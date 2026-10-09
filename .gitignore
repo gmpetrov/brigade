@@ -1,0 +1,16 @@
+node_modules
+dist
+.next
+.turbo
+*.tsbuildinfo
+next-env.d.ts
+coverage
+
+.env
+.env*.local
+!.env.example
+
+.DS_Store
+*.log
+src/generated
+apps/runner/bundle

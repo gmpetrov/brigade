@@ -1,0 +1,36 @@
+{
+  "name": "@brigade/runner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "brigade-runner": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist .turbo",
+    "spike": "tsx src/harness/spike.ts",
+    "bundle": "scripts/bundle.sh"
+  },
+  "dependencies": {
+    "@ai-sdk/harness": "1.0.147",
+    "@ai-sdk/harness-claude-code": "1.0.151",
+    "@ai-sdk/harness-codex": "1.0.149",
+    "@brigade/contracts": "workspace:*",
+    "ai": "7.0.136",
+    "pnpm": "10.34.6",
+    "ws": "8.22.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/ws": "8.18.2",
+    "tsx": "4.23.15"
+  },
+  "files": [
+    "dist"
+  ]
+}

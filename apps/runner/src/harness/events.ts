@@ -1,0 +1,203 @@
+// Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
+// this module sees an AI SDK type.
+import type { AgentEvent } from '@brigade/contracts'
+
+const FILE_TOOLS = new Set([
+  'write',
+  'edit',
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'NotebookEdit',
+  'fileChange',
+])
+const PLAN_TOOLS = new Set(['TodoWrite', 'todoWrite', 'update_plan'])
+/** Low-level echoes of the model stream; their content already arrives as mapped parts. */
+const DROPPED_RAW = new Set(['stream_event'])
+
+type Part = { type: string; [key: string]: any }
+
+export class EventMapper {
+  private texts = new Map<string, string>()
+  private reasoning = new Map<string, string>()
+  private toolCalls = new Map<string, { toolName: string; input: unknown }>()
+  finishReason = 'unknown'
+  /** The first error the harness reported during this turn. */
+  error: string | undefined
+  /** Set when the account ran out of usage during this turn. */
+  exhausted: { resetsAt: string | null } | undefined
+
+  /** Recognise an out-of-usage error from either harness. */
+  static exhaustedBy(message: string): { resetsAt: string | null } | undefined {
+    if (
+      !/usage limit|limit reached|hit your (usage )?limit|out of (usage|credits)|quota exceeded|rate_limit_error|too many requests/i.test(
+        message,
+      )
+    )
+      return
+    const epoch = message.match(/\|(\d{10})\b/)?.[1]
+    return { resetsAt: epoch ? new Date(Number(epoch) * 1000).toISOString() : null }
+  }
+
+  constructor(private readonly emit: (event: AgentEvent) => void) {}
+
+  map(part: Part) {
+    const at = new Date().toISOString()
+    switch (part.type) {
+      case 'text-delta': {
+        this.texts.set(part.id, (this.texts.get(part.id) ?? '') + part.text)
+        return this.emit({ at, type: 'message.delta', id: part.id, text: part.text })
+      }
+      case 'text-end': {
+        const text = this.texts.get(part.id) ?? ''
+        this.texts.delete(part.id)
+        return this.emit({ at, type: 'message.done', id: part.id, text })
+      }
+      case 'reasoning-delta':
+        return void this.reasoning.set(part.id, (this.reasoning.get(part.id) ?? '') + part.text)
+      case 'reasoning-end': {
+        const text = this.reasoning.get(part.id)
+        this.reasoning.delete(part.id)
+        if (text) this.emit({ at, type: 'raw', source: 'reasoning', value: text })
+        return
+      }
+      case 'tool-call': {
+        if (this.toolCalls.has(part.toolCallId)) return // adapters may repeat a call around approvals
+        this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
+        this.emit({
+          at,
+          type: 'tool.started',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          input: part.input,
+        })
+        if (PLAN_TOOLS.has(part.toolName) && Array.isArray(part.input?.todos)) {
+          this.emit({
+            at,
+            type: 'plan.updated',
+            items: part.input.todos.map((t: { content?: string; status?: string }) => ({
+              content: String(t.content ?? ''),
+              status: t.status === 'completed' || t.status === 'in_progress' ? t.status : 'pending',
+            })),
+          })
+        }
+        return
+      }
+      case 'tool-approval-request':
+        return this.emit({
+          at,
+          type: 'approval.requested',
+          approvalId: part.approvalId,
+          toolCallId: part.toolCall.toolCallId,
+          toolName: part.toolCall.toolName,
+          input: part.toolCall.input,
+        })
+      case 'tool-result': {
+        const call = this.toolCalls.get(part.toolCallId)
+        this.emit({
+          at,
+          type: 'tool.finished',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          output: part.output,
+          isError: false,
+        })
+        const path = call?.input as
+          { file_path?: string; notebook_path?: string; path?: string } | undefined
+        const file = path?.file_path ?? path?.notebook_path ?? path?.path
+        if (FILE_TOOLS.has(part.toolName) && file)
+          this.emit({ at, type: 'file.changed', path: file, toolName: part.toolName })
+        return
+      }
+      case 'tool-error':
+        return this.emit({
+          at,
+          type: 'tool.finished',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          output: String(part.error?.message ?? part.error),
+          isError: true,
+        })
+      case 'tool-output-denied':
+        return this.emit({
+          at,
+          type: 'tool.finished',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          output: 'Denied',
+          isError: true,
+        })
+      case 'finish': {
+        this.finishReason = part.finishReason
+        const usage = part.totalUsage ?? {}
+        if (usage.inputTokens !== undefined || usage.outputTokens !== undefined) {
+          this.emit({
+            at,
+            type: 'usage.updated',
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+          })
+        }
+        return
+      }
+      case 'error': {
+        const message = errorMessage(part.error)
+        const exhausted = EventMapper.exhaustedBy(message)
+        if (exhausted) return void (this.exhausted = exhausted)
+        this.error ??= message
+        return this.emit({ at, type: 'error', message })
+      }
+      case 'raw': {
+        const value = part.rawValue
+        if (DROPPED_RAW.has(value?.type)) return
+        if (value?.type === 'rate_limit_event') {
+          const info = value.rate_limit_info ?? {}
+          const status =
+            info.status === 'rejected'
+              ? 'rejected'
+              : info.status === 'allowed_warning'
+                ? 'warning'
+                : 'allowed'
+          if (status === 'rejected') {
+            this.exhausted = {
+              resetsAt: info.resetsAt ? new Date(info.resetsAt * 1000).toISOString() : null,
+            }
+          }
+          return this.emit({ at, type: 'usage.updated', status, limits: limits(info) })
+        }
+        return this.emit({ at, type: 'raw', source: 'harness', value })
+      }
+      // Stream lifecycle parts carry nothing a person needs to see.
+      case 'start':
+      case 'start-step':
+      case 'finish-step':
+      case 'text-start':
+      case 'reasoning-start':
+      case 'tool-input-start':
+      case 'tool-input-delta':
+      case 'tool-input-end':
+      case 'tool-approval-response': // the runner records who answered when the answer arrives
+      case 'abort':
+        return
+      default:
+        return this.emit({ at, type: 'raw', source: part.type, value: part })
+    }
+  }
+}
+
+function limits(
+  info:
+    { unifiedWindows?: Record<string, { utilization?: number; resetsAt?: number }> } | undefined,
+) {
+  return Object.entries(info?.unifiedWindows ?? {}).map(([window, w]) => ({
+    window,
+    utilization: w.utilization ?? 0,
+    resetsAt: w.resetsAt ? new Date(w.resetsAt * 1000).toISOString() : null,
+  }))
+}
+
+export function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return JSON.stringify(error)
+}

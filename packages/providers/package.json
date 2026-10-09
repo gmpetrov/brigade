@@ -1,0 +1,27 @@
+{
+  "name": "@brigade/providers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist .turbo",
+    "boat": "tsx scripts/boat.ts"
+  },
+  "dependencies": {
+    "@boatdev/sdk": "1.9.2",
+    "@brigade/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15"
+  }
+}

@@ -1,0 +1,14 @@
+# Local PostgreSQL for development only. Production uses Neon.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: brigade
+      POSTGRES_PASSWORD: brigade
+      POSTGRES_DB: brigade
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres:/var/lib/postgresql/data
+volumes:
+  postgres:

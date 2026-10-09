@@ -1,0 +1,321 @@
+// The harness layer. This directory is the only place in Brigade that imports
+// the experimental AI SDK harness packages (spec: "keep every import inside
+// one module of the runner package").
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
+import { createClaudeCode } from '@ai-sdk/harness-claude-code'
+import { createCodex } from '@ai-sdk/harness-codex'
+import type { AccountRef, AgentEvent, ThreadSpec } from '@brigade/contracts'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { accountEnv } from '../accounts.js'
+import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
+import { harnessEnv } from './env.js'
+import { errorMessage, EventMapper } from './events.js'
+import { createLocalSandboxSession, freePort } from './local-sandbox.js'
+import { connectorTools, type ConnectorCaller } from './tools.js'
+
+export type { ConnectorCaller } from './tools.js'
+
+export { stripApiKeys } from './env.js'
+
+const execFileAsync = promisify(execFile)
+
+export type ThreadInput =
+  | { kind: 'prompt'; text: string }
+  | { kind: 'approval'; approvalId: string; approved: boolean; reason?: string }
+
+/** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
+export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
+
+/** What the runner keeps per thread between processes. Never a credential. */
+type SavedState = {
+  accountId: string
+  resume?: unknown
+  /** Recent conversation, for the handoff when the thread moves to another account. */
+  transcript: { role: 'user' | 'assistant'; text: string }[]
+}
+
+const TRANSCRIPT_CHARS = 40_000
+
+function createAgent(spec: ThreadSpec, callConnector: ConnectorCaller) {
+  // auth {}: the adapter forwards no credential. The vendor CLI uses its own
+  // login in the account's config directory; the runner never reads it.
+  const harness =
+    spec.teammate.harness === 'codex' ? createCodex({ auth: {} }) : createClaudeCode({ auth: {} })
+  const tools = connectorTools(spec.connectors, callConnector)
+  return new HarnessAgent({
+    harness,
+    tools,
+    // The API is the enforcement point for connector calls; the harness does not ask again.
+    toolApproval: Object.fromEntries(
+      Object.keys(tools).map((name) => [name, 'not-applicable' as const]),
+    ),
+    ...(spec.teammate.model ? { model: spec.teammate.model } : {}),
+    ...(spec.teammate.instructions ? { instructions: spec.teammate.instructions } : {}),
+    // Codex cannot ask before built-in tool calls (spec, known limits).
+    permissionMode: spec.teammate.harness === 'codex' ? 'allow-all' : spec.permissionMode,
+    sandboxConfig: { workDir: '.' },
+  })
+}
+
+type Live = {
+  agent: ReturnType<typeof createAgent>
+  session: HarnessAgentSession
+  sandbox: ReturnType<typeof createLocalSandboxSession>
+  account: AccountRef
+}
+
+/** One thread: one harness session in its own working directory. */
+export class HarnessThread {
+  private live: Live | undefined
+  private saved: SavedState | undefined
+  private readonly stateFile: string
+
+  constructor(
+    private spec: ThreadSpec,
+    private readonly workDir: string,
+    stateDir: string,
+    private readonly emitEvent: (event: AgentEvent) => void,
+    /** Forwards connector tool calls to the API. */
+    private readonly callConnector: ConnectorCaller,
+    /** On a cloud computer: the teammate's Linux user, which runs the harness. */
+    private readonly runAs?: string,
+  ) {
+    this.stateFile = join(stateDir, `${spec.sessionId}.json`)
+  }
+
+  async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
+    this.spec = spec
+    await this.load()
+    let handoff: string | undefined
+    // A new prompt runs on the account the API chose; an approval stays on the live session.
+    if (input.kind === 'prompt' && this.saved && this.saved.accountId !== spec.account.id) {
+      handoff = await this.switchTo(spec.account, 'unavailable', null)
+    }
+    if (input.kind === 'prompt') this.remember('user', input.text)
+
+    const fallbacks = [...spec.fallbacks]
+    for (;;) {
+      const outcome = await this.turn(handoff ? { kind: 'prompt', text: handoff } : input, signal)
+      if (outcome.kind !== 'exhausted') return outcome.result
+      // Out of usage: continue on the member's next account, or pause.
+      const next = fallbacks.shift()
+      const from = this.current.id
+      if (!next) {
+        this.emit({
+          type: 'account.switched',
+          fromAccountId: from,
+          toAccountId: null,
+          reason: 'usage_limit',
+          resetsAt: outcome.resetsAt,
+        })
+        await this.park()
+        return { status: 'paused' }
+      }
+      handoff = await this.switchTo(next, 'usage_limit', outcome.resetsAt)
+      input = { kind: 'prompt', text: handoff }
+    }
+  }
+
+  /** Stop the harness and keep its saved state, so the next message resumes it. */
+  async park() {
+    const live = this.live
+    if (!live) return
+    this.live = undefined
+    try {
+      const resume = await live.session.stop()
+      this.saved = { ...this.saved!, accountId: live.account.id, resume }
+      await this.persist()
+    } finally {
+      await live.sandbox.destroy()
+    }
+  }
+
+  private get current(): AccountRef {
+    return this.live?.account ?? this.spec.account
+  }
+
+  private async turn(
+    input: ThreadInput,
+    signal: AbortSignal,
+  ): Promise<
+    { kind: 'done'; result: TurnOutcome } | { kind: 'exhausted'; resetsAt: string | null }
+  > {
+    const mapper = new EventMapper((event) => {
+      if (event.type === 'message.done') this.remember('assistant', event.text)
+      this.emitEvent(event)
+    })
+    try {
+      const live = await this.attach()
+      if (input.kind === 'prompt' && live.session.hasUnfinishedTurn()) {
+        return {
+          kind: 'done',
+          result: { status: 'waiting', error: 'Approve or deny the pending request first.' },
+        }
+      }
+      const result =
+        input.kind === 'prompt'
+          ? await live.agent.stream({
+              session: live.session,
+              prompt: input.text,
+              abortSignal: signal,
+            })
+          : await live.agent.continueStream({
+              session: live.session,
+              abortSignal: signal,
+              toolApprovalContinuations: [
+                {
+                  type: 'tool-approval-response',
+                  approvalId: input.approvalId,
+                  approved: input.approved,
+                  ...(input.reason ? { reason: input.reason } : {}),
+                },
+              ],
+            })
+      for await (const part of result.fullStream) mapper.map(part)
+      // A login refreshed during the turn goes back to the shared account directory.
+      if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
+      if (mapper.exhausted) return { kind: 'exhausted', resetsAt: mapper.exhausted.resetsAt }
+      if (live.session.hasUnfinishedTurn()) return { kind: 'done', result: { status: 'waiting' } }
+      // An error reported inside the stream fails the turn (it was already emitted).
+      if (mapper.error && !signal.aborted)
+        return { kind: 'done', result: { status: 'failed', error: mapper.error } }
+      this.emit({
+        type: 'turn.completed',
+        finishReason: signal.aborted ? 'interrupted' : mapper.finishReason,
+      })
+      await this.persist()
+      return { kind: 'done', result: { status: 'idle' } }
+    } catch (error) {
+      if (signal.aborted) {
+        this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
+        return { kind: 'done', result: { status: 'idle' } }
+      }
+      const message = errorMessage(error)
+      const exhausted = EventMapper.exhaustedBy(message)
+      if (exhausted) return { kind: 'exhausted', resetsAt: exhausted.resetsAt }
+      this.emit({ type: 'error', message })
+      await this.drop()
+      return { kind: 'done', result: { status: 'failed', error: message } }
+    }
+  }
+
+  /**
+   * Move the thread to another account: a new harness session in the same
+   * working directory, whose first message is a handoff summary.
+   */
+  private async switchTo(
+    account: AccountRef,
+    reason: 'usage_limit' | 'unavailable',
+    resetsAt: string | null,
+  ) {
+    const from = this.saved?.accountId ?? this.current.id
+    await this.drop()
+    this.emit({
+      type: 'account.switched',
+      fromAccountId: from,
+      toAccountId: account.id,
+      reason,
+      resetsAt,
+    })
+    this.saved = { accountId: account.id, transcript: this.saved?.transcript ?? [] }
+    await this.persist()
+    const lines = this.saved.transcript
+      .map((t) => `${t.role === 'user' ? 'User' : 'You'}: ${t.text}`)
+      .join('\n\n')
+    const last = this.saved.transcript.findLast((t) => t.role === 'user')
+    return [
+      'This conversation continues in a new session because the previous one could not go on (its account ran out of usage).',
+      'The working directory is exactly as the previous session left it.',
+      lines && `Conversation so far:\n\n${lines}`,
+      last && `Continue with the latest request if it is not finished yet.`,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+  }
+
+  private async attach(): Promise<Live> {
+    if (this.live) return this.live
+    const account = this.spec.account
+    let env: Record<string, string>
+    if (this.runAs) {
+      // The teammate's own Linux user, home and private link to the account's login.
+      await ensureUser(this.runAs)
+      await execFileAsync('sudo', ['-n', '-u', this.runAs, 'mkdir', '-p', this.workDir], {
+        cwd: '/',
+      })
+      const home = teammateHome(this.runAs)
+      env = harnessEnv({
+        ...(await linkAccount(this.runAs, account)),
+        HOME: home,
+        USER: this.runAs,
+        LOGNAME: this.runAs,
+      })
+    } else {
+      await mkdir(this.workDir, { recursive: true })
+      env = harnessEnv(accountEnv(account))
+    }
+    const agent = createAgent(this.spec, this.callConnector)
+    const sandbox = createLocalSandboxSession({
+      id: this.spec.sessionId,
+      workingDirectory: this.workDir,
+      port: await freePort(),
+      env,
+      ...(this.runAs ? { runAs: this.runAs } : {}),
+    })
+    const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
+    const session = await agent.createSession({
+      sessionId: this.spec.sessionId,
+      sandboxSession: sandbox,
+      ...(resume ? { resumeFrom: resume as never } : {}),
+    })
+    this.live = { agent, session, sandbox, account }
+    this.saved = { transcript: [], ...this.saved, accountId: account.id }
+    return this.live
+  }
+
+  /** After a failure: save what can be saved, so the next message starts clean. */
+  private async drop() {
+    const live = this.live
+    await this.park().catch(async () => {
+      await live?.session.destroy().catch(() => undefined)
+      await live?.sandbox.destroy()
+    })
+  }
+
+  private async load() {
+    if (this.saved) return
+    this.saved = await readFile(this.stateFile, 'utf8').then(
+      (text) => {
+        const parsed = JSON.parse(text) as SavedState & { type?: string }
+        // State written before accounts existed held only the resume payload.
+        return parsed.accountId
+          ? parsed
+          : { accountId: this.spec.account.id, resume: parsed, transcript: [] }
+      },
+      () => undefined,
+    )
+  }
+
+  private async persist() {
+    if (!this.saved) return
+    await mkdir(dirname(this.stateFile), { recursive: true, mode: 0o700 })
+    await writeFile(this.stateFile, JSON.stringify(this.saved), { mode: 0o600 })
+  }
+
+  private remember(role: 'user' | 'assistant', text: string) {
+    if (!this.saved) this.saved = { accountId: this.spec.account.id, transcript: [] }
+    const transcript = [...this.saved.transcript, { role, text }]
+    while (transcript.length > 1 && JSON.stringify(transcript).length > TRANSCRIPT_CHARS)
+      transcript.shift()
+    this.saved.transcript = transcript
+  }
+
+  private emit(event: DistributiveOmit<AgentEvent, 'at'>) {
+    this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
+  }
+}
+
+type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never

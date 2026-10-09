@@ -1,0 +1,593 @@
+// Brigade data model. Every model under Organization carries organizationId,
+// and every model under Workspace carries workspaceId (see src/db.ts scoping).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth (better-auth core + organization plugin)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  authSessions  AuthSession[]
+  authAccounts  AuthAccount[]
+  members       Member[]
+  invitations   Invitation[]
+}
+
+/// A signed-in browser session (better-auth "session"). Not a thread.
+model AuthSession {
+  id                   String   @id
+  token                String   @unique
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+  activeWorkspaceId    String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// A sign-in method of a user (better-auth "account"). Not a harness account.
+model AuthAccount {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+/// Short-lived codes: email verification, and runner link codes.
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model Organization {
+  id          String       @id
+  name        String
+  slug        String       @unique
+  logo        String?
+  metadata    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime?    @updatedAt
+  members     Member[]
+  invitations Invitation[]
+  workspaces  Workspace[]
+}
+
+/// A user's role in an organization: owner, admin or member.
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+  computers      Computer[]
+  accounts       Account[]
+  sessions       Session[]
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  inviterId      String
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Workspaces, computers and teammates
+// ---------------------------------------------------------------------------
+
+model Workspace {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  computers      Computer[]
+  runners        Runner[]
+  teammates      Teammate[]
+  sessions       Session[]
+  sessionEvents  SessionEvent[]
+  accounts       Account[]
+  projects       Project[]
+  comments       Comment[]
+  connections    Connection[]
+  vaultSecrets   VaultSecret[]
+  grants         Grant[]
+  connectionCalls ConnectionCall[]
+  webhooks       Webhook[]
+  tickets        Ticket[]
+  documents      Document[]
+  auditEntries   AuditEntry[]
+
+  @@index([organizationId])
+}
+
+enum ComputerKind {
+  cloud
+  member_machine
+}
+
+enum ComputerStatus {
+  pending
+  creating
+  starting
+  running
+  stopped
+  error
+  destroyed
+}
+
+/// The workspace cloud VM, or a member's own machine.
+model Computer {
+  id             String         @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind           ComputerKind
+  /// Set for a member's own machine: only that member runs threads on it.
+  memberId       String?
+  member         Member?        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  name           String
+  /// Opaque provider reference for a cloud computer. Only the providers package reads it.
+  providerRef    Json?
+  size           String?
+  status         ComputerStatus @default(pending)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  runner         Runner?
+  sessions       Session[]
+  accounts       Account[]
+
+  @@index([workspaceId])
+}
+
+/// A registered runner process on a computer.
+model Runner {
+  id              String    @id @default(cuid())
+  organizationId  String
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  computerId      String    @unique
+  computer        Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the runner token. The token itself is never stored.
+  tokenHash       String    @unique
+  version         String?
+  protocolVersion Int?
+  platform        String?
+  lastSeenAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+enum Harness {
+  claude_code
+  codex
+}
+
+/// An AI teammate: a saved identity, not a running process.
+model Teammate {
+  id               String     @id @default(cuid())
+  organizationId   String
+  workspaceId      String
+  workspace        Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  instructions     String     @default("")
+  harness          Harness    @default(claude_code)
+  model            String?
+  /// { threadsPerDay, computerHoursPerDay, writeCallsPerConnectionPerDay }
+  caps             Json       @default("{}")
+  /// Per kind of action: allow, ask or deny.
+  permissionPolicy Json       @default("{}")
+  archivedAt       DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  sessions         Session[]
+  grants           Grant[]
+  webhooks         Webhook[]
+  connectionCalls  ConnectionCall[]
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Threads
+// ---------------------------------------------------------------------------
+
+enum SessionStatus {
+  starting
+  running
+  waiting
+  idle
+  paused
+  failed
+  done
+}
+
+/// A thread: one conversation with one teammate, one harness session.
+model Session {
+  id                  String         @id @default(cuid())
+  organizationId      String
+  workspaceId         String
+  workspace           Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teammateId          String
+  teammate            Teammate       @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  startedByMemberId   String
+  startedBy           Member         @relation(fields: [startedByMemberId], references: [id], onDelete: Cascade)
+  computerId          String
+  computer            Computer       @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  accountId           String?
+  account             Account?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  title               String
+  status              SessionStatus  @default(starting)
+  /// A private thread does not write to workspace memory.
+  private             Boolean        @default(false)
+  /// Lets other members prompt or approve on the starter's subscription.
+  othersMayPrompt     Boolean        @default(false)
+  /// Set while a member has taken over the thread; the teammate does not act meanwhile.
+  controlledByMemberId String?
+  /// Highest contiguous event sequence number stored.
+  lastSeq             Int            @default(0)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  events              SessionEvent[]
+  comments            Comment[]
+  connectionCalls     ConnectionCall[]
+  tickets             Ticket[]
+
+  @@index([workspaceId, createdAt])
+  @@index([teammateId])
+}
+
+/// One AgentEvent with its sequence number. Append-only.
+model SessionEvent {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seq            Int
+  type           String
+  data           Json
+  at             DateTime
+
+  @@id([sessionId, seq])
+  @@index([workspaceId, at])
+}
+
+// ---------------------------------------------------------------------------
+// Harness accounts
+// ---------------------------------------------------------------------------
+
+enum AccountStatus {
+  signing_in
+  unverified
+  ready
+  needs_sign_in
+  exhausted
+}
+
+/// machine: the login already on a member's own machine. brigade: signed in
+/// through Brigade into its own config directory on the computer.
+enum AccountSource {
+  machine
+  brigade
+}
+
+/// One harness login of one member on one computer. Never the credential.
+model Account {
+  id             String        @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  computerId     String
+  computer       Computer      @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  provider       Harness
+  source         AccountSource @default(machine)
+  label          String
+  /// Reported by the harness after sign-in. Never the credential.
+  email          String?
+  plan           String?
+  status         AccountStatus @default(unverified)
+  /// Out of usage until this time; another account of the member is used meanwhile.
+  exhaustedUntil DateTime?
+  isDefault      Boolean       @default(false)
+  lastUsage      Json?
+  lastUsageAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sessions       Session[]
+
+  @@index([memberId, provider])
+}
+
+// ---------------------------------------------------------------------------
+// Engineering work
+// ---------------------------------------------------------------------------
+
+/// A code repository used for engineering work.
+model Project {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  repoUrl        String
+  setupScript    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
+}
+
+/// A human comment on a diff or a thread.
+model Comment {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  memberId       String
+  body           String
+  filePath       String?
+  line           Int?
+  createdAt      DateTime  @default(now())
+
+  @@index([sessionId])
+}
+
+// ---------------------------------------------------------------------------
+// Vault and connectors
+// ---------------------------------------------------------------------------
+
+enum ConnectorKind {
+  gmail
+  google_calendar
+  stripe
+}
+
+/// An external account and a reference to its vault secret.
+enum ConnectionStatus {
+  active
+  needs_reauth
+  /// Kept so its call log survives; its credential is deleted.
+  removed
+}
+
+model Connection {
+  id                String           @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind              ConnectorKind
+  label             String
+  /// The external account, e.g. the mailbox address. Never a credential.
+  externalAccount   String?
+  status            ConnectionStatus @default(active)
+  vaultSecretId     String?          @unique
+  vaultSecret       VaultSecret?     @relation(fields: [vaultSecretId], references: [id], onDelete: SetNull)
+  createdByMemberId String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  grants            Grant[]
+  calls             ConnectionCall[]
+  webhooks          Webhook[]
+
+  @@index([workspaceId])
+}
+
+/// One encrypted secret. Decrypted only inside the API process.
+model VaultSecret {
+  id             String      @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ciphertext     Bytes
+  iv             Bytes
+  authTag        Bytes
+  keyVersion     Int         @default(1)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  connection     Connection?
+
+  @@index([workspaceId])
+}
+
+enum GrantScope {
+  read
+  read_write
+}
+
+/// Permission for one teammate to use one connection.
+model Grant {
+  id             String     @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teammateId     String
+  teammate       Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  connectionId   String
+  connection     Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  scope          GrantScope
+  createdAt      DateTime   @default(now())
+
+  @@unique([teammateId, connectionId])
+}
+
+/// One connector call. Append-only.
+model ConnectionCall {
+  id             String     @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  connectionId   String
+  connection     Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  teammateId     String
+  teammate       Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  operation      String
+  write          Boolean
+  target         String
+  /// ok, denied, error, or awaiting_approval followed by its outcome in a later row.
+  result         String
+  error          String?
+  /// The approval ticket, when a human decided.
+  ticketId       String?
+  createdAt      DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([connectionId, createdAt])
+}
+
+/// An inbound URL, its verification secret and its assigned teammate.
+model Webhook {
+  id                String     @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId      String
+  connection        Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  teammateId        String
+  teammate          Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// Runs on this member's accounts.
+  createdByMemberId String
+  verificationSecretId String?
+  createdAt         DateTime   @default(now())
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Control and oversight
+// ---------------------------------------------------------------------------
+
+enum TicketType {
+  approval
+  question
+  sign_in
+  cap
+  usage_limit
+}
+
+enum TicketStatus {
+  open
+  approved
+  denied
+  resolved
+}
+
+/// Something waiting on a human.
+model Ticket {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId          String?
+  session            Session?     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type               TicketType
+  status             TicketStatus @default(open)
+  title              String
+  payload            Json         @default("{}")
+  resolvedByMemberId String?
+  resolvedAt         DateTime?
+  createdAt          DateTime     @default(now())
+
+  @@index([workspaceId, status])
+}
+
+/// Metadata and text-index entry for a library file.
+model Document {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  path           String
+  contentType    String
+  size           Int
+  text           String    @default("")
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
+
+  @@unique([workspaceId, path])
+}
+
+enum ActorType {
+  member
+  teammate
+  runner
+  system
+}
+
+/// Append-only record of an action. workspaceId is null for organization-level actions.
+model AuditEntry {
+  id             BigInt     @id @default(autoincrement())
+  organizationId String
+  workspaceId    String?
+  workspace      Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actorType      ActorType
+  actorId        String
+  action         String
+  targetType     String
+  targetId       String
+  data           Json?
+  at             DateTime   @default(now())
+
+  @@index([workspaceId, at])
+  @@index([organizationId, at])
+}
