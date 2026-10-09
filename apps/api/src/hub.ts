@@ -16,6 +16,7 @@ import { prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureRunning, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
+import { handleCredentialRequest } from './credentials.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
@@ -289,6 +290,19 @@ export function runnerSocket(runner: {
         state: message.ok ? 'done' : 'failed',
         ...(message.error ? { error: message.error } : {}),
       })
+      return
+    }
+
+    if (message.type === 'credential.request') {
+      // May wait for a person, like a connector call.
+      void handleCredentialRequest(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: String(error),
+        }),
+      )
       return
     }
 

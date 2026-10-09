@@ -1,9 +1,74 @@
 // Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
 // this module sees an AI SDK type.
-import { Question, type AgentEvent } from '@brigade/contracts'
+import { Question, type AgentEvent, type QuestionAnswer } from '@brigade/contracts'
+import { ASK_USER_TOOL } from './tools.js'
 
 /** The AI SDK's name for a harness's built-in question tool. */
 export const QUESTION_TOOL = 'askUserQuestions'
+
+type AskUserInput = {
+  id?: string
+  question?: string
+  header?: string
+  options?: { id?: string; label?: string; description?: string }[]
+  allowMultiple?: boolean
+  allowFreeForm?: boolean
+  secret?: boolean
+}
+
+/** Brigade's ask_user input as questions; ids filled in where the model left them out. */
+export function askUserQuestions(input: unknown): Question[] | undefined {
+  const raw = (input as { questions?: AskUserInput[] } | undefined)?.questions
+  if (!Array.isArray(raw)) return undefined
+  const parsed = Question.array().safeParse(
+    raw.map((q, i) => ({
+      id: q.id || `q${i + 1}`,
+      question: q.question,
+      ...(q.header ? { header: q.header } : {}),
+      ...(q.options?.length
+        ? {
+            options: q.options.map((o, j) => ({
+              id: o.id || `o${j + 1}`,
+              label: o.label,
+              ...(o.description ? { description: o.description } : {}),
+            })),
+          }
+        : {}),
+      ...(q.allowMultiple ? { allowMultiple: true } : {}),
+      ...(q.secret
+        ? { allowFreeForm: { secret: true } }
+        : q.allowFreeForm
+          ? { allowFreeForm: true }
+          : {}),
+    })),
+  )
+  return parsed.success ? parsed.data : undefined
+}
+
+/** A person's answer to ask_user, in words the model reads: labels, not option ids. */
+export function askUserResult(questions: Question[], answer: QuestionAnswer) {
+  if (answer.action === 'declined')
+    return {
+      declined: true,
+      note: 'The person declined to answer. Do not ask again; carry on or stop.',
+    }
+  return {
+    answers: questions.flatMap((q) => {
+      const a = answer.answers[q.id]
+      if (!a) return []
+      const labels = new Map(q.options?.map((o) => [o.id, o.label]) ?? [])
+      return [
+        {
+          question: q.question,
+          ...(a.optionIds.length
+            ? { selected: a.optionIds.map((id) => labels.get(id) ?? id) }
+            : {}),
+          ...(a.freeform ? { answer: a.freeform } : {}),
+        },
+      ]
+    }),
+  }
+}
 
 const FILE_TOOLS = new Set([
   'write',
@@ -74,14 +139,17 @@ export class EventMapper {
         if (this.toolCalls.has(part.toolCallId)) return // adapters may repeat a call around approvals
         this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
         // The harness's own question tool: a person answers, then the turn continues.
-        if (part.toolName === QUESTION_TOOL) {
-          const questions = Question.array().safeParse(part.input?.questions)
-          if (questions.success)
+        if (part.toolName === QUESTION_TOOL || part.toolName === ASK_USER_TOOL) {
+          const questions =
+            part.toolName === ASK_USER_TOOL
+              ? askUserQuestions(part.input)
+              : Question.array().safeParse(part.input?.questions).data
+          if (questions)
             return this.emit({
               at,
               type: 'question.asked',
               questionId: part.toolCallId,
-              questions: questions.data,
+              questions,
             })
         }
         this.emit({

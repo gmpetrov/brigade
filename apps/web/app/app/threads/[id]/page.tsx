@@ -192,7 +192,7 @@ export default function ThreadPage() {
               placeholder={
                 busy
                   ? `${t.teammate.name} is working. Your message will run next. @ to mention`
-                  : 'Reply. @ to mention a teammate, connection or thread'
+                  : 'Reply. @ to mention a teammate, connection, credential or thread'
               }
             />
             <div className="row">

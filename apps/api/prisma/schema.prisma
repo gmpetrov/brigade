@@ -144,6 +144,7 @@ model Workspace {
   comments       Comment[]
   connections    Connection[]
   vaultSecrets   VaultSecret[]
+  credentials    Credential[]
   grants         Grant[]
   connectionCalls ConnectionCall[]
   webhooks       Webhook[]
@@ -453,6 +454,34 @@ model VaultSecret {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   connection     Connection?
+  credential     Credential?
+
+  @@index([workspaceId])
+}
+
+enum CredentialKind {
+  website
+  database
+  api_key
+  other
+}
+
+/// A secret a member keeps for teammates: a website login, a database, an API key.
+/// A teammate may use it in a thread where a member mentioned it, or once a person approves.
+model Credential {
+  id                String         @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind              CredentialKind
+  name              String
+  /// Non-secret fields: URL, username, host, port, database. Never the secret.
+  details           Json           @default("{}")
+  vaultSecretId     String         @unique
+  vaultSecret       VaultSecret    @relation(fields: [vaultSecretId], references: [id], onDelete: Cascade)
+  createdByMemberId String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([workspaceId])
 }

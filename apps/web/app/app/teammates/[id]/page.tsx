@@ -116,7 +116,7 @@ export default function TeammatePage() {
             value={text}
             onChange={setText}
             onSubmit={() => formRef.current?.requestSubmit()}
-            placeholder={`What should ${teammate.name} do? @ to mention a connection or thread`}
+            placeholder={`What should ${teammate.name} do? @ to mention a connection, credential or thread`}
           />
         </div>
         {online.length === 0 ? (

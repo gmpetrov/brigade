@@ -108,6 +108,12 @@ export type Connection = Prisma.ConnectionModel
  */
 export type VaultSecret = Prisma.VaultSecretModel
 /**
+ * Model Credential
+ * A secret a member keeps for teammates: a website login, a database, an API key.
+ * A teammate may use it in a thread where a member mentioned it, or once a person approves.
+ */
+export type Credential = Prisma.CredentialModel
+/**
  * Model Grant
  * Permission for one teammate to use one connection.
  */

@@ -69,6 +69,7 @@ export const ModelName = {
   Comment: 'Comment',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
+  Credential: 'Credential',
   Grant: 'Grant',
   ConnectionCall: 'ConnectionCall',
   Webhook: 'Webhook',
@@ -371,6 +372,22 @@ export const VaultSecretScalarFieldEnum = {
 } as const
 
 export type VaultSecretScalarFieldEnum = (typeof VaultSecretScalarFieldEnum)[keyof typeof VaultSecretScalarFieldEnum]
+
+
+export const CredentialScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  kind: 'kind',
+  name: 'name',
+  details: 'details',
+  vaultSecretId: 'vaultSecretId',
+  createdByMemberId: 'createdByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CredentialScalarFieldEnum = (typeof CredentialScalarFieldEnum)[keyof typeof CredentialScalarFieldEnum]
 
 
 export const GrantScalarFieldEnum = {

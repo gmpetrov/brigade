@@ -157,6 +157,18 @@ export type ConnectionsResponse = {
   connections: Connection[]
 }
 
+export type { CredentialKind, CredentialSummary as Credential } from '@brigade/contracts'
+
+export type CredentialUse = {
+  id: string
+  at: string
+  teammate: string
+  sessionId: string | null
+  use: 'browser' | 'env' | null
+  /** mention: a member mentioned it in the thread. approval: a person approved the request. */
+  via: 'mention' | 'approval'
+}
+
 export type Webhook = {
   id: string
   label: string

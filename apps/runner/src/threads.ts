@@ -3,7 +3,12 @@
 import type { AgentEvent, ApiToRunner, ThreadSpec } from '@brigade/contracts'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
-import { HarnessThread, type ConnectorCaller, type ThreadInput } from './harness/index.js'
+import {
+  HarnessThread,
+  type ConnectorCaller,
+  type CredentialRequester,
+  type ThreadInput,
+} from './harness/index.js'
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
 /** Park an idle harness session after this long; the next message resumes it. */
@@ -33,6 +38,10 @@ export class Threads {
       concurrency: number
       emit: (sessionId: string, event: AgentEvent) => void
       callConnector: (sessionId: string, call: Parameters<ConnectorCaller>[0]) => Promise<unknown>
+      requestCredential: (
+        sessionId: string,
+        request: Parameters<CredentialRequester>[0],
+      ) => Promise<unknown>
     },
   ) {}
 
@@ -191,6 +200,7 @@ export class Threads {
         paths.state,
         (event) => this.options.emit(spec.sessionId, event),
         (call) => this.options.callConnector(spec.sessionId, call),
+        (request) => this.options.requestCredential(spec.sessionId, request),
         user,
       )
       thread = { harness, queue: Promise.resolve(), controller: undefined, parkTimer: undefined }

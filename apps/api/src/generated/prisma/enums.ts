@@ -96,6 +96,16 @@ export const ConnectionStatus = {
 export type ConnectionStatus = (typeof ConnectionStatus)[keyof typeof ConnectionStatus]
 
 
+export const CredentialKind = {
+  website: 'website',
+  database: 'database',
+  api_key: 'api_key',
+  other: 'other'
+} as const
+
+export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind]
+
+
 export const GrantScope = {
   read: 'read',
   read_write: 'read_write'

@@ -1,7 +1,14 @@
 'use client'
-import type { AgentEvent, Question, QuestionAnswer, SequencedEvent } from '@brigade/contracts'
+import {
+  formatMention,
+  type AgentEvent,
+  type Question,
+  type QuestionAnswer,
+  type SequencedEvent,
+} from '@brigade/contracts'
 import { useMemo, useState } from 'react'
-import { MessageText } from '@/components/mention'
+import { credentialHint, MessageText } from '@/components/mention'
+import { useApi, type Credential } from '@/lib/api'
 
 type Item =
   | { kind: 'user'; key: string; text: string }
@@ -318,6 +325,59 @@ export function ThreadItems({
 
 const isSecret = (q: Question) => typeof q.allowFreeForm === 'object' && q.allowFreeForm.secret
 
+/**
+ * The answer to a question asking for a secret: a credential from the vault.
+ * The teammate gets its mention, which lets it use the credential in this
+ * thread; the secret itself never goes into the answer.
+ */
+function CredentialPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (mention: string) => void
+  disabled: boolean
+}) {
+  const credentials = useApi<Credential[]>('/credentials')
+  const list = credentials.data ?? []
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <p className="hint" style={{ margin: 0 }}>
+        This asks for a secret. Pick one from the vault: your teammate can then use it in this
+        thread without ever seeing it.
+      </p>
+      <div className="row">
+        <select
+          aria-label="Credential"
+          disabled={disabled || list.length === 0}
+          value={value}
+          onChange={(e) => {
+            const c = list.find((c) => formatMention(mentionOf(c)) === e.target.value)
+            onChange(c ? formatMention(mentionOf(c)) : '')
+          }}
+          style={{ flex: 1 }}
+        >
+          <option value="">{list.length ? 'Choose a credential…' : 'The vault is empty'}</option>
+          {list.map((c) => (
+            <option key={c.id} value={formatMention(mentionOf(c))}>
+              {c.name} · {credentialHint(c)}
+            </option>
+          ))}
+        </select>
+        <a href="/app/vault" target="_blank" rel="noreferrer">
+          Add one
+        </a>
+        <button type="button" disabled={disabled} onClick={() => void credentials.reload()}>
+          Refresh
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const mentionOf = (c: Credential) => ({ kind: 'credential' as const, id: c.id, label: c.name })
+
 /** The harness asks a person something: options, a free answer, or a decline. */
 function QuestionCard({
   item,
@@ -394,10 +454,11 @@ function QuestionCard({
                 </label>
               ))}
               {isSecret(q) ? (
-                <p className="hint">
-                  This asks for a secret. Brigade never passes secrets to a teammate: sign it in
-                  through its browser instead, then answer or decline.
-                </p>
+                <CredentialPicker
+                  disabled={!canAnswer || busy}
+                  value={text[q.id] ?? ''}
+                  onChange={(mention) => setText((t) => ({ ...t, [q.id]: mention }))}
+                />
               ) : (
                 (q.allowFreeForm || !q.options?.length) && (
                   <textarea

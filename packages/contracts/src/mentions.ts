@@ -1,8 +1,9 @@
 /**
  * Mentions inside message text. The composer writes them as `@[Label](kind:id)`:
  * a teammate reads the label and the reference; the dashboard renders a chip.
+ * A member mentioning a credential lets the thread's teammate use it there.
  */
-export const MENTION_KINDS = ['teammate', 'connection', 'thread', 'computer'] as const
+export const MENTION_KINDS = ['teammate', 'connection', 'thread', 'computer', 'credential'] as const
 export type MentionKind = (typeof MENTION_KINDS)[number]
 
 export type Mention = { kind: MentionKind; id: string; label: string }
@@ -31,3 +32,7 @@ export const mentionsToText = (text: string) =>
   text.replace(MENTION, (_, label: string, kind: MentionKind) =>
     kind === 'teammate' ? `@${label}` : label,
   )
+
+/** Ids of the mentions of one kind in a text. */
+export const mentionedIds = (text: string, kind: MentionKind) =>
+  parseMentions(text).flatMap((p) => (typeof p !== 'string' && p.kind === kind ? [p.id] : []))

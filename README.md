@@ -163,10 +163,23 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **Sign-in through the dashboard.** "Open <teammate>'s browser" (teammate page, and the takeover panel) opens a
   window of that teammate's Chrome on the desktop, optionally at a URL, and shows the desktop. Whatever a person
   signs in to stays in that teammate's profile only.
-- **Questions.** When the harness asks a person something (its built-in question tool), the thread waits and a
-  `question` ticket opens; the answer goes back as the tool's result. A question asking for a secret only takes
-  options or a decline: Brigade never passes a secret to a teammate. A site that signed the teammate out shows up
-  this way, as the teammate asking a person to sign it in again.
+- **Questions.** When the harness asks a person something, the thread waits and a `question` ticket opens; the
+  answer goes back as the tool's result. Claude Code uses its built-in question tool. Codex's adapter has none, so
+  Codex threads get Brigade's `ask_user` tool, which has no `execute`: `HarnessAgent` pauses the turn on it and the
+  answer continues it, with option labels rather than ids. A question asking for a secret takes options, a
+  credential picked from the vault (sent as its mention, never its value) or a decline. A site that signed the
+  teammate out shows up this way, as the teammate asking a person to sign it in again.
+- **Credentials** (`apps/api/src/credentials.ts`, `apps/runner/src/credentials.ts`). Members keep website logins,
+  databases, API keys and other secrets in the vault from the Vault page; only non-secret details (URL, username,
+  host) are ever returned. A teammate gets `list_credentials`, `use_credential` and, with a browser,
+  `fill_credential`. The API releases a secret to the thread's runner once a member mentioned the credential in
+  that thread (`@[Name](credential:id)` in a message or an answer; a webhook payload has no member, so it cannot)
+  or a person approves an approval ticket; every release is audited and listed under the credential's uses. A
+  website password is typed into the thread's own tab by `credential-fill`, running as the teammate's user, only
+  when the page's host is the credential's host or a subdomain, then Enter is pressed: the model never sees it,
+  though it could still read the field back from the page. Other kinds become a `0600` env file outside the
+  working directory (`DATABASE_URL`, `PG*`, `API_KEY`, `SECRET`), removed when the thread parks; the model gets
+  the path and variable names, and can read the file if it chooses.
 - **Watching the desktop** (`apps/api/src/desktop-proxy.ts`). A thread on the workspace computer can show its
   desktop beside it, view only, without stopping the teammate or waking a stopped computer. The provider's desktop
   URL logs in with a cookie that browsers drop inside a third-party iframe, so the API logs in itself and relays the

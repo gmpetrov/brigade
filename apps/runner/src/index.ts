@@ -89,41 +89,53 @@ async function start() {
   }
   const outbox = new Outbox(paths.outbox)
   let connection: Connection
+  // A call waiting for a person shows as an approval in its thread, then as the decision.
+  const approvalHooks = (
+    sessionId: string,
+    call: { toolCallId: string; toolName: string; input: unknown },
+  ) => {
+    const emit = (event: AgentEvent) => connection.sendEvent(outbox.push(sessionId, event))
+    return {
+      onPending: (ticketId: string, reason?: string) =>
+        emit({
+          at: new Date().toISOString(),
+          type: 'approval.requested',
+          approvalId: ticketId,
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          input: call.input,
+          ...(reason ? { reason } : {}),
+        }),
+      onDecision: (d: { ticketId: string; approved: boolean; memberId: string }) =>
+        emit({
+          at: new Date().toISOString(),
+          type: 'approval.resolved',
+          approvalId: d.ticketId,
+          approved: d.approved,
+          memberId: d.memberId,
+        }),
+    }
+  }
   const threads = new Threads({
     concurrency: Number(values.concurrency),
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     // Connector calls go to the API. A write waiting for a person shows as an approval in the thread.
-    callConnector: (sessionId, call) => {
-      const emit = (event: AgentEvent) => connection.sendEvent(outbox.push(sessionId, event))
-      return connection.callConnector(
+    callConnector: (sessionId, call) =>
+      connection.callConnector(
         {
           sessionId,
           connectionId: call.connectionId,
           operation: call.operation,
           input: call.input,
         },
-        {
-          onPending: (ticketId, reason) =>
-            emit({
-              at: new Date().toISOString(),
-              type: 'approval.requested',
-              approvalId: ticketId,
-              toolCallId: call.toolCallId,
-              toolName: call.toolName,
-              input: call.input,
-              ...(reason ? { reason } : {}),
-            }),
-          onDecision: (d) =>
-            emit({
-              at: new Date().toISOString(),
-              type: 'approval.resolved',
-              approvalId: d.ticketId,
-              approved: d.approved,
-              memberId: d.memberId,
-            }),
-        },
-      )
-    },
+        approvalHooks(sessionId, call),
+      ),
+    // So do credentials: released once a member mentioned them in the thread, or a person approves.
+    requestCredential: (sessionId, { toolCallId, toolName, input, ...request }) =>
+      connection.requestCredential(
+        { sessionId, ...request },
+        approvalHooks(sessionId, { toolCallId, toolName, input }),
+      ),
   })
   const accounts = new Accounts({
     prompt: (loginId, prompt) =>

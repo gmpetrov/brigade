@@ -1,5 +1,6 @@
 // Messages on the one WebSocket between a runner and the API.
 import { z } from 'zod'
+import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent } from './events.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
@@ -115,6 +116,21 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     operation: z.string(),
     input: z.unknown(),
   }),
+  /**
+   * A teammate lists the workspace's credentials (never their secrets), or asks
+   * for one to use. The API releases it once a member mentioned it in the thread
+   * or approved the request. Answered like a connector call.
+   */
+  z.object({
+    type: z.literal('credential.request'),
+    callId: z.string(),
+    sessionId: z.string(),
+    action: z.enum(['list', 'release']),
+    credentialId: z.string().optional(),
+    use: CredentialUse.optional(),
+    /** Shown to the person approving, e.g. the page the password goes into. */
+    purpose: z.string().max(500).optional(),
+  }),
 ])
 export type RunnerToApi = z.infer<typeof RunnerToApi>
 
@@ -201,7 +217,7 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     data: z.string().max(65_536),
   }),
   z.object({ type: z.literal('terminal.close'), terminalId: z.string() }),
-  /** The connector call waits for a person's approval (ticket). */
+  /** The connector call (or credential request) waits for a person's approval (ticket). */
   z.object({
     type: z.literal('connector.pending'),
     callId: z.string(),
@@ -210,6 +226,7 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     /** Why a person must decide, when it is not the usual approval, e.g. a reached cap. */
     reason: z.string().optional(),
   }),
+  /** Answers a connector call or a credential request. A released credential's secret is in output. */
   z.object({
     type: z.literal('connector.result'),
     callId: z.string(),

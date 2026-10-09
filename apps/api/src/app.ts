@@ -10,6 +10,7 @@ import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
+import { credentials } from './routes/credentials.js'
 import { tickets } from './routes/tickets.js'
 import { inboundWebhooks, webhooks } from './routes/webhooks.js'
 import { runnerInstall } from './routes/runner-install.js'
@@ -32,6 +33,7 @@ app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)
 app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
+app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
 app.route('/api/webhooks', webhooks)
 app.route('/api/threads', threads)

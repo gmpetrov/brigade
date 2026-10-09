@@ -160,7 +160,7 @@ export async function handleConnectorCall(
         target,
         ...(reason ? { reason } : {}),
       })
-      const decided = await new Promise<Decision>((resolve) => waiting.set(ticket.id, resolve))
+      const decided = await awaitDecision(ticket.id)
       decision = { ...decided, ticketId: ticket.id }
       if (!decided.approved) {
         await record({
@@ -253,6 +253,10 @@ async function runOperation(
 
 /** Whether a connector call is waiting on this ticket in this process. */
 export const isWaiting = (ticketId: string) => waiting.has(ticketId)
+
+/** Wait in this process for a person to decide an approval ticket (see decideTicket). */
+export const awaitDecision = (ticketId: string) =>
+  new Promise<Decision>((resolve) => waiting.set(ticketId, resolve))
 
 /**
  * A person approves or denies a connector write. Returns false when the call

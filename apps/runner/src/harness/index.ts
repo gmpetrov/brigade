@@ -11,13 +11,27 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { accountEnv } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
+import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
-import { errorMessage, EventMapper, QUESTION_TOOL } from './events.js'
+import {
+  askUserQuestions,
+  askUserResult,
+  errorMessage,
+  EventMapper,
+  QUESTION_TOOL,
+} from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
-import { connectorTools, type ConnectorCaller } from './tools.js'
+import {
+  ASK_USER_TOOL,
+  askUserTool,
+  connectorTools,
+  credentialTools,
+  type ConnectorCaller,
+} from './tools.js'
 
 export type { ConnectorCaller } from './tools.js'
+export type { CredentialRequester } from '../credentials.js'
 
 export { stripApiKeys } from './env.js'
 
@@ -44,18 +58,24 @@ const TRANSCRIPT_CHARS = 40_000
 function createAgent(
   spec: ThreadSpec,
   callConnector: ConnectorCaller,
+  credentials: ThreadCredentials,
   mcpServers: Record<string, unknown>,
 ) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
   const settings = { auth: {}, mcpServers }
-  const harness =
-    spec.teammate.harness === 'codex' ? createCodex(settings) : createClaudeCode(settings)
-  const tools = connectorTools(spec.connectors, callConnector)
+  const codex = spec.teammate.harness === 'codex'
+  const harness = codex ? createCodex(settings) : createClaudeCode(settings)
+  const tools = {
+    ...connectorTools(spec.connectors, callConnector),
+    ...credentialTools(credentials),
+    // Claude Code asks with its own question tool; Codex's adapter has none.
+    ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
+  }
   return new HarnessAgent({
     harness,
     tools,
-    // The API is the enforcement point for connector calls; the harness does not ask again.
+    // The API is the enforcement point for connector calls and credentials; the harness does not ask again.
     toolApproval: Object.fromEntries(
       Object.keys(tools).map((name) => [name, 'not-applicable' as const]),
     ),
@@ -72,6 +92,7 @@ type Live = {
   session: HarnessAgentSession
   sandbox: ReturnType<typeof createLocalSandboxSession>
   account: AccountRef
+  credentials: ThreadCredentials
 }
 
 /** One thread: one harness session in its own working directory. */
@@ -89,6 +110,8 @@ export class HarnessThread {
     private readonly emitEvent: (event: AgentEvent) => void,
     /** Forwards connector tool calls to the API. */
     private readonly callConnector: ConnectorCaller,
+    /** Asks the API for the vault's credentials. */
+    private readonly requestCredential: CredentialRequester,
     /** On a cloud computer: the teammate's Linux user, which runs the harness. */
     private readonly runAs?: string,
   ) {
@@ -139,6 +162,7 @@ export class HarnessThread {
       await this.persist()
     } finally {
       await live.sandbox.destroy()
+      await live.credentials.cleanup()
     }
   }
 
@@ -178,14 +202,7 @@ export class HarnessThread {
             ? await live.agent.continueStream({
                 session: live.session,
                 abortSignal: signal,
-                toolResultContinuations: [
-                  {
-                    type: 'tool-result',
-                    toolCallId: input.questionId,
-                    toolName: QUESTION_TOOL,
-                    output: { type: 'json', value: input.answer },
-                  },
-                ],
+                toolResultContinuations: [this.answerResult(input.questionId, input.answer)],
               })
             : await live.agent.continueStream({
                 session: live.session,
@@ -224,6 +241,21 @@ export class HarnessThread {
       this.emit({ type: 'error', message })
       await this.drop()
       return { kind: 'done', result: { status: 'failed', error: message } }
+    }
+  }
+
+  /** A person's answer as the result of the question tool that asked it. */
+  private answerResult(questionId: string, answer: QuestionAnswer) {
+    const call = this.toolCalls.get(questionId)
+    const questions = call?.toolName === ASK_USER_TOOL ? askUserQuestions(call.input) : undefined
+    return {
+      type: 'tool-result' as const,
+      toolCallId: questionId,
+      toolName: call?.toolName ?? QUESTION_TOOL,
+      output: {
+        type: 'json' as const,
+        value: (questions ? askUserResult(questions, answer) : answer) as never,
+      },
     }
   }
 
@@ -289,17 +321,21 @@ export class HarnessThread {
           return null
         })
       : null
+    const tabsFile =
+      browser && this.runAs
+        ? `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`
+        : undefined
+    const credentials = new ThreadCredentials({
+      sessionId: this.spec.sessionId,
+      request: this.requestCredential,
+      ...(this.runAs ? { runAs: this.runAs } : {}),
+      ...(browser && tabsFile ? { browser: { port: browser, tabsFile } } : {}),
+    })
     const agent = createAgent(
       this.spec,
       this.callConnector,
-      browser && this.runAs
-        ? {
-            browser: browserMcpServer(
-              browser,
-              `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`,
-            ),
-          }
-        : {},
+      credentials,
+      browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
     )
     const sandbox = createLocalSandboxSession({
       id: this.spec.sessionId,
@@ -314,7 +350,7 @@ export class HarnessThread {
       sandboxSession: sandbox,
       ...(resume ? { resumeFrom: resume as never } : {}),
     })
-    this.live = { agent, session, sandbox, account }
+    this.live = { agent, session, sandbox, account, credentials }
     this.saved = { transcript: [], ...this.saved, accountId: account.id }
     return this.live
   }

@@ -1,9 +1,23 @@
 'use client'
 import { parseMentions, type Mention } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
-import { api, type Connection, type ConnectionsResponse } from '@/lib/api'
+import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 
 export type ConnectionKind = Connection['kind']
+
+const CREDENTIAL_KINDS: Record<Credential['kind'], string> = {
+  website: 'Website',
+  database: 'Database',
+  api_key: 'API key',
+  other: 'Secret',
+}
+
+/** What a credential's menu row shows beside its name: never the secret. */
+export function credentialHint(c: Credential) {
+  const d = c.details
+  const where = d.url ? new URL(d.url).host : d.host
+  return [CREDENTIAL_KINDS[c.kind], d.username, where].filter(Boolean).join(' · ')
+}
 
 // Which service a connection is, for its icon. Loaded once per page, again when an id is new.
 let kinds: Promise<Map<string, ConnectionKind>> | undefined
@@ -123,6 +137,13 @@ export function MentionIcon({
     return (
       <svg {...line}>
         <path d="M4 5h16v11H9l-5 4z" />
+      </svg>
+    )
+  if (kind === 'credential')
+    return (
+      <svg {...line}>
+        <circle cx="8" cy="15" r="4" />
+        <path d="m11 12 9-9M17 6l3 3M14 9l2 2" />
       </svg>
     )
   if (kind === 'computer')

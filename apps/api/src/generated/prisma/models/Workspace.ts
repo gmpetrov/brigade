@@ -193,6 +193,7 @@ export type WorkspaceWhereInput = {
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
+  credentials?: Prisma.CredentialListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
@@ -218,6 +219,7 @@ export type WorkspaceOrderByWithRelationInput = {
   comments?: Prisma.CommentOrderByRelationAggregateInput
   connections?: Prisma.ConnectionOrderByRelationAggregateInput
   vaultSecrets?: Prisma.VaultSecretOrderByRelationAggregateInput
+  credentials?: Prisma.CredentialOrderByRelationAggregateInput
   grants?: Prisma.GrantOrderByRelationAggregateInput
   connectionCalls?: Prisma.ConnectionCallOrderByRelationAggregateInput
   webhooks?: Prisma.WebhookOrderByRelationAggregateInput
@@ -246,6 +248,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
+  credentials?: Prisma.CredentialListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
@@ -292,6 +295,7 @@ export type WorkspaceCreateInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -316,6 +320,7 @@ export type WorkspaceUncheckedCreateInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -340,6 +345,7 @@ export type WorkspaceUpdateInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -364,6 +370,7 @@ export type WorkspaceUncheckedUpdateInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -621,6 +628,20 @@ export type WorkspaceUpdateOneRequiredWithoutVaultSecretsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutVaultSecretsInput, Prisma.WorkspaceUpdateWithoutVaultSecretsInput>, Prisma.WorkspaceUncheckedUpdateWithoutVaultSecretsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutCredentialsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutCredentialsInput, Prisma.WorkspaceUncheckedCreateWithoutCredentialsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutCredentialsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutCredentialsInput, Prisma.WorkspaceUncheckedCreateWithoutCredentialsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutCredentialsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutCredentialsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutCredentialsInput, Prisma.WorkspaceUpdateWithoutCredentialsInput>, Prisma.WorkspaceUncheckedUpdateWithoutCredentialsInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutGrantsInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutGrantsInput, Prisma.WorkspaceUncheckedCreateWithoutGrantsInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutGrantsInput
@@ -722,6 +743,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -745,6 +767,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -805,6 +828,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -828,6 +852,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -867,6 +892,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -890,6 +916,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -913,6 +940,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -936,6 +964,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -975,6 +1004,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -998,6 +1028,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1021,6 +1052,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1044,6 +1076,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1083,6 +1116,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1106,6 +1140,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1129,6 +1164,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1152,6 +1188,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1191,6 +1228,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1214,6 +1252,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1237,6 +1276,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1260,6 +1300,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1299,6 +1340,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1322,6 +1364,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1345,6 +1388,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1368,6 +1412,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1407,6 +1452,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1430,6 +1476,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1453,6 +1500,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1476,6 +1524,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1515,6 +1564,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1538,6 +1588,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1561,6 +1612,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1584,6 +1636,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1623,6 +1676,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1646,6 +1700,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1669,6 +1724,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1692,6 +1748,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1731,6 +1788,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1754,6 +1812,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1777,6 +1836,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -1800,6 +1860,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1839,6 +1900,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -1862,6 +1924,119 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutCredentialsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutCredentialsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutCredentialsInput, Prisma.WorkspaceUncheckedCreateWithoutCredentialsInput>
+}
+
+export type WorkspaceUpsertWithoutCredentialsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutCredentialsInput, Prisma.WorkspaceUncheckedUpdateWithoutCredentialsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutCredentialsInput, Prisma.WorkspaceUncheckedCreateWithoutCredentialsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutCredentialsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutCredentialsInput, Prisma.WorkspaceUncheckedUpdateWithoutCredentialsInput>
+}
+
+export type WorkspaceUpdateWithoutCredentialsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1886,6 +2061,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
@@ -1909,6 +2085,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1948,6 +2125,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
@@ -1971,6 +2149,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1994,6 +2173,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
@@ -2017,6 +2197,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2056,6 +2237,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
@@ -2079,6 +2261,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2102,6 +2285,7 @@ export type WorkspaceCreateWithoutWebhooksInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
@@ -2125,6 +2309,7 @@ export type WorkspaceUncheckedCreateWithoutWebhooksInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2164,6 +2349,7 @@ export type WorkspaceUpdateWithoutWebhooksInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
@@ -2187,6 +2373,7 @@ export type WorkspaceUncheckedUpdateWithoutWebhooksInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2210,6 +2397,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -2233,6 +2421,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2272,6 +2461,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -2295,6 +2485,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2318,6 +2509,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -2341,6 +2533,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2380,6 +2573,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -2403,6 +2597,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2426,6 +2621,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
@@ -2449,6 +2645,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2488,6 +2685,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -2511,6 +2709,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2540,6 +2739,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
@@ -2563,6 +2763,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2594,6 +2795,7 @@ export type WorkspaceCountOutputType = {
   comments: number
   connections: number
   vaultSecrets: number
+  credentials: number
   grants: number
   connectionCalls: number
   webhooks: number
@@ -2613,6 +2815,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   comments?: boolean | WorkspaceCountOutputTypeCountCommentsArgs
   connections?: boolean | WorkspaceCountOutputTypeCountConnectionsArgs
   vaultSecrets?: boolean | WorkspaceCountOutputTypeCountVaultSecretsArgs
+  credentials?: boolean | WorkspaceCountOutputTypeCountCredentialsArgs
   grants?: boolean | WorkspaceCountOutputTypeCountGrantsArgs
   connectionCalls?: boolean | WorkspaceCountOutputTypeCountConnectionCallsArgs
   webhooks?: boolean | WorkspaceCountOutputTypeCountWebhooksArgs
@@ -2704,6 +2907,13 @@ export type WorkspaceCountOutputTypeCountVaultSecretsArgs<ExtArgs extends runtim
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountCredentialsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CredentialWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.GrantWhereInput
 }
@@ -2761,6 +2971,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
+  credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   grants?: boolean | Prisma.Workspace$grantsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Workspace$connectionCallsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Workspace$webhooksArgs<ExtArgs>
@@ -2809,6 +3020,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
+  credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   grants?: boolean | Prisma.Workspace$grantsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Workspace$connectionCallsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Workspace$webhooksArgs<ExtArgs>
@@ -2838,6 +3050,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     comments: Prisma.$CommentPayload<ExtArgs>[]
     connections: Prisma.$ConnectionPayload<ExtArgs>[]
     vaultSecrets: Prisma.$VaultSecretPayload<ExtArgs>[]
+    credentials: Prisma.$CredentialPayload<ExtArgs>[]
     grants: Prisma.$GrantPayload<ExtArgs>[]
     connectionCalls: Prisma.$ConnectionCallPayload<ExtArgs>[]
     webhooks: Prisma.$WebhookPayload<ExtArgs>[]
@@ -3256,6 +3469,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   comments<T extends Prisma.Workspace$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connections<T extends Prisma.Workspace$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   vaultSecrets<T extends Prisma.Workspace$vaultSecretsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$vaultSecretsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  credentials<T extends Prisma.Workspace$credentialsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$credentialsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CredentialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   grants<T extends Prisma.Workspace$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connectionCalls<T extends Prisma.Workspace$connectionCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   webhooks<T extends Prisma.Workspace$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3934,6 +4148,30 @@ export type Workspace$vaultSecretsArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.VaultSecretScalarFieldEnum | Prisma.VaultSecretScalarFieldEnum[]
+}
+
+/**
+ * Workspace.credentials
+ */
+export type Workspace$credentialsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Credential
+   */
+  select?: Prisma.CredentialSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Credential
+   */
+  omit?: Prisma.CredentialOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CredentialInclude<ExtArgs> | null
+  where?: Prisma.CredentialWhereInput
+  orderBy?: Prisma.CredentialOrderByWithRelationInput | Prisma.CredentialOrderByWithRelationInput[]
+  cursor?: Prisma.CredentialWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CredentialScalarFieldEnum | Prisma.CredentialScalarFieldEnum[]
 }
 
 /**

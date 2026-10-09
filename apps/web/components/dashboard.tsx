@@ -74,6 +74,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {link('/app/computers', 'Computers')}
           {link('/app/tickets', 'Tickets')}
           {link('/app/connections', 'Connections')}
+          {link('/app/vault', 'Vault')}
           {link('/app/accounts', 'Accounts')}
           <div className="section">AI teammates</div>
           {(teammates.data ?? []).map((t) => link(`/app/teammates/${t.id}`, t.name))}

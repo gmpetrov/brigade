@@ -117,11 +117,29 @@ export class Connection {
     request: Omit<Extract<RunnerToApi, { type: 'connector.call' }>, 'type' | 'callId'>,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
   ): Promise<unknown> {
+    return this.call({ type: 'connector.call', ...request }, hooks)
+  }
+
+  /** List the workspace's credentials, or ask for one. A release may wait for a person. */
+  requestCredential(
+    request: Omit<Extract<RunnerToApi, { type: 'credential.request' }>, 'type' | 'callId'>,
+    hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
+  ): Promise<unknown> {
+    return this.call({ type: 'credential.request', ...request }, hooks)
+  }
+
+  private call(
+    message: DistributiveOmit<
+      Extract<RunnerToApi, { type: 'connector.call' | 'credential.request' }>,
+      'callId'
+    >,
+    hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
+  ): Promise<unknown> {
     if (!this.ready) return Promise.reject(new Error('Not connected to Brigade; try again shortly'))
     const callId = randomUUID()
     return new Promise((resolve, reject) => {
       this.calls.set(callId, { resolve, reject, ...hooks })
-      this.send({ type: 'connector.call', callId, ...request })
+      this.send({ ...message, callId } as RunnerToApi)
     })
   }
 
@@ -134,3 +152,5 @@ export class Connection {
     this.ws?.close()
   }
 }
+
+type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never

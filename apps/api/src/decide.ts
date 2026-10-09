@@ -1,7 +1,7 @@
 // A person resolves a ticket: approves or denies an action, allows work past a
 // cap, or dismisses a notice. The Tickets page and the thread view both come here.
 import { randomUUID } from 'node:crypto'
-import type { Question, QuestionAnswer } from '@brigade/contracts'
+import { parseMentions, type Question, type QuestionAnswer } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
@@ -13,8 +13,8 @@ import { promptThread } from './work.js'
 
 /**
  * A person answers the harness's question. Answers go to the thread as its
- * next input; a question asking for a secret only takes options or a decline,
- * since secrets never reach a computer.
+ * next input; a question asking for a secret takes options, a credential from
+ * the vault (by mention, never its value) or a decline.
  */
 export async function answerQuestion(
   scope: WorkspaceScope,
@@ -42,10 +42,15 @@ export async function answerQuestion(
       const options = new Set(question.options?.map((o) => o.id) ?? [])
       if (a.optionIds.some((o) => !options.has(o)))
         throw new HTTPException(400, { message: 'Unknown option' })
-      if (a.freeform && typeof question.allowFreeForm === 'object' && question.allowFreeForm.secret)
+      if (
+        a.freeform &&
+        typeof question.allowFreeForm === 'object' &&
+        question.allowFreeForm.secret &&
+        !onlyCredentialMentions(a.freeform)
+      )
         throw new HTTPException(400, {
           message:
-            'Brigade never passes a secret to a teammate. Sign it in through its browser instead, or decline.',
+            'Brigade never passes a secret in a message. Pick a credential from the vault instead, or decline.',
         })
     }
   }
@@ -74,6 +79,15 @@ export async function answerQuestion(
     data: { ticketId: ticket.id },
   })
   return { ok: true as const, live: true }
+}
+
+/** An answer made only of credential mentions: it names vault entries, not secrets. */
+const onlyCredentialMentions = (text: string) => {
+  const parts = parseMentions(text)
+  return (
+    parts.some((p) => typeof p !== 'string') &&
+    parts.every((p) => (typeof p === 'string' ? !p.trim() : p.kind === 'credential'))
+  )
 }
 
 type TicketPayload = {
