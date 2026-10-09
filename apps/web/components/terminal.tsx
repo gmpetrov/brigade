@@ -62,8 +62,8 @@ export function Terminal({ sessionId }: { sessionId: string }) {
   }, [sessionId])
 
   return (
-    <div>
-      <div className="hint" style={{ marginBottom: 6 }}>
+    <div className="min-w-0">
+      <div className="mb-1.5 text-sm text-muted-foreground">
         Terminal{' '}
         {state === 'connecting'
           ? '(starting the computer if needed…)'
@@ -71,10 +71,8 @@ export function Terminal({ sessionId }: { sessionId: string }) {
             ? '(closed)'
             : ''}
       </div>
-      <div
-        ref={host}
-        style={{ background: '#000', padding: 6, borderRadius: 6, overflowX: 'auto' }}
-      />
+      {/* Black to match xterm's own default background. */}
+      <div ref={host} className="overflow-x-auto rounded-lg bg-black p-1.5" />
     </div>
   )
 }

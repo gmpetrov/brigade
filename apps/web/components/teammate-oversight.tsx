@@ -1,6 +1,27 @@
 'use client'
+import { RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import {
   api,
   useApi,
@@ -32,59 +53,78 @@ const hours = (seconds: number) =>
       ? `${Math.round(seconds / 60)}m`
       : `${(seconds / 3600).toFixed(1)}h`
 
-/** Daily caps and the status timeline, from the teammate's event and call logs. */
-export function TeammateOversight({
-  teammate,
-  editable,
-  onCapsChange,
-}: {
-  teammate: Teammate
-  editable: boolean
-  onCapsChange: () => void
-}) {
+const segColor: Record<TimelineState, string> = {
+  working: 'bg-primary',
+  waiting: 'bg-warning',
+  blocked: 'bg-destructive',
+  done: 'bg-muted-foreground/30',
+}
+
+/** The teammate's status timeline and today's usage, for a chosen window ending now. */
+export function useTeammateTimeline(teammateId: string) {
   const [hoursBack, setHoursBack] = useState(8)
   // The window ends now, fixed until a refresh so the request stays stable.
   const [now, setNow] = useState(() => Date.now())
   const from = new Date(now - hoursBack * 3600_000).toISOString()
   const timeline = useApi<Timeline>(
-    `/teammates/${teammate.id}/timeline?from=${encodeURIComponent(from)}&to=${encodeURIComponent(new Date(now).toISOString())}`,
+    `/teammates/${teammateId}/timeline?from=${encodeURIComponent(from)}&to=${encodeURIComponent(new Date(now).toISOString())}`,
   )
+  return {
+    timeline,
+    hoursBack,
+    setWindow: (hours: number) => {
+      setHoursBack(hours)
+      setNow(Date.now())
+    },
+    refresh: () => setNow(Date.now()),
+  }
+}
 
+/** The status timeline card, from the teammate's event and call logs. */
+export function TeammateStatus({
+  timeline,
+  hoursBack,
+  setWindow,
+  refresh,
+}: ReturnType<typeof useTeammateTimeline>) {
   return (
-    <>
-      <CapsCard
-        teammate={teammate}
-        usage={timeline.data?.usage}
-        editable={editable}
-        onSaved={() => {
-          onCapsChange()
-          setNow(Date.now())
-        }}
-      />
-      <div className="card">
-        <div className="row" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0 }}>Status</h2>
-          <div className="spacer" />
-          <select
-            aria-label="Window"
-            style={{ width: 'auto' }}
-            value={hoursBack}
-            onChange={(e) => {
-              setHoursBack(Number(e.target.value))
-              setNow(Date.now())
-            }}
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2 className="text-base font-bold">Status</h2>
+        </CardTitle>
+        <CardAction>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Refresh"
+            title="Refresh"
+            onClick={refresh}
           >
+            <RefreshCw />
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Select value={String(hoursBack)} onValueChange={(v) => setWindow(Number(v))}>
+          <SelectTrigger size="sm" aria-label="Window" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
             {WINDOWS.map((w) => (
-              <option key={w.hours} value={w.hours}>
+              <SelectItem key={w.hours} value={String(w.hours)}>
                 {w.label}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-          <button onClick={() => setNow(Date.now())}>Refresh</button>
-        </div>
-        {timeline.data ? <TimelineChart data={timeline.data} /> : <p className="hint">Loading…</p>}
-      </div>
-    </>
+          </SelectContent>
+        </Select>
+        {timeline.data ? (
+          <TimelineChart data={timeline.data} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -97,33 +137,38 @@ function TimelineChart({ data }: { data: Timeline }) {
 
   return (
     <>
-      <p className="hint" style={{ marginTop: 0 }}>
+      <ul className="flex flex-col gap-2 text-sm">
         {(['working', 'waiting', 'blocked'] as const).map((s) => (
-          <span key={s} style={{ marginRight: 14 }}>
-            <span className={`swatch ${s}`} />
-            {stateLabel[s]} {hours(data.totals[s])}
-          </span>
+          <li key={s} className="flex items-center gap-2.5">
+            <span aria-hidden className={cn('size-2.5 shrink-0 rounded-sm', segColor[s])} />
+            <span className="flex-1">{stateLabel[s]}</span>
+            <span className="font-mono">{hours(data.totals[s])}</span>
+          </li>
         ))}
-        <span>
-          <span className="swatch done" />
-          Idle between turns
-        </span>
-      </p>
+        <li className="flex items-center gap-2.5">
+          <span aria-hidden className={cn('size-2.5 shrink-0 rounded-sm', segColor.done)} />
+          <span className="flex-1">Idle between turns</span>
+        </li>
+      </ul>
       {data.threads.length === 0 ? (
-        <p className="hint">No activity in this window.</p>
+        <p className="text-sm text-muted-foreground">No activity in this window.</p>
       ) : (
-        <div className="timeline">
+        <div className="grid grid-cols-[minmax(4rem,8rem)_1fr] items-center gap-x-3 gap-y-1.5 text-xs">
           {data.threads.map((t) => (
-            <div key={t.id} style={{ display: 'contents' }}>
-              <Link className="label" href={`/app/threads/${t.id}`} title={t.title}>
+            <div key={t.id} className="contents">
+              <Link
+                className="truncate hover:text-primary hover:underline"
+                href={`/app/threads/${t.id}`}
+                title={t.title}
+              >
                 {t.origin === 'webhook' ? '↪ ' : ''}
                 {t.title}
               </Link>
-              <div className="track">
+              <div className="relative h-3.5 overflow-hidden rounded-sm bg-muted">
                 {t.segments.map((s, i) => (
                   <div
                     key={i}
-                    className={`seg ${s.state}`}
+                    className={cn('absolute inset-y-0 min-w-0.5', segColor[s.state])}
                     title={`${stateLabel[s.state]}${s.note ? ` (${s.note})` : ''}: ${new Date(s.from).toLocaleString()} to ${new Date(s.to).toLocaleTimeString()}`}
                     style={{
                       left: `${pct(s.from)}%`,
@@ -135,7 +180,7 @@ function TimelineChart({ data }: { data: Timeline }) {
             </div>
           ))}
           <div />
-          <div className="axis">
+          <div className="flex justify-between font-mono text-[0.65rem] text-muted-foreground">
             {ticks.map((d) => (
               <span key={d.getTime()}>
                 {short
@@ -150,7 +195,8 @@ function TimelineChart({ data }: { data: Timeline }) {
   )
 }
 
-function CapsCard({
+/** Daily caps and today's usage against them. */
+export function TeammateCaps({
   teammate,
   usage,
   editable,
@@ -198,70 +244,106 @@ function CapsCard({
   const writes = Object.entries(usage?.writeCalls ?? {})
 
   return (
-    <div className="card">
-      <div className="row" style={{ marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Daily caps</h2>
-        <div className="spacer" />
-        {editable && !editing && <button onClick={() => setEditing(true)}>Edit caps</button>}
-      </div>
-      <p className="hint" style={{ marginTop: 0 }}>
-        Reaching a cap pauses {teammate.name}&apos;s new work and opens a ticket for an admin. Days
-        start at midnight UTC. Empty means no cap.
-      </p>
-      {editing ? (
-        <form action={save} className="stack">
-          <div className="row" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <CapField name="threadsPerDay" label="Threads started" value={caps.threadsPerDay} />
-            <CapField
-              name="computerHoursPerDay"
-              label="Computer hours"
-              value={caps.computerHoursPerDay}
-              step="0.25"
-              max={24}
-            />
-            <CapField
-              name="writeCallsPerConnectionPerDay"
-              label="Write calls per connection"
-              value={caps.writeCallsPerConnectionPerDay}
-            />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2 className="text-base font-bold">Daily caps</h2>
+        </CardTitle>
+        <CardDescription className="leading-relaxed">
+          Reaching a cap pauses {teammate.name}&apos;s new work and opens a ticket for an admin.
+          Days start at midnight UTC. Empty means no cap.
+        </CardDescription>
+        {editable && !editing && (
+          <CardAction>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              Edit caps
+            </Button>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent>
+        {editing ? (
+          <form action={save} className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <CapField name="threadsPerDay" label="Threads started" value={caps.threadsPerDay} />
+              <CapField
+                name="computerHoursPerDay"
+                label="Computer hours"
+                value={caps.computerHoursPerDay}
+                step="0.25"
+                max={24}
+              />
+              <CapField
+                name="writeCallsPerConnectionPerDay"
+                label="Write calls per connection"
+                value={caps.writeCallsPerConnectionPerDay}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {error && <span className="text-sm text-destructive-text">{error}</span>}
+              <div className="flex-1" />
+              <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save caps</Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
+              <StatTile
+                label="Threads started today"
+                value={usage?.threads}
+                limit={of(caps.threadsPerDay)}
+              />
+              <StatTile
+                label="Computer hours today"
+                value={usage?.computerHours}
+                limit={of(caps.computerHoursPerDay)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Write calls per connection today
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {writes.length === 0 ? (
+                  <Badge variant="secondary">0{of(caps.writeCallsPerConnectionPerDay)}</Badge>
+                ) : (
+                  writes.map(([id, n]) => (
+                    <Badge key={id} variant="secondary">
+                      {label(id)}: {n}
+                      {of(caps.writeCallsPerConnectionPerDay)}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-          <div className="row">
-            {error && <span className="error">{error}</span>}
-            <div className="spacer" />
-            <button type="button" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-            <button className="primary">Save caps</button>
-          </div>
-        </form>
-      ) : (
-        <ul className="list">
-          <li>
-            <span style={{ flex: 1 }}>Threads started today</span>
-            <span>
-              {usage?.threads ?? '…'}
-              {of(caps.threadsPerDay)}
-            </span>
-          </li>
-          <li>
-            <span style={{ flex: 1 }}>Computer hours today</span>
-            <span>
-              {usage?.computerHours ?? '…'}
-              {of(caps.computerHoursPerDay)}
-            </span>
-          </li>
-          <li>
-            <span style={{ flex: 1 }}>Write calls per connection today</span>
-            <span>
-              {writes.length === 0
-                ? `0${of(caps.writeCallsPerConnectionPerDay)}`
-                : writes
-                    .map(([id, n]) => `${label(id)}: ${n}${of(caps.writeCallsPerConnectionPerDay)}`)
-                    .join(', ')}
-            </span>
-          </li>
-        </ul>
-      )}
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatTile({
+  label,
+  value,
+  limit,
+}: {
+  label: string
+  value: number | undefined
+  limit: string
+}) {
+  return (
+    <div className="flex flex-col gap-1 rounded-md bg-secondary px-4 py-3.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-2xl font-extrabold">
+        {value ?? '…'}
+        {limit && (
+          <span className="ml-1 text-sm font-medium text-muted-foreground">{limit.trim()}</span>
+        )}
+      </span>
     </div>
   )
 }
@@ -280,9 +362,9 @@ function CapField({
   max?: number
 }) {
   return (
-    <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
-      <label htmlFor={name}>{label}</label>
-      <input
+    <div className="flex flex-[1_1_10rem] flex-col gap-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
         id={name}
         name={name}
         type="number"

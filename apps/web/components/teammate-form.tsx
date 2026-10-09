@@ -1,5 +1,12 @@
 'use client'
+import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
 import type { Teammate } from '@/lib/api'
 
 export type TeammateInput = {
@@ -8,6 +15,9 @@ export type TeammateInput = {
   harness: 'claude_code' | 'codex'
   model: string | null
 }
+
+const optionClass =
+  'flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-4 leading-normal font-normal transition-colors hover:bg-secondary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5'
 
 export function TeammateForm({
   initial,
@@ -40,45 +50,71 @@ export function TeammateForm({
   }
 
   return (
-    <form action={submit} className="card">
-      <div className="field">
-        <label htmlFor="name">Name</label>
-        <input id="name" name="name" defaultValue={initial?.name} placeholder="Riley" required />
-      </div>
-      <div className="field">
-        <label htmlFor="instructions">Role instructions</label>
-        <textarea
-          id="instructions"
-          name="instructions"
-          rows={6}
-          defaultValue={initial?.instructions}
-          placeholder="You handle customer support for Acme. Answer from the docs, be brief, and escalate refunds."
-        />
-      </div>
-      <div className="field">
-        <label htmlFor="harness">Agent</label>
-        <select id="harness" name="harness" defaultValue={initial?.harness ?? 'claude_code'}>
-          <option value="claude_code">Claude Agent</option>
-          <option value="codex">Codex</option>
-        </select>
-        <p className="hint">
-          Codex cannot ask before running commands or editing files, so its threads run them without
-          asking.
-        </p>
-      </div>
-      <div className="field">
-        <label htmlFor="model">Model</label>
-        <input
-          id="model"
-          name="model"
-          defaultValue={initial?.model ?? ''}
-          placeholder="Default for the account"
-        />
-      </div>
-      {error && <p className="error">{error}</p>}
-      <button className="primary" disabled={busy}>
-        {submitLabel}
-      </button>
-    </form>
+    <Card className="w-full max-w-2xl">
+      <CardContent>
+        <form action={submit} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              name="name"
+              defaultValue={initial?.name}
+              placeholder="Riley"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="instructions">Role instructions</Label>
+            <Textarea
+              id="instructions"
+              name="instructions"
+              rows={6}
+              defaultValue={initial?.instructions}
+              placeholder="You handle customer support for Acme. Answer from the docs, be brief, and escalate refunds."
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label id="harness-label">Agent</Label>
+            <RadioGroup
+              name="harness"
+              aria-labelledby="harness-label"
+              defaultValue={initial?.harness ?? 'claude_code'}
+              className="grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]"
+            >
+              <Label htmlFor="harness-claude_code" className={optionClass}>
+                <RadioGroupItem id="harness-claude_code" value="claude_code" className="mt-0.5" />
+                <span className="font-bold">Claude Agent</span>
+              </Label>
+              <Label htmlFor="harness-codex" className={optionClass}>
+                <RadioGroupItem id="harness-codex" value="codex" className="mt-0.5" />
+                <span className="flex flex-col gap-2">
+                  <span className="font-bold">Codex</span>
+                  <span className="flex items-start gap-1.5 rounded-md bg-warning/10 px-2 py-1.5 text-xs text-warning">
+                    <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                    Codex cannot ask before running commands or editing files, so its threads run
+                    them without asking.
+                  </span>
+                </span>
+              </Label>
+            </RadioGroup>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="model">Model</Label>
+            <Input
+              id="model"
+              name="model"
+              defaultValue={initial?.model ?? ''}
+              placeholder="Default for the account"
+            />
+          </div>
+          {error && <p className="text-sm text-destructive-text">{error}</p>}
+          <div className="flex justify-end border-t pt-5">
+            <Button type="submit" disabled={busy}>
+              {submitLabel}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

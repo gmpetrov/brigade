@@ -1,9 +1,50 @@
 'use client'
+import {
+  ChevronsUpDown,
+  Inbox,
+  KeyRound,
+  LogOut,
+  MessagesSquare,
+  Monitor,
+  Plug,
+  Plus,
+  UserRound,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, useApi, type Me, type Teammate } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+
+export { StatusBadge } from '@/components/status-badge'
 
 type Dashboard = { me: Me; teammates: Teammate[]; reloadTeammates: () => Promise<void> }
 const DashboardContext = createContext<Dashboard | null>(null)
@@ -15,6 +56,33 @@ export function useDashboard() {
 }
 
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
+
+const NAV = [
+  { href: '/app', label: 'Threads', icon: MessagesSquare },
+  { href: '/app/computers', label: 'Computers', icon: Monitor },
+  { href: '/app/tickets', label: 'Tickets', icon: Inbox },
+  { href: '/app/connections', label: 'Connections', icon: Plug },
+  { href: '/app/vault', label: 'Vault', icon: KeyRound },
+  { href: '/app/accounts', label: 'Accounts', icon: UserRound },
+]
+
+const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
+
+export function TeammateAvatar({ teammate, className }: { teammate: Pick<Teammate, 'name' | 'harness'>; className?: string }) {
+  return (
+    <Avatar className={className ?? 'size-6'}>
+      <AvatarFallback
+        className={
+          teammate.harness === 'codex'
+            ? 'bg-accent text-accent-foreground text-[0.7em] font-bold'
+            : 'bg-primary/15 text-primary text-[0.7em] font-bold'
+        }
+      >
+        {initial(teammate.name)}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter()
@@ -28,8 +96,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     else if (me.data && !me.data.activeWorkspaceId) router.replace('/onboarding')
   }, [me.data, me.error, router])
 
-  if (!me.data?.activeWorkspaceId) return <main className="narrow hint">Loading…</main>
+  if (!me.data?.activeWorkspaceId)
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <Skeleton className="h-6 w-40" />
+      </div>
+    )
   const data = me.data
+  const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
+  const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
 
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
@@ -41,70 +116,134 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     router.replace('/sign-in')
   }
 
-  const link = (href: string, label: string) => (
-    <Link key={href} href={href} className={pathname === href ? 'active' : ''}>
-      {label}
-    </Link>
-  )
-
   return (
     <DashboardContext.Provider
       value={{ me: data, teammates: teammates.data ?? [], reloadTeammates: teammates.reload }}
     >
-      <div className="shell">
-        <nav className="sidebar">
-          <select
-            aria-label="Workspace"
-            value={data.activeWorkspaceId ?? ''}
-            onChange={(e) =>
-              e.target.value === '+'
-                ? router.push('/onboarding')
-                : void switchWorkspace(e.target.value)
-            }
-          >
-            {data.workspaces.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-            {isAdmin(data) && <option value="+">New workspace…</option>}
-          </select>
-          <div className="section">Workspace</div>
-          {link('/app', 'Threads')}
-          {link('/app/computers', 'Computers')}
-          {link('/app/tickets', 'Tickets')}
-          {link('/app/connections', 'Connections')}
-          {link('/app/vault', 'Vault')}
-          {link('/app/accounts', 'Accounts')}
-          <div className="section">AI teammates</div>
-          {(teammates.data ?? []).map((t) => link(`/app/teammates/${t.id}`, t.name))}
-          {isAdmin(data) && link('/app/teammates/new', '+ New teammate')}
-          <div className="spacer" />
-          <div className="hint" style={{ padding: '0 10px' }}>
-            {data.user.name} ·{' '}
-            {data.organizations.find((o) => o.id === data.activeOrganizationId)?.name}
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
+                      <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-sm font-bold">
+                        {initial(workspace?.name ?? '')}
+                      </span>
+                      <span className="grid flex-1 text-left leading-tight">
+                        <span className="truncate font-semibold">{workspace?.name}</span>
+                        <span className="text-muted-foreground truncate text-xs">
+                          {organization?.name}
+                        </span>
+                      </span>
+                      <ChevronsUpDown className="ml-auto" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-56">
+                    <DropdownMenuLabel className="text-muted-foreground text-xs">Workspaces</DropdownMenuLabel>
+                    {data.workspaces.map((w) => (
+                      <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
+                        <span className="bg-secondary flex size-6 items-center justify-center rounded-sm text-xs font-bold">
+                          {initial(w.name)}
+                        </span>
+                        {w.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {isAdmin(data) && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
+                          <Plus /> New workspace
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {NAV.map(({ href, label, icon: Icon }) => (
+                    <SidebarMenuItem key={href}>
+                      <SidebarMenuButton asChild isActive={pathname === href}>
+                        <Link href={href}>
+                          <Icon />
+                          <span>{label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>AI teammates</SidebarGroupLabel>
+              {isAdmin(data) && (
+                <SidebarGroupAction asChild title="New teammate">
+                  <Link href="/app/teammates/new">
+                    <Plus />
+                    <span className="sr-only">New teammate</span>
+                  </Link>
+                </SidebarGroupAction>
+              )}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {(teammates.data ?? []).map((t) => {
+                    const href = `/app/teammates/${t.id}`
+                    return (
+                      <SidebarMenuItem key={t.id}>
+                        <SidebarMenuButton asChild isActive={pathname === href}>
+                          <Link href={href}>
+                            <TeammateAvatar teammate={t} className="size-5" />
+                            <span>{t.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter>
+            <div className="bg-card flex items-center gap-2 rounded-lg border p-2">
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-secondary text-xs font-bold">
+                  {initial(data.user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid min-w-0 flex-1 leading-tight">
+                <span className="truncate text-sm font-semibold">{data.user.name}</span>
+                <span className="text-muted-foreground truncate text-xs">{organization?.name}</span>
+              </div>
+              <ThemeToggle />
+              <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={signOut}>
+                <LogOut />
+              </Button>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset>
+          <header className="flex h-12 items-center gap-2 px-4 md:hidden">
+            <SidebarTrigger />
+            <span className="font-semibold">{workspace?.name}</span>
+          </header>
+          <div className="mx-auto w-full max-w-5xl min-w-0 px-4 pt-6 pb-16 md:px-10 md:pt-10">
+            {children}
           </div>
-          <button onClick={signOut} style={{ margin: '4px 10px 0' }}>
-            Sign out
-          </button>
-        </nav>
-        <main className="main">{children}</main>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     </DashboardContext.Provider>
   )
-}
-
-export function StatusBadge({ status }: { status: string }) {
-  const tone =
-    status === 'idle' || status === 'done'
-      ? 'ok'
-      : status === 'waiting'
-        ? 'warn'
-        : status === 'failed'
-          ? 'danger'
-          : ''
-  const label = status === 'waiting' ? 'needs approval' : status
-  return <span className={`badge ${tone}`}>{label}</span>
 }
 
 export function timeAgo(iso: string) {

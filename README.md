@@ -42,6 +42,25 @@ node apps/runner/dist/index.js start
 The runner keeps its token, event outbox and harness state in `~/.brigade` (override with `BRIGADE_HOME`).
 It strips `ANTHROPIC_*` and other API-key variables at startup, so Claude Code runs on your subscription login.
 
+### Theme
+
+The web app uses [shadcn/ui](https://ui.shadcn.com) on Tailwind v4. Its palette, fonts, radius, spacing and shadows
+come from one [tweakcn](https://tweakcn.com) theme (Violet Bloom by default). To switch, pass a theme name or any
+tweakcn URL:
+
+```bash
+pnpm --filter @brigade/web theme violet-bloom
+```
+
+```bash
+pnpm --filter @brigade/web theme "https://tweakcn.com/editor/theme?theme=amethyst-haze"
+```
+
+This rewrites `apps/web/app/theme.css` and `apps/web/app/theme-fonts.ts` only. `app/globals.css` maps the theme into
+Tailwind and adds Brigade's status colors (`success`, `warning`, `destructive-text`); components in
+`apps/web/components/ui` use theme tokens only, so nothing else changes. Light, dark or system is the user's choice
+from the sidebar.
+
 ### Spike (build step 1)
 
 `pnpm --filter @brigade/runner spike [workdir]` runs Claude Code through `HarnessAgent` with the bridge on this

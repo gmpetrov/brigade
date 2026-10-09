@@ -1,8 +1,16 @@
 'use client'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
+import { StatusBadge } from '@/components/status-badge'
+import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { useApi, type RunLog, type RunLogEntry, type Thread } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 const SOURCES: { value: RunLogEntry['source']; label: string }[] = [
   { value: 'event', label: 'Thread' },
@@ -33,7 +41,11 @@ export default function RunLogPage() {
   const [usage, setUsage] = useState(false)
 
   if (!log.data || !thread.data)
-    return <p className={log.error ? 'error' : 'hint'}>{log.error?.message ?? 'Loading…'}</p>
+    return (
+      <p className={cn('text-sm', log.error ? 'text-destructive-text' : 'text-muted-foreground')}>
+        {log.error?.message ?? 'Loading…'}
+      </p>
+    )
   const t = thread.data
   const members = log.data.members
   const who = (memberId: unknown) =>
@@ -47,14 +59,16 @@ export default function RunLogPage() {
         actor: teammate,
         what: (
           <>
-            <code>{String(d.operation)}</code> on {String(d.connection)}: {String(d.target)}{' '}
-            <span
-              className={`badge ${e.type === 'ok' ? 'ok' : e.type === 'denied' ? 'warn' : 'danger'}`}
-            >
-              {e.type}
-            </span>
-            {Boolean(d.write) && <span className="badge warn"> write</span>}
-            {typeof d.error === 'string' && <span className="hint"> {d.error}</span>}
+            <code className="font-mono text-xs">{String(d.operation)}</code> on{' '}
+            {String(d.connection)}: {String(d.target)}{' '}
+            <StatusBadge
+              status={e.type}
+              tone={e.type === 'ok' ? 'success' : e.type === 'denied' ? 'warning' : 'destructive'}
+            />
+            {Boolean(d.write) && <StatusBadge status="write" tone="warning" className="ml-1" />}
+            {typeof d.error === 'string' && (
+              <span className="text-muted-foreground"> {d.error}</span>
+            )}
           </>
         ),
       }
@@ -116,7 +130,10 @@ export default function RunLogPage() {
             actor: teammate,
             what: (
               <>
-                Visited <code>{clip((d.input as { url: string }).url, 200)}</code>
+                Visited{' '}
+                <code className="font-mono text-xs">
+                  {clip((d.input as { url: string }).url, 200)}
+                </code>
               </>
             ),
             detail: d.input,
@@ -125,7 +142,7 @@ export default function RunLogPage() {
           actor: teammate,
           what: (
             <>
-              Called <code>{String(d.toolName)}</code>
+              Called <code className="font-mono text-xs">{String(d.toolName)}</code>
             </>
           ),
           detail: d.input,
@@ -135,7 +152,8 @@ export default function RunLogPage() {
           actor: teammate,
           what: (
             <>
-              <code>{String(d.toolName)}</code> {d.isError ? 'failed' : 'finished'}
+              <code className="font-mono text-xs">{String(d.toolName)}</code>{' '}
+              {d.isError ? 'failed' : 'finished'}
             </>
           ),
           detail: d.output,
@@ -145,8 +163,10 @@ export default function RunLogPage() {
           actor: teammate,
           what: (
             <>
-              Asked to run <code>{String(d.toolName)}</code>
-              {typeof d.reason === 'string' && <span className="hint"> · {d.reason}</span>}
+              Asked to run <code className="font-mono text-xs">{String(d.toolName)}</code>
+              {typeof d.reason === 'string' && (
+                <span className="text-muted-foreground"> · {d.reason}</span>
+              )}
             </>
           ),
           detail: d.input,
@@ -161,7 +181,7 @@ export default function RunLogPage() {
           actor: teammate,
           what: (
             <>
-              Changed <code>{String(d.path)}</code>
+              Changed <code className="font-mono text-xs">{String(d.path)}</code>
             </>
           ),
         }
@@ -177,7 +197,7 @@ export default function RunLogPage() {
           actor: who(d.memberId) ?? 'a member',
           what: (
             <>
-              Ran <code>{clip(d.command, 200)}</code>
+              Ran <code className="font-mono text-xs">{clip(d.command, 200)}</code>
             </>
           ),
         }
@@ -208,10 +228,17 @@ export default function RunLogPage() {
       case 'usage.updated':
         return { actor: teammate, what: 'Usage updated', detail: d }
       case 'error':
-        return { actor: teammate, what: <span className="error">{String(d.message)}</span> }
+        return {
+          actor: teammate,
+          what: <span className="text-destructive-text">{String(d.message)}</span>,
+        }
       case 'raw':
         return d.source === 'reasoning'
-          ? { actor: teammate, what: <span className="hint">Thinking</span>, detail: d.value }
+          ? {
+              actor: teammate,
+              what: <span className="text-muted-foreground">Thinking</span>,
+              detail: d.value,
+            }
           : { actor: 'Runner', what: clip(d.value), detail: d.value }
       default:
         return { actor: 'Runner', what: e.type, detail: d }
@@ -223,76 +250,88 @@ export default function RunLogPage() {
   )
 
   return (
-    <div className="stack">
-      <div>
-        <Link href={`/app/threads/${id}`} className="hint">
-          ← {t.title}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1.5">
+        <Link
+          href={`/app/threads/${id}`}
+          className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="size-4 flex-none" aria-hidden />
+          <span className="truncate">{t.title}</span>
         </Link>
-        <h1 style={{ margin: '4px 0 0' }}>Run log</h1>
-        <p className="hint">
+        <h1 className="text-2xl font-extrabold tracking-tight">Run log</h1>
+        <p className="text-sm text-muted-foreground">
           Everything that happened in this thread, in order: messages, tool calls, approvals and who
           gave them, connector calls and files changed.
         </p>
       </div>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {SOURCES.map((s) => (
-          <label key={s.value} className="row hint" style={{ fontWeight: 400 }}>
-            <input
-              type="checkbox"
-              style={{ width: 'auto' }}
+          <Label key={s.value} className="font-normal text-muted-foreground">
+            <Checkbox
               checked={sources.has(s.value)}
-              onChange={(e) => {
+              onCheckedChange={(checked) => {
                 const next = new Set(sources)
-                if (e.target.checked) next.add(s.value)
+                if (checked === true) next.add(s.value)
                 else next.delete(s.value)
                 setSources(next)
               }}
             />
             {s.label}
-          </label>
+          </Label>
         ))}
-        <label className="row hint" style={{ fontWeight: 400 }}>
-          <input
-            type="checkbox"
-            style={{ width: 'auto' }}
-            checked={usage}
-            onChange={(e) => setUsage(e.target.checked)}
-          />
+        <Label className="font-normal text-muted-foreground">
+          <Checkbox checked={usage} onCheckedChange={(checked) => setUsage(checked === true)} />
           Usage updates
-        </label>
+        </Label>
       </div>
       {entries.length === 0 ? (
-        <p className="hint">Nothing yet.</p>
+        <p className="text-sm text-muted-foreground">Nothing yet.</p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="log">
-            <tbody>
+        <Card className="gap-0 overflow-hidden py-0">
+          <Table>
+            <TableBody>
               {entries.map((e, i) => {
                 const { actor, what, detail } = describe(e)
                 return (
-                  <tr key={`${e.source}${e.seq ?? ''}${i}`}>
-                    <td className="hint" title={new Date(e.at).toLocaleString()}>
+                  <TableRow key={`${e.source}${e.seq ?? ''}${i}`} className="hover:bg-transparent">
+                    <TableCell
+                      className="w-0 py-2.5 pl-4 align-top font-mono text-xs text-muted-foreground"
+                      title={new Date(e.at).toLocaleString()}
+                    >
                       {new Date(e.at).toLocaleTimeString()}
-                    </td>
-                    <td>{actor}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell className="w-0 py-2.5 align-top text-muted-foreground">
+                      {actor}
+                    </TableCell>
+                    <TableCell className="min-w-64 py-2.5 pr-4 align-top whitespace-normal wrap-anywhere">
                       {detail === undefined ? (
                         what
                       ) : (
-                        <details className="tool">
-                          <summary>{what}</summary>
-                          <pre>
-                            {typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2)}
-                          </pre>
-                        </details>
+                        <Collapsible>
+                          <CollapsibleTrigger className="group flex items-start gap-1 text-left">
+                            <ChevronRight
+                              className="mt-0.5 size-4 flex-none text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+                              aria-hidden
+                            />
+                            <span className="min-w-0">{what}</span>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere">
+                              {typeof detail === 'string'
+                                ? detail
+                                : JSON.stringify(detail, null, 2)}
+                            </pre>
+                          </CollapsibleContent>
+                        </Collapsible>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   )

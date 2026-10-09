@@ -2,6 +2,7 @@
 import { parseMentions, type Mention } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 export type ConnectionKind = Connection['kind']
 
@@ -48,14 +49,23 @@ function useConnectionKind(mention: Mention, known?: ConnectionKind) {
 export function MentionChip({
   mention,
   connectionKind,
+  className,
 }: {
   mention: Mention
   connectionKind?: ConnectionKind
+  className?: string
 }) {
   const kind = useConnectionKind(mention, connectionKind)
-  if (mention.kind === 'teammate') return <strong className="mention-name">@{mention.label}</strong>
+  if (mention.kind === 'teammate')
+    return <strong className={cn('font-semibold', className)}>@{mention.label}</strong>
   return (
-    <span className="mention-chip" data-kind={mention.kind}>
+    <span
+      data-kind={mention.kind}
+      className={cn(
+        'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground',
+        className,
+      )}
+    >
       <MentionIcon kind={mention.kind} connectionKind={kind} />
       {mention.label}
     </span>

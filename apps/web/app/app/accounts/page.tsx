@@ -1,5 +1,21 @@
 'use client'
 import { useState } from 'react'
+import { ShieldCheck } from 'lucide-react'
+import { StatusBadge } from '@/components/status-badge'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import {
   api,
   harnessLabel,
@@ -55,59 +71,89 @@ export default function Accounts() {
     (accounts.data ?? []).filter((a) => a.provider === provider)
 
   return (
-    <div className="stack">
-      <h1>Accounts</h1>
-      <p className="hint">
-        Your Claude and Codex subscriptions. Add several of each: when one runs out of usage, your
-        threads continue on the next. Accounts are yours alone; nobody else&apos;s threads use them.
-        Brigade never sees your password or tokens: you sign in on the vendor&apos;s own page, and
-        the login stays on the computer.
-      </p>
-      {error && <p className="error">{error}</p>}
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3">
+        <h1 className="text-3xl font-extrabold tracking-tight">Accounts</h1>
+        <p className="max-w-prose text-muted-foreground">
+          Your Claude and Codex subscriptions. Add several of each: when one runs out of usage,
+          your threads continue on the next. Accounts are yours alone; nobody else&apos;s threads
+          use them.
+        </p>
+        <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm text-accent-foreground">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p>
+            Brigade never sees your password or tokens: you sign in on the vendor&apos;s own page,
+            and the login stays on the computer.
+          </p>
+        </div>
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
+      </header>
 
       {(['claude_code', 'codex'] as const).map((provider) => (
-        <section key={provider} className="stack">
-          <h2 style={{ marginTop: 16 }}>{provider === 'codex' ? 'Codex' : 'Claude'}</h2>
+        <section
+          key={provider}
+          aria-labelledby={`accounts-${provider}`}
+          className="flex flex-col gap-3"
+        >
+          <h2 id={`accounts-${provider}`} className="text-lg font-bold tracking-tight">
+            {provider === 'codex' ? 'Codex' : 'Claude'}{' '}
+            <span className="font-semibold text-muted-foreground">
+              {byProvider(provider).length}
+            </span>
+          </h2>
           {byProvider(provider).length === 0 ? (
-            <p className="hint">No {harnessLabel(provider)} accounts yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No {harnessLabel(provider)} accounts yet.
+            </p>
           ) : (
-            <ul className="list">
+            <div className="grid gap-4 md:grid-cols-2">
               {byProvider(provider).map((a) => (
-                <AccountRow key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
+                <AccountCard key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
               ))}
-            </ul>
+            </div>
           )}
         </section>
       ))}
 
-      <form action={add} className="card">
-        <h2>Add an account</h2>
-        {online.length === 0 ? (
-          <p className="hint">No computer is online.</p>
-        ) : (
-          <div className="row">
-            <select name="provider" style={{ width: 'auto' }} aria-label="Provider">
-              <option value="claude_code">Claude</option>
-              <option value="codex">Codex (ChatGPT)</option>
-            </select>
-            <span className="hint">on</span>
-            <select name="computerId" style={{ width: 'auto' }} aria-label="Computer">
-              {online.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {computerName(c)}
-                </option>
-              ))}
-            </select>
-            <div className="spacer" />
-            <button className="primary">Sign in</button>
-          </div>
-        )}
-      </form>
+      <Card className="gap-4 border-dashed p-5 shadow-none">
+        <form action={add} className="flex flex-col gap-4">
+          <h2 className="font-bold tracking-tight">Add an account</h2>
+          {online.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No computer is online.</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <Select name="provider" defaultValue="claude_code">
+                <SelectTrigger aria-label="Provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="claude_code">Claude</SelectItem>
+                  <SelectItem value="codex">Codex (ChatGPT)</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">on</span>
+              <Select name="computerId" defaultValue={online[0]?.id}>
+                <SelectTrigger aria-label="Computer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {online.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {computerName(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button className="ml-auto">Sign in</Button>
+            </div>
+          )}
+        </form>
+      </Card>
     </div>
   )
 }
 
-function AccountRow({
+function AccountCard({
   account: a,
   login,
   onAct,
@@ -122,13 +168,18 @@ function AccountRow({
     a.status === 'signing_in' && login && login.state !== 'done' && login.state !== 'failed'
 
   return (
-    <li style={{ display: 'block' }}>
-      <div className="row">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div>
-            {a.label} {a.isDefault && <span className="badge">default</span>}
-          </div>
-          <div className="hint">
+    <Card className={cn('gap-4 p-5', a.isDefault && 'border-2 border-primary')}>
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-2 font-bold">
+            {a.label}
+            {a.isDefault && (
+              <Badge variant="secondary" className="bg-primary/15 font-semibold text-primary">
+                default
+              </Badge>
+            )}
+          </span>
+          <span className="text-sm text-muted-foreground">
             {[
               a.email,
               a.plan,
@@ -137,46 +188,141 @@ function AccountRow({
             ]
               .filter(Boolean)
               .join(' · ')}
-          </div>
-          {a.lastUsage && a.lastUsage.length > 0 && (
-            <div className="hint">
-              {a.lastUsage
-                .map(
-                  (l) =>
-                    `${l.window.replace('_', ' ')} ${Math.round(l.utilization * 100)}%${l.resetsAt ? ` (resets ${resetLabel(l.resetsAt)})` : ''}`,
-                )
-                .join(' · ')}
-            </div>
-          )}
+          </span>
         </div>
         {exhausted ? (
-          <span className="badge warn">out of usage until {resetLabel(a.exhaustedUntil)}</span>
+          <StatusBadge
+            status="exhausted"
+            tone="warning"
+            label={`out of usage until ${resetLabel(a.exhaustedUntil)}`}
+          />
         ) : a.status === 'needs_sign_in' ? (
-          <span className="badge danger">needs sign-in</span>
+          <StatusBadge status="needs_sign_in" tone="destructive" label="needs sign-in" />
         ) : a.status === 'signing_in' ? (
-          <span className="badge warn">signing in</span>
+          <StatusBadge status="signing_in" tone="warning" label="signing in" />
         ) : (
-          <span className="badge ok">ready</span>
+          <StatusBadge status="ready" tone="success" />
         )}
+      </div>
+
+      {a.lastUsage && a.lastUsage.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {a.lastUsage.map((l) => {
+            const percent = Math.round(l.utilization * 100)
+            return (
+              <div key={l.window} className="flex flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="text-muted-foreground">
+                    <span className="capitalize">{l.window.replace('_', ' ')}</span>
+                    {l.resetsAt && ` · resets ${resetLabel(l.resetsAt)}`}
+                  </span>
+                  <span className="font-mono">{percent}%</span>
+                </div>
+                <Progress
+                  value={Math.min(100, Math.max(0, percent))}
+                  aria-label={`${l.window.replace('_', ' ')} usage`}
+                />
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {signingIn && (
+        <div className="flex flex-col gap-2 rounded-lg bg-muted p-4 text-sm">
+          {login.state === 'starting' && (
+            <p className="text-muted-foreground">
+              Starting {harnessLabel(a.provider)} sign-in on the computer…
+            </p>
+          )}
+          {login.state === 'open_url' && login.flow === 'device' && (
+            <>
+              <p>
+                1. Open{' '}
+                <a
+                  href={login.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {login.url}
+                </a>{' '}
+                and sign in to ChatGPT.
+              </p>
+              <p>
+                2. Enter this code there:{' '}
+                <code className="font-mono text-lg font-semibold">{login.userCode}</code>
+              </p>
+              <p className="text-muted-foreground">This page updates when you are done.</p>
+            </>
+          )}
+          {login.state === 'open_url' && login.flow === 'paste' && (
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void onAct(api(`/accounts/${a.id}/code`, { body: { code } }))
+              }}
+            >
+              <p className="flex items-center gap-2">
+                1.{' '}
+                <Button asChild size="sm">
+                  <a href={login.url} target="_blank" rel="noreferrer">
+                    Open Claude sign-in
+                  </a>
+                </Button>
+              </p>
+              <p>2. Sign in to the Claude account you want to add. Claude then shows a code.</p>
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`code-${a.id}`} className="sr-only">
+                  Sign-in code
+                </Label>
+                <Input
+                  id={`code-${a.id}`}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="3. Paste the code here"
+                  autoComplete="off"
+                  className="flex-1 bg-card"
+                />
+                <Button disabled={!code.trim()}>Finish</Button>
+              </div>
+            </form>
+          )}
+          {login.state === 'verifying' && (
+            <p className="text-muted-foreground">Finishing sign-in…</p>
+          )}
+        </div>
+      )}
+      {login?.state === 'failed' && (
+        <p className="text-sm text-destructive-text">Sign-in failed: {login.error}</p>
+      )}
+
+      <div className="mt-auto flex flex-wrap justify-end gap-2">
         {!a.isDefault && a.status === 'ready' && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() =>
               void onAct(api(`/accounts/${a.id}`, { method: 'PATCH', body: { isDefault: true } }))
             }
           >
             Make default
-          </button>
+          </Button>
         )}
         {a.source === 'brigade' &&
           (a.status === 'needs_sign_in' || (a.status === 'signing_in' && !signingIn)) && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => void onAct(api(`/accounts/${a.id}/sign-in`, { method: 'POST' }))}
             >
               Sign in again
-            </button>
+            </Button>
           )}
-        <button
-          className="danger"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => {
             if (
               confirm(
@@ -188,66 +334,8 @@ function AccountRow({
           }}
         >
           Remove
-        </button>
+        </Button>
       </div>
-
-      {signingIn && (
-        <div className="card" style={{ marginTop: 10, background: 'var(--sunken)' }}>
-          {login.state === 'starting' && (
-            <p className="hint">Starting {harnessLabel(a.provider)} sign-in on the computer…</p>
-          )}
-          {login.state === 'open_url' && login.flow === 'device' && (
-            <>
-              <p>
-                1. Open{' '}
-                <a href={login.url} target="_blank" rel="noreferrer">
-                  {login.url}
-                </a>{' '}
-                and sign in to ChatGPT.
-              </p>
-              <p>
-                2. Enter this code there: <code style={{ fontSize: 18 }}>{login.userCode}</code>
-              </p>
-              <p className="hint">This page updates when you are done.</p>
-            </>
-          )}
-          {login.state === 'open_url' && login.flow === 'paste' && (
-            <form
-              className="stack"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void onAct(api(`/accounts/${a.id}/code`, { body: { code } }))
-              }}
-            >
-              <p>
-                1.{' '}
-                <a className="button primary" href={login.url} target="_blank" rel="noreferrer">
-                  Open Claude sign-in
-                </a>
-              </p>
-              <p>2. Sign in to the Claude account you want to add. Claude then shows a code.</p>
-              <div className="row">
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="3. Paste the code here"
-                  autoComplete="off"
-                  style={{ flex: 1, width: 'auto' }}
-                />
-                <button className="primary" disabled={!code.trim()}>
-                  Finish
-                </button>
-              </div>
-            </form>
-          )}
-          {login.state === 'verifying' && <p className="hint">Finishing sign-in…</p>}
-        </div>
-      )}
-      {login?.state === 'failed' && (
-        <p className="error" style={{ marginTop: 6 }}>
-          Sign-in failed: {login.error}
-        </p>
-      )}
-    </li>
+    </Card>
   )
 }

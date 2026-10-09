@@ -1,8 +1,24 @@
 'use client'
 import Link from 'next/link'
 import { useState, type InputHTMLAttributes } from 'react'
+import { KeyRound, Plus, ShieldCheck } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
-import { credentialHint, MentionIcon } from '@/components/mention'
+import { credentialHint } from '@/components/mention'
+import { StatusBadge } from '@/components/status-badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import { api, useApi, type Credential, type CredentialKind, type CredentialUse } from '@/lib/api'
 
 const KINDS: { kind: CredentialKind; label: string; hint: string }[] = [
@@ -65,23 +81,35 @@ export default function VaultPage() {
   }
 
   return (
-    <div className="stack">
-      <div className="row">
-        <h1 style={{ margin: 0 }}>Vault</h1>
-        <div className="spacer" />
-        {!adding && (
-          <button className="primary" onClick={() => setAdding(true)}>
-            Add a credential
-          </button>
-        )}
-      </div>
-      <p className="hint">
-        Logins, databases and keys your teammates can use. A secret is encrypted the moment you save
-        it and is never shown again, here or to a teammate&apos;s model. Type <code>@</code> and its
-        name in a thread to let that thread&apos;s teammate use it; anywhere else, it has to ask and
-        a person approves.
-      </p>
-      {error && <p className="error">{error}</p>}
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <h1 className="text-3xl font-extrabold tracking-tight">Vault</h1>
+            <p className="max-w-prose text-muted-foreground">
+              Logins, databases and keys your teammates can use.
+            </p>
+          </div>
+          {!adding && (
+            <Button onClick={() => setAdding(true)}>
+              <Plus />
+              Add a credential
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent-foreground" aria-hidden />
+          <p>
+            <span className="font-semibold text-accent-foreground">
+              A secret is encrypted the moment you save it and is never shown again, here or to a
+              teammate&apos;s model.
+            </span>{' '}
+            Type <code className="font-mono">@</code> and its name in a thread to let that
+            thread&apos;s teammate use it; anywhere else, it has to ask and a person approves.
+          </p>
+        </div>
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
+      </header>
 
       {adding && (
         <CredentialForm
@@ -94,34 +122,61 @@ export default function VaultPage() {
       )}
 
       {credentials.data?.length === 0 && !adding ? (
-        <p className="hint">Nothing in the vault yet.</p>
-      ) : (
-        <ul className="list">
+        <Card className="items-center gap-3 border-dashed px-6 py-12 text-center shadow-none">
+          <span
+            aria-hidden
+            className="flex size-11 items-center justify-center rounded-md bg-primary/15 text-primary"
+          >
+            <KeyRound className="size-5" />
+          </span>
+          <p className="font-semibold">Nothing in the vault yet.</p>
+          <Button onClick={() => setAdding(true)}>
+            <Plus />
+            Add a credential
+          </Button>
+        </Card>
+      ) : (credentials.data ?? []).length > 0 ? (
+        <Card className="gap-0 divide-y py-0">
           {(credentials.data ?? []).map((c) => (
-            <li key={c.id} style={{ display: 'block' }}>
-              <div className="row">
-                <span className="mention-option-icon" aria-hidden>
-                  <MentionIcon kind="credential" />
+            <div key={c.id} className="flex flex-col gap-3 px-5 py-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <span
+                  aria-hidden
+                  className="flex size-11 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground"
+                >
+                  <KeyRound className="size-5" />
                 </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div>{c.name}</div>
-                  <div className="hint">
+                <div className="flex min-w-0 flex-1 basis-48 flex-col gap-0.5">
+                  <span className="font-semibold">{c.name}</span>
+                  <span className="truncate text-sm text-muted-foreground">
                     {credentialHint(c)} · updated {timeAgo(c.updatedAt)}
-                  </div>
+                  </span>
                 </div>
-                <button onClick={() => setUses(uses === c.id ? undefined : c.id)}>
-                  {uses === c.id ? 'Hide uses' : 'Uses'}
-                </button>
-                {mayEdit(c) && (
-                  <>
-                    <button onClick={() => setEditing(editing === c.id ? undefined : c.id)}>
-                      Edit
-                    </button>
-                    <button className="danger" onClick={() => void remove(c)}>
-                      Delete
-                    </button>
-                  </>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-expanded={uses === c.id}
+                    onClick={() => setUses(uses === c.id ? undefined : c.id)}
+                  >
+                    {uses === c.id ? 'Hide uses' : 'Uses'}
+                  </Button>
+                  {mayEdit(c) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-expanded={editing === c.id}
+                        onClick={() => setEditing(editing === c.id ? undefined : c.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => void remove(c)}>
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
               {editing === c.id && (
                 <CredentialForm
@@ -134,10 +189,10 @@ export default function VaultPage() {
                 />
               )}
               {uses === c.id && <Uses credentialId={c.id} />}
-            </li>
+            </div>
           ))}
-        </ul>
-      )}
+        </Card>
+      ) : null}
     </div>
   )
 }
@@ -156,6 +211,7 @@ function CredentialForm({
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const d = credential?.details ?? {}
+  const prefix = credential ? `cred-${credential.id}` : 'cred'
 
   async function save(form: FormData) {
     setError(undefined)
@@ -193,29 +249,43 @@ function CredentialForm({
   }
 
   const field = (key: string, label: string, props: InputHTMLAttributes<HTMLInputElement> = {}) => (
-    <div className="field">
-      <label htmlFor={`cred-${key}`}>{label}</label>
-      <input id={`cred-${key}`} name={key} {...props} />
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={`${prefix}-${key}`}>{label}</Label>
+      <Input
+        id={`${prefix}-${key}`}
+        name={key}
+        {...props}
+        className={cn(credential && 'bg-card', props.className)}
+      />
     </div>
   )
 
   return (
-    <form action={save} className="card stack" style={{ marginTop: credential ? 10 : 0 }}>
+    <form
+      action={save}
+      className={cn(
+        'flex flex-col gap-4',
+        credential ? 'rounded-lg border bg-muted/50 p-4' : 'rounded-xl border bg-card p-5 shadow-sm',
+      )}
+    >
       {!credential && (
-        <div className="field">
-          <label htmlFor="cred-kind">Kind</label>
-          <select
-            id="cred-kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as CredentialKind)}
-          >
-            {KINDS.map((k) => (
-              <option key={k.kind} value={k.kind}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-          <p className="hint">{KINDS.find((k) => k.kind === kind)!.hint}</p>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${prefix}-kind`}>Kind</Label>
+          <Select value={kind} onValueChange={(value) => setKind(value as CredentialKind)}>
+            <SelectTrigger id={`${prefix}-kind`} className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KINDS.map((k) => (
+                <SelectItem key={k.kind} value={k.kind}>
+                  {k.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            {KINDS.find((k) => k.kind === kind)!.hint}
+          </p>
         </div>
       )}
       {field('name', 'Name', {
@@ -244,24 +314,32 @@ function CredentialForm({
         })}
       {kind === 'database' && (
         <>
-          <div className="field">
-            <label htmlFor="cred-engine">Engine</label>
-            <select id="cred-engine" name="engine" defaultValue={d.engine ?? 'postgres'}>
-              <option value="postgres">PostgreSQL</option>
-              <option value="mysql">MySQL</option>
-              <option value="mongodb">MongoDB</option>
-              <option value="other">Other</option>
-            </select>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${prefix}-engine`}>Engine</Label>
+            <Select name="engine" defaultValue={d.engine ?? 'postgres'}>
+              <SelectTrigger
+                id={`${prefix}-engine`}
+                className={cn('w-full sm:w-72', credential && 'bg-card')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="postgres">PostgreSQL</SelectItem>
+                <SelectItem value="mysql">MySQL</SelectItem>
+                <SelectItem value="mongodb">MongoDB</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <div style={{ flex: 3 }}>
+          <div className="grid grid-cols-4 items-start gap-3">
+            <div className="col-span-3">
               {field('host', 'Host', {
                 required: true,
                 defaultValue: d.host,
                 placeholder: 'db.internal',
               })}
             </div>
-            <div style={{ flex: 1 }}>
+            <div>
               {field('port', 'Port', {
                 type: 'number',
                 min: 1,
@@ -285,26 +363,24 @@ function CredentialForm({
         required: !credential,
         placeholder: credential ? 'Leave empty to keep the saved one' : '',
       })}
-      <div className="field">
-        <label htmlFor="cred-notes">Notes for teammates (optional)</label>
-        <textarea
-          id="cred-notes"
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`${prefix}-notes`}>Notes for teammates (optional)</Label>
+        <Textarea
+          id={`${prefix}-notes`}
           name="notes"
           rows={2}
           maxLength={2000}
           defaultValue={d.notes}
           placeholder="Read-only replica. Ask before running anything heavy."
+          className={cn(credential && 'bg-card')}
         />
       </div>
-      {error && <p className="error">{error}</p>}
-      <div className="row">
-        <div className="spacer" />
-        <button type="button" onClick={onCancel}>
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
-        </button>
-        <button className="primary" disabled={busy}>
-          {credential ? 'Save' : 'Add to vault'}
-        </button>
+        </Button>
+        <Button disabled={busy}>{credential ? 'Save' : 'Add to vault'}</Button>
       </div>
     </form>
   )
@@ -312,36 +388,43 @@ function CredentialForm({
 
 function Uses({ credentialId }: { credentialId: string }) {
   const uses = useApi<CredentialUse[]>(`/credentials/${credentialId}/uses`)
-  if (!uses.data) return <p className="hint">Loading…</p>
+  if (!uses.data) return <p className="text-sm text-muted-foreground">Loading…</p>
   if (uses.data.length === 0)
-    return (
-      <p className="hint" style={{ marginTop: 8 }}>
-        No teammate has used it yet.
-      </p>
-    )
+    return <p className="text-sm text-muted-foreground">No teammate has used it yet.</p>
   return (
-    <table style={{ width: '100%', marginTop: 10, fontSize: 13, borderCollapse: 'collapse' }}>
-      <tbody>
-        {uses.data.map((u) => (
-          <tr key={u.id} style={{ borderTop: '1px solid var(--border)' }}>
-            <td className="hint" style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>
-              {timeAgo(u.at)}
-            </td>
-            <td style={{ padding: '4px 6px' }}>{u.teammate}</td>
-            <td style={{ padding: '4px 6px' }}>
-              {u.use === 'browser' ? 'signed in with it' : 'loaded it as an env file'}
-            </td>
-            <td style={{ padding: '4px 6px' }}>
-              <span className={`badge ${u.via === 'mention' ? 'ok' : 'warn'}`}>
-                {u.via === 'mention' ? 'mentioned' : 'approved'}
-              </span>
-            </td>
-            <td style={{ padding: '4px 6px' }}>
-              {u.sessionId && <Link href={`/app/threads/${u.sessionId}`}>thread</Link>}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="rounded-lg border">
+      <Table className="text-[13px]">
+        <TableBody>
+          {uses.data.map((u) => (
+            <TableRow key={u.id}>
+              <TableCell className="whitespace-nowrap text-muted-foreground">
+                {timeAgo(u.at)}
+              </TableCell>
+              <TableCell>{u.teammate}</TableCell>
+              <TableCell>
+                {u.use === 'browser' ? 'signed in with it' : 'loaded it as an env file'}
+              </TableCell>
+              <TableCell>
+                <StatusBadge
+                  status={u.via}
+                  tone={u.via === 'mention' ? 'success' : 'warning'}
+                  label={u.via === 'mention' ? 'mentioned' : 'approved'}
+                />
+              </TableCell>
+              <TableCell>
+                {u.sessionId && (
+                  <Link
+                    href={`/app/threads/${u.sessionId}`}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    thread
+                  </Link>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

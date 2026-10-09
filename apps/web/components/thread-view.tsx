@@ -6,9 +6,36 @@ import {
   type QuestionAnswer,
   type SequencedEvent,
 } from '@brigade/contracts'
+import {
+  ChevronRight,
+  Circle,
+  CircleCheck,
+  CircleDot,
+  CircleHelp,
+  ListChecks,
+  RefreshCw,
+  ShieldAlert,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { TeammateAvatar } from '@/components/dashboard'
 import { credentialHint, MessageText } from '@/components/mention'
-import { useApi, type Credential } from '@/lib/api'
+import { StatusBadge } from '@/components/status-badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useApi, type Credential, type Teammate } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 type Item =
   | { kind: 'user'; key: string; text: string }
@@ -174,99 +201,141 @@ function toolSummary(toolName: string, input: unknown) {
   return typeof value === 'string' ? value : ''
 }
 
+/** Raw JSON or text under a tool call, an approval or a thought. */
+const preClass =
+  'max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere'
+
+/** A small uppercase label heading a card in the thread. */
+function CardLabel({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase [&>svg]:size-3.5',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function ThreadItems({
   items,
   onApproval,
   onAnswer,
   canApprove,
+  teammate,
 }: {
   items: Item[]
   onApproval: (approvalId: string, approved: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   canApprove: boolean
+  /** Who answers: shown beside its messages. */
+  teammate?: { name: string; harness: string }
 }) {
+  // The thread's teammate carries its harness as a plain string; the avatar only tells codex apart.
+  const avatar = teammate && {
+    name: teammate.name,
+    harness: teammate.harness as Teammate['harness'],
+  }
   return (
-    <div className="thread">
+    <div className="flex flex-col gap-4">
       {items.map((item) => {
         switch (item.kind) {
           case 'user':
             return (
-              <div key={item.key} className="bubble user">
+              <div
+                key={item.key}
+                className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground"
+              >
                 <MessageText text={item.text} />
               </div>
             )
           case 'assistant':
             return (
-              <div key={item.key} className="bubble assistant">
-                {item.text}
+              <div key={item.key} className="flex items-start gap-3">
+                {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
+                <div className="min-w-0 flex-1 pt-1 leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                  {item.text}
+                </div>
               </div>
             )
           case 'thinking':
             return (
-              <details key={item.key} className="tool">
-                <summary className="hint">Thinking</summary>
-                <pre style={{ whiteSpace: 'pre-wrap' }}>{item.text}</pre>
-              </details>
+              <Collapsible key={item.key} className="self-start">
+                <CollapsibleTrigger className="group flex items-center gap-1.5 rounded-full border border-dashed px-3 py-1 text-sm text-muted-foreground hover:border-solid hover:text-foreground">
+                  <ChevronRight
+                    className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+                    aria-hidden
+                  />
+                  Thinking
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <pre className={cn(preClass, 'mt-2')}>{item.text}</pre>
+                </CollapsibleContent>
+              </Collapsible>
             )
           case 'tool':
             return (
-              <details key={item.key} className="tool">
-                <summary>
-                  <code>{item.toolName}</code>
-                  <span
-                    className="hint"
-                    style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                    }}
-                  >
+              <Collapsible key={item.key} className="rounded-lg border border-dashed text-sm">
+                <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 px-3 py-1.5 text-left">
+                  <ChevronRight
+                    className="size-3.5 flex-none text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+                    aria-hidden
+                  />
+                  <code className="flex-none font-mono text-xs font-medium">{item.toolName}</code>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
                     {toolSummary(item.toolName, item.input)}
                   </span>
                   {!item.finished ? (
-                    <span className="badge">running</span>
+                    <StatusBadge status="running" />
                   ) : item.isError ? (
-                    <span className="badge danger">failed</span>
+                    <StatusBadge status="failed" />
                   ) : null}
-                </summary>
-                <pre>{json(item.input)}</pre>
-                {item.output !== undefined && <pre>{json(item.output)}</pre>}
-              </details>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex flex-col gap-2 border-t border-dashed p-2">
+                  <pre className={preClass}>{json(item.input)}</pre>
+                  {item.output !== undefined && <pre className={preClass}>{json(item.output)}</pre>}
+                </CollapsibleContent>
+              </Collapsible>
             )
           case 'approval':
             return (
-              <div key={item.key} className="approval">
-                <div className="meta">Approval needed</div>
-                <div style={{ marginBottom: 8 }}>
-                  Allow <code>{item.toolName}</code> {toolSummary(item.toolName, item.input)}?
+              <Card key={item.key} className="gap-3 border-warning/50 px-5 py-4">
+                <CardLabel className="text-warning">
+                  <ShieldAlert aria-hidden />
+                  Approval needed
+                </CardLabel>
+                <div className="font-medium">
+                  Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
+                  {toolSummary(item.toolName, item.input)}?
                 </div>
-                {item.reason && (
-                  <p className="hint" style={{ marginTop: 0 }}>
-                    {item.reason}
-                  </p>
-                )}
-                <pre
-                  className="card"
-                  style={{ background: 'var(--sunken)', overflowX: 'auto', maxHeight: 240 }}
-                >
-                  {json(item.input)}
-                </pre>
+                {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
+                <pre className={cn(preClass, 'max-h-60')}>{json(item.input)}</pre>
                 {item.resolved ? (
-                  <span className={`badge ${item.resolved.approved ? 'ok' : 'danger'}`}>
-                    {item.resolved.approved ? 'Approved' : 'Denied'}
-                  </span>
+                  <StatusBadge
+                    status={item.resolved.approved ? 'approved' : 'denied'}
+                    label={item.resolved.approved ? 'Approved' : 'Denied'}
+                  />
                 ) : canApprove ? (
-                  <div className="row" style={{ marginTop: 8 }}>
-                    <button className="primary" onClick={() => onApproval(item.approvalId, true)}>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
                       Approve
-                    </button>
-                    <button onClick={() => onApproval(item.approvalId, false)}>Deny</button>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onApproval(item.approvalId, false)}
+                    >
+                      Deny
+                    </Button>
                   </div>
                 ) : (
-                  <p className="hint">Only the member who started this thread can answer.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Only the member who started this thread can answer.
+                  </p>
                 )}
-              </div>
+              </Card>
             )
           case 'question':
             return (
@@ -279,25 +348,47 @@ export function ThreadItems({
             )
           case 'plan':
             return (
-              <div key={item.key} className="card">
-                <div className="meta">Plan</div>
-                {item.items.map((p, i) => (
-                  <div key={i}>
-                    {p.status === 'completed' ? '☑' : p.status === 'in_progress' ? '◐' : '☐'}{' '}
-                    {p.content}
-                  </div>
-                ))}
-              </div>
+              <Card key={item.key} className="gap-2 px-5 py-4">
+                <CardLabel className="text-muted-foreground">
+                  <ListChecks aria-hidden />
+                  Plan
+                </CardLabel>
+                <ul className="flex flex-col gap-1.5 text-sm">
+                  {item.items.map((p, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      {p.status === 'completed' ? (
+                        <CircleCheck
+                          className="mt-0.5 size-4 flex-none text-success"
+                          aria-label="Done"
+                        />
+                      ) : p.status === 'in_progress' ? (
+                        <CircleDot
+                          className="mt-0.5 size-4 flex-none text-primary"
+                          aria-label="In progress"
+                        />
+                      ) : (
+                        <Circle
+                          className="mt-0.5 size-4 flex-none text-muted-foreground"
+                          aria-label="To do"
+                        />
+                      )}
+                      <span className={cn(p.status === 'completed' && 'text-muted-foreground')}>
+                        {p.content}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             )
           case 'file':
             return (
-              <div key={item.key} className="hint">
-                Changed <code>{item.path}</code>
+              <div key={item.key} className="text-sm text-muted-foreground">
+                Changed <code className="font-mono text-xs text-foreground">{item.path}</code>
               </div>
             )
           case 'turn':
             return item.finishReason === 'interrupted' ? (
-              <div key={item.key} className="hint">
+              <div key={item.key} className="text-sm text-muted-foreground">
                 Interrupted
               </div>
             ) : null
@@ -305,15 +396,15 @@ export function ThreadItems({
             return (
               <div
                 key={item.key}
-                className="bubble error"
-                style={{ border: '1px solid var(--danger)' }}
+                role="alert"
+                className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm wrap-anywhere whitespace-pre-wrap text-destructive-text"
               >
                 {item.message}
               </div>
             )
           case 'note':
             return (
-              <div key={item.key} className="hint">
+              <div key={item.key} className="text-sm text-muted-foreground">
                 {item.text}
               </div>
             )
@@ -342,35 +433,48 @@ function CredentialPicker({
   const credentials = useApi<Credential[]>('/credentials')
   const list = credentials.data ?? []
   return (
-    <div className="stack" style={{ gap: 6 }}>
-      <p className="hint" style={{ margin: 0 }}>
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
         This asks for a secret. Pick one from the vault: your teammate can then use it in this
         thread without ever seeing it.
       </p>
-      <div className="row">
-        <select
-          aria-label="Credential"
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
           disabled={disabled || list.length === 0}
           value={value}
-          onChange={(e) => {
-            const c = list.find((c) => formatMention(mentionOf(c)) === e.target.value)
+          onValueChange={(next) => {
+            const c = list.find((c) => formatMention(mentionOf(c)) === next)
             onChange(c ? formatMention(mentionOf(c)) : '')
           }}
-          style={{ flex: 1 }}
         >
-          <option value="">{list.length ? 'Choose a credential…' : 'The vault is empty'}</option>
-          {list.map((c) => (
-            <option key={c.id} value={formatMention(mentionOf(c))}>
-              {c.name} · {credentialHint(c)}
-            </option>
-          ))}
-        </select>
-        <a href="/app/vault" target="_blank" rel="noreferrer">
-          Add one
-        </a>
-        <button type="button" disabled={disabled} onClick={() => void credentials.reload()}>
+          <SelectTrigger aria-label="Credential" className="min-w-0 flex-[1_1_14rem]">
+            <SelectValue
+              placeholder={list.length ? 'Choose a credential…' : 'The vault is empty'}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {list.map((c) => (
+              <SelectItem key={c.id} value={formatMention(mentionOf(c))}>
+                {c.name} · {credentialHint(c)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button asChild variant="link" size="sm">
+          <a href="/app/vault" target="_blank" rel="noreferrer">
+            Add one
+          </a>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={() => void credentials.reload()}
+        >
+          <RefreshCw aria-hidden />
           Refresh
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -416,85 +520,136 @@ function QuestionCard({
   const complete = item.questions.every(
     (q) => (picked[q.id]?.length ?? 0) > 0 || Boolean(text[q.id]?.trim()),
   )
+  const disabled = !canAnswer || busy
 
   return (
-    <div className="approval">
-      <div className="meta">Question</div>
-      {item.questions.map((q) => (
-        <div key={q.id} style={{ marginBottom: 10 }}>
-          <div style={{ marginBottom: 6 }}>
-            {q.header && <strong>{q.header}: </strong>}
-            {q.question}
-          </div>
-          {item.answer ? null : (
-            <>
-              {q.options?.map((o) => (
-                <label key={o.id} className="row" style={{ fontWeight: 400, marginBottom: 4 }}>
-                  <input
-                    type={q.allowMultiple ? 'checkbox' : 'radio'}
-                    name={`${item.questionId}-${q.id}`}
-                    style={{ width: 'auto' }}
-                    disabled={!canAnswer || busy}
-                    checked={picked[q.id]?.includes(o.id) ?? false}
-                    onChange={(e) =>
-                      setPicked((p) => ({
-                        ...p,
-                        [q.id]: q.allowMultiple
-                          ? e.target.checked
-                            ? [...(p[q.id] ?? []), o.id]
-                            : (p[q.id] ?? []).filter((x) => x !== o.id)
-                          : [o.id],
-                      }))
-                    }
-                  />
-                  <span>
-                    {o.label}
-                    {o.description && <span className="hint"> · {o.description}</span>}
-                  </span>
-                </label>
-              ))}
-              {isSecret(q) ? (
-                <CredentialPicker
-                  disabled={!canAnswer || busy}
-                  value={text[q.id] ?? ''}
-                  onChange={(mention) => setText((t) => ({ ...t, [q.id]: mention }))}
-                />
-              ) : (
-                (q.allowFreeForm || !q.options?.length) && (
-                  <textarea
-                    rows={2}
-                    placeholder="Your answer"
-                    disabled={!canAnswer || busy}
+    <Card className="gap-4 border-primary/40 px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <CardLabel className="text-primary">
+          <CircleHelp aria-hidden />
+          Question
+        </CardLabel>
+        {item.answer && (
+          <StatusBadge
+            status={item.answer.action}
+            tone={item.answer.action === 'declined' ? 'warning' : 'success'}
+            label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
+          />
+        )}
+      </div>
+      {item.questions.map((q) => {
+        const optionId = (o: { id: string }) => `${item.questionId}-${q.id}-${o.id}`
+        return (
+          <div key={q.id} className="flex flex-col gap-3">
+            <p className="font-semibold">
+              {q.header && <span className="text-muted-foreground">{q.header}: </span>}
+              {q.question}
+            </p>
+            {item.answer ? null : (
+              <>
+                {q.options?.length ? (
+                  q.allowMultiple ? (
+                    <div className="flex flex-col gap-2.5">
+                      {q.options.map((o) => (
+                        <div key={o.id} className="flex items-start gap-2.5">
+                          <Checkbox
+                            id={optionId(o)}
+                            className="mt-0.5"
+                            disabled={disabled}
+                            checked={picked[q.id]?.includes(o.id) ?? false}
+                            onCheckedChange={(checked) =>
+                              setPicked((p) => ({
+                                ...p,
+                                [q.id]:
+                                  checked === true
+                                    ? [...(p[q.id] ?? []), o.id]
+                                    : (p[q.id] ?? []).filter((x) => x !== o.id),
+                              }))
+                            }
+                          />
+                          <OptionLabel htmlFor={optionId(o)} option={o} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <RadioGroup
+                      name={`${item.questionId}-${q.id}`}
+                      disabled={disabled}
+                      value={picked[q.id]?.[0] ?? ''}
+                      onValueChange={(id) => setPicked((p) => ({ ...p, [q.id]: [id] }))}
+                      className="gap-2.5"
+                    >
+                      {q.options.map((o) => (
+                        <div key={o.id} className="flex items-start gap-2.5">
+                          <RadioGroupItem id={optionId(o)} value={o.id} className="mt-0.5" />
+                          <OptionLabel htmlFor={optionId(o)} option={o} />
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )
+                ) : null}
+                {isSecret(q) ? (
+                  <CredentialPicker
+                    disabled={disabled}
                     value={text[q.id] ?? ''}
-                    onChange={(e) => setText((t) => ({ ...t, [q.id]: e.target.value }))}
+                    onChange={(mention) => setText((t) => ({ ...t, [q.id]: mention }))}
                   />
-                )
-              )}
-            </>
-          )}
-        </div>
-      ))}
-      {item.answer ? (
-        <span className={`badge ${item.answer.action === 'declined' ? 'warn' : 'ok'}`}>
-          {item.answer.action === 'declined' ? 'Declined' : 'Answered'}
-        </span>
-      ) : canAnswer ? (
-        <div className="row">
-          <button
-            className="primary"
+                ) : (
+                  (q.allowFreeForm || !q.options?.length) && (
+                    <Textarea
+                      rows={2}
+                      placeholder="Your answer"
+                      aria-label="Your answer"
+                      disabled={disabled}
+                      value={text[q.id] ?? ''}
+                      onChange={(e) => setText((t) => ({ ...t, [q.id]: e.target.value }))}
+                    />
+                  )
+                )}
+              </>
+            )}
+          </div>
+        )
+      })}
+      {item.answer ? null : canAnswer ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
             disabled={busy || !complete}
             onClick={() => void send({ action: 'answered', answers })}
           >
             Answer
-          </button>
-          <button disabled={busy} onClick={() => void send({ action: 'declined' })}>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void send({ action: 'declined' })}
+          >
             Decline
-          </button>
-          {error && <span className="error">{error}</span>}
+          </Button>
+          {error && <span className="text-sm text-destructive-text">{error}</span>}
         </div>
       ) : (
-        <p className="hint">Only the member who started this thread can answer.</p>
+        <p className="text-sm text-muted-foreground">
+          Only the member who started this thread can answer.
+        </p>
       )}
-    </div>
+    </Card>
+  )
+}
+
+function OptionLabel({
+  htmlFor,
+  option,
+}: {
+  htmlFor: string
+  option: { label: string; description?: string }
+}) {
+  return (
+    <Label htmlFor={htmlFor} className="block leading-snug font-normal">
+      {option.label}
+      {option.description && <span className="text-muted-foreground"> · {option.description}</span>}
+    </Label>
   )
 }

@@ -1,657 +1,118 @@
+/* Brigade styles.
+ * The theme (colors, fonts, radius, spacing, shadows) lives in ./theme.css and is
+ * generated from tweakcn: run `pnpm theme <name>` to switch it. This file maps
+ * those variables into Tailwind and adds Brigade's own status colors. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './theme.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Brigade status colors: not part of a shadcn theme, so they live here. */
 :root {
-  --bg: #fbfaf8;
-  --surface: #ffffff;
-  --sunken: #f3f1ed;
-  --text: #1c1b19;
-  --muted: #6b6862;
-  --border: #e4e1db;
-  --accent: #2f5bd3;
-  --accent-text: #ffffff;
-  --ok: #1f7a4d;
-  --warn: #9a6200;
-  --danger: #b4332b;
-  --radius: 8px;
-  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
-  color-scheme: light;
+  --success: oklch(0.5 0.13 155);
+  --warning: oklch(0.53 0.13 60);
+  --destructive-text: oklch(0.53 0.19 23);
 }
-@media (prefers-color-scheme: dark) {
+.dark {
+  --success: oklch(0.8 0.18 152);
+  --warning: oklch(0.83 0.13 75);
+  --destructive-text: var(--destructive);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-text: var(--destructive-text);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  --tracking-tighter: var(--tracking-tighter);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-wider: var(--tracking-wider);
+  --tracking-widest: var(--tracking-widest);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    letter-spacing: var(--tracking-normal, normal);
+  }
+}
+
+/* App-specific pieces that can't take Tailwind classes. */
+@layer components {
+  /* Desktop preview: on wide screens the panel is fixed to the right of the
+   * window (components/desktop-preview.tsx); the content column makes room. */
   :root {
-    --bg: #151514;
-    --surface: #1d1d1b;
-    --sunken: #242422;
-    --text: #ecebe8;
-    --muted: #9c9a95;
-    --border: #33322f;
-    --accent: #7f9ef0;
-    --accent-text: #10131c;
-    --ok: #5fc493;
-    --warn: #e0a84a;
-    --danger: #ec7b72;
-    color-scheme: dark;
+    --desktop-w: min(45vw, 960px);
   }
-}
-
-* {
-  box-sizing: border-box;
-}
-html,
-body {
-  margin: 0;
-}
-body {
-  background: var(--bg);
-  color: var(--text);
-  font:
-    14px/1.5 system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-}
-a {
-  color: inherit;
-}
-h1,
-h2,
-h3 {
-  line-height: 1.25;
-  margin: 0 0 12px;
-}
-h1 {
-  font-size: 22px;
-}
-h2 {
-  font-size: 16px;
-}
-p {
-  margin: 0 0 12px;
-}
-code,
-pre {
-  font-family: var(--mono);
-  font-size: 12.5px;
-}
-
-button,
-.button {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: var(--radius);
-  padding: 7px 12px;
-  font: inherit;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-button.primary,
-.button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-button.danger {
-  color: var(--danger);
-}
-input,
-textarea,
-select {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-  font: inherit;
-}
-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-.field {
-  margin-bottom: 14px;
-}
-.hint {
-  color: var(--muted);
-  font-size: 13px;
-}
-.error {
-  color: var(--danger);
-}
-.row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.spacer {
-  flex: 1;
-}
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-.stack > * + * {
-  margin-top: 12px;
-}
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-.list > li {
-  padding: 10px 14px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.list > li:first-child {
-  border-top: 0;
-}
-.list a {
-  text-decoration: none;
-}
-.badge {
-  font-size: 12px;
-  padding: 1px 8px;
-  border-radius: 99px;
-  background: var(--sunken);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.badge.ok {
-  color: var(--ok);
-}
-.badge.warn {
-  color: var(--warn);
-}
-.badge.danger {
-  color: var(--danger);
-}
-
-/* Centered pages: auth and onboarding */
-.narrow {
-  max-width: 400px;
-  margin: 10vh auto;
-  padding: 0 16px;
-}
-
-/* Dashboard shell */
-.shell {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: 100vh;
-}
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--surface);
-}
-.sidebar a {
-  display: block;
-  padding: 6px 10px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--text);
-}
-.sidebar a.active,
-.sidebar a:hover {
-  background: var(--sunken);
-}
-.sidebar .section {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 12px 10px 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.main {
-  padding: 24px 32px;
-  max-width: 980px;
-  width: 100%;
-  min-width: 0;
-}
-@media (max-width: 720px) {
-  .shell {
-    grid-template-columns: 1fr;
+  @media (width >= 80rem) {
+    [data-slot='sidebar-inset']:has([data-desktop-panel]) > div:last-child {
+      max-width: none;
+      padding-right: calc(var(--desktop-w) + 2.5rem);
+    }
   }
-  .sidebar {
-    position: static;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .main {
-    padding: 16px;
-  }
-}
 
-/* Thread view */
-.thread {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 180px;
-}
-.bubble {
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.bubble.user {
-  background: var(--sunken);
-  align-self: flex-end;
-  max-width: 85%;
-}
-.bubble.assistant {
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-.meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 2px;
-}
-.tool {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  font-size: 13px;
-}
-.tool > summary {
-  padding: 6px 12px;
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.tool > summary::-webkit-details-marker {
-  display: none;
-}
-.tool pre {
-  margin: 0;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--sunken);
-  overflow-x: auto;
-  max-height: 320px;
-}
-.approval {
-  border: 1px solid var(--warn);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  background: var(--surface);
-}
-.composer {
-  position: fixed;
-  bottom: 0;
-  left: 240px;
-  right: 0;
-  background: linear-gradient(transparent, var(--bg) 24px);
-  padding: 24px 32px 20px;
-}
-.composer form {
-  max-width: 916px;
-}
-@media (max-width: 720px) {
-  .composer {
-    left: 0;
-    padding: 16px;
+  /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
+  .composer-input p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    float: left;
+    height: 0;
+    pointer-events: none;
   }
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--muted);
-  display: inline-block;
-}
-.dot.on {
-  background: var(--ok);
-}
-
-/* Run log */
-table.log {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-table.log td {
-  padding: 6px 8px;
-  border-top: 1px solid var(--border);
-  vertical-align: top;
-}
-table.log td:first-child {
-  white-space: nowrap;
-}
-table.log td:nth-child(2) {
-  white-space: nowrap;
-  color: var(--muted);
-}
-table.log .tool {
-  margin: 0;
-}
-
-/* Status timeline */
-.timeline {
-  display: grid;
-  grid-template-columns: minmax(80px, 200px) 1fr;
-  gap: 6px 12px;
-  align-items: center;
-  font-size: 13px;
-}
-.timeline .label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.timeline .track {
-  position: relative;
-  height: 14px;
-  background: var(--sunken);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.timeline .seg {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  min-width: 2px;
-}
-.seg.working,
-.swatch.working {
-  background: var(--accent);
-}
-.seg.waiting,
-.swatch.waiting {
-  background: var(--warn);
-}
-.seg.blocked,
-.swatch.blocked {
-  background: var(--danger);
-}
-.seg.done,
-.swatch.done {
-  background: var(--border);
-}
-.swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 4px;
-  vertical-align: -1px;
-}
-.timeline .axis {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-/* Desktop preview: the workspace computer beside a thread */
-:root {
-  --desktop-w: min(52vw, 960px);
-}
-.desktop-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--desktop-w);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 10;
-}
-.desktop-bar {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: nowrap;
-}
-.desktop-screen {
-  flex: 1;
-  min-height: 0;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.desktop-view {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-.desktop-canvas {
-  width: 100%;
-  height: 100%;
-}
-.desktop-canvas canvas {
-  border-radius: 6px;
-}
-.desktop-view.controlled .desktop-canvas canvas:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-.desktop-status {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  pointer-events: none;
-}
-/* Expanded: the desktop fills the window, the page dimmed behind it */
-.desktop-panel.expanded {
-  inset: 0;
-  width: auto;
-  height: auto;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  position: fixed;
-  z-index: 50;
-  background: rgba(0, 0, 0, 0.92);
-}
-.desktop-panel.expanded .desktop-bar {
-  border-bottom: 0;
-  background: transparent;
-}
-.desktop-panel.expanded .desktop-screen {
-  background: transparent;
-  padding: 0 24px 24px;
-}
-.desktop-screen p {
-  padding: 16px;
-  margin: 0;
-}
-.desktop-foot {
-  margin: 0;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-}
-.main:has(.desktop-panel) {
-  max-width: none;
-  padding-right: calc(var(--desktop-w) + 32px);
-}
-.shell:has(.desktop-panel) .composer {
-  right: var(--desktop-w);
-}
-@media (max-width: 1100px) {
-  .desktop-panel {
-    position: static;
-    width: auto;
-    height: 60vh;
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .main:has(.desktop-panel) {
-    padding-right: 32px;
-  }
-  .shell:has(.desktop-panel) .composer {
-    right: 0;
-  }
-}
-
-/* Composer: a message box with @ mentions */
-.composer-field .composer-input {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-  max-height: 40vh;
-  overflow-y: auto;
-  outline: none;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.composer-field .composer-input:focus-visible {
-  border-color: var(--accent);
-}
-.composer-field .composer-input[contenteditable='false'] {
-  opacity: 0.6;
-}
-.composer-input p {
-  margin: 0;
-}
-.composer-input p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  color: var(--muted);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-/* Mentions, in the composer and in sent messages */
-.mention-name {
-  font-weight: 600;
-}
-.mention-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 7px;
-  margin: 0 1px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  line-height: 1.6;
-  vertical-align: baseline;
-  white-space: nowrap;
-  max-width: 28ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mention-chip svg {
-  flex: none;
-  color: var(--muted);
-}
-.mention-node.ProseMirror-selectednode .mention-chip,
-.mention-node.ProseMirror-selectednode .mention-name {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-radius: 6px;
-}
-
-.mention-menu {
-  --menu-bg: var(--surface);
-  z-index: 20;
-  width: 360px;
-  max-height: 320px;
-  overflow-y: auto;
-  padding: 4px;
-  background: var(--menu-bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.08),
-    0 12px 32px rgb(0 0 0 / 0.16);
-}
-@media (prefers-color-scheme: dark) {
-  /* Raised above the page, which is nearly the same dark as a card. */
-  .mention-menu {
-    --menu-bg: #2a2a27;
-    border-color: #45443f;
-    box-shadow:
-      0 1px 2px rgb(0 0 0 / 0.4),
-      0 16px 40px rgb(0 0 0 / 0.55);
-  }
-}
-.mention-menu .hint {
-  margin: 0;
-  padding: 6px 8px;
-}
-.mention-group {
-  padding: 8px 8px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.mention-option {
-  display: flex;
-  width: 100%;
-  gap: 8px;
-  border: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  text-align: left;
-  background: transparent;
-}
-.mention-option[aria-selected='true'] {
-  background: color-mix(in srgb, var(--accent) 16%, var(--menu-bg));
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.mention-option[aria-selected='true'] .mention-option-icon {
-  color: var(--accent);
-}
-.mention-option-icon {
-  display: inline-flex;
-  color: var(--muted);
-}
-.mention-option-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mention-option .hint {
-  flex: none;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

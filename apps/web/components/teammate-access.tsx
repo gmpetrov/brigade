@@ -1,6 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { api, useApi, type ConnectionsResponse, type Teammate } from '@/lib/api'
 
 type Scope = 'none' | 'read' | 'read_write'
@@ -45,48 +53,80 @@ export function TeammateAccess({
 
   const list = connections.data?.connections ?? []
   return (
-    <div className="card stack">
-      <h2>Access</h2>
-      {list.length === 0 ? (
-        <p className="hint">
-          No connections in this workspace yet. <Link href="/app/connections">Add one</Link>.
-        </p>
-      ) : (
-        list.map((c) => {
-          const scope: Scope = grants.data?.find((g) => g.connectionId === c.id)?.scope ?? 'none'
-          return (
-            <div key={c.id} className="row">
-              <span style={{ flex: 1 }}>
-                {c.label} {c.externalAccount && <span className="hint">· {c.externalAccount}</span>}
-              </span>
-              <select
-                value={scope}
-                disabled={!editable}
-                onChange={(e) => void setGrant(c.id, e.target.value as Scope)}
-                style={{ width: 'auto' }}
-              >
-                <option value="none">No access</option>
-                <option value="read">Read only</option>
-                <option value="read_write">Read and write</option>
-              </select>
-            </div>
-          )
-        })
-      )}
-      <div className="row">
-        <span style={{ flex: 1 }}>Changes through connections (sending, editing, deleting)</span>
-        <select
-          value={policy}
-          disabled={!editable}
-          onChange={(e) => void setPolicy(e.target.value)}
-          style={{ width: 'auto' }}
-        >
-          <option value="ask">Ask a person first</option>
-          <option value="allow">Allow</option>
-          <option value="deny">Never</option>
-        </select>
-      </div>
-      {error && <p className="error">{error}</p>}
-    </div>
+    <Card className="gap-0 overflow-hidden pb-0">
+      <CardHeader className="pb-4">
+        <CardTitle>
+          <h2 className="text-base font-bold">Access</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-0">
+        {list.length === 0 ? (
+          <p className="border-t px-6 py-3 text-sm text-muted-foreground">
+            No connections in this workspace yet.{' '}
+            <Link href="/app/connections" className="font-medium text-primary hover:underline">
+              Add one
+            </Link>
+            .
+          </p>
+        ) : (
+          list.map((c) => {
+            const scope: Scope = grants.data?.find((g) => g.connectionId === c.id)?.scope ?? 'none'
+            return (
+              <div key={c.id} className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-bold text-secondary-foreground"
+                >
+                  {c.label.trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
+                  <span className="truncate text-sm font-semibold">{c.label}</span>
+                  {c.externalAccount && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {c.externalAccount}
+                    </span>
+                  )}
+                </span>
+                <Select
+                  value={scope}
+                  disabled={!editable}
+                  onValueChange={(v) => void setGrant(c.id, v as Scope)}
+                >
+                  <SelectTrigger size="sm" aria-label={`${c.label} access`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No access</SelectItem>
+                    <SelectItem value="read">Read only</SelectItem>
+                    <SelectItem value="read_write">Read and write</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          })
+        )}
+        <div className="flex flex-wrap items-center gap-3 border-t bg-secondary px-6 py-3.5">
+          <span className="flex-[1_1_16rem] text-sm font-semibold">
+            Changes through connections{' '}
+            <span className="font-normal text-muted-foreground">(sending, editing, deleting)</span>
+          </span>
+          <Select value={policy} disabled={!editable} onValueChange={(v) => void setPolicy(v)}>
+            <SelectTrigger
+              size="sm"
+              aria-label="Changes through connections"
+              className="bg-background"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ask">Ask a person first</SelectItem>
+              <SelectItem value="allow">Allow</SelectItem>
+              <SelectItem value="deny">Never</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {error && <p className="border-t px-6 py-3 text-sm text-destructive-text">{error}</p>}
+      </CardContent>
+    </Card>
   )
 }

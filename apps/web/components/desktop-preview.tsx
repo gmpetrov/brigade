@@ -1,6 +1,10 @@
 'use client'
+import { Maximize2, Minimize2, RotateCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { DesktopView, type DesktopConnection } from './desktop-view'
 
 const KEY = 'brigade.desktopPreview'
@@ -108,29 +112,55 @@ export function DesktopPreview({
 
   return (
     <aside
-      className={`desktop-panel${expanded ? ' expanded' : ''}`}
+      data-desktop-panel
+      className={cn(
+        'flex flex-col overflow-hidden',
+        expanded
+          ? 'fixed inset-0 z-50 bg-background/95 backdrop-blur-sm'
+          : 'mb-4 h-[60vh] rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:h-auto xl:w-(--desktop-w) xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none',
+      )}
       aria-label={`${teammateName}'s desktop`}
     >
-      <div className="row desktop-bar">
-        <strong>{teammateName}&apos;s computer</strong>
-        <span className="badge">{control ? 'You have control' : 'View only'}</span>
-        <div className="spacer" />
-        <button type="button" onClick={reload} title="Reconnect">
+      <div
+        className={cn('flex flex-nowrap items-center gap-2 px-3 py-2.5', !expanded && 'border-b')}
+      >
+        <strong className="min-w-0 truncate text-sm font-semibold">
+          {teammateName}&apos;s computer
+        </strong>
+        <Badge variant="secondary" className="text-muted-foreground">
+          {control ? 'You have control' : 'View only'}
+        </Badge>
+        <div className="flex-1" />
+        <Button type="button" variant="ghost" size="sm" onClick={reload} title="Reconnect">
+          <RotateCw aria-hidden />
           Reload
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           onClick={() => onExpand(!expanded)}
           aria-label={expanded ? 'Collapse desktop' : 'Expand desktop'}
           title={expanded ? 'Collapse' : 'Expand'}
         >
-          {expanded ? '↙' : '↗'}
-        </button>
-        <button type="button" onClick={onClose} aria-label="Close desktop">
-          ✕
-        </button>
+          {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClose}
+          aria-label="Close desktop"
+        >
+          <X aria-hidden />
+        </Button>
       </div>
-      <div className="desktop-screen">
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 items-center justify-center',
+          expanded ? 'px-6 pb-6' : 'bg-muted',
+        )}
+      >
         {connection ? (
           <DesktopView
             connection={connection}
@@ -141,13 +171,15 @@ export function DesktopPreview({
             onLost={onLost}
           />
         ) : (
-          <p className={error ? 'error' : 'hint'}>
+          <p
+            className={cn('p-4 text-sm', error ? 'text-destructive-text' : 'text-muted-foreground')}
+          >
             {error ?? waiting ?? 'Connecting to the desktop…'}
           </p>
         )}
       </div>
       {!expanded && (
-        <p className="hint desktop-foot">
+        <p className="border-t px-3 py-2 text-sm text-muted-foreground">
           {control
             ? 'Click the screen to use it. Copy and paste work both ways.'
             : 'Everything on the workspace computer shows here, other teammates’ browsers included. To use it yourself, take over.'}

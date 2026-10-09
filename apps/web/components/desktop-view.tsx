@@ -2,6 +2,7 @@
 import type RFB from '@novnc/novnc'
 import { useEffect, useRef, useState } from 'react'
 import { bridgeInput, type DesktopClipboard } from '@/lib/desktop-input'
+import { cn } from '@/lib/utils'
 
 export type DesktopConnection = { socketUrl: string; password: string }
 
@@ -97,9 +98,20 @@ export function DesktopView({
   }, [control, focus])
 
   return (
-    <div className={`desktop-view${control ? ' controlled' : ''}`}>
-      <div ref={screen} className="desktop-canvas" />
-      {!connected && <p className="hint desktop-status">Connecting to the desktop…</p>}
+    <div className="relative size-full">
+      <div
+        ref={screen}
+        className={cn(
+          'size-full [&_canvas]:rounded-md',
+          control &&
+            '[&_canvas:focus]:outline-2 [&_canvas:focus]:-outline-offset-2 [&_canvas:focus]:outline-primary',
+        )}
+      />
+      {!connected && (
+        <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+          Connecting to the desktop…
+        </p>
+      )}
     </div>
   )
 }

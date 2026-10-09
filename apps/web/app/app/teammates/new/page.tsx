@@ -8,8 +8,8 @@ export default function NewTeammate() {
   const router = useRouter()
   const { reloadTeammates } = useDashboard()
   return (
-    <div className="stack" style={{ maxWidth: 640 }}>
-      <h1>New AI teammate</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-7">
+      <h1 className="text-3xl font-extrabold tracking-tight">New AI teammate</h1>
       <TeammateForm
         submitLabel="Create teammate"
         onSubmit={async (input) => {

@@ -27,6 +27,7 @@ import {
   type Credential,
   type ThreadSummary,
 } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 /** Something to mention, with what the menu shows beside it. */
 type Option = Mention & { hint?: string; connectionKind?: ConnectionKind }
@@ -108,27 +109,35 @@ type MenuProps = {
   onHover: (index: number) => void
 }
 
+/** max-h-80, in px: whether the menu fits above the composer. */
+const MENU_MAX_HEIGHT = 320
+
+const menuClass =
+  'max-h-80 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg'
+
 function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
   // Only a moving pointer selects: rows scrolling under a still one (arrow keys) do not.
   const pointer = useRef('')
   if (!items.length)
     return (
-      <div className="mention-menu">
-        <p className="hint">Nothing matches “{query}”</p>
+      <div className={menuClass}>
+        <p className="px-2 py-1.5 text-sm text-muted-foreground">Nothing matches “{query}”</p>
       </div>
     )
   return (
-    <div className="mention-menu" role="listbox">
+    <div className={menuClass} role="listbox">
       {items.map((o, i) => (
         <div key={`${o.kind}:${o.id}`}>
           {o.kind !== items[i - 1]?.kind && (
-            <div className="mention-group">{groups.find((g) => g.kind === o.kind)?.title}</div>
+            <div className="px-2 pt-2 pb-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              {groups.find((g) => g.kind === o.kind)?.title}
+            </div>
           )}
           <button
             type="button"
             role="option"
             aria-selected={i === selected}
-            className="mention-option"
+            className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-primary/15 aria-selected:shadow-[inset_2px_0_0_var(--primary)]"
             // Keep the editor's selection: pick on mousedown, before it blurs.
             onMouseDown={(e) => {
               e.preventDefault()
@@ -144,11 +153,15 @@ function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
               if (i === selected) el?.scrollIntoView({ block: 'nearest' })
             }}
           >
-            <span className="mention-option-icon">
+            <span className="inline-flex text-muted-foreground group-aria-selected:text-primary">
               <MentionIcon kind={o.kind} connectionKind={o.connectionKind} />
             </span>
-            <span className="mention-option-label">{o.label}</span>
-            {o.hint && <span className="hint">{o.hint}</span>}
+            <span className="min-w-0 flex-1 truncate">{o.label}</span>
+            {o.hint && (
+              <span className="max-w-[45%] flex-none truncate text-xs text-muted-foreground">
+                {o.hint}
+              </span>
+            )}
           </button>
         </div>
       ))}
@@ -156,11 +169,14 @@ function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
   )
 }
 
-function MentionView({ node }: ReactNodeViewProps) {
+function MentionView({ node, selected }: ReactNodeViewProps) {
   const { kind, id, label } = node.attrs as Mention
   return (
-    <NodeViewWrapper as="span" className="mention-node">
-      <MentionChip mention={{ kind, id, label }} />
+    <NodeViewWrapper as="span">
+      <MentionChip
+        mention={{ kind, id, label }}
+        className={selected ? 'rounded-md outline-2 outline-offset-1 outline-primary' : undefined}
+      />
     </NodeViewWrapper>
   )
 }
@@ -186,7 +202,18 @@ function renderMenu() {
       current = props
       selected = 0
       component = new ReactRenderer(MentionMenu, { props: menuProps(), editor: props.editor })
-      unmount = props.mount(component.element)
+      // Like a chat app's command menu: docked to the composer's frame, full width, above
+      // it (below when there's no room above), rather than floating at the caret.
+      const editorDom = props.editor.view.dom
+      const frame =
+        editorDom.closest<HTMLElement>('[data-composer-frame]') ?? editorDom.parentElement!
+      const above = frame.getBoundingClientRect().top > MENU_MAX_HEIGHT + 16
+      component.element.className = cn(
+        'absolute inset-x-0 z-50',
+        above ? 'bottom-full mb-2' : 'top-full mt-2',
+      )
+      frame.append(component.element)
+      unmount = () => component?.element.remove()
     },
     onUpdate(props: SuggestionProps<Option, Mention>) {
       current = props
@@ -247,6 +274,7 @@ export function Composer({
   name,
   id,
   threadId,
+  bare,
 }: {
   value: string
   onChange: (text: string) => void
@@ -260,6 +288,8 @@ export function Composer({
   id?: string
   /** The thread being replied in, left out of the menu. */
   threadId?: string
+  /** No border of its own: the surrounding card frames it. */
+  bare?: boolean
 }) {
   const options = useMentionOptions(threadId)
   // The editor is built once; these keep its callbacks current.
@@ -294,8 +324,6 @@ export function Composer({
         renderText: ({ node }) => formatMention(node.attrs as Mention),
         suggestion: {
           char: '@',
-          placement: 'top-start',
-          offset: { mainAxis: 6 },
           items: ({ query }) => search(latest.current.options, query),
           render: renderMenu,
         },
@@ -313,7 +341,13 @@ export function Composer({
     content: toDoc(value),
     editorProps: {
       attributes: {
-        class: 'composer-input',
+        // `composer-input` hooks the placeholder rule in globals.css (ProseMirror markup).
+        class: cn(
+          'composer-input max-h-[40vh] overflow-y-auto text-sm wrap-anywhere whitespace-pre-wrap outline-none [&[contenteditable=false]]:opacity-60',
+          bare
+            ? 'px-2 py-1.5 text-[0.9375rem]'
+            : 'rounded-md border border-input bg-transparent px-3 py-2 shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30',
+        ),
         role: 'textbox',
         'aria-multiline': 'true',
         ...(id ? { id } : {}),
@@ -344,9 +378,11 @@ export function Composer({
   }, [editor, placeholder])
 
   return (
-    <>
-      <EditorContent editor={editor} className="composer-field" />
+    // `relative`: the mention menu docks here unless an ancestor is marked
+    // `data-composer-frame` (a card around a bare composer).
+    <div className="relative">
+      <EditorContent editor={editor} />
       {name && <input type="hidden" name={name} value={value} />}
-    </>
+    </div>
   )
 }

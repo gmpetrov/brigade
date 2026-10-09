@@ -1,15 +1,20 @@
 'use client'
+import { ArrowRight, ListOrdered, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Composer } from '@/components/composer'
-import { StatusBadge, useDashboard } from '@/components/dashboard'
+import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
 import { Takeover } from '@/components/takeover'
 import { TicketRow } from '@/components/ticket-row'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
-import { api, harnessLabel, useApi, type Thread } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { api, harnessLabel, useApi, type Teammate, type Thread } from '@/lib/api'
 import { useThreadEvents } from '@/lib/use-thread-events'
+import { cn } from '@/lib/utils'
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,7 +42,13 @@ export default function ThreadPage() {
   }, [status, reload])
 
   if (!thread.data)
-    return <p className={thread.error ? 'error' : 'hint'}>{thread.error?.message ?? 'Loading…'}</p>
+    return (
+      <p
+        className={cn('text-sm', thread.error ? 'text-destructive-text' : 'text-muted-foreground')}
+      >
+        {thread.error?.message ?? 'Loading…'}
+      </p>
+    )
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
@@ -67,83 +78,138 @@ export default function ThreadPage() {
   }
 
   return (
-    <div>
-      <div className="row" style={{ marginBottom: 16 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1
-            style={{
-              margin: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t.title}
-          </h1>
-          <div className="hint">
-            {t.teammate.name} · {harnessLabel(t.teammate.harness)} on{' '}
-            {t.computer.kind === 'cloud' ? 'the workspace computer' : t.computer.name} ·{' '}
-            {t.origin === 'webhook'
-              ? `started by webhook "${t.webhook?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
-              : `started by ${t.startedBy.user.name}`}
-            {limits?.map(
-              (l) => ` · ${l.window.replace('_', ' ')} ${Math.round(l.utilization * 100)}% used`,
+    <div className="flex flex-col">
+      <header className="mb-6 flex flex-col gap-4 border-b pb-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-[1_1_26rem] flex-col gap-1.5">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground"
+            >
+              <Link href="/app" className="hover:text-foreground">
+                Threads
+              </Link>
+              <span aria-hidden>/</span>
+              <Link
+                href={`/app/teammates/${t.teammate.id}`}
+                className="truncate hover:text-foreground"
+              >
+                {t.teammate.name}
+              </Link>
+            </nav>
+            <h1 className="truncate text-2xl font-extrabold tracking-tight">{t.title}</h1>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <TeammateAvatar
+                teammate={{
+                  name: t.teammate.name,
+                  harness: t.teammate.harness as Teammate['harness'],
+                }}
+                className="size-5"
+              />
+              <span className="font-semibold text-foreground">{t.teammate.name}</span>
+              <span aria-hidden>·</span>
+              <span>
+                {harnessLabel(t.teammate.harness)} on{' '}
+                {t.computer.kind === 'cloud' ? 'the workspace computer' : t.computer.name}
+              </span>
+              <span aria-hidden>·</span>
+              <span>
+                {t.origin === 'webhook'
+                  ? `started by webhook "${t.webhook?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
+                  : `started by ${t.startedBy.user.name}`}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                'size-2 rounded-full',
+                connected ? 'bg-success' : 'bg-muted-foreground',
+              )}
+              title={connected ? 'Live' : 'Reconnecting'}
+              role="img"
+              aria-label={connected ? 'Live' : 'Reconnecting'}
+            />
+            <StatusBadge status={current} />
+            {t.computer.kind === 'cloud' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={watching}
+                onClick={() => setWatching(!watching)}
+                title="Watch the workspace computer's desktop"
+              >
+                <Monitor aria-hidden />
+                {watching ? 'Hide desktop' : 'Desktop'}
+              </Button>
             )}
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/app/threads/${id}/log`}>
+                <ListOrdered aria-hidden />
+                Run log
+              </Link>
+            </Button>
           </div>
         </div>
-        {t.computer.kind === 'cloud' && (
-          <button
-            type="button"
-            aria-pressed={watching}
-            onClick={() => setWatching(!watching)}
-            title="Watch the workspace computer's desktop"
-          >
-            {watching ? 'Hide desktop' : 'Desktop'}
-          </button>
-        )}
-        <Link href={`/app/threads/${id}/log`} className="button">
-          Run log
-        </Link>
-        <span
-          className={`dot ${connected ? 'on' : ''}`}
-          title={connected ? 'Live' : 'Reconnecting'}
-        />
-        <StatusBadge status={current} />
-      </div>
+        {limits?.length ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {limits.map((l) => {
+              const used = Math.round(l.utilization * 100)
+              return (
+                <div
+                  key={l.window}
+                  className="flex items-center gap-2.5 text-xs text-muted-foreground"
+                >
+                  <span className="capitalize">{l.window.replace('_', ' ')}</span>
+                  <Progress
+                    value={Math.min(used, 100)}
+                    aria-label={`${l.window.replace('_', ' ')} usage`}
+                    className="h-1.5 w-28 bg-secondary"
+                  />
+                  <span className="font-mono text-foreground">{used}% used</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
+      </header>
 
       {notices.length > 0 && (
-        <ul className="list" style={{ marginBottom: 16 }}>
-          {notices.map((ticket) => (
-            <TicketRow
-              key={ticket.id}
-              me={me}
-              ticket={{
-                ...ticket,
-                status: 'open',
-                resolvedAt: null,
-                session: {
-                  id: t.id,
-                  title: t.title,
-                  origin: t.origin,
-                  startedByMemberId: t.startedByMemberId,
-                  teammate: t.teammate,
-                },
-              }}
-              onResolve={async (ticketId, approved) => {
-                setError(undefined)
-                try {
-                  await api(`/tickets/${ticketId}/resolve`, { body: { approved } })
-                } catch (e) {
-                  setError((e as Error).message)
-                }
-                await thread.reload()
-              }}
-            />
-          ))}
-        </ul>
+        <Card className="mb-4 gap-0 overflow-hidden py-0">
+          <ul className="divide-y">
+            {notices.map((ticket) => (
+              <TicketRow
+                key={ticket.id}
+                me={me}
+                ticket={{
+                  ...ticket,
+                  status: 'open',
+                  resolvedAt: null,
+                  session: {
+                    id: t.id,
+                    title: t.title,
+                    origin: t.origin,
+                    startedByMemberId: t.startedByMemberId,
+                    teammate: t.teammate,
+                  },
+                }}
+                onResolve={async (ticketId, approved) => {
+                  setError(undefined)
+                  try {
+                    await api(`/tickets/${ticketId}/resolve`, { body: { approved } })
+                  } catch (e) {
+                    setError((e as Error).message)
+                  }
+                  await thread.reload()
+                }}
+              />
+            ))}
+          </ul>
+        </Card>
       )}
 
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4 empty:hidden">
         <Takeover
           thread={t}
           memberId={me.memberId ?? ''}
@@ -171,6 +237,7 @@ export default function ThreadPage() {
 
       <ThreadItems
         items={items}
+        teammate={t.teammate}
         canApprove={t.mayPrompt}
         onApproval={(approvalId, approved) =>
           void call('/approvals', { approvalId, approved }).catch(() => undefined)
@@ -179,44 +246,65 @@ export default function ThreadPage() {
           api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
         }
       />
-      <div ref={bottom} />
 
       {t.controlledByMemberId ? null : t.mayPrompt ? (
-        <div className="composer">
-          <form onSubmit={(e) => void send(e).catch(() => undefined)} className="card stack">
-            <Composer
-              threadId={id}
-              value={text}
-              onChange={setText}
-              onSubmit={() => void send().catch(() => undefined)}
-              placeholder={
-                busy
-                  ? `${t.teammate.name} is working. Your message will run next. @ to mention`
-                  : 'Reply. @ to mention a teammate, connection, credential or thread'
-              }
-            />
-            <div className="row">
-              {error && <span className="error">{error}</span>}
-              <div className="spacer" />
-              {busy && (
-                <button
-                  type="button"
-                  onClick={() => void call('/interrupt').catch(() => undefined)}
-                >
-                  Interrupt
-                </button>
-              )}
-              <button className="primary" disabled={!text.trim() || current === 'waiting'}>
-                Send
-              </button>
-            </div>
+        // Sticks to the bottom of the content column while the thread scrolls under it; the
+        // negative margin takes up the column's bottom padding so it never jumps at the end.
+        <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">
+          <form onSubmit={(e) => void send(e).catch(() => undefined)}>
+            <Card
+              data-composer-frame
+              className="relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring"
+            >
+              <Composer
+                bare
+                threadId={id}
+                value={text}
+                onChange={setText}
+                onSubmit={() => void send().catch(() => undefined)}
+                rows={2}
+                placeholder={
+                  busy
+                    ? `${t.teammate.name} is working. Your message will run next. @ to mention`
+                    : 'Reply. @ to mention a teammate, connection, credential or thread'
+                }
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                {error ? (
+                  <span className="min-w-0 flex-1 pl-2 text-sm text-destructive-text">{error}</span>
+                ) : (
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 pl-2 text-xs text-muted-foreground">
+                    <kbd className="rounded-md bg-secondary px-1.5 font-mono text-foreground">
+                      @
+                    </kbd>
+                    mention a teammate, connection or thread
+                  </span>
+                )}
+                {busy && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void call('/interrupt').catch(() => undefined)}
+                  >
+                    Interrupt
+                  </Button>
+                )}
+                <Button size="sm" disabled={!text.trim() || current === 'waiting'}>
+                  Send
+                  <ArrowRight aria-hidden />
+                </Button>
+              </div>
+            </Card>
           </form>
         </div>
       ) : (
-        <p className="hint">
+        <p className="mt-6 text-sm text-muted-foreground">
           This thread runs on {t.startedBy.user.name}&apos;s subscription. You can watch it live.
         </p>
       )}
+      {/* After the composer; its scroll margin covers the column's bottom padding. */}
+      <div ref={bottom} className="scroll-mb-16" />
     </div>
   )
 }
