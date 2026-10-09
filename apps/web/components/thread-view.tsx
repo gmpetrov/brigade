@@ -1,6 +1,6 @@
 'use client'
-import type { AgentEvent, SequencedEvent } from '@brigade/contracts'
-import { useMemo } from 'react'
+import type { AgentEvent, Question, QuestionAnswer, SequencedEvent } from '@brigade/contracts'
+import { useMemo, useState } from 'react'
 
 type Item =
   | { kind: 'user'; key: string; text: string }
@@ -21,7 +21,15 @@ type Item =
       approvalId: string
       toolName: string
       input: unknown
+      reason?: string
       resolved?: { approved: boolean }
+    }
+  | {
+      kind: 'question'
+      key: string
+      questionId: string
+      questions: Question[]
+      answer?: QuestionAnswer
     }
   | { kind: 'plan'; key: string; items: Extract<AgentEvent, { type: 'plan.updated' }>['items'] }
   | { kind: 'file'; key: string; path: string }
@@ -80,11 +88,25 @@ export function useThreadItems(events: SequencedEvent[]) {
             approvalId: e.approvalId,
             toolName: e.toolName,
             input: e.input,
+            ...(e.reason ? { reason: e.reason } : {}),
           })
           break
         case 'approval.resolved': {
           const item = byKey.get(`a${e.approvalId}`)
           if (item?.kind === 'approval') item.resolved = { approved: e.approved }
+          break
+        }
+        case 'question.asked':
+          add({
+            kind: 'question',
+            key: `q${e.questionId}`,
+            questionId: e.questionId,
+            questions: e.questions,
+          })
+          break
+        case 'question.answered': {
+          const item = byKey.get(`q${e.questionId}`)
+          if (item?.kind === 'question') item.answer = e.answer
           break
         }
         case 'plan.updated':
@@ -147,10 +169,12 @@ function toolSummary(toolName: string, input: unknown) {
 export function ThreadItems({
   items,
   onApproval,
+  onAnswer,
   canApprove,
 }: {
   items: Item[]
   onApproval: (approvalId: string, approved: boolean) => void
+  onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   canApprove: boolean
 }) {
   return (
@@ -209,6 +233,11 @@ export function ThreadItems({
                 <div style={{ marginBottom: 8 }}>
                   Allow <code>{item.toolName}</code> {toolSummary(item.toolName, item.input)}?
                 </div>
+                {item.reason && (
+                  <p className="hint" style={{ marginTop: 0 }}>
+                    {item.reason}
+                  </p>
+                )}
                 <pre
                   className="card"
                   style={{ background: 'var(--sunken)', overflowX: 'auto', maxHeight: 240 }}
@@ -230,6 +259,15 @@ export function ThreadItems({
                   <p className="hint">Only the member who started this thread can answer.</p>
                 )}
               </div>
+            )
+          case 'question':
+            return (
+              <QuestionCard
+                key={item.key}
+                item={item}
+                canAnswer={canApprove}
+                onAnswer={(answer) => onAnswer(item.questionId, answer)}
+              />
             )
           case 'plan':
             return (
@@ -273,6 +311,128 @@ export function ThreadItems({
             )
         }
       })}
+    </div>
+  )
+}
+
+const isSecret = (q: Question) => typeof q.allowFreeForm === 'object' && q.allowFreeForm.secret
+
+/** The harness asks a person something: options, a free answer, or a decline. */
+function QuestionCard({
+  item,
+  canAnswer,
+  onAnswer,
+}: {
+  item: Extract<Item, { kind: 'question' }>
+  canAnswer: boolean
+  onAnswer: (answer: QuestionAnswer) => Promise<void>
+}) {
+  const [picked, setPicked] = useState<Record<string, string[]>>({})
+  const [text, setText] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+
+  async function send(answer: QuestionAnswer) {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await onAnswer(answer)
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  const answers = Object.fromEntries(
+    item.questions.map((q) => [
+      q.id,
+      {
+        optionIds: picked[q.id] ?? [],
+        ...(text[q.id]?.trim() ? { freeform: text[q.id]!.trim() } : {}),
+      },
+    ]),
+  )
+  const complete = item.questions.every(
+    (q) => (picked[q.id]?.length ?? 0) > 0 || Boolean(text[q.id]?.trim()),
+  )
+
+  return (
+    <div className="approval">
+      <div className="meta">Question</div>
+      {item.questions.map((q) => (
+        <div key={q.id} style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 6 }}>
+            {q.header && <strong>{q.header}: </strong>}
+            {q.question}
+          </div>
+          {item.answer ? null : (
+            <>
+              {q.options?.map((o) => (
+                <label key={o.id} className="row" style={{ fontWeight: 400, marginBottom: 4 }}>
+                  <input
+                    type={q.allowMultiple ? 'checkbox' : 'radio'}
+                    name={`${item.questionId}-${q.id}`}
+                    style={{ width: 'auto' }}
+                    disabled={!canAnswer || busy}
+                    checked={picked[q.id]?.includes(o.id) ?? false}
+                    onChange={(e) =>
+                      setPicked((p) => ({
+                        ...p,
+                        [q.id]: q.allowMultiple
+                          ? e.target.checked
+                            ? [...(p[q.id] ?? []), o.id]
+                            : (p[q.id] ?? []).filter((x) => x !== o.id)
+                          : [o.id],
+                      }))
+                    }
+                  />
+                  <span>
+                    {o.label}
+                    {o.description && <span className="hint"> · {o.description}</span>}
+                  </span>
+                </label>
+              ))}
+              {isSecret(q) ? (
+                <p className="hint">
+                  This asks for a secret. Brigade never passes secrets to a teammate: sign it in
+                  through its browser instead, then answer or decline.
+                </p>
+              ) : (
+                (q.allowFreeForm || !q.options?.length) && (
+                  <textarea
+                    rows={2}
+                    placeholder="Your answer"
+                    disabled={!canAnswer || busy}
+                    value={text[q.id] ?? ''}
+                    onChange={(e) => setText((t) => ({ ...t, [q.id]: e.target.value }))}
+                  />
+                )
+              )}
+            </>
+          )}
+        </div>
+      ))}
+      {item.answer ? (
+        <span className={`badge ${item.answer.action === 'declined' ? 'warn' : 'ok'}`}>
+          {item.answer.action === 'declined' ? 'Declined' : 'Answered'}
+        </span>
+      ) : canAnswer ? (
+        <div className="row">
+          <button
+            className="primary"
+            disabled={busy || !complete}
+            onClick={() => void send({ action: 'answered', answers })}
+          >
+            Answer
+          </button>
+          <button disabled={busy} onClick={() => void send({ action: 'declined' })}>
+            Decline
+          </button>
+          {error && <span className="error">{error}</span>}
+        </div>
+      ) : (
+        <p className="hint">Only the member who started this thread can answer.</p>
+      )}
     </div>
   )
 }

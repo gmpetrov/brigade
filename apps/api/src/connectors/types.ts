@@ -10,18 +10,42 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
   run: (ctx: ConnectorContext, input: z.infer<I>) => Promise<unknown>
 }
 
-/** What an operation gets: an authorised fetch. The credential stays inside the API. */
-export type ConnectorContext = { fetch: (url: string, init?: RequestInit) => Promise<Response> }
+/**
+ * What an operation gets: an authorised fetch, and the call's id for vendor
+ * idempotency keys. The credential stays inside the API.
+ */
+export type ConnectorContext = {
+  fetch: (url: string, init?: RequestInit) => Promise<Response>
+  callId: string
+}
+
+export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe'
+
+/** A vendor API key, entered once in the dashboard and kept in the vault. */
+export type ApiKeyCredential = { apiKey: string }
 
 export type ConnectorDefinition = {
-  kind: 'gmail' | 'google_calendar' | 'stripe'
+  kind: ConnectorKind
   label: string
+  /** google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard. */
+  auth: 'google' | 'api_key'
   operations: Record<string, Operation>
 }
 
 export const op = <I extends z.ZodType>(o: Operation<I>) => o as unknown as Operation
 
 export class ConnectorError extends Error {}
+
+/**
+ * Vendors may echo part of a credential in errors (Stripe shows a masked key).
+ * Nothing that looks like a key or token leaves the API, even masked.
+ */
+export function redact(text: string) {
+  return text
+    .replace(/\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9*]+/g, '[redacted key]')
+    .replace(/\bya29\.[\w-]+/g, '[redacted token]')
+    .replace(/\bBearer\s+[\w.*-]+/gi, 'Bearer [redacted]')
+}
 
 /** Fetch JSON from a vendor API and turn its errors into readable ones. */
 export async function json<T>(response: Response): Promise<T> {
@@ -33,7 +57,7 @@ export async function json<T>(response: Response): Promise<T> {
     } catch {
       // not JSON
     }
-    throw new ConnectorError(`${response.status}: ${message}`)
+    throw new ConnectorError(redact(`${response.status}: ${message}`))
   }
   return (body ? JSON.parse(body) : {}) as T
 }

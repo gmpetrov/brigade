@@ -4,7 +4,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
+import { TeammateBrowser } from '@/components/teammate-browser'
 import { TeammateForm } from '@/components/teammate-form'
+import { TeammateOversight } from '@/components/teammate-oversight'
 import { ThreadList } from '@/components/thread-list'
 import {
   api,
@@ -171,6 +173,19 @@ export default function TeammatePage() {
         teammate={teammate}
         editable={isAdmin(me)}
         onPolicyChange={() => void reloadTeammates()}
+      />
+
+      <TeammateBrowser
+        teammate={teammate}
+        computer={computers.data?.computers.find(
+          (c) => c.kind === 'cloud' && !['destroyed', 'error'].includes(c.status),
+        )}
+      />
+
+      <TeammateOversight
+        teammate={teammate}
+        editable={isAdmin(me)}
+        onCapsChange={() => void reloadTeammates()}
       />
 
       <h2 style={{ marginTop: 24 }}>Threads</h2>

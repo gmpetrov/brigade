@@ -108,6 +108,7 @@ const post = (ctx: ConnectorContext, path: string, body: unknown) =>
 export const gmail: ConnectorDefinition = {
   kind: 'gmail',
   label: 'Gmail',
+  auth: 'google',
   operations: {
     gmail_search: op({
       description:

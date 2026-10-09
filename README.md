@@ -49,15 +49,17 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 
 ## Build status
 
-| Step                            | Status                                                                                                                                                                                                                             |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Spike                        | Passed on macOS and on a boat VM (non-root user, subscription signed in through the dashboard, no API key, pause/resume).                                                                                                          |
-| 2. Skeleton                     | Done.                                                                                                                                                                                                                              |
-| 3. Runner on a member's machine | Done. One-command install: `curl -fsSL <api>/runner/install.sh \| sh`.                                                                                                                                                             |
-| 4. Cloud computer               | Done: created with the workspace (or from Computers), runner as a systemd service, stops after the idle period, resumes on the next message or takeover, a Linux user per teammate, takeover with desktop, terminal and hand back. |
-| 5. Accounts                     | Mostly done: sign-in from the dashboard, several accounts per provider, default and per-thread choice, usage display, automatic switching with a handoff, Codex. Switching is untested against a real exhausted account.           |
-| 6. Vault and first connector    | Built and tested with a stand-in credential: vault, connections, grants, write policy, the Gmail connector, the call log, approval tickets. Real Gmail waits on a Google OAuth client.                                             |
-| 7–11                            | Not started.                                                                                                                                                                                                                       |
+| Step                            | Status                                                                                                                                                                                                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Spike                        | Passed on macOS and on a boat VM (non-root user, subscription signed in through the dashboard, no API key, pause/resume).                                                                                                                                                                                   |
+| 2. Skeleton                     | Done.                                                                                                                                                                                                                                                                                                       |
+| 3. Runner on a member's machine | Done. One-command install: `curl -fsSL <api>/runner/install.sh \| sh`.                                                                                                                                                                                                                                      |
+| 4. Cloud computer               | Done: created with the workspace (or from Computers), runner as a systemd service, stops after the idle period, resumes on the next message or takeover, a Linux user per teammate, takeover with desktop, terminal and hand back.                                                                          |
+| 5. Accounts                     | Mostly done: sign-in from the dashboard, several accounts per provider, default and per-thread choice, usage display, automatic switching with a handoff, Codex. Switching is untested against a real exhausted account.                                                                                    |
+| 6. Vault and first connector    | Done. Tested on a real Gmail mailbox: labels, search, read, a draft after approval, a send after approval.                                                                                                                                                                                                  |
+| 7. Control                      | Done. Caps (threads started, connector writes), every ticket path, the timeline and run log, Stripe and HMAC webhook signatures, webhook writes always asking. Tested on real accounts: Gmail, Google Calendar (list, free/busy, create, get, delete), Stripe test mode (search, charges, customer update). |
+| 8. Browser                      | Done on the workspace computer: a Chrome per teammate with its own profile, driven through Playwright's MCP server, each thread in its own tabs (kept across turns), opened on the desktop from the dashboard for sign-in. Harness questions are tickets. Codex threads with the browser are untested.      |
+| 9–11                            | Not started.                                                                                                                                                                                                                                                                                                |
 
 ## Decisions where the spec is silent
 
@@ -125,7 +127,45 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   runner's computer, the grant, read vs write, and the teammate's policy for writes (`allow`, `ask`, `deny`; default
   `ask`). `ask` opens an approval ticket and the call waits; the thread shows it as an approval, answered from the
   thread or the Tickets page by the thread's starter or an admin. Every call, refused ones included, is recorded in
-  `ConnectionCall`. Caps arrive with step 7. A call waiting for approval does not survive an API restart (its
-  ticket is then marked expired when answered).
+  `ConnectionCall`. A call waiting for approval does not survive an API restart (its ticket is then marked expired
+  when answered). Vendor errors are scrubbed of anything that looks like a key or token before they are logged or
+  returned, since Stripe echoes a masked key.
 - **Connections** are kept as `removed` when disconnected, so their call log survives; the credential is revoked at
-  the provider and deleted from the vault.
+  the provider (Google) and deleted from the vault. Gmail and Google Calendar connect through Google OAuth; Stripe
+  takes a secret or restricted key pasted once into a dashboard form, straight into the vault.
+- **Caps** (`apps/api/src/caps.ts`) are counted from the logs, per UTC day: threads created, working time (from a
+  prompt or approval to the end of the turn or the next approval request), and write calls made per connection.
+  Reaching a cap pauses the work and opens a `cap` ticket that only an admin answers. "Allow once" runs the held
+  turn or connector call; "Deny" ends a never-started thread or drops the call. Raising the cap is a teammate edit.
+- **Tickets.** Built-in tool approvals from the harness are tickets too (closed when the runner reports the answer),
+  so the queue holds every approval. Expired logins open a `sign_in` ticket for the account's owner, closed by the
+  next successful sign-in. A pause for usage closes when the thread is prompted again. One function,
+  `resolveTicket` (`apps/api/src/decide.ts`), answers tickets for both the Tickets page and the thread view.
+- **Status timeline and run log** (`apps/api/src/timeline.ts`) are computed on request from `SessionEvent`,
+  `ConnectionCall`, `Ticket` and `AuditEntry`. A turn held by a cap has no events yet, so its ticket marks it blocked.
+- **Inbound webhooks** (`apps/api/src/routes/webhooks.ts`) live at `POST /hooks/<random token>`. Verification is
+  Stripe's `Stripe-Signature` (5-minute tolerance, secret pasted after adding the URL in Stripe), an HMAC Brigade
+  generates (`X-Brigade-Signature: sha256=<hex>`, shown once), or the URL alone. Retries with the same event id
+  start no second thread. The thread runs on the workspace computer, on the accounts of the admin who created the
+  webhook; the payload is its first message, under one line naming the webhook and event. Every connector write
+  in such a thread asks a person, whatever the teammate's policy. When a thread cannot start, the sender gets a
+  503 with `Retry-After` and the webhook's creator gets a ticket.
+- **Teammate browser** (`apps/runner/src/browsers.ts`). On the workspace computer each teammate has one Chrome,
+  running as its Linux user with its profile in `~/.browser`, shown on the computer's desktop. The root helper
+  starts it, lets that user draw on the display, and adds a firewall rule so only that user can reach its
+  DevTools port (`20000 + uid`, localhost). The harness gets Playwright's MCP server (`@playwright/mcp`, through
+  the adapters' native `mcpServers` setting), so Brigade writes no browser tool. On a member's own machine nothing
+  is configured: the harness uses whatever browser access the member has set up.
+- **One browser, a tab set per thread** (`apps/runner/src/browser-relay.ts`). Playwright's MCP server would adopt
+  every open tab, so each thread reaches the browser through a small DevTools relay that shows it only the tabs it
+  opened and their popups. The harness restarts MCP servers between turns, so a thread's tab ids are kept in
+  `~/.browser-tabs/<thread>.json`; tabs of threads idle for a day are closed.
+- **Sign-in through the dashboard.** "Open <teammate>'s browser" (teammate page, and the takeover panel) opens a
+  window of that teammate's Chrome on the desktop, optionally at a URL, and shows the desktop. Whatever a person
+  signs in to stays in that teammate's profile only.
+- **Questions.** When the harness asks a person something (its built-in question tool), the thread waits and a
+  `question` ticket opens; the answer goes back as the tool's result. A question asking for a secret only takes
+  options or a decline: Brigade never passes a secret to a teammate. A site that signed the teammate out shows up
+  this way, as the teammate asking a person to sign it in again.
+- **Updating the root helper.** New workspace computers get the helper from the bootstrap. A runner upgrade does
+  not change root-owned files, so an existing computer needs the helper reinstalled when it changes.

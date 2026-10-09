@@ -5,7 +5,13 @@ import type { ApiToRunner, PermissionPolicy, RunnerToApi } from '@brigade/contra
 import { audit } from './audit.js'
 import { connectors } from './connectors/index.js'
 import { refreshGoogle, type GoogleCredential } from './connectors/google-oauth.js'
-import type { Operation } from './connectors/types.js'
+import {
+  redact,
+  type ApiKeyCredential,
+  type ConnectorKind,
+  type Operation,
+} from './connectors/types.js'
+import { writeCapReached } from './caps.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { openSecret, replaceSecret } from './vault.js'
 
@@ -98,33 +104,62 @@ export async function handleConnectorCall(
     })
   }
 
-  // Approval: the teammate's policy for connector writes.
+  // Approval and caps: the teammate's policy for connector writes, then its daily write cap.
   let decision: (Decision & { ticketId: string }) | undefined
   if (operation.write) {
-    const policy = (session.teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
-    if (policy === 'deny') {
+    const configured =
+      (session.teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
+    if (configured === 'deny') {
       await record({ result: 'denied', target, error: 'policy denies connector writes' })
       return result({
         ok: false,
         error: `${session.teammate.name} may not make changes through connectors`,
       })
     }
-    if (policy === 'ask') {
+    // A webhook payload is untrusted input: writes in its threads always wait for a person.
+    const policy = session.origin === 'webhook' ? 'ask' : configured
+    const cap = await writeCapReached(db, session.teammate, connection.id)
+    if (cap || policy === 'ask') {
+      const action = `${call.operation.replace(/_/g, ' ')} (${target})`
+      const where = connection.externalAccount ?? connection.label
+      const reason = cap
+        ? `${session.teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
+        : session.origin === 'webhook'
+          ? 'A webhook started this thread, so every change waits for a person.'
+          : undefined
       const ticket = await db.ticket.create({
         data: {
           sessionId: session.id,
-          type: 'approval',
-          title: `${session.teammate.name}: ${call.operation.replace(/_/g, ' ')} (${target})`,
+          type: cap ? 'cap' : 'approval',
+          title: cap
+            ? `${session.teammate.name} reached its write cap on ${where}: ${action}`
+            : `${session.teammate.name}: ${action}`,
           payload: {
             connectionId: connection.id,
-            connection: connection.externalAccount ?? connection.label,
+            connection: where,
             operation: call.operation,
             target,
             input: input.data,
+            ...(cap ?? {}),
+            ...(reason ? { reason } : {}),
           },
         } as never,
       })
-      reply({ type: 'connector.pending', callId: call.callId, ticketId: ticket.id, target })
+      if (cap)
+        await audit({
+          ...scope,
+          actor: { type: 'system', id: 'brigade' },
+          action: 'cap.reached',
+          target: { type: 'thread', id: session.id },
+          data: { ...cap, connectionId: connection.id, ticketId: ticket.id },
+        })
+      reply({
+        type: 'connector.pending',
+        callId: call.callId,
+        ticketId: ticket.id,
+        target,
+        ...(reason ? { reason } : {}),
+      })
       const decided = await new Promise<Decision>((resolve) => waiting.set(ticket.id, resolve))
       decision = { ...decided, ticketId: ticket.id }
       if (!decided.approved) {
@@ -143,14 +178,12 @@ export async function handleConnectorCall(
     }
   }
 
-  // Caps arrive with build step 7.
-
   try {
-    const output = await runOperation(db, scope, connection, operation, input.data)
+    const output = await runOperation(db, scope, connection, operation, input.data, call.callId)
     await record({ result: 'ok', target, ...(decision ? { ticketId: decision.ticketId } : {}) })
     return result({ ok: true, output, ...(decision ? { decision } : {}) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = redact(error instanceof Error ? error.message : String(error))
     await record({
       result: 'error',
       target,
@@ -165,23 +198,38 @@ export async function handleConnectorCall(
 async function runOperation(
   db: ScopedDb,
   scope: Scope,
-  connection: { id: string; kind: string; vaultSecretId: string | null },
+  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
   operation: Operation,
   input: unknown,
+  callId: string,
 ) {
   if (!connection.vaultSecretId) throw new Error('This connection has no credential; reconnect it')
-  let credential = await openSecret<GoogleCredential>(db, scope, connection.vaultSecretId)
+  const secretId = connection.vaultSecretId
+  const needsReauth = () =>
+    db.connection.updateMany({ where: { id: connection.id }, data: { status: 'needs_reauth' } })
+
+  if (connectors[connection.kind]?.auth === 'api_key') {
+    const { apiKey } = await openSecret<ApiKeyCredential>(db, scope, secretId)
+    const authorised = async (url: string, init: RequestInit = {}) => {
+      const response = await fetch(url, {
+        ...init,
+        headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
+      })
+      if (response.status === 401) await needsReauth()
+      return response
+    }
+    return operation.run({ fetch: authorised, callId }, input)
+  }
+
+  let credential = await openSecret<GoogleCredential>(db, scope, secretId)
   const refresh = async () => {
     try {
       credential = await refreshGoogle(credential)
     } catch (error) {
-      await db.connection.updateMany({
-        where: { id: connection.id },
-        data: { status: 'needs_reauth' },
-      })
+      await needsReauth()
       throw error
     }
-    await replaceSecret(db, scope, connection.vaultSecretId!, credential)
+    await replaceSecret(db, scope, secretId, credential)
   }
   if (credential.expiresAt < Date.now() + 60_000) await refresh()
   const authorised = async (url: string, init: RequestInit = {}) => {
@@ -200,8 +248,11 @@ async function runOperation(
     }
     return response
   }
-  return operation.run({ fetch: authorised }, input)
+  return operation.run({ fetch: authorised, callId }, input)
 }
+
+/** Whether a connector call is waiting on this ticket in this process. */
+export const isWaiting = (ticketId: string) => waiting.has(ticketId)
 
 /**
  * A person approves or denies a connector write. Returns false when the call
@@ -214,7 +265,7 @@ export async function decideTicket(
 ): Promise<boolean> {
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
-    where: { id: ticketId, type: 'approval', status: 'open' },
+    where: { id: ticketId, type: { in: ['approval', 'cap'] }, status: 'open' },
   })
   if (!ticket) return false
   const resolve = waiting.get(ticketId)
@@ -230,11 +281,15 @@ export async function decideTicket(
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
-    action: resolve
-      ? decision.approved
-        ? 'approval.approved'
-        : 'approval.denied'
-      : 'approval.expired',
+    action: `${ticket.type === 'cap' ? 'cap' : 'approval'}.${
+      resolve
+        ? decision.approved
+          ? ticket.type === 'cap'
+            ? 'allowed'
+            : 'approved'
+          : 'denied'
+        : 'expired'
+    }`,
     target: { type: 'ticket', id: ticketId },
     ...(decision.reason ? { data: { reason: decision.reason } } : {}),
   })

@@ -1,17 +1,27 @@
 'use client'
-import Link from 'next/link'
 import { useState } from 'react'
-import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
+import { useDashboard } from '@/components/dashboard'
+import { TicketRow } from '@/components/ticket-row'
 import { api, useApi, type Ticket } from '@/lib/api'
 
-/** Everything waiting on a person in this workspace. */
+const TYPES: { value: Ticket['type'] | ''; label: string }[] = [
+  { value: '', label: 'All kinds' },
+  { value: 'approval', label: 'Approvals' },
+  { value: 'cap', label: 'Reached caps' },
+  { value: 'sign_in', label: 'Expired logins' },
+  { value: 'usage_limit', label: 'Out of usage' },
+  { value: 'question', label: 'Questions' },
+]
+
+/** One inbox per workspace of everything waiting on a person. */
 export default function Tickets() {
   const { me } = useDashboard()
   const [all, setAll] = useState(false)
+  const [type, setType] = useState<Ticket['type'] | ''>('')
   const tickets = useApi<Ticket[]>(`/tickets${all ? '?status=all' : ''}`)
   const [error, setError] = useState<string>()
 
-  async function decide(id: string, approved: boolean) {
+  async function resolve(id: string, approved: boolean) {
     setError(undefined)
     try {
       await api(`/tickets/${id}/resolve`, { body: { approved } })
@@ -21,13 +31,25 @@ export default function Tickets() {
     await tickets.reload()
   }
 
-  const canDecide = (t: Ticket) => isAdmin(me) || t.session?.startedByMemberId === me.memberId
+  const shown = (tickets.data ?? []).filter((t) => !type || t.type === type)
 
   return (
     <div className="stack">
-      <div className="row">
+      <div className="row" style={{ flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Tickets</h1>
         <div className="spacer" />
+        <select
+          aria-label="Kind"
+          value={type}
+          onChange={(e) => setType(e.target.value as Ticket['type'] | '')}
+          style={{ width: 'auto' }}
+        >
+          {TYPES.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
         <label className="row hint" style={{ fontWeight: 400 }}>
           <input
             type="checkbox"
@@ -39,49 +61,10 @@ export default function Tickets() {
         </label>
       </div>
       {error && <p className="error">{error}</p>}
-      {tickets.data && tickets.data.length === 0 && (
-        <p className="hint">Nothing is waiting on you.</p>
-      )}
+      {tickets.data && shown.length === 0 && <p className="hint">Nothing is waiting on you.</p>}
       <ul className="list">
-        {(tickets.data ?? []).map((t) => (
-          <li key={t.id} style={{ display: 'block' }}>
-            <div className="row">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div>{t.title}</div>
-                <div className="hint">
-                  {t.type.replace('_', ' ')} · {timeAgo(t.createdAt)}
-                  {t.session && (
-                    <>
-                      {' · '}
-                      <Link href={`/app/threads/${t.session.id}`}>{t.session.title}</Link>
-                    </>
-                  )}
-                </div>
-              </div>
-              {t.status === 'open' && t.type === 'approval' && canDecide(t) ? (
-                <>
-                  <button className="primary" onClick={() => void decide(t.id, true)}>
-                    Approve
-                  </button>
-                  <button onClick={() => void decide(t.id, false)}>Deny</button>
-                </>
-              ) : (
-                <span
-                  className={`badge ${t.status === 'approved' ? 'ok' : t.status === 'denied' ? 'danger' : t.status === 'open' ? 'warn' : ''}`}
-                >
-                  {t.status}
-                </span>
-              )}
-            </div>
-            {t.type === 'approval' && t.payload.input !== undefined && (
-              <details className="tool" style={{ marginTop: 8 }}>
-                <summary className="hint">
-                  {t.payload.operation} on {t.payload.connection}: {t.payload.target}
-                </summary>
-                <pre>{JSON.stringify(t.payload.input, null, 2)}</pre>
-              </details>
-            )}
-          </li>
+        {shown.map((t) => (
+          <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
         ))}
       </ul>
     </div>

@@ -11,7 +11,7 @@ const PARK_AFTER_MS = 5 * 60_000
 
 type Command = Extract<
   ApiToRunner,
-  { type: 'thread.prompt' | 'thread.approval' | 'thread.interrupt' }
+  { type: 'thread.prompt' | 'thread.approval' | 'thread.answer' | 'thread.interrupt' }
 >
 
 type Thread = {
@@ -63,6 +63,15 @@ export class Threads {
         memberId: command.memberId,
       })
       input = { kind: 'prompt', text: command.text }
+    } else if (command.type === 'thread.answer') {
+      this.options.emit(spec.sessionId, {
+        at,
+        type: 'question.answered',
+        questionId: command.questionId,
+        answer: command.answer,
+        memberId: command.memberId,
+      })
+      input = { kind: 'answer', questionId: command.questionId, answer: command.answer }
     } else {
       this.options.emit(spec.sessionId, {
         at,

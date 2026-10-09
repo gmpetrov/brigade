@@ -1,7 +1,6 @@
 import { ResolveTicket } from '@brigade/contracts'
 import { Hono } from 'hono'
-import { HTTPException } from 'hono/http-exception'
-import { decideTicket } from '../connector-calls.js'
+import { resolveTicket } from '../decide.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Everything waiting on a person in this workspace. */
@@ -17,8 +16,9 @@ export const tickets = new Hono<AppEnv>()
           select: {
             id: true,
             title: true,
+            origin: true,
             startedByMemberId: true,
-            teammate: { select: { name: true } },
+            teammate: { select: { id: true, name: true } },
           },
         },
       },
@@ -28,23 +28,8 @@ export const tickets = new Hono<AppEnv>()
     return c.json(rows)
   })
 
-  /** Approve or deny. The thread's starter, or an owner or admin, decides. */
+  /** Approve, deny or dismiss. Who may depends on the kind of ticket. */
   .post('/:id/resolve', async (c) => {
-    const { scope, db } = c.var
-    const ticket = await db.ticket.findFirst({
-      where: { id: c.req.param('id'), status: 'open' },
-      include: { session: true },
-    })
-    if (!ticket) throw new HTTPException(404, { message: 'Ticket not found or already resolved' })
-    if (ticket.type !== 'approval')
-      throw new HTTPException(409, { message: 'Only approvals are resolved here' })
-    const isAdmin = scope.role === 'owner' || scope.role === 'admin'
-    if (!isAdmin && ticket.session?.startedByMemberId !== scope.memberId) {
-      throw new HTTPException(403, {
-        message: 'Only the member who started the thread, or an admin, can decide',
-      })
-    }
     const input = await parseBody(c.req.raw, ResolveTicket)
-    const live = await decideTicket(scope, ticket.id, input)
-    return c.json({ ok: true, live })
+    return c.json(await resolveTicket(c.var.scope, c.req.param('id'), input))
   })

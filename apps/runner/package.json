@@ -20,6 +20,7 @@
     "@ai-sdk/harness-claude-code": "1.0.151",
     "@ai-sdk/harness-codex": "1.0.149",
     "@brigade/contracts": "workspace:*",
+    "@playwright/mcp": "0.0.82",
     "ai": "7.0.136",
     "pnpm": "10.34.6",
     "ws": "8.22.0",

@@ -1,7 +1,22 @@
 'use client'
-import { ApiToBrowser, type SequencedEvent } from '@brigade/contracts'
+import { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import { useEffect, useRef, useState } from 'react'
 import { WS_URL } from './config'
+
+/**
+ * An event this dashboard does not know (a newer runner or API) becomes an
+ * ignored placeholder, so the rest of its batch still shows and the sequence
+ * stays contiguous.
+ */
+function known(e: unknown): unknown {
+  if (SequencedEvent.safeParse(e).success) return e
+  const { sessionId, seq } = e as { sessionId: string; seq: number }
+  return {
+    sessionId,
+    seq,
+    event: { type: 'raw', source: 'unsupported', value: null, at: new Date(0).toISOString() },
+  }
+}
 
 /**
  * Follow a thread live. Replays stored events on connect and after every
@@ -36,7 +51,10 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
         socket!.send(JSON.stringify({ type: 'subscribe', sessionId, afterSeq: contiguous() }))
       }
       socket.onmessage = (message) => {
-        const parsed = ApiToBrowser.safeParse(JSON.parse(String(message.data)))
+        const raw = JSON.parse(String(message.data)) as { type?: string; events?: unknown[] }
+        const parsed = ApiToBrowser.safeParse(
+          raw.type === 'events' ? { ...raw, events: (raw.events ?? []).map(known) } : raw,
+        )
         if (!parsed.success) return
         const data = parsed.data
         if (data.type === 'events') {

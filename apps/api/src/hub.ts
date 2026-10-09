@@ -222,6 +222,16 @@ export function runnerSocket(runner: {
         return
       }
       endLogin(login.loginId)
+      if (message.ok) {
+        await prisma.ticket.updateMany({
+          where: {
+            type: 'sign_in',
+            status: 'open',
+            payload: { path: ['accountId'], equals: login.accountId },
+          },
+          data: { status: 'resolved', resolvedByMemberId: login.memberId, resolvedAt: new Date() },
+        })
+      }
       await prisma.account.update({
         where: { id: login.accountId },
         data: message.ok
@@ -312,8 +322,9 @@ export function runnerSocket(runner: {
       await prisma.session.update({ where: { id: sessionId }, data: { lastSeq, status } })
       broadcast(session.workspaceId, { type: 'events', events: fresh }, sessionId)
       if (status !== session.status) broadcastThreadStatus(session.workspaceId, sessionId, status)
-      await noteAccountState(session.accountId, fresh)
+      await noteAccountState(session, fresh)
       await noteAccountSwitches(session, fresh)
+      await noteTickets(session, fresh)
     }
     send(ws, { type: 'ack', sessionId, seq: lastSeq })
   }
@@ -326,7 +337,10 @@ function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
     case 'approval.resolved':
       return 'running'
     case 'approval.requested':
+    case 'question.asked':
       return 'waiting'
+    case 'question.answered':
+      return 'running'
     case 'turn.completed':
       return 'idle'
     case 'account.switched':
@@ -418,7 +432,11 @@ async function syncMachineLogins(
 }
 
 /** Keep the account's usage snapshot, and notice when its login stopped working. */
-async function noteAccountState(accountId: string | null, events: SequencedEvent[]) {
+async function noteAccountState(
+  session: { id: string; organizationId: string; workspaceId: string; accountId: string | null },
+  events: SequencedEvent[],
+) {
+  const { accountId } = session
   if (!accountId) return
   const usage = events.findLast((e) => e.event.type === 'usage.updated' && e.event.limits?.length)
   const authFailed = events.some(
@@ -429,6 +447,20 @@ async function noteAccountState(accountId: string | null, events: SequencedEvent
   // Only an actual reply proves the login works; a turn can complete after an error.
   const worked = events.some((e) => e.event.type === 'message.done')
   if (!usage && !authFailed && !worked) return
+  const before = await prisma.account.findUnique({ where: { id: accountId } })
+  if (authFailed && before && before.status !== 'needs_sign_in') {
+    // An expired login is a ticket for the member who owns the account.
+    await prisma.ticket.create({
+      data: {
+        organizationId: session.organizationId,
+        workspaceId: session.workspaceId,
+        sessionId: session.id,
+        type: 'sign_in',
+        title: `Sign in again: ${before.label}`,
+        payload: { accountId, memberId: before.memberId },
+      },
+    })
+  }
   await prisma.account.update({
     where: { id: accountId },
     data: {
@@ -438,6 +470,104 @@ async function noteAccountState(accountId: string | null, events: SequencedEvent
       ...(authFailed ? { status: 'needs_sign_in' } : worked ? { status: 'ready' } : {}),
     },
   })
+}
+
+/**
+ * Keep the ticket queue in step with the thread: the harness asking before a
+ * built-in tool call is a ticket, closed when answered; a usage-limit pause is
+ * closed when someone prompts the thread again.
+ */
+async function noteTickets(
+  session: { id: string; organizationId: string; workspaceId: string; teammateId: string },
+  events: SequencedEvent[],
+) {
+  for (const { event } of events) {
+    if (event.type === 'approval.requested') {
+      // Connector writes already have their ticket; its id is the approval id.
+      const exists = await prisma.ticket.count({ where: { id: event.approvalId } })
+      if (exists) continue
+      const teammate = await prisma.teammate.findUnique({ where: { id: session.teammateId } })
+      const input = JSON.stringify(event.input ?? null)
+      await prisma.ticket.create({
+        data: {
+          organizationId: session.organizationId,
+          workspaceId: session.workspaceId,
+          sessionId: session.id,
+          type: 'approval',
+          title: `${teammate?.name ?? 'Teammate'}: ${event.toolName}${describeInput(event.input)}`,
+          payload: {
+            source: 'harness',
+            approvalId: event.approvalId,
+            toolName: event.toolName,
+            input:
+              input.length <= 4000 ? (event.input as Prisma.InputJsonValue) : input.slice(0, 4000),
+          },
+        },
+      })
+    } else if (event.type === 'approval.resolved') {
+      await prisma.ticket.updateMany({
+        where: {
+          sessionId: session.id,
+          status: 'open',
+          payload: { path: ['approvalId'], equals: event.approvalId },
+        },
+        data: {
+          status: event.approved ? 'approved' : 'denied',
+          resolvedByMemberId: event.memberId,
+          resolvedAt: new Date(event.at),
+        },
+      })
+    } else if (event.type === 'question.asked') {
+      const teammate = await prisma.teammate.findUnique({ where: { id: session.teammateId } })
+      const first = event.questions[0]?.question ?? 'a question'
+      await prisma.ticket.create({
+        data: {
+          organizationId: session.organizationId,
+          workspaceId: session.workspaceId,
+          sessionId: session.id,
+          type: 'question',
+          title: `${teammate?.name ?? 'Teammate'} asks: ${first.length > 160 ? `${first.slice(0, 157)}...` : first}`,
+          payload: {
+            source: 'harness',
+            questionId: event.questionId,
+            questions: event.questions as unknown as Prisma.InputJsonValue,
+          },
+        },
+      })
+    } else if (event.type === 'question.answered') {
+      await prisma.ticket.updateMany({
+        where: {
+          sessionId: session.id,
+          status: 'open',
+          payload: { path: ['questionId'], equals: event.questionId },
+        },
+        data: {
+          status: 'resolved',
+          resolvedByMemberId: event.memberId,
+          resolvedAt: new Date(event.at),
+        },
+      })
+    } else if (event.type === 'message.user') {
+      await prisma.ticket.updateMany({
+        where: { sessionId: session.id, status: 'open', type: 'usage_limit' },
+        data: {
+          status: 'resolved',
+          resolvedByMemberId: event.memberId,
+          resolvedAt: new Date(event.at),
+        },
+      })
+    }
+  }
+}
+
+/** The part of a tool call a person needs to decide: the command, file or URL. */
+function describeInput(input: unknown) {
+  if (!input || typeof input !== 'object') return ''
+  const i = input as Record<string, unknown>
+  const value = [i.command, i.file_path, i.path, i.url, i.cmd].find((v) => typeof v === 'string')
+  return typeof value === 'string'
+    ? ` (${value.length > 120 ? `${value.slice(0, 117)}...` : value})`
+    : ''
 }
 
 // ---------------------------------------------------------------------------

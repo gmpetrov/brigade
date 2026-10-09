@@ -1,7 +1,11 @@
-import { CreateTeammate, UpdateTeammate, SetGrant } from '@brigade/contracts'
+import { randomUUID } from 'node:crypto'
+import { CreateTeammate, OpenBrowser, UpdateTeammate, SetGrant } from '@brigade/contracts'
+import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { usageToday } from '../caps.js'
+import { teammateTimeline } from '../timeline.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 export const teammates = new Hono<AppEnv>()
@@ -21,6 +25,58 @@ export const teammates = new Hono<AppEnv>()
     return c.json(row)
   })
 
+  /** Per thread: working, waiting for approval, blocked and done. Default: the last 24 hours. */
+  .get('/:id/timeline', async (c) => {
+    const teammate = await c.var.db.teammate.findFirst({ where: { id: c.req.param('id') } })
+    if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+    const to = new Date(c.req.query('to') ?? Date.now())
+    const from = new Date(c.req.query('from') ?? to.getTime() - 24 * 3600_000)
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to)
+      throw new HTTPException(400, { message: 'Bad time range' })
+    if (to.getTime() - from.getTime() > 31 * 24 * 3600_000)
+      throw new HTTPException(400, { message: 'At most 31 days at a time' })
+    const [timeline, usage] = await Promise.all([
+      teammateTimeline(c.var.db, teammate.id, from, to),
+      usageToday(c.var.db, teammate),
+    ])
+    return c.json({ ...timeline, usage })
+  })
+
+  /**
+   * Open a window of the teammate's browser on the workspace computer, e.g. to
+   * sign it in to a site. The person then uses the computer's desktop.
+   */
+  .post('/:id/browser', async (c) => {
+    const { scope, db } = c.var
+    const teammate = await db.teammate.findFirst({
+      where: { id: c.req.param('id'), archivedAt: null },
+    })
+    if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+    const { url } = await parseBody(c.req.raw, OpenBrowser)
+    const computer = await db.computer.findFirst({
+      where: { kind: 'cloud', status: { notIn: ['destroyed', 'error'] } },
+    })
+    if (!computer)
+      throw new HTTPException(409, {
+        message: 'Teammate browsers live on the workspace computer, and this workspace has none',
+      })
+    await dispatch(computer, {
+      type: 'browser.open',
+      commandId: randomUUID(),
+      teammateId: teammate.id,
+      teammateName: teammate.name,
+      ...(url ? { url } : {}),
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'browser.opened',
+      target: { type: 'teammate', id: teammate.id },
+      data: { computerId: computer.id, ...(url ? { url } : {}) },
+    })
+    return c.json({ computerId: computer.id })
+  })
+
   .post('/', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, CreateTeammate)
@@ -38,6 +94,7 @@ export const teammates = new Hono<AppEnv>()
   .patch('/:id', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, UpdateTeammate)
+    // Changing caps or the permission policy is an admin's decision, recorded with the new values.
     const { count } = await c.var.db.teammate.updateMany({
       where: { id: c.req.param('id'), archivedAt: null },
       data: input,
@@ -48,7 +105,11 @@ export const teammates = new Hono<AppEnv>()
       actor: { type: 'member', id: c.var.scope.memberId },
       action: 'teammate.updated',
       target: { type: 'teammate', id: c.req.param('id') },
-      data: { fields: Object.keys(input) },
+      data: {
+        fields: Object.keys(input),
+        ...(input.caps ? { caps: input.caps } : {}),
+        ...(input.permissionPolicy ? { permissionPolicy: input.permissionPolicy } : {}),
+      },
     })
     return c.json(await c.var.db.teammate.findFirst({ where: { id: c.req.param('id') } }))
   })

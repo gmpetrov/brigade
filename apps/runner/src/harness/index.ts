@@ -6,13 +6,14 @@ import { dirname, join } from 'node:path'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
-import type { AccountRef, AgentEvent, ThreadSpec } from '@brigade/contracts'
+import type { AccountRef, AgentEvent, QuestionAnswer, ThreadSpec } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { accountEnv } from '../accounts.js'
+import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
-import { errorMessage, EventMapper } from './events.js'
+import { errorMessage, EventMapper, QUESTION_TOOL } from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import { connectorTools, type ConnectorCaller } from './tools.js'
 
@@ -25,6 +26,7 @@ const execFileAsync = promisify(execFile)
 export type ThreadInput =
   | { kind: 'prompt'; text: string }
   | { kind: 'approval'; approvalId: string; approved: boolean; reason?: string }
+  | { kind: 'answer'; questionId: string; answer: QuestionAnswer }
 
 /** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
 export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
@@ -39,11 +41,16 @@ type SavedState = {
 
 const TRANSCRIPT_CHARS = 40_000
 
-function createAgent(spec: ThreadSpec, callConnector: ConnectorCaller) {
+function createAgent(
+  spec: ThreadSpec,
+  callConnector: ConnectorCaller,
+  mcpServers: Record<string, unknown>,
+) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
+  const settings = { auth: {}, mcpServers }
   const harness =
-    spec.teammate.harness === 'codex' ? createCodex({ auth: {} }) : createClaudeCode({ auth: {} })
+    spec.teammate.harness === 'codex' ? createCodex(settings) : createClaudeCode(settings)
   const tools = connectorTools(spec.connectors, callConnector)
   return new HarnessAgent({
     harness,
@@ -70,6 +77,8 @@ type Live = {
 /** One thread: one harness session in its own working directory. */
 export class HarnessThread {
   private live: Live | undefined
+  /** Tool calls not yet finished, kept across turns (see EventMapper). */
+  private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
   private readonly stateFile: string
 
@@ -146,13 +155,16 @@ export class HarnessThread {
     const mapper = new EventMapper((event) => {
       if (event.type === 'message.done') this.remember('assistant', event.text)
       this.emitEvent(event)
-    })
+    }, this.toolCalls)
     try {
       const live = await this.attach()
       if (input.kind === 'prompt' && live.session.hasUnfinishedTurn()) {
         return {
           kind: 'done',
-          result: { status: 'waiting', error: 'Approve or deny the pending request first.' },
+          result: {
+            status: 'waiting',
+            error: 'Answer the pending approval or question first.',
+          },
         }
       }
       const result =
@@ -162,18 +174,31 @@ export class HarnessThread {
               prompt: input.text,
               abortSignal: signal,
             })
-          : await live.agent.continueStream({
-              session: live.session,
-              abortSignal: signal,
-              toolApprovalContinuations: [
-                {
-                  type: 'tool-approval-response',
-                  approvalId: input.approvalId,
-                  approved: input.approved,
-                  ...(input.reason ? { reason: input.reason } : {}),
-                },
-              ],
-            })
+          : input.kind === 'answer'
+            ? await live.agent.continueStream({
+                session: live.session,
+                abortSignal: signal,
+                toolResultContinuations: [
+                  {
+                    type: 'tool-result',
+                    toolCallId: input.questionId,
+                    toolName: QUESTION_TOOL,
+                    output: { type: 'json', value: input.answer },
+                  },
+                ],
+              })
+            : await live.agent.continueStream({
+                session: live.session,
+                abortSignal: signal,
+                toolApprovalContinuations: [
+                  {
+                    type: 'tool-approval-response',
+                    approvalId: input.approvalId,
+                    approved: input.approved,
+                    ...(input.reason ? { reason: input.reason } : {}),
+                  },
+                ],
+              })
       for await (const part of result.fullStream) mapper.map(part)
       // A login refreshed during the turn goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
@@ -257,7 +282,25 @@ export class HarnessThread {
       await mkdir(this.workDir, { recursive: true })
       env = harnessEnv(accountEnv(account))
     }
-    const agent = createAgent(this.spec, this.callConnector)
+    // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
+    const browser = this.runAs
+      ? await ensureBrowser(this.spec.teammate).catch((error) => {
+          console.warn(`no browser for ${this.runAs}: ${errorMessage(error)}`)
+          return null
+        })
+      : null
+    const agent = createAgent(
+      this.spec,
+      this.callConnector,
+      browser && this.runAs
+        ? {
+            browser: browserMcpServer(
+              browser,
+              `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`,
+            ),
+          }
+        : {},
+    )
     const sandbox = createLocalSandboxSession({
       id: this.spec.sessionId,
       workingDirectory: this.workDir,

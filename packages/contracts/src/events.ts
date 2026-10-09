@@ -7,6 +7,35 @@ const base = {
   at: z.iso.datetime(),
 }
 
+/** A question the harness asks a person (its own question tool). */
+export const Question = z.object({
+  id: z.string(),
+  question: z.string(),
+  header: z.string().optional(),
+  options: z
+    .array(z.object({ id: z.string(), label: z.string(), description: z.string().optional() }))
+    .optional(),
+  allowMultiple: z.boolean().optional(),
+  /** { secret: true }: the harness asks for a secret. Brigade never passes one on. */
+  allowFreeForm: z.union([z.boolean(), z.object({ secret: z.boolean() })]).optional(),
+})
+export type Question = z.infer<typeof Question>
+
+export const QuestionAnswer = z.discriminatedUnion('action', [
+  z.object({
+    action: z.enum(['answered', 'partially-answered']),
+    answers: z.record(
+      z.string(),
+      z.object({
+        optionIds: z.array(z.string()).max(50),
+        freeform: z.string().max(20_000).optional(),
+      }),
+    ),
+  }),
+  z.object({ action: z.literal('declined') }),
+])
+export type QuestionAnswer = z.infer<typeof QuestionAnswer>
+
 export const AgentEvent = z.discriminatedUnion('type', [
   /** A human prompt sent to the thread. */
   z.object({
@@ -39,6 +68,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     toolCallId: z.string(),
     toolName: z.string(),
     input: z.unknown(),
+    /** Why a person must decide, when it is not the usual approval, e.g. a reached cap. */
+    reason: z.string().optional(),
   }),
   z.object({
     ...base,
@@ -47,6 +78,20 @@ export const AgentEvent = z.discriminatedUnion('type', [
     approved: z.boolean(),
     memberId: z.string().nullable(),
     reason: z.string().optional(),
+  }),
+  /** The harness asks a person something and waits for the answer. */
+  z.object({
+    ...base,
+    type: z.literal('question.asked'),
+    questionId: z.string(),
+    questions: z.array(Question),
+  }),
+  z.object({
+    ...base,
+    type: z.literal('question.answered'),
+    questionId: z.string(),
+    answer: QuestionAnswer,
+    memberId: z.string().nullable(),
   }),
   z.object({
     ...base,

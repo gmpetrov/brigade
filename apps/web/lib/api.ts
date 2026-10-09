@@ -66,7 +66,14 @@ export type Teammate = {
   harness: 'claude_code' | 'codex'
   model: string | null
   permissionPolicy: { connectorWrites?: 'allow' | 'ask' | 'deny' } | null
+  caps: Caps | null
   createdAt: string
+}
+
+export type Caps = {
+  threadsPerDay?: number | null
+  computerHoursPerDay?: number | null
+  writeCallsPerConnectionPerDay?: number | null
 }
 
 export type Computer = {
@@ -96,6 +103,9 @@ export type Thread = ThreadSummary & {
   teammate: { id: string; name: string; harness: string; model: string | null }
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
+  origin: 'member' | 'webhook'
+  webhook: { id: string; label: string } | null
+  tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
 }
 
 export type AccountLogin = {
@@ -142,7 +152,52 @@ export type Connection = {
   createdAt: string
   grants: { teammateId: string; scope: 'read' | 'read_write' }[]
 }
-export type ConnectionsResponse = { available: { gmail: boolean }; connections: Connection[] }
+export type ConnectionsResponse = {
+  available: Record<Connection['kind'], boolean>
+  connections: Connection[]
+}
+
+export type Webhook = {
+  id: string
+  label: string
+  connectionId: string
+  verification: 'stripe' | 'hmac' | 'none'
+  url: string
+  hasSecret: boolean
+  createdAt: string
+  teammate: { id: string; name: string }
+}
+
+export type TimelineState = 'working' | 'waiting' | 'blocked' | 'done'
+export type Timeline = {
+  from: string
+  to: string
+  totals: Record<TimelineState, number>
+  threads: {
+    id: string
+    title: string
+    status: string
+    origin: 'member' | 'webhook'
+    segments: { state: TimelineState; from: string; to: string; note?: string }[]
+    doneAt?: string
+  }[]
+  usage: {
+    since: string
+    caps: Caps | null
+    threads: number
+    computerHours: number
+    writeCalls: Record<string, number>
+  }
+}
+
+export type RunLogEntry = {
+  at: string
+  source: 'event' | 'call' | 'ticket' | 'audit'
+  type: string
+  seq?: number
+  data: Record<string, unknown>
+}
+export type RunLog = { entries: RunLogEntry[]; members: Record<string, string> }
 
 export type ConnectionCall = {
   id: string
@@ -164,19 +219,58 @@ export type Ticket = {
   title: string
   payload: {
     connection?: string
+    connectionId?: string
     operation?: string
     target?: string
     input?: unknown
     resetsAt?: string
+    reason?: string
+    source?: 'harness'
+    toolName?: string
+    pending?: { text: string; memberId: string | null }
+    cap?: keyof Caps
+    limit?: number
+    used?: number
+    accountId?: string
+    memberId?: string
+    webhookId?: string
   }
   createdAt: string
   resolvedAt: string | null
   session: {
     id: string
     title: string
+    origin: 'member' | 'webhook'
     startedByMemberId: string
-    teammate: { name: string }
+    teammate: { id: string; name: string }
   } | null
 }
 
 export const harnessLabel = (harness: string) => (harness === 'codex' ? 'Codex' : 'Claude')
+
+/**
+ * Show the workspace computer's desktop in a new tab, optionally with a window
+ * of a teammate's browser opened on it first. The tab opens at once, in the
+ * click, so popup blockers allow it; its address follows when ready.
+ */
+export async function openDesktop(
+  computerId: string,
+  browser?: { teammateId: string; url?: string },
+) {
+  const tab = window.open('about:blank', '_blank')
+  if (tab) tab.opener = null
+  try {
+    if (browser)
+      await api(`/teammates/${browser.teammateId}/browser`, {
+        body: browser.url ? { url: browser.url } : {},
+      })
+    const { url } = await api<{ url: string }>(`/computers/${computerId}/desktop`, {
+      method: 'POST',
+    })
+    if (tab) tab.location.href = url
+    else window.location.href = url
+  } catch (error) {
+    tab?.close()
+    throw error
+  }
+}

@@ -15,7 +15,7 @@ const BATCH = 200
 type PendingCall = {
   resolve: (output: unknown) => void
   reject: (error: Error) => void
-  onPending: (ticketId: string) => void
+  onPending: (ticketId: string, reason?: string) => void
   onDecision: (decision: { ticketId: string; approved: boolean; memberId: string }) => void
 }
 
@@ -61,7 +61,7 @@ export class Connection {
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)
       } else if (message.type === 'connector.pending') {
-        this.calls.get(message.callId)?.onPending(message.ticketId)
+        this.calls.get(message.callId)?.onPending(message.ticketId, message.reason)
       } else if (message.type === 'connector.result') {
         const call = this.calls.get(message.callId)
         if (!call) return

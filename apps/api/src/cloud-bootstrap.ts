@@ -6,7 +6,7 @@
  * manages teammate Linux users and shares account logins with them without
  * ever reading a login file.
  */
-const TEAMMATE_HELPER = `#!/bin/sh
+export const TEAMMATE_HELPER = `#!/bin/sh
 # Brigade teammate helper. Called by the brigade runner through sudo.
 set -eu
 GROUP=brigade-teammates
@@ -39,6 +39,30 @@ case "\${1:-}" in
       ln -sfn "$ACCOUNTS/$3/$F" "$D/$F"
       chown -h "$2:$2" "$D/$F"
     fi
+    ;;
+  browser) # <user> <port> <title> [url]: the teammate's Chrome on the desktop, its own profile
+    user_ok "$2"
+    echo "$3" | grep -Eq '^[0-9]{4,5}$' || fail "bad port"
+    echo "$4" | grep -Eq '^[A-Za-z0-9 ._-]{1,60}$' || fail "bad title"
+    URL="\${5:-}"
+    if [ -n "$URL" ]; then echo "$URL" | grep -Eq '^https?://[^[:space:]]+$' || fail "bad url"; fi
+    U=$(id -u "$2")
+    # Only the teammate's own user may reach its browser's debugging port.
+    for T in iptables ip6tables; do
+      command -v "$T" >/dev/null || continue
+      "$T" -C OUTPUT -o lo -p tcp --dport "$3" -m owner ! --uid-owner "$U" -j REJECT 2>/dev/null ||
+        "$T" -I OUTPUT -o lo -p tcp --dport "$3" -m owner ! --uid-owner "$U" -j REJECT
+    done
+    # Its windows show on the computer's desktop, where a person can take over.
+    AUTH=$(ps -o args= -C Xorg | sed -n 's/.* -auth \\([^ ]*\\).*/\\1/p' | head -1)
+    DISPLAY=:0 XAUTHORITY="$AUTH" xhost "+SI:localuser:$2" >/dev/null || fail "no desktop"
+    install -d -o "$2" -g "$2" -m 700 "/home/$2/.browser"
+    cd /
+    setsid -f runuser -u "$2" -- env -i HOME="/home/$2" USER="$2" LOGNAME="$2" DISPLAY=:0 \\
+      PATH=/usr/bin:/bin LANG=C.UTF-8 google-chrome --user-data-dir="/home/$2/.browser" \\
+      --remote-debugging-port="$3" --no-first-run --no-default-browser-check \\
+      --password-store=basic --class="brigade-$2" --window-name="$4" \${URL:+"$URL"} \\
+      >/dev/null 2>&1 </dev/null
     ;;
   *) fail "unknown command" ;;
 esac

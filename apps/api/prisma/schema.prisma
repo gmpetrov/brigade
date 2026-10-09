@@ -257,6 +257,11 @@ enum SessionStatus {
 }
 
 /// A thread: one conversation with one teammate, one harness session.
+enum SessionOrigin {
+  member
+  webhook
+}
+
 model Session {
   id                  String         @id @default(cuid())
   organizationId      String
@@ -278,6 +283,10 @@ model Session {
   othersMayPrompt     Boolean        @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
+  /// member: a member's message. webhook: an inbound webhook, whose writes always need approval.
+  origin              SessionOrigin  @default(member)
+  webhookId           String?
+  webhook             Webhook?       @relation(fields: [webhookId], references: [id], onDelete: SetNull)
   /// Highest contiguous event sequence number stored.
   lastSeq             Int            @default(0)
   createdAt           DateTime       @default(now())
@@ -493,6 +502,7 @@ model ConnectionCall {
 
   @@index([sessionId])
   @@index([connectionId, createdAt])
+  @@index([teammateId, connectionId, createdAt])
 }
 
 /// An inbound URL, its verification secret and its assigned teammate.
@@ -505,12 +515,27 @@ model Webhook {
   connection        Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   teammateId        String
   teammate          Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  label             String
+  /// The unguessable part of the webhook's URL.
+  pathToken         String     @unique
+  verification      WebhookVerification
   /// Runs on this member's accounts.
   createdByMemberId String
+  /// The signing secret, in the vault.
   verificationSecretId String?
   createdAt         DateTime   @default(now())
+  sessions          Session[]
 
   @@index([workspaceId])
+}
+
+enum WebhookVerification {
+  /// Stripe-Signature, with the endpoint's signing secret.
+  stripe
+  /// X-Brigade-Signature: sha256=<hex HMAC of the body>.
+  hmac
+  /// The URL alone, for apps that sign nothing.
+  none
 }
 
 // ---------------------------------------------------------------------------
@@ -549,6 +574,7 @@ model Ticket {
   createdAt          DateTime     @default(now())
 
   @@index([workspaceId, status])
+  @@index([sessionId])
 }
 
 /// Metadata and text-index entry for a library file.

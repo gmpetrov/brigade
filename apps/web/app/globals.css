@@ -335,3 +335,82 @@ label {
 .dot.on {
   background: var(--ok);
 }
+
+/* Run log */
+table.log {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.log td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+table.log td:first-child {
+  white-space: nowrap;
+}
+table.log td:nth-child(2) {
+  white-space: nowrap;
+  color: var(--muted);
+}
+table.log .tool {
+  margin: 0;
+}
+
+/* Status timeline */
+.timeline {
+  display: grid;
+  grid-template-columns: minmax(80px, 200px) 1fr;
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.timeline .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline .track {
+  position: relative;
+  height: 14px;
+  background: var(--sunken);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.timeline .seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+}
+.seg.working,
+.swatch.working {
+  background: var(--accent);
+}
+.seg.waiting,
+.swatch.waiting {
+  background: var(--warn);
+}
+.seg.blocked,
+.swatch.blocked {
+  background: var(--danger);
+}
+.seg.done,
+.swatch.done {
+  background: var(--border);
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.timeline .axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}

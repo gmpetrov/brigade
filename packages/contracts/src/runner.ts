@@ -1,6 +1,6 @@
 // Messages on the one WebSocket between a runner and the API.
 import { z } from 'zod'
-import { SequencedEvent } from './events.js'
+import { QuestionAnswer, SequencedEvent } from './events.js'
 
 export const HarnessId = z.enum(['claude_code', 'codex'])
 export type HarnessId = z.infer<typeof HarnessId>
@@ -130,7 +130,27 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     reason: z.string().optional(),
     memberId: z.string(),
   }),
+  /** A person's answer to the harness's question. */
+  z.object({
+    type: z.literal('thread.answer'),
+    commandId: z.string(),
+    thread: ThreadSpec,
+    questionId: z.string(),
+    answer: QuestionAnswer,
+    memberId: z.string(),
+  }),
   z.object({ type: z.literal('thread.interrupt'), commandId: z.string(), sessionId: z.string() }),
+  /**
+   * Open a window of the teammate's browser on the computer's desktop, e.g. for
+   * a person to sign it in to a site. Cloud computers only.
+   */
+  z.object({
+    type: z.literal('browser.open'),
+    commandId: z.string(),
+    teammateId: z.string(),
+    teammateName: z.string(),
+    url: z.url({ protocol: /^https?$/ }).optional(),
+  }),
   /** A person takes control of a thread: the teammate stops, now or after its current turn. */
   z.object({
     type: z.literal('thread.takeover'),
@@ -168,6 +188,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     callId: z.string(),
     ticketId: z.string(),
     target: z.string(),
+    /** Why a person must decide, when it is not the usual approval, e.g. a reached cap. */
+    reason: z.string().optional(),
   }),
   z.object({
     type: z.literal('connector.result'),

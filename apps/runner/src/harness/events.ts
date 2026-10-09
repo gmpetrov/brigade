@@ -1,6 +1,9 @@
 // Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
 // this module sees an AI SDK type.
-import type { AgentEvent } from '@brigade/contracts'
+import { Question, type AgentEvent } from '@brigade/contracts'
+
+/** The AI SDK's name for a harness's built-in question tool. */
+export const QUESTION_TOOL = 'askUserQuestions'
 
 const FILE_TOOLS = new Set([
   'write',
@@ -20,7 +23,6 @@ type Part = { type: string; [key: string]: any }
 export class EventMapper {
   private texts = new Map<string, string>()
   private reasoning = new Map<string, string>()
-  private toolCalls = new Map<string, { toolName: string; input: unknown }>()
   finishReason = 'unknown'
   /** The first error the harness reported during this turn. */
   error: string | undefined
@@ -39,7 +41,14 @@ export class EventMapper {
     return { resetsAt: epoch ? new Date(Number(epoch) * 1000).toISOString() : null }
   }
 
-  constructor(private readonly emit: (event: AgentEvent) => void) {}
+  constructor(
+    private readonly emit: (event: AgentEvent) => void,
+    /**
+     * Tool calls seen so far in the thread. Shared across turns: a call that
+     * waited for approval finishes in the next turn, which needs its input.
+     */
+    private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>(),
+  ) {}
 
   map(part: Part) {
     const at = new Date().toISOString()
@@ -64,6 +73,17 @@ export class EventMapper {
       case 'tool-call': {
         if (this.toolCalls.has(part.toolCallId)) return // adapters may repeat a call around approvals
         this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
+        // The harness's own question tool: a person answers, then the turn continues.
+        if (part.toolName === QUESTION_TOOL) {
+          const questions = Question.array().safeParse(part.input?.questions)
+          if (questions.success)
+            return this.emit({
+              at,
+              type: 'question.asked',
+              questionId: part.toolCallId,
+              questions: questions.data,
+            })
+        }
         this.emit({
           at,
           type: 'tool.started',
@@ -94,6 +114,7 @@ export class EventMapper {
         })
       case 'tool-result': {
         const call = this.toolCalls.get(part.toolCallId)
+        this.toolCalls.delete(part.toolCallId)
         this.emit({
           at,
           type: 'tool.finished',
@@ -110,6 +131,7 @@ export class EventMapper {
         return
       }
       case 'tool-error':
+        this.toolCalls.delete(part.toolCallId)
         return this.emit({
           at,
           type: 'tool.finished',
@@ -119,6 +141,7 @@ export class EventMapper {
           isError: true,
         })
       case 'tool-output-denied':
+        this.toolCalls.delete(part.toolCallId)
         return this.emit({
           at,
           type: 'tool.finished',

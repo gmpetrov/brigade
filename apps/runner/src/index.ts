@@ -9,6 +9,7 @@ import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/co
 import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js'
 import { Accounts, machineLogins } from './accounts.js'
 import { Connection } from './connection.js'
+import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
@@ -101,7 +102,7 @@ async function start() {
           input: call.input,
         },
         {
-          onPending: (ticketId) =>
+          onPending: (ticketId, reason) =>
             emit({
               at: new Date().toISOString(),
               type: 'approval.requested',
@@ -109,6 +110,7 @@ async function start() {
               toolCallId: call.toolCallId,
               toolName: call.toolName,
               input: call.input,
+              ...(reason ? { reason } : {}),
             }),
           onDecision: (d) =>
             emit({
@@ -139,6 +141,7 @@ async function start() {
     switch (message.type) {
       case 'thread.prompt':
       case 'thread.approval':
+      case 'thread.answer':
       case 'thread.interrupt':
         try {
           threads.handle(message)
@@ -186,6 +189,20 @@ async function start() {
         return accounts.cancel(message.loginId)
       case 'account.remove':
         return accounts.remove(message.account)
+      case 'browser.open':
+        if (!CLOUD) return
+        return ensureBrowser(
+          { id: message.teammateId, name: message.teammateName },
+          message.url ?? BROWSER_START_PAGE,
+        ).then(
+          () => undefined,
+          (error) =>
+            connection.send({
+              type: 'command.failed',
+              commandId: message.commandId,
+              error: String(error),
+            }),
+        )
     }
   }
 

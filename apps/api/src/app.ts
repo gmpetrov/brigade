@@ -10,6 +10,7 @@ import { accounts } from './routes/accounts.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { tickets } from './routes/tickets.js'
+import { inboundWebhooks, webhooks } from './routes/webhooks.js'
 import { runnerInstall } from './routes/runner-install.js'
 import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
@@ -31,9 +32,12 @@ app.route('/api/computers', computers)
 app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
 app.route('/api/tickets', tickets)
+app.route('/api/webhooks', webhooks)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
+// Public: third-party apps post here. Verified by URL and signature, not a session.
+app.route('/hooks', inboundWebhooks)
 
 /** The dashboard's live socket. Scoped by the session cookie. */
 app.get(

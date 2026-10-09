@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { api, type Thread } from '@/lib/api'
+import { api, openDesktop, type Thread } from '@/lib/api'
 import { Terminal } from './terminal'
 
 /** Take over the workspace computer for a thread, then hand back. */
@@ -79,15 +79,12 @@ export function Takeover({
         <button
           disabled={busy}
           onClick={() =>
-            void act(async () => {
-              const { url } = await api<{ url: string }>(
-                `/computers/${thread.computer.id}/desktop`,
-                { method: 'POST' },
-              )
-              window.open(url, '_blank', 'noopener')
-            })
+            void act(() => openDesktop(thread.computer.id, { teammateId: thread.teammate.id }))
           }
         >
+          Open {thread.teammate.name}&apos;s browser
+        </button>
+        <button disabled={busy} onClick={() => void act(() => openDesktop(thread.computer.id))}>
           Open desktop
         </button>
       </div>

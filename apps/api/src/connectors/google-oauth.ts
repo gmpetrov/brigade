@@ -6,7 +6,11 @@ export const GOOGLE_SCOPES: Record<'gmail' | 'google_calendar', string[]> = {
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.send',
   ],
-  google_calendar: ['https://www.googleapis.com/auth/calendar.events'],
+  google_calendar: [
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+    'https://www.googleapis.com/auth/calendar.freebusy',
+  ],
 }
 
 export type GoogleCredential = {
@@ -80,4 +84,21 @@ export async function revokeGoogle(credential: GoogleCredential) {
     `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(credential.refreshToken ?? credential.accessToken)}`,
     { method: 'POST' },
   ).catch(() => undefined)
+}
+
+/** The account a credential belongs to, to show which one a connection is. Never the credential. */
+export async function googleAccount(kind: 'gmail' | 'google_calendar', accessToken: string) {
+  const headers = { authorization: `Bearer ${accessToken}` }
+  if (kind === 'gmail') {
+    const profile = (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers,
+    }).then((r) => r.json())) as { emailAddress?: string }
+    return profile.emailAddress ?? null
+  }
+  // The primary calendar's id is the account's address.
+  const primary = (await fetch(
+    'https://www.googleapis.com/calendar/v3/users/me/calendarList/primary',
+    { headers },
+  ).then((r) => r.json())) as { id?: string }
+  return primary.id ?? null
 }
