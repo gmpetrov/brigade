@@ -1,6 +1,7 @@
 // Zod schemas shared by api, runner and web. The single source of types.
 export * from './api.js'
 export * from './events.js'
+export * from './mentions.js'
 export * from './runner.js'
 
 /** Bump when the runner protocol changes incompatibly. */

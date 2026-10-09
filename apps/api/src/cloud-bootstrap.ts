@@ -64,6 +64,23 @@ case "\${1:-}" in
       --password-store=basic --class="brigade-$2" --window-name="$4" \${URL:+"$URL"} \\
       >/dev/null 2>&1 </dev/null
     ;;
+  clipboard) # get|set: the desktop's clipboard as UTF-8, on stdout or from stdin
+    AUTH=$(ps -o args= -C Xorg | sed -n 's/.* -auth \\([^ ]*\\).*/\\1/p' | head -1)
+    [ -n "$AUTH" ] || fail "no desktop"
+    export DISPLAY=:0 XAUTHORITY="$AUTH"
+    case "\${2:-}" in
+      get) timeout 3 xclip -o -selection clipboard 2>/dev/null || true ;;
+      set) # both selections: Shift+Insert pastes PRIMARY in terminals, CLIPBOARD in browsers
+        T=$(mktemp)
+        trap 'rm -f "$T"' EXIT
+        head -c 1000000 >"$T"
+        for S in clipboard primary; do
+          xclip -i -selection "$S" "$T" >/dev/null 2>&1 </dev/null
+        done
+        ;;
+      *) fail "bad clipboard command" ;;
+    esac
+    ;;
   *) fail "unknown command" ;;
 esac
 `

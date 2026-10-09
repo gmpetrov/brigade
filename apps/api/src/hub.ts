@@ -1,6 +1,6 @@
 // The WebSocket hub: one socket per runner, one per open dashboard tab.
 // Everything lives in this one API process; there is no broker.
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import {
   ApiToBrowser,
   ApiToRunner,
@@ -54,6 +54,39 @@ export function sendToRunner(computerId: string, message: ApiToRunner): boolean 
   touch(computerId)
   send(conn.ws, message)
   return true
+}
+
+const clipboards = new Map<
+  string,
+  { computerId: string; resolve: (text: string) => void; reject: (error: Error) => void }
+>()
+
+/**
+ * Set a cloud computer's desktop clipboard to `text`, or read it. Resolves
+ * with the clipboard text; rejects when the runner is offline or cannot.
+ */
+export function desktopClipboard(computerId: string, text?: string) {
+  return new Promise<string>((resolve, reject) => {
+    const requestId = randomUUID()
+    const timer = setTimeout(() => {
+      clipboards.delete(requestId)
+      reject(new Error('The computer did not answer'))
+    }, 5000)
+    const settle =
+      <T>(fn: (value: T) => void) =>
+      (value: T) => {
+        clearTimeout(timer)
+        clipboards.delete(requestId)
+        fn(value)
+      }
+    clipboards.set(requestId, { computerId, resolve: settle(resolve), reject: settle(reject) })
+    const sent = sendToRunner(computerId, {
+      type: 'desktop.clipboard',
+      requestId,
+      ...(text === undefined ? {} : { text }),
+    })
+    if (!sent) clipboards.get(requestId)?.reject(new Error('The computer is offline'))
+  })
 }
 
 /** Commands for cloud computers that are starting, sent when their runner connects. */
@@ -269,6 +302,14 @@ export function runnerSocket(runner: {
           error: String(error),
         }),
       )
+      return
+    }
+
+    if (message.type === 'desktop.clipboard.result') {
+      const request = clipboards.get(message.requestId)
+      if (!request || request.computerId !== runner.computerId) return
+      if (message.error !== undefined) request.reject(new Error(message.error))
+      else request.resolve(message.text ?? '')
       return
     }
 

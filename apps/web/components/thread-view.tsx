@@ -1,6 +1,7 @@
 'use client'
 import type { AgentEvent, Question, QuestionAnswer, SequencedEvent } from '@brigade/contracts'
 import { useMemo, useState } from 'react'
+import { MessageText } from '@/components/mention'
 
 type Item =
   | { kind: 'user'; key: string; text: string }
@@ -184,7 +185,7 @@ export function ThreadItems({
           case 'user':
             return (
               <div key={item.key} className="bubble user">
-                {item.text}
+                <MessageText text={item.text} />
               </div>
             )
           case 'assistant':

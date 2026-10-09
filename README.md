@@ -167,5 +167,10 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   `question` ticket opens; the answer goes back as the tool's result. A question asking for a secret only takes
   options or a decline: Brigade never passes a secret to a teammate. A site that signed the teammate out shows up
   this way, as the teammate asking a person to sign it in again.
+- **Watching the desktop** (`apps/api/src/desktop-proxy.ts`). A thread on the workspace computer can show its
+  desktop beside it, view only, without stopping the teammate or waking a stopped computer. The provider's desktop
+  URL logs in with a cookie that browsers drop inside a third-party iframe, so the API logs in itself and relays the
+  noVNC page and its socket under a random view id that lapses after an hour unused. The browser never sees the
+  provider's URL. View only is noVNC's own setting, not a boundary: any member may take over anyway.
 - **Updating the root helper.** New workspace computers get the helper from the bootstrap. A runner upgrade does
   not change root-owned files, so an existing computer needs the helper reinstalled when it changes.

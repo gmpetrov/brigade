@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import {
   AnswerQuestion,
+  DesktopClipboard,
   HandBack,
+  mentionsToText,
   TakeOver,
   ResolveApproval,
   SendMessage,
@@ -13,9 +15,11 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { audit } from '../audit.js'
+import { desktopUrl, ensureRunning } from '../cloud.js'
+import { openView } from '../desktop-proxy.js'
 import { answerQuestion, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
-import { broadcastThreadStatus, dispatch } from '../hub.js'
+import { broadcastThreadStatus, desktopClipboard, dispatch } from '../hub.js'
 import { loadThread, specFor } from '../thread-spec.js'
 import { promptThread, startThread } from '../work.js'
 import { runLog } from '../timeline.js'
@@ -124,7 +128,7 @@ export const threads = new Hono<AppEnv>()
       computer,
       memberId: scope.memberId,
       accountId: input.accountId ?? null,
-      title: input.text.split('\n')[0]!,
+      title: mentionsToText(input.text).split('\n')[0]!,
       text: input.text,
     })
     if (outcome === 'offline') {
@@ -238,6 +242,62 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
     })
     return c.json({ ok: true })
+  })
+
+  /**
+   * The computer's desktop: watch the teammate work, or use it after taking
+   * over. Watching never wakes a stopped computer; having control does.
+   */
+  .post('/:id/desktop', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (thread.computer.kind !== 'cloud') {
+      throw new HTTPException(409, {
+        message: "This thread runs on a member's own machine. Its desktop is theirs.",
+      })
+    }
+    if (thread.computer.status !== 'running') {
+      if (thread.controlledByMemberId === scope.memberId) {
+        await ensureRunning(thread.computer.id)
+        // 503: the dashboard asks again until the computer is up.
+        throw new HTTPException(503, { message: 'Starting the workspace computer…' })
+      }
+      throw new HTTPException(409, {
+        message: 'The workspace computer is not running. It starts with the next message.',
+      })
+    }
+    const url = await desktopUrl(thread.computer)
+    if (!url)
+      throw new HTTPException(409, {
+        message: 'The desktop is not available yet. Try again in a moment.',
+      })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'desktop.watched',
+      target: { type: 'thread', id: thread.id },
+    })
+    // Relayed through this API. View only until takeover is the viewer's own
+    // setting, not a boundary: any member may take over anyway.
+    return c.json(await openView(url))
+  })
+
+  /**
+   * Copy and paste through the desktop view: set the desktop's clipboard, or
+   * read it. VNC alone carries neither direction reliably. In control only.
+   */
+  .post('/:id/desktop/clipboard', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (thread.computer.kind !== 'cloud' || thread.controlledByMemberId !== scope.memberId) {
+      throw new HTTPException(409, { message: 'Take over to use the desktop clipboard' })
+    }
+    const { text } = await parseBody(c.req.raw, DesktopClipboard)
+    try {
+      return c.json({ text: await desktopClipboard(thread.computer.id, text) })
+    } catch (error) {
+      throw new HTTPException(503, { message: (error as Error).message })
+    }
   })
 
   /** Takeover: a person steps in; the teammate stops now or after its current turn. */

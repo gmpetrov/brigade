@@ -2,6 +2,9 @@
 import { z } from 'zod'
 import { QuestionAnswer, SequencedEvent } from './events.js'
 
+/** Longest clipboard text carried between a person's browser and a desktop. */
+export const CLIPBOARD_MAX = 1_000_000
+
 export const HarnessId = z.enum(['claude_code', 'codex'])
 export type HarnessId = z.infer<typeof HarnessId>
 
@@ -96,6 +99,13 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     email: z.string().optional(),
     plan: z.string().optional(),
   }),
+  /** The desktop's clipboard text after a desktop.clipboard command, or why it failed. */
+  z.object({
+    type: z.literal('desktop.clipboard.result'),
+    requestId: z.string(),
+    text: z.string().max(CLIPBOARD_MAX).optional(),
+    error: z.string().optional(),
+  }),
   /** A harness called a connector tool. The API checks grant, scope, approval and caps, then calls. */
   z.object({
     type: z.literal('connector.call'),
@@ -150,6 +160,15 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     teammateId: z.string(),
     teammateName: z.string(),
     url: z.url({ protocol: /^https?$/ }).optional(),
+  }),
+  /**
+   * The cloud computer's desktop clipboard, for a person in control copying
+   * and pasting through the desktop view: set it to `text`, or read it.
+   */
+  z.object({
+    type: z.literal('desktop.clipboard'),
+    requestId: z.string(),
+    text: z.string().max(CLIPBOARD_MAX).optional(),
   }),
   /** A person takes control of a thread: the teammate stops, now or after its current turn. */
   z.object({

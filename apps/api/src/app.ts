@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
 import { env } from './config.js'
+import { desktopProxy } from './desktop-proxy.js'
 import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
 import { computers, runnerLink } from './routes/computers.js'
@@ -36,6 +37,8 @@ app.route('/api/webhooks', webhooks)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
+// The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
+app.route('/desktop', desktopProxy)
 // Public: third-party apps post here. Verified by URL and signature, not a session.
 app.route('/hooks', inboundWebhooks)
 

@@ -8,10 +8,13 @@ export function Takeover({
   thread,
   memberId,
   onChange,
+  onOpenDesktop,
 }: {
   thread: Thread
   memberId: string
   onChange: () => void
+  /** Show the desktop in this page. Without it, the desktop opens in a new tab. */
+  onOpenDesktop?: () => void
 }) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
@@ -79,12 +82,22 @@ export function Takeover({
         <button
           disabled={busy}
           onClick={() =>
-            void act(() => openDesktop(thread.computer.id, { teammateId: thread.teammate.id }))
+            void act(async () => {
+              if (!onOpenDesktop)
+                return openDesktop(thread.computer.id, { teammateId: thread.teammate.id })
+              await api(`/teammates/${thread.teammate.id}/browser`, { body: {} })
+              onOpenDesktop()
+            })
           }
         >
           Open {thread.teammate.name}&apos;s browser
         </button>
-        <button disabled={busy} onClick={() => void act(() => openDesktop(thread.computer.id))}>
+        <button
+          disabled={busy}
+          onClick={() =>
+            onOpenDesktop ? onOpenDesktop() : void act(() => openDesktop(thread.computer.id))
+          }
+        >
           Open desktop
         </button>
       </div>

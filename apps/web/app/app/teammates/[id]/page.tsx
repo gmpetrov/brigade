@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Composer } from '@/components/composer'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateBrowser } from '@/components/teammate-browser'
@@ -31,6 +32,8 @@ export default function TeammatePage() {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [text, setText] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
   if (!teammate) return <p className="hint">Loading…</p>
   const online = usableComputers(computers.data)
@@ -44,6 +47,7 @@ export default function TeammatePage() {
   )
 
   async function start(form: FormData) {
+    if (busy || !text.trim() || !online.length) return
     setBusy(true)
     setError(undefined)
     try {
@@ -102,15 +106,17 @@ export default function TeammatePage() {
         )
       )}
 
-      <form action={start} className="card">
+      <form ref={formRef} action={start} className="card">
         <div className="field">
           <label htmlFor="text">New thread</label>
-          <textarea
+          <Composer
             id="text"
             name="text"
             rows={4}
-            placeholder={`What should ${teammate.name} do?`}
-            required
+            value={text}
+            onChange={setText}
+            onSubmit={() => formRef.current?.requestSubmit()}
+            placeholder={`What should ${teammate.name} do? @ to mention a connection or thread`}
           />
         </div>
         {online.length === 0 ? (
@@ -157,7 +163,7 @@ export default function TeammatePage() {
               </select>
             )}
             <div className="spacer" />
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !text.trim()}>
               Start thread
             </button>
           </div>

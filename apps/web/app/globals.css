@@ -414,3 +414,244 @@ table.log .tool {
   color: var(--muted);
   font-size: 11px;
 }
+
+/* Desktop preview: the workspace computer beside a thread */
+:root {
+  --desktop-w: min(52vw, 960px);
+}
+.desktop-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--desktop-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 10;
+}
+.desktop-bar {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: nowrap;
+}
+.desktop-screen {
+  flex: 1;
+  min-height: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.desktop-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.desktop-canvas {
+  width: 100%;
+  height: 100%;
+}
+.desktop-canvas canvas {
+  border-radius: 6px;
+}
+.desktop-view.controlled .desktop-canvas canvas:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.desktop-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  pointer-events: none;
+}
+/* Expanded: the desktop fills the window, the page dimmed behind it */
+.desktop-panel.expanded {
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  position: fixed;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.92);
+}
+.desktop-panel.expanded .desktop-bar {
+  border-bottom: 0;
+  background: transparent;
+}
+.desktop-panel.expanded .desktop-screen {
+  background: transparent;
+  padding: 0 24px 24px;
+}
+.desktop-screen p {
+  padding: 16px;
+  margin: 0;
+}
+.desktop-foot {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+.main:has(.desktop-panel) {
+  max-width: none;
+  padding-right: calc(var(--desktop-w) + 32px);
+}
+.shell:has(.desktop-panel) .composer {
+  right: var(--desktop-w);
+}
+@media (max-width: 1100px) {
+  .desktop-panel {
+    position: static;
+    width: auto;
+    height: 60vh;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .main:has(.desktop-panel) {
+    padding-right: 32px;
+  }
+  .shell:has(.desktop-panel) .composer {
+    right: 0;
+  }
+}
+
+/* Composer: a message box with @ mentions */
+.composer-field .composer-input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.composer-field .composer-input:focus-visible {
+  border-color: var(--accent);
+}
+.composer-field .composer-input[contenteditable='false'] {
+  opacity: 0.6;
+}
+.composer-input p {
+  margin: 0;
+}
+.composer-input p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Mentions, in the composer and in sent messages */
+.mention-name {
+  font-weight: 600;
+}
+.mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  margin: 0 1px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  line-height: 1.6;
+  vertical-align: baseline;
+  white-space: nowrap;
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mention-chip svg {
+  flex: none;
+  color: var(--muted);
+}
+.mention-node.ProseMirror-selectednode .mention-chip,
+.mention-node.ProseMirror-selectednode .mention-name {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+.mention-menu {
+  --menu-bg: var(--surface);
+  z-index: 20;
+  width: 360px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--menu-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.08),
+    0 12px 32px rgb(0 0 0 / 0.16);
+}
+@media (prefers-color-scheme: dark) {
+  /* Raised above the page, which is nearly the same dark as a card. */
+  .mention-menu {
+    --menu-bg: #2a2a27;
+    border-color: #45443f;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 16px 40px rgb(0 0 0 / 0.55);
+  }
+}
+.mention-menu .hint {
+  margin: 0;
+  padding: 6px 8px;
+}
+.mention-group {
+  padding: 8px 8px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mention-option {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+  background: transparent;
+}
+.mention-option[aria-selected='true'] {
+  background: color-mix(in srgb, var(--accent) 16%, var(--menu-bg));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.mention-option[aria-selected='true'] .mention-option-icon {
+  color: var(--accent);
+}
+.mention-option-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+.mention-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mention-option .hint {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

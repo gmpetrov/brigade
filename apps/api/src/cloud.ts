@@ -99,7 +99,8 @@ export async function ensureRunning(computerId: string) {
   if (computer.status !== 'stopped' && isOnline(computerId)) return
   const status = await provider.status(ref)
   if (status === 'running' && computer.status !== 'stopped') return // booting or reconnecting
-  if (status === 'destroyed' || status === 'error') return setStatus(computer, 'error')
+  if (status === 'destroyed') return setStatus(computer, 'error')
+  // An 'error' computer (a failed resume, say) gets another start: it resumes from its last snapshot.
   await setStatus(computer, 'starting')
   void provider
     .start(ref)

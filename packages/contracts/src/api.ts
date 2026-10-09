@@ -1,7 +1,7 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
 import { QuestionAnswer, SequencedEvent } from './events.js'
-import { HarnessId } from './runner.js'
+import { CLIPBOARD_MAX, HarnessId } from './runner.js'
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),
@@ -88,6 +88,8 @@ export const AddAccount = z.object({
 })
 export const TakeOver = z.object({ interrupt: z.boolean().default(false) })
 export const HandBack = z.object({ note: z.string().max(20_000).default('') })
+/** With text: put it on the desktop's clipboard. Without: read the clipboard. */
+export const DesktopClipboard = z.object({ text: z.string().max(CLIPBOARD_MAX).optional() })
 export const SubmitLoginCode = z.object({ code: z.string().trim().min(1).max(4000) })
 export const UpdateAccount = z.object({
   label: z.string().trim().min(1).max(80).optional(),

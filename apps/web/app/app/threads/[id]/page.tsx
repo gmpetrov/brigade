@@ -2,7 +2,9 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { Composer } from '@/components/composer'
 import { StatusBadge, useDashboard } from '@/components/dashboard'
+import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
 import { Takeover } from '@/components/takeover'
 import { TicketRow } from '@/components/ticket-row'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
@@ -19,6 +21,8 @@ export default function ThreadPage() {
   const [error, setError] = useState<string>()
   const [text, setText] = useState('')
   const bottom = useRef<HTMLDivElement>(null)
+  const [watching, setWatching] = useDesktopPreview()
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest' })
@@ -55,9 +59,9 @@ export default function ThreadPage() {
     }
   }
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault()
-    if (!text.trim()) return
+  async function send(e?: React.FormEvent) {
+    e?.preventDefault()
+    if (!text.trim() || current === 'waiting') return
     await call('/messages', { text })
     setText('')
   }
@@ -87,6 +91,16 @@ export default function ThreadPage() {
             )}
           </div>
         </div>
+        {t.computer.kind === 'cloud' && (
+          <button
+            type="button"
+            aria-pressed={watching}
+            onClick={() => setWatching(!watching)}
+            title="Watch the workspace computer's desktop"
+          >
+            {watching ? 'Hide desktop' : 'Desktop'}
+          </button>
+        )}
         <Link href={`/app/threads/${id}/log`} className="button">
           Run log
         </Link>
@@ -130,8 +144,30 @@ export default function ThreadPage() {
       )}
 
       <div style={{ marginBottom: 16 }}>
-        <Takeover thread={t} memberId={me.memberId ?? ''} onChange={() => void thread.reload()} />
+        <Takeover
+          thread={t}
+          memberId={me.memberId ?? ''}
+          onChange={() => void thread.reload()}
+          onOpenDesktop={() => {
+            setWatching(true)
+            setExpanded(true)
+          }}
+        />
       </div>
+
+      {watching && t.computer.kind === 'cloud' && (
+        <DesktopPreview
+          threadId={t.id}
+          teammateName={t.teammate.name}
+          control={!!me.memberId && t.controlledByMemberId === me.memberId}
+          expanded={expanded}
+          onExpand={setExpanded}
+          onClose={() => {
+            setWatching(false)
+            setExpanded(false)
+          }}
+        />
+      )}
 
       <ThreadItems
         items={items}
@@ -148,17 +184,16 @@ export default function ThreadPage() {
       {t.controlledByMemberId ? null : t.mayPrompt ? (
         <div className="composer">
           <form onSubmit={(e) => void send(e).catch(() => undefined)} className="card stack">
-            <textarea
+            <Composer
+              threadId={id}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={setText}
+              onSubmit={() => void send().catch(() => undefined)}
               placeholder={
-                busy ? `${t.teammate.name} is working. Your message will run next.` : 'Reply'
+                busy
+                  ? `${t.teammate.name} is working. Your message will run next. @ to mention`
+                  : 'Reply. @ to mention a teammate, connection or thread'
               }
-              rows={3}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey))
-                  void send(e).catch(() => undefined)
-              }}
             />
             <div className="row">
               {error && <span className="error">{error}</span>}

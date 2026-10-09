@@ -10,6 +10,7 @@ import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js
 import { Accounts, machineLogins } from './accounts.js'
 import { Connection } from './connection.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
+import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
@@ -189,6 +190,27 @@ async function start() {
         return accounts.cancel(message.loginId)
       case 'account.remove':
         return accounts.remove(message.account)
+      case 'desktop.clipboard':
+        if (!CLOUD)
+          return connection.send({
+            type: 'desktop.clipboard.result',
+            requestId: message.requestId,
+            error: 'Not a cloud computer',
+          })
+        return desktopClipboard(message.text).then(
+          (text) =>
+            connection.send({
+              type: 'desktop.clipboard.result',
+              requestId: message.requestId,
+              text,
+            }),
+          (error) =>
+            connection.send({
+              type: 'desktop.clipboard.result',
+              requestId: message.requestId,
+              error: String(error),
+            }),
+        )
       case 'browser.open':
         if (!CLOUD) return
         return ensureBrowser(
