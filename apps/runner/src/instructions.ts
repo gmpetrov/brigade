@@ -95,6 +95,13 @@ const credentials = (browser: Browser) =>
       '(its kind, a name, the sign-in page or API URL, the username if you know it). The person saves it to the vault ' +
       'right in the ticket, and the answer gives you its mention, which lets you use it in this thread at once. ' +
       'Then use it and finish the task.',
+    browser.ready &&
+      'When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a bot or firewall ' +
+        'block page) or a step only a person can do in the browser, do not try to get around it and do not stop to ' +
+        'explain: leave the page open and open a ticket with an `action` ask with `browser: true`, saying what to do ' +
+        'there (e.g. "Check Verify you are human on citadium.com"). Ask for any login the vault lacks in the same ticket. ' +
+        'The person takes over your browser from the ticket, clears it and hands back; then look at the page again ' +
+        'and finish the task.',
     !browser.ready &&
       'When the work needs signing in to a website, tell the person you cannot' +
         (browser.error ? ' because your browser did not start, with the reason above' : '') +

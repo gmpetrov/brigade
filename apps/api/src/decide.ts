@@ -17,7 +17,7 @@ import { scoped } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread, specFor, teammateIn } from './thread-spec.js'
-import { joinThread, promptThread } from './work.js'
+import { handBack, joinThread, promptThread } from './work.js'
 
 /**
  * A person answers the harness's question. Answers go to the thread as its
@@ -161,6 +161,13 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
       }
     }
   }
+  // The teammate takes no input while a person has control. The member in control answers once
+  // done on the computer (a "verify you are human" check, say): control goes back with the answer.
+  if (thread.controlledByMemberId === scope.memberId) await handBack(db, scope, thread, '')
+  else if (thread.controlledByMemberId)
+    throw new HTTPException(409, {
+      message: 'Another member has control of this thread. It can be answered once they hand back.',
+    })
   const sent = await dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),

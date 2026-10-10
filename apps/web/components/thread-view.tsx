@@ -19,7 +19,9 @@ import {
   CircleHelp,
   ClipboardList,
   GitPullRequest,
+  Hand,
   ListChecks,
+  Monitor,
   Plus,
   RefreshCw,
   ShieldAlert,
@@ -332,6 +334,7 @@ export function ThreadItems({
   onAnswer,
   onTicket,
   canApprove,
+  takeover,
   teammate,
   teammates = [],
 }: {
@@ -341,6 +344,8 @@ export function ThreadItems({
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   canApprove: boolean
+  /** Unset when this member cannot take over the computer (a member's own machine, another in control). */
+  takeover?: TicketTakeover
   /** Who answers when a message does not say: shown beside its messages. */
   teammate?: { name: string; harness: string }
   /** Everyone in the thread. With several, each message shows who wrote it. */
@@ -511,6 +516,7 @@ export function ThreadItems({
                 key={item.key}
                 item={item}
                 canAnswer={canApprove}
+                takeover={takeover}
                 teammates={teammates}
                 askerId={item.teammateId}
                 askerName={
@@ -915,6 +921,84 @@ function OptionLabel({
   )
 }
 
+/** Taking over the workspace computer from a ticket, for an ask done in the teammate's browser. */
+export type TicketTakeover = {
+  /** This member already has control. */
+  mine: boolean
+  /** Take control, unless already theirs, and show the desktop, where the teammate's browser is. */
+  open: () => Promise<void>
+}
+
+/**
+ * Something to do in the teammate's browser, such as a "verify you are human"
+ * check: take over from the ticket, do it, answer. Answering hands control back.
+ */
+function BrowserAction({
+  askerName,
+  takeover,
+  onReply,
+}: {
+  askerName: string
+  takeover: TicketTakeover
+  onReply: (reply: AskReply) => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+
+  async function open() {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await takeover.open()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        {takeover.mine
+          ? `You have control. Do it in ${askerName}'s browser on the desktop, then answer here: control goes back to ${askerName} with your answer.`
+          : `${askerName} left the page open in its browser and waits. Take over to do it there.`}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {takeover.mine ? (
+          <>
+            <Button size="sm" onClick={() => onReply({ type: 'action', done: true })}>
+              Done, hand back
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}>
+              <Monitor aria-hidden />
+              Show desktop
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" disabled={busy} onClick={() => void open()}>
+              <Hand aria-hidden />
+              Take over {askerName}&apos;s browser
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onReply({ type: 'action', done: true })}
+            >
+              I&apos;ve done this
+            </Button>
+          </>
+        )}
+        <Button size="sm" variant="ghost" onClick={() => onReply({ type: 'action', done: false })}>
+          Can&apos;t do it
+        </Button>
+      </div>
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+    </div>
+  )
+}
+
 /**
  * A ticket the teammate opened: one or more asks, each answered with its own
  * buttons. The teammate waits; the answers go to it once every ask has one.
@@ -922,6 +1006,7 @@ function OptionLabel({
 function TicketCard({
   item,
   canAnswer,
+  takeover,
   teammates,
   askerId,
   askerName,
@@ -929,6 +1014,7 @@ function TicketCard({
 }: {
   item: Extract<Item, { kind: 'ticket' }>
   canAnswer: boolean
+  takeover: TicketTakeover | undefined
   teammates: { id: string; name: string }[]
   askerId: string | undefined
   askerName: string
@@ -983,6 +1069,7 @@ function TicketCard({
             ask={ask}
             reply={answered?.[ask.id] ?? replies[ask.id]}
             disabled={disabled}
+            takeover={takeover}
             teammates={teammates}
             askerId={askerId}
             askerName={askerName}
@@ -1043,6 +1130,7 @@ function AskView({
   ask,
   reply,
   disabled,
+  takeover,
   teammates,
   askerId,
   askerName,
@@ -1052,6 +1140,7 @@ function AskView({
   ask: Ask
   reply: AskReply | undefined
   disabled: boolean
+  takeover: TicketTakeover | undefined
   teammates: { id: string; name: string }[]
   askerId: string | undefined
   askerName: string
@@ -1262,6 +1351,8 @@ function AskView({
             Can&apos;t grant
           </Button>
         </div>
+      ) : ask.type === 'action' && ask.browser && takeover ? (
+        <BrowserAction askerName={askerName} takeover={takeover} onReply={onReply} />
       ) : ask.type === 'action' ? (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => onReply({ type: 'action', done: true })}>

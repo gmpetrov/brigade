@@ -137,6 +137,33 @@ export async function promptThread(
   })
 }
 
+/** The member in control hands the thread back: the teammate continues, told their note and what changed. */
+export async function handBack(
+  db: ScopedDb,
+  scope: Scope & { memberId: string },
+  thread: Thread,
+  note: string,
+) {
+  await db.session.updateMany({ where: { id: thread.id }, data: { controlledByMemberId: null } })
+  const sent = await dispatch(thread.computer, {
+    type: 'thread.handback',
+    commandId: randomUUID(),
+    thread: await specFor(db, thread, { requireUsage: false }),
+    memberId: scope.memberId,
+    note,
+  })
+  if (sent === 'offline')
+    throw new HTTPException(409, {
+      message: 'That computer is offline. Start its runner and try again.',
+    })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'takeover.ended',
+    target: { type: 'thread', id: thread.id },
+  })
+}
+
 /** Teammates answering one another stop after this many turns without a member's message. */
 const MAX_TURNS_WITHOUT_MEMBER = 50
 

@@ -33,6 +33,15 @@ const slug = (text: string) =>
     .replace(/^-|-$/g, '')
     .slice(0, 40) || 'credential'
 
+const pageOf = (url: string | undefined) => {
+  try {
+    const u = new URL(url ?? '')
+    return `${u.origin}${u.pathname}`
+  } catch {
+    return 'the sign-in page'
+  }
+}
+
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
 
 const SCHEMES = { postgres: 'postgresql', mysql: 'mysql', mongodb: 'mongodb' } as const
@@ -78,17 +87,23 @@ export function envFor(
 }
 
 /** Run a command as the teammate's user (or as this user), with `stdin`; resolves its stdout. */
-function run(command: string, args: string[], stdin: string, runAs?: string) {
+function run(command: string, args: string[], stdin: string, runAs?: string, timeoutMs?: number) {
   const [file, argv] = runAs ? ['sudo', ['-n', '-u', runAs, command, ...args]] : [command, args]
   return new Promise<string>((resolve, reject) => {
-    const child = spawn(file, argv, { cwd: '/', stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn(file, argv, {
+      cwd: '/',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(timeoutMs ? { timeout: timeoutMs, killSignal: 'SIGKILL' as const } : {}),
+    })
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (d) => (stdout += d))
     child.stderr.on('data', (d) => (stderr += d))
     child.on('error', reject)
     child.on('exit', (code) =>
-      code === 0 ? resolve(stdout) : reject(new Error(stderr.trim() || `exit ${code}`)),
+      code === 0
+        ? resolve(stdout)
+        : reject(new Error(stderr.trim() || (code === null ? 'It took too long' : `exit ${code}`))),
     )
     child.stdin.end(stdin)
   })
@@ -173,6 +188,8 @@ export class ThreadCredentials {
         [FILL, String(browser.port), browser.tabsFile],
         JSON.stringify(input),
         runAs,
+        // The helper gives up on its own after 30 seconds; this is in case it cannot.
+        45_000,
       ).then(
         (stdout) =>
           JSON.parse(stdout) as {
@@ -193,7 +210,8 @@ export class ThreadCredentials {
       credentialId,
       'browser',
       call,
-      `The login goes into ${check.url}.`,
+      // The page without its query, which can be long (a SAML request) and hold tokens.
+      `The login goes into ${pageOf(check.url)}.`.slice(0, 500),
     )
     // The vault's own URL decides where the password may go, not the earlier listing.
     const result = await helper({

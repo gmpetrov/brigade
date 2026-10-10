@@ -89,6 +89,11 @@ export const Ask = z.discriminatedUnion('type', [
     type: z.literal('action'),
     title: z.string(),
     steps: z.array(z.string()).max(30).optional(),
+    /**
+     * Done in the teammate's browser on the workspace computer, e.g. a "verify
+     * you are human" check: the ticket lets the person take over to do it.
+     */
+    browser: z.boolean().optional(),
   }),
   /** Information. secret: a credential, picked from the vault by mention. */
   z.object({

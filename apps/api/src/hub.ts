@@ -267,8 +267,21 @@ export function runnerSocket(runner: {
   }
 
   async function handle(raw: unknown, ws: WSContext) {
-    const parsed = RunnerToApi.safeParse(JSON.parse(String(raw)))
-    if (!parsed.success) return console.warn('bad runner message', parsed.error.issues[0])
+    const json = JSON.parse(String(raw)) as { callId?: unknown }
+    const parsed = RunnerToApi.safeParse(json)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      console.warn('bad runner message', issue)
+      // A call the runner waits on is answered, or the teammate's tool would wait forever.
+      if (typeof json?.callId === 'string')
+        send(ws, {
+          type: 'connector.result',
+          callId: json.callId,
+          ok: false,
+          error: `Brigade could not read this call (${issue?.path.join('.') || 'message'}: ${issue?.message}). Try again differently.`,
+        })
+      return
+    }
     const message = parsed.data
 
     if (message.type === 'hello') {

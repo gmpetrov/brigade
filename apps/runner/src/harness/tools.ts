@@ -112,7 +112,10 @@ export const openTicketTool = tool({
     'so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
     '(approval), a choice (decision), a connection or credential you lack (access), something only a person can do ' +
     'such as a phone call (action), or information only they have (input). Put several asks in one ticket rather than ' +
-    'opening several. Never ask for a password, key or other secret in words. For a login or key the vault lacks, ' +
+    'opening several. When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a ' +
+    'bot or firewall block page), use an action ask with browser: true and leave the page open: the person takes ' +
+    'over your browser from the ticket, clears it and hands back. Never ask for a password, key or other secret ' +
+    'in words. For a login or key the vault lacks, ' +
     'use an access ask of kind credential and fill in `credential` with what you know: the person saves it to the ' +
     'vault right in the ticket, and its mention comes back for you to use at once.',
   inputSchema: jsonSchema<{ title: string; asks: unknown[] }>({
@@ -183,6 +186,11 @@ export const openTicketTool = tool({
               type: 'array',
               items: { type: 'string' },
               description: 'action: a checklist for the person',
+            },
+            browser: {
+              type: 'boolean',
+              description:
+                'action: done in your browser on this computer, such as a "verify you are human" check. The person takes over your browser from the ticket',
             },
             secret: {
               type: 'boolean',

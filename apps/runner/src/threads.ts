@@ -276,15 +276,16 @@ export class Threads {
     const thread = this.thread(spec.sessionId)
     const takeover = thread.takeover
     if (!takeover) return
-    const files = await changedFiles(takeover.since).catch(() => [])
+    // Control returns at once: a ticket answered with the handback comes right behind it.
     thread.takeover = undefined
-    const at = new Date().toISOString()
     this.options.emit(spec.sessionId, {
-      at,
+      at: new Date().toISOString(),
       type: 'control.changed',
       controller: 'teammate',
       memberId,
     })
+    const files = await changedFiles(takeover.since).catch(() => [])
+    const at = new Date().toISOString()
     if (!note.trim() && files.length === 0) return
     const text = [
       'A person took over this thread and has now handed it back to you.',

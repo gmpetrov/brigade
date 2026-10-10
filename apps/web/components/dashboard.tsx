@@ -233,8 +233,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                       {!!badges[href] && (
-                        <SidebarMenuBadge aria-label={`${badges[href]} waiting on you`}>
-                          {badges[href]}
+                        <SidebarMenuBadge
+                          aria-label={`${badges[href]} waiting on you`}
+                          className="right-2"
+                        >
+                          <span className="flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1.5 text-[0.6875rem] leading-none font-semibold text-primary-foreground">
+                            {badges[href]! > 99 ? '99+' : badges[href]}
+                          </span>
                         </SidebarMenuBadge>
                       )}
                     </SidebarMenuItem>

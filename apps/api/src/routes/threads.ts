@@ -27,7 +27,13 @@ import type { ScopedDb } from '../db.js'
 import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
-import { joinThread, mentionedTeammates, promptWithAttachments, startThread } from '../work.js'
+import {
+  handBack,
+  joinThread,
+  mentionedTeammates,
+  promptWithAttachments,
+  startThread,
+} from '../work.js'
 import { reopenOnMessage } from '../tasks.js'
 import { runLog } from '../timeline.js'
 import {
@@ -453,7 +459,13 @@ export const threads = new Hono<AppEnv>()
     })
     // Relayed through this API. View only until takeover is the viewer's own
     // setting, not a boundary: any member may take over anyway.
-    return c.json(await openView(url))
+    return c.json(
+      await openView(url).catch((error: unknown) => {
+        throw new HTTPException(503, {
+          message: `The desktop did not answer: ${(error as Error).message}`,
+        })
+      }),
+    )
   })
 
   /**
@@ -516,20 +528,7 @@ export const threads = new Hono<AppEnv>()
     if (thread.controlledByMemberId !== scope.memberId)
       throw new HTTPException(409, { message: 'You do not have control of this thread' })
     const { note } = await parseBody(c.req.raw, HandBack)
-    await db.session.updateMany({ where: { id: thread.id }, data: { controlledByMemberId: null } })
-    await deliver(thread.computer, {
-      type: 'thread.handback',
-      commandId: randomUUID(),
-      thread: await specFor(db, thread, { requireUsage: false }),
-      memberId: scope.memberId,
-      note,
-    })
-    await audit({
-      ...scope,
-      actor: { type: 'member', id: scope.memberId },
-      action: 'takeover.ended',
-      target: { type: 'thread', id: thread.id },
-    })
+    await handBack(db, scope, thread, note)
     return c.json({ ok: true })
   })
 

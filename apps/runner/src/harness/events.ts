@@ -145,7 +145,18 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
           },
         ]
       if (ask.type === 'action' && reply.type === 'action')
-        return [{ ask: ask.title, done: reply.done, ...(reply.note ? { note: reply.note } : {}) }]
+        return [
+          {
+            ask: ask.title,
+            done: reply.done,
+            ...(reply.note ? { note: reply.note } : {}),
+            ...(ask.browser && reply.done
+              ? {
+                  browser: 'The person used your browser. Look at the page again before you go on.',
+                }
+              : {}),
+          },
+        ]
       if (ask.type === 'input' && reply.type === 'input')
         return [{ ask: ask.question, answer: reply.text }]
       return []

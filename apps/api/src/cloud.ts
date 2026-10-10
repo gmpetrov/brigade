@@ -1,6 +1,7 @@
 // The workspace cloud computer: created with the workspace, stopped when idle,
 // resumed on demand. Provider details stay inside @brigade/providers.
 import { providerFromEnv, type ComputerRef } from '@brigade/providers'
+import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { defaults, env } from './config.js'
 import { prisma } from './db.js'
@@ -138,9 +139,24 @@ export async function stopComputer(
 }
 
 /** A live desktop for takeover. The URL carries a token: only for members of the workspace. */
+/** What a provider's failed request said: the text of its answer, when it has one. */
+export async function providerReason(error: unknown) {
+  const response = (error as { response?: unknown } | null)?.response
+  const text = response instanceof Response ? await response.text().catch(() => '') : ''
+  return (text.trim() || (error instanceof Error ? error.message : String(error))).slice(0, 300)
+}
+
+/** The desktop's URL. A provider that does not answer is a 503, which the dashboard retries. */
 export async function desktopUrl(computer: { providerRef: unknown }) {
   const ref = refOf(computer)
-  return provider && ref ? provider.desktopUrl(ref) : null
+  if (!provider || !ref) return null
+  try {
+    return await provider.desktopUrl(ref)
+  } catch (error) {
+    throw new HTTPException(503, {
+      message: `The workspace computer's provider did not answer: ${await providerReason(error)}`,
+    })
+  }
 }
 
 /** The setup last tried per computer, so a failing one is not retried on every connect. */

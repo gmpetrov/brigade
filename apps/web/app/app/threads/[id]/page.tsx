@@ -323,7 +323,26 @@ export default function ThreadPage() {
             api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
           }
           onTicket={(requestId, answer) =>
-            api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(() => undefined)
+            // Answering may hand control back: show the composer again.
+            api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
+              () => void thread.reload(),
+            )
+          }
+          takeover={
+            t.computer.kind === 'cloud' &&
+            me.memberId &&
+            (!t.controlledByMemberId || t.controlledByMemberId === me.memberId)
+              ? {
+                  mine: t.controlledByMemberId === me.memberId,
+                  open: async () => {
+                    if (t.controlledByMemberId !== me.memberId)
+                      await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
+                    setFile(undefined)
+                    setWatching(true)
+                    await thread.reload()
+                  },
+                }
+              : undefined
           }
         />
       </FileLinksProvider>

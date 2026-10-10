@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { harnessLabel, useApi, waitsOn, type ThreadSummary, type Ticket } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
+import { cn } from '@/lib/utils'
 
 const LAST_TEAMMATE = 'brigade.home.teammate'
 
@@ -56,7 +57,11 @@ function NeedsYou({ tickets, pulls }: { tickets: Ticket[]; pulls: number }) {
       </p>
     )
   return (
-    <section aria-labelledby="needs-you" className="grid gap-3 sm:grid-cols-2">
+    // Side by side when both show; one alone takes the full width.
+    <section
+      aria-labelledby="needs-you"
+      className={cn('grid gap-3', tickets.length > 0 && pulls > 0 && 'sm:grid-cols-2')}
+    >
       <h2 id="needs-you" className="sr-only">
         Waiting on you
       </h2>
@@ -79,7 +84,11 @@ function NeedsYou({ tickets, pulls }: { tickets: Ticket[]; pulls: number }) {
             {tickets.slice(0, 3).map((t) => (
               <li key={t.id} className="truncate">
                 <span className="font-medium">{t.session?.teammate.name ?? 'Brigade'}</span>
-                <span className="text-muted-foreground"> · {t.title}</span>
+                <span className="text-muted-foreground">
+                  {' · '}
+                  {/* Titles start with the teammate's name; it is shown just before. */}
+                  {t.session ? t.title.replace(`${t.session.teammate.name}: `, '') : t.title}
+                </span>
               </li>
             ))}
             {tickets.length > 3 && (

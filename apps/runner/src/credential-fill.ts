@@ -22,6 +22,11 @@ type Target = { id: string; type: string; url: string; webSocketDebuggerUrl?: st
 
 const [port, tabsFile] = process.argv.slice(2)
 
+/** A tab that does not answer (frozen in the background, a dialog open) is given up on after this. */
+const TAB_MS = 5_000
+/** The whole run, so a stuck browser never holds the teammate's turn. */
+const DEADLINE_MS = 30_000
+
 const out = (result: Record<string, unknown>) => {
   process.stdout.write(JSON.stringify(result))
   process.exit(0)
@@ -82,8 +87,10 @@ async function main() {
   } catch {}
   const targets = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()) as Target[]
   const mine = targets.filter((t) => t.type === 'page' && owned.includes(t.id))
-  const target = mine.find((t) => matches(hostOf(t.url), input.host))
-  if (!target?.webSocketDebuggerUrl)
+  const candidates = mine.filter(
+    (t) => matches(hostOf(t.url), input.host) && t.webSocketDebuggerUrl,
+  )
+  if (candidates.length === 0)
     return out({
       ok: false,
       error: `None of your tabs is on ${input.host}. Open its sign-in page first.${
@@ -91,8 +98,34 @@ async function main() {
       }`,
     })
 
-  const ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise((resolve, reject) => ws.once('open', resolve).once('error', reject))
+  // Several tabs on the site: the first that answers, brought to the front and woken.
+  for (const target of candidates) {
+    const tab = await connect(target.webSocketDebuggerUrl!).catch(() => undefined)
+    if (!tab) continue
+    await tab.send('Page.bringToFront').catch(() => undefined)
+    await tab.send('Page.setWebLifecycleState', { state: 'active' }).catch(() => undefined)
+    const page = (await tab.evaluate(FIND).catch(() => undefined)) as Page | undefined
+    if (page) return use(tab, page, input)
+    tab.close()
+  }
+  return out({
+    ok: false,
+    error:
+      `Your tab on ${input.host} does not answer: a dialog may be open on it, or it is stuck loading. ` +
+      'Look at it in your browser (close any dialog, or reload the sign-in page), then try again.',
+  })
+}
+
+type Page = { host: string; url: string; username: boolean; password: boolean }
+
+/** A DevTools connection to one tab, each call given up on after TAB_MS. */
+async function connect(url: string) {
+  const ws = new WebSocket(url)
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), TAB_MS)
+    ws.once('open', () => (clearTimeout(timer), resolve(undefined)))
+    ws.once('error', (e) => (clearTimeout(timer), reject(e)))
+  })
   let nextId = 1
   const waiting = new Map<number, (m: { result?: any; error?: { message: string } }) => void>()
   ws.on('message', (raw) => {
@@ -102,19 +135,26 @@ async function main() {
   const send = (method: string, params: Record<string, unknown> = {}) =>
     new Promise<any>((resolve, reject) => {
       const id = nextId++
-      waiting.set(id, (m) => (m.error ? reject(new Error(m.error.message)) : resolve(m.result)))
+      const timer = setTimeout(() => {
+        waiting.delete(id)
+        reject(new Error(`The tab did not answer ${method}`))
+      }, TAB_MS)
+      waiting.set(id, (m) => {
+        clearTimeout(timer)
+        waiting.delete(id)
+        if (m.error) reject(new Error(m.error.message))
+        else resolve(m.result)
+      })
       ws.send(JSON.stringify({ id, method, params }))
     })
   const evaluate = async (expression: string) =>
     (await send('Runtime.evaluate', { expression, returnByValue: true })).result?.value
+  return { send, evaluate, close: () => ws.close() }
+}
 
+async function use(tab: Awaited<ReturnType<typeof connect>>, page: Page, input: Input) {
+  const { send, evaluate } = tab
   try {
-    const page = (await evaluate(FIND)) as {
-      host: string
-      url: string
-      username: boolean
-      password: boolean
-    }
     // The page may have moved since the tab was listed: check the host it is on now.
     if (!matches(page.host, input.host))
       return out({ ok: false, error: `The tab is on ${page.host} now, not ${input.host}.` })
@@ -136,7 +176,6 @@ async function main() {
             : ''
         }.`,
       })
-    await send('Page.bringToFront').catch(() => undefined)
     for (const field of fill) {
       if (!(await evaluate(focus(field))))
         return out({ ok: false, url: page.url, error: `Could not focus the ${field} field.` })
@@ -150,9 +189,18 @@ async function main() {
     }
     return out({ ok: true, url: page.url, filled: fill, submitted: Boolean(input.submit) })
   } finally {
-    ws.close()
+    tab.close()
   }
 }
+
+setTimeout(
+  () =>
+    out({
+      ok: false,
+      error: 'The browser did not answer in time. Look at your tab, then try again.',
+    }),
+  DEADLINE_MS,
+).unref()
 
 main().catch((error) =>
   out({ ok: false, error: error instanceof Error ? error.message : String(error) }),
