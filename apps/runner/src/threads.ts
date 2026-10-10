@@ -557,8 +557,9 @@ export class Threads {
         log.entries.splice(0, drop)
         log.start += drop
       }
-      // The speaker has seen everything up to and including what it said.
-      if (by) log.seen[by] = log.start + log.entries.length
+      // What the speaker has seen moves only when it is told (catchUp): a message
+      // that came in while it was replying is still unseen. Its own lines are skipped there.
+      if (by && !(by in log.seen)) log.seen[by] = log.start + log.entries.length
       return log
     })
     thread.log = log
