@@ -40,6 +40,7 @@ export function instructions(
         : ''),
     spec.git && code(spec),
     tasks(spec),
+    SCHEDULES,
     credentials(browser),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
     own && `## What you have learned\n\n${clip(own)}`,
@@ -72,6 +73,15 @@ const tasks = (spec: ThreadSpec) =>
       'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
       'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
       'Do not ask first: create it, say so in one line, and do the work.'
+
+/** Schedules: recurring work, set up when the person asks for it. */
+const SCHEDULES =
+  '## Schedules\n\n' +
+  'When the person asks for something to happen repeatedly or at set times, set it up with `create_schedule`: ' +
+  'each run prompts you in a fresh thread with no memory of this one, so the instructions must stand alone ' +
+  '(inputs by name, steps, where the result goes). `list_schedules` and `update_schedule` show and change yours. ' +
+  'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
+  'and open a ticket when you need a person.'
 
 /**
  * The teammate's own browser, which website logins need: ready, none on this

@@ -216,7 +216,8 @@ export async function handoffThread(
 
 /**
  * A new thread with a fresh context, on the starting member's accounts. For a
- * trigger, the member who set it up. Throws when they have no usable account.
+ * trigger, the member who set it up; for a schedule, its owner. Throws when
+ * they have no usable account.
  */
 export async function startThread(
   db: ScopedDb,
@@ -228,7 +229,10 @@ export async function startThread(
     accountId?: string | null
     title: string
     text: string
-    origin?: { triggerId: string; conversationKey?: string }
+    /** Started by no one typing: an event, or a schedule's time. */
+    origin?:
+      | { kind: 'trigger'; triggerId: string; conversationKey?: string }
+      | { kind: 'schedule'; scheduleId: string }
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
     /** The task this thread works on, linked before its first turn so the teammate knows. */
@@ -257,13 +261,15 @@ export async function startThread(
       accountId: account.id,
       title: input.title.slice(0, 120),
       ...(input.taskId ? { taskId: input.taskId } : {}),
-      ...(input.origin
+      ...(input.origin?.kind === 'trigger'
         ? {
             origin: 'trigger',
             triggerId: input.origin.triggerId,
             conversationKey: input.origin.conversationKey ?? null,
           }
-        : {}),
+        : input.origin?.kind === 'schedule'
+          ? { origin: 'schedule', scheduleId: input.origin.scheduleId }
+          : {}),
     } as never,
   })
   await joinThread(db, created.id, teammateIds)
@@ -279,16 +285,19 @@ export async function startThread(
   })
   await audit({
     ...scope,
-    actor: input.origin
-      ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
-      : { type: 'member', id: input.memberId },
+    actor: !input.origin
+      ? { type: 'member', id: input.memberId }
+      : input.origin.kind === 'trigger'
+        ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
+        : { type: 'system', id: `schedule:${input.origin.scheduleId}` },
     action: 'thread.started',
     target: { type: 'thread', id: created.id },
     data: {
       teammateId: input.teammate.id,
       computerId: input.computer.id,
       accountId: account.id,
-      ...(input.origin ? { triggerId: input.origin.triggerId } : {}),
+      ...(input.origin?.kind === 'trigger' ? { triggerId: input.origin.triggerId } : {}),
+      ...(input.origin?.kind === 'schedule' ? { scheduleId: input.origin.scheduleId } : {}),
     },
   })
   const thread = await loadThread(db, created.id)

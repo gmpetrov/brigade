@@ -84,6 +84,12 @@ export type Session = Prisma.SessionModel
  */
 export type Task = Prisma.TaskModel
 /**
+ * Model Schedule
+ * A teammate prompted with the same instructions on a cron schedule; each
+ * firing starts a fresh thread on the owner's accounts.
+ */
+export type Schedule = Prisma.ScheduleModel
+/**
  * Model ThreadTeammate
  * 
  */

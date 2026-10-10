@@ -186,6 +186,13 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   a triggered teammate only what it needs, or set it to `ask`. When a thread cannot start, the
   trigger's creator gets a ticket and the event is offered again (Stripe retries; Gmail and Calendar keep their
   cursor).
+- **Schedules** (`apps/api/src/schedules.ts`, `routes/schedules.ts`, design in `docs/automations.md`). A teammate
+  prompted with the same instructions on a cron schedule (five fields plus an IANA timezone, runs at least 5 minutes
+  apart), each firing in a fresh thread on the accounts of the member who owns it. A minute tick moves `nextRunAt`
+  with a conditional update, which is the claim: a firing starts once, and missed firings collapse into one. A firing
+  is skipped while the previous run is still going; one that cannot start opens a ticket for the owner. Only the owner
+  edits a schedule; admins may pause, run or delete it. Teammates create, list and change schedules with their tools,
+  only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter.
 - **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
   connection's triggers change: a Stripe webhook endpoint per connection listing the events needed (its signing
   secret goes to the vault; a restricted key needs Webhook Endpoints write access); the GitHub App's one webhook;

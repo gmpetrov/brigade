@@ -161,7 +161,7 @@ function TimelineChart({ data }: { data: Timeline }) {
                 href={`/app/threads/${t.id}`}
                 title={t.title}
               >
-                {t.origin === 'trigger' ? '↪ ' : ''}
+                {t.origin === 'trigger' ? '↪ ' : t.origin === 'schedule' ? '⏱ ' : ''}
                 {t.title}
               </Link>
               <div className="relative h-3.5 overflow-hidden rounded-sm bg-muted">

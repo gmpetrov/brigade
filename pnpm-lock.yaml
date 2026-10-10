@@ -174,6 +174,9 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      cronstrue:
+        specifier: 3.27.0
+        version: 3.27.0
       lucide-react:
         specifier: 0.545.0
         version: 0.545.0(react@19.3.0)
@@ -229,6 +232,9 @@ importers:
 
   packages/contracts:
     dependencies:
+      croner:
+        specifier: 10.0.1
+        version: 10.0.1
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -3642,6 +3648,16 @@ packages:
 
   /confbox@0.3.1:
     resolution: {integrity: sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA==}
+
+  /croner@10.0.1:
+    resolution: {integrity: sha512-ixNtAJndqh173VQ4KodSdJEI6nuioBWI0V1ITNKhZZsO0pEMoDxz539T4FTTbSZ/xIOSuDnzxLVRqBVSvPNE2g==}
+    engines: {node: '>=18.0'}
+    dev: false
+
+  /cronstrue@3.27.0:
+    resolution: {integrity: sha512-AKhV4ilvx73NmicrZCGASdszUIf2ew0A/6jQQTh4pu3lIUzgWOGjT3Gv3CGIcTQ/p8Qy/tZuCmlaOftj8PXaNg==}
+    hasBin: true
+    dev: false
 
   /cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}

@@ -191,6 +191,8 @@ async function start() {
       connection.callLibrary({ sessionId, teammateId, operation }),
     callTask: (sessionId, teammateId, { operation }) =>
       connection.callTask({ sessionId, teammateId, operation }),
+    callSchedule: (sessionId, teammateId, { operation }) =>
+      connection.callSchedule({ sessionId, teammateId, operation }),
     memoryUpdate: (update) => connection.send(update),
   })
   const accounts = new Accounts({

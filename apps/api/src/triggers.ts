@@ -135,7 +135,7 @@ export async function deliver(
       memberId: trigger.createdByMemberId,
       title: event.title,
       text: event.text,
-      origin: { triggerId: trigger.id, conversationKey: event.conversationKey },
+      origin: { kind: 'trigger', triggerId: trigger.id, conversationKey: event.conversationKey },
       attachmentIds: event.attachmentIds ?? [],
     })
     if (outcome === 'offline') return failed('the computer is offline')

@@ -144,6 +144,7 @@ export function TicketRow({
                   {t.session.title}
                 </Link>
                 {t.session.origin === 'trigger' && ' (trigger)'}
+                {t.session.origin === 'schedule' && ' (schedule)'}
               </>
             )}
             {t.type === 'usage_limit' && t.payload.resetsAt && (

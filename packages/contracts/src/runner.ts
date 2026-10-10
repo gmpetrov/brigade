@@ -4,6 +4,7 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { ScheduleOperation } from './schedules.js'
 import { TaskOperation } from './tasks.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
@@ -226,6 +227,17 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     sessionId: z.string(),
     teammateId: z.string().optional(),
     operation: TaskOperation,
+  }),
+  /**
+   * A teammate creates, lists or changes schedules from a member's thread.
+   * The API checks the thread and teammate. Answered like a connector call.
+   */
+  z.object({
+    type: z.literal('schedule.call'),
+    callId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string().optional(),
+    operation: ScheduleOperation,
   }),
   /**
    * A thread went quiet: what a short harness run took from it. The summary

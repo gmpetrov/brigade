@@ -18,6 +18,7 @@ import { ensureRunning, ensureSetup, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
+import { handleScheduleCall } from './schedules.js'
 import { handleTaskCall } from './tasks.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
@@ -226,6 +227,11 @@ export function broadcastThreadStatus(workspaceId: string, sessionId: string, st
 /** Tell dashboards a task was created, changed or removed. */
 export function broadcastTask(workspaceId: string, taskId: string) {
   broadcast(workspaceId, { type: 'task.updated', taskId })
+}
+
+/** A schedule was created, changed, fired or removed. */
+export function broadcastSchedule(workspaceId: string, scheduleId: string) {
+  broadcast(workspaceId, { type: 'schedule.updated', scheduleId })
 }
 
 // ---------------------------------------------------------------------------
@@ -445,6 +451,18 @@ export function runnerSocket(runner: {
 
     if (message.type === 'task.call') {
       void handleTaskCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+      return
+    }
+
+    if (message.type === 'schedule.call') {
+      void handleScheduleCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
         send(ws, {
           type: 'connector.result',
           callId: message.callId,

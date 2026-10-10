@@ -145,9 +145,23 @@ export default function ThreadPage() {
               </span>
               <span aria-hidden>·</span>
               <span>
-                {t.origin === 'trigger'
-                  ? `started by trigger "${t.trigger?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
-                  : `started by ${t.startedBy.user.name}`}
+                {t.origin === 'trigger' ? (
+                  `started by trigger "${t.trigger?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
+                ) : t.origin === 'schedule' ? (
+                  <>
+                    started by schedule{' '}
+                    {t.schedule ? (
+                      <Link href="/app/automations" className="hover:underline">
+                        &ldquo;{t.schedule.title}&rdquo;
+                      </Link>
+                    ) : (
+                      '(deleted)'
+                    )}{' '}
+                    on {t.startedBy.user.name}&rsquo;s accounts
+                  </>
+                ) : (
+                  `started by ${t.startedBy.user.name}`
+                )}
               </span>
             </div>
           </div>
