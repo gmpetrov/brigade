@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util'
 import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/contracts'
 import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js'
 import { Accounts, machineLogins } from './accounts.js'
+import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { readThreadFile } from './files.js'
 import { Library, LIBRARY_DIR } from './library.js'
@@ -95,6 +96,8 @@ async function start() {
   const outbox = new Outbox(paths.outbox)
   const library = new Library(config)
   void library.cleanTemp()
+  const attachments = new Attachments(config)
+  void attachments.cleanCache()
   // Git backups GitHub would not take, kept in the API's bucket.
   const bundleUrl = (b: BackupName) =>
     new URL(
@@ -175,12 +178,14 @@ async function start() {
         { sessionId, teammateId, ...request },
         approvalHooks(sessionId, teammateId, { toolCallId, toolName, input }),
       ),
+    attachments,
     handoff: (sessionId, fromTeammateId, teammateIds) =>
       connection.send({ type: 'thread.handoff', sessionId, fromTeammateId, teammateIds }),
     context: {
       libraryDir: LIBRARY_DIR,
       memoryFor: (teammateId) => library.memoryFor(teammateId),
       bundles,
+      uploadFile: (input) => attachments.upload(input),
     },
     callLibrary: (sessionId, teammateId, { operation }) =>
       connection.callLibrary({ sessionId, teammateId, operation }),

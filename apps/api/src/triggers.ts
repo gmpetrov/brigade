@@ -4,13 +4,14 @@
 // thread. The event is untrusted: it summons nobody, and its thread's changes
 // are bounded by the teammate's grants, policy and caps like any other thread.
 import { HTTPException } from 'hono/http-exception'
+import { ingestExternal } from './attachments.js'
 import { audit } from './audit.js'
 import { authorisedFetch } from './connector-calls.js'
 import { triggersOf } from './connectors/index.js'
 import type { ConnectorContext, ConnectorKind, VendorEvent } from './connectors/types.js'
 import { prisma, scoped, type Scope } from './db.js'
 import { loadThread } from './thread-spec.js'
-import { promptThread, startThread } from './work.js'
+import { promptWithAttachments, startThread } from './work.js'
 
 /** Raw payloads past this are cut: the summary carries what matters. */
 const PAYLOAD_MAX = 40_000
@@ -45,6 +46,8 @@ export async function deliver(
     title: string
     text: string
     conversationKey?: string
+    /** The event's files, already taken from the connection. */
+    attachmentIds?: string[]
   },
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
@@ -98,10 +101,13 @@ export async function deliver(
     }))
   if (ongoing && ongoing.status !== 'failed' && !ongoing.controlledByMemberId) {
     try {
-      const outcome = await promptThread(db, scope, await loadThread(db, ongoing.id), {
-        text: event.text,
-        memberId: null,
-      })
+      const outcome = await promptWithAttachments(
+        db,
+        scope,
+        await loadThread(db, ongoing.id),
+        { text: event.text, memberId: null, attachmentIds: event.attachmentIds ?? [] },
+        null,
+      )
       if (outcome === 'offline') return failed('the computer is offline')
       await received(ongoing.id, outcome)
       return { ok: true, threadId: ongoing.id, paused: outcome === 'paused' }
@@ -130,6 +136,7 @@ export async function deliver(
       title: event.title,
       text: event.text,
       origin: { triggerId: trigger.id, conversationKey: event.conversationKey },
+      attachmentIds: event.attachmentIds ?? [],
     })
     if (outcome === 'offline') return failed('the computer is offline')
     await received(thread.id, outcome)
@@ -176,6 +183,9 @@ export async function dispatch(
     },
   }
 
+  // The event's files, taken once for every trigger it starts a thread for.
+  let attachmentIds: string[] | undefined
+
   let started = 0
   let failed = false
   for (const trigger of triggers) {
@@ -183,6 +193,17 @@ export async function dispatch(
     if (!definition?.events.includes(event.type)) continue
     const options = (trigger.options ?? {}) as Record<string, string>
     if (definition.matches && !(await definition.matches(event, options, ctx))) continue
+    const files = definition.attachments?.(event) ?? []
+    if (files.length > 0 && !attachmentIds) {
+      try {
+        attachmentIds = await ingestExternal(scoped(scope), scope, connection.id, files, ctx)
+      } catch (error) {
+        // The bucket is unreachable: offer the event again later rather than lose its files.
+        console.error(`event ${event.id}: could not keep its files`, error)
+        failed = true
+        break
+      }
+    }
     const { title, summary } = definition.describe(event)
     const source = connection.externalAccount ?? connection.label
     const text = [
@@ -196,6 +217,7 @@ export async function dispatch(
       title: `${trigger.label}: ${title}`,
       text,
       conversationKey: definition.conversation?.(event),
+      ...(files.length > 0 ? { attachmentIds } : {}),
     })
     if ('error' in delivery) failed = true
     if ('ok' in delivery) started++

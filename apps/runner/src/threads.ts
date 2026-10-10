@@ -4,12 +4,16 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  attachmentLines,
   mentionedIds,
+  MessageAttachment,
   type AgentEvent,
   type ApiToRunner,
   type RunnerToApi,
+  type ThreadAttachmentRef,
   type ThreadSpec,
 } from '@brigade/contracts'
+import type { Attachments, Folder } from './attachments.js'
 import { memoryPrompt, parseMemory } from './memory.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
@@ -56,10 +60,15 @@ type Log = {
 }
 
 type Thread = {
-  /** One harness session per teammate, by teammate id. */
+  /** One harness session per teammate, by teammate id, and where it works. */
   harnesses: Map<
     string,
-    { harness: HarnessThread; parkTimer: NodeJS.Timeout | undefined; reply?: string }
+    {
+      harness: HarnessThread
+      folder: Folder
+      parkTimer: NodeJS.Timeout | undefined
+      reply?: string
+    }
   >
   queue: Promise<void>
   controller: AbortController | undefined
@@ -91,7 +100,9 @@ export class Threads {
         sessionId: string,
         teammateId: string,
         call: Parameters<ConnectorCaller>[0],
-      ) => Promise<unknown>
+      ) => Promise<{ output: unknown; attachments: ThreadAttachmentRef[] }>
+      /** The thread's files, put in each teammate's working folder. */
+      attachments: Pick<Attachments, 'deliver'>
       requestCredential: (
         sessionId: string,
         teammateId: string,
@@ -137,13 +148,19 @@ export class Threads {
     }
     if (command.type === 'thread.prompt') {
       this.thread(spec.sessionId).handoffs = 0
+      const attachments = command.attachments
       this.options.emit(spec.sessionId, {
         at,
         type: 'message.user',
         text: command.text,
         memberId: command.memberId,
+        ...(attachments.length
+          ? { attachments: attachments.map((a) => MessageAttachment.parse(a)) }
+          : {}),
       })
-      const upTo = this.note(spec, null, 'A member', command.text)
+      // Teammates are told where the files are; they are in each one's folder before its turn.
+      const text = [command.text, attachmentLines(attachments)].filter(Boolean).join('\n\n')
+      const upTo = this.note(spec, null, 'A member', text)
       // Each teammate in turn, told what was said since its last turn: the first up to this
       // message, those after it also their predecessors' replies.
       for (const [i, next] of specs.entries())
@@ -298,6 +315,7 @@ export class Threads {
       const controller = new AbortController()
       thread.controller = controller
       try {
+        await this.placeFiles(spec, seat.folder)
         const turn =
           input === 'prompt'
             ? { kind: 'prompt' as const, text: await this.catchUp(spec, await upTo) }
@@ -339,6 +357,20 @@ export class Threads {
         this.pending--
         this.release()
       }
+    })
+  }
+
+  /** Put the thread's files in the teammate's folder; say in the thread which could not be. */
+  private async placeFiles(spec: ThreadSpec, folder: Folder) {
+    const failed = await this.options.attachments
+      .deliver(spec.attachments, folder)
+      .catch((error: unknown) => [String(error)])
+    if (failed.length === 0) return
+    this.options.emit(spec.sessionId, {
+      at: new Date().toISOString(),
+      type: 'raw',
+      source: 'runner',
+      value: `Could not put some attached files in ${spec.teammate.name}'s folder:\n${failed.map((f) => `- ${f}`).join('\n')}`,
     })
   }
 
@@ -522,11 +554,16 @@ export class Threads {
     if (!seat) {
       // On a cloud computer each teammate runs as its own Linux user, in its own home.
       const user = CLOUD ? teammateUser(teammateId) : undefined
-      const harness = new HarnessThread(
-        spec,
-        user
+      const folder: Folder = {
+        key: `${spec.sessionId}-${teammateId}`,
+        workDir: user
           ? `${teammateHome(user)}/threads/${spec.sessionId}`
           : paths.threadDir(teammateId, spec.sessionId),
+        ...(user ? { runAs: user } : {}),
+      }
+      const harness = new HarnessThread(
+        spec,
+        folder.workDir,
         paths.state,
         (event) => {
           // In a thread with several teammates, each event says whose it is.
@@ -536,7 +573,18 @@ export class Threads {
             seat!.reply = event.text
           }
         },
-        (call) => this.options.callConnector(spec.sessionId, teammateId, call),
+        // Files a call brings (an email's attachment) are in the folder before the teammate reads the result.
+        async (call) => {
+          const { output, attachments } = await this.options.callConnector(
+            spec.sessionId,
+            teammateId,
+            call,
+          )
+          const failed = await this.options.attachments.deliver(attachments, folder)
+          if (failed.length > 0)
+            throw new Error(`Could not put the file here: ${failed.join('; ')}`)
+          return output
+        },
         (request) => this.options.requestCredential(spec.sessionId, teammateId, request),
         {
           ...this.options.context,
@@ -544,7 +592,7 @@ export class Threads {
         },
         user,
       )
-      seat = { harness, parkTimer: undefined }
+      seat = { harness, folder, parkTimer: undefined }
       thread.harnesses.set(teammateId, seat)
     }
     return seat

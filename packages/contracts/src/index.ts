@@ -1,5 +1,6 @@
 // Zod schemas shared by api, runner and web. The single source of types.
 export * from './api.js'
+export * from './attachments.js'
 export * from './credentials.js'
 export * from './events.js'
 export * from './library.js'
@@ -11,8 +12,8 @@ export * from './runner.js'
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
  * 3: self-update. 4: the library, memory and search. 5: git through the API's proxy.
- * 6: generated images.
+ * 6: generated images. 7: attachments.
  */
-export const PROTOCOL_VERSION = 6
+export const PROTOCOL_VERSION = 7
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

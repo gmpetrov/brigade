@@ -1,7 +1,13 @@
 // Every connector call goes through here (spec hard constraint 4): the API
 // checks grant, scope, approval and caps, adds the credential from the vault,
 // makes the request and records it. The credential never leaves this process.
-import type { ApiToRunner, PermissionPolicy, RunnerToApi } from '@brigade/contracts'
+import type {
+  ApiToRunner,
+  PermissionPolicy,
+  RunnerToApi,
+  ThreadAttachmentRef,
+} from '@brigade/contracts'
+import { keepConnectorFile, readAttachment } from './attachments.js'
 import { audit } from './audit.js'
 import { connectors } from './connectors/index.js'
 import {
@@ -41,6 +47,7 @@ export async function handleConnectorCall(
     output?: unknown
     error?: string
     decision?: Decision & { ticketId: string }
+    attachments?: ThreadAttachmentRef[]
   }) =>
     reply({
       type: 'connector.result',
@@ -48,6 +55,7 @@ export async function handleConnectorCall(
       ok: r.ok,
       ...(r.output === undefined ? {} : { output: r.output }),
       ...(r.error ? { error: r.error } : {}),
+      ...(r.attachments?.length ? { attachments: r.attachments } : {}),
       ...(r.decision
         ? {
             decision: {
@@ -183,10 +191,36 @@ export async function handleConnectorCall(
     }
   }
 
+  // Files the call brings into the thread, put in the teammate's folder before it sees the result.
+  const kept: ThreadAttachmentRef[] = []
   try {
-    const output = await runOperation(db, scope, connection, operation, input.data, call.callId)
+    const fetch = await authorisedFetch(db, scope, connection)
+    const output = await operation.run(
+      {
+        fetch,
+        callId: call.callId,
+        keepFile: async (file) => {
+          const ref = await keepConnectorFile(db, scope, session, connection.id, file, { fetch })
+          kept.push(ref)
+          return ref
+        },
+        readFile: async (id) => {
+          // Only what this thread's teammates uploaded to send.
+          const row = await db.attachment.findFirst({
+            where: { id, source: 'teammate', sessionId: session.id, status: 'ready' },
+          })
+          if (!row) throw new Error(`No file ${id} to send from this thread`)
+          return {
+            name: row.name,
+            contentType: row.contentType,
+            bytes: await readAttachment(scope, row.id),
+          }
+        },
+      },
+      input.data,
+    )
     await record({ result: 'ok', target, ...(decision ? { ticketId: decision.ticketId } : {}) })
-    return result({ ok: true, output, ...(decision ? { decision } : {}) })
+    return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
   } catch (error) {
     const message = redact(error instanceof Error ? error.message : String(error))
     await record({
@@ -197,18 +231,6 @@ export async function handleConnectorCall(
     })
     return result({ ok: false, error: message, ...(decision ? { decision } : {}) })
   }
-}
-
-/** Call the vendor with the credential from the vault, refreshing it when needed. */
-async function runOperation(
-  db: ScopedDb,
-  scope: Scope,
-  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
-  operation: Operation,
-  input: unknown,
-  callId: string,
-) {
-  return operation.run({ fetch: await authorisedFetch(db, scope, connection), callId }, input)
 }
 
 /**

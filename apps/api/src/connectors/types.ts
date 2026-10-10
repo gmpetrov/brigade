@@ -1,3 +1,4 @@
+import type { ThreadAttachmentRef } from '@brigade/contracts'
 import type { z } from 'zod'
 
 /** One thing a connector can do. Each declares whether it reads or writes and what it touches. */
@@ -8,6 +9,12 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
   /** The exact object a call touches, for approvals and the call log. */
   target: (input: z.infer<I>) => string
   run: (ctx: ConnectorContext, input: z.infer<I>) => Promise<unknown>
+  /**
+   * The input field listing files to send with the call (an email's attachments):
+   * the teammate gives paths on its computer, the runner uploads them, and the
+   * operation reads them with ctx.readFile by the ids it gets instead.
+   */
+  files?: string
 }
 
 /**
@@ -17,6 +24,19 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
 export type ConnectorContext = {
   fetch: (url: string, init?: RequestInit) => Promise<Response>
   callId: string
+  /**
+   * A file for the calling thread, e.g. an email's attachment the teammate asked
+   * for: kept once per `key` and put in the teammate's working folder. Returns where.
+   */
+  keepFile: (file: {
+    /** The vendor's stable name for it within the connection, e.g. gmail:<messageId>:<partId>. */
+    key: string
+    name: string
+    contentType: string
+    bytes: () => Promise<Uint8Array>
+  }) => Promise<ThreadAttachmentRef>
+  /** A file the teammate sends with this call, by the id the runner gave its upload. */
+  readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
 }
 
 export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
@@ -31,6 +51,18 @@ export type TriggerOption = {
   placeholder?: string
   help?: string
   required?: boolean
+}
+
+/** A file a connection offers: an email's attachment, a chat message's file. */
+export type ExternalFile = {
+  /** The vendor's stable name for it within the connection, e.g. gmail:<messageId>:<partId>. */
+  key: string
+  name: string
+  contentType: string
+  size: number
+  /** Shown inside the message (an email's inline image) rather than attached to it. */
+  inline?: boolean
+  download: (ctx: Pick<ConnectorContext, 'fetch'>) => Promise<Uint8Array>
 }
 
 /** A vendor event, as the ingress or the change reader hands it to the triggers. */
@@ -54,12 +86,14 @@ export type TriggerDefinition = {
   matches?: (
     event: VendorEvent,
     options: Record<string, string>,
-    ctx: { fetch: ConnectorContext['fetch'] },
+    ctx: Pick<ConnectorContext, 'fetch'>,
   ) => boolean | Promise<boolean>
   /** What the teammate reads first: a title and a few lines, before the raw payload. */
   describe: (event: VendorEvent) => { title: string; summary: string }
   /** The conversation an event belongs to (e.g. a Gmail thread): its later events continue the same thread. */
   conversation?: (event: VendorEvent) => string | undefined
+  /** Files that come with the event (an email's attachments): given to its thread. */
+  attachments?: (event: VendorEvent) => ExternalFile[]
 }
 
 export type ConnectorDefinition = {

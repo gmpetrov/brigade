@@ -3,6 +3,7 @@ import { ArrowRight, ListOrdered, Lock, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
@@ -27,6 +28,8 @@ export default function ThreadPage() {
   const { items, limits } = useThreadItems(events)
   const [error, setError] = useState<string>()
   const [text, setText] = useState('')
+  const files = useUploads()
+  const drop = useFileDrop(files.add)
   const bottom = useRef<HTMLDivElement>(null)
   const [watching, setWatching] = useDesktopPreview()
   const [expanded, setExpanded] = useState(false)
@@ -85,11 +88,14 @@ export default function ThreadPage() {
     }
   }
 
+  const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
+
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!text.trim() || current === 'waiting') return
-    await call('/messages', { text })
+    if (!ready || current === 'waiting') return
+    await call('/messages', { text, attachmentIds: files.ids })
     setText('')
+    files.clear()
   }
 
   return (
@@ -321,8 +327,13 @@ export default function ThreadPage() {
           <form onSubmit={(e) => void send(e).catch(() => undefined)}>
             <Card
               data-composer-frame
-              className="relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring"
+              className={cn(
+                'relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring',
+                drop.dragging && 'border-primary ring-[3px] ring-primary/30',
+              )}
+              {...drop.props}
             >
+              <UploadList uploads={files.uploads} onRemove={files.remove} />
               <Composer
                 bare
                 threadId={id}
@@ -339,6 +350,7 @@ export default function ThreadPage() {
                 }
               />
               <div className="flex flex-wrap items-center gap-2">
+                <AttachButton onFiles={files.add} />
                 {error ? (
                   <span className="min-w-0 flex-1 pl-2 text-sm text-destructive-text">{error}</span>
                 ) : (
@@ -359,7 +371,7 @@ export default function ThreadPage() {
                     Interrupt
                   </Button>
                 )}
-                <Button size="sm" disabled={!text.trim() || current === 'waiting'}>
+                <Button size="sm" disabled={!ready || current === 'waiting'}>
                   Send
                   <ArrowRight aria-hidden />
                 </Button>

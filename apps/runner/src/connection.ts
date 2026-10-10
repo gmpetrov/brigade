@@ -4,6 +4,7 @@ import {
   PROTOCOL_VERSION,
   type RunnerToApi,
   type SequencedEvent,
+  type ThreadAttachmentRef,
 } from '@brigade/contracts'
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
@@ -13,8 +14,10 @@ import { installedBundle } from './updater.js'
 
 const BATCH = 200
 
+type Result = Extract<ApiToRunner, { type: 'connector.result' }>
+
 type PendingCall = {
-  resolve: (output: unknown) => void
+  resolve: (result: Result) => void
   reject: (error: Error) => void
   onPending: (ticketId: string, reason?: string) => void
   onDecision: (decision: { ticketId: string; approved: boolean; memberId: string }) => void
@@ -75,7 +78,7 @@ export class Connection {
         if (!call) return
         this.calls.delete(message.callId)
         if (message.decision) call.onDecision(message.decision)
-        if (message.ok) call.resolve(message.output)
+        if (message.ok) call.resolve(message)
         else call.reject(new Error(message.error ?? 'The connector call failed'))
       } else if (message.type === 'update.available') {
         this.onBundle(message.bundle, false)
@@ -123,30 +126,35 @@ export class Connection {
     if (this.ready) this.send({ type: 'events', events: [event] })
   }
 
-  /** Ask the API to make a connector call. It may first wait for a person's approval. */
-  callConnector(
+  /**
+   * Ask the API to make a connector call. It may first wait for a person's
+   * approval. With the output come the files the call brought into the thread.
+   */
+  async callConnector(
     request: Omit<Extract<RunnerToApi, { type: 'connector.call' }>, 'type' | 'callId'>,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
-  ): Promise<unknown> {
-    return this.call({ type: 'connector.call', ...request }, hooks)
+  ): Promise<{ output: unknown; attachments: ThreadAttachmentRef[] }> {
+    const result = await this.call({ type: 'connector.call', ...request }, hooks)
+    return { output: result.output, attachments: result.attachments ?? [] }
   }
 
   /** List the workspace's credentials, or ask for one. A release may wait for a person. */
-  requestCredential(
+  async requestCredential(
     request: Omit<Extract<RunnerToApi, { type: 'credential.request' }>, 'type' | 'callId'>,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
   ): Promise<unknown> {
-    return this.call({ type: 'credential.request', ...request }, hooks)
+    return (await this.call({ type: 'credential.request', ...request }, hooks)).output
   }
 
   /** Search the workspace, or save a file to its library. The API checks the grant. */
-  callLibrary(
+  async callLibrary(
     request: Omit<Extract<RunnerToApi, { type: 'library.call' }>, 'type' | 'callId'>,
   ): Promise<unknown> {
-    return this.call(
+    const result = await this.call(
       { type: 'library.call', ...request },
       { onPending: () => undefined, onDecision: () => undefined },
     )
+    return result.output
   }
 
   private call(
@@ -155,7 +163,7 @@ export class Connection {
       'callId'
     >,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,
-  ): Promise<unknown> {
+  ): Promise<Result> {
     if (!this.ready) return Promise.reject(new Error('Not connected to Brigade; try again shortly'))
     const callId = randomUUID()
     return new Promise((resolve, reject) => {

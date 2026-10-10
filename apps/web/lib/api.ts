@@ -1,6 +1,9 @@
 'use client'
+import type { AttachmentInfo, UploadTicket } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { API_URL } from './config'
+
+export type { AttachmentInfo } from '@brigade/contracts'
 
 export class ApiError extends Error {
   constructor(
@@ -28,6 +31,86 @@ export async function api<T = unknown>(
     throw new ApiError((body as { error?: string }).error ?? response.statusText, response.status)
   return body as T
 }
+
+/**
+ * Send a request body with XMLHttpRequest, as fetch reports no upload
+ * progress. Resolves to the parsed JSON body, if any.
+ */
+function send(
+  request: { method: string; url: string; headers?: Record<string, string>; credentials: boolean },
+  body: XMLHttpRequestBodyInit,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open(request.method, request.url)
+    xhr.withCredentials = request.credentials
+    for (const [name, value] of Object.entries(request.headers ?? {}))
+      xhr.setRequestHeader(name, value)
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total)
+    xhr.onload = () => {
+      const json = (() => {
+        try {
+          return xhr.responseText ? (JSON.parse(xhr.responseText) as unknown) : undefined
+        } catch {
+          return undefined
+        }
+      })()
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(json)
+      const error = (json as { error?: string } | undefined)?.error
+      reject(new ApiError(error ?? `Upload failed (${xhr.status || xhr.statusText})`, xhr.status))
+    }
+    xhr.onerror = () => reject(new ApiError('Upload failed: storage is unreachable', 0))
+    xhr.onabort = () => reject(new DOMException('Upload cancelled', 'AbortError'))
+    signal?.addEventListener('abort', () => xhr.abort())
+    xhr.send(body)
+  })
+}
+
+/**
+ * Upload one file for a message, reporting progress from 0 to 1. Sent with
+ * the message by its id. Straight to the bucket when the API hands out a
+ * signed URL; otherwise through the API.
+ */
+export async function uploadAttachment(
+  file: File,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<AttachmentInfo> {
+  const ticket = await api<UploadTicket>('/attachments/uploads', {
+    body: { name: file.name || 'file', size: file.size, contentType: file.type },
+  })
+  if (!ticket.direct) {
+    const form = new FormData()
+    form.append('file', file)
+    const url = `${API_URL}/api/attachments`
+    return (await send(
+      { method: 'POST', url, credentials: true },
+      form,
+      onProgress,
+      signal,
+    )) as AttachmentInfo
+  }
+  const id = ticket.attachment.id
+  try {
+    await send(
+      { method: ticket.method, url: ticket.url, headers: ticket.headers, credentials: false },
+      file,
+      onProgress,
+      signal,
+    )
+    return await api<AttachmentInfo>(`/attachments/${id}/complete`, { body: {} })
+  } catch (error) {
+    // The half-done upload goes; the API would sweep it later anyway.
+    void api(`/attachments/${id}`, { method: 'DELETE' }).catch(() => undefined)
+    throw error
+  }
+}
+
+/** A file given to a thread (or an unsent upload), as itself; `download` saves it instead. */
+export const attachmentUrl = (id: string, download = false) =>
+  `${API_URL}/api/attachments/${id}/content${download ? '?download' : ''}`
 
 /** An image in a teammate's working folder for a thread, for an `<img>`. */
 export const threadImageUrl = (threadId: string, path: string, teammateId?: string) =>
@@ -121,6 +204,8 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   origin: 'member' | 'trigger'
   trigger: { id: string; label: string; event: string } | null
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
+  /** Every file given to the thread, oldest first. */
+  attachments: AttachmentInfo[]
 }
 
 export type AccountLogin = {

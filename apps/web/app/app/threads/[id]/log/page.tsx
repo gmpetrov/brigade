@@ -113,12 +113,15 @@ export default function RunLogPage() {
       }
     }
     switch (e.type) {
-      case 'message.user':
+      case 'message.user': {
+        const files = (d.attachments as { name: string }[] | undefined) ?? []
+        const attached = files.length ? `Attached: ${files.map((f) => f.name).join(', ')}` : ''
         return {
           actor: who(d.memberId) ?? (t.origin === 'trigger' ? 'Trigger' : 'Brigade'),
-          what: clip(d.text),
-          detail: d.text,
+          what: clip(String(d.text || attached)),
+          detail: [d.text, attached].filter(Boolean).join('\n\n'),
         }
+      }
       case 'message.done':
         return { actor: teammate, what: clip(d.text), detail: d.text }
       case 'tool.started':

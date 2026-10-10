@@ -69,20 +69,22 @@ export function contentTypeFor(path: string, given?: string | null) {
   return type && /^[a-z]+\/[a-z0-9.+-]+$/.test(type) ? type : 'application/octet-stream'
 }
 
-const isText = (contentType: string) =>
+export const isText = (contentType: string) =>
   contentType.startsWith('text/') ||
   ['application/json', 'application/yaml', 'application/xml'].includes(contentType)
 
 /** The text to index, or '' when the file has none Brigade can read (images, office files). */
-async function extractText(bytes: Uint8Array, contentType: string) {
+export async function extractText(bytes: Uint8Array, contentType: string) {
+  // PostgreSQL text cannot hold NUL, which PDFs (and some text files) put in their text.
+  const storable = (text: string) => text.replace(/\u0000/g, '').slice(0, INDEX_CHARS)
   try {
     if (isText(contentType))
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes).slice(0, INDEX_CHARS)
+      return storable(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
     if (contentType === 'application/pdf') {
       const { extractText: pdfText, getDocumentProxy } = await import('unpdf')
       const pdf = await getDocumentProxy(new Uint8Array(bytes))
       const { text } = await pdfText(pdf, { mergePages: true })
-      return text.slice(0, INDEX_CHARS)
+      return storable(text)
     }
   } catch {
     // Not valid UTF-8, or a damaged PDF: kept, just not searchable.

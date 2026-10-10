@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
-  IMAGE_FILE,
+  FILE_VIEW_MAX,
+  VIEWABLE_FILE,
   AnswerQuestion,
   AnswerTicket,
   DesktopClipboard,
@@ -17,15 +18,16 @@ import {
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
+import { readAttachment, toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
 import { desktopUrl, ensureRunning } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
-import { contentTypeFor } from '../library.js'
+import { contentTypeFor, isText } from '../library.js'
 import { loadThread, specFor } from '../thread-spec.js'
-import { joinThread, mentionedTeammates, promptThread, startThread } from '../work.js'
+import { joinThread, mentionedTeammates, promptWithAttachments, startThread } from '../work.js'
 import { runLog } from '../timeline.js'
 import {
   parseBody,
@@ -63,6 +65,14 @@ function requireMayPrompt(
       message: 'A person has control of this thread. It continues when they hand it back.',
     })
   }
+}
+
+/** A thread started with files and no words is named after its first file. */
+async function attachedTitle(db: ScopedDb, attachmentIds: string[]) {
+  const first = attachmentIds[0]
+  const row = first ? await db.attachment.findFirst({ where: { id: first } }) : null
+  const more = attachmentIds.length > 1 ? ` and ${attachmentIds.length - 1} more` : ''
+  return row ? `${row.name}${more}` : 'Files'
 }
 
 /** Send to the thread's computer; a stopped workspace computer is resumed first. */
@@ -121,11 +131,13 @@ export const threads = new Hono<AppEnv>()
           select: { id: true, type: true, title: true, payload: true, createdAt: true },
           orderBy: { createdAt: 'asc' },
         },
+        attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
     return c.json({
       ...thread,
+      attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
     })
   })
@@ -145,6 +157,34 @@ export const threads = new Hono<AppEnv>()
       .replace(/:\d+(:\d+)?$/, '')
       .replace(/^\.\//, '')
     if (!path || path.length > 1000) throw new HTTPException(400, { message: 'Which file?' })
+
+    // A file given to the thread: its original, from the bucket (the computer may be stopped).
+    const relative = path.startsWith('/')
+      ? path.match(new RegExp(`/threads/${thread.id}/(attachments/.+)$`))?.[1]
+      : path
+    const given =
+      relative &&
+      (await db.threadAttachment.findFirst({
+        where: { sessionId: thread.id, path: relative, attachment: { status: 'ready' } },
+        include: { attachment: true },
+      }))
+    if (given) {
+      const row = given.attachment
+      const text =
+        isText(row.contentType) &&
+        new TextDecoder('utf-8', { fatal: false }).decode(
+          (await readAttachment(c.var.scope, row.id)).subarray(0, FILE_VIEW_MAX),
+        )
+      return c.json({
+        source: 'attachment',
+        path: given.path,
+        attachmentId: row.id,
+        contentType: row.contentType,
+        size: row.size,
+        ...(text === false ? {} : { text }),
+        truncated: row.size > FILE_VIEW_MAX,
+      } satisfies ThreadFile)
+    }
 
     // The library: its own path, or its mirror's path on a computer.
     const mirrored = path.startsWith('/') ? path.match(/\/library\/(.+)$/)?.[1] : undefined
@@ -189,12 +229,15 @@ export const threads = new Hono<AppEnv>()
     } satisfies ThreadFile)
   })
 
-  /** An image in a teammate's working folder, such as one it generated, as the image itself. */
+  /**
+   * An image or PDF in a teammate's working folder, such as one it generated,
+   * as itself. Inline but sandboxed: the dashboard shows a PDF from a copy it fetches.
+   */
   .get('/:id/image', async (c) => {
     const thread = await loadThread(c.var.db, c.req.param('id'))
     const path = (c.req.query('path') ?? '').trim().replace(/^\.\//, '')
-    if (!path || path.length > 1000 || !IMAGE_FILE.test(path))
-      throw new HTTPException(400, { message: 'Which image?' })
+    if (!path || path.length > 1000 || !VIEWABLE_FILE.test(path))
+      throw new HTTPException(400, { message: 'Which image or PDF?' })
     const result = await readThreadFile(thread.computerId, {
       sessionId: thread.id,
       teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
@@ -205,8 +248,8 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
         message:
           result.error === 'not_found'
-            ? `No image "${path}" in the teammate's folder`
-            : (result.error ?? 'Could not read the image'),
+            ? `No "${path}" in the teammate's folder`
+            : (result.error ?? 'Could not read the file'),
       })
     return c.body(Buffer.from(result.data, 'base64'), 200, {
       'content-type': contentTypeFor(path),
@@ -236,13 +279,15 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(404, { message: 'Computer not found' })
     }
     // A thread runs on the starting member's accounts, never anyone else's.
+    const firstLine = mentionsToText(input.text).split('\n')[0]!
     const { thread, outcome } = await startThread(db, scope, {
       teammate,
       computer,
       memberId: scope.memberId,
       accountId: input.accountId ?? null,
-      title: mentionsToText(input.text).split('\n')[0]!,
+      title: firstLine || (await attachedTitle(db, input.attachmentIds)),
       text: input.text,
+      attachmentIds: input.attachmentIds,
     })
     if (outcome === 'offline') {
       throw new HTTPException(409, {
@@ -263,16 +308,22 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
-    const { text } = await parseBody(c.req.raw, SendMessage)
+    const { text, attachmentIds } = await parseBody(c.req.raw, SendMessage)
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
     const mentioned = await mentionedTeammates(db, text)
     const joined = mentioned.filter((id) => !thread.teammates.some((t) => t.teammateId === id))
     if (joined.length > 0) await joinThread(db, thread.id, joined)
-    const outcome = await promptThread(
+    const outcome = await promptWithAttachments(
       db,
       scope,
       joined.length > 0 ? await loadThread(db, thread.id) : thread,
-      { text, memberId: scope.memberId, ...(mentioned.length ? { teammateIds: mentioned } : {}) },
+      {
+        text,
+        memberId: scope.memberId,
+        ...(mentioned.length ? { teammateIds: mentioned } : {}),
+        attachmentIds,
+      },
+      { memberId: scope.memberId },
     )
     if (outcome === 'offline')
       throw new HTTPException(409, {

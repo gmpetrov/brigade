@@ -185,3 +185,14 @@ export type Document = Prisma.DocumentModel
  * Append-only record of an action. workspaceId is null for organization-level actions.
  */
 export type AuditEntry = Prisma.AuditEntryModel
+/**
+ * Model Attachment
+ * A file's bytes (in the bucket, keyed by id) and where they came from. One
+ * file can be in several threads, e.g. an email two triggers matched.
+ */
+export type Attachment = Prisma.AttachmentModel
+/**
+ * Model ThreadAttachment
+ * A file in a thread: copied into each teammate's working folder at `path` before its turn.
+ */
+export type ThreadAttachment = Prisma.ThreadAttachmentModel

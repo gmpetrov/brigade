@@ -77,7 +77,9 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
-  AuditEntry: 'AuditEntry'
+  AuditEntry: 'AuditEntry',
+  Attachment: 'Attachment',
+  ThreadAttachment: 'ThreadAttachment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -530,6 +532,41 @@ export const AuditEntryScalarFieldEnum = {
 } as const
 
 export type AuditEntryScalarFieldEnum = (typeof AuditEntryScalarFieldEnum)[keyof typeof AuditEntryScalarFieldEnum]
+
+
+export const AttachmentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  sha256: 'sha256',
+  status: 'status',
+  note: 'note',
+  source: 'source',
+  uploadedByMemberId: 'uploadedByMemberId',
+  connectionId: 'connectionId',
+  externalRef: 'externalRef',
+  sessionId: 'sessionId',
+  text: 'text',
+  createdAt: 'createdAt'
+} as const
+
+export type AttachmentScalarFieldEnum = (typeof AttachmentScalarFieldEnum)[keyof typeof AttachmentScalarFieldEnum]
+
+
+export const ThreadAttachmentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  attachmentId: 'attachmentId',
+  path: 'path',
+  createdAt: 'createdAt'
+} as const
+
+export type ThreadAttachmentScalarFieldEnum = (typeof ThreadAttachmentScalarFieldEnum)[keyof typeof ThreadAttachmentScalarFieldEnum]
 
 
 export const SortOrder = {

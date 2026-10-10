@@ -6,12 +6,13 @@ import { basename, dirname, join } from 'node:path'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
-import type {
-  AccountRef,
-  AgentEvent,
-  QuestionAnswer,
-  ThreadSpec,
-  TicketAnswer,
+import {
+  ATTACHMENT_MAX,
+  type AccountRef,
+  type AgentEvent,
+  type QuestionAnswer,
+  type ThreadSpec,
+  type TicketAnswer,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -48,12 +49,19 @@ import {
 
 export type { ConnectorCaller, LibraryCaller } from './tools.js'
 
-/** What a thread reaches beyond its own directory: the library, memory and git backups. */
+/** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
   libraryDir: string
   memoryFor: (teammateId: string) => { workspace: string; teammate: string }
   callLibrary: LibraryCaller
   bundles: BundleStore
+  /** Send a file of the teammate's to the API, to go with a connector call. Returns its id. */
+  uploadFile: (input: {
+    sessionId: string
+    teammateId: string
+    name: string
+    bytes: Buffer
+  }) => Promise<string>
 }
 export type { CredentialRequester } from '../credentials.js'
 
@@ -448,7 +456,7 @@ export class HarnessThread {
     })
     const agent = createAgent(
       this.spec,
-      this.callConnector,
+      (call) => this.callWithFiles(call),
       credentials,
       browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
       {
@@ -483,6 +491,38 @@ export class HarnessThread {
     this.live = { agent, session, sandbox, account, credentials }
     this.saved = { transcript: [], ...this.saved, accountId: account.id }
     return this.live
+  }
+
+  /**
+   * A connector call that sends files (an email's attachments): the teammate
+   * names them by path; they go to the API first, and the call carries their ids.
+   */
+  private async callWithFiles(call: Parameters<ConnectorCaller>[0]) {
+    const field = this.spec.connectors
+      .find((c) => c.connectionId === call.connectionId)
+      ?.operations.find((o) => o.name === call.operation)?.filesField
+    const input = call.input as Record<string, unknown> | null
+    const files = field && input && Array.isArray(input[field]) ? (input[field] as unknown[]) : []
+    if (!field || files.length === 0) return this.callConnector(call)
+    const ids = []
+    for (const file of files) {
+      if (typeof file !== 'string') throw new Error(`${field} lists file paths`)
+      const bytes = await readAs(
+        resolvePath(this.workDir, file),
+        this.runAs,
+        ATTACHMENT_MAX,
+        'Files sent with a call',
+      )
+      ids.push(
+        await this.context.uploadFile({
+          sessionId: this.spec.sessionId,
+          teammateId: this.spec.teammate.id,
+          name: basename(file),
+          bytes,
+        }),
+      )
+    }
+    return this.callConnector({ ...call, input: { ...input, [field]: ids } })
   }
 
   /** After a failure: save what can be saved, so the next message starts clean. */
@@ -550,16 +590,24 @@ async function prepare(workDir: string, account: AccountRef, runAs?: string) {
 /** Most a teammate saves to the library in one call. */
 const READ_MAX = 10 * 1024 * 1024
 
-/** Read a file as the teammate's user (or as this user on a member's machine). */
-async function readAs(file: string, runAs?: string): Promise<Buffer> {
+/** Read a file as the teammate's user (or as this user on a member's machine), up to `max` bytes. */
+async function readAs(
+  file: string,
+  runAs?: string,
+  max = READ_MAX,
+  what = 'Files saved to the library',
+): Promise<Buffer> {
   const { stdout } = await execFileAsync(
-    runAs ? 'sudo' : 'cat',
-    runAs ? ['-n', '-u', runAs, 'head', '-c', String(READ_MAX + 1), '--', file] : ['--', file],
-    { cwd: '/', encoding: 'buffer', maxBuffer: READ_MAX + 1024 },
+    runAs ? 'sudo' : 'head',
+    runAs
+      ? ['-n', '-u', runAs, 'head', '-c', String(max + 1), '--', file]
+      : ['-c', String(max + 1), '--', file],
+    { cwd: '/', encoding: 'buffer', maxBuffer: max + 1024 },
   ).catch((error: unknown) => {
     throw new Error(`Could not read ${file}: ${errorMessage(error)}`)
   })
-  if (stdout.byteLength > READ_MAX) throw new Error('Files saved to the library can be up to 10 MB')
+  if (stdout.byteLength > max)
+    throw new Error(`${what} can be up to ${Math.round(max / (1024 * 1024))} MB`)
   return stdout
 }
 

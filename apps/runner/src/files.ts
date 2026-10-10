@@ -7,8 +7,8 @@ import { isAbsolute, join, relative } from 'node:path'
 import { promisify } from 'node:util'
 import {
   FILE_VIEW_MAX,
-  IMAGE_FILE,
   IMAGE_VIEW_MAX,
+  VIEWABLE_FILE,
   type ApiToRunner,
   type RunnerToApi,
 } from '@brigade/contracts'
@@ -79,8 +79,8 @@ export async function readThreadFile(request: Request): Promise<Result> {
   const base = { type: 'thread.file.result' as const, requestId: request.requestId }
   if (!SAFE_ID.test(request.sessionId) || !request.teammateIds.every((id) => SAFE_ID.test(id)))
     return { ...base, ok: false, error: 'Invalid thread' }
-  if (request.image && !IMAGE_FILE.test(request.path))
-    return { ...base, ok: false, error: 'Not an image' }
+  if (request.image && !VIEWABLE_FILE.test(request.path))
+    return { ...base, ok: false, error: 'Not an image or PDF' }
   for (const teammateId of request.teammateIds) {
     const user = CLOUD ? teammateUser(teammateId) : undefined
     const dir = user

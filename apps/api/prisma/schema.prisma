@@ -152,6 +152,8 @@ model Workspace {
   subscriptions  Subscription[]
   tickets        Ticket[]
   documents      Document[]
+  attachments    Attachment[]
+  threadAttachments ThreadAttachment[]
   auditEntries   AuditEntry[]
 
   @@index([organizationId])
@@ -312,6 +314,9 @@ model Session {
   connectionCalls     ConnectionCall[]
   tickets             Ticket[]
   documents           Document[]
+  attachments         ThreadAttachment[]
+  /// Files teammates sent from this thread (e.g. attached to an email).
+  sentAttachments     Attachment[]
 
   @@index([workspaceId, createdAt])
   @@index([teammateId])
@@ -482,6 +487,7 @@ model Connection {
   calls             ConnectionCall[]
   triggers          Trigger[]
   subscriptions     Subscription[]
+  attachments       Attachment[]
 
   @@index([workspaceId])
 }
@@ -763,4 +769,78 @@ model AuditEntry {
 
   @@index([workspaceId, at])
   @@index([organizationId, at])
+}
+
+// ---------------------------------------------------------------------------
+// Attachments: files given to threads, from a person's computer or a connection
+// ---------------------------------------------------------------------------
+
+enum AttachmentSource {
+  /// A member uploaded it in the dashboard.
+  upload
+  /// It came with an event or a call on a connection (an email's attachment).
+  connector
+  /// A teammate sent it from its working folder (e.g. attached to an email it sends).
+  teammate
+}
+
+enum AttachmentStatus {
+  /// A member's browser is uploading it straight to the bucket; not checked yet.
+  pending
+  /// The bytes are in the bucket.
+  ready
+  /// Not stored: too large, a type Brigade does not take from outside, or it could not be fetched.
+  blocked
+}
+
+/// A file's bytes (in the bucket, keyed by id) and where they came from. One
+/// file can be in several threads, e.g. an email two triggers matched.
+model Attachment {
+  id                 String           @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// The file's name, made safe: no folders, no hidden or control characters.
+  name               String
+  contentType        String
+  size               Int
+  sha256             String           @default("")
+  status             AttachmentStatus @default(ready)
+  /// Why it is blocked.
+  note               String?
+  source             AttachmentSource
+  uploadedByMemberId String?
+  connectionId       String?
+  connection         Connection?      @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  /// The vendor's stable name for it, e.g. gmail:<messageId>:<partId>: fetched once.
+  externalRef        String?
+  /// Set for a file a teammate sent: the thread it was sent from.
+  sessionId          String?
+  session            Session?         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// Extracted for search, like a library file's.
+  text               String           @default("")
+  createdAt          DateTime         @default(now())
+  threads            ThreadAttachment[]
+
+  @@unique([connectionId, externalRef])
+  @@index([workspaceId, createdAt])
+}
+
+/// A file in a thread: copied into each teammate's working folder at `path` before its turn.
+model ThreadAttachment {
+  id             String     @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  attachmentId   String
+  attachment     Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  /// Relative to a teammate's working folder, e.g. attachments/invoice.pdf. Decided by the API.
+  path           String
+  createdAt      DateTime   @default(now())
+
+  @@unique([sessionId, path])
+  @@unique([sessionId, attachmentId])
+  @@index([attachmentId])
 }

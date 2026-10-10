@@ -8,6 +8,7 @@ import { env } from './config.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
+import { attachments } from './routes/attachments.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
@@ -15,6 +16,7 @@ import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
 import { projects } from './routes/projects.js'
+import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { tickets } from './routes/tickets.js'
@@ -43,6 +45,7 @@ app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
 app.route('/api/library', library)
+app.route('/api/attachments', attachments)
 app.route('/api/projects', projects)
 app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)
@@ -50,6 +53,7 @@ app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)
 app.route('/runner/backups', runnerBackups)
+app.route('/runner/attachments', runnerAttachments)
 // Git for teammates, proxied to GitHub. Authenticated by a thread's git token, not a session.
 app.route('/git', gitProxy)
 // GitHub App events: pushes refresh computers' caches. Verified by the app's webhook secret.

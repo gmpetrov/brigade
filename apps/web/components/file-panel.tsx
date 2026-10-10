@@ -1,18 +1,95 @@
 'use client'
-// A file the thread mentions, beside it: from the library, or from the
-// teammate's working folder on its computer. Takes the desktop panel's place.
+// A file the thread mentions, beside it: from the library, the thread's
+// attachments, or the teammate's working folder on its computer. Takes the
+// desktop panel's place. Text shows as text, images and PDFs as themselves.
 import type { ThreadFile } from '@brigade/contracts'
 import { Check, Copy, Download, FileText, Library, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { api, threadImageUrl } from '@/lib/api'
+import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
+
+/** Pages a PDF shows here; the rest are a download away. */
+const PDF_PAGES = 50
+
+let pdfWorker: Worker | undefined
+
+/**
+ * A PDF, drawn page by page with pdf.js to the panel's width: the same in every
+ * browser, including those that show no PDF in a frame. Loaded only when one opens.
+ */
+function PdfView({ url, name }: { url: string; name: string }) {
+  const pages = useRef<HTMLDivElement>(null)
+  const [status, setStatus] = useState<{ error?: string; count?: number }>({})
+  useEffect(() => {
+    let cancelled = false
+    let destroy: (() => Promise<void>) | undefined
+    setStatus({})
+    pages.current?.replaceChildren()
+    void (async () => {
+      const response = await fetch(url, { credentials: 'include', cache: 'no-store' })
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string }
+        throw new Error(body.error ?? `Could not open it (${response.status})`)
+      }
+      const data = new Uint8Array(await response.arrayBuffer())
+      const pdfjs = await import('pdfjs-dist')
+      pdfWorker ??= new Worker(new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url), {
+        type: 'module',
+      })
+      pdfjs.GlobalWorkerOptions.workerPort = pdfWorker
+      const task = pdfjs.getDocument({ data })
+      destroy = () => task.destroy()
+      const doc = await task.promise
+      if (cancelled) return
+      setStatus({ count: doc.numPages })
+      const root = pages.current
+      if (!root) return
+      const width = Math.max(200, root.clientWidth - 32)
+      const ratio = window.devicePixelRatio || 1
+      for (let n = 1; n <= Math.min(doc.numPages, PDF_PAGES) && !cancelled; n++) {
+        const page = await doc.getPage(n)
+        const scale = width / page.getViewport({ scale: 1 }).width
+        const viewport = page.getViewport({ scale: scale * ratio })
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.floor(viewport.width)
+        canvas.height = Math.floor(viewport.height)
+        canvas.style.width = `${Math.floor(viewport.width / ratio)}px`
+        canvas.setAttribute('aria-label', `Page ${n} of ${doc.numPages}`)
+        canvas.className = 'mx-auto block rounded-sm bg-white shadow-sm'
+        root.append(canvas)
+        await page.render({ canvas, viewport }).promise
+      }
+    })().catch((e: Error) => !cancelled && setStatus({ error: e.message }))
+    return () => {
+      cancelled = true
+      void destroy?.()
+    }
+  }, [url])
+  return (
+    <div className="flex min-h-full flex-col gap-4 bg-muted p-4">
+      {status.error ? (
+        <p className="text-sm text-destructive-text">{status.error}</p>
+      ) : (
+        status.count === undefined && (
+          <p className="text-sm text-muted-foreground">Opening {name}…</p>
+        )
+      )}
+      <div ref={pages} role="document" aria-label={name} className="flex flex-col gap-4" />
+      {(status.count ?? 0) > PDF_PAGES && (
+        <p className="text-center text-xs text-muted-foreground">
+          Showing the first {PDF_PAGES} of {status.count} pages. Download it to see the rest.
+        </p>
+      )}
+    </div>
+  )
+}
 
 function size(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -57,12 +134,16 @@ export function FilePanel({
   const shown = file?.path ?? path
   const slash = shown.lastIndexOf('/')
   const folder = slash >= 0 ? shown.slice(0, slash) : ''
-  const content = file?.documentId && `${API_URL}/api/library/${file.documentId}/content`
-  // An image in the teammate's folder shows as itself; other binary files only from the library.
-  const image =
-    file && IMAGE.test(file.contentType)
-      ? (content ?? threadImageUrl(threadId, file.path, file.teammateId))
+  // The library's copy, or the file as given to the thread; a working folder's own only through the computer.
+  const content = file?.documentId
+    ? `${API_URL}/api/library/${file.documentId}/content`
+    : file?.attachmentId
+      ? attachmentUrl(file.attachmentId)
       : undefined
+  // An image or PDF in the teammate's folder shows as itself; other binary files only from storage.
+  const own = file && (content ?? threadImageUrl(threadId, file.path, file.teammateId))
+  const image = file && IMAGE.test(file.contentType) ? own : undefined
+  const pdf = file?.contentType === 'application/pdf' ? own : undefined
 
   return (
     <aside
@@ -83,7 +164,11 @@ export function FilePanel({
         </div>
         {file && (
           <Badge variant="secondary" className="shrink-0 text-muted-foreground">
-            {file.source === 'library' ? 'Library' : `${teammateName(file.teammateId)}'s folder`}
+            {file.source === 'library'
+              ? 'Library'
+              : file.source === 'attachment'
+                ? 'Attached'
+                : `${teammateName(file.teammateId)}'s folder`}
           </Badge>
         )}
         <Button
@@ -130,6 +215,8 @@ export function FilePanel({
           <p className="p-4 text-sm text-destructive-text">{error}</p>
         ) : !file ? (
           <p className="p-4 text-sm text-muted-foreground">Opening {path}…</p>
+        ) : pdf ? (
+          <PdfView url={pdf} name={shown.slice(slash + 1)} />
         ) : file.text === undefined ? (
           image ? (
             <div className="flex justify-center bg-muted p-4">

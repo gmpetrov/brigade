@@ -180,3 +180,21 @@ export const ActorType = {
 } as const
 
 export type ActorType = (typeof ActorType)[keyof typeof ActorType]
+
+
+export const AttachmentSource = {
+  upload: 'upload',
+  connector: 'connector',
+  teammate: 'teammate'
+} as const
+
+export type AttachmentSource = (typeof AttachmentSource)[keyof typeof AttachmentSource]
+
+
+export const AttachmentStatus = {
+  pending: 'pending',
+  ready: 'ready',
+  blocked: 'blocked'
+} as const
+
+export type AttachmentStatus = (typeof AttachmentStatus)[keyof typeof AttachmentStatus]

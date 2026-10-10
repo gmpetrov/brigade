@@ -1,5 +1,6 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
+import { AttachmentIds } from './attachments.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess } from './library.js'
 import { isHarnessModel } from './models.js'
@@ -83,13 +84,20 @@ export const ResolveTicket = z.object({
   reason: z.string().max(2000).optional(),
 })
 
-export const StartThread = z.object({
-  teammateId: z.string(),
-  computerId: z.string(),
-  /** Omit to use the member's default account for the teammate's harness. */
-  accountId: z.string().optional(),
-  text: z.string().trim().min(1).max(100_000),
-})
+const hasContent = (m: { text: string; attachmentIds: string[] }) =>
+  m.text.length > 0 || m.attachmentIds.length > 0
+
+export const StartThread = z
+  .object({
+    teammateId: z.string(),
+    computerId: z.string(),
+    /** Omit to use the member's default account for the teammate's harness. */
+    accountId: z.string().optional(),
+    text: z.string().trim().max(100_000).default(''),
+    /** Files uploaded with POST /attachments, given to the thread with this message. */
+    attachmentIds: AttachmentIds,
+  })
+  .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 
 export const AddAccount = z.object({
   computerId: z.string(),
@@ -105,7 +113,12 @@ export const UpdateAccount = z.object({
   label: z.string().trim().min(1).max(80).optional(),
   isDefault: z.literal(true).optional(),
 })
-export const SendMessage = z.object({ text: z.string().trim().min(1).max(100_000) })
+export const SendMessage = z
+  .object({
+    text: z.string().trim().max(100_000).default(''),
+    attachmentIds: AttachmentIds,
+  })
+  .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 export const ResolveApproval = z.object({
   approvalId: z.string(),
   approved: z.boolean(),

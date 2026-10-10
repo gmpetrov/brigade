@@ -34,6 +34,13 @@ export function documentKey(scope: Scope, documentId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/library/${documentId}`
 }
 
+/** The bucket key of an attachment's bytes: a file given to a thread. */
+export function attachmentKey(scope: Scope, attachmentId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, attachmentId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/attachments/${attachmentId}`
+}
+
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
 
 /**
@@ -54,6 +61,28 @@ export function repoBackupKey(
 }
 
 const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponent).join('/')}`
+
+/** Browsers can upload straight to the bucket: only with R2, not the local stand-in. */
+export const directUploads = Boolean(r2)
+
+/** How long a signed upload URL works. */
+const UPLOAD_URL_SECONDS = 10 * 60
+
+/**
+ * A short-lived URL a browser can PUT one object to, without credentials.
+ * Size and type are signed: R2 refuses a body of any other length or type.
+ */
+export async function presignPut(key: string, size: number, contentType: string) {
+  if (!r2) throw new Error('Direct uploads need R2')
+  const headers = { 'content-type': contentType, 'content-length': String(size) }
+  const signed = await r2.client.sign(`${url(key)}?X-Amz-Expires=${UPLOAD_URL_SECONDS}`, {
+    method: 'PUT',
+    headers,
+    aws: { signQuery: true, allHeaders: true },
+  })
+  // The browser sets content-length itself; it only sends the type.
+  return { url: signed.url, headers: { 'content-type': contentType } }
+}
 
 export async function putObject(key: string, body: Uint8Array, contentType: string) {
   if (!r2) {

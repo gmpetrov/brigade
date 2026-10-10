@@ -116,19 +116,24 @@ export type LibraryManifest = z.infer<typeof LibraryManifest>
 /** Largest text a file panel shows; longer files are cut. */
 export const FILE_VIEW_MAX = 1024 * 1024
 
-/** Largest image a thread shows from a teammate's working folder. */
+/** Largest image or PDF a thread shows from a teammate's working folder. */
 export const IMAGE_VIEW_MAX = 10 * 1024 * 1024
 
 /** Image files a thread shows as pictures, by extension. */
 export const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i
 
-/** A file a thread mentions, for the panel beside it: from the library, or from a teammate's working folder. */
+/** Files the file panel shows as themselves, not as text: images and PDFs. */
+export const VIEWABLE_FILE = /\.(png|jpe?g|gif|webp|pdf)$/i
+
+/** A file a thread mentions, for the panel beside it: from the library, the thread's attachments, or a teammate's working folder. */
 export const ThreadFile = z.object({
-  source: z.enum(['library', 'thread']),
+  source: z.enum(['library', 'thread', 'attachment']),
   /** The library path, or the path on the computer. */
   path: z.string(),
   /** Set for a library file. */
   documentId: z.string().optional(),
+  /** Set for a file given to the thread: its original, as uploaded or received. */
+  attachmentId: z.string().optional(),
   contentType: z.string(),
   size: z.number().int(),
   /** Unset for a binary file. */

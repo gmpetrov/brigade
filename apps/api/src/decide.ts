@@ -6,6 +6,7 @@ import {
   type Ask,
   type Question,
   type QuestionAnswer,
+  type ThreadAttachmentRef,
   type TicketAnswer,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -209,7 +210,13 @@ type TicketPayload = {
   requestId?: string
   asks?: Ask[]
   /** A turn held back by a cap, and who answers it. */
-  pending?: { text: string; memberId: string | null; teammateIds?: string[]; handoff?: boolean }
+  pending?: {
+    text: string
+    memberId: string | null
+    teammateIds?: string[]
+    handoff?: boolean
+    attachments?: ThreadAttachmentRef[]
+  }
   /** A sign-in ticket's account. */
   accountId?: string
   /** The member a notice is for. */

@@ -3,6 +3,7 @@ import { modelLabel } from '@brigade/contracts'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
@@ -31,6 +32,7 @@ import {
   type ComputersResponse,
   type ThreadSummary,
 } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 export default function TeammatePage() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +48,8 @@ export default function TeammatePage() {
   const [busy, setBusy] = useState(false)
   const [text, setText] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
+  const files = useUploads()
+  const drop = useFileDrop(files.add)
   const oversight = useTeammateTimeline(id)
 
   if (!teammate) return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -59,8 +63,10 @@ export default function TeammatePage() {
       !(a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()),
   )
 
+  const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
+
   async function start(form: FormData) {
-    if (busy || !text.trim() || !online.length) return
+    if (busy || !ready || !online.length) return
     setBusy(true)
     setError(undefined)
     try {
@@ -69,9 +75,11 @@ export default function TeammatePage() {
           teammateId: id,
           computerId: String(form.get('computerId')),
           text: String(form.get('text')),
+          attachmentIds: files.ids,
           ...(form.get('accountId') ? { accountId: String(form.get('accountId')) } : {}),
         },
       })
+      files.clear()
       router.push(`/app/threads/${thread.id}`)
     } catch (e) {
       setError((e as Error).message)
@@ -148,15 +156,27 @@ export default function TeammatePage() {
             </CardHeader>
             <CardContent>
               <form ref={formRef} action={start} className="flex flex-col gap-3.5">
-                <Composer
-                  id="text"
-                  name="text"
-                  rows={4}
-                  value={text}
-                  onChange={setText}
-                  onSubmit={() => formRef.current?.requestSubmit()}
-                  placeholder={`What should ${teammate.name} do? @ to mention a connection, credential or thread`}
-                />
+                <div
+                  className={cn(
+                    'flex flex-col gap-2 rounded-md',
+                    drop.dragging && 'ring-[3px] ring-primary/30',
+                  )}
+                  {...drop.props}
+                >
+                  <Composer
+                    id="text"
+                    name="text"
+                    rows={4}
+                    value={text}
+                    onChange={setText}
+                    onSubmit={() => formRef.current?.requestSubmit()}
+                    placeholder={`What should ${teammate.name} do? @ to mention a connection, credential or thread. Drop files to attach them`}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AttachButton onFiles={files.add} />
+                    <UploadList uploads={files.uploads} onRemove={files.remove} />
+                  </div>
+                </div>
                 {online.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No computer is online.{' '}
@@ -212,7 +232,7 @@ export default function TeammatePage() {
                         </SelectContent>
                       </Select>
                     )}
-                    <Button type="submit" className="ml-auto" disabled={busy || !text.trim()}>
+                    <Button type="submit" className="ml-auto" disabled={busy || !ready}>
                       Start thread
                     </Button>
                   </div>

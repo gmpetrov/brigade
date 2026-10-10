@@ -1,6 +1,7 @@
 // AgentEvent: Brigade's own event union. The runner maps harness stream parts
 // to these; nothing outside the runner sees a harness type.
 import { z } from 'zod'
+import { MessageAttachment } from './attachments.js'
 
 const base = {
   /** ISO time the event happened on the computer. */
@@ -121,6 +122,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     type: z.literal('message.user'),
     text: z.string(),
     memberId: z.string().nullable(),
+    /** The files that came with it. */
+    attachments: z.array(MessageAttachment).optional(),
   }),
   z.object({ ...base, type: z.literal('message.delta'), id: z.string(), text: z.string() }),
   z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),

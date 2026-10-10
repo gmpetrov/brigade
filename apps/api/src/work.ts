@@ -1,8 +1,9 @@
 // Starting a teammate's next turn. Members' messages, triggers and approved
 // caps all come through here, so caps are checked in one place.
 import { randomUUID } from 'node:crypto'
-import { mentionedIds } from '@brigade/contracts'
+import { mentionedIds, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { attachToThread, detach } from './attachments.js'
 import { audit } from './audit.js'
 import { capLabel, turnCapReached } from './caps.js'
 import type { RunnerToApi } from '@brigade/contracts'
@@ -21,7 +22,14 @@ import {
 type Thread = LoadedThread
 
 /** A message for the thread, and the teammates that answer it in order (default: the current one). */
-type Prompt = { text: string; memberId: string | null; teammateIds?: string[]; handoff?: boolean }
+type Prompt = {
+  text: string
+  memberId: string | null
+  teammateIds?: string[]
+  handoff?: boolean
+  /** The files that came with it, already in the thread. */
+  attachments?: ThreadAttachmentRef[]
+}
 
 const MAX_TEAMMATES_PER_MESSAGE = 5
 
@@ -63,6 +71,13 @@ export async function promptThread(
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   const ids = prompt.teammateIds?.length ? prompt.teammateIds : [currentTeammate(thread).id]
   const responders = ids.map((id) => teammateIn(thread, id))
+  if (prompt.attachments?.length) {
+    const protocol = runnerProtocol(thread.computer.id)
+    if (protocol !== undefined && protocol < 7)
+      throw new HTTPException(409, {
+        message: "This computer's runner is too old for attached files. Update it.",
+      })
+  }
   if (responders.length > 1 || responders[0]!.id !== thread.teammateId) {
     const protocol = runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 2)
@@ -118,6 +133,7 @@ export async function promptThread(
     memberId: prompt.memberId,
     then,
     ...(prompt.handoff ? { handoff: true } : {}),
+    attachments: prompt.attachments ?? [],
   })
 }
 
@@ -186,6 +202,8 @@ export async function startThread(
     title: string
     text: string
     origin?: { triggerId: string; conversationKey?: string }
+    /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
+    attachmentIds?: string[]
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -219,6 +237,16 @@ export async function startThread(
     } as never,
   })
   await joinThread(db, created.id, teammateIds)
+  const { refs: attachments } = await attachToThread(
+    db,
+    scope,
+    created.id,
+    input.attachmentIds ?? [],
+    input.origin ? null : { memberId: input.memberId },
+  ).catch(async (error: unknown) => {
+    await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
+    throw error
+  })
   await audit({
     ...scope,
     actor: input.origin
@@ -238,7 +266,12 @@ export async function startThread(
     db,
     scope,
     thread,
-    { text: input.text, memberId: input.origin ? null : input.memberId, teammateIds },
+    {
+      text: input.text,
+      memberId: input.origin ? null : input.memberId,
+      teammateIds,
+      attachments,
+    },
     { isNew: true },
   ).catch(async (error: unknown) => {
     // E.g. a mentioned teammate's harness has no account: the thread never ran.
@@ -248,4 +281,28 @@ export async function startThread(
   if (outcome === 'offline')
     await db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } })
   return { thread, outcome }
+}
+
+/**
+ * A message with files: they join the thread, then the prompt goes. When it
+ * cannot reach the computer, the files leave the thread again so they can be sent once more.
+ */
+export async function promptWithAttachments(
+  db: ScopedDb,
+  scope: Scope,
+  thread: Thread,
+  prompt: Omit<Prompt, 'attachments'> & { attachmentIds: string[] },
+  check: { memberId: string } | null,
+) {
+  const { attachmentIds, ...rest } = prompt
+  const { refs, created } = await attachToThread(db, scope, thread.id, attachmentIds, check)
+  // The thread's spec lists every file in it, these included.
+  try {
+    const outcome = await promptThread(db, scope, thread, { ...rest, attachments: refs })
+    if (outcome === 'offline') await detach(db, created)
+    return outcome
+  } catch (error) {
+    await detach(db, created)
+    throw error
+  }
 }

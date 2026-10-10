@@ -4,6 +4,7 @@ import {
   type AgentEvent,
   type Ask,
   type AskReply,
+  type MessageAttachment,
   type Question,
   type QuestionAnswer,
   type SequencedEvent,
@@ -21,6 +22,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { MessageAttachments } from '@/components/attachments'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { Markdown, MessageWithCode } from '@/components/markdown'
@@ -44,7 +46,7 @@ import { threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/ap
 import { cn } from '@/lib/utils'
 
 type Item =
-  | { kind: 'user'; key: string; text: string }
+  | { kind: 'user'; key: string; text: string; attachments: MessageAttachment[] }
   | { kind: 'assistant'; key: string; text: string; done: boolean; teammateId?: string }
   | { kind: 'thinking'; key: string; text: string }
   | {
@@ -103,7 +105,7 @@ export function useThreadItems(events: SequencedEvent[]) {
     for (const { seq, event: e } of events) {
       switch (e.type) {
         case 'message.user':
-          add({ kind: 'user', key: `u${seq}`, text: e.text })
+          add({ kind: 'user', key: `u${seq}`, text: e.text, attachments: e.attachments ?? [] })
           break
         // Ids come from each teammate's own harness: keyed by teammate too.
         case 'message.delta': {
@@ -332,11 +334,15 @@ export function ThreadItems({
         switch (item.kind) {
           case 'user':
             return (
-              <div
-                key={item.key}
-                className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground"
-              >
-                <MessageWithCode text={item.text} />
+              <div key={item.key} className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
+                {item.text && (
+                  <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
+                    <MessageWithCode text={item.text} />
+                  </div>
+                )}
+                {item.attachments.length > 0 && (
+                  <MessageAttachments attachments={item.attachments} className="justify-end" />
+                )}
               </div>
             )
           case 'assistant': {

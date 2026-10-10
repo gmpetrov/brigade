@@ -1,5 +1,6 @@
 // Messages on the one WebSocket between a runner and the API.
 import { z } from 'zod'
+import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
@@ -33,6 +34,11 @@ export const ConnectorGrant = z.object({
       description: z.string(),
       write: z.boolean(),
       inputSchema: z.record(z.string(), z.unknown()),
+      /**
+       * The input field holding paths of files on the computer to send with the call
+       * (e.g. an email's attachments). The runner uploads them and passes their ids.
+       */
+      filesField: z.string().optional(),
     }),
   ),
 })
@@ -84,6 +90,8 @@ export const ThreadSpec = z.object({
   private: z.boolean().default(false),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */
   git: GitAccess.optional(),
+  /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
+  attachments: z.array(ThreadAttachmentRef).default([]),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -259,7 +267,7 @@ export const ApiToRunner = z.discriminatedUnion('type', [
    * Read a file a thread mentions, for a person viewing it: relative to a
    * teammate's working folder for the thread (tried in order), or an absolute
    * path inside one of them or the library mirror. Text up to FILE_VIEW_MAX;
-   * with `image`, an image file's bytes up to IMAGE_VIEW_MAX instead.
+   * with `image`, an image's or PDF's bytes (VIEWABLE_FILE) up to IMAGE_VIEW_MAX instead.
    */
   z.object({
     type: z.literal('thread.file.read'),
@@ -289,6 +297,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     then: z.array(ThreadSpec).default([]),
     /** Set when a teammate handed the thread on: nobody wrote `text`, so it is not shown as a message. */
     handoff: z.boolean().optional(),
+    /** The files that came with this message (all the thread's are in each spec). */
+    attachments: z.array(ThreadAttachmentRef).default([]),
   }),
   z.object({
     type: z.literal('thread.approval'),
@@ -389,6 +399,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     decision: z
       .object({ ticketId: z.string(), approved: z.boolean(), memberId: z.string() })
       .optional(),
+    /** Files the call brought into the thread (e.g. an email's attachment): put in the caller's folder first. */
+    attachments: z.array(ThreadAttachmentRef).optional(),
   }),
   /** Run the vendor's own login command into this account's config directory. */
   z.object({ type: z.literal('account.login.start'), loginId: z.string(), account: AccountRef }),

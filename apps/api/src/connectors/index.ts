@@ -58,6 +58,7 @@ export function operationSpecs(kind: ConnectorDefinition['kind'], scope: 'read' 
       description: o.description,
       write: o.write,
       inputSchema: z.toJSONSchema(o.input, { io: 'input' }) as Record<string, unknown>,
+      ...(o.files ? { filesField: o.files } : {}),
     }))
 }
 

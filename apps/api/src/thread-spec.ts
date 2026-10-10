@@ -1,5 +1,6 @@
 import type { ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { threadAttachments } from './attachments.js'
 import type { ScopedDb } from './db.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { gitAccess } from './git.js'
@@ -131,6 +132,7 @@ export async function specFor(
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
     library: teammate.libraryAccess,
     private: thread.private,
+    attachments: await threadAttachments(db, thread.id),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {
