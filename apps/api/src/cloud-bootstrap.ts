@@ -85,10 +85,20 @@ case "\${1:-}" in
 esac
 `
 
+const install = '/opt/brigade'
+const runner = `${install}/bin/brigade-runner`
+
+/**
+ * Reinstall the runner from the API's bundle and restart it. For runners too
+ * old to update themselves; newer ones run the installer on their own.
+ */
+export const reinstallScript = (apiUrl: string) => `set -eu
+sudo -u brigade -H env BRIGADE_INSTALL_DIR=${install} sh -c 'curl -fsSL ${apiUrl}/runner/install.sh | sh'
+sudo systemctl restart brigade-runner
+`
+
 /** Install the runner under its own Linux user, as a service that survives stop and resume. */
 export function bootstrapScript(input: { apiUrl: string; code: string }) {
-  const install = '/opt/brigade'
-  const runner = `${install}/bin/brigade-runner`
   return `set -eu
 id brigade >/dev/null 2>&1 || sudo useradd -m -s /bin/bash brigade
 getent group brigade-teammates >/dev/null || sudo groupadd brigade-teammates

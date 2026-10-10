@@ -192,6 +192,11 @@ export class Accounts {
     this.logins.set(loginId, login)
   }
 
+  /** A sign-in is in progress. */
+  get busy() {
+    return this.logins.size > 0
+  }
+
   submit(loginId: string, code: string) {
     const login = this.logins.get(loginId)
     if (!login) throw new Error('No sign-in is waiting for a code')

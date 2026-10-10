@@ -90,17 +90,25 @@ export type ThreadSummary = {
   title: string
   status: string
   updatedAt: string
+  /** The teammate that started the thread. */
   teammate: { id: string; name: string }
+  /** Everyone in it, the starting teammate first. */
+  teammates: { teammate: { id: string; name: string } }[]
   startedBy: { id: string; user: { name: string } }
 }
 
-export type Thread = ThreadSummary & {
+export type Thread = Omit<ThreadSummary, 'teammates'> & {
   startedByMemberId: string
   othersMayPrompt: boolean
   controlledByMemberId: string | null
   mayPrompt: boolean
   lastSeq: number
   teammate: { id: string; name: string; harness: string; model: string | null }
+  teammates: {
+    joinedAt: string
+    lastTurnAt: string
+    teammate: { id: string; name: string; harness: string; model: string | null }
+  }[]
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
   origin: 'member' | 'webhook'

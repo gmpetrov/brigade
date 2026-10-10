@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
 import { VERSION, type RunnerConfig } from './config.js'
 import type { Outbox } from './outbox.js'
+import { installedBundle } from './updater.js'
 
 const BATCH = 200
 
@@ -31,6 +32,11 @@ export class Connection {
     private readonly outbox: Outbox,
     private readonly onCommand: (message: ApiToRunner) => void,
     private readonly hello: () => Promise<Partial<Extract<RunnerToApi, { type: 'hello' }>>>,
+    /**
+     * The bundle the API serves, on every connect. `required`: the API refuses
+     * this runner's protocol. Returns true when the runner updates itself.
+     */
+    private readonly onBundle: (bundle: string | undefined, required: boolean) => boolean,
   ) {}
 
   start() {
@@ -48,6 +54,7 @@ export class Connection {
         protocolVersion: PROTOCOL_VERSION,
         version: VERSION,
         platform: `${process.platform}-${process.arch}`,
+        ...(installedBundle() ? { bundle: installedBundle() } : {}),
       })
     })
     ws.on('message', (raw) => {
@@ -58,6 +65,7 @@ export class Connection {
         console.log(`connected to ${this.config.apiUrl} (workspace "${this.config.workspaceName}")`)
         this.ready = true
         this.flush()
+        this.onBundle(message.bundle, false)
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)
       } else if (message.type === 'connector.pending') {
@@ -69,7 +77,10 @@ export class Connection {
         if (message.decision) call.onDecision(message.decision)
         if (message.ok) call.resolve(message.output)
         else call.reject(new Error(message.error ?? 'The connector call failed'))
+      } else if (message.type === 'update.available') {
+        this.onBundle(message.bundle, false)
       } else if (message.type === 'update.required') {
+        if (this.onBundle(message.bundle, true)) return
         console.error(
           `This runner is too old for the API (needs protocol ${message.minProtocolVersion}). Update it and start again.`,
         )

@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { CreateTeammate, OpenBrowser, UpdateTeammate, SetGrant } from '@brigade/contracts'
+import {
+  CreateTeammate,
+  isHarnessModel,
+  OpenBrowser,
+  UpdateTeammate,
+  SetGrant,
+} from '@brigade/contracts'
 import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
@@ -94,6 +100,22 @@ export const teammates = new Hono<AppEnv>()
   .patch('/:id', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, UpdateTeammate)
+    if (input.harness !== undefined || input.model !== undefined) {
+      const current = await c.var.db.teammate.findFirst({
+        where: { id: c.req.param('id'), archivedAt: null },
+        select: { harness: true, model: true },
+      })
+      if (!current) throw new HTTPException(404, { message: 'Teammate not found' })
+      const harness = input.harness ?? current.harness
+      const model = input.model === undefined ? current.model : input.model
+      // A model saved before the list existed stays until someone changes it.
+      const unchanged = harness === current.harness && model === current.model
+      if (!unchanged && !isHarnessModel(harness, model)) {
+        // A new harness can't run the old one's model: fall back to the account's default.
+        if (input.model === undefined) input.model = null
+        else throw new HTTPException(400, { message: 'Not a model this agent can run' })
+      }
+    }
     // Changing caps or the permission policy is an admin's decision, recorded with the new values.
     const { count } = await c.var.db.teammate.updateMany({
       where: { id: c.req.param('id'), archivedAt: null },

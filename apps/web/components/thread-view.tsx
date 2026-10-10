@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
+import { Markdown } from '@/components/markdown'
 import { credentialHint, MessageText } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -39,7 +40,7 @@ import { cn } from '@/lib/utils'
 
 type Item =
   | { kind: 'user'; key: string; text: string }
-  | { kind: 'assistant'; key: string; text: string; done: boolean }
+  | { kind: 'assistant'; key: string; text: string; done: boolean; teammateId?: string }
   | { kind: 'thinking'; key: string; text: string }
   | {
       kind: 'tool'
@@ -89,29 +90,32 @@ export function useThreadItems(events: SequencedEvent[]) {
         case 'message.user':
           add({ kind: 'user', key: `u${seq}`, text: e.text })
           break
+        // Ids come from each teammate's own harness: keyed by teammate too.
         case 'message.delta': {
-          const item = byKey.get(`m${e.id}`)
+          const key = `m${e.teammateId ?? ''}:${e.id}`
+          const item = byKey.get(key)
           if (item?.kind === 'assistant') item.text += e.text
-          else add({ kind: 'assistant', key: `m${e.id}`, text: e.text, done: false })
+          else add({ kind: 'assistant', key, text: e.text, done: false, teammateId: e.teammateId })
           break
         }
         case 'message.done': {
-          const item = byKey.get(`m${e.id}`)
+          const key = `m${e.teammateId ?? ''}:${e.id}`
+          const item = byKey.get(key)
           if (item?.kind === 'assistant') Object.assign(item, { text: e.text, done: true })
-          else add({ kind: 'assistant', key: `m${e.id}`, text: e.text, done: true })
+          else add({ kind: 'assistant', key, text: e.text, done: true, teammateId: e.teammateId })
           break
         }
         case 'tool.started':
           add({
             kind: 'tool',
-            key: `t${e.toolCallId}`,
+            key: `t${e.teammateId ?? ''}:${e.toolCallId}`,
             toolName: e.toolName,
             input: e.input,
             finished: false,
           })
           break
         case 'tool.finished': {
-          const item = byKey.get(`t${e.toolCallId}`)
+          const item = byKey.get(`t${e.teammateId ?? ''}:${e.toolCallId}`)
           if (item?.kind === 'tool')
             Object.assign(item, { output: e.output, isError: e.isError, finished: true })
           break
@@ -225,22 +229,25 @@ export function ThreadItems({
   onAnswer,
   canApprove,
   teammate,
+  teammates = [],
 }: {
   items: Item[]
   onApproval: (approvalId: string, approved: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   canApprove: boolean
-  /** Who answers: shown beside its messages. */
+  /** Who answers when a message does not say: shown beside its messages. */
   teammate?: { name: string; harness: string }
+  /** Everyone in the thread. With several, each message shows who wrote it. */
+  teammates?: { id: string; name: string; harness: string }[]
 }) {
-  // The thread's teammate carries its harness as a plain string; the avatar only tells codex apart.
-  const avatar = teammate && {
-    name: teammate.name,
-    harness: teammate.harness as Teammate['harness'],
-  }
+  // A teammate carries its harness as a plain string; the avatar only tells codex apart.
+  const avatarOf = (t: { name: string; harness: string } | undefined) =>
+    t && { name: t.name, harness: t.harness as Teammate['harness'] }
+  const byId = new Map(teammates.map((t) => [t.id, t]))
+  const several = teammates.length > 1
   return (
     <div className="flex flex-col gap-4">
-      {items.map((item) => {
+      {items.map((item, i) => {
         switch (item.kind) {
           case 'user':
             return (
@@ -251,15 +258,29 @@ export function ThreadItems({
                 <MessageText text={item.text} />
               </div>
             )
-          case 'assistant':
+          case 'assistant': {
+            const author = (item.teammateId && byId.get(item.teammateId)) || teammate
+            const avatar = avatarOf(author)
+            // With several teammates, name the author where the speaker changes.
+            const previous = items
+              .slice(0, i)
+              .findLast((it): it is Extract<Item, { kind: 'assistant' }> => it.kind === 'assistant')
+            const named =
+              several &&
+              author &&
+              (!previous ||
+                previous.teammateId !== item.teammateId ||
+                items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
             return (
               <div key={item.key} className="flex items-start gap-3">
                 {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
-                <div className="min-w-0 flex-1 pt-1 leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                  {item.text}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+                  {named && <span className="text-sm font-semibold">{author.name}</span>}
+                  <Markdown text={item.text} />
                 </div>
               </div>
             )
+          }
           case 'thinking':
             return (
               <Collapsible key={item.key} className="self-start">
@@ -271,7 +292,10 @@ export function ThreadItems({
                   Thinking
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <pre className={cn(preClass, 'mt-2')}>{item.text}</pre>
+                  <Markdown
+                    text={item.text}
+                    className="mt-2 max-h-80 overflow-auto rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+                  />
                 </CollapsibleContent>
               </Collapsible>
             )
@@ -541,10 +565,11 @@ function QuestionCard({
         const optionId = (o: { id: string }) => `${item.questionId}-${q.id}-${o.id}`
         return (
           <div key={q.id} className="flex flex-col gap-3">
-            <p className="font-semibold">
+            <div className="font-semibold">
               {q.header && <span className="text-muted-foreground">{q.header}: </span>}
-              {q.question}
-            </p>
+              {/* The first paragraph stays on the header's line. */}
+              <Markdown text={q.question} className="inline [&>p:first-child]:inline" />
+            </div>
             {item.answer ? null : (
               <>
                 {q.options?.length ? (

@@ -1,4 +1,5 @@
 'use client'
+import { HARNESS_MODELS, isHarnessModel, modelLabel } from '@brigade/contracts'
 import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -6,6 +7,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectLabel,
+  SelectGroup,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { Teammate } from '@/lib/api'
 
@@ -15,6 +25,10 @@ export type TeammateInput = {
   harness: 'claude_code' | 'codex'
   model: string | null
 }
+
+type Harness = TeammateInput['harness']
+/** Radix Select can't hold null: this stands for "the account's default model". */
+const DEFAULT_MODEL = 'default'
 
 const optionClass =
   'flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-4 leading-normal font-normal transition-colors hover:bg-secondary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5'
@@ -30,17 +44,29 @@ export function TeammateForm({
 }) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [harness, setHarness] = useState<Harness>(initial?.harness ?? 'claude_code')
+  const [model, setModel] = useState<string | null>(initial?.model ?? null)
+  // A model saved before the list existed stays selectable until it's changed.
+  const legacy =
+    initial?.model && initial.harness === harness && !isHarnessModel(harness, initial.model)
+      ? initial.model
+      : null
+
+  function changeHarness(next: Harness) {
+    setHarness(next)
+    // Each agent has its own models: keep the choice only if the new one runs it too.
+    if (!isHarnessModel(next, model) && model !== legacy) setModel(null)
+  }
 
   async function submit(form: FormData) {
     setBusy(true)
     setError(undefined)
     try {
-      const model = String(form.get('model') ?? '').trim()
       await onSubmit({
         name: String(form.get('name')),
         instructions: String(form.get('instructions') ?? ''),
-        harness: form.get('harness') === 'codex' ? 'codex' : 'claude_code',
-        model: model || null,
+        harness,
+        model,
       })
     } catch (e) {
       setError((e as Error).message)
@@ -78,7 +104,8 @@ export function TeammateForm({
             <RadioGroup
               name="harness"
               aria-labelledby="harness-label"
-              defaultValue={initial?.harness ?? 'claude_code'}
+              value={harness}
+              onValueChange={(value) => changeHarness(value as Harness)}
               className="grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]"
             >
               <Label htmlFor="harness-claude_code" className={optionClass}>
@@ -100,12 +127,32 @@ export function TeammateForm({
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="model">Model</Label>
-            <Input
-              id="model"
-              name="model"
-              defaultValue={initial?.model ?? ''}
-              placeholder="Default for the account"
-            />
+            <Select
+              value={model ?? DEFAULT_MODEL}
+              onValueChange={(value) => setModel(value === DEFAULT_MODEL ? null : value)}
+            >
+              <SelectTrigger id="model" className="w-full sm:w-80">
+                <SelectValue>{modelLabel(harness, model)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent position="popper" className="max-h-96">
+                <SelectGroup>
+                  <SelectLabel>Select model</SelectLabel>
+                  <ModelOption value={DEFAULT_MODEL} label="Default">
+                    The account’s default model
+                  </ModelOption>
+                  {HARNESS_MODELS[harness].map((m) => (
+                    <ModelOption key={m.id} value={m.id} label={m.label}>
+                      {m.description}
+                    </ModelOption>
+                  ))}
+                  {legacy && (
+                    <ModelOption value={legacy} label={legacy}>
+                      Saved earlier; not in the current list
+                    </ModelOption>
+                  )}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           <div className="flex justify-end border-t pt-5">
@@ -116,5 +163,16 @@ export function TeammateForm({
         </form>
       </CardContent>
     </Card>
+  )
+}
+
+function ModelOption({ value, label, children }: { value: string; label: string; children: string }) {
+  return (
+    <SelectItem value={value} className="items-start py-2">
+      <span className="flex flex-col gap-0.5">
+        <span className="font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground">{children}</span>
+      </span>
+    </SelectItem>
   )
 }

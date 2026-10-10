@@ -15,6 +15,7 @@ import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Threads } from './threads.js'
+import { Updater } from './updater.js'
 
 // Brigade sets no API key anywhere; harnesses use this computer's subscription logins.
 stripApiKeys()
@@ -92,9 +93,11 @@ async function start() {
   // A call waiting for a person shows as an approval in its thread, then as the decision.
   const approvalHooks = (
     sessionId: string,
+    teammateId: string,
     call: { toolCallId: string; toolName: string; input: unknown },
   ) => {
-    const emit = (event: AgentEvent) => connection.sendEvent(outbox.push(sessionId, event))
+    const emit = (event: AgentEvent) =>
+      connection.sendEvent(outbox.push(sessionId, { ...event, teammateId }))
     return {
       onPending: (ticketId: string, reason?: string) =>
         emit({
@@ -120,22 +123,25 @@ async function start() {
     concurrency: Number(values.concurrency),
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     // Connector calls go to the API. A write waiting for a person shows as an approval in the thread.
-    callConnector: (sessionId, call) =>
+    callConnector: (sessionId, teammateId, call) =>
       connection.callConnector(
         {
           sessionId,
+          teammateId,
           connectionId: call.connectionId,
           operation: call.operation,
           input: call.input,
         },
-        approvalHooks(sessionId, call),
+        approvalHooks(sessionId, teammateId, call),
       ),
     // So do credentials: released once a member mentioned them in the thread, or a person approves.
-    requestCredential: (sessionId, { toolCallId, toolName, input, ...request }) =>
+    requestCredential: (sessionId, teammateId, { toolCallId, toolName, input, ...request }) =>
       connection.requestCredential(
-        { sessionId, ...request },
-        approvalHooks(sessionId, { toolCallId, toolName, input }),
+        { sessionId, teammateId, ...request },
+        approvalHooks(sessionId, teammateId, { toolCallId, toolName, input }),
       ),
+    handoff: (sessionId, fromTeammateId, teammateIds) =>
+      connection.send({ type: 'thread.handoff', sessionId, fromTeammateId, teammateIds }),
   })
   const accounts = new Accounts({
     prompt: (loginId, prompt) =>
@@ -242,7 +248,25 @@ async function start() {
 
   // On a member's own machine, report which harnesses are already signed in there.
   const hello = async () => (CLOUD ? {} : { machineLogins: await machineLogins() })
-  connection = new Connection(config, outbox, (message) => void onCommand(message), hello)
+  // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in.
+  const updater = new Updater({
+    apiUrl: config.apiUrl,
+    idle: () => !threads.busy && terminals.count === 0 && !accounts.busy,
+    stop: async () => {
+      // No new commands once disconnected; a turn that slipped in finishes first.
+      connection.close()
+      terminals.closeAll()
+      await threads.settle()
+      await threads.parkAll()
+    },
+  })
+  connection = new Connection(
+    config,
+    outbox,
+    (message) => void onCommand(message),
+    hello,
+    (bundle, required) => updater.offer(bundle, required),
+  )
   connection.start()
 
   const shutdown = async () => {

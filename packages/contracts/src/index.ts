@@ -3,9 +3,10 @@ export * from './api.js'
 export * from './credentials.js'
 export * from './events.js'
 export * from './mentions.js'
+export * from './models.js'
 export * from './runner.js'
 
-/** Bump when the runner protocol changes incompatibly. */
-export const PROTOCOL_VERSION = 1
+/** Bump when the runner protocol changes. 2: threads with several teammates. 3: self-update. */
+export const PROTOCOL_VERSION = 3
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

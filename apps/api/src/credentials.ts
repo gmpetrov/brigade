@@ -16,6 +16,7 @@ import {
 import { audit } from './audit.js'
 import { awaitDecision } from './connector-calls.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { actingTeammate } from './thread-spec.js'
 import { openSecret } from './vault.js'
 
 type Row = {
@@ -86,9 +87,10 @@ export async function handleCredentialRequest(
   // Only threads running on this runner's own computer.
   const session = await db.session.findFirst({
     where: { id: request.sessionId, computerId: runner.computerId },
-    include: { teammate: true },
   })
   if (!session) return fail('Unknown thread')
+  const teammate = await actingTeammate(db, session, request.teammateId)
+  if (!teammate) return fail('That teammate is not in this thread')
 
   if (request.action === 'list') {
     const rows = await db.credential.findMany({ orderBy: { name: 'asc' } })
@@ -117,7 +119,7 @@ export async function handleCredentialRequest(
   let decision: { ticketId: string; approved: boolean; memberId: string } | undefined
   if (!(await mentionedInThread(db, session.id, credential.id))) {
     const where = credential.details.url ?? credential.details.host
-    const reason = `${session.teammate.name} asks to ${
+    const reason = `${teammate.name} asks to ${
       use === 'browser' ? 'sign in with' : 'use'
     } ${credential.name}${where ? ` (${where})` : ''}. Nobody mentioned it in this thread.${
       request.purpose ? ` ${request.purpose}` : ''
@@ -126,7 +128,7 @@ export async function handleCredentialRequest(
       data: {
         sessionId: session.id,
         type: 'approval',
-        title: `${session.teammate.name}: use ${credential.name}`,
+        title: `${teammate.name}: use ${credential.name}`,
         payload: { credentialId: credential.id, credential: credential.name, use, reason },
       } as never,
     })
@@ -146,7 +148,7 @@ export async function handleCredentialRequest(
   const secret = await openSecret<CredentialSecret>(db, scope, row.vaultSecretId)
   await audit({
     ...scope,
-    actor: { type: 'teammate', id: session.teammateId },
+    actor: { type: 'teammate', id: teammate.id },
     action: 'credential.released',
     target: { type: 'credential', id: credential.id },
     data: {

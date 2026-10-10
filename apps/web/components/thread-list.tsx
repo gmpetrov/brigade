@@ -33,7 +33,14 @@ export function ThreadList({
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{t.title}</div>
                 <div className="truncate text-sm text-muted-foreground">
-                  {showTeammate && <>{t.teammate.name} · </>}
+                  {showTeammate && (
+                    <>
+                      {(t.teammates?.length ? t.teammates.map((p) => p.teammate) : [t.teammate])
+                        .map((p) => p.name)
+                        .join(', ')}{' '}
+                      ·{' '}
+                    </>
+                  )}
                   started by {t.startedBy.user.name} · {timeAgo(t.updatedAt)}
                 </div>
               </div>

@@ -232,6 +232,7 @@ export type TeammateWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   sessions?: Prisma.SessionListRelationFilter
+  threadSeats?: Prisma.ThreadTeammateListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
@@ -252,6 +253,7 @@ export type TeammateOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
+  threadSeats?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   grants?: Prisma.GrantOrderByRelationAggregateInput
   webhooks?: Prisma.WebhookOrderByRelationAggregateInput
   connectionCalls?: Prisma.ConnectionCallOrderByRelationAggregateInput
@@ -275,6 +277,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   sessions?: Prisma.SessionListRelationFilter
+  threadSeats?: Prisma.ThreadTeammateListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
@@ -330,6 +333,7 @@ export type TeammateCreateInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
@@ -349,6 +353,7 @@ export type TeammateUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
@@ -368,6 +373,7 @@ export type TeammateUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
@@ -387,6 +393,7 @@ export type TeammateUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
@@ -552,6 +559,20 @@ export type TeammateUpdateOneRequiredWithoutSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutSessionsInput, Prisma.TeammateUpdateWithoutSessionsInput>, Prisma.TeammateUncheckedUpdateWithoutSessionsInput>
 }
 
+export type TeammateCreateNestedOneWithoutThreadSeatsInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutThreadSeatsInput, Prisma.TeammateUncheckedCreateWithoutThreadSeatsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutThreadSeatsInput
+  connect?: Prisma.TeammateWhereUniqueInput
+}
+
+export type TeammateUpdateOneRequiredWithoutThreadSeatsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutThreadSeatsInput, Prisma.TeammateUncheckedCreateWithoutThreadSeatsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutThreadSeatsInput
+  upsert?: Prisma.TeammateUpsertWithoutThreadSeatsInput
+  connect?: Prisma.TeammateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutThreadSeatsInput, Prisma.TeammateUpdateWithoutThreadSeatsInput>, Prisma.TeammateUncheckedUpdateWithoutThreadSeatsInput>
+}
+
 export type TeammateCreateNestedOneWithoutGrantsInput = {
   create?: Prisma.XOR<Prisma.TeammateCreateWithoutGrantsInput, Prisma.TeammateUncheckedCreateWithoutGrantsInput>
   connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutGrantsInput
@@ -607,6 +628,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
@@ -625,6 +647,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
@@ -687,6 +710,7 @@ export type TeammateCreateWithoutSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
@@ -705,6 +729,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
@@ -739,6 +764,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
@@ -757,6 +783,99 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateCreateWithoutThreadSeatsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateCreateOrConnectWithoutThreadSeatsInput = {
+  where: Prisma.TeammateWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutThreadSeatsInput, Prisma.TeammateUncheckedCreateWithoutThreadSeatsInput>
+}
+
+export type TeammateUpsertWithoutThreadSeatsInput = {
+  update: Prisma.XOR<Prisma.TeammateUpdateWithoutThreadSeatsInput, Prisma.TeammateUncheckedUpdateWithoutThreadSeatsInput>
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutThreadSeatsInput, Prisma.TeammateUncheckedCreateWithoutThreadSeatsInput>
+  where?: Prisma.TeammateWhereInput
+}
+
+export type TeammateUpdateToOneWithWhereWithoutThreadSeatsInput = {
+  where?: Prisma.TeammateWhereInput
+  data: Prisma.XOR<Prisma.TeammateUpdateWithoutThreadSeatsInput, Prisma.TeammateUncheckedUpdateWithoutThreadSeatsInput>
+}
+
+export type TeammateUpdateWithoutThreadSeatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
@@ -776,6 +895,7 @@ export type TeammateCreateWithoutGrantsInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
 }
@@ -794,6 +914,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
 }
@@ -828,6 +949,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
 }
@@ -846,6 +968,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
 }
@@ -864,6 +987,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
 }
@@ -882,6 +1006,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
 }
@@ -916,6 +1041,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
 }
@@ -934,6 +1060,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
 }
@@ -952,6 +1079,7 @@ export type TeammateCreateWithoutWebhooksInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
 }
@@ -970,6 +1098,7 @@ export type TeammateUncheckedCreateWithoutWebhooksInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
 }
@@ -1004,6 +1133,7 @@ export type TeammateUpdateWithoutWebhooksInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
 }
@@ -1022,6 +1152,7 @@ export type TeammateUncheckedUpdateWithoutWebhooksInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
 }
@@ -1053,6 +1184,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
@@ -1071,6 +1203,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
@@ -1097,6 +1230,7 @@ export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
 
 export type TeammateCountOutputType = {
   sessions: number
+  threadSeats: number
   grants: number
   webhooks: number
   connectionCalls: number
@@ -1104,6 +1238,7 @@ export type TeammateCountOutputType = {
 
 export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | TeammateCountOutputTypeCountSessionsArgs
+  threadSeats?: boolean | TeammateCountOutputTypeCountThreadSeatsArgs
   grants?: boolean | TeammateCountOutputTypeCountGrantsArgs
   webhooks?: boolean | TeammateCountOutputTypeCountWebhooksArgs
   connectionCalls?: boolean | TeammateCountOutputTypeCountConnectionCallsArgs
@@ -1124,6 +1259,13 @@ export type TeammateCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Ext
  */
 export type TeammateCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SessionWhereInput
+}
+
+/**
+ * TeammateCountOutputType without action
+ */
+export type TeammateCountOutputTypeCountThreadSeatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadTeammateWhereInput
 }
 
 /**
@@ -1163,6 +1305,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Teammate$sessionsArgs<ExtArgs>
+  threadSeats?: boolean | Prisma.Teammate$threadSeatsArgs<ExtArgs>
   grants?: boolean | Prisma.Teammate$grantsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Teammate$webhooksArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Teammate$connectionCallsArgs<ExtArgs>
@@ -1220,6 +1363,7 @@ export type TeammateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs =
 export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Teammate$sessionsArgs<ExtArgs>
+  threadSeats?: boolean | Prisma.Teammate$threadSeatsArgs<ExtArgs>
   grants?: boolean | Prisma.Teammate$grantsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Teammate$webhooksArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Teammate$connectionCallsArgs<ExtArgs>
@@ -1237,6 +1381,7 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     sessions: Prisma.$SessionPayload<ExtArgs>[]
+    threadSeats: Prisma.$ThreadTeammatePayload<ExtArgs>[]
     grants: Prisma.$GrantPayload<ExtArgs>[]
     webhooks: Prisma.$WebhookPayload<ExtArgs>[]
     connectionCalls: Prisma.$ConnectionCallPayload<ExtArgs>[]
@@ -1656,6 +1801,7 @@ export interface Prisma__TeammateClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.Teammate$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadSeats<T extends Prisma.Teammate$threadSeatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$threadSeatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   grants<T extends Prisma.Teammate$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   webhooks<T extends Prisma.Teammate$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connectionCalls<T extends Prisma.Teammate$connectionCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$connectionCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2122,6 +2268,30 @@ export type Teammate$sessionsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
+}
+
+/**
+ * Teammate.threadSeats
+ */
+export type Teammate$threadSeatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadTeammate
+   */
+  select?: Prisma.ThreadTeammateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadTeammate
+   */
+  omit?: Prisma.ThreadTeammateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadTeammateInclude<ExtArgs> | null
+  where?: Prisma.ThreadTeammateWhereInput
+  orderBy?: Prisma.ThreadTeammateOrderByWithRelationInput | Prisma.ThreadTeammateOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadTeammateWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadTeammateScalarFieldEnum | Prisma.ThreadTeammateScalarFieldEnum[]
 }
 
 /**

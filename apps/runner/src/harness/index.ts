@@ -102,6 +102,11 @@ export class HarnessThread {
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
   private readonly stateFile: string
+  /**
+   * Names this harness session and its saved state. The thread's id for its
+   * starting teammate (as before threads had several); thread and teammate for the others.
+   */
+  private readonly key: string
 
   constructor(
     private spec: ThreadSpec,
@@ -115,7 +120,8 @@ export class HarnessThread {
     /** On a cloud computer: the teammate's Linux user, which runs the harness. */
     private readonly runAs?: string,
   ) {
-    this.stateFile = join(stateDir, `${spec.sessionId}.json`)
+    this.key = spec.starter ? spec.sessionId : `${spec.sessionId}-${spec.teammate.id}`
+    this.stateFile = join(stateDir, `${this.key}.json`)
   }
 
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
@@ -338,7 +344,7 @@ export class HarnessThread {
       browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
     )
     const sandbox = createLocalSandboxSession({
-      id: this.spec.sessionId,
+      id: this.key,
       workingDirectory: this.workDir,
       port: await freePort(),
       env,
@@ -346,7 +352,7 @@ export class HarnessThread {
     })
     const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
     const session = await agent.createSession({
-      sessionId: this.spec.sessionId,
+      sessionId: this.key,
       sandboxSession: sandbox,
       ...(resume ? { resumeFrom: resume as never } : {}),
     })

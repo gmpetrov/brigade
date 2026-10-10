@@ -63,6 +63,7 @@ export const ModelName = {
   Runner: 'Runner',
   Teammate: 'Teammate',
   Session: 'Session',
+  ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
   Project: 'Project',
@@ -275,6 +276,18 @@ export const SessionScalarFieldEnum = {
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const ThreadTeammateScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  joinedAt: 'joinedAt',
+  lastTurnAt: 'lastTurnAt'
+} as const
+
+export type ThreadTeammateScalarFieldEnum = (typeof ThreadTeammateScalarFieldEnum)[keyof typeof ThreadTeammateScalarFieldEnum]
 
 
 export const SessionEventScalarFieldEnum = {

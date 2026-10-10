@@ -409,6 +409,7 @@ export const ModelName = {
   Runner: 'Runner',
   Teammate: 'Teammate',
   Session: 'Session',
+  ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
   Project: 'Project',
@@ -437,7 +438,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "sessionEvent" | "account" | "project" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "webhook" | "ticket" | "document" | "auditEntry"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "threadTeammate" | "sessionEvent" | "account" | "project" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "webhook" | "ticket" | "document" | "auditEntry"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1326,6 +1327,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SessionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThreadTeammate: {
+      payload: Prisma.$ThreadTeammatePayload<ExtArgs>
+      fields: Prisma.ThreadTeammateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadTeammateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadTeammateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadTeammateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadTeammateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        findMany: {
+          args: Prisma.ThreadTeammateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>[]
+        }
+        create: {
+          args: Prisma.ThreadTeammateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        createMany: {
+          args: Prisma.ThreadTeammateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadTeammateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadTeammateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        update: {
+          args: Prisma.ThreadTeammateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadTeammateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadTeammateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadTeammateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadTeammateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadTeammatePayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadTeammateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadTeammate>
+        }
+        groupBy: {
+          args: Prisma.ThreadTeammateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadTeammateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadTeammateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadTeammateCountAggregateOutputType> | number
         }
       }
     }
@@ -2513,6 +2588,18 @@ export const SessionScalarFieldEnum = {
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
 
 
+export const ThreadTeammateScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  joinedAt: 'joinedAt',
+  lastTurnAt: 'lastTurnAt'
+} as const
+
+export type ThreadTeammateScalarFieldEnum = (typeof ThreadTeammateScalarFieldEnum)[keyof typeof ThreadTeammateScalarFieldEnum]
+
+
 export const SessionEventScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
@@ -3254,6 +3341,7 @@ export type GlobalOmitConfig = {
   runner?: Prisma.RunnerOmit
   teammate?: Prisma.TeammateOmit
   session?: Prisma.SessionOmit
+  threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
   account?: Prisma.AccountOmit
   project?: Prisma.ProjectOmit

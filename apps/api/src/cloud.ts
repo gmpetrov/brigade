@@ -4,9 +4,10 @@ import { providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { audit } from './audit.js'
 import { defaults, env } from './config.js'
 import { prisma } from './db.js'
-import { broadcastComputer, isOnline } from './hub.js'
-import { bootstrapScript } from './cloud-bootstrap.js'
+import { broadcastComputer, isOnline, runnerProtocol } from './hub.js'
+import { bootstrapScript, reinstallScript } from './cloud-bootstrap.js'
 import { issueLinkCode } from './link-codes.js'
+import { runnerBundle } from './routes/runner-install.js'
 
 const provider = providerFromEnv(process.env)
 
@@ -142,7 +143,48 @@ export async function desktopUrl(computer: { providerRef: unknown }) {
   return provider && ref ? provider.desktopUrl(ref) : null
 }
 
-/** Stop cloud computers that have had no running thread for the idle period. */
+/**
+ * Runners from before self-update (protocol 3), by the bundle they were last
+ * reinstalled from: tried once per bundle, since an older bundle cannot help.
+ */
+const reinstalled = new Map<string, string>()
+
+/**
+ * A runner too old to update itself is reinstalled through the provider, when
+ * no thread is running there. Its restart parks threads like any stop.
+ */
+async function reinstallOldRunner(computer: {
+  id: string
+  organizationId: string
+  workspaceId: string
+  providerRef: unknown
+}) {
+  const ref = refOf(computer)
+  const protocol = runnerProtocol(computer.id)
+  const bundle = await runnerBundle()
+  if (!provider || !ref || !bundle || protocol === undefined || protocol >= 3) return
+  if (reinstalled.get(computer.id) === bundle) return
+  reinstalled.set(computer.id, bundle)
+  console.log(`reinstalling the runner on ${computer.id} (protocol ${protocol})`)
+  const result = await provider.exec(ref, reinstallScript(env.API_URL))
+  if (result.exitCode !== 0)
+    return console.error(
+      `runner reinstall on ${computer.id} failed (${result.exitCode}): ${result.stderr.slice(-2000)}`,
+    )
+  await audit({
+    organizationId: computer.organizationId,
+    workspaceId: computer.workspaceId,
+    actor: { type: 'system', id: 'brigade' },
+    action: 'runner.updated',
+    target: { type: 'computer', id: computer.id },
+    data: { fromProtocol: protocol },
+  })
+}
+
+/**
+ * Stop cloud computers that have had no running thread for the idle period,
+ * and reinstall old runners on the others while they are idle.
+ */
 async function stopIdle() {
   const idleMs = env.IDLE_STOP_MINUTES * 60_000
   const running = await prisma.computer.findMany({ where: { kind: 'cloud', status: 'running' } })
@@ -154,6 +196,9 @@ async function stopIdle() {
       touch(computer.id)
       continue
     }
+    await reinstallOldRunner(computer).catch((error) =>
+      console.error('runner reinstall failed', error),
+    )
     const since = lastActive.get(computer.id) ?? computer.updatedAt.getTime()
     if (Date.now() - since < idleMs) continue
     console.log(`stopping idle computer ${computer.id}`)

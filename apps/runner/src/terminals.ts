@@ -97,6 +97,10 @@ export class Terminals {
     terminal.child.stdin?.end('exit\n')
   }
 
+  get count() {
+    return this.open.size
+  }
+
   closeAll() {
     for (const id of this.open.keys()) this.close(id)
   }

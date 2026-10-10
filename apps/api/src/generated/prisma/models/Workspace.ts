@@ -188,6 +188,7 @@ export type WorkspaceWhereInput = {
   teammates?: Prisma.TeammateListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   sessionEvents?: Prisma.SessionEventListRelationFilter
+  threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   comments?: Prisma.CommentListRelationFilter
@@ -214,6 +215,7 @@ export type WorkspaceOrderByWithRelationInput = {
   teammates?: Prisma.TeammateOrderByRelationAggregateInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   sessionEvents?: Prisma.SessionEventOrderByRelationAggregateInput
+  threadSeats?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
   projects?: Prisma.ProjectOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
@@ -243,6 +245,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   teammates?: Prisma.TeammateListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   sessionEvents?: Prisma.SessionEventListRelationFilter
+  threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   comments?: Prisma.CommentListRelationFilter
@@ -290,6 +293,7 @@ export type WorkspaceCreateInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -315,6 +319,7 @@ export type WorkspaceUncheckedCreateInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -340,6 +345,7 @@ export type WorkspaceUpdateInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -365,6 +371,7 @@ export type WorkspaceUncheckedUpdateInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -542,6 +549,20 @@ export type WorkspaceUpdateOneRequiredWithoutSessionsNestedInput = {
   upsert?: Prisma.WorkspaceUpsertWithoutSessionsInput
   connect?: Prisma.WorkspaceWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutSessionsInput, Prisma.WorkspaceUpdateWithoutSessionsInput>, Prisma.WorkspaceUncheckedUpdateWithoutSessionsInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutThreadSeatsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadSeatsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutThreadSeatsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutThreadSeatsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadSeatsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutThreadSeatsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutThreadSeatsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutThreadSeatsInput, Prisma.WorkspaceUpdateWithoutThreadSeatsInput>, Prisma.WorkspaceUncheckedUpdateWithoutThreadSeatsInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutSessionEventsInput = {
@@ -738,6 +759,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -762,6 +784,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -823,6 +846,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -847,6 +871,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -887,6 +912,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -911,6 +937,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -935,6 +962,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -959,6 +987,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -999,6 +1028,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1023,6 +1053,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1047,6 +1078,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1071,6 +1103,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1111,6 +1144,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1135,6 +1169,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1159,6 +1194,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1183,6 +1219,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1223,6 +1260,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1246,6 +1284,123 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutThreadSeatsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutThreadSeatsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadSeatsInput>
+}
+
+export type WorkspaceUpsertWithoutThreadSeatsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedUpdateWithoutThreadSeatsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadSeatsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutThreadSeatsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutThreadSeatsInput, Prisma.WorkspaceUncheckedUpdateWithoutThreadSeatsInput>
+}
+
+export type WorkspaceUpdateWithoutThreadSeatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1271,6 +1426,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1295,6 +1451,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1335,6 +1492,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1359,6 +1517,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1384,6 +1543,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
@@ -1408,6 +1568,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1448,6 +1609,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
@@ -1472,6 +1634,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1496,6 +1659,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
@@ -1520,6 +1684,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1560,6 +1725,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
@@ -1584,6 +1750,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1608,6 +1775,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
@@ -1632,6 +1800,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1672,6 +1841,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
@@ -1696,6 +1866,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1720,6 +1891,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1744,6 +1916,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1784,6 +1957,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1808,6 +1982,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1832,6 +2007,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1856,6 +2032,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1896,6 +2073,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -1920,6 +2098,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1944,6 +2123,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -1968,6 +2148,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2008,6 +2189,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2032,6 +2214,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2056,6 +2239,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2080,6 +2264,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2120,6 +2305,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2144,6 +2330,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2168,6 +2355,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2192,6 +2380,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2232,6 +2421,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2256,6 +2446,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2280,6 +2471,7 @@ export type WorkspaceCreateWithoutWebhooksInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2304,6 +2496,7 @@ export type WorkspaceUncheckedCreateWithoutWebhooksInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2344,6 +2537,7 @@ export type WorkspaceUpdateWithoutWebhooksInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2368,6 +2562,7 @@ export type WorkspaceUncheckedUpdateWithoutWebhooksInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2392,6 +2587,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2416,6 +2612,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2456,6 +2653,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2480,6 +2678,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2504,6 +2703,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2528,6 +2728,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2568,6 +2769,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2592,6 +2794,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2616,6 +2819,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
@@ -2640,6 +2844,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2680,6 +2885,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2704,6 +2910,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2734,6 +2941,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
@@ -2758,6 +2966,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2790,6 +2999,7 @@ export type WorkspaceCountOutputType = {
   teammates: number
   sessions: number
   sessionEvents: number
+  threadSeats: number
   accounts: number
   projects: number
   comments: number
@@ -2810,6 +3020,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   teammates?: boolean | WorkspaceCountOutputTypeCountTeammatesArgs
   sessions?: boolean | WorkspaceCountOutputTypeCountSessionsArgs
   sessionEvents?: boolean | WorkspaceCountOutputTypeCountSessionEventsArgs
+  threadSeats?: boolean | WorkspaceCountOutputTypeCountThreadSeatsArgs
   accounts?: boolean | WorkspaceCountOutputTypeCountAccountsArgs
   projects?: boolean | WorkspaceCountOutputTypeCountProjectsArgs
   comments?: boolean | WorkspaceCountOutputTypeCountCommentsArgs
@@ -2867,6 +3078,13 @@ export type WorkspaceCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Ty
  */
 export type WorkspaceCountOutputTypeCountSessionEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SessionEventWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountThreadSeatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadTeammateWhereInput
 }
 
 /**
@@ -2966,6 +3184,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   teammates?: boolean | Prisma.Workspace$teammatesArgs<ExtArgs>
   sessions?: boolean | Prisma.Workspace$sessionsArgs<ExtArgs>
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
+  threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
@@ -3015,6 +3234,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   teammates?: boolean | Prisma.Workspace$teammatesArgs<ExtArgs>
   sessions?: boolean | Prisma.Workspace$sessionsArgs<ExtArgs>
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
+  threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
@@ -3045,6 +3265,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     teammates: Prisma.$TeammatePayload<ExtArgs>[]
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     sessionEvents: Prisma.$SessionEventPayload<ExtArgs>[]
+    threadSeats: Prisma.$ThreadTeammatePayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
     projects: Prisma.$ProjectPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
@@ -3464,6 +3685,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   teammates<T extends Prisma.Workspace$teammatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$teammatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessions<T extends Prisma.Workspace$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessionEvents<T extends Prisma.Workspace$sessionEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$sessionEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadSeats<T extends Prisma.Workspace$threadSeatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadSeatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.Workspace$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projects<T extends Prisma.Workspace$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Workspace$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4028,6 +4250,30 @@ export type Workspace$sessionEventsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.SessionEventScalarFieldEnum | Prisma.SessionEventScalarFieldEnum[]
+}
+
+/**
+ * Workspace.threadSeats
+ */
+export type Workspace$threadSeatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadTeammate
+   */
+  select?: Prisma.ThreadTeammateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadTeammate
+   */
+  omit?: Prisma.ThreadTeammateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadTeammateInclude<ExtArgs> | null
+  where?: Prisma.ThreadTeammateWhereInput
+  orderBy?: Prisma.ThreadTeammateOrderByWithRelationInput | Prisma.ThreadTeammateOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadTeammateWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadTeammateScalarFieldEnum | Prisma.ThreadTeammateScalarFieldEnum[]
 }
 
 /**

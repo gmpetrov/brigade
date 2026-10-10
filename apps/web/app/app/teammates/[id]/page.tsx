@@ -1,4 +1,5 @@
 'use client'
+import { modelLabel } from '@brigade/contracts'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -101,7 +102,7 @@ export default function TeammatePage() {
                   : 'bg-primary/15 text-primary'
               }
             >
-              {harnessLabel(teammate.harness)}
+              {harnessLabel(teammate.harness)} · {modelLabel(teammate.harness, teammate.model)}
             </Badge>
           </div>
           {!editing && teammate.instructions && (

@@ -13,6 +13,7 @@ import {
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
+import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
 
 type Decision = { approved: boolean; memberId: string; reason?: string }
@@ -54,9 +55,10 @@ export async function handleConnectorCall(
   // Only threads running on this runner's own computer.
   const session = await db.session.findFirst({
     where: { id: call.sessionId, computerId: runner.computerId },
-    include: { teammate: true },
   })
   if (!session) return result({ ok: false, error: 'Unknown thread' })
+  const teammate = await actingTeammate(db, session, call.teammateId)
+  if (!teammate) return result({ ok: false, error: 'That teammate is not in this thread' })
   const connection = await db.connection.findFirst({
     where: { id: call.connectionId, status: { not: 'removed' } },
   })
@@ -70,7 +72,7 @@ export async function handleConnectorCall(
       data: {
         sessionId: session.id,
         connectionId: connection.id,
-        teammateId: session.teammateId,
+        teammateId: teammate.id,
         operation: call.operation,
         write: operation.write,
         ...data,
@@ -87,43 +89,42 @@ export async function handleConnectorCall(
 
   // Grant and scope.
   const grant = await db.grant.findFirst({
-    where: { teammateId: session.teammateId, connectionId: connection.id },
+    where: { teammateId: teammate.id, connectionId: connection.id },
   })
   if (!grant) {
     await record({ result: 'denied', target, error: 'no grant' })
     return result({
       ok: false,
-      error: `${session.teammate.name} has no access to ${connection.label}`,
+      error: `${teammate.name} has no access to ${connection.label}`,
     })
   }
   if (operation.write && grant.scope !== 'read_write') {
     await record({ result: 'denied', target, error: 'read-only grant' })
     return result({
       ok: false,
-      error: `${session.teammate.name} has read-only access to ${connection.label}`,
+      error: `${teammate.name} has read-only access to ${connection.label}`,
     })
   }
 
   // Approval and caps: the teammate's policy for connector writes, then its daily write cap.
   let decision: (Decision & { ticketId: string }) | undefined
   if (operation.write) {
-    const configured =
-      (session.teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
+    const configured = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
     if (configured === 'deny') {
       await record({ result: 'denied', target, error: 'policy denies connector writes' })
       return result({
         ok: false,
-        error: `${session.teammate.name} may not make changes through connectors`,
+        error: `${teammate.name} may not make changes through connectors`,
       })
     }
     // A webhook payload is untrusted input: writes in its threads always wait for a person.
     const policy = session.origin === 'webhook' ? 'ask' : configured
-    const cap = await writeCapReached(db, session.teammate, connection.id)
+    const cap = await writeCapReached(db, teammate, connection.id)
     if (cap || policy === 'ask') {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
       const reason = cap
-        ? `${session.teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
+        ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
         : session.origin === 'webhook'
           ? 'A webhook started this thread, so every change waits for a person.'
           : undefined
@@ -132,8 +133,8 @@ export async function handleConnectorCall(
           sessionId: session.id,
           type: cap ? 'cap' : 'approval',
           title: cap
-            ? `${session.teammate.name} reached its write cap on ${where}: ${action}`
-            : `${session.teammate.name}: ${action}`,
+            ? `${teammate.name} reached its write cap on ${where}: ${action}`
+            : `${teammate.name}: ${action}`,
           payload: {
             connectionId: connection.id,
             connection: where,

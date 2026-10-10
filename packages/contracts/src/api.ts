@@ -1,6 +1,7 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
 import { QuestionAnswer, SequencedEvent } from './events.js'
+import { isHarnessModel } from './models.js'
 import { CLIPBOARD_MAX, HarnessId } from './runner.js'
 
 export const HealthResponse = z.object({
@@ -12,12 +13,19 @@ export type HealthResponse = z.infer<typeof HealthResponse>
 export const CreateWorkspace = z.object({ name: z.string().trim().min(1).max(80) })
 export const SwitchWorkspace = z.object({ workspaceId: z.string() })
 
-export const CreateTeammate = z.object({
-  name: z.string().trim().min(1).max(80),
-  instructions: z.string().max(20_000).default(''),
-  harness: HarnessId.default('claude_code'),
-  model: z.string().trim().max(100).nullable().default(null),
-})
+/** One of HARNESS_MODELS for the teammate's harness, or null for the account's default. */
+export const TeammateModel = z.string().trim().max(100).nullable()
+export const CreateTeammate = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    instructions: z.string().max(20_000).default(''),
+    harness: HarnessId.default('claude_code'),
+    model: TeammateModel.default(null),
+  })
+  .refine((t) => isHarnessModel(t.harness, t.model), {
+    path: ['model'],
+    message: 'Not a model this agent can run',
+  })
 export const PermissionPolicy = z.object({
   /** Connector writes: allow, ask (a ticket waits for a person) or deny. */
   connectorWrites: z.enum(['allow', 'ask', 'deny']).optional(),
@@ -36,7 +44,8 @@ export const UpdateTeammate = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   instructions: z.string().max(20_000).optional(),
   harness: HarnessId.optional(),
-  model: z.string().trim().max(100).nullable().optional(),
+  /** Checked against the teammate's harness by the API, which knows the stored one. */
+  model: TeammateModel.optional(),
   permissionPolicy: PermissionPolicy.optional(),
   caps: Caps.optional(),
 })

@@ -5,9 +5,30 @@ import type { ScopedDb } from './db.js'
 export type TimelineState = 'working' | 'waiting' | 'blocked' | 'done'
 type Transition = { at: Date; state: TimelineState; note?: string }
 
+/**
+ * The events of one teammate in a thread. Harness events carry the teammate
+ * that produced them; in a thread where turns say who answers (turn.started),
+ * a member's message starts nobody's turn, and other unmarked events (a change
+ * of control) concern everyone. Older threads had one teammate: the starter.
+ */
+export function eventsOf<E extends { type: string; data: unknown }>(
+  events: E[],
+  teammateId: string,
+  starterId: string,
+): E[] {
+  const turns = events.some((e) => e.type === 'turn.started')
+  return events.filter((e) => {
+    const by = (e.data as { teammateId?: string } | null)?.teammateId
+    if (by) return by === teammateId
+    if (turns) return e.type !== 'message.user'
+    return teammateId === starterId
+  })
+}
+
 /** What each event means for the teammate's state in that thread. */
 function transitionOf(type: string, data: Record<string, unknown>, at: Date): Transition | null {
   switch (type) {
+    case 'turn.started':
     case 'message.user':
     case 'approval.resolved':
     case 'question.answered':
@@ -32,6 +53,7 @@ function transitionOf(type: string, data: Record<string, unknown>, at: Date): Tr
 }
 
 const STATE_EVENTS = [
+  'turn.started',
   'message.user',
   'question.asked',
   'question.answered',
@@ -46,8 +68,19 @@ const STATE_EVENTS = [
 /** Per thread, the stretches of working, waiting for approval, blocked and done in a window. */
 export async function teammateTimeline(db: ScopedDb, teammateId: string, from: Date, to: Date) {
   const sessions = await db.session.findMany({
-    where: { teammateId, updatedAt: { gte: from }, createdAt: { lte: to } },
-    select: { id: true, title: true, status: true, origin: true, createdAt: true },
+    where: {
+      teammates: { some: { teammateId } },
+      updatedAt: { gte: from },
+      createdAt: { lte: to },
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      origin: true,
+      createdAt: true,
+      teammateId: true,
+    },
     orderBy: { createdAt: 'asc' },
     take: 200,
   })
@@ -70,7 +103,7 @@ export async function teammateTimeline(db: ScopedDb, teammateId: string, from: D
   const totals: Record<TimelineState, number> = { working: 0, waiting: 0, blocked: 0, done: 0 }
   const threads = sessions.map((session) => {
     const transitions: Transition[] = []
-    for (const e of eventsBy.get(session.id) ?? []) {
+    for (const e of eventsOf(eventsBy.get(session.id) ?? [], teammateId, session.teammateId)) {
       const t = transitionOf(e.type, e.data as Record<string, unknown>, e.at)
       if (t) transitions.push(t)
     }

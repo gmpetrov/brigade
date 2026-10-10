@@ -8,7 +8,7 @@ import { decideTicket } from './connector-calls.js'
 import { scoped } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
-import { loadThread, specFor } from './thread-spec.js'
+import { loadThread, specFor, teammateIn } from './thread-spec.js'
 import { promptThread } from './work.js'
 
 /**
@@ -58,7 +58,8 @@ export async function answerQuestion(
   const sent = await dispatch(thread.computer, {
     type: 'thread.answer',
     commandId: randomUUID(),
-    thread: await specFor(db, thread),
+    // The answer goes to the harness of the teammate that asked.
+    thread: await specFor(db, thread, { teammate: teammateIn(thread, payload.teammateId) }),
     questionId: payload.questionId,
     answer,
     memberId: scope.memberId,
@@ -95,11 +96,13 @@ type TicketPayload = {
   connectionId?: string
   /** A harness approval or question: the harness's own id for it. */
   source?: 'harness'
+  /** The teammate whose harness asked, in a thread with several. */
+  teammateId?: string
   approvalId?: string
   questionId?: string
   questions?: Question[]
-  /** A turn held back by a cap. */
-  pending?: { text: string; memberId: string | null }
+  /** A turn held back by a cap, and who answers it. */
+  pending?: { text: string; memberId: string | null; teammateIds?: string[]; handoff?: boolean }
   /** A sign-in ticket's account. */
   accountId?: string
   /** The member a notice is for. */
@@ -169,7 +172,7 @@ export async function resolveTicket(
     const sent = await dispatch(thread.computer, {
       type: 'thread.approval',
       commandId: randomUUID(),
-      thread: await specFor(db, thread),
+      thread: await specFor(db, thread, { teammate: teammateIn(thread, payload.teammateId) }),
       approvalId: payload.approvalId,
       approved: input.approved,
       ...reason,

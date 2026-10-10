@@ -52,6 +52,16 @@ export default function ThreadPage() {
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
+  const people = t.teammates.length ? t.teammates.map((p) => p.teammate) : [t.teammate]
+  // Who is answering now: the last turn that started, else whoever was asked last.
+  const lastTurn = events.findLast((e) => e.event.type === 'turn.started')?.event.teammateId
+  const answering =
+    people.find((p) => p.id === lastTurn) ??
+    t.teammates.reduce<(typeof t.teammates)[number] | undefined>(
+      (a, b) => (!a || b.lastTurnAt > a.lastTurnAt ? b : a),
+      undefined,
+    )?.teammate ??
+    t.teammate
   // Approvals, questions and caps on a connector call show in the thread itself; other open tickets above it.
   const notices = t.tickets.filter(
     (ticket) =>
@@ -99,17 +109,26 @@ export default function ThreadPage() {
             </nav>
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{t.title}</h1>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-              <TeammateAvatar
-                teammate={{
-                  name: t.teammate.name,
-                  harness: t.teammate.harness as Teammate['harness'],
-                }}
-                className="size-5"
-              />
-              <span className="font-semibold text-foreground">{t.teammate.name}</span>
+              {people.map((p, i) => (
+                <span key={p.id} className="flex items-center gap-1.5">
+                  <TeammateAvatar
+                    teammate={{ name: p.name, harness: p.harness as Teammate['harness'] }}
+                    className="size-5"
+                  />
+                  <span>
+                    <Link
+                      href={`/app/teammates/${p.id}`}
+                      className="font-semibold text-foreground hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                    {i < people.length - 1 && ','}
+                  </span>
+                </span>
+              ))}
               <span aria-hidden>·</span>
               <span>
-                {harnessLabel(t.teammate.harness)} on{' '}
+                {people.length === 1 && `${harnessLabel(people[0]!.harness)} `}on{' '}
                 {t.computer.kind === 'cloud' ? 'the workspace computer' : t.computer.name}
               </span>
               <span aria-hidden>·</span>
@@ -238,6 +257,7 @@ export default function ThreadPage() {
       <ThreadItems
         items={items}
         teammate={t.teammate}
+        teammates={people}
         canApprove={t.mayPrompt}
         onApproval={(approvalId, approved) =>
           void call('/approvals', { approvalId, approved }).catch(() => undefined)
@@ -265,8 +285,10 @@ export default function ThreadPage() {
                 rows={2}
                 placeholder={
                   busy
-                    ? `${t.teammate.name} is working. Your message will run next. @ to mention`
-                    : 'Reply. @ to mention a teammate, connection, credential or thread'
+                    ? `${answering.name} is working. Your message will run next. @ to mention`
+                    : people.length > 1
+                      ? `Reply to ${answering.name}, or @ a teammate to ask them`
+                      : 'Reply. @ a teammate to bring them in, or a connection, credential or thread'
                 }
               />
               <div className="flex flex-wrap items-center gap-2">
@@ -277,7 +299,7 @@ export default function ThreadPage() {
                     <kbd className="rounded-md bg-secondary px-1.5 font-mono text-foreground">
                       @
                     </kbd>
-                    mention a teammate, connection or thread
+                    a teammate to bring them in, or a connection or thread
                   </span>
                 )}
                 {busy && (

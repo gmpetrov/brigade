@@ -18,11 +18,17 @@ import { ensureRunning, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
+import { runnerBundle } from './routes/runner-install.js'
+import { handoffThread } from './work.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
 
 type RunnerConn = {
   runnerId: string
+  protocolVersion: number
+  /** The bundle it was installed from, and the last one it was told about. */
+  bundle?: string
+  offered?: string
   computerId: string
   organizationId: string
   workspaceId: string
@@ -42,6 +48,11 @@ export const hashToken = (token: string) => createHash('sha256').update(token).d
 
 export function isOnline(computerId: string) {
   return runners.has(computerId)
+}
+
+/** The protocol version of a computer's connected runner; undefined while it is offline. */
+export function runnerProtocol(computerId: string) {
+  return runners.get(computerId)?.protocolVersion
 }
 
 function send(ws: WSContext, message: ApiToRunner | ApiToBrowser) {
@@ -110,6 +121,22 @@ export async function dispatch(
   await ensureRunning(computer.id)
   return 'queued'
 }
+
+/**
+ * When the served runner bundle changes (a rebuild, a deploy), tell each
+ * connected runner installed from another one, once per bundle.
+ */
+setInterval(() => {
+  void runnerBundle().then((bundle) => {
+    if (!bundle) return
+    for (const conn of runners.values()) {
+      if (conn.protocolVersion < 3 || !conn.bundle || conn.bundle === bundle) continue
+      if (conn.offered === bundle) continue
+      conn.offered = bundle
+      send(conn.ws, { type: 'update.available', bundle })
+    }
+  }, console.error)
+}, 60_000).unref()
 
 function flushQueue(computerId: string) {
   const list = queued.get(computerId) ?? []
@@ -184,18 +211,33 @@ export function runnerSocket(runner: {
     const message = parsed.data
 
     if (message.type === 'hello') {
+      const bundle = (await runnerBundle()) ?? undefined
       if (message.protocolVersion < MIN_PROTOCOL_VERSION) {
-        send(ws, { type: 'update.required', minProtocolVersion: MIN_PROTOCOL_VERSION })
+        send(ws, {
+          type: 'update.required',
+          minProtocolVersion: MIN_PROTOCOL_VERSION,
+          ...(bundle ? { bundle } : {}),
+        })
         ws.close(4000, 'update required')
         return
       }
       runners.get(runner.computerId)?.ws.close(4001, 'replaced by a newer connection')
-      conn = { ...runner, runnerId: runner.id, ws }
+      conn = {
+        ...runner,
+        runnerId: runner.id,
+        protocolVersion: message.protocolVersion,
+        ws,
+        ...(message.bundle ? { bundle: message.bundle } : {}),
+        ...(bundle ? { offered: bundle } : {}),
+      }
       runners.set(runner.computerId, conn)
       await prisma.runner.update({
         where: { id: runner.id },
         data: {
-          version: message.version,
+          // The installed bundle tells builds apart; the package version does not change.
+          version: message.bundle
+            ? `${message.version}+${message.bundle.slice(0, 12)}`
+            : message.version,
           protocolVersion: message.protocolVersion,
           platform: message.platform,
           lastSeenAt: new Date(),
@@ -222,7 +264,17 @@ export function runnerSocket(runner: {
           error: 'The computer restarted during sign-in. Sign in again.',
         })
       }
-      send(ws, { type: 'welcome', runnerId: runner.id, computerId: runner.computerId })
+      // A runner installed from another bundle updates itself once it is idle.
+      send(ws, {
+        type: 'welcome',
+        runnerId: runner.id,
+        computerId: runner.computerId,
+        ...(bundle ? { bundle } : {}),
+      })
+      if (message.bundle && bundle && message.bundle !== bundle)
+        console.log(
+          `runner ${runner.id}: bundle ${message.bundle.slice(0, 12)} → ${bundle.slice(0, 12)}`,
+        )
       touch(runner.computerId)
       flushQueue(runner.computerId)
       broadcast(runner.workspaceId, {
@@ -302,6 +354,14 @@ export function runnerSocket(runner: {
           ok: false,
           error: String(error),
         }),
+      )
+      return
+    }
+
+    if (message.type === 'thread.handoff') {
+      // Sent when the teammate's turn ends; caps and the chain limit are checked there.
+      void handoffThread(runner, message).catch((error) =>
+        console.warn(`runner ${runner.id}: handoff failed: ${String(error)}`),
       )
       return
     }
@@ -395,6 +455,7 @@ function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
     case 'question.asked':
       return 'waiting'
     case 'question.answered':
+    case 'turn.started':
       return 'running'
     case 'turn.completed':
       return 'idle'
@@ -486,13 +547,30 @@ async function syncMachineLogins(
   }
 }
 
-/** Keep the account's usage snapshot, and notice when its login stopped working. */
+/**
+ * Keep each account's usage snapshot, and notice when its login stopped
+ * working. In a thread with several teammates, each turn says its account.
+ */
 async function noteAccountState(
   session: { id: string; organizationId: string; workspaceId: string; accountId: string | null },
   events: SequencedEvent[],
 ) {
-  const { accountId } = session
-  if (!accountId) return
+  const byAccount = new Map<string, SequencedEvent[]>()
+  let accountId = session.accountId
+  for (const e of events) {
+    if (e.event.type === 'turn.started') accountId = e.event.accountId
+    if (accountId) byAccount.set(accountId, [...(byAccount.get(accountId) ?? []), e])
+    // What follows a switch is the new account's.
+    if (e.event.type === 'account.switched' && e.event.toAccountId) accountId = e.event.toAccountId
+  }
+  for (const [id, list] of byAccount) await noteOneAccount(session, id, list)
+}
+
+async function noteOneAccount(
+  session: { id: string; organizationId: string; workspaceId: string },
+  accountId: string,
+  events: SequencedEvent[],
+) {
   const usage = events.findLast((e) => e.event.type === 'usage.updated' && e.event.limits?.length)
   const authFailed = events.some(
     (e) =>
@@ -502,8 +580,11 @@ async function noteAccountState(
   // Only an actual reply proves the login works; a turn can complete after an error.
   const worked = events.some((e) => e.event.type === 'message.done')
   if (!usage && !authFailed && !worked) return
-  const before = await prisma.account.findUnique({ where: { id: accountId } })
-  if (authFailed && before && before.status !== 'needs_sign_in') {
+  const before = await prisma.account.findFirst({
+    where: { id: accountId, workspaceId: session.workspaceId },
+  })
+  if (!before) return
+  if (authFailed && before.status !== 'needs_sign_in') {
     // An expired login is a ticket for the member who owns the account.
     await prisma.ticket.create({
       data: {
@@ -541,7 +622,7 @@ async function noteTickets(
       // Connector writes already have their ticket; its id is the approval id.
       const exists = await prisma.ticket.count({ where: { id: event.approvalId } })
       if (exists) continue
-      const teammate = await prisma.teammate.findUnique({ where: { id: session.teammateId } })
+      const teammate = await eventTeammate(session, event)
       const input = JSON.stringify(event.input ?? null)
       await prisma.ticket.create({
         data: {
@@ -552,6 +633,7 @@ async function noteTickets(
           title: `${teammate?.name ?? 'Teammate'}: ${event.toolName}${describeInput(event.input)}`,
           payload: {
             source: 'harness',
+            teammateId: teammate?.id ?? session.teammateId,
             approvalId: event.approvalId,
             toolName: event.toolName,
             input:
@@ -573,7 +655,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'question.asked') {
-      const teammate = await prisma.teammate.findUnique({ where: { id: session.teammateId } })
+      const teammate = await eventTeammate(session, event)
       const first = event.questions[0]?.question ?? 'a question'
       await prisma.ticket.create({
         data: {
@@ -584,6 +666,7 @@ async function noteTickets(
           title: `${teammate?.name ?? 'Teammate'} asks: ${first.length > 160 ? `${first.slice(0, 157)}...` : first}`,
           payload: {
             source: 'harness',
+            teammateId: teammate?.id ?? session.teammateId,
             questionId: event.questionId,
             questions: event.questions as unknown as Prisma.InputJsonValue,
           },
@@ -613,6 +696,20 @@ async function noteTickets(
       })
     }
   }
+}
+
+/** The teammate whose harness produced an event: one in the thread, else the starting one. */
+async function eventTeammate(
+  session: { id: string; workspaceId: string; teammateId: string },
+  event: AgentEvent,
+) {
+  const seat = event.teammateId
+    ? await prisma.threadTeammate.findFirst({
+        where: { sessionId: session.id, teammateId: event.teammateId },
+        include: { teammate: true },
+      })
+    : null
+  return seat?.teammate ?? prisma.teammate.findUnique({ where: { id: session.teammateId } })
 }
 
 /** The part of a tool call a person needs to decide: the command, file or URL. */
@@ -704,7 +801,11 @@ async function openTerminal(
   const db = scoped(scope)
   const thread = await db.session.findFirst({
     where: { id: message.sessionId },
-    include: { teammate: true, computer: true },
+    include: {
+      teammate: true,
+      computer: true,
+      teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
+    },
   })
   const fail = (text: string) => {
     terminals.delete(message.terminalId)

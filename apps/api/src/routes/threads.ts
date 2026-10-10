@@ -21,7 +21,7 @@ import { answerQuestion, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import { broadcastThreadStatus, desktopClipboard, dispatch } from '../hub.js'
 import { loadThread, specFor } from '../thread-spec.js'
-import { promptThread, startThread } from '../work.js'
+import { joinThread, mentionedTeammates, promptThread, startThread } from '../work.js'
 import { runLog } from '../timeline.js'
 import {
   parseBody,
@@ -70,11 +70,16 @@ export const threads = new Hono<AppEnv>()
   .get('/', async (c) => {
     const teammateId = c.req.query('teammateId')
     const rows = await c.var.db.session.findMany({
-      where: teammateId ? { teammateId } : {},
+      // A teammate's threads: those it started and those it joined.
+      where: teammateId ? { teammates: { some: { teammateId } } } : {},
       orderBy: { updatedAt: 'desc' },
       take: 100,
       include: {
         teammate: { select: { id: true, name: true } },
+        teammates: {
+          select: { teammate: { select: { id: true, name: true } } },
+          orderBy: { joinedAt: 'asc' },
+        },
         startedBy: { select: { id: true, user: { select: { name: true } } } },
       },
     })
@@ -86,6 +91,14 @@ export const threads = new Hono<AppEnv>()
       where: { id: c.req.param('id') },
       include: {
         teammate: { select: { id: true, name: true, harness: true, model: true } },
+        teammates: {
+          select: {
+            joinedAt: true,
+            lastTurnAt: true,
+            teammate: { select: { id: true, name: true, harness: true, model: true } },
+          },
+          orderBy: { joinedAt: 'asc' },
+        },
         computer: { select: { id: true, name: true, kind: true } },
         account: { select: { id: true, label: true, status: true } },
         startedBy: { select: { id: true, user: { select: { name: true } } } },
@@ -151,7 +164,16 @@ export const threads = new Hono<AppEnv>()
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
     const { text } = await parseBody(c.req.raw, SendMessage)
-    const outcome = await promptThread(db, scope, thread, { text, memberId: scope.memberId })
+    // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
+    const mentioned = await mentionedTeammates(db, text)
+    const joined = mentioned.filter((id) => !thread.teammates.some((t) => t.teammateId === id))
+    if (joined.length > 0) await joinThread(db, thread.id, joined)
+    const outcome = await promptThread(
+      db,
+      scope,
+      joined.length > 0 ? await loadThread(db, thread.id) : thread,
+      { text, memberId: scope.memberId, ...(mentioned.length ? { teammateIds: mentioned } : {}) },
+    )
     if (outcome === 'offline')
       throw new HTTPException(409, {
         message: 'That computer is offline. Start its runner and try again.',
@@ -161,6 +183,7 @@ export const threads = new Hono<AppEnv>()
       actor: { type: 'member', id: scope.memberId },
       action: 'thread.prompted',
       target: { type: 'thread', id: thread.id },
+      ...(joined.length > 0 ? { data: { joined } } : {}),
     })
     return c.json({ ok: true, paused: outcome === 'paused' })
   })

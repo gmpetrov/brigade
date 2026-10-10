@@ -319,6 +319,7 @@ export type SessionWhereInput = {
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
   webhook?: Prisma.XOR<Prisma.WebhookNullableScalarRelationFilter, Prisma.WebhookWhereInput> | null
   events?: Prisma.SessionEventListRelationFilter
+  teammates?: Prisma.ThreadTeammateListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
@@ -349,6 +350,7 @@ export type SessionOrderByWithRelationInput = {
   account?: Prisma.AccountOrderByWithRelationInput
   webhook?: Prisma.WebhookOrderByWithRelationInput
   events?: Prisma.SessionEventOrderByRelationAggregateInput
+  teammates?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
   connectionCalls?: Prisma.ConnectionCallOrderByRelationAggregateInput
   tickets?: Prisma.TicketOrderByRelationAggregateInput
@@ -382,6 +384,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
   webhook?: Prisma.XOR<Prisma.WebhookNullableScalarRelationFilter, Prisma.WebhookWhereInput> | null
   events?: Prisma.SessionEventListRelationFilter
+  teammates?: Prisma.ThreadTeammateListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
@@ -454,6 +457,7 @@ export type SessionCreateInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -478,6 +482,7 @@ export type SessionUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -502,6 +507,7 @@ export type SessionUpdateInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -526,6 +532,7 @@ export type SessionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -857,6 +864,20 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type SessionCreateNestedOneWithoutTeammatesInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTeammatesInput, Prisma.SessionUncheckedCreateWithoutTeammatesInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTeammatesInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutTeammatesNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTeammatesInput, Prisma.SessionUncheckedCreateWithoutTeammatesInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTeammatesInput
+  upsert?: Prisma.SessionUpsertWithoutTeammatesInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutTeammatesInput, Prisma.SessionUpdateWithoutTeammatesInput>, Prisma.SessionUncheckedUpdateWithoutTeammatesInput>
+}
+
 export type SessionCreateNestedOneWithoutEventsInput = {
   create?: Prisma.XOR<Prisma.SessionCreateWithoutEventsInput, Prisma.SessionUncheckedCreateWithoutEventsInput>
   connectOrCreate?: Prisma.SessionCreateOrConnectWithoutEventsInput
@@ -1017,6 +1038,7 @@ export type SessionCreateWithoutStartedByInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1040,6 +1062,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1112,6 +1135,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1135,6 +1159,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1184,6 +1209,7 @@ export type SessionCreateWithoutComputerInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1207,6 +1233,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1256,6 +1283,7 @@ export type SessionCreateWithoutTeammateInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1279,6 +1307,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1310,6 +1339,118 @@ export type SessionUpdateManyWithWhereWithoutTeammateInput = {
   data: Prisma.XOR<Prisma.SessionUpdateManyMutationInput, Prisma.SessionUncheckedUpdateManyWithoutTeammateInput>
 }
 
+export type SessionCreateWithoutTeammatesInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+}
+
+export type SessionUncheckedCreateWithoutTeammatesInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  webhookId?: string | null
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutTeammatesInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutTeammatesInput, Prisma.SessionUncheckedCreateWithoutTeammatesInput>
+}
+
+export type SessionUpsertWithoutTeammatesInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutTeammatesInput, Prisma.SessionUncheckedUpdateWithoutTeammatesInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutTeammatesInput, Prisma.SessionUncheckedCreateWithoutTeammatesInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutTeammatesInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutTeammatesInput, Prisma.SessionUncheckedUpdateWithoutTeammatesInput>
+}
+
+export type SessionUpdateWithoutTeammatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutTeammatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+}
+
 export type SessionCreateWithoutEventsInput = {
   id?: string
   organizationId: string
@@ -1328,6 +1469,7 @@ export type SessionCreateWithoutEventsInput = {
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1351,6 +1493,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1390,6 +1533,7 @@ export type SessionUpdateWithoutEventsInput = {
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -1413,6 +1557,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -1436,6 +1581,7 @@ export type SessionCreateWithoutAccountInput = {
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1459,6 +1605,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1509,6 +1656,7 @@ export type SessionCreateWithoutCommentsInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
 }
@@ -1532,6 +1680,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -1571,6 +1720,7 @@ export type SessionUpdateWithoutCommentsInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
 }
@@ -1594,6 +1744,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -1617,6 +1768,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
 }
@@ -1640,6 +1792,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -1679,6 +1832,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
 }
@@ -1702,6 +1856,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -1724,6 +1879,7 @@ export type SessionCreateWithoutWebhookInput = {
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
@@ -1747,6 +1903,7 @@ export type SessionUncheckedCreateWithoutWebhookInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
@@ -1797,6 +1954,7 @@ export type SessionCreateWithoutTicketsInput = {
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
   webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
 }
@@ -1820,6 +1978,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
 }
@@ -1859,6 +2018,7 @@ export type SessionUpdateWithoutTicketsInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
 }
@@ -1882,6 +2042,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
 }
@@ -1923,6 +2084,7 @@ export type SessionUpdateWithoutStartedByInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -1946,6 +2108,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2007,6 +2170,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -2030,6 +2194,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2091,6 +2256,7 @@ export type SessionUpdateWithoutComputerInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -2114,6 +2280,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2175,6 +2342,7 @@ export type SessionUpdateWithoutTeammateInput = {
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -2198,6 +2366,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2259,6 +2428,7 @@ export type SessionUpdateWithoutAccountInput = {
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -2282,6 +2452,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2343,6 +2514,7 @@ export type SessionUpdateWithoutWebhookInput = {
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
@@ -2366,6 +2538,7 @@ export type SessionUncheckedUpdateWithoutWebhookInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
@@ -2397,6 +2570,7 @@ export type SessionUncheckedUpdateManyWithoutWebhookInput = {
 
 export type SessionCountOutputType = {
   events: number
+  teammates: number
   comments: number
   connectionCalls: number
   tickets: number
@@ -2404,6 +2578,7 @@ export type SessionCountOutputType = {
 
 export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   events?: boolean | SessionCountOutputTypeCountEventsArgs
+  teammates?: boolean | SessionCountOutputTypeCountTeammatesArgs
   comments?: boolean | SessionCountOutputTypeCountCommentsArgs
   connectionCalls?: boolean | SessionCountOutputTypeCountConnectionCallsArgs
   tickets?: boolean | SessionCountOutputTypeCountTicketsArgs
@@ -2424,6 +2599,13 @@ export type SessionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Exte
  */
 export type SessionCountOutputTypeCountEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SessionEventWhereInput
+}
+
+/**
+ * SessionCountOutputType without action
+ */
+export type SessionCountOutputTypeCountTeammatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadTeammateWhereInput
 }
 
 /**
@@ -2473,6 +2655,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
   webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
   events?: boolean | Prisma.Session$eventsArgs<ExtArgs>
+  teammates?: boolean | Prisma.Session$teammatesArgs<ExtArgs>
   comments?: boolean | Prisma.Session$commentsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Session$connectionCallsArgs<ExtArgs>
   tickets?: boolean | Prisma.Session$ticketsArgs<ExtArgs>
@@ -2560,6 +2743,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
   webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
   events?: boolean | Prisma.Session$eventsArgs<ExtArgs>
+  teammates?: boolean | Prisma.Session$teammatesArgs<ExtArgs>
   comments?: boolean | Prisma.Session$commentsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Session$connectionCallsArgs<ExtArgs>
   tickets?: boolean | Prisma.Session$ticketsArgs<ExtArgs>
@@ -2592,6 +2776,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     account: Prisma.$AccountPayload<ExtArgs> | null
     webhook: Prisma.$WebhookPayload<ExtArgs> | null
     events: Prisma.$SessionEventPayload<ExtArgs>[]
+    /**
+     * Every teammate in the thread, the starting one (teammateId) included.
+     */
+    teammates: Prisma.$ThreadTeammatePayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
     connectionCalls: Prisma.$ConnectionCallPayload<ExtArgs>[]
     tickets: Prisma.$TicketPayload<ExtArgs>[]
@@ -3030,6 +3218,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   account<T extends Prisma.Session$accountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$accountArgs<ExtArgs>>): Prisma.Prisma__AccountClient<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   webhook<T extends Prisma.Session$webhookArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$webhookArgs<ExtArgs>>): Prisma.Prisma__WebhookClient<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   events<T extends Prisma.Session$eventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$eventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  teammates<T extends Prisma.Session$teammatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$teammatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Session$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connectionCalls<T extends Prisma.Session$connectionCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$connectionCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tickets<T extends Prisma.Session$ticketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$ticketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3539,6 +3728,30 @@ export type Session$eventsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.SessionEventScalarFieldEnum | Prisma.SessionEventScalarFieldEnum[]
+}
+
+/**
+ * Session.teammates
+ */
+export type Session$teammatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadTeammate
+   */
+  select?: Prisma.ThreadTeammateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadTeammate
+   */
+  omit?: Prisma.ThreadTeammateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadTeammateInclude<ExtArgs> | null
+  where?: Prisma.ThreadTeammateWhereInput
+  orderBy?: Prisma.ThreadTeammateOrderByWithRelationInput | Prisma.ThreadTeammateOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadTeammateWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadTeammateScalarFieldEnum | Prisma.ThreadTeammateScalarFieldEnum[]
 }
 
 /**

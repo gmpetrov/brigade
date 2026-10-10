@@ -5,6 +5,8 @@ import { z } from 'zod'
 const base = {
   /** ISO time the event happened on the computer. */
   at: z.iso.datetime(),
+  /** The teammate whose harness produced it, in a thread with several. Unset: a person or the runner. */
+  teammateId: z.string().optional(),
 }
 
 /** A question the harness asks a person (its own question tool). */
@@ -124,6 +126,14 @@ export const AgentEvent = z.discriminatedUnion('type', [
     type: z.literal('control.changed'),
     controller: z.enum(['teammate', 'human']),
     memberId: z.string().nullable(),
+  }),
+  /** A teammate starts answering. In a thread with several, they answer one after another. */
+  z.object({
+    ...base,
+    type: z.literal('turn.started'),
+    teammateId: z.string(),
+    /** The account it runs on; usage and sign-in problems after this belong to it. */
+    accountId: z.string(),
   }),
   z.object({ ...base, type: z.literal('turn.completed'), finishReason: z.string() }),
   /** A command a person ran in the computer's terminal during takeover. */

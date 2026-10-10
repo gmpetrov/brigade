@@ -14,7 +14,7 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model SessionEvent
- * One AgentEvent with its sequence number. Append-only.
+ * 
  */
 export type SessionEventModel = runtime.Types.Result.DefaultSelection<Prisma.$SessionEventPayload>
 

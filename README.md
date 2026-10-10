@@ -206,3 +206,23 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   provider's URL. View only is noVNC's own setting, not a boundary: any member may take over anyway.
 - **Updating the root helper.** New workspace computers get the helper from the bootstrap. A runner upgrade does
   not change root-owned files, so an existing computer needs the helper reinstalled when it changes.
+- **Threads with several teammates.** Mentioning a teammate (`@[Name](teammate:id)`) in a member's message brings it
+  into the thread (`ThreadTeammate`) and has it answer; several mentions answer one after another, in order. A
+  message with no mention goes to the teammate asked last. The thread keeps its starting teammate (`Session.teammateId`),
+  computer and the starter's accounts; each teammate runs its own harness session, in its own directory and Linux user,
+  on an account of its own harness. Before each turn the runner tells the teammate what was said since its last one
+  (members' messages and the other teammates' replies, kept in `~/.brigade/state/<thread>.team.json`); a thread with
+  one teammate reads exactly as before. Harness events carry `teammateId`, and each turn starts with `turn.started`
+  (teammate and account), so tickets, connector grants, caps, usage and the timeline are each teammate's own. A
+  webhook's payload summons nobody. On a runner below protocol 2 the API sends turns only to the starting teammate.
+- **Runner updates** (`apps/runner/src/updater.ts`). The API's runner bundle is the only version that counts: a
+  runner reports the SHA-256 of the bundle it was installed from (the installer stamps it, after checking it against
+  the API's `x-bundle-sha256` header), and the API names the one it serves in `welcome`, and in `update.available`
+  when the file changes. A runner with another bundle waits until no turn is running or queued and no terminal or
+  sign-in is open, disconnects, parks its threads (as on any stop) and runs the API's own installer into its install
+  directory, then exits with code 75. The installer's wrapper (`bin/brigade-runner`) starts the new runner on that
+  code; systemd restarts it anyway; a runner started by an older wrapper starts the new one itself, once. Rollbacks
+  work the same way, since any different bundle counts. A failed install keeps the old runner (directories are
+  swapped last) and is not retried for an hour. Runners started from source never update; `BRIGADE_AUTO_UPDATE=0`
+  turns it off. Cloud runners from before self-update (protocol below 3) are reinstalled once per bundle through
+  the provider while idle.

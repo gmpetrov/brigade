@@ -2,6 +2,7 @@
 // per connection. Counted from the thread, event and call logs; days are UTC.
 import type { Caps } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
+import { eventsOf } from './timeline.js'
 
 export type CapName = keyof Caps
 export type CapReached = { cap: CapName; limit: number; used: number }
@@ -22,7 +23,7 @@ const limitOf = (caps: unknown, cap: CapName) => {
 }
 
 /** Event types that start or end a stretch of the teammate working. */
-const STARTS = new Set(['message.user', 'approval.resolved', 'question.answered'])
+const STARTS = new Set(['turn.started', 'message.user', 'approval.resolved', 'question.answered'])
 const ENDS = new Set([
   'approval.requested',
   'question.asked',
@@ -43,15 +44,23 @@ export async function workingSeconds(
 ) {
   const events = await db.sessionEvent.findMany({
     where: {
-      session: { teammateId },
+      session: { teammates: { some: { teammateId } } },
       at: { gte: since },
       type: { in: [...STARTS, ...ENDS, 'account.switched'] },
     },
-    select: { sessionId: true, type: true, at: true, data: true },
+    select: {
+      sessionId: true,
+      type: true,
+      at: true,
+      data: true,
+      session: { select: { teammateId: true } },
+    },
     orderBy: [{ sessionId: 'asc' }, { seq: 'asc' }],
   })
   let total = 0
-  for (const [, list] of Map.groupBy(events, (e) => e.sessionId)) {
+  for (const [, all] of Map.groupBy(events, (e) => e.sessionId)) {
+    // In a thread with several teammates, only this one's turns.
+    const list = eventsOf(all, teammateId, all[0]!.session.teammateId)
     let startedAt: number | null = null
     for (const [i, e] of list.entries()) {
       const pausedBySwitch =

@@ -53,6 +53,13 @@ export const ThreadSpec = z.object({
   fallbacks: z.array(AccountRef),
   /** Connector tools; every call goes back to the API, which checks and makes it. */
   connectors: z.array(ConnectorGrant).default([]),
+  /**
+   * The teammate that started the thread. Others in it get their own harness
+   * session and saved state, keyed by thread and teammate.
+   */
+  starter: z.boolean().default(true),
+  /** Everyone in the thread, so each teammate knows who else is in it. */
+  teammates: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -63,6 +70,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     protocolVersion: z.number().int(),
     version: z.string(),
     platform: z.string(),
+    /** SHA-256 of the bundle it was installed from. Unset: running from source, never updated. */
+    bundle: z.string().optional(),
     /** On a member's machine: which harnesses are already signed in there. Never a credential. */
     machineLogins: z
       .array(
@@ -112,6 +121,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     type: z.literal('connector.call'),
     callId: z.string(),
     sessionId: z.string(),
+    /** The teammate making the call. Unset: the thread's starting teammate. */
+    teammateId: z.string().optional(),
     connectionId: z.string(),
     operation: z.string(),
     input: z.unknown(),
@@ -125,27 +136,55 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     type: z.literal('credential.request'),
     callId: z.string(),
     sessionId: z.string(),
+    teammateId: z.string().optional(),
     action: z.enum(['list', 'release']),
     credentialId: z.string().optional(),
     use: CredentialUse.optional(),
     /** Shown to the person approving, e.g. the page the password goes into. */
     purpose: z.string().max(500).optional(),
   }),
+  /**
+   * A teammate's reply mentioned others in the thread: they answer next, in
+   * order. The API checks they are in the thread, the caps and the chain limit.
+   */
+  z.object({
+    type: z.literal('thread.handoff'),
+    sessionId: z.string(),
+    fromTeammateId: z.string(),
+    teammateIds: z.array(z.string()).min(1).max(5),
+  }),
 ])
 export type RunnerToApi = z.infer<typeof RunnerToApi>
 
 // API -> runner
 export const ApiToRunner = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('welcome'), runnerId: z.string(), computerId: z.string() }),
-  z.object({ type: z.literal('update.required'), minProtocolVersion: z.number().int() }),
+  /** bundle: the SHA-256 of the runner bundle the API serves; a runner with another one updates. */
+  z.object({
+    type: z.literal('welcome'),
+    runnerId: z.string(),
+    computerId: z.string(),
+    bundle: z.string().optional(),
+  }),
+  /** The API now serves another runner bundle (sent to every connected runner). */
+  z.object({ type: z.literal('update.available'), bundle: z.string() }),
+  z.object({
+    type: z.literal('update.required'),
+    minProtocolVersion: z.number().int(),
+    bundle: z.string().optional(),
+  }),
   /** Highest contiguous seq stored per thread. The runner drops buffered events up to it. */
   z.object({ type: z.literal('ack'), sessionId: z.string(), seq: z.number().int() }),
   z.object({
     type: z.literal('thread.prompt'),
     commandId: z.string(),
+    /** The teammate that answers first. */
     thread: ThreadSpec,
     text: z.string(),
     memberId: z.string().nullable(),
+    /** Teammates that answer after it, in order, each told what was said before its turn. */
+    then: z.array(ThreadSpec).default([]),
+    /** Set when a teammate handed the thread on: nobody wrote `text`, so it is not shown as a message. */
+    handoff: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('thread.approval'),
