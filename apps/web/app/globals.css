@@ -96,9 +96,11 @@
 /* App-specific pieces that can't take Tailwind classes. */
 @layer components {
   /* Side panel (the desktop, or a file): on wide screens it is fixed to the
-   * right of the window; the content column makes room (below, unlayered). */
+   * right of the window; the content column makes room (below, unlayered).
+   * Kept narrower than the thread so the conversation stays the main column;
+   * Expand opens the desktop full size. */
   :root {
-    --desktop-w: min(45vw, 960px);
+    --desktop-w: clamp(26rem, 34vw, 40rem);
   }
 
   /* Code highlighting (rehype-highlight's hljs classes, components/markdown.tsx). */
