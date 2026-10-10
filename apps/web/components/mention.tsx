@@ -3,6 +3,7 @@ import { parseMentions, type Mention } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useFileLinks } from '@/components/file-links'
 import { ProviderLogo } from '@/components/provider-logo'
 
 export type ConnectionKind = Connection['kind']
@@ -46,7 +47,7 @@ function useConnectionKind(mention: Mention, known?: ConnectionKind) {
   return kind
 }
 
-/** A teammate reads as a name; everything else as a chip with its icon. */
+/** A teammate reads as a name; everything else as a chip with its icon. A library file opens in the panel. */
 export function MentionChip({
   mention,
   connectionKind,
@@ -57,19 +58,28 @@ export function MentionChip({
   className?: string
 }) {
   const kind = useConnectionKind(mention, connectionKind)
+  const links = useFileLinks()
   if (mention.kind === 'teammate')
     return <strong className={cn('font-semibold', className)}>@{mention.label}</strong>
+  const open = mention.kind === 'document' && links
+  const Tag = open ? 'button' : 'span'
   return (
-    <span
+    <Tag
       data-kind={mention.kind}
+      {...(open && {
+        type: 'button' as const,
+        title: `Open ${mention.label}`,
+        onClick: () => links.open({ path: mention.label }),
+      })}
       className={cn(
+        open && 'cursor-pointer hover:bg-accent',
         'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground',
         className,
       )}
     >
       <MentionIcon kind={mention.kind} connectionKind={kind} />
       {mention.label}
-    </span>
+    </Tag>
   )
 }
 
@@ -107,6 +117,12 @@ export function MentionIcon({
   }
   if (kind === 'repository' || kind === 'project')
     return <ProviderLogo kind="github" className="size-3.5" />
+  if (kind === 'document')
+    return (
+      <svg {...line}>
+        <path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6" />
+      </svg>
+    )
   if (kind === 'thread')
     return (
       <svg {...line}>
