@@ -236,6 +236,19 @@ export async function listPulls(
           await sync(db, row, p)
           pulls.push(summary(repo, p, row))
         }
+        // Closed on GitHub since last seen: no longer open, so the sidebar count drops.
+        // Merged or closed is settled when the closed list syncs them.
+        if (state === 'open' && list.length < 50) {
+          const listed = new Set(list.map((p) => p.number))
+          const gone = rows.filter(
+            (r) => r.repository === repo && r.state === 'open' && !listed.has(r.number),
+          )
+          if (gone.length)
+            await db.pullRequest.updateMany({
+              where: { id: { in: gone.map((r) => r.id) } },
+              data: { state: 'closed' },
+            })
+        }
       } catch (error) {
         errors.push({
           repository: repo,
@@ -259,6 +272,9 @@ export const needsAttention = (db: ScopedDb) =>
       ],
     },
   })
+
+/** Open pull requests, as last seen on GitHub. */
+export const openCount = (db: ScopedDb) => db.pullRequest.count({ where: { state: 'open' } })
 
 function checkStatus(status: string, conclusion: string | null): CheckRun['status'] {
   if (status !== 'completed') return 'pending'

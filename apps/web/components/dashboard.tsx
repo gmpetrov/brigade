@@ -58,6 +58,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { cn } from '@/lib/utils'
 
 export { StatusBadge } from '@/components/status-badge'
 
@@ -116,8 +117,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const me = useApi<Me>('/me')
   const ready = me.data?.activeWorkspaceId ?? null
   const teammates = useApi<Teammate[]>(ready ? '/teammates' : null)
-  // Pull requests waiting on a person, refreshed as the member moves around.
-  const pullsWaiting = useApi<{ count: number }>(ready ? '/pulls/attention' : null)
+  // Open pull requests and those waiting on a person, refreshed as the member moves around.
+  const pullsWaiting = useApi<{ count: number; open: number }>(ready ? '/pulls/attention' : null)
   const reloadPulls = pullsWaiting.reload
   // Tickets waiting on this member, the same way.
   const tickets = useApi<Ticket[]>(ready ? '/tickets' : null)
@@ -145,10 +146,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
-  const badges: Record<string, number | undefined> = {
-    '/app/tickets': tickets.data?.filter((t) => waitsOn(t, data)).length,
-    '/app/pulls': pullsWaiting.data?.count,
-    '/app/tasks': tasks.data?.filter((t) => t.column === 'needs_you').length,
+  // A badge counts what waits on the member; quiet ones (open pull requests) just count.
+  const pullsWaitingCount = pullsWaiting.data?.count ?? 0
+  const badges: Record<string, { count?: number; label: string; quiet?: boolean }> = {
+    '/app/tickets': {
+      count: tickets.data?.filter((t) => waitsOn(t, data)).length,
+      label: 'waiting on you',
+    },
+    '/app/pulls': {
+      count: pullsWaiting.data?.open,
+      label: pullsWaitingCount > 0 ? `open, ${pullsWaitingCount} waiting on you` : 'open',
+      quiet: pullsWaitingCount === 0,
+    },
+    '/app/tasks': {
+      count: tasks.data?.filter((t) => t.column === 'needs_you').length,
+      label: 'waiting on you',
+    },
   }
 
   async function switchWorkspace(workspaceId: string) {
@@ -219,33 +232,43 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <SidebarGroupLabel>Workspace</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {NAV.map(({ href, label, icon: Icon }) => (
-                    <SidebarMenuItem key={href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={
-                          pathname === href ||
-                          (['/app/pulls', '/app/threads'].includes(href) &&
-                            pathname.startsWith(href))
-                        }
-                      >
-                        <Link href={href}>
-                          <Icon />
-                          <span>{label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                      {!!badges[href] && (
-                        <SidebarMenuBadge
-                          aria-label={`${badges[href]} waiting on you`}
-                          className="right-2"
+                  {NAV.map(({ href, label, icon: Icon }) => {
+                    const badge = badges[href]
+                    return (
+                      <SidebarMenuItem key={href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            pathname === href ||
+                            (['/app/pulls', '/app/threads'].includes(href) &&
+                              pathname.startsWith(href))
+                          }
                         >
-                          <span className="flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1.5 text-[0.6875rem] leading-none font-semibold text-primary-foreground">
-                            {badges[href]! > 99 ? '99+' : badges[href]}
-                          </span>
-                        </SidebarMenuBadge>
-                      )}
-                    </SidebarMenuItem>
-                  ))}
+                          <Link href={href}>
+                            <Icon />
+                            <span>{label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                        {!!badge?.count && (
+                          <SidebarMenuBadge
+                            aria-label={`${badge.count} ${badge.label}`}
+                            className="right-2"
+                          >
+                            <span
+                              className={cn(
+                                'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
+                                badge.quiet
+                                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                  : 'bg-primary text-primary-foreground',
+                              )}
+                            >
+                              {badge.count > 99 ? '99+' : badge.count}
+                            </span>
+                          </SidebarMenuBadge>
+                        )}
+                      </SidebarMenuItem>
+                    )
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

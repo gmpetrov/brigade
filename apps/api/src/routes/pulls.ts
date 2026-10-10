@@ -7,6 +7,7 @@ import {
   listPulls,
   mergeNow,
   needsAttention,
+  openCount,
   pullDetail,
   requestReview,
   stopLoop,
@@ -29,8 +30,11 @@ export const pulls = new Hono<AppEnv>()
     return c.json(await listPulls(c.var.db, c.var.scope, state))
   })
 
-  /** For the sidebar: how many wait on a person. Database only, no GitHub call. */
-  .get('/attention', async (c) => c.json({ count: await needsAttention(c.var.db) }))
+  /** For the sidebar: how many are open and how many wait on a person. Database only, no GitHub call. */
+  .get('/attention', async (c) => {
+    const [count, open] = await Promise.all([needsAttention(c.var.db), openCount(c.var.db)])
+    return c.json({ count, open })
+  })
 
   .get('/:owner/:name/:number', async (c) => {
     const { repo, number } = target(c.req.param())
