@@ -18,6 +18,7 @@ import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Threads } from './threads.js'
+import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
 
 // Brigade sets no API key anywhere; harnesses use this computer's subscription logins.
@@ -94,6 +95,35 @@ async function start() {
   const outbox = new Outbox(paths.outbox)
   const library = new Library(config)
   void library.cleanTemp()
+  // Git backups GitHub would not take, kept in the API's bucket.
+  const bundleUrl = (b: BackupName) =>
+    new URL(
+      `/runner/backups/${[...b.repository.split('/'), b.sessionId, b.teammateId, b.folder]
+        .map(encodeURIComponent)
+        .join('/')}`,
+      config.apiUrl,
+    )
+  const bundles: BundleStore = {
+    put: async (backup, bundle) => {
+      const response = await fetch(bundleUrl(backup), {
+        method: 'PUT',
+        headers: {
+          authorization: `Bearer ${config.token}`,
+          'content-type': 'application/x-git-bundle',
+        },
+        body: new Uint8Array(bundle),
+      })
+      if (!response.ok) throw new Error(`the API refused the backup (${response.status})`)
+    },
+    get: async (backup) => {
+      const response = await fetch(bundleUrl(backup), {
+        headers: { authorization: `Bearer ${config.token}` },
+      })
+      if (response.status === 404) return null
+      if (!response.ok) throw new Error(`the API refused the backup (${response.status})`)
+      return Buffer.from(await response.arrayBuffer())
+    },
+  }
   let connection: Connection
   // A call waiting for a person shows as an approval in its thread, then as the decision.
   const approvalHooks = (
@@ -147,7 +177,11 @@ async function start() {
       ),
     handoff: (sessionId, fromTeammateId, teammateIds) =>
       connection.send({ type: 'thread.handoff', sessionId, fromTeammateId, teammateIds }),
-    context: { libraryDir: LIBRARY_DIR, memoryFor: (teammateId) => library.memoryFor(teammateId) },
+    context: {
+      libraryDir: LIBRARY_DIR,
+      memoryFor: (teammateId) => library.memoryFor(teammateId),
+      bundles,
+    },
     callLibrary: (sessionId, teammateId, { operation }) =>
       connection.callLibrary({ sessionId, teammateId, operation }),
     memoryUpdate: (update) => connection.send(update),
@@ -238,6 +272,8 @@ async function start() {
               error: String(error),
             }),
         )
+      case 'repos.changed':
+        return prefetch(message.repository, message.fetch)
       case 'library.changed':
         return library.sync()
       case 'thread.file.read':
@@ -296,6 +332,14 @@ async function start() {
     (bundle, required) => updater.offer(bundle, required),
   )
   connection.start()
+
+  // Free disk now and then: checkouts of quiet threads that hold nothing GitHub lacks.
+  const sweepRepos = () =>
+    void sweep((sessionId) => threads.inUse(sessionId)).catch((error) =>
+      console.warn(`repository sweep failed: ${String(error)}`),
+    )
+  setTimeout(sweepRepos, 10 * 60_000).unref()
+  setInterval(sweepRepos, 6 * 60 * 60_000).unref()
 
   const shutdown = async () => {
     console.log('stopping: saving thread state')

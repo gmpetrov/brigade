@@ -1,3 +1,4 @@
+import { Webhook } from 'lucide-react'
 import type { Connection } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -5,7 +6,8 @@ export type ProviderKind = Connection['kind']
 
 /**
  * Each service's own mark: Google's 2020 Gmail and Calendar icons, Stripe's
- * app icon, GitHub's Invertocat (in the text color, so it reads in both themes).
+ * app icon, GitHub's Invertocat (in the text color, so it reads in both themes), and a
+ * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
   const common = { 'aria-hidden': true, className: cn('size-6 shrink-0', className) } as const
@@ -62,6 +64,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         </g>
       </svg>
     )
+  if (kind === 'webhook') return <Webhook {...common} />
   if (kind === 'stripe')
     return (
       <svg viewBox="0 0 24 24" {...common}>

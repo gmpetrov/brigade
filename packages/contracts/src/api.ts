@@ -64,14 +64,21 @@ export const ConnectStripe = z.object({
     .regex(/^(sk|rk)_(test|live)_[A-Za-z0-9]+$/, 'A Stripe secret (sk_) or restricted (rk_) key'),
   label: z.string().trim().min(1).max(80).optional(),
 })
+/** A custom app that posts events to Brigade. No credential: its webhooks carry the trust. */
+export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
 export const CreateWebhook = z.object({
   connectionId: z.string(),
   teammateId: z.string(),
   label: z.string().trim().min(1).max(80),
-  /** stripe: Stripe-Signature with the endpoint's signing secret. hmac: X-Brigade-Signature. none: the URL alone. */
-  verification: z.enum(['stripe', 'hmac', 'none']),
+  /**
+   * URL webhooks only. stripe: Stripe-Signature with the endpoint's signing secret.
+   * hmac: X-Brigade-Signature. none: the URL alone. Gmail triggers verify nothing.
+   */
+  verification: z.enum(['stripe', 'hmac', 'none']).optional(),
   /** Stripe's signing secret (whsec_…), now or later. Brigade generates the secret for hmac. */
   signingSecret: z.string().trim().max(500).optional(),
+  /** Gmail triggers only: a Gmail search new mail must match, e.g. "to:support@acme.com". */
+  filter: z.string().trim().max(500).optional(),
 })
 export const SetWebhookSecret = z.object({
   signingSecret: z

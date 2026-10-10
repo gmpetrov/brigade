@@ -104,7 +104,7 @@ export const threads = new Hono<AppEnv>()
         computer: { select: { id: true, name: true, kind: true } },
         account: { select: { id: true, label: true, status: true } },
         startedBy: { select: { id: true, user: { select: { name: true } } } },
-        webhook: { select: { id: true, label: true } },
+        webhook: { select: { id: true, label: true, source: true } },
         tickets: {
           where: { status: 'open' },
           select: { id: true, type: true, title: true, payload: true, createdAt: true },

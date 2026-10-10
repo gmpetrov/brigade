@@ -259,3 +259,34 @@ export function libraryTools(options: {
     })
   return tools
 }
+
+/** Checking out a GitHub repository the teammate reaches, into its working directory. */
+export function repoTools(
+  checkout: (input: { repository: string; base?: string; directory?: string }) => Promise<unknown>,
+): Record<string, Tool> {
+  return {
+    checkout_repository: tool({
+      description:
+        'Check out a GitHub repository you have access to into your working directory, on a branch of your own for this thread ' +
+        '(brigade/...), and return where. Fast after the first time: the computer keeps a copy. Calling it again on a checkout ' +
+        'fetches the latest from GitHub without touching your files. Push with `git push -u origin HEAD`; ' +
+        'only branches under brigade/ can be pushed, so open a pull request with the GitHub tool to propose changes.',
+      inputSchema: jsonSchema<{ repository: string; base?: string; directory?: string }>({
+        type: 'object',
+        properties: {
+          repository: { type: 'string', description: 'owner/name, e.g. acme/web' },
+          base: {
+            type: 'string',
+            description: 'The branch to start from (default: the default branch)',
+          },
+          directory: {
+            type: 'string',
+            description: 'Folder name in your working directory (default: the repository name)',
+          },
+        },
+        required: ['repository'],
+      }),
+      execute: (input) => checkout(input),
+    }),
+  }
+}

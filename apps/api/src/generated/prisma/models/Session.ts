@@ -3002,7 +3002,7 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     controlledByMemberId: string | null
     /**
-     * member: a member's message. webhook: an inbound webhook, whose writes always need approval.
+     * member: a member's message. webhook: an inbound webhook or trigger, whose writes always need approval.
      */
     origin: $Enums.SessionOrigin
     webhookId: string | null

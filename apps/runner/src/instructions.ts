@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ThreadSpec } from '@brigade/contracts'
+import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
 /** Memory beyond this is left to search, so the file stays a reasonable size. */
@@ -36,6 +37,7 @@ export function instructions(
       (spec.library === 'read_write'
         ? ' To add or update a library file, write it on this computer, then call `save_to_library`.'
         : ''),
+    spec.git && code(spec),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
     own && `## What you have learned\n\n${clip(own)}`,
     '## Memory',
@@ -46,6 +48,38 @@ export function instructions(
     .filter(Boolean)
     .join('\n\n')
     .concat('\n')
+}
+
+/** How a teammate with a GitHub connection works on code. */
+const code = (spec: ThreadSpec) =>
+  [
+    '## Code',
+    'You can work on the GitHub repositories of your GitHub connection. Check one out with `checkout_repository`: ' +
+      `it goes into your working directory on a branch of your own for this thread (${threadBranch(spec)}).`,
+    'Commit as you go and push with `git push -u origin HEAD`. Git reaches GitHub through Brigade: only branches ' +
+      'under `brigade/` can be pushed, so propose changes to other branches with a pull request (the GitHub tool; ' +
+      'a person may need to approve it). The `gh` command is not signed in; use the GitHub tools instead.',
+    'When the thread goes quiet, Brigade backs up commits and changes to tracked files you have not pushed ' +
+      '(to `brigade/wip/...`). New files you have not committed are not backed up. A checkout left untouched for ' +
+      'two weeks with everything on GitHub is removed to free disk; `checkout_repository` brings it back, with your ' +
+      'branch or backup.',
+    projects(spec),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+/** The workspace's projects: the repositories it works on, with what to know about each. */
+function projects(spec: ThreadSpec) {
+  const list = spec.git?.projects ?? []
+  if (list.length === 0) return ''
+  return [
+    '### Projects',
+    "The workspace's repositories, set up by the team. `checkout_repository` runs a project's setup script in a new checkout.",
+    ...list.map((p) => {
+      const notes = p.notes.trim()
+      return `- **${p.repository}**${notes ? `\n\n  ${clip(notes).replace(/\n/g, '\n  ')}` : ''}`
+    }),
+  ].join('\n\n')
 }
 
 export const instructionsFileName = (spec: ThreadSpec) =>

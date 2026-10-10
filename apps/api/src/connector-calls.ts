@@ -14,6 +14,7 @@ import { refreshGoogle, type GoogleCredential } from './connectors/google-oauth.
 import {
   redact,
   type ApiKeyCredential,
+  type ConnectorContext,
   type ConnectorKind,
   type Operation,
 } from './connectors/types.js'
@@ -210,6 +211,18 @@ async function runOperation(
   input: unknown,
   callId: string,
 ) {
+  return operation.run({ fetch: await authorisedFetch(db, scope, connection), callId }, input)
+}
+
+/**
+ * A fetch that adds the connection's credential from the vault, refreshing it
+ * when needed. Marks the connection needs_reauth when the vendor refuses it.
+ */
+export async function authorisedFetch(
+  db: ScopedDb,
+  scope: Scope,
+  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
+): Promise<ConnectorContext['fetch']> {
   if (!connection.vaultSecretId) throw new Error('This connection has no credential; reconnect it')
   const secretId = connection.vaultSecretId
   const needsReauth = () =>
@@ -225,7 +238,7 @@ async function runOperation(
       if (response.status === 401) await needsReauth()
       return response
     }
-    return operation.run({ fetch: authorised, callId }, input)
+    return authorised
   }
 
   if (connectors[connection.kind]?.auth === 'github_app') {
@@ -253,7 +266,7 @@ async function runOperation(
       if (response.status === 401) response = await send(true)
       return response
     }
-    return operation.run({ fetch: authorised, callId }, input)
+    return authorised
   }
 
   let credential = await openSecret<GoogleCredential>(db, scope, secretId)
@@ -283,7 +296,7 @@ async function runOperation(
     }
     return response
   }
-  return operation.run({ fetch: authorised, callId }, input)
+  return authorised
 }
 
 /** Whether a connector call is waiting on this ticket in this process. */

@@ -19,7 +19,7 @@ export type ConnectorContext = {
   callId: string
 }
 
-export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github'
+export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }

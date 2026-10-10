@@ -60,11 +60,18 @@ function send(ws: WSContext, message: ApiToRunner | ApiToBrowser) {
   ws.send(JSON.stringify(message))
 }
 
-/** Send a command to a computer's runner. Returns false when it is offline. */
-export function sendToRunner(computerId: string, message: ApiToRunner): boolean {
+/**
+ * Send a command to a computer's runner. Returns false when it is offline.
+ * Background work (touch: false) does not keep a cloud computer from its idle stop.
+ */
+export function sendToRunner(
+  computerId: string,
+  message: ApiToRunner,
+  options: { touch?: boolean } = {},
+): boolean {
   const conn = runners.get(computerId)
   if (!conn) return false
-  touch(computerId)
+  if (options.touch !== false) touch(computerId)
   send(conn.ws, message)
   return true
 }

@@ -294,7 +294,7 @@ model Session {
   othersMayPrompt     Boolean        @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
-  /// member: a member's message. webhook: an inbound webhook, whose writes always need approval.
+  /// member: a member's message. webhook: an inbound webhook or trigger, whose writes always need approval.
   origin              SessionOrigin  @default(member)
   webhookId           String?
   webhook             Webhook?       @relation(fields: [webhookId], references: [id], onDelete: SetNull)
@@ -400,19 +400,23 @@ model Account {
 // Engineering work
 // ---------------------------------------------------------------------------
 
-/// A code repository used for engineering work.
+/// A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
+/// Reached through a GitHub connection; this only adds what teammates should do with it.
 model Project {
   id             String    @id @default(cuid())
   organizationId String
   workspaceId    String
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
-  repoUrl        String
+  /// owner/name on GitHub, lowercase.
+  repository     String
+  /// Shell run in a fresh checkout as the teammate, e.g. "pnpm install".
   setupScript    String?
+  /// What teammates should know about it, added to their instructions.
+  notes          String    @default("")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  @@index([workspaceId])
+  @@unique([workspaceId, repository])
 }
 
 /// A human comment on a diff or a thread.
@@ -441,6 +445,8 @@ enum ConnectorKind {
   google_calendar
   stripe
   github
+  /// A custom app that posts events to Brigade. Inbound only: no credential, no operations.
+  webhook
 }
 
 /// An external account and a reference to its vault secret.
@@ -568,7 +574,8 @@ model ConnectionCall {
   @@index([teammateId, connectionId, createdAt])
 }
 
-/// An inbound URL, its verification secret and its assigned teammate.
+/// Something outside that starts threads for a teammate: an inbound URL (http) or new
+/// mail in a Gmail connection's inbox (gmail).
 model Webhook {
   id                String     @id @default(cuid())
   organizationId    String
@@ -579,9 +586,15 @@ model Webhook {
   teammateId        String
   teammate          Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   label             String
-  /// The unguessable part of the webhook's URL.
-  pathToken         String     @unique
+  source            WebhookSource @default(http)
+  /// http: the unguessable part of the webhook's URL.
+  pathToken         String?    @unique
+  /// http: how the sender is verified. gmail: none.
   verification      WebhookVerification
+  /// gmail: a Gmail search the new message must match, e.g. "to:support@acme.com".
+  filter            String?
+  /// gmail: the mailbox history id seen up to.
+  cursor            String?
   /// Runs on this member's accounts.
   createdByMemberId String
   /// The signing secret, in the vault.
@@ -590,6 +603,13 @@ model Webhook {
   sessions          Session[]
 
   @@index([workspaceId])
+}
+
+enum WebhookSource {
+  /// Events posted to the webhook's URL.
+  http
+  /// New messages in a Gmail connection's inbox, polled.
+  gmail
 }
 
 enum WebhookVerification {

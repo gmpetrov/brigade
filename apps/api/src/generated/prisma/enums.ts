@@ -90,7 +90,8 @@ export const ConnectorKind = {
   gmail: 'gmail',
   google_calendar: 'google_calendar',
   stripe: 'stripe',
-  github: 'github'
+  github: 'github',
+  webhook: 'webhook'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]
@@ -121,6 +122,14 @@ export const GrantScope = {
 } as const
 
 export type GrantScope = (typeof GrantScope)[keyof typeof GrantScope]
+
+
+export const WebhookSource = {
+  http: 'http',
+  gmail: 'gmail'
+} as const
+
+export type WebhookSource = (typeof WebhookSource)[keyof typeof WebhookSource]
 
 
 export const WebhookVerification = {

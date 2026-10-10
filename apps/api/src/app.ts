@@ -11,7 +11,11 @@ import { accounts } from './routes/accounts.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
+import { gitProxy } from './routes/git.js'
+import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
+import { projects } from './routes/projects.js'
+import { runnerBackups } from './routes/runner-backups.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { tickets } from './routes/tickets.js'
 import { inboundWebhooks, webhooks } from './routes/webhooks.js'
@@ -38,11 +42,17 @@ app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
 app.route('/api/library', library)
+app.route('/api/projects', projects)
 app.route('/api/webhooks', webhooks)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)
+app.route('/runner/backups', runnerBackups)
+// Git for teammates, proxied to GitHub. Authenticated by a thread's git token, not a session.
+app.route('/git', gitProxy)
+// GitHub App events: pushes refresh computers' caches. Verified by the app's webhook secret.
+app.route('/github/webhook', githubWebhook)
 // The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
 app.route('/desktop', desktopProxy)
 // Public: third-party apps post here. Verified by URL and signature, not a session.

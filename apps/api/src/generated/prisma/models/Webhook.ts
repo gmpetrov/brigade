@@ -14,7 +14,8 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model Webhook
- * An inbound URL, its verification secret and its assigned teammate.
+ * Something outside that starts threads for a teammate: an inbound URL (http) or new
+ * mail in a Gmail connection's inbox (gmail).
  */
 export type WebhookModel = runtime.Types.Result.DefaultSelection<Prisma.$WebhookPayload>
 
@@ -31,8 +32,11 @@ export type WebhookMinAggregateOutputType = {
   connectionId: string | null
   teammateId: string | null
   label: string | null
+  source: $Enums.WebhookSource | null
   pathToken: string | null
   verification: $Enums.WebhookVerification | null
+  filter: string | null
+  cursor: string | null
   createdByMemberId: string | null
   verificationSecretId: string | null
   createdAt: Date | null
@@ -45,8 +49,11 @@ export type WebhookMaxAggregateOutputType = {
   connectionId: string | null
   teammateId: string | null
   label: string | null
+  source: $Enums.WebhookSource | null
   pathToken: string | null
   verification: $Enums.WebhookVerification | null
+  filter: string | null
+  cursor: string | null
   createdByMemberId: string | null
   verificationSecretId: string | null
   createdAt: Date | null
@@ -59,8 +66,11 @@ export type WebhookCountAggregateOutputType = {
   connectionId: number
   teammateId: number
   label: number
+  source: number
   pathToken: number
   verification: number
+  filter: number
+  cursor: number
   createdByMemberId: number
   verificationSecretId: number
   createdAt: number
@@ -75,8 +85,11 @@ export type WebhookMinAggregateInputType = {
   connectionId?: true
   teammateId?: true
   label?: true
+  source?: true
   pathToken?: true
   verification?: true
+  filter?: true
+  cursor?: true
   createdByMemberId?: true
   verificationSecretId?: true
   createdAt?: true
@@ -89,8 +102,11 @@ export type WebhookMaxAggregateInputType = {
   connectionId?: true
   teammateId?: true
   label?: true
+  source?: true
   pathToken?: true
   verification?: true
+  filter?: true
+  cursor?: true
   createdByMemberId?: true
   verificationSecretId?: true
   createdAt?: true
@@ -103,8 +119,11 @@ export type WebhookCountAggregateInputType = {
   connectionId?: true
   teammateId?: true
   label?: true
+  source?: true
   pathToken?: true
   verification?: true
+  filter?: true
+  cursor?: true
   createdByMemberId?: true
   verificationSecretId?: true
   createdAt?: true
@@ -190,8 +209,11 @@ export type WebhookGroupByOutputType = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source: $Enums.WebhookSource
+  pathToken: string | null
   verification: $Enums.WebhookVerification
+  filter: string | null
+  cursor: string | null
   createdByMemberId: string
   verificationSecretId: string | null
   createdAt: Date
@@ -225,8 +247,11 @@ export type WebhookWhereInput = {
   connectionId?: Prisma.StringFilter<"Webhook"> | string
   teammateId?: Prisma.StringFilter<"Webhook"> | string
   label?: Prisma.StringFilter<"Webhook"> | string
-  pathToken?: Prisma.StringFilter<"Webhook"> | string
+  source?: Prisma.EnumWebhookSourceFilter<"Webhook"> | $Enums.WebhookSource
+  pathToken?: Prisma.StringNullableFilter<"Webhook"> | string | null
   verification?: Prisma.EnumWebhookVerificationFilter<"Webhook"> | $Enums.WebhookVerification
+  filter?: Prisma.StringNullableFilter<"Webhook"> | string | null
+  cursor?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Webhook"> | string
   verificationSecretId?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Webhook"> | Date | string
@@ -243,8 +268,11 @@ export type WebhookOrderByWithRelationInput = {
   connectionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
-  pathToken?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  pathToken?: Prisma.SortOrderInput | Prisma.SortOrder
   verification?: Prisma.SortOrder
+  filter?: Prisma.SortOrderInput | Prisma.SortOrder
+  cursor?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -265,7 +293,10 @@ export type WebhookWhereUniqueInput = Prisma.AtLeast<{
   connectionId?: Prisma.StringFilter<"Webhook"> | string
   teammateId?: Prisma.StringFilter<"Webhook"> | string
   label?: Prisma.StringFilter<"Webhook"> | string
+  source?: Prisma.EnumWebhookSourceFilter<"Webhook"> | $Enums.WebhookSource
   verification?: Prisma.EnumWebhookVerificationFilter<"Webhook"> | $Enums.WebhookVerification
+  filter?: Prisma.StringNullableFilter<"Webhook"> | string | null
+  cursor?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Webhook"> | string
   verificationSecretId?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Webhook"> | Date | string
@@ -282,8 +313,11 @@ export type WebhookOrderByWithAggregationInput = {
   connectionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
-  pathToken?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  pathToken?: Prisma.SortOrderInput | Prisma.SortOrder
   verification?: Prisma.SortOrder
+  filter?: Prisma.SortOrderInput | Prisma.SortOrder
+  cursor?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -302,8 +336,11 @@ export type WebhookScalarWhereWithAggregatesInput = {
   connectionId?: Prisma.StringWithAggregatesFilter<"Webhook"> | string
   teammateId?: Prisma.StringWithAggregatesFilter<"Webhook"> | string
   label?: Prisma.StringWithAggregatesFilter<"Webhook"> | string
-  pathToken?: Prisma.StringWithAggregatesFilter<"Webhook"> | string
+  source?: Prisma.EnumWebhookSourceWithAggregatesFilter<"Webhook"> | $Enums.WebhookSource
+  pathToken?: Prisma.StringNullableWithAggregatesFilter<"Webhook"> | string | null
   verification?: Prisma.EnumWebhookVerificationWithAggregatesFilter<"Webhook"> | $Enums.WebhookVerification
+  filter?: Prisma.StringNullableWithAggregatesFilter<"Webhook"> | string | null
+  cursor?: Prisma.StringNullableWithAggregatesFilter<"Webhook"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Webhook"> | string
   verificationSecretId?: Prisma.StringNullableWithAggregatesFilter<"Webhook"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Webhook"> | Date | string
@@ -313,8 +350,11 @@ export type WebhookCreateInput = {
   id?: string
   organizationId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -331,8 +371,11 @@ export type WebhookUncheckedCreateInput = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -343,8 +386,11 @@ export type WebhookUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -361,8 +407,11 @@ export type WebhookUncheckedUpdateInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -376,8 +425,11 @@ export type WebhookCreateManyInput = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -387,8 +439,11 @@ export type WebhookUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -401,8 +456,11 @@ export type WebhookUncheckedUpdateManyInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -430,8 +488,11 @@ export type WebhookCountOrderByAggregateInput = {
   connectionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
+  source?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
+  filter?: Prisma.SortOrder
+  cursor?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -444,8 +505,11 @@ export type WebhookMaxOrderByAggregateInput = {
   connectionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
+  source?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
+  filter?: Prisma.SortOrder
+  cursor?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -458,8 +522,11 @@ export type WebhookMinOrderByAggregateInput = {
   connectionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   label?: Prisma.SortOrder
+  source?: Prisma.SortOrder
   pathToken?: Prisma.SortOrder
   verification?: Prisma.SortOrder
+  filter?: Prisma.SortOrder
+  cursor?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -607,6 +674,10 @@ export type WebhookUncheckedUpdateManyWithoutConnectionNestedInput = {
   deleteMany?: Prisma.WebhookScalarWhereInput | Prisma.WebhookScalarWhereInput[]
 }
 
+export type EnumWebhookSourceFieldUpdateOperationsInput = {
+  set?: $Enums.WebhookSource
+}
+
 export type EnumWebhookVerificationFieldUpdateOperationsInput = {
   set?: $Enums.WebhookVerification
 }
@@ -615,8 +686,11 @@ export type WebhookCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -631,8 +705,11 @@ export type WebhookUncheckedCreateWithoutWorkspaceInput = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -675,8 +752,11 @@ export type WebhookScalarWhereInput = {
   connectionId?: Prisma.StringFilter<"Webhook"> | string
   teammateId?: Prisma.StringFilter<"Webhook"> | string
   label?: Prisma.StringFilter<"Webhook"> | string
-  pathToken?: Prisma.StringFilter<"Webhook"> | string
+  source?: Prisma.EnumWebhookSourceFilter<"Webhook"> | $Enums.WebhookSource
+  pathToken?: Prisma.StringNullableFilter<"Webhook"> | string | null
   verification?: Prisma.EnumWebhookVerificationFilter<"Webhook"> | $Enums.WebhookVerification
+  filter?: Prisma.StringNullableFilter<"Webhook"> | string | null
+  cursor?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Webhook"> | string
   verificationSecretId?: Prisma.StringNullableFilter<"Webhook"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Webhook"> | Date | string
@@ -686,8 +766,11 @@ export type WebhookCreateWithoutTeammateInput = {
   id?: string
   organizationId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -702,8 +785,11 @@ export type WebhookUncheckedCreateWithoutTeammateInput = {
   workspaceId: string
   connectionId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -740,8 +826,11 @@ export type WebhookCreateWithoutSessionsInput = {
   id?: string
   organizationId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -757,8 +846,11 @@ export type WebhookUncheckedCreateWithoutSessionsInput = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -784,8 +876,11 @@ export type WebhookUpdateWithoutSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -801,8 +896,11 @@ export type WebhookUncheckedUpdateWithoutSessionsInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -812,8 +910,11 @@ export type WebhookCreateWithoutConnectionInput = {
   id?: string
   organizationId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -828,8 +929,11 @@ export type WebhookUncheckedCreateWithoutConnectionInput = {
   workspaceId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -868,8 +972,11 @@ export type WebhookCreateManyWorkspaceInput = {
   connectionId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -879,8 +986,11 @@ export type WebhookUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -895,8 +1005,11 @@ export type WebhookUncheckedUpdateWithoutWorkspaceInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -909,8 +1022,11 @@ export type WebhookUncheckedUpdateManyWithoutWorkspaceInput = {
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -922,8 +1038,11 @@ export type WebhookCreateManyTeammateInput = {
   workspaceId: string
   connectionId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -933,8 +1052,11 @@ export type WebhookUpdateWithoutTeammateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -949,8 +1071,11 @@ export type WebhookUncheckedUpdateWithoutTeammateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -963,8 +1088,11 @@ export type WebhookUncheckedUpdateManyWithoutTeammateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -976,8 +1104,11 @@ export type WebhookCreateManyConnectionInput = {
   workspaceId: string
   teammateId: string
   label: string
-  pathToken: string
+  source?: $Enums.WebhookSource
+  pathToken?: string | null
   verification: $Enums.WebhookVerification
+  filter?: string | null
+  cursor?: string | null
   createdByMemberId: string
   verificationSecretId?: string | null
   createdAt?: Date | string
@@ -987,8 +1118,11 @@ export type WebhookUpdateWithoutConnectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1003,8 +1137,11 @@ export type WebhookUncheckedUpdateWithoutConnectionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1017,8 +1154,11 @@ export type WebhookUncheckedUpdateManyWithoutConnectionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
-  pathToken?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.EnumWebhookSourceFieldUpdateOperationsInput | $Enums.WebhookSource
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   verification?: Prisma.EnumWebhookVerificationFieldUpdateOperationsInput | $Enums.WebhookVerification
+  filter?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1062,8 +1202,11 @@ export type WebhookSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   connectionId?: boolean
   teammateId?: boolean
   label?: boolean
+  source?: boolean
   pathToken?: boolean
   verification?: boolean
+  filter?: boolean
+  cursor?: boolean
   createdByMemberId?: boolean
   verificationSecretId?: boolean
   createdAt?: boolean
@@ -1081,8 +1224,11 @@ export type WebhookSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   connectionId?: boolean
   teammateId?: boolean
   label?: boolean
+  source?: boolean
   pathToken?: boolean
   verification?: boolean
+  filter?: boolean
+  cursor?: boolean
   createdByMemberId?: boolean
   verificationSecretId?: boolean
   createdAt?: boolean
@@ -1098,8 +1244,11 @@ export type WebhookSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   connectionId?: boolean
   teammateId?: boolean
   label?: boolean
+  source?: boolean
   pathToken?: boolean
   verification?: boolean
+  filter?: boolean
+  cursor?: boolean
   createdByMemberId?: boolean
   verificationSecretId?: boolean
   createdAt?: boolean
@@ -1115,14 +1264,17 @@ export type WebhookSelectScalar = {
   connectionId?: boolean
   teammateId?: boolean
   label?: boolean
+  source?: boolean
   pathToken?: boolean
   verification?: boolean
+  filter?: boolean
+  cursor?: boolean
   createdByMemberId?: boolean
   verificationSecretId?: boolean
   createdAt?: boolean
 }
 
-export type WebhookOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "pathToken" | "verification" | "createdByMemberId" | "verificationSecretId" | "createdAt", ExtArgs["result"]["webhook"]>
+export type WebhookOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "source" | "pathToken" | "verification" | "filter" | "cursor" | "createdByMemberId" | "verificationSecretId" | "createdAt", ExtArgs["result"]["webhook"]>
 export type WebhookInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
@@ -1156,11 +1308,23 @@ export type $WebhookPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     connectionId: string
     teammateId: string
     label: string
+    source: $Enums.WebhookSource
     /**
-     * The unguessable part of the webhook's URL.
+     * http: the unguessable part of the webhook's URL.
      */
-    pathToken: string
+    pathToken: string | null
+    /**
+     * http: how the sender is verified. gmail: none.
+     */
     verification: $Enums.WebhookVerification
+    /**
+     * gmail: a Gmail search the new message must match, e.g. "to:support@acme.com".
+     */
+    filter: string | null
+    /**
+     * gmail: the mailbox history id seen up to.
+     */
+    cursor: string | null
     /**
      * Runs on this member's accounts.
      */
@@ -1603,8 +1767,11 @@ export interface WebhookFieldRefs {
   readonly connectionId: Prisma.FieldRef<"Webhook", 'String'>
   readonly teammateId: Prisma.FieldRef<"Webhook", 'String'>
   readonly label: Prisma.FieldRef<"Webhook", 'String'>
+  readonly source: Prisma.FieldRef<"Webhook", 'WebhookSource'>
   readonly pathToken: Prisma.FieldRef<"Webhook", 'String'>
   readonly verification: Prisma.FieldRef<"Webhook", 'WebhookVerification'>
+  readonly filter: Prisma.FieldRef<"Webhook", 'String'>
+  readonly cursor: Prisma.FieldRef<"Webhook", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Webhook", 'String'>
   readonly verificationSecretId: Prisma.FieldRef<"Webhook", 'String'>
   readonly createdAt: Prisma.FieldRef<"Webhook", 'DateTime'>

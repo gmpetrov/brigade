@@ -41,6 +41,18 @@ const CONNECT_ERRORS: Record<string, string> = {
     'Your GitHub account cannot reach that installation. Sign in to GitHub as someone who can, and try again.',
 }
 
+/**
+ * How each kind of connection starts threads. http: the service posts to a
+ * Brigade URL. gmail: Brigade watches the inbox. Google Calendar has neither.
+ */
+const TRIGGER_SOURCE: Record<Connection['kind'], 'http' | 'gmail' | null> = {
+  gmail: 'gmail',
+  google_calendar: null,
+  stripe: 'http',
+  github: 'http',
+  webhook: 'http',
+}
+
 export default function ConnectionsPage() {
   return (
     <Suspense>
@@ -53,8 +65,10 @@ function Connections() {
   const { me, teammates } = useDashboard()
   const params = useSearchParams()
   const data = useApi<ConnectionsResponse>('/connections')
+  const hooks = useApi<Webhook[]>('/webhooks')
   const [open, setOpen] = useState<{ id: string; tab: 'log' | 'webhooks' }>()
   const [stripeOpen, setStripeOpen] = useState(false)
+  const [customOpen, setCustomOpen] = useState(false)
   const [error, setError] = useState<string>()
   const admin = isAdmin(me)
   const name = (teammateId: string) =>
@@ -96,20 +110,39 @@ function Connections() {
     }
   }
 
+  async function connectCustomApp(form: FormData) {
+    setError(undefined)
+    try {
+      const { id } = await api<{ id: string }>('/connections/webhook', {
+        body: { label: String(form.get('label')) },
+      })
+      setCustomOpen(false)
+      await data.reload()
+      // Its webhooks are the point: open them straight away.
+      setOpen({ id, tab: 'webhooks' })
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function remove(c: Connection) {
     const label = c.externalAccount ?? c.label
     const after =
       c.kind === 'github' ? ' Brigade stays installed on GitHub until you uninstall it there.' : ''
-    if (!confirm(`Disconnect ${label}? Teammates lose access; the call log is kept.${after}`))
-      return
+    const message =
+      c.kind === 'webhook'
+        ? `Remove ${label}? Its webhook URLs stop working.`
+        : `Disconnect ${label}? Teammates lose access; the call log is kept.${after}`
+    if (!confirm(message)) return
     const id = c.id
     await api(`/connections/${id}`, { method: 'DELETE' }).catch((e) =>
       setError((e as Error).message),
     )
-    await data.reload()
+    await Promise.all([data.reload(), hooks.reload()])
   }
 
   const connections = data.data?.connections ?? []
+  const hooksOf = (id: string) => (hooks.data ?? []).filter((w) => w.connectionId === id)
 
   return (
     <div className="flex flex-col gap-8">
@@ -152,90 +185,105 @@ function Connections() {
           <p className="text-sm text-muted-foreground">No connections yet.</p>
         ) : (
           <Card className="gap-0 divide-y py-0">
-            {connections.map((c) => (
-              <div key={c.id} className="flex flex-col gap-3 px-5 py-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <ProviderTile kind={c.kind} />
-                  <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
+            {connections.map((c) => {
+              const source = TRIGGER_SOURCE[c.kind]
+              const own = hooksOf(c.id)
+              // Webhooks made before a kind lost its trigger stay visible, to delete them.
+              const showTriggers = Boolean(source) || own.length > 0
+              const custom = c.kind === 'webhook'
+              return (
+                <div key={c.id} className="flex flex-col gap-3 px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <ProviderTile kind={c.kind} />
+                    <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">{c.label}</span>
+                        {c.status === 'needs_reauth' ? (
+                          <StatusBadge
+                            status="needs_reauth"
+                            tone="destructive"
+                            label="reconnect needed"
+                          />
+                        ) : (
+                          <StatusBadge status="active" tone="success" />
+                        )}
+                      </div>
+                      {c.externalAccount && (
+                        <span className="truncate text-sm text-muted-foreground">
+                          {c.externalAccount}
+                        </span>
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {custom
+                          ? own.length === 0
+                            ? 'Custom app · no webhooks yet'
+                            : `Custom app · ${own.map((w) => `${w.label} → ${w.teammate.name}`).join(', ')}`
+                          : c.grants.length === 0
+                            ? 'No teammate has access'
+                            : c.grants
+                                .map(
+                                  (g) =>
+                                    `${name(g.teammateId)} (${g.scope === 'read' ? 'read' : 'read and write'})`,
+                                )
+                                .join(', ')}
+                      </span>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{c.label}</span>
-                      {c.status === 'needs_reauth' ? (
-                        <StatusBadge
-                          status="needs_reauth"
-                          tone="destructive"
-                          label="reconnect needed"
-                        />
-                      ) : (
-                        <StatusBadge status="active" tone="success" />
+                      {admin && c.kind === 'github' && c.externalUrl && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={c.externalUrl} target="_blank" rel="noreferrer">
+                            Repositories
+                            <ExternalLink aria-hidden />
+                            <span className="sr-only"> (choose them on GitHub)</span>
+                          </a>
+                        </Button>
+                      )}
+                      {!custom && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-expanded={open?.id === c.id && open.tab === 'log'}
+                          onClick={() =>
+                            setOpen(
+                              open?.id === c.id && open.tab === 'log'
+                                ? undefined
+                                : { id: c.id, tab: 'log' },
+                            )
+                          }
+                        >
+                          {open?.id === c.id && open.tab === 'log' ? 'Hide log' : 'Call log'}
+                        </Button>
+                      )}
+                      {showTriggers && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-expanded={open?.id === c.id && open.tab === 'webhooks'}
+                          onClick={() =>
+                            setOpen(
+                              open?.id === c.id && open.tab === 'webhooks'
+                                ? undefined
+                                : { id: c.id, tab: 'webhooks' },
+                            )
+                          }
+                        >
+                          {source === 'gmail' ? 'Triggers' : 'Webhooks'}
+                        </Button>
+                      )}
+                      {admin && (
+                        <Button variant="danger" size="sm" onClick={() => void remove(c)}>
+                          {custom ? 'Remove' : 'Disconnect'}
+                        </Button>
                       )}
                     </div>
-                    {c.externalAccount && (
-                      <span className="truncate text-sm text-muted-foreground">
-                        {c.externalAccount}
-                      </span>
-                    )}
-                    <span className="text-sm text-muted-foreground">
-                      {c.grants.length === 0
-                        ? 'No teammate has access'
-                        : c.grants
-                            .map(
-                              (g) =>
-                                `${name(g.teammateId)} (${g.scope === 'read' ? 'read' : 'read and write'})`,
-                            )
-                            .join(', ')}
-                    </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {admin && c.kind === 'github' && c.externalUrl && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={c.externalUrl} target="_blank" rel="noreferrer">
-                          Repositories
-                          <ExternalLink aria-hidden />
-                          <span className="sr-only"> (choose them on GitHub)</span>
-                        </a>
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-expanded={open?.id === c.id && open.tab === 'log'}
-                      onClick={() =>
-                        setOpen(
-                          open?.id === c.id && open.tab === 'log'
-                            ? undefined
-                            : { id: c.id, tab: 'log' },
-                        )
-                      }
-                    >
-                      {open?.id === c.id && open.tab === 'log' ? 'Hide log' : 'Call log'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-expanded={open?.id === c.id && open.tab === 'webhooks'}
-                      onClick={() =>
-                        setOpen(
-                          open?.id === c.id && open.tab === 'webhooks'
-                            ? undefined
-                            : { id: c.id, tab: 'webhooks' },
-                        )
-                      }
-                    >
-                      Webhooks
-                    </Button>
-                    {admin && (
-                      <Button variant="danger" size="sm" onClick={() => void remove(c)}>
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
+                  {open?.id === c.id && open.tab === 'log' && <CallLog connectionId={c.id} />}
+                  {open?.id === c.id && open.tab === 'webhooks' && (
+                    <Webhooks connection={c} hooks={own} reload={hooks.reload} editable={admin} />
+                  )}
                 </div>
-                {open?.id === c.id && open.tab === 'log' && <CallLog connectionId={c.id} />}
-                {open?.id === c.id && open.tab === 'webhooks' && (
-                  <Webhooks connection={c} editable={admin} />
-                )}
-              </div>
-            ))}
+              )
+            })}
           </Card>
         )}
       </section>
@@ -254,7 +302,7 @@ function Connections() {
                       disabled={!data.data?.available.gmail}
                       onClick={() => void connectGoogle('gmail')}
                     >
-                      Connect Gmail
+                      Connect
                     </Button>
                   ),
                 },
@@ -267,7 +315,7 @@ function Connections() {
                       disabled={!data.data?.available.google_calendar}
                       onClick={() => void connectGoogle('google_calendar')}
                     >
-                      Connect Google Calendar
+                      Connect
                     </Button>
                   ),
                 },
@@ -280,7 +328,7 @@ function Connections() {
                       aria-expanded={stripeOpen}
                       onClick={() => setStripeOpen(!stripeOpen)}
                     >
-                      Connect Stripe
+                      Connect
                     </Button>
                   ),
                 },
@@ -293,7 +341,21 @@ function Connections() {
                       disabled={!data.data?.available.github}
                       onClick={() => void connectGitHub()}
                     >
-                      Connect GitHub
+                      Connect
+                    </Button>
+                  ),
+                },
+                {
+                  kind: 'webhook',
+                  name: 'Custom app',
+                  hint: 'Any app or service that can send a webhook',
+                  button: (
+                    <Button
+                      variant="outline"
+                      aria-expanded={customOpen}
+                      onClick={() => setCustomOpen(!customOpen)}
+                    >
+                      Add a custom app
                     </Button>
                   ),
                 },
@@ -304,7 +366,12 @@ function Connections() {
                 className="flex flex-wrap items-center gap-4 py-3 first:pt-0 last:pb-0"
               >
                 <ProviderTile kind={option.kind} />
-                <span className="flex-1 font-semibold">{option.name}</span>
+                <span className="flex flex-1 flex-col">
+                  <span className="font-semibold">{option.name}</span>
+                  {'hint' in option && (
+                    <span className="text-sm text-muted-foreground">{option.hint}</span>
+                  )}
+                </span>
                 {option.button}
               </div>
             ))}
@@ -327,6 +394,31 @@ function Connections() {
               Connecting GitHub installs Brigade&apos;s GitHub App on your account or organization.
               You choose which repositories it can reach, and can change them on GitHub at any time.
             </p>
+          )}
+          {customOpen && (
+            <form
+              action={connectCustomApp}
+              className="flex flex-col gap-4 rounded-lg border bg-muted/50 p-4"
+            >
+              <p className="text-sm text-muted-foreground">
+                For your own apps and services, or any tool without a connector here. Each webhook
+                you add gets its own URL: every event posted to it starts a thread for a teammate.
+                Nothing to sign in to, and teammates cannot call the app back through Brigade.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="custom-label">App name</Label>
+                <Input
+                  id="custom-label"
+                  name="label"
+                  placeholder="Zendesk, our backend, Typeform…"
+                  className="bg-card"
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button>Add</Button>
+              </div>
+            </form>
           )}
           {stripeOpen && (
             <form
@@ -419,34 +511,48 @@ function CallLog({ connectionId }: { connectionId: string }) {
   )
 }
 
-function Webhooks({ connection, editable }: { connection: Connection; editable: boolean }) {
+function Webhooks({
+  connection,
+  hooks,
+  reload,
+  editable,
+}: {
+  connection: Connection
+  hooks: Webhook[]
+  reload: () => Promise<unknown>
+  editable: boolean
+}) {
   const { teammates } = useDashboard()
-  const all = useApi<Webhook[]>('/webhooks')
-  const hooks = (all.data ?? []).filter((w) => w.connectionId === connection.id)
   const [adding, setAdding] = useState(false)
   const [created, setCreated] = useState<{ url: string; signingSecret?: string }>()
   const [error, setError] = useState<string>()
   const stripe = connection.kind === 'stripe'
   const github = connection.kind === 'github'
+  const gmail = TRIGGER_SOURCE[connection.kind] === 'gmail'
+  const canAdd = editable && TRIGGER_SOURCE[connection.kind] !== null
   const idFor = (field: string) => `webhook-${connection.id}-${field}`
 
   async function create(form: FormData) {
     setError(undefined)
     try {
-      const result = await api<{ url: string; signingSecret?: string }>('/webhooks', {
+      const result = await api<{ url: string | null; signingSecret?: string }>('/webhooks', {
         body: {
           connectionId: connection.id,
           teammateId: String(form.get('teammateId')),
           label: String(form.get('label')),
-          verification: String(form.get('verification')),
+          ...(gmail
+            ? form.get('filter')
+              ? { filter: String(form.get('filter')) }
+              : {}
+            : { verification: String(form.get('verification')) }),
           ...(form.get('signingSecret')
             ? { signingSecret: String(form.get('signingSecret')) }
             : {}),
         },
       })
-      setCreated(result)
+      setCreated(result.url ? { url: result.url, signingSecret: result.signingSecret } : undefined)
       setAdding(false)
-      await all.reload()
+      await reload()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -459,24 +565,42 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
         method: 'PATCH',
         body: { signingSecret: String(form.get('signingSecret')) },
       })
-      await all.reload()
+      await reload()
     } catch (e) {
       setError((e as Error).message)
     }
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this webhook? Its URL stops working.')) return
+    const w = hooks.find((h) => h.id === id)
+    const question =
+      w?.source === 'gmail'
+        ? 'Delete this trigger? New mail stops starting threads.'
+        : 'Delete this webhook? Its URL stops working.'
+    if (!confirm(question)) return
     await api(`/webhooks/${id}`, { method: 'DELETE' }).catch((e) => setError((e as Error).message))
-    await all.reload()
+    await reload()
   }
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        Each event posted to a webhook URL starts a new thread for its teammate, with the payload as
-        the first message. It runs on the accounts of the admin who set it up. A payload can ask for
-        anything, so every change a webhook thread makes through a connector waits for a person.
+        {gmail ? (
+          <>
+            Each new email in this inbox starts a thread for the trigger&apos;s teammate, with the
+            email as the first message. Brigade checks the inbox every minute, for mail that arrives
+            after the trigger is created. It runs on the accounts of the admin who set it up. An
+            email can ask for anything, so every change its thread makes through a connector waits
+            for a person. To reply, the teammate also needs access to this mailbox.
+          </>
+        ) : (
+          <>
+            Each event posted to a webhook URL starts a new thread for its teammate, with the
+            payload as the first message. It runs on the accounts of the admin who set it up. A
+            payload can ask for anything, so every change a webhook thread makes through a connector
+            waits for a person.
+          </>
+        )}
       </p>
       {created && (
         <div className="flex flex-col gap-2 rounded-lg bg-muted p-4 text-sm">
@@ -521,9 +645,25 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                     <span className="font-semibold">{w.label}</span>{' '}
                     <span className="text-muted-foreground">→ {w.teammate.name}</span>
                   </div>
-                  <code className="font-mono text-xs break-all text-muted-foreground">{w.url}</code>
+                  {w.source === 'gmail' ? (
+                    <span className="text-xs text-muted-foreground">
+                      {w.filter ? (
+                        <>
+                          New mail matching <code className="font-mono">{w.filter}</code>
+                        </>
+                      ) : (
+                        'All new mail in the inbox'
+                      )}
+                    </span>
+                  ) : (
+                    <code className="font-mono text-xs break-all text-muted-foreground">
+                      {w.url}
+                    </code>
+                  )}
                 </div>
-                {w.verification !== 'none' && !w.hasSecret ? (
+                {w.source === 'gmail' ? (
+                  <StatusBadge status="watching" tone="success" label="watching inbox" />
+                ) : w.verification !== 'none' && !w.hasSecret ? (
                   <StatusBadge
                     status="needs_secret"
                     tone="destructive"
@@ -560,7 +700,7 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
           ))}
         </div>
       )}
-      {editable &&
+      {canAdd &&
         (adding ? (
           <form action={create} className="flex flex-col gap-4 rounded-lg border bg-muted/50 p-4">
             <div className="flex flex-col gap-2">
@@ -575,7 +715,9 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                     ? 'Disputes and failed payments'
                     : github
                       ? 'New issues and pull requests'
-                      : 'New support request'
+                      : gmail
+                        ? 'Support inbox'
+                        : 'New support request'
                 }
               />
             </div>
@@ -594,23 +736,39 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={idFor('verification')}>Verify the sender with</Label>
-              <Select name="verification" defaultValue={stripe ? 'stripe' : 'hmac'}>
-                <SelectTrigger id={idFor('verification')} className="w-full bg-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {stripe && <SelectItem value="stripe">Stripe signature</SelectItem>}
-                  <SelectItem value="hmac">
-                    {github
-                      ? 'GitHub signature (a secret Brigade generates)'
-                      : 'A signing secret Brigade generates'}
-                  </SelectItem>
-                  <SelectItem value="none">Nothing (the URL alone)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {gmail ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={idFor('filter')}>Only emails matching (optional)</Label>
+                <Input
+                  id={idFor('filter')}
+                  name="filter"
+                  className="bg-card font-mono"
+                  placeholder="to:support@acme.com -category:promotions"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Gmail search, as in Gmail&apos;s search box. Leave it empty for every new email in
+                  the inbox.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={idFor('verification')}>Verify the sender with</Label>
+                <Select name="verification" defaultValue={stripe ? 'stripe' : 'hmac'}>
+                  <SelectTrigger id={idFor('verification')} className="w-full bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stripe && <SelectItem value="stripe">Stripe signature</SelectItem>}
+                    <SelectItem value="hmac">
+                      {github
+                        ? 'GitHub signature (a secret Brigade generates)'
+                        : 'A signing secret Brigade generates'}
+                    </SelectItem>
+                    <SelectItem value="none">Nothing (the URL alone)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {stripe && (
               <div className="flex flex-col gap-2">
                 <Label htmlFor={idFor('secret')}>Stripe signing secret</Label>
@@ -633,13 +791,13 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
               <Button type="button" variant="outline" onClick={() => setAdding(false)}>
                 Cancel
               </Button>
-              <Button>Create webhook</Button>
+              <Button>{gmail ? 'Create trigger' : 'Create webhook'}</Button>
             </div>
           </form>
         ) : (
           <div>
             <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-              Add a webhook
+              {gmail ? 'Add a trigger' : 'Add a webhook'}
             </Button>
           </div>
         ))}

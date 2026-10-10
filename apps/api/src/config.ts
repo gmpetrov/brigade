@@ -38,6 +38,11 @@ const Env = z.object({
   GITHUB_APP_CLIENT_SECRET: z.string().optional(),
   /** The app's private key: the .pem with \n escapes, or base64 of the file. */
   GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+  /**
+   * The app's webhook secret. Webhook URL {API_URL}/github/webhook, events "Push"
+   * (and installation events, sent anyway): computers then fetch the pushed repository.
+   */
+  GITHUB_APP_WEBHOOK_SECRET: z.string().optional(),
   /** Minutes without activity before a cloud computer stops. */
   IDLE_STOP_MINUTES: z.coerce.number().positive().default(30),
   /** The one bucket (Cloudflare R2), for library files. */

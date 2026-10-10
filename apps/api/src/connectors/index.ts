@@ -12,6 +12,18 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
 }
 
+/**
+ * How each kind of connection can start threads. http: the service posts to a
+ * Brigade URL. gmail: Brigade watches the inbox. Google Calendar has neither.
+ */
+export const triggerSource: Record<ConnectorDefinition['kind'], 'http' | 'gmail' | null> = {
+  gmail: 'gmail',
+  google_calendar: null,
+  stripe: 'http',
+  github: 'http',
+  webhook: 'http',
+}
+
 /** The operations a teammate may see for a grant: reads always, writes only with read_write. */
 export function operationSpecs(kind: ConnectorDefinition['kind'], scope: 'read' | 'read_write') {
   const connector = connectors[kind]

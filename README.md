@@ -102,8 +102,8 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **Event mapping.** Reasoning becomes `raw` with `source: "reasoning"`. Claude Code's `rate_limit_event` becomes
   `usage.updated` with 5-hour and 7-day utilization and reset times. Low-level `stream_event` echoes are dropped.
 - **Permission mode.** Member machine: `allow-reads` (ask before writes and commands). Cloud: `allow-all`.
-- **Thread directory** on a member's machine: `~/.brigade/teammates/<teammate>/threads/<thread>/` until projects and
-  worktrees arrive in step 11. Idle harness sessions are stopped after 5 minutes and resumed from saved state.
+- **Thread directory** on a member's machine: `~/.brigade/teammates/<teammate>/threads/<thread>/`. Repositories are
+  checked out inside it (see "Code from GitHub"). Idle harness sessions are stopped after 5 minutes and resumed from saved state.
 - **Approvals are answered inline** in the thread; ticket rows and the ticket queue come with steps 6–7.
 - **Sign-in is email and password** for now. Invitations by email come with step 10.
 - **The runner ships its own pinned pnpm** (10.x), because the Claude Code adapter installs its bridge with
@@ -251,6 +251,45 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,
   `simple` for paths) with a GIN index, queried with `websearch_to_tsquery`. Teammates get `search_workspace`
   (answered like a connector call); a teammate finds its own memory, never another teammate's.
+- **Code from GitHub** (`apps/api/src/git.ts`, `apps/api/src/routes/git.ts`, `apps/runner/src/repos.ts`). GitHub is
+  the source of truth; a computer's disk is a cache. Git reaches GitHub only through the API, which proxies git's
+  smart HTTP protocol at `/git/<owner>/<name>.git` and adds the installation token there, so no GitHub credential
+  reaches a computer (hard constraint 4). A teammate granted a GitHub connection gets `git` in its thread spec: the
+  proxy URL and a token signed by the API (HKDF from `BETTER_AUTH_SECRET`, 7 days) naming the thread, teammate and
+  computer. Every request is checked again: the thread on that computer, the teammate in it, a grant whose
+  installation reaches the repository (public repositories outside any installation are readable anonymously, so
+  dependencies keep working). Pushes need a `read_write` grant and a policy other than `deny`, count toward the write
+  cap, and may only update branches under `brigade/`; anything else is refused the way GitHub refuses a protected
+  branch (`! [remote rejected]`). Propose changes with `github_create_pull_request`, which asks as usual. Each clone or
+  fetch (`git_fetch`) and push (`git_push`) is a `ConnectionCall`. The runner passes git its settings as
+  `GIT_CONFIG_*` environment, never a file: the token as an `extraHeader` for the proxy URL only, and on the workspace
+  computer `github.com` URLs rewritten to the proxy and the teammate as commit author. Each teammate keeps a bare
+  cache per repository (`~/.repos/<owner>/<name>.git`, never pruned; `~/.brigade/repos` on a member's machine);
+  `checkout_repository` clones into the thread's directory with `--reference` to it, on
+  `brigade/<teammate>-<thread>`. When a thread goes quiet the runner backs up unpushed commits and changes to
+  tracked files (`git stash create`, so the teammate's branch and files are untouched) to
+  `brigade/wip/<thread>/<teammate>/<folder>` (`git_backup`, not counted toward caps). Untracked files are not backed
+  up, since they may hold secrets. When GitHub will not take the backup (a read-only grant, say), the runner sends a
+  `git bundle` of what GitHub lacks to `PUT /runner/backups/...` (runner token, threads on its computer only), kept in
+  the bucket at `<organization>/<workspace>/repos/<owner>/<name>/<thread>/<teammate>/<folder>.bundle`. A new checkout
+  in the same thread restores the backup (GitHub's first, then the bucket's) unless the pushed branch moved past it.
+  Cloned and fetched through a real installation; pushes to GitHub, and all of it on a cloud computer, are untested.
+- **Projects** (`Project`, `apps/api/src/routes/projects.ts`, the Projects page). A project is a repository
+  (`owner/name`) with an optional setup script and notes; owners and admins edit them, since the script runs on the
+  computers. They travel in the thread spec (`git.projects`): the notes go into the teammate's instruction file, and
+  `checkout_repository` runs the setup script once in each new checkout, as the teammate, for up to 20 minutes, and
+  returns its output. Projects add nothing to access: a teammate reaches what its GitHub grants reach.
+- **Push webhook** (`apps/api/src/routes/github-webhook.ts`). With `GITHUB_APP_WEBHOOK_SECRET` set and the app's
+  webhook at `{API_URL}/github/webhook` (event "Push"), a push sends `repos.changed` to every online computer
+  (protocol 5) of the workspaces using that installation, found by the connection's settings URL ending in
+  `/installations/<id>`. It carries a fetch-only token per granted teammate, valid ten minutes and tied to no thread
+  (not in any thread's call log); the runner fetches only caches it already has, and the message never wakes a stopped
+  computer or postpones its idle stop. Installation events reset the repository lists and the connections' status.
+- **Disk sweep** (`sweep` in `apps/runner/src/repos.ts`, every 6 hours). Threads are never archived, so the runner
+  removes a checkout when its thread is not in use there, its git files are 14 days old, and it holds nothing GitHub
+  lacks: no changes or untracked files (`git --no-optional-locks status`, so looking does not refresh the index), no
+  stash, no commit outside the remote branches. Then caches no remaining checkout borrows from, untouched for 30 days.
+  A thread that comes back checks its repository out again and continues its branch or backup.
 - **Root setup on cloud computers.** The helper and the library folder are one versioned setup script
   (`setupScript` in `cloud-bootstrap.ts`). A cloud runner reports the setup it has on connect; the API reapplies the
   current one through the provider when they differ. This replaces reinstalling the helper by hand.

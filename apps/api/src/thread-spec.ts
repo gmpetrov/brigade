@@ -2,6 +2,7 @@ import type { ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import type { ScopedDb } from './db.js'
 import { connectors, operationSpecs } from './connectors/index.js'
+import { gitAccess } from './git.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
 
 /**
@@ -94,12 +95,22 @@ export async function specFor(
     where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
     include: { connection: true },
   })
+  const github = grants.some(
+    (g) => g.connection.kind === 'github' && g.connection.status === 'active',
+  )
+  const projects = github
+    ? await db.project.findMany({
+        select: { repository: true, setupScript: true, notes: true },
+        orderBy: { repository: 'asc' },
+      })
+    : []
   return {
     connectors: grants
       .filter((g) => connectors[g.connection.kind])
       .map((g) => ({
         connectionId: g.connection.id,
-        kind: g.connection.kind,
+        // Only kinds with operations get here; a custom app's webhook connection has none.
+        kind: g.connection.kind as Exclude<typeof g.connection.kind, 'webhook'>,
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
@@ -120,5 +131,15 @@ export async function specFor(
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
     library: teammate.libraryAccess,
     private: thread.private,
+    // A GitHub grant also reaches its repositories through git, via the API's proxy.
+    ...(github
+      ? {
+          git: gitAccess(
+            { sessionId: thread.id, teammateId: teammate.id, computerId: thread.computerId },
+            teammate,
+            projects,
+          ),
+        }
+      : {}),
   }
 }

@@ -32,7 +32,12 @@ export const LibraryPath = z
     'Use a relative path like "folder/file.md", with no hidden or ".." parts',
   )
 
-export const DocumentKind = z.enum(['library', 'workspace_memory', 'teammate_memory', 'thread_summary'])
+export const DocumentKind = z.enum([
+  'library',
+  'workspace_memory',
+  'teammate_memory',
+  'thread_summary',
+])
 export type DocumentKind = z.infer<typeof DocumentKind>
 
 export const LibraryFile = z.object({
@@ -98,7 +103,9 @@ export type MemoryEdit = z.infer<typeof MemoryEdit>
 
 /** What the runner fetches to mirror the library and load memory. Never another workspace's. */
 export const LibraryManifest = z.object({
-  files: z.array(z.object({ id: z.string(), path: z.string(), sha256: z.string(), size: z.number() })),
+  files: z.array(
+    z.object({ id: z.string(), path: z.string(), sha256: z.string(), size: z.number() }),
+  ),
   memory: z.object({
     workspace: z.string(),
     teammates: z.record(z.string(), z.string()),

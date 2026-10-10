@@ -13,6 +13,7 @@ import { accountEnv } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { instructions, writeInstructions } from '../instructions.js'
+import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
 import {
@@ -29,17 +30,19 @@ import {
   connectorTools,
   credentialTools,
   libraryTools,
+  repoTools,
   type ConnectorCaller,
   type LibraryCaller,
 } from './tools.js'
 
 export type { ConnectorCaller, LibraryCaller } from './tools.js'
 
-/** What a thread reaches beyond its own directory: the library and memory. */
+/** What a thread reaches beyond its own directory: the library, memory and git backups. */
 export type ThreadContext = {
   libraryDir: string
   memoryFor: (teammateId: string) => { workspace: string; teammate: string }
   callLibrary: LibraryCaller
+  bundles: BundleStore
 }
 export type { CredentialRequester } from '../credentials.js'
 
@@ -71,6 +74,7 @@ function createAgent(
   credentials: ThreadCredentials,
   mcpServers: Record<string, unknown>,
   library: Parameters<typeof libraryTools>[0],
+  checkoutRepo: (input: CheckoutInput) => Promise<unknown>,
 ) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
@@ -81,6 +85,7 @@ function createAgent(
     ...connectorTools(spec.connectors, callConnector),
     ...credentialTools(credentials),
     ...libraryTools(library),
+    ...(spec.git ? repoTools(checkoutRepo) : {}),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
   }
@@ -168,6 +173,24 @@ export class HarnessThread {
       handoff = await this.switchTo(next, 'usage_limit', outcome.resetsAt)
       input = { kind: 'prompt', text: handoff }
     }
+  }
+
+  /**
+   * Back up what the teammate has not pushed in its checkouts, to GitHub. Called
+   * when the thread goes quiet: the computer's disk is a cache, GitHub the source.
+   */
+  async backup() {
+    await backup({
+      spec: this.spec,
+      workDir: this.workDir,
+      bundles: this.context.bundles,
+      ...(this.runAs ? { runAs: this.runAs } : {}),
+    })
+  }
+
+  /** A harness session is running, not parked. */
+  get active() {
+    return this.live !== undefined
   }
 
   /** Stop the harness and keep its saved state, so the next message resumes it. */
@@ -315,7 +338,7 @@ export class HarnessThread {
   private async attach(): Promise<Live> {
     if (this.live) return this.live
     const account = this.spec.account
-    const env = await prepare(this.workDir, account, this.runAs)
+    const env = { ...(await prepare(this.workDir, account, this.runAs)), ...gitEnv(this.spec.git) }
     // Memory loads through the harness's own instruction file.
     await writeInstructions(
       this.workDir,
@@ -355,6 +378,15 @@ export class HarnessThread {
         call: this.context.callLibrary,
         readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
       },
+      (request) =>
+        checkout({
+          // The latest spec: its git token is the freshest.
+          spec: this.spec,
+          workDir: this.workDir,
+          request,
+          bundles: this.context.bundles,
+          ...(this.runAs ? { runAs: this.runAs } : {}),
+        }),
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,

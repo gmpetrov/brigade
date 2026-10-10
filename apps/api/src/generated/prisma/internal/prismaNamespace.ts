@@ -2641,9 +2641,9 @@ export const ProjectScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
-  name: 'name',
-  repoUrl: 'repoUrl',
+  repository: 'repository',
   setupScript: 'setupScript',
+  notes: 'notes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2754,8 +2754,11 @@ export const WebhookScalarFieldEnum = {
   connectionId: 'connectionId',
   teammateId: 'teammateId',
   label: 'label',
+  source: 'source',
   pathToken: 'pathToken',
   verification: 'verification',
+  filter: 'filter',
+  cursor: 'cursor',
   createdByMemberId: 'createdByMemberId',
   verificationSecretId: 'verificationSecretId',
   createdAt: 'createdAt'
@@ -3113,6 +3116,20 @@ export type EnumGrantScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'GrantScope[]'
  */
 export type ListEnumGrantScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GrantScope[]'>
+    
+
+
+/**
+ * Reference to a field of type 'WebhookSource'
+ */
+export type EnumWebhookSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookSource'>
+    
+
+
+/**
+ * Reference to a field of type 'WebhookSource[]'
+ */
+export type ListEnumWebhookSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookSource[]'>
     
 
 

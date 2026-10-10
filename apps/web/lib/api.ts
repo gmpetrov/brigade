@@ -115,7 +115,7 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
   origin: 'member' | 'webhook'
-  webhook: { id: string; label: string } | null
+  webhook: { id: string; label: string; source: 'http' | 'gmail' } | null
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
 }
 
@@ -156,7 +156,8 @@ export const computerName = (c: { kind: string; name: string }) =>
 
 export type Connection = {
   id: string
-  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github'
+  /** webhook: a custom app that posts events to Brigade. Inbound only. */
+  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
   label: string
   externalAccount: string | null
   /** Where a person manages the account at the provider, e.g. a GitHub installation's settings. */
@@ -189,12 +190,17 @@ export type CredentialUse = {
   via: 'mention' | 'approval'
 }
 
+/** Starts threads for a teammate: events posted to a URL (http), or new mail in a Gmail inbox. */
 export type Webhook = {
   id: string
   label: string
   connectionId: string
+  source: 'http' | 'gmail'
   verification: 'stripe' | 'hmac' | 'none'
-  url: string
+  /** http only. */
+  url: string | null
+  /** gmail only: the Gmail search new mail must match. */
+  filter: string | null
   hasSecret: boolean
   createdAt: string
   teammate: { id: string; name: string }
@@ -306,3 +312,7 @@ export async function openDesktop(
     throw error
   }
 }
+
+export type { Project } from '@brigade/contracts'
+/** A repository the workspace's GitHub connections reach. */
+export type RepositoryOption = { repository: string; private: boolean; connection: string }

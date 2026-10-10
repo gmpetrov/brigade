@@ -5,12 +5,13 @@ export * from './events.js'
 export * from './library.js'
 export * from './mentions.js'
 export * from './models.js'
+export * from './projects.js'
 export * from './runner.js'
 
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
- * 3: self-update. 4: the library, memory and search.
+ * 3: self-update. 4: the library, memory and search. 5: git through the API's proxy.
  */
-export const PROTOCOL_VERSION = 4
+export const PROTOCOL_VERSION = 5
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

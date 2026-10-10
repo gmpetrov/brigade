@@ -7,6 +7,7 @@ import { promisify } from 'node:util'
 import type { AgentEvent, ThreadSpec } from '@brigade/contracts'
 import { CLOUD } from './config.js'
 import { harnessEnv } from './harness/env.js'
+import { gitEnv } from './repos.js'
 import { ensureUser, teammateHome, teammateUser } from './teammates.js'
 
 const execFileAsync = promisify(execFile)
@@ -60,6 +61,8 @@ export class Terminals {
       TERM: 'xterm-256color',
       HISTFILE: history,
       PROMPT_COMMAND: 'history -a',
+      // A person in control pushes as the teammate would: through Brigade, to brigade/ branches.
+      ...gitEnv(spec.git),
     })
     // `script` gives the shell a real terminal without a native module.
     const shell = `stty cols ${cols} rows ${rows} 2>/dev/null; cd ${quote(dir)} && exec bash --login`

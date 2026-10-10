@@ -56,7 +56,8 @@ function useMentionOptions(threadId?: string): Option[] {
         hint: 'AI teammate',
       })),
       ...(connections.data?.connections ?? [])
-        .filter((c) => c.status !== 'removed')
+        // A custom app only sends events: there is nothing for a teammate to use.
+        .filter((c) => c.status !== 'removed' && c.kind !== 'webhook')
         .map((c) => ({
           kind: 'connection' as const,
           id: c.id,

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { ProjectSpec } from './projects.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -37,7 +38,23 @@ export const ConnectorGrant = z.object({
 })
 export type ConnectorGrant = z.infer<typeof ConnectorGrant>
 
-/** What a runner needs to start or continue a thread. Never a secret. */
+/**
+ * Git through the API's proxy (see the API's routes/git.ts). The token is a
+ * capability for that proxy, limited to one thread and teammate and checked
+ * against its grants on every request; never a GitHub credential.
+ */
+export const GitAccess = z.object({
+  /** The proxy's base URL; a repository is at <url><owner>/<name>.git. */
+  url: z.url(),
+  token: z.string(),
+  /** Who the teammate's commits are by on a cloud computer. */
+  author: z.object({ name: z.string(), email: z.string() }),
+  /** The workspace's projects: a setup script for fresh checkouts and notes for the teammate. */
+  projects: z.array(ProjectSpec).default([]),
+})
+export type GitAccess = z.infer<typeof GitAccess>
+
+/** What a runner needs to start or continue a thread. Never a secret, except git's proxy token. */
 export const ThreadSpec = z.object({
   sessionId: z.string(),
   teammate: z.object({
@@ -65,6 +82,8 @@ export const ThreadSpec = z.object({
   library: LibraryAccess.default('read'),
   /** A private thread does not write to workspace memory, and its summary is not searchable. */
   private: z.boolean().default(false),
+  /** Set when the teammate is granted a GitHub connection: its repositories through git. */
+  git: GitAccess.optional(),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -225,6 +244,15 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
+  /**
+   * A repository got a push on GitHub: bring the teammates' caches of it up to
+   * date, if this computer has any. Each token is fetch-only, for a few minutes.
+   */
+  z.object({
+    type: z.literal('repos.changed'),
+    repository: z.string(),
+    fetch: z.array(z.object({ teammateId: z.string(), url: z.url(), token: z.string() })).max(50),
+  }),
   /**
    * Read a file a thread mentions, for a person viewing it: relative to a
    * teammate's working folder for the thread (tried in order), or an absolute

@@ -34,6 +34,25 @@ export function documentKey(scope: Scope, documentId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/library/${documentId}`
 }
 
+const REPO_PART = /^[a-z0-9_.-]{1,100}$/
+
+/**
+ * The bucket key of a thread's git backup: a bundle of what a teammate had not
+ * pushed in one checkout, kept when GitHub would not take it.
+ */
+export function repoBackupKey(
+  scope: Scope,
+  backup: { repository: string; sessionId: string; teammateId: string; folder: string },
+) {
+  const [owner = '', name = ''] = backup.repository.split('/')
+  for (const part of [scope.organizationId, scope.workspaceId, backup.sessionId, backup.teammateId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  for (const part of [owner, name, backup.folder])
+    if (!REPO_PART.test(part) || part === '.' || part === '..')
+      throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/repos/${owner}/${name}/${backup.sessionId}/${backup.teammateId}/${backup.folder}.bundle`
+}
+
 const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponent).join('/')}`
 
 export async function putObject(key: string, body: Uint8Array, contentType: string) {

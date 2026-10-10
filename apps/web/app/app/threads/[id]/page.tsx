@@ -138,7 +138,7 @@ export default function ThreadPage() {
               <span aria-hidden>·</span>
               <span>
                 {t.origin === 'webhook'
-                  ? `started by webhook "${t.webhook?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
+                  ? `started by ${t.webhook?.source === 'gmail' ? 'Gmail trigger' : 'webhook'} "${t.webhook?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
                   : `started by ${t.startedBy.user.name}`}
               </span>
             </div>

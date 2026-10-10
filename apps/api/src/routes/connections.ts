@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
 import { connectors } from '../connectors/index.js'
-import { ConnectGoogle, ConnectStripe } from '@brigade/contracts'
+import { ConnectGoogle, ConnectStripe, ConnectWebhookApp } from '@brigade/contracts'
 import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { deleteWebhooks } from './webhooks.js'
@@ -81,7 +81,7 @@ const saveState = (identifier: string, value: OAuthState) =>
     },
   })
 
-/** Seal the credential in the vault and record the connection. */
+/** Seal the credential, if any, in the vault and record the connection. */
 async function createConnection(
   scope: WorkspaceScope,
   connection: {
@@ -90,10 +90,10 @@ async function createConnection(
     externalAccount: string | null
     externalUrl?: string
   },
-  credential: object,
+  credential: object | null,
 ) {
   const db = scoped(scope)
-  const vaultSecretId = await sealSecret(db, scope, credential)
+  const vaultSecretId = credential ? await sealSecret(db, scope, credential) : null
   const row = await db.connection.create({
     data: { ...connection, vaultSecretId, createdByMemberId: scope.memberId } as never,
   })
@@ -214,6 +214,7 @@ export const connections = new Hono<AppEnv>()
         google_calendar: googleConfigured(),
         stripe: true,
         github: githubConfigured(),
+        webhook: true,
       },
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
     })
@@ -261,6 +262,22 @@ export const connections = new Hono<AppEnv>()
       scope,
       { kind: 'stripe', label: input.label ?? 'Stripe', externalAccount: account },
       { apiKey: input.apiKey },
+    )
+    return c.json({ id: connection.id }, 201)
+  })
+
+  /**
+   * A custom app that posts events to Brigade. Nothing to sign in to: its
+   * webhooks, added next, each carry their own URL and signing secret.
+   */
+  .post('/webhook', async (c) => {
+    const { scope } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const input = await parseBody(c.req.raw, ConnectWebhookApp)
+    const connection = await createConnection(
+      scope,
+      { kind: 'webhook', label: input.label, externalAccount: null },
+      null,
     )
     return c.json({ id: connection.id }, 201)
   })

@@ -8,11 +8,11 @@ import {
   type ConnectorDefinition,
 } from './types.js'
 
-const API = 'https://gmail.googleapis.com/gmail/v1/users/me'
+export const API = 'https://gmail.googleapis.com/gmail/v1/users/me'
 
 type Header = { name: string; value: string }
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[]; headers?: Header[] }
-type Message = {
+export type Message = {
   id: string
   threadId: string
   snippet?: string
@@ -50,7 +50,7 @@ const summary = (m: Message) => ({
   labels: m.labelIds,
 })
 
-const full = (m: Message) => ({
+export const full = (m: Message) => ({
   ...summary(m),
   cc: header(m, 'Cc'),
   body: textOf(m.payload).slice(0, 50_000),

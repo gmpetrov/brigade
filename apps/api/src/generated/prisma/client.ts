@@ -120,7 +120,8 @@ export type SessionEvent = Prisma.SessionEventModel
 export type Account = Prisma.AccountModel
 /**
  * Model Project
- * A code repository used for engineering work.
+ * A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
+ * Reached through a GitHub connection; this only adds what teammates should do with it.
  */
 export type Project = Prisma.ProjectModel
 /**
@@ -156,7 +157,8 @@ export type Grant = Prisma.GrantModel
 export type ConnectionCall = Prisma.ConnectionCallModel
 /**
  * Model Webhook
- * An inbound URL, its verification secret and its assigned teammate.
+ * Something outside that starts threads for a teammate: an inbound URL (http) or new
+ * mail in a Gmail connection's inbox (gmail).
  */
 export type Webhook = Prisma.WebhookModel
 /**

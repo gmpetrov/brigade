@@ -331,9 +331,9 @@ export const ProjectScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
-  name: 'name',
-  repoUrl: 'repoUrl',
+  repository: 'repository',
   setupScript: 'setupScript',
+  notes: 'notes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -444,8 +444,11 @@ export const WebhookScalarFieldEnum = {
   connectionId: 'connectionId',
   teammateId: 'teammateId',
   label: 'label',
+  source: 'source',
   pathToken: 'pathToken',
   verification: 'verification',
+  filter: 'filter',
+  cursor: 'cursor',
   createdByMemberId: 'createdByMemberId',
   verificationSecretId: 'verificationSecretId',
   createdAt: 'createdAt'

@@ -155,6 +155,10 @@ export const teammates = new Hono<AppEnv>()
     })
     if (!teammate || !connection)
       throw new HTTPException(404, { message: 'Teammate or connection not found' })
+    if (connection.kind === 'webhook')
+      throw new HTTPException(400, {
+        message: 'A custom app only sends events; there is nothing to grant',
+      })
     await db.grant.deleteMany({ where: { teammateId: teammate.id, connectionId: connection.id } })
     if (input.scope !== 'none') {
       await db.grant.create({

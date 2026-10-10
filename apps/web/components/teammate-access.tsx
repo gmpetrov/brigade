@@ -11,11 +11,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ProviderTile } from '@/components/provider-logo'
-import { api, useApi, type ConnectionsResponse, type Teammate } from '@/lib/api'
+import { api, useApi, type ConnectionsResponse, type Teammate, type Webhook } from '@/lib/api'
 
 type Scope = 'none' | 'read' | 'read_write'
 
-/** Which connections a teammate may use, and whether its changes wait for a person. */
+/**
+ * Which connections a teammate may use, whether its changes wait for a person,
+ * and what outside starts threads for it.
+ */
 export function TeammateAccess({
   teammate,
   editable,
@@ -29,6 +32,7 @@ export function TeammateAccess({
   const grants = useApi<{ connectionId: string; scope: Exclude<Scope, 'none'> }[]>(
     `/teammates/${teammate.id}/grants`,
   )
+  const hooks = useApi<Webhook[]>('/webhooks')
   const [error, setError] = useState<string>()
   const policy = (teammate.permissionPolicy?.connectorWrites ?? 'ask') as 'allow' | 'ask' | 'deny'
 
@@ -63,7 +67,10 @@ export function TeammateAccess({
     onPolicyChange()
   }
 
-  const list = connections.data?.connections ?? []
+  const all = connections.data?.connections ?? []
+  // A custom app only sends events: nothing to grant.
+  const list = all.filter((c) => c.kind !== 'webhook')
+  const triggers = (hooks.data ?? []).filter((w) => w.teammate.id === teammate.id)
   return (
     <Card className="gap-0 overflow-hidden pb-0">
       <CardHeader className="pb-4">
@@ -161,6 +168,45 @@ export function TeammateAccess({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-col gap-0.5 border-t px-6 pt-4 pb-2">
+          <h3 className="text-sm font-bold">Starts threads from</h3>
+          <p className="text-xs text-muted-foreground">
+            Webhooks and Gmail triggers. Their threads always ask a person before changes.
+          </p>
+        </div>
+        {triggers.length === 0 ? (
+          <p className="px-6 pb-3 text-sm text-muted-foreground">
+            Nothing yet.{' '}
+            <Link href="/app/connections" className="font-medium text-primary hover:underline">
+              Add a webhook or trigger
+            </Link>{' '}
+            on a connection.
+          </p>
+        ) : (
+          triggers.map((w) => {
+            const c = all.find((c) => c.id === w.connectionId)
+            const from = c ? (c.externalAccount ?? c.label) : 'a removed connection'
+            return (
+              <div key={w.id} className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
+                {c && <ProviderTile kind={c.kind} small />}
+                <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
+                  <span className="truncate text-sm font-semibold">{w.label}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {w.source === 'gmail'
+                      ? `New mail in ${from}${w.filter ? ` matching ${w.filter}` : ''}`
+                      : `Events posted by ${from}`}
+                  </span>
+                </span>
+                <Link
+                  href="/app/connections"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Manage
+                </Link>
+              </div>
+            )
+          })
+        )}
         {error && <p className="border-t px-6 py-3 text-sm text-destructive-text">{error}</p>}
       </CardContent>
     </Card>

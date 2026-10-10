@@ -115,6 +115,8 @@ export async function writeCapReached(
       connectionId,
       write: true,
       result: { in: ['ok', 'error'] },
+      // The runner's own backups of a quiet thread are not the teammate's writes.
+      operation: { not: 'git_backup' },
       createdAt: { gte: dayStart() },
     },
   })
@@ -133,6 +135,7 @@ export async function usageToday(db: ScopedDb, teammate: { id: string; caps: unk
         teammateId: teammate.id,
         write: true,
         result: { in: ['ok', 'error'] },
+        operation: { not: 'git_backup' },
         createdAt: { gte: since },
       },
       _count: { _all: true },

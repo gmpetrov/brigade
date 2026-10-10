@@ -229,6 +229,21 @@ export class Threads {
     this.enqueue(spec, 'prompt', this.note(spec, null, 'A member', text))
   }
 
+  /**
+   * Whether a thread is in use here: a turn queued or running, a person in
+   * control, or a harness session not yet parked (one waiting for an approval,
+   * say). Its checkouts stay.
+   */
+  inUse(sessionId: string) {
+    const thread = this.threads.get(sessionId)
+    if (!thread) return false
+    return (
+      Boolean(thread.controller || thread.takeover) ||
+      [...thread.waiting.values()].some((n) => n > 0) ||
+      [...thread.harnesses.values()].some((seat) => seat.harness.active)
+    )
+  }
+
   /** A turn is running or queued somewhere. Threads waiting for a person do not count. */
   get busy() {
     return this.pending > 0
@@ -257,6 +272,7 @@ export class Threads {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
     clearTimeout(seat.parkTimer)
+    seat.parkTimer = undefined
     clearTimeout(thread.quietTimer)
     this.pending++
     const me = spec.teammate.id
@@ -290,10 +306,14 @@ export class Threads {
           })
         }
         if (outcome.status === 'idle') {
-          seat.parkTimer = setTimeout(
-            () => void seat.harness.park().catch(console.error),
-            PARK_AFTER_MS,
-          )
+          // Quiet: park the harness, then put what it has not pushed on GitHub.
+          seat.parkTimer = setTimeout(() => {
+            seat.parkTimer = undefined
+            void seat.harness
+              .park()
+              .then(() => seat.harness.backup())
+              .catch(console.error)
+          }, PARK_AFTER_MS)
           thread.lastSpec = spec
           clearTimeout(thread.quietTimer)
           thread.quietTimer = setTimeout(() => this.memorize(spec.sessionId), QUIET_AFTER_MS)

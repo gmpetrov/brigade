@@ -14,7 +14,8 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model Project
- * A code repository used for engineering work.
+ * A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
+ * Reached through a GitHub connection; this only adds what teammates should do with it.
  */
 export type ProjectModel = runtime.Types.Result.DefaultSelection<Prisma.$ProjectPayload>
 
@@ -28,9 +29,9 @@ export type ProjectMinAggregateOutputType = {
   id: string | null
   organizationId: string | null
   workspaceId: string | null
-  name: string | null
-  repoUrl: string | null
+  repository: string | null
   setupScript: string | null
+  notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -39,9 +40,9 @@ export type ProjectMaxAggregateOutputType = {
   id: string | null
   organizationId: string | null
   workspaceId: string | null
-  name: string | null
-  repoUrl: string | null
+  repository: string | null
   setupScript: string | null
+  notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,9 +51,9 @@ export type ProjectCountAggregateOutputType = {
   id: number
   organizationId: number
   workspaceId: number
-  name: number
-  repoUrl: number
+  repository: number
   setupScript: number
+  notes: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -63,9 +64,9 @@ export type ProjectMinAggregateInputType = {
   id?: true
   organizationId?: true
   workspaceId?: true
-  name?: true
-  repoUrl?: true
+  repository?: true
   setupScript?: true
+  notes?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -74,9 +75,9 @@ export type ProjectMaxAggregateInputType = {
   id?: true
   organizationId?: true
   workspaceId?: true
-  name?: true
-  repoUrl?: true
+  repository?: true
   setupScript?: true
+  notes?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -85,9 +86,9 @@ export type ProjectCountAggregateInputType = {
   id?: true
   organizationId?: true
   workspaceId?: true
-  name?: true
-  repoUrl?: true
+  repository?: true
   setupScript?: true
+  notes?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -169,9 +170,9 @@ export type ProjectGroupByOutputType = {
   id: string
   organizationId: string
   workspaceId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript: string | null
+  notes: string
   createdAt: Date
   updatedAt: Date
   _count: ProjectCountAggregateOutputType | null
@@ -201,9 +202,9 @@ export type ProjectWhereInput = {
   id?: Prisma.StringFilter<"Project"> | string
   organizationId?: Prisma.StringFilter<"Project"> | string
   workspaceId?: Prisma.StringFilter<"Project"> | string
-  name?: Prisma.StringFilter<"Project"> | string
-  repoUrl?: Prisma.StringFilter<"Project"> | string
+  repository?: Prisma.StringFilter<"Project"> | string
   setupScript?: Prisma.StringNullableFilter<"Project"> | string | null
+  notes?: Prisma.StringFilter<"Project"> | string
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -213,9 +214,9 @@ export type ProjectOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  repoUrl?: Prisma.SortOrder
+  repository?: Prisma.SortOrder
   setupScript?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -223,26 +224,27 @@ export type ProjectOrderByWithRelationInput = {
 
 export type ProjectWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  workspaceId_repository?: Prisma.ProjectWorkspaceIdRepositoryCompoundUniqueInput
   AND?: Prisma.ProjectWhereInput | Prisma.ProjectWhereInput[]
   OR?: Prisma.ProjectWhereInput[]
   NOT?: Prisma.ProjectWhereInput | Prisma.ProjectWhereInput[]
   organizationId?: Prisma.StringFilter<"Project"> | string
   workspaceId?: Prisma.StringFilter<"Project"> | string
-  name?: Prisma.StringFilter<"Project"> | string
-  repoUrl?: Prisma.StringFilter<"Project"> | string
+  repository?: Prisma.StringFilter<"Project"> | string
   setupScript?: Prisma.StringNullableFilter<"Project"> | string | null
+  notes?: Prisma.StringFilter<"Project"> | string
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
-}, "id">
+}, "id" | "workspaceId_repository">
 
 export type ProjectOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  repoUrl?: Prisma.SortOrder
+  repository?: Prisma.SortOrder
   setupScript?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ProjectCountOrderByAggregateInput
@@ -257,9 +259,9 @@ export type ProjectScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Project"> | string
   organizationId?: Prisma.StringWithAggregatesFilter<"Project"> | string
   workspaceId?: Prisma.StringWithAggregatesFilter<"Project"> | string
-  name?: Prisma.StringWithAggregatesFilter<"Project"> | string
-  repoUrl?: Prisma.StringWithAggregatesFilter<"Project"> | string
+  repository?: Prisma.StringWithAggregatesFilter<"Project"> | string
   setupScript?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
+  notes?: Prisma.StringWithAggregatesFilter<"Project"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Project"> | Date | string
 }
@@ -267,9 +269,9 @@ export type ProjectScalarWhereWithAggregatesInput = {
 export type ProjectCreateInput = {
   id?: string
   organizationId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutProjectsInput
@@ -279,9 +281,9 @@ export type ProjectUncheckedCreateInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -289,9 +291,9 @@ export type ProjectUncheckedCreateInput = {
 export type ProjectUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutProjectsNestedInput
@@ -301,9 +303,9 @@ export type ProjectUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -312,9 +314,9 @@ export type ProjectCreateManyInput = {
   id?: string
   organizationId: string
   workspaceId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -322,9 +324,9 @@ export type ProjectCreateManyInput = {
 export type ProjectUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -333,9 +335,9 @@ export type ProjectUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -350,13 +352,18 @@ export type ProjectOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ProjectWorkspaceIdRepositoryCompoundUniqueInput = {
+  workspaceId: string
+  repository: string
+}
+
 export type ProjectCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  repoUrl?: Prisma.SortOrder
+  repository?: Prisma.SortOrder
   setupScript?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -365,9 +372,9 @@ export type ProjectMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  repoUrl?: Prisma.SortOrder
+  repository?: Prisma.SortOrder
   setupScript?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -376,9 +383,9 @@ export type ProjectMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  repoUrl?: Prisma.SortOrder
+  repository?: Prisma.SortOrder
   setupScript?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -428,9 +435,9 @@ export type ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput = {
 export type ProjectCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -438,9 +445,9 @@ export type ProjectCreateWithoutWorkspaceInput = {
 export type ProjectUncheckedCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -478,9 +485,9 @@ export type ProjectScalarWhereInput = {
   id?: Prisma.StringFilter<"Project"> | string
   organizationId?: Prisma.StringFilter<"Project"> | string
   workspaceId?: Prisma.StringFilter<"Project"> | string
-  name?: Prisma.StringFilter<"Project"> | string
-  repoUrl?: Prisma.StringFilter<"Project"> | string
+  repository?: Prisma.StringFilter<"Project"> | string
   setupScript?: Prisma.StringNullableFilter<"Project"> | string | null
+  notes?: Prisma.StringFilter<"Project"> | string
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
 }
@@ -488,9 +495,9 @@ export type ProjectScalarWhereInput = {
 export type ProjectCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
-  name: string
-  repoUrl: string
+  repository: string
   setupScript?: string | null
+  notes?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -498,9 +505,9 @@ export type ProjectCreateManyWorkspaceInput = {
 export type ProjectUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -508,9 +515,9 @@ export type ProjectUpdateWithoutWorkspaceInput = {
 export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -518,9 +525,9 @@ export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
 export type ProjectUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  repoUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
   setupScript?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -531,9 +538,9 @@ export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   id?: boolean
   organizationId?: boolean
   workspaceId?: boolean
-  name?: boolean
-  repoUrl?: boolean
+  repository?: boolean
   setupScript?: boolean
+  notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -543,9 +550,9 @@ export type ProjectSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   id?: boolean
   organizationId?: boolean
   workspaceId?: boolean
-  name?: boolean
-  repoUrl?: boolean
+  repository?: boolean
   setupScript?: boolean
+  notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -555,9 +562,9 @@ export type ProjectSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   id?: boolean
   organizationId?: boolean
   workspaceId?: boolean
-  name?: boolean
-  repoUrl?: boolean
+  repository?: boolean
   setupScript?: boolean
+  notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -567,14 +574,14 @@ export type ProjectSelectScalar = {
   id?: boolean
   organizationId?: boolean
   workspaceId?: boolean
-  name?: boolean
-  repoUrl?: boolean
+  repository?: boolean
   setupScript?: boolean
+  notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "repoUrl" | "setupScript" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
+export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "setupScript" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
 export type ProjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }
@@ -594,9 +601,18 @@ export type $ProjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     id: string
     organizationId: string
     workspaceId: string
-    name: string
-    repoUrl: string
+    /**
+     * owner/name on GitHub, lowercase.
+     */
+    repository: string
+    /**
+     * Shell run in a fresh checkout as the teammate, e.g. "pnpm install".
+     */
     setupScript: string | null
+    /**
+     * What teammates should know about it, added to their instructions.
+     */
+    notes: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["project"]>
@@ -1026,9 +1042,9 @@ export interface ProjectFieldRefs {
   readonly id: Prisma.FieldRef<"Project", 'String'>
   readonly organizationId: Prisma.FieldRef<"Project", 'String'>
   readonly workspaceId: Prisma.FieldRef<"Project", 'String'>
-  readonly name: Prisma.FieldRef<"Project", 'String'>
-  readonly repoUrl: Prisma.FieldRef<"Project", 'String'>
+  readonly repository: Prisma.FieldRef<"Project", 'String'>
   readonly setupScript: Prisma.FieldRef<"Project", 'String'>
+  readonly notes: Prisma.FieldRef<"Project", 'String'>
   readonly createdAt: Prisma.FieldRef<"Project", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Project", 'DateTime'>
 }

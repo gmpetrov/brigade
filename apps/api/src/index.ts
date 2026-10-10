@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server'
 import { WebSocketServer } from 'ws'
 import { app } from './app.js'
 import { env } from './config.js'
+import { watchGmail } from './triggers.js'
 
 serve(
   {
@@ -13,3 +14,5 @@ serve(
     console.log(`api listening on http://localhost:${info.port}`)
   },
 )
+
+watchGmail()

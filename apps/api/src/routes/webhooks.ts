@@ -1,15 +1,17 @@
-// Inbound webhooks: a Brigade URL a third-party app posts to. Each event opens
-// a new thread for the webhook's teammate, with the payload as its first message.
+// Webhooks and triggers. An http webhook is a Brigade URL a third-party app
+// posts to; a gmail trigger watches a Gmail connection's inbox (see triggers.ts).
+// Each event opens a new thread for the teammate, with the event as its first message.
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { CreateWebhook, SetWebhookSecret } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
-import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
+import { triggerSource } from '../connectors/index.js'
+import { scoped, type Scope, type ScopedDb } from '../db.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { deleteSecret, openSecret, replaceSecret, sealSecret } from '../vault.js'
-import { startThread } from '../work.js'
+import { deliver, fenced, findWebhook } from '../triggers.js'
 
 const MAX_BODY = 1024 * 1024
 /** Stripe's default tolerance for a signature's timestamp. */
@@ -41,9 +43,9 @@ export const webhooks = new Hono<AppEnv>()
       orderBy: { createdAt: 'asc' },
     })
     return c.json(
-      rows.map(({ verificationSecretId, pathToken, ...row }) => ({
+      rows.map(({ verificationSecretId, pathToken, cursor: _cursor, ...row }) => ({
         ...row,
-        url: urlOf(pathToken),
+        url: pathToken ? urlOf(pathToken) : null,
         hasSecret: Boolean(verificationSecretId),
       })),
     )
@@ -60,6 +62,34 @@ export const webhooks = new Hono<AppEnv>()
     ])
     if (!connection || !teammate)
       throw new HTTPException(404, { message: 'Connection or teammate not found' })
+    const source = triggerSource[connection.kind]
+    if (!source)
+      throw new HTTPException(400, { message: `${connection.label} cannot start threads` })
+
+    if (source === 'gmail') {
+      const row = await db.webhook.create({
+        data: {
+          connectionId: connection.id,
+          teammateId: teammate.id,
+          label: input.label,
+          source,
+          verification: 'none',
+          filter: input.filter || null,
+          createdByMemberId: scope.memberId,
+        } as never,
+      })
+      await audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'webhook.created',
+        target: { type: 'webhook', id: row.id },
+        data: { connectionId: connection.id, teammateId: teammate.id, source, filter: row.filter },
+      })
+      return c.json({ id: row.id, url: null }, 201)
+    }
+
+    if (!input.verification)
+      throw new HTTPException(400, { message: 'Choose how the sender is verified' })
     let secret: string | null = null
     if (input.verification === 'stripe') {
       if (connection.kind !== 'stripe')
@@ -78,6 +108,7 @@ export const webhooks = new Hono<AppEnv>()
         connectionId: connection.id,
         teammateId: teammate.id,
         label: input.label,
+        source,
         verification: input.verification,
         pathToken,
         verificationSecretId,
@@ -92,6 +123,7 @@ export const webhooks = new Hono<AppEnv>()
       data: {
         connectionId: connection.id,
         teammateId: teammate.id,
+        source,
         verification: input.verification,
       },
     })
@@ -169,10 +201,7 @@ function verifyHmac(header: string | undefined, body: string, secret: string) {
 
 /** The public endpoint third-party apps post to. No session: the URL and signature identify it. */
 export const inboundWebhooks = new Hono().post('/:token', async (c) => {
-  const webhook = await prisma.webhook.findUnique({
-    where: { pathToken: c.req.param('token') },
-    include: { teammate: true, connection: true },
-  })
+  const webhook = await findWebhook(c.req.param('token'))
   if (!webhook) return c.json({ error: 'Unknown webhook' }, 404)
   const scope: Scope = { organizationId: webhook.organizationId, workspaceId: webhook.workspaceId }
   const db = scoped(scope)
@@ -217,75 +246,22 @@ export const inboundWebhooks = new Hono().post('/:token', async (c) => {
     c.req.header('x-github-delivery') ||
     c.req.header('x-request-id') ||
     null
-  if (eventId) {
-    const seen = await db.auditEntry.findFirst({
-      where: {
-        action: 'webhook.received',
-        targetId: webhook.id,
-        data: { path: ['eventId'], equals: eventId },
-      },
-    })
-    if (seen) return c.json({ ok: true, duplicate: true })
-  }
 
-  // The workspace computer, or else the member who set it up's own machine.
-  const computer =
-    (await db.computer.findFirst({
-      where: { kind: 'cloud', status: { not: 'destroyed' } },
-    })) ??
-    (await db.computer.findFirst({
-      where: { kind: 'member_machine', memberId: webhook.createdByMemberId },
-      orderBy: { updatedAt: 'desc' },
-    }))
-  const receivedAt = new Date().toISOString()
   const text = [
-    `Inbound webhook "${webhook.label}" from ${webhook.connection.externalAccount ?? webhook.connection.label}, event ${eventType}, received ${receivedAt}. Payload:`,
-    '```' + (typeof payload === 'string' ? '' : 'json'),
-    typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2),
-    '```',
+    `Inbound webhook "${webhook.label}" from ${webhook.connection.externalAccount ?? webhook.connection.label}, event ${eventType}, received ${new Date().toISOString()}. Payload:`,
+    typeof payload === 'string'
+      ? fenced(payload)
+      : fenced(JSON.stringify(payload, null, 2), 'json'),
   ].join('\n')
 
-  const failed = async (message: string) => {
-    // Never silent: a ticket for the member who set the webhook up. The sender retries.
-    const open = await db.ticket.count({
-      where: {
-        type: 'question',
-        status: 'open',
-        payload: { path: ['webhookId'], equals: webhook.id },
-      },
-    })
-    if (!open)
-      await db.ticket.create({
-        data: {
-          type: 'question',
-          title: `Webhook "${webhook.label}" could not start a thread: ${message}`,
-          payload: { webhookId: webhook.id, memberId: webhook.createdByMemberId },
-        } as never,
-      })
-    return c.json({ error: message }, 503, { 'retry-after': '300' })
-  }
-  if (!computer) return failed('the workspace has no computer')
-
-  try {
-    const { thread, outcome } = await startThread(db, scope, {
-      teammate: webhook.teammate,
-      computer,
-      memberId: webhook.createdByMemberId,
-      title: `${webhook.label}: ${eventType}`,
-      text,
-      origin: { webhookId: webhook.id },
-    })
-    if (outcome === 'offline') return failed('the computer is offline')
-    await audit({
-      ...scope,
-      actor: { type: 'system', id: `webhook:${webhook.id}` },
-      action: 'webhook.received',
-      target: { type: 'webhook', id: webhook.id },
-      data: { eventId, eventType, threadId: thread.id, outcome },
-    })
-    return c.json({ ok: true, threadId: thread.id, paused: outcome === 'paused' }, 202)
-  } catch (error) {
-    if (error instanceof HTTPException) return failed(error.message)
-    throw error
-  }
+  const delivery = await deliver(webhook, {
+    eventId,
+    eventType,
+    title: `${webhook.label}: ${eventType}`,
+    text,
+  })
+  // The sender retries.
+  if ('error' in delivery) return c.json({ error: delivery.error }, 503, { 'retry-after': '300' })
+  if ('duplicate' in delivery) return c.json({ ok: true, duplicate: true })
+  return c.json({ ok: true, threadId: delivery.threadId, paused: delivery.paused }, 202)
 })
