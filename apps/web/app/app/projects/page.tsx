@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
-import { FolderGit2, Plus } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Check, ChevronsUpDown, FolderGit2, Lock, Plus } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -59,6 +59,7 @@ export default function ProjectsPage() {
 
       {adding && (
         <ProjectForm
+          taken={(projects.data ?? []).map((p) => p.repository)}
           onCancel={() => setAdding(false)}
           onSaved={async () => {
             setAdding(false)
@@ -165,26 +166,32 @@ export default function ProjectsPage() {
 /** Add a project, or edit one's setup script and notes. */
 function ProjectForm({
   project,
+  taken = [],
   onCancel,
   onSaved,
 }: {
   project?: Project
+  /** Repositories that are projects already, left out of the picker. */
+  taken?: string[]
   onCancel: () => void
   onSaved: () => Promise<void>
 }) {
   const repositories = useApi<RepositoryOption[]>(project ? null : '/projects/repositories')
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [repository, setRepository] = useState<string>()
   const prefix = project ? `project-${project.id}` : 'project'
 
   async function save(form: FormData) {
     setError(undefined)
+    const target = project?.repository ?? repository
+    if (!target) return setError('Pick a repository.')
     setBusy(true)
     try {
       await api('/projects', {
         method: 'PUT',
         body: {
-          repository: project?.repository ?? String(form.get('repository') ?? ''),
+          repository: target,
           setupScript: String(form.get('setupScript') ?? ''),
           notes: String(form.get('notes') ?? ''),
         },
@@ -208,30 +215,19 @@ function ProjectForm({
       {!project && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${prefix}-repository`}>Repository</Label>
-          <Input
+          <RepositoryPicker
             id={`${prefix}-repository`}
-            name="repository"
-            required
-            list={`${prefix}-repositories`}
-            placeholder="acme/web"
-            autoComplete="off"
-            spellCheck={false}
-            className="font-mono sm:w-96"
+            options={options.filter((r) => !taken.includes(r.repository))}
+            loading={repositories.data === undefined}
+            value={repository}
+            onChange={setRepository}
           />
-          <datalist id={`${prefix}-repositories`}>
-            {options.map((r) => (
-              <option key={r.repository} value={r.repository}>
-                {r.connection}
-                {r.private ? ' · private' : ''}
-              </option>
-            ))}
-          </datalist>
           <p className="text-sm text-muted-foreground">
             {repositories.data === undefined
               ? 'Loading what your GitHub connections reach…'
               : options.length > 0
-                ? `owner/name. Your GitHub connections reach ${options.length} ${options.length === 1 ? 'repository' : 'repositories'}.`
-                : 'owner/name. No GitHub connection reaches any repository yet: add one under Connections.'}
+                ? `Your GitHub connections reach ${options.length} ${options.length === 1 ? 'repository' : 'repositories'}.`
+                : 'No GitHub connection reaches any repository yet: add one under Connections.'}
           </p>
         </div>
       )}
@@ -272,5 +268,141 @@ function ProjectForm({
         <Button disabled={busy}>{project ? 'Save' : 'Add project'}</Button>
       </div>
     </form>
+  )
+}
+
+/** A searchable list of the repositories the workspace's GitHub connections reach. */
+function RepositoryPicker({
+  id,
+  options,
+  loading,
+  value,
+  onChange,
+}: {
+  id: string
+  options: RepositoryOption[]
+  loading: boolean
+  value?: string
+  onChange: (repository: string | undefined) => void
+}) {
+  const listId = useId()
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+
+  const q = query.trim().toLowerCase()
+  // Names that start with the query first, then repositories whose name does.
+  const matches =
+    q && q !== value?.toLowerCase()
+      ? options
+          .filter((r) => r.repository.toLowerCase().includes(q))
+          .sort(
+            (a, b) =>
+              Number(!a.repository.toLowerCase().startsWith(q)) -
+              Number(!b.repository.toLowerCase().startsWith(q)),
+          )
+      : options
+
+  function pick(r: RepositoryOption) {
+    onChange(r.repository)
+    setQuery(r.repository)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative sm:w-96">
+      <Input
+        id={id}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && matches[active] ? `${listId}-${active}` : undefined}
+        value={query}
+        disabled={loading}
+        placeholder={loading ? 'Loading repositories…' : 'Search repositories'}
+        autoComplete="off"
+        spellCheck={false}
+        className="pr-9 font-mono"
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onBlur={() => {
+          setOpen(false)
+          // Leaving with a half-typed name keeps the last pick.
+          setQuery(value ?? '')
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setActive(0)
+          setOpen(true)
+          if (value) onChange(undefined)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            if (!open) return setOpen(true)
+            const n = matches.length
+            if (n) setActive((active + (e.key === 'ArrowDown' ? 1 : n - 1)) % n)
+          } else if (e.key === 'Enter') {
+            // Enter picks rather than submits while the list is open.
+            if (open && matches[active]) {
+              e.preventDefault()
+              pick(matches[active])
+            }
+          } else if (e.key === 'Escape' && open) {
+            e.preventDefault()
+            setOpen(false)
+          }
+        }}
+      />
+      <ChevronsUpDown
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
+      />
+      {open && !loading && (
+        <div
+          id={listId}
+          role="listbox"
+          className="absolute inset-x-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+        >
+          {matches.length === 0 ? (
+            <p className="px-2 py-1.5 text-sm text-muted-foreground">
+              {options.length ? `Nothing matches “${query}”` : 'No repository to add'}
+            </p>
+          ) : (
+            matches.map((r, i) => (
+              <div
+                key={r.repository}
+                id={`${listId}-${i}`}
+                role="option"
+                aria-selected={i === active}
+                className="flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm aria-selected:bg-accent aria-selected:text-accent-foreground"
+                // Pick on mousedown, before the input blurs.
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  pick(r)
+                }}
+                onMouseMove={() => i !== active && setActive(i)}
+                ref={(el) => {
+                  if (i === active) el?.scrollIntoView({ block: 'nearest' })
+                }}
+              >
+                <Check
+                  aria-hidden
+                  className={cn('size-4 flex-none', r.repository !== value && 'invisible')}
+                />
+                <span className="min-w-0 flex-1 truncate font-mono">{r.repository}</span>
+                {r.private && (
+                  <Lock aria-label="Private" className="size-3.5 flex-none text-muted-foreground" />
+                )}
+                <span className="max-w-[40%] flex-none truncate text-xs text-muted-foreground">
+                  {r.connection}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   )
 }

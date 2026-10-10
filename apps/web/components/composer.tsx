@@ -25,6 +25,7 @@ import {
   type ComputersResponse,
   type ConnectionsResponse,
   type Credential,
+  type Project,
   type ThreadSummary,
 } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -35,6 +36,7 @@ type Option = Mention & { hint?: string; connectionKind?: ConnectionKind }
 const groups: { kind: MentionKind; title: string; max: number }[] = [
   { kind: 'teammate', title: 'Teammates', max: 5 },
   { kind: 'connection', title: 'Connections', max: 5 },
+  { kind: 'project', title: 'Projects', max: 5 },
   { kind: 'credential', title: 'Credentials', max: 5 },
   { kind: 'thread', title: 'Threads', max: 4 },
   { kind: 'computer', title: 'Computers', max: 3 },
@@ -47,6 +49,7 @@ function useMentionOptions(threadId?: string): Option[] {
   const threads = useApi<ThreadSummary[]>('/threads')
   const computers = useApi<ComputersResponse>('/computers')
   const credentials = useApi<Credential[]>('/credentials')
+  const projects = useApi<Project[]>('/projects')
   return useMemo(
     () => [
       ...teammates.map((t) => ({
@@ -65,6 +68,12 @@ function useMentionOptions(threadId?: string): Option[] {
           hint: c.externalAccount ?? undefined,
           connectionKind: c.kind,
         })),
+      ...(projects.data ?? []).map((p) => ({
+        kind: 'project' as const,
+        id: p.repository,
+        label: p.repository,
+        hint: 'GitHub',
+      })),
       ...(credentials.data ?? []).map((c) => ({
         kind: 'credential' as const,
         id: c.id,
@@ -83,7 +92,15 @@ function useMentionOptions(threadId?: string): Option[] {
         .filter((c) => c.status !== 'destroyed')
         .map((c) => ({ kind: 'computer' as const, id: c.id, label: computerName(c) })),
     ],
-    [teammates, connections.data, credentials.data, threads.data, computers.data, threadId],
+    [
+      teammates,
+      connections.data,
+      projects.data,
+      credentials.data,
+      threads.data,
+      computers.data,
+      threadId,
+    ],
   )
 }
 
@@ -261,8 +278,8 @@ function toDoc(text: string): JSONContent {
 }
 
 /**
- * A message box where `@` mentions teammates, connections, credentials, threads
- * and computers. Its value is plain text; mentions are `@[Label](kind:id)` in it.
+ * A message box where `@` mentions teammates, connections, projects, credentials,
+ * threads and computers. Its value is plain text; mentions are `@[Label](kind:id)` in it.
  * Mentioning a credential lets the thread's teammate use it there.
  */
 export function Composer({

@@ -74,7 +74,7 @@ function projects(spec: ThreadSpec) {
   if (list.length === 0) return ''
   return [
     '### Projects',
-    "The workspace's repositories, set up by the team. `checkout_repository` runs a project's setup script in a new checkout.",
+    "The workspace's repositories, set up by the team. `checkout_repository` runs a project's setup script in a new checkout. A message mentions one as `@[owner/name](project:owner/name)`.",
     ...list.map((p) => {
       const notes = p.notes.trim()
       return `- **${p.repository}**${notes ? `\n\n  ${clip(notes).replace(/\n/g, '\n  ')}` : ''}`
