@@ -24,6 +24,7 @@ export function instructions(
   spec: ThreadSpec,
   memory: { workspace: string; teammate: string },
   libraryDir: string,
+  browser: Browser,
 ) {
   const workspace = body(memory.workspace)
   const own = body(memory.teammate)
@@ -38,6 +39,8 @@ export function instructions(
         ? ' To add or update a library file, write it on this computer, then call `save_to_library`.'
         : ''),
     spec.git && code(spec),
+    tasks(spec),
+    credentials(browser),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
     own && `## What you have learned\n\n${clip(own)}`,
     '## Memory',
@@ -49,6 +52,56 @@ export function instructions(
     .join('\n\n')
     .concat('\n')
 }
+
+/** The Tasks board: this thread's task, or when to make one. */
+const tasks = (spec: ThreadSpec) =>
+  spec.task
+    ? [
+        '## Your task',
+        `This thread is the task **${spec.task.title}** on the workspace's Tasks board.`,
+        spec.task.description,
+        'Put what you produce where others can reach it: push your branch or open a pull request, attach files ' +
+          'to the thread, or save them to the library. Another teammate may take the task over, and it does not ' +
+          'see your working folder. When the work is finished and delivered, call `complete_task` with a short ' +
+          'summary and links to what you produced.',
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    : '## Tasks\n\n' +
+      "The workspace tracks bigger work as tasks on its Tasks board. Call `create_task` when this thread's work " +
+      'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
+      'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
+      'Do not ask first: create it, say so in one line, and do the work.'
+
+/**
+ * The teammate's own browser, which website logins need: ready, none on this
+ * computer (a member's machine), or why it did not start on a cloud computer.
+ */
+export type Browser = { ready: true } | { ready: false; error?: string }
+
+/** The vault, and getting a login or key it lacks without stopping the work. */
+const credentials = (browser: Browser) =>
+  [
+    '## Credentials',
+    "Logins, API keys and other secrets live in the workspace's vault: `list_credentials` shows what it holds. " +
+      (browser.ready
+        ? 'Sign in to a website with `fill_credential` on its sign-in page in your browser; '
+        : browser.error
+          ? `Your browser did not start on this computer (${browser.error.replace(/\s+/g, ' ').slice(0, 600)}), so you cannot sign in to websites in this thread; `
+          : 'You have no browser on this computer, so you cannot sign in to websites; ') +
+      'load any other kind with `use_credential`. You never see a secret, and you never ask for one in a message.',
+    'When the work needs a credential the vault does not have, do not stop to explain where to add it: open a ticket ' +
+      '(`open_ticket`) with an `access` ask of kind `credential`, and fill in `credential` with what you know ' +
+      '(its kind, a name, the sign-in page or API URL, the username if you know it). The person saves it to the vault ' +
+      'right in the ticket, and the answer gives you its mention, which lets you use it in this thread at once. ' +
+      'Then use it and finish the task.',
+    !browser.ready &&
+      'When the work needs signing in to a website, tell the person you cannot' +
+        (browser.error ? ' because your browser did not start, with the reason above' : '') +
+        '. Do not ask for a different kind of credential (such as API keys) to work around it unless they ask for that.',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 
 /** How a teammate with a GitHub connection works on code. */
 const code = (spec: ThreadSpec) =>

@@ -1,7 +1,7 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
 import { jsonSchema, tool, type Tool } from 'ai'
-import type { ConnectorGrant } from '@brigade/contracts'
+import type { ConnectorGrant, TaskOperation } from '@brigade/contracts'
 
 export type ConnectorCaller = (call: {
   connectionId: string
@@ -57,8 +57,8 @@ export const askUserTool = tool({
   description:
     'Ask the person who gave you this task one or more questions and wait for their answer. ' +
     'Use it when you need a decision or information only they have; offer options when there are clear choices. ' +
-    'Never ask for a password, key or other secret here: ask them to save it in the vault and mention it, ' +
-    'or set secret: true and they can pick a saved credential.',
+    'Never ask for a password, key or other secret here: set secret: true and they pick a saved credential, ' +
+    'or, for one the vault lacks, open a ticket with an access ask of kind credential so they can save it.',
   inputSchema: jsonSchema<{ questions: unknown[] }>({
     type: 'object',
     properties: {
@@ -112,8 +112,9 @@ export const openTicketTool = tool({
     'so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
     '(approval), a choice (decision), a connection or credential you lack (access), something only a person can do ' +
     'such as a phone call (action), or information only they have (input). Put several asks in one ticket rather than ' +
-    'opening several. Never ask for a password, key or other secret in words: use an input ask with secret: true and ' +
-    'they pick a saved credential.',
+    'opening several. Never ask for a password, key or other secret in words. For a login or key the vault lacks, ' +
+    'use an access ask of kind credential and fill in `credential` with what you know: the person saves it to the ' +
+    'vault right in the ticket, and its mention comes back for you to use at once.',
   inputSchema: jsonSchema<{ title: string; asks: unknown[] }>({
     type: 'object',
     properties: {
@@ -160,6 +161,24 @@ export const openTicketTool = tool({
               description: 'access: which service or credential, e.g. "Stripe"',
             },
             reason: { type: 'string', description: 'access: what you need it for' },
+            credential: {
+              type: 'object',
+              description:
+                'access to a credential: what you know of it, to fill in the form the person saves it with. Never a secret',
+              properties: {
+                kind: { type: 'string', enum: ['website', 'database', 'api_key', 'other'] },
+                name: { type: 'string', description: 'e.g. "Reddit"' },
+                url: {
+                  type: 'string',
+                  description:
+                    "website: the sign-in page, e.g. https://www.reddit.com/login (the password is only typed on its domain). api_key: the API's base URL",
+                },
+                username: {
+                  type: 'string',
+                  description: 'website: the username or email, if known',
+                },
+              },
+            },
             steps: {
               type: 'array',
               items: { type: 'string' },
@@ -194,7 +213,8 @@ type Credentials = {
 type Call = { toolCallId: string; toolName: string; input: unknown }
 
 const MENTIONS =
-  'Members mention credentials in messages as @[Name](credential:<id>); a credential mentioned by a member in this thread is yours to use here, any other needs a person to approve it.'
+  'Members mention credentials in messages as @[Name](credential:<id>); a credential mentioned by a member in this thread is yours to use here, any other needs a person to approve it. ' +
+  'For one the vault lacks, open a ticket with an access ask of kind credential: the person saves it from the ticket.'
 
 /** The vault's credentials, as tools. Their secrets never appear in a tool result. */
 export function credentialTools(credentials: Credentials): Record<string, Tool> {
@@ -337,6 +357,96 @@ export function libraryTools(options: {
       },
     })
   return tools
+}
+
+export type TaskCaller = (call: {
+  operation: TaskOperation
+  toolCallId: string
+  toolName: string
+  input: unknown
+}) => Promise<unknown>
+
+/**
+ * Tasks on the board: turn this thread into one, or mark this thread's task
+ * done. The API checks the thread (not a trigger's, not already a task).
+ */
+export function taskTools(call: TaskCaller): Record<string, Tool> {
+  return {
+    create_task: tool({
+      description:
+        "Track this thread's work as a task on the workspace's Tasks board, where the team follows it. " +
+        'Use it when the work has a deliverable someone will review (a pull request, document, email or report), ' +
+        'takes several steps, will wait on approval or someone else, or the person asks to track it. ' +
+        'Do not use it for questions, explanations, brainstorming or quick actions you finish in this reply, ' +
+        'or when this thread is already a task. Call it before starting the work, or as soon as a conversation ' +
+        'turns into work. Do not ask first; say in one line that you are tracking it.',
+      inputSchema: jsonSchema<{
+        title: string
+        description: string
+        priority?: 'low' | 'medium' | 'high' | 'urgent'
+      }>({
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Short and imperative, e.g. "Add CSV export to billing"',
+          },
+          description: { type: 'string', description: 'What done looks like, in a few lines' },
+          priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+        },
+        required: ['title', 'description'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'create',
+            title: input.title,
+            description: input.description,
+            priority: input.priority ?? 'medium',
+          },
+          toolCallId,
+          toolName: 'create_task',
+          input,
+        }),
+    }),
+    complete_task: tool({
+      description:
+        "Mark this thread's task done once the work is finished and delivered. Give a short summary of what you did " +
+        'and links to what you produced (pull request, document, file) so a person or another teammate can find it. ' +
+        'Only for a thread that is a task.',
+      inputSchema: jsonSchema<{ summary: string; deliverables?: { label: string; url: string }[] }>(
+        {
+          type: 'object',
+          properties: {
+            summary: { type: 'string', description: 'What was done, in a few lines' },
+            deliverables: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', description: 'e.g. "Pull request acme/web#42"' },
+                  url: { type: 'string', description: 'An https link' },
+                },
+                required: ['label', 'url'],
+              },
+            },
+          },
+          required: ['summary'],
+        },
+      ),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'complete',
+            summary: input.summary,
+            deliverables: input.deliverables ?? [],
+          },
+          toolCallId,
+          toolName: 'complete_task',
+          input,
+        }),
+    }),
+  }
 }
 
 /** Checking out a GitHub repository the teammate reaches, into its working directory. */

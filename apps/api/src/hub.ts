@@ -18,6 +18,7 @@ import { ensureRunning, ensureSetup, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
+import { handleTaskCall } from './tasks.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
@@ -222,6 +223,11 @@ export function broadcastThreadStatus(workspaceId: string, sessionId: string, st
   broadcast(workspaceId, { type: 'thread.updated', sessionId, status })
 }
 
+/** Tell dashboards a task was created, changed or removed. */
+export function broadcastTask(workspaceId: string, taskId: string) {
+  broadcast(workspaceId, { type: 'task.updated', taskId })
+}
+
 // ---------------------------------------------------------------------------
 // Runners
 // ---------------------------------------------------------------------------
@@ -419,6 +425,18 @@ export function runnerSocket(runner: {
           callId: message.callId,
           ok: false,
           error: String(error),
+        }),
+      )
+      return
+    }
+
+    if (message.type === 'task.call') {
+      void handleTaskCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
         }),
       )
       return
@@ -961,6 +979,7 @@ async function openTerminal(
       teammate: true,
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
+      task: { select: { id: true, title: true, description: true, completedAt: true } },
     },
   })
   const fail = (text: string) => {

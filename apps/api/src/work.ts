@@ -204,6 +204,8 @@ export async function startThread(
     origin?: { triggerId: string; conversationKey?: string }
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
+    /** The task this thread works on, linked before its first turn so the teammate knows. */
+    taskId?: string
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -227,6 +229,7 @@ export async function startThread(
       computerId: input.computer.id,
       accountId: account.id,
       title: input.title.slice(0, 120),
+      ...(input.taskId ? { taskId: input.taskId } : {}),
       ...(input.origin
         ? {
             origin: 'trigger',

@@ -102,10 +102,14 @@ export type Teammate = Prisma.TeammateModel
  */
 export type Session = Prisma.SessionModel
 /**
+ * Model Task
+ * Work to see finished, on the Tasks board. Its thread is its comments and
+ * progress; the column comes from the thread (none: backlog) and completedAt.
+ */
+export type Task = Prisma.TaskModel
+/**
  * Model ThreadTeammate
- * One AgentEvent with its sequence number. Append-only.
- * A teammate in a thread. A member's mention brings a teammate in; each runs its own
- * harness session on the thread's computer and is told what the others said.
+ * 
  */
 export type ThreadTeammate = Prisma.ThreadTeammateModel
 /**

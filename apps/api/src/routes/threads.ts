@@ -26,8 +26,9 @@ import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
-import { loadThread, specFor } from '../thread-spec.js'
+import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
 import { joinThread, mentionedTeammates, promptWithAttachments, startThread } from '../work.js'
+import { reopenOnMessage } from '../tasks.js'
 import { runLog } from '../timeline.js'
 import {
   parseBody,
@@ -44,27 +45,6 @@ function teammatesFirst(
 ) {
   const ids = [...new Set([thread.teammateId, ...thread.teammates.map((t) => t.teammateId)])]
   return asked && ids.includes(asked) ? [asked, ...ids.filter((i) => i !== asked)] : ids
-}
-
-/** Prompting or approving spends the starter's subscription: only they may, unless they allow it. */
-function requireMayPrompt(
-  scope: WorkspaceScope,
-  thread: {
-    startedByMemberId: string
-    othersMayPrompt: boolean
-    controlledByMemberId: string | null
-  },
-) {
-  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt) {
-    throw new HTTPException(403, {
-      message: "This thread runs on another member's subscription. Fork it to continue.",
-    })
-  }
-  if (thread.controlledByMemberId) {
-    throw new HTTPException(409, {
-      message: 'A person has control of this thread. It continues when they hand it back.',
-    })
-  }
 }
 
 /** A thread started with files and no words is named after its first file. */
@@ -132,6 +112,7 @@ export const threads = new Hono<AppEnv>()
           orderBy: { createdAt: 'asc' },
         },
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
+        task: { select: { id: true, title: true, completedAt: true } },
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -336,6 +317,7 @@ export const threads = new Hono<AppEnv>()
       target: { type: 'thread', id: thread.id },
       ...(joined.length > 0 ? { data: { joined } } : {}),
     })
+    await reopenOnMessage(scope, thread)
     return c.json({ ok: true, paused: outcome === 'paused' })
   })
 

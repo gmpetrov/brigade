@@ -43,17 +43,21 @@ import {
   OPEN_TICKET_TOOL,
   openTicketTool,
   repoTools,
+  taskTools,
   type ConnectorCaller,
   type LibraryCaller,
+  type TaskCaller,
 } from './tools.js'
 
-export type { ConnectorCaller, LibraryCaller } from './tools.js'
+export type { ConnectorCaller, LibraryCaller, TaskCaller } from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
   libraryDir: string
   memoryFor: (teammateId: string) => { workspace: string; teammate: string }
   callLibrary: LibraryCaller
+  /** Create a task from the thread, or complete its task. */
+  callTask: TaskCaller
   bundles: BundleStore
   /** Send a file of the teammate's to the API, to go with a connector call. Returns its id. */
   uploadFile: (input: {
@@ -95,6 +99,7 @@ function createAgent(
   mcpServers: Record<string, unknown>,
   library: Parameters<typeof libraryTools>[0],
   checkoutRepo: (input: CheckoutInput) => Promise<unknown>,
+  callTask: TaskCaller,
 ) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
@@ -106,6 +111,7 @@ function createAgent(
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),
+    ...taskTools(callTask),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
@@ -426,6 +432,20 @@ export class HarnessThread {
     if (this.live) return this.live
     const account = this.spec.account
     const env = { ...(await prepare(this.workDir, account, this.runAs)), ...gitEnv(this.spec.git) }
+    // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
+    // Why it did not start goes to the teammate too, which tells the person.
+    let browserError: string | undefined
+    const browser = this.runAs
+      ? await ensureBrowser(this.spec.teammate).catch((error) => {
+          browserError = errorMessage(error)
+          console.warn(`no browser for ${this.runAs}: ${browserError}`)
+          return null
+        })
+      : null
+    const tabsFile =
+      browser && this.runAs
+        ? `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`
+        : undefined
     // Memory loads through the harness's own instruction file.
     await writeInstructions(
       this.workDir,
@@ -434,20 +454,12 @@ export class HarnessThread {
         this.spec,
         this.context.memoryFor(this.spec.teammate.id),
         this.context.libraryDir,
+        tabsFile
+          ? { ready: true }
+          : { ready: false, ...(browserError ? { error: browserError } : {}) },
       ),
       this.runAs,
     ).catch((error) => console.warn(`could not write instructions: ${errorMessage(error)}`))
-    // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
-    const browser = this.runAs
-      ? await ensureBrowser(this.spec.teammate).catch((error) => {
-          console.warn(`no browser for ${this.runAs}: ${errorMessage(error)}`)
-          return null
-        })
-      : null
-    const tabsFile =
-      browser && this.runAs
-        ? `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`
-        : undefined
     const credentials = new ThreadCredentials({
       sessionId: this.spec.sessionId,
       request: this.requestCredential,
@@ -474,6 +486,7 @@ export class HarnessThread {
           bundles: this.context.bundles,
           ...(this.runAs ? { runAs: this.runAs } : {}),
         }),
+      this.context.callTask,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,

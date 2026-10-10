@@ -248,6 +248,7 @@ export type TeammateWhereInput = {
   pullRequestsAuthored?: Prisma.PullRequestListRelationFilter
   pullRequestsReviewing?: Prisma.PullRequestListRelationFilter
   pullRequestReviews?: Prisma.PullRequestReviewListRelationFilter
+  tasks?: Prisma.TaskListRelationFilter
 }
 
 export type TeammateOrderByWithRelationInput = {
@@ -274,6 +275,7 @@ export type TeammateOrderByWithRelationInput = {
   pullRequestsAuthored?: Prisma.PullRequestOrderByRelationAggregateInput
   pullRequestsReviewing?: Prisma.PullRequestOrderByRelationAggregateInput
   pullRequestReviews?: Prisma.PullRequestReviewOrderByRelationAggregateInput
+  tasks?: Prisma.TaskOrderByRelationAggregateInput
 }
 
 export type TeammateWhereUniqueInput = Prisma.AtLeast<{
@@ -303,6 +305,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   pullRequestsAuthored?: Prisma.PullRequestListRelationFilter
   pullRequestsReviewing?: Prisma.PullRequestListRelationFilter
   pullRequestReviews?: Prisma.PullRequestReviewListRelationFilter
+  tasks?: Prisma.TaskListRelationFilter
 }, "id">
 
 export type TeammateOrderByWithAggregationInput = {
@@ -366,6 +369,7 @@ export type TeammateCreateInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateInput = {
@@ -391,6 +395,7 @@ export type TeammateUncheckedCreateInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUpdateInput = {
@@ -416,6 +421,7 @@ export type TeammateUpdateInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateInput = {
@@ -441,6 +447,7 @@ export type TeammateUncheckedUpdateInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateManyInput = {
@@ -618,6 +625,20 @@ export type TeammateUpdateOneRequiredWithoutSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutSessionsInput, Prisma.TeammateUpdateWithoutSessionsInput>, Prisma.TeammateUncheckedUpdateWithoutSessionsInput>
 }
 
+export type TeammateCreateNestedOneWithoutTasksInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutTasksInput, Prisma.TeammateUncheckedCreateWithoutTasksInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutTasksInput
+  connect?: Prisma.TeammateWhereUniqueInput
+}
+
+export type TeammateUpdateOneRequiredWithoutTasksNestedInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutTasksInput, Prisma.TeammateUncheckedCreateWithoutTasksInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutTasksInput
+  upsert?: Prisma.TeammateUpsertWithoutTasksInput
+  connect?: Prisma.TeammateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutTasksInput, Prisma.TeammateUpdateWithoutTasksInput>, Prisma.TeammateUncheckedUpdateWithoutTasksInput>
+}
+
 export type TeammateCreateNestedOneWithoutThreadSeatsInput = {
   create?: Prisma.XOR<Prisma.TeammateCreateWithoutThreadSeatsInput, Prisma.TeammateUncheckedCreateWithoutThreadSeatsInput>
   connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutThreadSeatsInput
@@ -760,6 +781,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutWorkspaceInput = {
@@ -784,6 +806,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutWorkspaceInput = {
@@ -853,6 +876,7 @@ export type TeammateCreateWithoutSessionsInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSessionsInput = {
@@ -877,6 +901,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSessionsInput = {
@@ -917,6 +942,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSessionsInput = {
@@ -933,6 +959,123 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
+  pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
+  pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateCreateWithoutTasksInput = {
+  id?: string
+  organizationId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
+  pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
+  pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateUncheckedCreateWithoutTasksInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
+  pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
+  pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateCreateOrConnectWithoutTasksInput = {
+  where: Prisma.TeammateWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutTasksInput, Prisma.TeammateUncheckedCreateWithoutTasksInput>
+}
+
+export type TeammateUpsertWithoutTasksInput = {
+  update: Prisma.XOR<Prisma.TeammateUpdateWithoutTasksInput, Prisma.TeammateUncheckedUpdateWithoutTasksInput>
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutTasksInput, Prisma.TeammateUncheckedCreateWithoutTasksInput>
+  where?: Prisma.TeammateWhereInput
+}
+
+export type TeammateUpdateToOneWithWhereWithoutTasksInput = {
+  where?: Prisma.TeammateWhereInput
+  data: Prisma.XOR<Prisma.TeammateUpdateWithoutTasksInput, Prisma.TeammateUncheckedUpdateWithoutTasksInput>
+}
+
+export type TeammateUpdateWithoutTasksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
+  pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
+  pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateUncheckedUpdateWithoutTasksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutTeammateNestedInput
@@ -965,6 +1108,7 @@ export type TeammateCreateWithoutThreadSeatsInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
@@ -989,6 +1133,7 @@ export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutThreadSeatsInput = {
@@ -1029,6 +1174,7 @@ export type TeammateUpdateWithoutThreadSeatsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
@@ -1053,6 +1199,7 @@ export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutPullRequestsAuthoredInput = {
@@ -1077,6 +1224,7 @@ export type TeammateCreateWithoutPullRequestsAuthoredInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestsAuthoredInput = {
@@ -1101,6 +1249,7 @@ export type TeammateUncheckedCreateWithoutPullRequestsAuthoredInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestsAuthoredInput = {
@@ -1130,6 +1279,7 @@ export type TeammateCreateWithoutPullRequestsReviewingInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestsReviewingInput = {
@@ -1154,6 +1304,7 @@ export type TeammateUncheckedCreateWithoutPullRequestsReviewingInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestsReviewingInput = {
@@ -1194,6 +1345,7 @@ export type TeammateUpdateWithoutPullRequestsAuthoredInput = {
   documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestsAuthoredInput = {
@@ -1218,6 +1370,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestsAuthoredInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUpsertWithoutPullRequestsReviewingInput = {
@@ -1253,6 +1406,7 @@ export type TeammateUpdateWithoutPullRequestsReviewingInput = {
   documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestsReviewingInput = {
@@ -1277,6 +1431,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestsReviewingInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutPullRequestReviewsInput = {
@@ -1301,6 +1456,7 @@ export type TeammateCreateWithoutPullRequestReviewsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestReviewsInput = {
@@ -1325,6 +1481,7 @@ export type TeammateUncheckedCreateWithoutPullRequestReviewsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestReviewsInput = {
@@ -1365,6 +1522,7 @@ export type TeammateUpdateWithoutPullRequestReviewsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestReviewsInput = {
@@ -1389,6 +1547,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestReviewsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutGrantsInput = {
@@ -1413,6 +1572,7 @@ export type TeammateCreateWithoutGrantsInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutGrantsInput = {
@@ -1437,6 +1597,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutGrantsInput = {
@@ -1477,6 +1638,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutGrantsInput = {
@@ -1501,6 +1663,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutConnectionCallsInput = {
@@ -1525,6 +1688,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
@@ -1549,6 +1713,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutConnectionCallsInput = {
@@ -1589,6 +1754,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
@@ -1613,6 +1779,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutTriggersInput = {
@@ -1637,6 +1804,7 @@ export type TeammateCreateWithoutTriggersInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutTriggersInput = {
@@ -1661,6 +1829,7 @@ export type TeammateUncheckedCreateWithoutTriggersInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutTriggersInput = {
@@ -1701,6 +1870,7 @@ export type TeammateUpdateWithoutTriggersInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutTriggersInput = {
@@ -1725,6 +1895,7 @@ export type TeammateUncheckedUpdateWithoutTriggersInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutDocumentsInput = {
@@ -1749,6 +1920,7 @@ export type TeammateCreateWithoutDocumentsInput = {
   pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutDocumentsInput = {
@@ -1773,6 +1945,7 @@ export type TeammateUncheckedCreateWithoutDocumentsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutDocumentsInput = {
@@ -1813,6 +1986,7 @@ export type TeammateUpdateWithoutDocumentsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutDocumentsInput = {
@@ -1837,6 +2011,7 @@ export type TeammateUncheckedUpdateWithoutDocumentsInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateManyWorkspaceInput = {
@@ -1876,6 +2051,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
@@ -1900,6 +2076,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1932,6 +2109,7 @@ export type TeammateCountOutputType = {
   pullRequestsAuthored: number
   pullRequestsReviewing: number
   pullRequestReviews: number
+  tasks: number
 }
 
 export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1944,6 +2122,7 @@ export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   pullRequestsAuthored?: boolean | TeammateCountOutputTypeCountPullRequestsAuthoredArgs
   pullRequestsReviewing?: boolean | TeammateCountOutputTypeCountPullRequestsReviewingArgs
   pullRequestReviews?: boolean | TeammateCountOutputTypeCountPullRequestReviewsArgs
+  tasks?: boolean | TeammateCountOutputTypeCountTasksArgs
 }
 
 /**
@@ -2019,6 +2198,13 @@ export type TeammateCountOutputTypeCountPullRequestReviewsArgs<ExtArgs extends r
   where?: Prisma.PullRequestReviewWhereInput
 }
 
+/**
+ * TeammateCountOutputType without action
+ */
+export type TeammateCountOutputTypeCountTasksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TaskWhereInput
+}
+
 
 export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2044,6 +2230,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   pullRequestsAuthored?: boolean | Prisma.Teammate$pullRequestsAuthoredArgs<ExtArgs>
   pullRequestsReviewing?: boolean | Prisma.Teammate$pullRequestsReviewingArgs<ExtArgs>
   pullRequestReviews?: boolean | Prisma.Teammate$pullRequestReviewsArgs<ExtArgs>
+  tasks?: boolean | Prisma.Teammate$tasksArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["teammate"]>
 
@@ -2109,6 +2296,7 @@ export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   pullRequestsAuthored?: boolean | Prisma.Teammate$pullRequestsAuthoredArgs<ExtArgs>
   pullRequestsReviewing?: boolean | Prisma.Teammate$pullRequestsReviewingArgs<ExtArgs>
   pullRequestReviews?: boolean | Prisma.Teammate$pullRequestReviewsArgs<ExtArgs>
+  tasks?: boolean | Prisma.Teammate$tasksArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TeammateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2131,6 +2319,7 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     pullRequestsAuthored: Prisma.$PullRequestPayload<ExtArgs>[]
     pullRequestsReviewing: Prisma.$PullRequestPayload<ExtArgs>[]
     pullRequestReviews: Prisma.$PullRequestReviewPayload<ExtArgs>[]
+    tasks: Prisma.$TaskPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2559,6 +2748,7 @@ export interface Prisma__TeammateClient<T, Null = never, ExtArgs extends runtime
   pullRequestsAuthored<T extends Prisma.Teammate$pullRequestsAuthoredArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$pullRequestsAuthoredArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pullRequestsReviewing<T extends Prisma.Teammate$pullRequestsReviewingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$pullRequestsReviewingArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pullRequestReviews<T extends Prisma.Teammate$pullRequestReviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$pullRequestReviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  tasks<T extends Prisma.Teammate$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3215,6 +3405,30 @@ export type Teammate$pullRequestReviewsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.PullRequestReviewScalarFieldEnum | Prisma.PullRequestReviewScalarFieldEnum[]
+}
+
+/**
+ * Teammate.tasks
+ */
+export type Teammate$tasksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Task
+   */
+  select?: Prisma.TaskSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Task
+   */
+  omit?: Prisma.TaskOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TaskInclude<ExtArgs> | null
+  where?: Prisma.TaskWhereInput
+  orderBy?: Prisma.TaskOrderByWithRelationInput | Prisma.TaskOrderByWithRelationInput[]
+  cursor?: Prisma.TaskWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TaskScalarFieldEnum | Prisma.TaskScalarFieldEnum[]
 }
 
 /**

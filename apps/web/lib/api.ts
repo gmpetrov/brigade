@@ -1,5 +1,5 @@
 'use client'
-import type { AttachmentInfo, UploadTicket } from '@brigade/contracts'
+import type { AttachmentInfo, TaskColumn, TaskPriority, UploadTicket } from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { API_URL } from './config'
 
@@ -206,6 +206,46 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
   /** Every file given to the thread, oldest first. */
   attachments: AttachmentInfo[]
+  /** The task this thread works on, if it is one. */
+  task: { id: string; title: string; completedAt: string | null } | null
+}
+
+export type { TaskColumn, TaskPriority } from '@brigade/contracts'
+
+/** A task on the board, with its thread if it has started. */
+export type Task = {
+  id: string
+  title: string
+  description: string
+  priority: TaskPriority
+  column: TaskColumn
+  teammate: { id: string; name: string; harness: Teammate['harness'] }
+  createdBy: { id: string; user: { name: string } }
+  createdByMemberId: string
+  summary: string | null
+  deliverables: { label: string; url: string }[]
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+  thread: {
+    id: string
+    status: string
+    updatedAt: string
+    computerId: string
+    startedByMemberId: string
+    openTickets: number
+  } | null
+}
+
+export type TaskDetail = Task & {
+  pullRequests: {
+    id: string
+    repository: string
+    number: number
+    title: string
+    state: string
+    headRef: string
+  }[]
 }
 
 export type AccountLogin = {

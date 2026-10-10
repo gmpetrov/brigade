@@ -11,6 +11,7 @@ import {
   Monitor,
   Plug,
   Plus,
+  SquareKanban,
   UserRound,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -45,7 +46,16 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, isAdmin, useApi, waitsOn, type Me, type Teammate, type Ticket } from '@/lib/api'
+import {
+  api,
+  isAdmin,
+  useApi,
+  waitsOn,
+  type Me,
+  type Task,
+  type Teammate,
+  type Ticket,
+} from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 
 export { StatusBadge } from '@/components/status-badge'
@@ -63,14 +73,15 @@ export { isAdmin }
 
 const NAV = [
   { href: '/app', label: 'Home', icon: House },
-  { href: '/app/threads', label: 'Threads', icon: MessagesSquare },
-  { href: '/app/computers', label: 'Computers', icon: Monitor },
+  { href: '/app/tasks', label: 'Tasks', icon: SquareKanban },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
   { href: '/app/connections', label: 'Connections', icon: Plug },
   { href: '/app/vault', label: 'Vault', icon: KeyRound },
-  { href: '/app/accounts', label: 'Accounts', icon: UserRound },
+  { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
+  { href: '/app/threads', label: 'Threads', icon: MessagesSquare },
+  { href: '/app/computers', label: 'Computers', icon: Monitor },
 ]
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
@@ -109,10 +120,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Tickets waiting on this member, the same way.
   const tickets = useApi<Ticket[]>(ready ? '/tickets' : null)
   const reloadTickets = tickets.reload
+  // Tasks that need a person, the same way.
+  const tasks = useApi<Task[]>(ready ? '/tasks' : null)
+  const reloadTasks = tasks.reload
   useEffect(() => {
     void reloadPulls()
     void reloadTickets()
-  }, [pathname, reloadPulls, reloadTickets])
+    void reloadTasks()
+  }, [pathname, reloadPulls, reloadTickets, reloadTasks])
 
   useEffect(() => {
     if (me.error?.status === 401) router.replace('/sign-in')
@@ -131,6 +146,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const badges: Record<string, number | undefined> = {
     '/app/tickets': tickets.data?.filter((t) => waitsOn(t, data)).length,
     '/app/pulls': pullsWaiting.data?.count,
+    '/app/tasks': tasks.data?.filter((t) => t.column === 'needs_you').length,
   }
 
   async function switchWorkspace(workspaceId: string) {

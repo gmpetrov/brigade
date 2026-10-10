@@ -4,6 +4,7 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { TaskOperation } from './tasks.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -89,6 +90,8 @@ export const ThreadSpec = z.object({
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */
   attachments: z.array(ThreadAttachmentRef).default([]),
+  /** The task this thread works on, if it is one. */
+  task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -212,6 +215,17 @@ export const RunnerToApi = z.discriminatedUnion('type', [
         contentType: z.string().max(200).optional(),
       }),
     ]),
+  }),
+  /**
+   * A teammate creates a task from its thread, or marks the thread's task
+   * done. The API checks the thread and teammate. Answered like a connector call.
+   */
+  z.object({
+    type: z.literal('task.call'),
+    callId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string().optional(),
+    operation: TaskOperation,
   }),
   /**
    * A thread went quiet: what a short harness run took from it. The summary

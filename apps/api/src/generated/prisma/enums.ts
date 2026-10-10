@@ -67,6 +67,16 @@ export const SessionOrigin = {
 export type SessionOrigin = (typeof SessionOrigin)[keyof typeof SessionOrigin]
 
 
+export const TaskPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  urgent: 'urgent'
+} as const
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',

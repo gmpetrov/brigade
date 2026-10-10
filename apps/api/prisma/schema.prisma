@@ -102,6 +102,7 @@ model Member {
   computers      Computer[]
   accounts       Account[]
   sessions       Session[]
+  tasks          Task[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -155,6 +156,7 @@ model Workspace {
   threadAttachments ThreadAttachment[]
   pullRequests   PullRequest[]
   pullRequestReviews PullRequestReview[]
+  tasks          Task[]
   auditEntries   AuditEntry[]
 
   @@index([organizationId])
@@ -251,6 +253,7 @@ model Teammate {
   pullRequestsAuthored  PullRequest[] @relation("PullRequestAuthor")
   pullRequestsReviewing PullRequest[] @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
+  tasks            Task[]
 
   @@index([workspaceId])
 }
@@ -323,6 +326,9 @@ model Session {
   sentAttachments     Attachment[]
   /// Pull requests opened from this thread; their review loop runs here.
   pullRequests        PullRequest[]
+  /// The task this thread works on. One thread per task for now.
+  taskId              String?        @unique
+  task                Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
   @@index([teammateId])
@@ -332,6 +338,42 @@ model Session {
 /// One AgentEvent with its sequence number. Append-only.
 /// A teammate in a thread. A member's mention brings a teammate in; each runs its own
 /// harness session on the thread's computer and is told what the others said.
+enum TaskPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+/// Work to see finished, on the Tasks board. Its thread is its comments and
+/// progress; the column comes from the thread (none: backlog) and completedAt.
+model Task {
+  id                String       @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title             String
+  description       String       @default("")
+  priority          TaskPriority @default(medium)
+  /// The teammate doing it.
+  teammateId        String
+  teammate          Teammate     @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// Who asked: the member, or the thread's starter when a teammate created it.
+  createdByMemberId String
+  createdBy         Member       @relation(fields: [createdByMemberId], references: [id], onDelete: Cascade)
+  /// What was done, from whoever marked it done.
+  summary           String?
+  /// Links to what it produced: [{ label, url }].
+  deliverables      Json         @default("[]")
+  completedAt       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  session           Session?
+
+  @@index([workspaceId, completedAt])
+  @@index([teammateId])
+}
+
 model ThreadTeammate {
   organizationId String
   workspaceId    String

@@ -187,6 +187,7 @@ export type MemberWhereInput = {
   computers?: Prisma.ComputerListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
+  tasks?: Prisma.TaskListRelationFilter
 }
 
 export type MemberOrderByWithRelationInput = {
@@ -200,6 +201,7 @@ export type MemberOrderByWithRelationInput = {
   computers?: Prisma.ComputerOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
+  tasks?: Prisma.TaskOrderByRelationAggregateInput
 }
 
 export type MemberWhereUniqueInput = Prisma.AtLeast<{
@@ -217,6 +219,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   computers?: Prisma.ComputerListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
+  tasks?: Prisma.TaskListRelationFilter
 }, "id" | "organizationId_userId">
 
 export type MemberOrderByWithAggregationInput = {
@@ -250,6 +253,7 @@ export type MemberCreateInput = {
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateInput = {
@@ -261,6 +265,7 @@ export type MemberUncheckedCreateInput = {
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUpdateInput = {
@@ -272,6 +277,7 @@ export type MemberUpdateInput = {
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateInput = {
@@ -283,6 +289,7 @@ export type MemberUncheckedUpdateInput = {
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberCreateManyInput = {
@@ -470,6 +477,20 @@ export type MemberUpdateOneRequiredWithoutSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutSessionsInput, Prisma.MemberUpdateWithoutSessionsInput>, Prisma.MemberUncheckedUpdateWithoutSessionsInput>
 }
 
+export type MemberCreateNestedOneWithoutTasksInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutTasksInput, Prisma.MemberUncheckedCreateWithoutTasksInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutTasksInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutTasksNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutTasksInput, Prisma.MemberUncheckedCreateWithoutTasksInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutTasksInput
+  upsert?: Prisma.MemberUpsertWithoutTasksInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutTasksInput, Prisma.MemberUpdateWithoutTasksInput>, Prisma.MemberUncheckedUpdateWithoutTasksInput>
+}
+
 export type MemberCreateNestedOneWithoutAccountsInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutAccountsInput, Prisma.MemberUncheckedCreateWithoutAccountsInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutAccountsInput
@@ -492,6 +513,7 @@ export type MemberCreateWithoutUserInput = {
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateWithoutUserInput = {
@@ -502,6 +524,7 @@ export type MemberUncheckedCreateWithoutUserInput = {
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberCreateOrConnectWithoutUserInput = {
@@ -549,6 +572,7 @@ export type MemberCreateWithoutOrganizationInput = {
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateWithoutOrganizationInput = {
@@ -559,6 +583,7 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberCreateOrConnectWithoutOrganizationInput = {
@@ -595,6 +620,7 @@ export type MemberCreateWithoutComputersInput = {
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateWithoutComputersInput = {
@@ -605,6 +631,7 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   createdAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberCreateOrConnectWithoutComputersInput = {
@@ -631,6 +658,7 @@ export type MemberUpdateWithoutComputersInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutComputersInput = {
@@ -641,6 +669,7 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberCreateWithoutSessionsInput = {
@@ -651,6 +680,7 @@ export type MemberCreateWithoutSessionsInput = {
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateWithoutSessionsInput = {
@@ -661,6 +691,7 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   createdAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberCreateOrConnectWithoutSessionsInput = {
@@ -687,6 +718,7 @@ export type MemberUpdateWithoutSessionsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSessionsInput = {
@@ -697,6 +729,67 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type MemberCreateWithoutTasksInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+}
+
+export type MemberUncheckedCreateWithoutTasksInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+}
+
+export type MemberCreateOrConnectWithoutTasksInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutTasksInput, Prisma.MemberUncheckedCreateWithoutTasksInput>
+}
+
+export type MemberUpsertWithoutTasksInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutTasksInput, Prisma.MemberUncheckedUpdateWithoutTasksInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutTasksInput, Prisma.MemberUncheckedCreateWithoutTasksInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutTasksInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutTasksInput, Prisma.MemberUncheckedUpdateWithoutTasksInput>
+}
+
+export type MemberUpdateWithoutTasksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutTasksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
 }
 
 export type MemberCreateWithoutAccountsInput = {
@@ -707,6 +800,7 @@ export type MemberCreateWithoutAccountsInput = {
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberUncheckedCreateWithoutAccountsInput = {
@@ -717,6 +811,7 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   createdAt?: Date | string
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type MemberCreateOrConnectWithoutAccountsInput = {
@@ -743,6 +838,7 @@ export type MemberUpdateWithoutAccountsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutAccountsInput = {
@@ -753,6 +849,7 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberCreateManyUserInput = {
@@ -770,6 +867,7 @@ export type MemberUpdateWithoutUserInput = {
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutUserInput = {
@@ -780,6 +878,7 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutUserInput = {
@@ -804,6 +903,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutOrganizationInput = {
@@ -814,6 +914,7 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
@@ -832,12 +933,14 @@ export type MemberCountOutputType = {
   computers: number
   accounts: number
   sessions: number
+  tasks: number
 }
 
 export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   computers?: boolean | MemberCountOutputTypeCountComputersArgs
   accounts?: boolean | MemberCountOutputTypeCountAccountsArgs
   sessions?: boolean | MemberCountOutputTypeCountSessionsArgs
+  tasks?: boolean | MemberCountOutputTypeCountTasksArgs
 }
 
 /**
@@ -871,6 +974,13 @@ export type MemberCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Types
   where?: Prisma.SessionWhereInput
 }
 
+/**
+ * MemberCountOutputType without action
+ */
+export type MemberCountOutputTypeCountTasksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TaskWhereInput
+}
+
 
 export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -883,6 +993,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   computers?: boolean | Prisma.Member$computersArgs<ExtArgs>
   accounts?: boolean | Prisma.Member$accountsArgs<ExtArgs>
   sessions?: boolean | Prisma.Member$sessionsArgs<ExtArgs>
+  tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
@@ -921,6 +1032,7 @@ export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   computers?: boolean | Prisma.Member$computersArgs<ExtArgs>
   accounts?: boolean | Prisma.Member$accountsArgs<ExtArgs>
   sessions?: boolean | Prisma.Member$sessionsArgs<ExtArgs>
+  tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -940,6 +1052,7 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     computers: Prisma.$ComputerPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
     sessions: Prisma.$SessionPayload<ExtArgs>[]
+    tasks: Prisma.$TaskPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1346,6 +1459,7 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   computers<T extends Prisma.Member$computersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$computersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComputerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.Member$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessions<T extends Prisma.Member$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  tasks<T extends Prisma.Member$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1850,6 +1964,30 @@ export type Member$sessionsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
+}
+
+/**
+ * Member.tasks
+ */
+export type Member$tasksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Task
+   */
+  select?: Prisma.TaskSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Task
+   */
+  omit?: Prisma.TaskOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TaskInclude<ExtArgs> | null
+  where?: Prisma.TaskWhereInput
+  orderBy?: Prisma.TaskOrderByWithRelationInput | Prisma.TaskOrderByWithRelationInput[]
+  cursor?: Prisma.TaskWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TaskScalarFieldEnum | Prisma.TaskScalarFieldEnum[]
 }
 
 /**

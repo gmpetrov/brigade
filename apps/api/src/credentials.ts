@@ -42,8 +42,9 @@ export const summarize = (row: Row): CredentialSummary => ({
 
 /**
  * Whether a member mentioned the credential in the thread: in a message, or
- * in an answer to the teammate's question or ticket. A trigger's event has no member,
- * so it cannot grant a credential.
+ * in an answer to the teammate's question or ticket (an input, or a credential
+ * granted to an access ask). A trigger's event has no member, so it cannot
+ * grant a credential.
  */
 export async function mentionedInThread(db: ScopedDb, sessionId: string, credentialId: string) {
   const events = await db.sessionEvent.findMany({
@@ -64,7 +65,13 @@ export async function mentionedInThread(db: ScopedDb, sessionId: string, credent
         : !answer || answer.action === 'declined'
           ? []
           : 'replies' in answer
-            ? Object.values(answer.replies).map((r) => (r.type === 'input' ? r.text : ''))
+            ? Object.values(answer.replies).map((r) =>
+                r.type === 'input'
+                  ? r.text
+                  : r.type === 'access' && r.granted
+                    ? (r.credential ?? '')
+                    : '',
+              )
             : Object.values(answer.answers).map((a) => a.freeform ?? '')
     return texts.some((text) => mentionedIds(text, 'credential').includes(credentialId))
   })

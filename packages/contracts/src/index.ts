@@ -9,12 +9,14 @@ export * from './models.js'
 export * from './pulls.js'
 export * from './repositories.js'
 export * from './runner.js'
+export * from './tasks.js'
 
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
  * 3: self-update. 4: the library, memory and search. 5: git through the API's proxy.
  * 6: generated images. 7: attachments. 8: welcome lists running threads, to close lost turns.
+ * 9: tasks.
  */
-export const PROTOCOL_VERSION = 8
+export const PROTOCOL_VERSION = 9
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

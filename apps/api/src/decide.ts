@@ -2,6 +2,7 @@
 // cap, or dismisses a notice. The Tickets page and the thread view both come here.
 import { randomUUID } from 'node:crypto'
 import {
+  mentionedIds,
   parseMentions,
   type Ask,
   type Question,
@@ -132,6 +133,17 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
           throw new HTTPException(400, {
             message: 'Pick a credential from the vault: Brigade never passes a secret in a message',
           })
+      }
+      if (ask.type === 'access' && reply.type === 'access' && reply.credential) {
+        // A credential the person picked or just saved: one of this workspace's vault.
+        const ids = mentionedIds(reply.credential, 'credential')
+        if (
+          ask.kind !== 'credential' ||
+          !reply.granted ||
+          !onlyCredentialMentions(reply.credential) ||
+          (await db.credential.count({ where: { id: { in: ids } } })) !== new Set(ids).size
+        )
+          throw new HTTPException(400, { message: 'Pick a credential from the vault' })
       }
       if (ask.type === 'approval' && reply.type === 'approval' && !reply.approved) {
         if (!reply.changes?.trim())

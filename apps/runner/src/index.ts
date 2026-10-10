@@ -189,6 +189,8 @@ async function start() {
     },
     callLibrary: (sessionId, teammateId, { operation }) =>
       connection.callLibrary({ sessionId, teammateId, operation }),
+    callTask: (sessionId, teammateId, { operation }) =>
+      connection.callTask({ sessionId, teammateId, operation }),
     memoryUpdate: (update) => connection.send(update),
   })
   const accounts = new Accounts({

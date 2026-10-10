@@ -58,9 +58,19 @@ case "\${1:-}" in
     AUTH=$(ps -o args= -C Xorg | sed -n 's/.* -auth \\([^ ]*\\).*/\\1/p' | head -1)
     DISPLAY=:0 XAUTHORITY="$AUTH" xhost "+SI:localuser:$2" >/dev/null || fail "no desktop"
     install -d -o "$2" -g "$2" -m 700 "/home/$2/.browser"
+    # A resumed computer has a new hostname, and Chrome refuses a profile still locked by
+    # its last run "on another computer". With none of the teammate's Chromes running,
+    # that lock is stale: remove it, as the teammate.
+    if ! pgrep -u "$2" -f "user-data-dir=/home/$2/.browser" >/dev/null; then
+      runuser -u "$2" -- rm -f "/home/$2/.browser/SingletonLock" "/home/$2/.browser/SingletonCookie" \\
+        "/home/$2/.browser/SingletonSocket"
+    fi
     cd /
+    # Chrome's output goes to ~/.browser.log, written as the teammate, so the runner can
+    # say why it did not start.
     setsid -f runuser -u "$2" -- env -i HOME="/home/$2" USER="$2" LOGNAME="$2" DISPLAY=:0 \\
-      PATH=/usr/bin:/bin LANG=C.UTF-8 google-chrome --user-data-dir="/home/$2/.browser" \\
+      PATH=/usr/bin:/bin LANG=C.UTF-8 sh -c 'exec "$@" >"$HOME/.browser.log" 2>&1' sh \\
+      google-chrome --user-data-dir="/home/$2/.browser" \\
       --remote-debugging-port="$3" --no-first-run --no-default-browser-check \\
       --password-store=basic --class="brigade-$2" --window-name="$4" \${URL:+"$URL"} \\
       >/dev/null 2>&1 </dev/null

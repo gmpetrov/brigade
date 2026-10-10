@@ -46,6 +46,8 @@ export function DesktopView({
     let client: RFB | undefined
     let unbridge: (() => void) | undefined
     let closed = false
+    // noVNC logs an error when a client that already dropped is disconnected again.
+    let ended = false
     setConnected(false)
     // noVNC touches browser APIs as it loads: only here, never on the server.
     void import('@novnc/novnc').then(({ default: RFBClient }) => {
@@ -65,6 +67,7 @@ export function DesktopView({
         if (initial.current.focus && initial.current.control) client?.focus({ preventScroll: true })
       })
       client.addEventListener('disconnect', (e) => {
+        ended = true
         setConnected(false)
         if (!closed)
           lost.current((e as CustomEvent<{ clean: boolean }>).detail.clean ? 'closed' : 'lost')
@@ -85,7 +88,7 @@ export function DesktopView({
     return () => {
       closed = true
       unbridge?.()
-      client?.disconnect()
+      if (!ended) client?.disconnect()
       rfb.current = null
     }
   }, [connection])

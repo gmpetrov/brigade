@@ -10,6 +10,7 @@ import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
 import { Takeover } from '@/components/takeover'
+import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
 import { TicketRow } from '@/components/ticket-row'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
@@ -196,6 +197,9 @@ export default function ThreadPage() {
             ) : (
               t.private && <StatusBadge status="private" tone="neutral" label="Private" />
             )}
+            {!t.task && t.origin === 'member' && t.mayPrompt && (
+              <MakeTaskButton thread={t} onCreated={() => void thread.reload()} />
+            )}
             <Button asChild variant="outline" size="sm">
               <Link href={`/app/threads/${id}/log`}>
                 <ListOrdered aria-hidden />
@@ -226,6 +230,10 @@ export default function ThreadPage() {
           </div>
         ) : null}
       </header>
+
+      {t.task && (
+        <ThreadTaskBar taskId={t.task.id} status={current} onChanged={() => void thread.reload()} />
+      )}
 
       {notices.length > 0 && (
         <Card className="mb-4 gap-0 overflow-hidden py-0">

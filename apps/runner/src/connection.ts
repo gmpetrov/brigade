@@ -158,9 +158,23 @@ export class Connection {
     return result.output
   }
 
+  /** Create a task from a thread, or complete its task. The API checks the thread. */
+  async callTask(
+    request: Omit<Extract<RunnerToApi, { type: 'task.call' }>, 'type' | 'callId'>,
+  ): Promise<unknown> {
+    const result = await this.call(
+      { type: 'task.call', ...request },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+    return result.output
+  }
+
   private call(
     message: DistributiveOmit<
-      Extract<RunnerToApi, { type: 'connector.call' | 'credential.request' | 'library.call' }>,
+      Extract<
+        RunnerToApi,
+        { type: 'connector.call' | 'credential.request' | 'library.call' | 'task.call' }
+      >,
       'callId'
     >,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,

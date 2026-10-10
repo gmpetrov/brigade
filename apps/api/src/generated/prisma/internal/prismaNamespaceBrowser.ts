@@ -63,6 +63,7 @@ export const ModelName = {
   Runner: 'Runner',
   Teammate: 'Teammate',
   Session: 'Session',
+  Task: 'Task',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
@@ -278,10 +279,30 @@ export const SessionScalarFieldEnum = {
   conversationKey: 'conversationKey',
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  taskId: 'taskId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const TaskScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  title: 'title',
+  description: 'description',
+  priority: 'priority',
+  teammateId: 'teammateId',
+  createdByMemberId: 'createdByMemberId',
+  summary: 'summary',
+  deliverables: 'deliverables',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TaskScalarFieldEnum = (typeof TaskScalarFieldEnum)[keyof typeof TaskScalarFieldEnum]
 
 
 export const ThreadTeammateScalarFieldEnum = {

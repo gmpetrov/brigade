@@ -176,6 +176,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     status: z.string(),
   }),
   z.object({ type: z.literal('computer.updated'), computerId: z.string(), online: z.boolean() }),
+  /** A task was created, changed or removed: refetch the board. */
+  z.object({ type: z.literal('task.updated'), taskId: z.string() }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),

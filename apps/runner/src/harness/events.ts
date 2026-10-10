@@ -130,7 +130,20 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
         return [{ ask: ask.question, chose: label ?? reply.optionId }]
       }
       if (ask.type === 'access' && reply.type === 'access')
-        return [{ ask: `Access to ${ask.what}`, granted: reply.granted }]
+        return [
+          {
+            ask: `Access to ${ask.what}`,
+            granted: reply.granted,
+            ...(reply.granted && reply.credential
+              ? {
+                  credential: reply.credential,
+                  note:
+                    'The person granted this credential from the vault; it is yours to use in this thread. ' +
+                    'Pass the id in its mention to fill_credential (a website login) or use_credential, and carry on.',
+                }
+              : {}),
+          },
+        ]
       if (ask.type === 'action' && reply.type === 'action')
         return [{ ask: ask.title, done: reply.done, ...(reply.note ? { note: reply.note } : {}) }]
       if (ask.type === 'input' && reply.type === 'input')

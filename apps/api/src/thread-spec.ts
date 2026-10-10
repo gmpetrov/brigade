@@ -2,6 +2,7 @@ import type { ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { threadAttachments } from './attachments.js'
 import type { ScopedDb } from './db.js'
+import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { gitAccess } from './git.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
@@ -22,6 +23,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       teammate: true,
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
+      task: { select: { id: true, title: true, description: true, completedAt: true } },
     },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -127,6 +129,9 @@ export async function specFor(
     library: teammate.libraryAccess,
     private: thread.private,
     attachments: await threadAttachments(db, thread.id),
+    task: thread.task
+      ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
+      : null,
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {
@@ -136,5 +141,26 @@ export async function specFor(
           ),
         }
       : {}),
+  }
+}
+
+/** Prompting or approving spends the starter's subscription: only they may, unless they allow it. */
+export function requireMayPrompt(
+  scope: WorkspaceScope,
+  thread: {
+    startedByMemberId: string
+    othersMayPrompt: boolean
+    controlledByMemberId: string | null
+  },
+) {
+  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt) {
+    throw new HTTPException(403, {
+      message: "This thread runs on another member's subscription. Fork it to continue.",
+    })
+  }
+  if (thread.controlledByMemberId) {
+    throw new HTTPException(409, {
+      message: 'A person has control of this thread. It continues when they hand it back.',
+    })
   }
 }

@@ -9,7 +9,7 @@ import { createRequire } from 'node:module'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { teammateUser } from './teammates.js'
+import { teammateHome, teammateUser } from './teammates.js'
 
 const run = promisify(execFile)
 const HELPER = '/usr/local/sbin/brigade-teammate'
@@ -46,8 +46,30 @@ export async function ensureBrowser(teammate: { id: string; name: string }, url?
   }
   for (let i = 0; i < 50 && !(await listening(port)); i++)
     await new Promise((r) => setTimeout(r, 200))
-  if (!(await listening(port))) throw new Error(`The browser of ${user} did not start`)
+  if (!(await listening(port))) {
+    const why = await chromeErrors(user)
+    throw new Error(`The browser of ${user} did not start${why ? `: ${why}` : ''}`)
+  }
   return port
+}
+
+/** The last errors Chrome printed, from the log the helper keeps in the teammate's home. */
+async function chromeErrors(user: string) {
+  const { stdout } = await run(
+    'sudo',
+    ['-n', '-u', user, 'tail', '-c', '4000', `${teammateHome(user)}/.browser.log`],
+    { cwd: '/' },
+  ).catch(() => ({ stdout: '' }))
+  // [pid:tid:time:ERROR:file.cc:123] message
+  const errors = stdout
+    .split('\n')
+    .filter((line) => /^\[[^\]]*:(ERROR|FATAL):[^\]]*\]/.test(line))
+    .map((line) => line.replace(/^\[[^\]]*\]\s*/, '').trim())
+  // Chrome often repeats an error inside a later one ("Unable to show message box: …").
+  return errors
+    .filter((error, i) => !errors.slice(0, i).some((earlier) => error.includes(earlier)))
+    .slice(-2)
+    .join(' / ')
 }
 
 /** Opened when a person asks for the browser without a site in mind. */

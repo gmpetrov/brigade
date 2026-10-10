@@ -1,6 +1,7 @@
 'use client'
 import {
   formatMention,
+  mentionsToText,
   type AgentEvent,
   type Ask,
   type AskReply,
@@ -19,12 +20,14 @@ import {
   ClipboardList,
   GitPullRequest,
   ListChecks,
+  Plus,
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { MessageAttachments } from '@/components/attachments'
+import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { Markdown, MessageWithCode } from '@/components/markdown'
@@ -591,27 +594,43 @@ export function ThreadItems({
 const isSecret = (q: Question) => typeof q.allowFreeForm === 'object' && q.allowFreeForm.secret
 
 /**
- * The answer to a question asking for a secret: a credential from the vault.
- * The teammate gets its mention, which lets it use the credential in this
- * thread; the secret itself never goes into the answer.
+ * The answer to a question asking for a secret: a credential from the vault,
+ * or a new one saved there from here. The teammate gets its mention, which
+ * lets it use the credential in this thread; the secret itself never goes
+ * into the answer.
  */
 function CredentialPicker({
   value,
   onChange,
   disabled,
+  intro = 'This asks for a secret. Pick one from the vault, or add it there: your teammate can then use it in this thread without ever seeing it.',
+  onNew,
 }: {
   value: string
   onChange: (mention: string) => void
   disabled: boolean
+  intro?: string
+  /** Adding a new one happens elsewhere, instead of in a form here. */
+  onNew?: () => void
 }) {
   const credentials = useApi<Credential[]>('/credentials')
+  const [adding, setAdding] = useState(false)
   const list = credentials.data ?? []
+  if (adding)
+    return (
+      <CredentialForm
+        inline
+        onCancel={() => setAdding(false)}
+        onSaved={async (saved) => {
+          await credentials.reload()
+          onChange(formatMention(mentionOf(saved)))
+          setAdding(false)
+        }}
+      />
+    )
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">
-        This asks for a secret. Pick one from the vault: your teammate can then use it in this
-        thread without ever seeing it.
-      </p>
+      <p className="text-sm text-muted-foreground">{intro}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Select
           disabled={disabled || list.length === 0}
@@ -634,14 +653,19 @@ function CredentialPicker({
             ))}
           </SelectContent>
         </Select>
-        <Button asChild variant="link" size="sm">
-          <a href="/app/vault" target="_blank" rel="noreferrer">
-            Add one
-          </a>
-        </Button>
         <Button
           type="button"
           variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={() => (onNew ? onNew() : setAdding(true))}
+        >
+          <Plus aria-hidden />
+          New credential
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
           size="sm"
           disabled={disabled}
           onClick={() => void credentials.reload()}
@@ -655,6 +679,68 @@ function CredentialPicker({
 }
 
 const mentionOf = (c: Credential) => ({ kind: 'credential' as const, id: c.id, label: c.name })
+
+/**
+ * A teammate lacks a credential: save it to the vault right here, filled in
+ * with what the teammate knows, or grant one already there. Either way the
+ * teammate gets its mention and carries on with it in this thread.
+ */
+function CredentialAccess({
+  ask,
+  askerName,
+  onReply,
+}: {
+  ask: Extract<Ask, { type: 'access' }>
+  askerName: string
+  onReply: (reply: AskReply) => void
+}) {
+  const [fromVault, setFromVault] = useState(false)
+  const [picked, setPicked] = useState('')
+  const grant = (mention: string) => onReply({ type: 'access', granted: true, credential: mention })
+  const refuse = (
+    <Button size="sm" variant="ghost" onClick={() => onReply({ type: 'access', granted: false })}>
+      Can&apos;t grant
+    </Button>
+  )
+  if (fromVault)
+    return (
+      <div className="flex flex-col gap-2">
+        <CredentialPicker
+          value={picked}
+          onChange={setPicked}
+          disabled={false}
+          intro={`Pick one from the vault: ${askerName} can then use it in this thread without ever seeing it.`}
+          onNew={() => setFromVault(false)}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={!picked} onClick={() => grant(picked)}>
+            Grant
+          </Button>
+          {refuse}
+        </div>
+      </div>
+    )
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        Save it to the vault here and {askerName} uses it in this thread right away. The secret is
+        encrypted the moment you save it; {askerName} never sees it.
+      </p>
+      <CredentialForm
+        inline
+        draft={ask.credential}
+        submitLabel="Save and grant"
+        onSaved={(saved) => grant(formatMention(mentionOf(saved)))}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="link" onClick={() => setFromVault(true)}>
+          It&apos;s already in the vault
+        </Button>
+        {refuse}
+      </div>
+    </div>
+  )
+}
 
 /** The harness asks a person something: options, a free answer, or a decline. */
 function QuestionCard({
@@ -944,7 +1030,8 @@ function replyLabel(ask: Ask, reply: AskReply, teammates: { id: string; name: st
           ? 'Approved'
           : 'Declined'
     case 'access':
-      return reply.granted ? 'Granted' : 'Not granted'
+      if (!reply.granted) return 'Not granted'
+      return reply.credential ? `Granted ${mentionsToText(reply.credential)}` : 'Granted'
     case 'action':
       return reply.done ? 'Done' : 'Not done'
     case 'input':
@@ -1155,15 +1242,13 @@ function AskView({
             </>
           )}
         </div>
+      ) : ask.type === 'access' && ask.kind === 'credential' ? (
+        <CredentialAccess ask={ask} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="outline">
-            <a
-              href={ask.kind === 'credential' ? '/app/vault' : '/app/connections'}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {ask.kind === 'credential' ? 'Open Vault →' : 'Open Connections →'}
+            <a href="/app/connections" target="_blank" rel="noreferrer">
+              Open Connections →
             </a>
           </Button>
           <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>

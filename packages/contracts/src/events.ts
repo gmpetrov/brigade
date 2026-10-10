@@ -2,6 +2,7 @@
 // to these; nothing outside the runner sees a harness type.
 import { z } from 'zod'
 import { MessageAttachment } from './attachments.js'
+import { CredentialKind } from './credentials.js'
 
 const base = {
   /** ISO time the event happened on the computer. */
@@ -69,6 +70,18 @@ export const Ask = z.discriminatedUnion('type', [
     kind: z.enum(['connection', 'credential']),
     what: z.string(),
     reason: z.string().optional(),
+    /**
+     * A credential: what the teammate knows of it, so a person can save it to
+     * the vault from the ticket. Only fills in the form; never a secret.
+     */
+    credential: z
+      .object({
+        kind: CredentialKind.optional(),
+        name: z.string().max(80).optional(),
+        url: z.string().max(2000).optional(),
+        username: z.string().max(500).optional(),
+      })
+      .optional(),
   }),
   /** Something only a person can do, such as a phone call. */
   z.object({
@@ -99,7 +112,12 @@ export const AskReply = z.discriminatedUnion('type', [
   }),
   /** optionId: one of the ask's options, or approve / decline when it has none. */
   z.object({ type: z.literal('decision'), optionId: z.string() }),
-  z.object({ type: z.literal('access'), granted: z.boolean() }),
+  z.object({
+    type: z.literal('access'),
+    granted: z.boolean(),
+    /** A credential granted from the vault, as its mention: the teammate may use it in this thread. */
+    credential: z.string().max(1000).optional(),
+  }),
   z.object({
     type: z.literal('action'),
     done: z.boolean(),

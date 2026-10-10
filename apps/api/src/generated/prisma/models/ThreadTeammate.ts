@@ -14,9 +14,7 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model ThreadTeammate
- * One AgentEvent with its sequence number. Append-only.
- * A teammate in a thread. A member's mention brings a teammate in; each runs its own
- * harness session on the thread's computer and is told what the others said.
+ * 
  */
 export type ThreadTeammateModel = runtime.Types.Result.DefaultSelection<Prisma.$ThreadTeammatePayload>
 
