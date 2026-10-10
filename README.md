@@ -286,7 +286,10 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **When a thread ends** is when it goes quiet: 5 minutes after its last turn (`BRIGADE_QUIET_MS` overrides, for
   tests), the runner runs the thread's harness once more, outside the thread, with no tools, on the same account,
   in an empty directory. It reads what was said since the last time and answers with a summary and lines to add to
-  or remove from each memory file. The API applies those lines (`applyMemoryEdit`) one file at a time, so threads
+  or remove from each memory file. Memory is loaded into every thread, so it is not a log: at most three lines a file
+  per run, only what a teammate would need in an unrelated thread and could not find with its tools (never the
+  thread's progress, what Brigade or a repository already shows, or what emails and websites said), and the same run
+  removes lines that are wrong, repeated or below that bar, so memory cleans itself. The API applies those lines (`applyMemoryEdit`) one file at a time, so threads
   ending together never overwrite each other or people's edits. A private thread (set by its starter) leaves
   workspace memory alone, and its summary is searchable only by the starter.
 - **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,

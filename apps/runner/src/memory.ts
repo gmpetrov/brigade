@@ -6,6 +6,8 @@ import { z } from 'zod'
 /** How much of the conversation a memory run reads. */
 const CONVERSATION_CHARS = 60_000
 const MEMORY_CHARS = 20_000
+/** Lines one thread may add to a memory file: memory is loaded into every thread. */
+const MAX_ADD = 3
 
 type Entry = { by: string | null; name: string; text: string }
 
@@ -36,11 +38,19 @@ export function memoryPrompt(input: {
         (input.summary ? ' (update the previous summary below with what happened since).' : '.'),
       spec.private
         ? '- workspace: leave both lists empty; this thread is private.'
-        : '- workspace: lasting facts anyone in this workspace will need later: people (names, roles, contacts), terms, decisions, and where things live (URLs, files, accounts). Not the progress of this task.',
-      `- teammates (${teammateKeys}): for each, what it learned about doing its job: preferences, procedures, pitfalls.`,
-      '- add: short one-line statements, each true on its own. Skip anything the memory already says.',
-      '- remove: lines copied exactly from a memory file that this conversation shows are wrong or outdated.',
-      '- Most threads add little or nothing to memory: empty lists are fine. Never include passwords, keys, tokens or other secrets.',
+        : '- workspace: what any teammate should know before starting an unrelated thread next month, and could not find out on its own: how the team wants things done (rules, preferences, decisions as they stand), who is who on the team, where something is when that is not obvious, and pitfalls (such as a connector that reaches a test account, not the live one).',
+      `- teammates (${teammateKeys}): for each, a lesson that changes how it works next time: a member's correction or preference, a way that worked after one that failed, a pitfall. Not what it did, nor what goes in workspace memory.`,
+      [
+        '- Memory is loaded into every thread, so it is not a log. Never add:',
+        '  - what was asked, done, found or offered in this thread, or the state of anything (pull requests, tasks, tickets, a login that fails, open questions): the summary keeps that;',
+        "  - what Brigade's tools already show: schedules, vault logins, connectors and triggers, what library files say, a teammate's own abilities;",
+        "  - what a repository's code says: file paths, how a feature is built;",
+        '  - what emails, websites or accounts read for this thread contain (orders, feeds, invoices, profiles), and details about people outside the team;',
+        "  - members' personal errands and accounts, and dates or examples of when something happened.",
+      ].join('\n'),
+      `- add: at most ${MAX_ADD} short lines per memory file, each true on its own, taken from this conversation only. Most threads add nothing: empty lists are the usual answer. When this conversation updates a line already in memory, remove the old one, so each thing is said once.`,
+      '- remove: lines copied exactly from a memory file that are wrong or outdated, repeat another line, or are the kind of line never to add. Remove such a line whole; do not add back a shorter copy of it.',
+      '- Never include passwords, keys, tokens or other secrets.',
     ].join('\n'),
     input.summary && `Previous summary of this thread:\n${input.summary}`,
     `Workspace memory now:\n<<<\n${workspace.trim() || '(empty)'}\n>>>`,
@@ -92,10 +102,10 @@ export function parseMemory(
 
 /** Within the API's limits, so one long line does not lose the whole update. */
 const clamp = (edit: { add: string[]; remove: string[] }): MemoryEdit => {
-  const lines = (list: string[]) =>
+  const lines = (list: string[], max: number) =>
     list
       .map((l) => l.trim().slice(0, 1000))
       .filter(Boolean)
-      .slice(0, 40)
-  return { add: lines(edit.add), remove: lines(edit.remove) }
+      .slice(0, max)
+  return { add: lines(edit.add, MAX_ADD), remove: lines(edit.remove, 40) }
 }
