@@ -103,6 +103,7 @@ model Member {
   accounts       Account[]
   sessions       Session[]
   tasks          Task[]
+  schedules      Schedule[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -157,6 +158,7 @@ model Workspace {
   pullRequests   PullRequest[]
   pullRequestReviews PullRequestReview[]
   tasks          Task[]
+  schedules      Schedule[]
   auditEntries   AuditEntry[]
 
   @@index([organizationId])
@@ -254,6 +256,8 @@ model Teammate {
   pullRequestsReviewing PullRequest[] @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
   tasks            Task[]
+  schedules        Schedule[]
+  schedulesCreated Schedule[] @relation("ScheduleCreatedByTeammate")
 
   @@index([workspaceId])
 }
@@ -281,6 +285,7 @@ enum SessionStatus {
 enum SessionOrigin {
   member
   trigger
+  schedule
 }
 
 model Session {
@@ -304,12 +309,14 @@ model Session {
   othersMayPrompt     Boolean        @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
-  /// member: a member's message. trigger: an outside event, whose writes always need approval.
+  /// member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
   origin              SessionOrigin  @default(member)
   triggerId           String?
   trigger             Trigger?       @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
   conversationKey     String?
+  scheduleId          String?
+  schedule            Schedule?      @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   /// Highest contiguous event sequence number stored.
   lastSeq             Int            @default(0)
   createdAt           DateTime       @default(now())
@@ -333,6 +340,7 @@ model Session {
   @@index([workspaceId, createdAt])
   @@index([teammateId])
   @@index([triggerId, conversationKey])
+  @@index([scheduleId, createdAt])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
@@ -371,6 +379,42 @@ model Task {
   session           Session?
 
   @@index([workspaceId, completedAt])
+  @@index([teammateId])
+}
+
+/// A teammate prompted with the same instructions on a cron schedule; each
+/// firing starts a fresh thread on the owner's accounts.
+model Schedule {
+  id                  String    @id @default(cuid())
+  organizationId      String
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teammateId          String
+  teammate            Teammate  @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  title               String
+  /// The first message of each run.
+  instructions        String
+  /// Five fields: minute, hour, day of month, month, day of week.
+  cron                String
+  /// IANA, e.g. Europe/Paris: the cron's hours are in this zone.
+  timezone            String
+  /// Runs on this member's accounts; only they edit it.
+  ownerMemberId       String
+  owner               Member    @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  /// Set when a teammate created it from a thread.
+  createdByTeammateId String?
+  createdByTeammate   Teammate? @relation("ScheduleCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
+  pausedAt            DateTime?
+  /// The next firing; null while paused.
+  nextRunAt           DateTime?
+  /// Why the last firing could not start; cleared by the next one that does.
+  lastError           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  sessions            Session[]
+
+  @@index([nextRunAt])
+  @@index([workspaceId])
   @@index([teammateId])
 }
 

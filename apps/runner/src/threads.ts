@@ -121,7 +121,7 @@ export class Threads {
       /** A teammate's reply mentioned others in the thread: ask the API to have them answer next. */
       handoff: (sessionId: string, fromTeammateId: string, teammateIds: string[]) => void
       /** The library and memory threads reach. */
-      context: Omit<ThreadContext, 'callLibrary' | 'callTask'>
+      context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule'>
       callLibrary: (
         sessionId: string,
         teammateId: string,
@@ -132,6 +132,12 @@ export class Threads {
         sessionId: string,
         teammateId: string,
         call: Parameters<ThreadContext['callTask']>[0],
+      ) => Promise<unknown>
+      /** A teammate's schedule tools: create, list or change its schedules. */
+      callSchedule: (
+        sessionId: string,
+        teammateId: string,
+        call: Parameters<ThreadContext['callSchedule']>[0],
       ) => Promise<unknown>
       /** What a quiet thread leaves in memory. */
       memoryUpdate: (update: Extract<RunnerToApi, { type: 'memory.update' }>) => void
@@ -632,6 +638,7 @@ export class Threads {
           ...this.options.context,
           callLibrary: (call) => this.options.callLibrary(spec.sessionId, teammateId, call),
           callTask: (call) => this.options.callTask(spec.sessionId, teammateId, call),
+          callSchedule: (call) => this.options.callSchedule(spec.sessionId, teammateId, call),
         },
         user,
       )

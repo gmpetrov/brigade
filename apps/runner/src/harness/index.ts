@@ -43,13 +43,15 @@ import {
   OPEN_TICKET_TOOL,
   openTicketTool,
   repoTools,
+  scheduleTools,
   taskTools,
   type ConnectorCaller,
   type LibraryCaller,
+  type ScheduleCaller,
   type TaskCaller,
 } from './tools.js'
 
-export type { ConnectorCaller, LibraryCaller, TaskCaller } from './tools.js'
+export type { ConnectorCaller, LibraryCaller, ScheduleCaller, TaskCaller } from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
@@ -58,6 +60,8 @@ export type ThreadContext = {
   callLibrary: LibraryCaller
   /** Create a task from the thread, or complete its task. */
   callTask: TaskCaller
+  /** Create, list or change the teammate's schedules. */
+  callSchedule: ScheduleCaller
   bundles: BundleStore
   /** Send a file of the teammate's to the API, to go with a connector call. Returns its id. */
   uploadFile: (input: {
@@ -100,6 +104,7 @@ function createAgent(
   library: Parameters<typeof libraryTools>[0],
   checkoutRepo: (input: CheckoutInput) => Promise<unknown>,
   callTask: TaskCaller,
+  callSchedule: ScheduleCaller,
 ) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
@@ -112,6 +117,7 @@ function createAgent(
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),
     ...taskTools(callTask),
+    ...scheduleTools(callSchedule),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
@@ -487,6 +493,7 @@ export class HarnessThread {
           ...(this.runAs ? { runAs: this.runAs } : {}),
         }),
       this.context.callTask,
+      this.context.callSchedule,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,

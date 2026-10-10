@@ -1,7 +1,7 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
 import { jsonSchema, tool, type Tool } from 'ai'
-import type { ConnectorGrant, TaskOperation } from '@brigade/contracts'
+import type { ConnectorGrant, ScheduleOperation, TaskOperation } from '@brigade/contracts'
 
 export type ConnectorCaller = (call: {
   connectionId: string
@@ -451,6 +451,105 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
           },
           toolCallId,
           toolName: 'complete_task',
+          input,
+        }),
+    }),
+  }
+}
+
+export type ScheduleCaller = (call: {
+  operation: ScheduleOperation
+  toolCallId: string
+  toolName: string
+  input: unknown
+}) => Promise<unknown>
+
+const CRON =
+  'Five-field cron: minute hour day-of-month month day-of-week, e.g. "0 9 * * 1-5" for 09:00 on weekdays, ' +
+  '"30 7 * * 1" for 07:30 on Mondays, "0 */2 * * *" every two hours. Runs at least 5 minutes apart.'
+const TIMEZONE =
+  'IANA timezone the hours are in, e.g. "Europe/Paris". Use the person\'s if you know it.'
+
+/**
+ * Schedules: the teammate prompted with the same instructions on a cron
+ * schedule, on the thread starter's accounts. The API checks the thread (a
+ * member's, not a trigger's or a schedule's) and whose schedules they are.
+ */
+export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
+  return {
+    create_schedule: tool({
+      description:
+        'Set up recurring work: you are prompted with these instructions on a schedule, each run in a fresh ' +
+        'thread on the accounts of the person in this thread. Use it when the person asks for something to happen ' +
+        'repeatedly or at set times ("every morning", "each Monday", "daily at 6pm"). Each run starts with no memory ' +
+        'of this conversation, so write instructions that stand alone: the inputs by name (repositories, mailboxes, ' +
+        'documents, searches), the steps, where the result goes (an email, a pull request, the library) and when to ' +
+        'open a ticket instead. Do not ask first; create it, then tell the person in one line when it runs.',
+      inputSchema: jsonSchema<{
+        title: string
+        instructions: string
+        cron: string
+        timezone?: string
+      }>({
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Short, e.g. "Weekly PR digest"' },
+          instructions: { type: 'string', description: 'What to do on each run, standing alone' },
+          cron: { type: 'string', description: CRON },
+          timezone: { type: 'string', description: TIMEZONE },
+        },
+        required: ['title', 'instructions', 'cron'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'create',
+            title: input.title,
+            instructions: input.instructions,
+            cron: input.cron,
+            ...(input.timezone ? { timezone: input.timezone } : {}),
+          },
+          toolCallId,
+          toolName: 'create_schedule',
+          input,
+        }),
+    }),
+    list_schedules: tool({
+      description:
+        'List your schedules: id, title, cron, timezone, whether paused, and the next runs.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({ operation: { name: 'list' }, toolCallId, toolName: 'list_schedules', input }),
+    }),
+    update_schedule: tool({
+      description:
+        'Change one of your schedules when the person asks: its title, instructions or timing, or pause and ' +
+        'resume it (paused). Only schedules that run on the accounts of the person in this thread. ' +
+        'Deleting is done by people, on the Automations page.',
+      inputSchema: jsonSchema<{
+        scheduleId: string
+        title?: string
+        instructions?: string
+        cron?: string
+        timezone?: string
+        paused?: boolean
+      }>({
+        type: 'object',
+        properties: {
+          scheduleId: { type: 'string', description: 'From list_schedules' },
+          title: { type: 'string' },
+          instructions: { type: 'string', description: 'Replaces them whole' },
+          cron: { type: 'string', description: CRON },
+          timezone: { type: 'string', description: TIMEZONE },
+          paused: { type: 'boolean', description: 'true pauses it, false resumes it' },
+        },
+        required: ['scheduleId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'update', ...input },
+          toolCallId,
+          toolName: 'update_schedule',
           input,
         }),
     }),

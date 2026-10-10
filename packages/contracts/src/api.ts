@@ -178,6 +178,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('computer.updated'), computerId: z.string(), online: z.boolean() }),
   /** A task was created, changed or removed: refetch the board. */
   z.object({ type: z.literal('task.updated'), taskId: z.string() }),
+  /** A schedule was created, changed, fired or removed: refetch the list. */
+  z.object({ type: z.literal('schedule.updated'), scheduleId: z.string() }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),

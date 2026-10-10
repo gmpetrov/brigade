@@ -61,7 +61,8 @@ export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus]
 
 export const SessionOrigin = {
   member: 'member',
-  trigger: 'trigger'
+  trigger: 'trigger',
+  schedule: 'schedule'
 } as const
 
 export type SessionOrigin = (typeof SessionOrigin)[keyof typeof SessionOrigin]

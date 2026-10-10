@@ -201,8 +201,9 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   }[]
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
-  origin: 'member' | 'trigger'
+  origin: 'member' | 'trigger' | 'schedule'
   trigger: { id: string; label: string; event: string } | null
+  schedule: { id: string; title: string } | null
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
   /** Every file given to the thread, oldest first. */
   attachments: AttachmentInfo[]
@@ -211,6 +212,28 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'
+
+/** A teammate prompted with the same instructions on a cron schedule, on its owner's accounts. */
+export type Schedule = {
+  id: string
+  teammateId: string
+  title: string
+  instructions: string
+  cron: string
+  timezone: string
+  ownerMemberId: string
+  createdByTeammateId: string | null
+  pausedAt: string | null
+  nextRunAt: string | null
+  lastError: string | null
+  createdAt: string
+  updatedAt: string
+  teammate: { id: string; name: string; harness: Teammate['harness']; archivedAt: string | null }
+  owner: { id: string; user: { name: string } }
+  createdByTeammate: { id: string; name: string } | null
+  /** Its latest thread. */
+  lastRun: { id: string; status: string; createdAt: string } | null
+}
 
 /** A task on the board, with its thread if it has started. */
 export type Task = {
@@ -370,7 +393,7 @@ export type Timeline = {
     id: string
     title: string
     status: string
-    origin: 'member' | 'trigger'
+    origin: 'member' | 'trigger' | 'schedule'
     segments: { state: TimelineState; from: string; to: string; note?: string }[]
     doneAt?: string
   }[]
@@ -434,7 +457,7 @@ export type Ticket = {
   session: {
     id: string
     title: string
-    origin: 'member' | 'trigger'
+    origin: 'member' | 'trigger' | 'schedule'
     startedByMemberId: string
     teammate: { id: string; name: string }
   } | null

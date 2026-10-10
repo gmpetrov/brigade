@@ -169,11 +169,25 @@ export class Connection {
     return result.output
   }
 
+  /** Create, list or change the teammate's schedules. The API checks the thread. */
+  async callSchedule(
+    request: Omit<Extract<RunnerToApi, { type: 'schedule.call' }>, 'type' | 'callId'>,
+  ): Promise<unknown> {
+    const result = await this.call(
+      { type: 'schedule.call', ...request },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+    return result.output
+  }
+
   private call(
     message: DistributiveOmit<
       Extract<
         RunnerToApi,
-        { type: 'connector.call' | 'credential.request' | 'library.call' | 'task.call' }
+        {
+          type:
+            'connector.call' | 'credential.request' | 'library.call' | 'task.call' | 'schedule.call'
+        }
       >,
       'callId'
     >,

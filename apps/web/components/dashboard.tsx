@@ -1,5 +1,6 @@
 'use client'
 import {
+  CalendarClock,
   ChevronsUpDown,
   GitPullRequest,
   House,
@@ -74,6 +75,7 @@ export { isAdmin }
 const NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/tasks', label: 'Tasks', icon: SquareKanban },
+  { href: '/app/automations', label: 'Automations', icon: CalendarClock },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },

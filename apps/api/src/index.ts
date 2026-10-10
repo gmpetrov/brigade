@@ -4,6 +4,7 @@ import { app } from './app.js'
 import { sweepUploads } from './attachments.js'
 import { env } from './config.js'
 import { watchMerges } from './pull-requests.js'
+import { watchSchedules } from './schedules.js'
 import { watchSubscriptions } from './subscriptions/index.js'
 
 serve(
@@ -19,6 +20,7 @@ serve(
 
 watchSubscriptions()
 watchMerges()
+watchSchedules()
 
 // Uploads abandoned mid-way or never sent with a message.
 const sweep = () =>
