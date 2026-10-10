@@ -78,7 +78,8 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 | 6. Vault and first connector    | Done. Tested on a real Gmail mailbox: labels, search, read, a draft after approval, a send after approval.                                                                                                                                                                                                  |
 | 7. Control                      | Done. Caps (threads started, connector writes), every ticket path, the timeline and run log, Stripe and HMAC webhook signatures, webhook writes always asking. Tested on real accounts: Gmail, Google Calendar (list, free/busy, create, get, delete), Stripe test mode (search, charges, customer update). |
 | 8. Browser                      | Done on the workspace computer: a Chrome per teammate with its own profile, driven through Playwright's MCP server, each thread in its own tabs (kept across turns), opened on the desktop from the dashboard for sign-in. Harness questions are tickets. Codex threads with the browser are untested.      |
-| 9–11                            | Not started.                                                                                                                                                                                                                                                                                                |
+| 9. Memory and library           | Done on a member's machine: library in the bucket (a local folder until R2 is configured), mirrored to computers, memory through the harness's own instruction file, memory taken when a thread goes quiet, one full-text search. Not yet run on a cloud computer.                                          |
+| 10–11                           | Not started.                                                                                                                                                                                                                                                                                                |
 
 ## Decisions where the spec is silent
 
@@ -204,8 +205,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   URL logs in with a cookie that browsers drop inside a third-party iframe, so the API logs in itself and relays the
   noVNC page and its socket under a random view id that lapses after an hour unused. The browser never sees the
   provider's URL. View only is noVNC's own setting, not a boundary: any member may take over anyway.
-- **Updating the root helper.** New workspace computers get the helper from the bootstrap. A runner upgrade does
-  not change root-owned files, so an existing computer needs the helper reinstalled when it changes.
+- **Updating the root helper.** See "Root setup on cloud computers" below: the API reapplies it when it changes.
 - **Threads with several teammates.** Mentioning a teammate (`@[Name](teammate:id)`) in a member's message brings it
   into the thread (`ThreadTeammate`) and has it answer; several mentions answer one after another, in order. A
   message with no mention goes to the teammate asked last. The thread keeps its starting teammate (`Session.teammateId`),
@@ -226,3 +226,37 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   swapped last) and is not retried for an hour. Runners started from source never update; `BRIGADE_AUTO_UPDATE=0`
   turns it off. Cloud runners from before self-update (protocol below 3) are reinstalled once per bundle through
   the provider while idle.
+- **Library** (`apps/api/src/library.ts`). Files go in the one bucket under `<organization>/<workspace>/library/<document id>`
+  (Cloudflare R2 through its S3 API; without `R2_*`, development uses `apps/api/.bucket`). `Document` keeps path,
+  type, size, SHA-256 and the text (UTF-8 files and PDFs; other files are kept but not searchable). Any member
+  uploads, edits, renames and deletes from the Library page; every change is audited. A file is served inline only
+  for types that cannot run script (`Content-Security-Policy: sandbox` always); anything else downloads.
+- **Library on computers** (`apps/runner/src/library.ts`). The runner mirrors the library read-only, at
+  `/var/lib/brigade/library` on the workspace computer (written by the runner, read by teammate users) and
+  `~/.brigade/library` on a member's machine. It fetches a manifest from `GET /runner/library` (runner token) on
+  every connect, when the API sends `library.changed`, and every 15 minutes. A teammate's grant on the library is
+  `read` (default) or `read_write`; with write it gets `save_to_library`, which sends a file it wrote through the
+  API. There is no "no access": the workspace is one trust zone and the mirror is shared.
+- **Memory** is three kinds of Markdown `Document` with no bucket object: workspace (`workspace.md`), teammate
+  (`teammates/<id>.md`) and thread summaries (`threads/<id>.md`). Memory loads through the harness's own file: the
+  runner writes `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex) into the thread's directory each time a harness
+  session starts, with the workspace's and the teammate's memory and where the library is. A file of that name
+  Brigade did not write is left alone.
+- **When a thread ends** is when it goes quiet: 5 minutes after its last turn (`BRIGADE_QUIET_MS` overrides, for
+  tests), the runner runs the thread's harness once more, outside the thread, with no tools, on the same account,
+  in an empty directory. It reads what was said since the last time and answers with a summary and lines to add to
+  or remove from each memory file. The API applies those lines (`applyMemoryEdit`) one file at a time, so threads
+  ending together never overwrite each other or people's edits. A private thread (set by its starter) leaves
+  workspace memory alone, and its summary is searchable only by the starter.
+- **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,
+  `simple` for paths) with a GIN index, queried with `websearch_to_tsquery`. Teammates get `search_workspace`
+  (answered like a connector call); a teammate finds its own memory, never another teammate's.
+- **Root setup on cloud computers.** The helper and the library folder are one versioned setup script
+  (`setupScript` in `cloud-bootstrap.ts`). A cloud runner reports the setup it has on connect; the API reapplies the
+  current one through the provider when they differ. This replaces reinstalling the helper by hand.
+- **Files in a thread.** A file path in a teammate's reply (inline code such as `faq/support.md` or `src/a.ts:42`, or a
+  relative Markdown link) opens in a panel beside the thread, in the desktop panel's place (a bottom sheet on narrow
+  screens). `GET /api/threads/:id/file` serves a library path from the library, so it opens while the computer is
+  stopped; anything else is read by the runner (`thread.file.read`) from the replying teammate's working folder for
+  that thread (then the others'), or the library mirror, after resolving links, as the teammate's user, text only, up
+  to 1 MB. It never wakes a stopped computer.

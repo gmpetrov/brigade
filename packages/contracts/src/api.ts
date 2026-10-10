@@ -1,6 +1,7 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
 import { QuestionAnswer, SequencedEvent } from './events.js'
+import { LibraryAccess } from './library.js'
 import { isHarnessModel } from './models.js'
 import { CLIPBOARD_MAX, HarnessId } from './runner.js'
 
@@ -48,6 +49,7 @@ export const UpdateTeammate = z.object({
   model: TeammateModel.optional(),
   permissionPolicy: PermissionPolicy.optional(),
   caps: Caps.optional(),
+  libraryAccess: LibraryAccess.optional(),
 })
 export const SetGrant = z.object({
   connectionId: z.string(),

@@ -3,6 +3,7 @@ import { parseMentions, type Mention } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { ProviderLogo } from '@/components/provider-logo'
 
 export type ConnectionKind = Connection['kind']
 
@@ -96,46 +97,7 @@ export function MentionIcon({
     strokeLinejoin: 'round',
   } as const
   if (kind === 'connection') {
-    if (connectionKind === 'gmail')
-      return (
-        <svg {...common}>
-          <path d="M3 6.5 12 13l9-6.5" fill="none" stroke="#EA4335" strokeWidth="2.4" />
-          <path d="M3 6.5V19h3.5v-8.5" fill="#4285F4" />
-          <path d="M21 6.5V19h-3.5v-8.5" fill="#34A853" />
-          <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="#C5221F" />
-        </svg>
-      )
-    if (connectionKind === 'google_calendar')
-      return (
-        <svg {...common}>
-          <rect
-            x="3"
-            y="4"
-            width="18"
-            height="17"
-            rx="3"
-            fill="#fff"
-            stroke="#4285F4"
-            strokeWidth="2"
-          />
-          <path d="M3 9h18" stroke="#4285F4" strokeWidth="2" />
-          <path d="M8 2.5v3M16 2.5v3" stroke="#1A73E8" strokeWidth="2" strokeLinecap="round" />
-          <rect x="8" y="12" width="3" height="3" rx=".5" fill="#EA4335" />
-        </svg>
-      )
-    if (connectionKind === 'stripe')
-      return (
-        <svg {...common}>
-          <rect x="2" y="2" width="20" height="20" rx="5" fill="#635BFF" />
-          <path
-            d="M14.8 9.2c-.6-.4-1.5-.7-2.4-.7-.9 0-1.4.3-1.4.8 0 1.4 4.6.7 4.6 3.9 0 1.6-1.3 2.7-3.4 2.7-1.1 0-2.3-.3-3.1-.8"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      )
+    if (connectionKind) return <ProviderLogo kind={connectionKind} className="size-3.5" />
     // A plug: a connection whose service is unknown here.
     return (
       <svg {...line}>

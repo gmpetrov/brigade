@@ -95,16 +95,10 @@
 
 /* App-specific pieces that can't take Tailwind classes. */
 @layer components {
-  /* Desktop preview: on wide screens the panel is fixed to the right of the
-   * window (components/desktop-preview.tsx); the content column makes room. */
+  /* Side panel (the desktop, or a file): on wide screens it is fixed to the
+   * right of the window; the content column makes room (below, unlayered). */
   :root {
     --desktop-w: min(45vw, 960px);
-  }
-  @media (width >= 80rem) {
-    [data-slot='sidebar-inset']:has([data-desktop-panel]) > div:last-child {
-      max-width: none;
-      padding-right: calc(var(--desktop-w) + 2.5rem);
-    }
   }
 
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
@@ -114,5 +108,14 @@
     float: left;
     height: 0;
     pointer-events: none;
+  }
+}
+
+/* Outside any layer, so it wins over the content column's own max-width and
+ * padding utilities (components/desktop-preview.tsx, components/file-panel.tsx). */
+@media (width >= 80rem) {
+  [data-slot='sidebar-inset']:has([data-desktop-panel]) > div:last-child {
+    max-width: none;
+    padding-right: calc(var(--desktop-w) + 2.5rem);
   }
 }

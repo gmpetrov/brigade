@@ -203,7 +203,14 @@ export const inboundWebhooks = new Hono().post('/:token', async (c) => {
     // Not JSON: passed on as text.
   }
   const fields = typeof payload === 'object' && payload ? (payload as Record<string, unknown>) : {}
-  const eventType = typeof fields.type === 'string' ? fields.type : 'event'
+  // Stripe names the event in the body; GitHub in a header, with the action in the body.
+  const githubEvent = c.req.header('x-github-event')
+  const eventType =
+    typeof fields.type === 'string'
+      ? fields.type
+      : githubEvent
+        ? `${githubEvent}${typeof fields.action === 'string' ? `.${fields.action}` : ''}`
+        : 'event'
   // Senders retry; one thread per event id.
   const eventId =
     (typeof fields.id === 'string' && fields.id) ||

@@ -247,6 +247,7 @@ export const TeammateScalarFieldEnum = {
   model: 'model',
   caps: 'caps',
   permissionPolicy: 'permissionPolicy',
+  libraryAccess: 'libraryAccess',
   archivedAt: 'archivedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -362,6 +363,7 @@ export const ConnectionScalarFieldEnum = {
   kind: 'kind',
   label: 'label',
   externalAccount: 'externalAccount',
+  externalUrl: 'externalUrl',
   status: 'status',
   vaultSecretId: 'vaultSecretId',
   createdByMemberId: 'createdByMemberId',
@@ -473,10 +475,15 @@ export const DocumentScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
+  kind: 'kind',
   path: 'path',
+  teammateId: 'teammateId',
+  sessionId: 'sessionId',
   contentType: 'contentType',
   size: 'size',
+  sha256: 'sha256',
   text: 'text',
+  indexed: 'indexed',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const

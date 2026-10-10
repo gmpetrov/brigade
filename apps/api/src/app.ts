@@ -11,6 +11,8 @@ import { accounts } from './routes/accounts.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
+import { library } from './routes/library.js'
+import { runnerLibrary } from './routes/runner-library.js'
 import { tickets } from './routes/tickets.js'
 import { inboundWebhooks, webhooks } from './routes/webhooks.js'
 import { runnerInstall } from './routes/runner-install.js'
@@ -35,10 +37,12 @@ app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
+app.route('/api/library', library)
 app.route('/api/webhooks', webhooks)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
+app.route('/runner/library', runnerLibrary)
 // The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
 app.route('/desktop', desktopProxy)
 // Public: third-party apps post here. Verified by URL and signature, not a session.

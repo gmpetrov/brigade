@@ -9,6 +9,13 @@ import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { deleteWebhooks } from './webhooks.js'
 import {
+  githubAccount,
+  githubAuthorizeUrl,
+  githubConfigured,
+  githubInstallUrl,
+  verifiedInstallation,
+} from '../connectors/github-app.js'
+import {
   exchangeGoogleCode,
   googleAccount,
   googleAuthUrl,
@@ -30,18 +37,59 @@ import {
 import { deleteSecret, openSecret, sealSecret } from '../vault.js'
 
 const stateIdentifier = (state: string) => `oauth-state:${hashToken(state)}`
+/** A member's GitHub connect request, from "Connect GitHub" until GitHub sends them back. */
+const githubPending = (userId: string) => `github-pending:${userId}`
+const STATE_MS = 10 * 60_000
 type OAuthState = {
   organizationId: string
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar'
+  kind: 'gmail' | 'google_calendar' | 'github'
+  /** github: the installation GitHub named, still to be checked against the person. */
+  installationId?: number
 }
+
+/**
+ * The connect request a state was issued for. It must be the same signed-in
+ * member, still an admin of that workspace. Returns the reason otherwise.
+ */
+async function takeState(identifier: string, userId: string) {
+  const row = await prisma.verification.findFirst({
+    where: { identifier, expiresAt: { gt: new Date() } },
+  })
+  if (!row) return 'expired'
+  await prisma.verification.deleteMany({ where: { id: row.id } })
+  const grant = JSON.parse(row.value) as OAuthState
+  const scope = await resolveScope({
+    userId,
+    activeOrganizationId: grant.organizationId,
+    activeWorkspaceId: grant.workspaceId,
+  })
+  if (!scope || scope.userId !== grant.userId || (scope.role !== 'owner' && scope.role !== 'admin'))
+    return 'forbidden'
+  return { grant, scope }
+}
+
+const saveState = (identifier: string, value: OAuthState) =>
+  prisma.verification.create({
+    data: {
+      id: randomUUID(),
+      identifier,
+      value: JSON.stringify(value),
+      expiresAt: new Date(Date.now() + STATE_MS),
+    },
+  })
 
 /** Seal the credential in the vault and record the connection. */
 async function createConnection(
   scope: WorkspaceScope,
-  connection: { kind: ConnectorKind; label: string; externalAccount: string | null },
+  connection: {
+    kind: ConnectorKind
+    label: string
+    externalAccount: string | null
+    externalUrl?: string
+  },
   credential: object,
 ) {
   const db = scoped(scope)
@@ -68,24 +116,10 @@ export const connections = new Hono<AppEnv>()
    */
   .get('/oauth/google/callback', async (c) => {
     const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
-    const state = c.req.query('state') ?? ''
-    const row = await prisma.verification.findFirst({
-      where: { identifier: stateIdentifier(state), expiresAt: { gt: new Date() } },
-    })
-    if (!row) return back('error=expired')
-    await prisma.verification.deleteMany({ where: { id: row.id } })
-    const grant = JSON.parse(row.value) as OAuthState
-    const scope = await resolveScope({
-      userId: c.var.userId,
-      activeOrganizationId: grant.organizationId,
-      activeWorkspaceId: grant.workspaceId,
-    })
-    if (
-      !scope ||
-      scope.userId !== grant.userId ||
-      (scope.role !== 'owner' && scope.role !== 'admin')
-    )
-      return back('error=forbidden')
+    const taken = await takeState(stateIdentifier(c.req.query('state') ?? ''), c.var.userId)
+    if (typeof taken === 'string') return back(`error=${taken}`)
+    const { grant, scope } = taken
+    if (grant.kind === 'github') return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
     let credential: GoogleCredential
@@ -105,6 +139,67 @@ export const connections = new Hono<AppEnv>()
     return back(`connected=${connection.id}`)
   })
 
+  /**
+   * GitHub's setup URL, after the app is installed or its repositories change.
+   * The installation id here is only a claim: the member signs in to GitHub
+   * next, and the callback checks that they reach that installation.
+   */
+  .get('/oauth/github/setup', async (c) => {
+    const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
+    // A member of an organization asked its owners to install the app; nothing is installed yet.
+    if (c.req.query('setup_action') === 'request') return back('error=github_requested')
+    const installationId = Number(c.req.query('installation_id'))
+    if (!Number.isSafeInteger(installationId) || installationId <= 0) return back('error=declined')
+    const taken = await takeState(githubPending(c.var.userId), c.var.userId)
+    if (typeof taken === 'string') return back(`error=${taken}`)
+    const state = randomBytes(24).toString('base64url')
+    await saveState(stateIdentifier(state), { ...taken.grant, installationId })
+    return c.redirect(githubAuthorizeUrl(state))
+  })
+
+  /** GitHub's redirect back after the member signs in. The vault keeps only the installation id. */
+  .get('/oauth/github/callback', async (c) => {
+    const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
+    const taken = await takeState(stateIdentifier(c.req.query('state') ?? ''), c.var.userId)
+    if (typeof taken === 'string') return back(`error=${taken}`)
+    const { grant, scope } = taken
+    if (grant.kind !== 'github' || !grant.installationId) return back('error=forbidden')
+    if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
+
+    let installation: Awaited<ReturnType<typeof verifiedInstallation>>
+    try {
+      installation = await verifiedInstallation(c.req.query('code')!, grant.installationId)
+    } catch (error) {
+      console.error('github connection failed:', error instanceof Error ? error.message : error)
+      return back('error=github')
+    }
+    if (!installation) return back('error=github_not_yours')
+
+    // Changing the repositories on GitHub comes back here too: refresh the connection, don't add one.
+    const db = scoped(scope)
+    const existing = await db.connection.findFirst({
+      where: { kind: 'github', externalUrl: installation.html_url, status: { not: 'removed' } },
+    })
+    if (existing) {
+      await db.connection.updateMany({
+        where: { id: existing.id },
+        data: { externalAccount: githubAccount(installation), status: 'active' },
+      })
+      return back(`connected=${existing.id}`)
+    }
+    const connection = await createConnection(
+      scope,
+      {
+        kind: 'github',
+        label: connectors.github!.label,
+        externalAccount: githubAccount(installation),
+        externalUrl: installation.html_url,
+      },
+      { installationId: installation.id },
+    )
+    return back(`connected=${connection.id}`)
+  })
+
   .use(requireWorkspace)
 
   .get('/', async (c) => {
@@ -118,6 +213,7 @@ export const connections = new Hono<AppEnv>()
         gmail: googleConfigured(),
         google_calendar: googleConfigured(),
         stripe: true,
+        github: githubConfigured(),
       },
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
     })
@@ -130,16 +226,22 @@ export const connections = new Hono<AppEnv>()
       throw new HTTPException(409, { message: 'Google is not configured on this Brigade server' })
     const { kind } = await parseBody(c.req.raw, ConnectGoogle)
     const state = randomBytes(24).toString('base64url')
-    const value: OAuthState = { ...c.var.scope, kind }
-    await prisma.verification.create({
-      data: {
-        id: randomUUID(),
-        identifier: stateIdentifier(state),
-        value: JSON.stringify(value),
-        expiresAt: new Date(Date.now() + 10 * 60_000),
-      },
-    })
+    await saveState(stateIdentifier(state), { ...c.var.scope, kind })
     return c.json({ url: googleAuthUrl(kind, state) })
+  })
+
+  /**
+   * Start a GitHub connection: install Brigade's GitHub App and pick the
+   * repositories. Admins only. One request per member at a time.
+   */
+  .post('/github', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    if (!githubConfigured())
+      throw new HTTPException(409, { message: 'GitHub is not configured on this Brigade server' })
+    const identifier = githubPending(c.var.scope.userId)
+    await prisma.verification.deleteMany({ where: { identifier } })
+    await saveState(identifier, { ...c.var.scope, kind: 'github' })
+    return c.json({ url: githubInstallUrl() })
   })
 
   /** Connect Stripe with a key entered once here. It goes straight into the vault. */
@@ -186,6 +288,7 @@ export const connections = new Hono<AppEnv>()
     if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
     if (connection.vaultSecretId) {
       // Google tokens are revoked at Google. A Stripe key is revoked in Stripe's dashboard.
+      // A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
       if (connectors[connection.kind]?.auth === 'google') {
         const credential = await openSecret<GoogleCredential>(
           db,

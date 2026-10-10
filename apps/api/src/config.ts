@@ -26,8 +26,27 @@ const Env = z.object({
     .refine((b) => b.length === 32, 'VAULT_KEY must be 32 bytes, base64'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  /**
+   * Brigade's GitHub App, for GitHub connections. Setup URL
+   * {API_URL}/api/connections/oauth/github/setup with "Redirect on update" on;
+   * callback URL {API_URL}/api/connections/oauth/github/callback.
+   */
+  GITHUB_APP_ID: z.string().optional(),
+  /** The app's URL name: github.com/apps/<slug>. */
+  GITHUB_APP_SLUG: z.string().optional(),
+  GITHUB_APP_CLIENT_ID: z.string().optional(),
+  GITHUB_APP_CLIENT_SECRET: z.string().optional(),
+  /** The app's private key: the .pem with \n escapes, or base64 of the file. */
+  GITHUB_APP_PRIVATE_KEY: z.string().optional(),
   /** Minutes without activity before a cloud computer stops. */
   IDLE_STOP_MINUTES: z.coerce.number().positive().default(30),
+  /** The one bucket (Cloudflare R2), for library files. */
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  /** Without R2 (development only): a local folder stands in for the bucket. */
+  BUCKET_DIR: z.string().default(new URL('../.bucket', import.meta.url).pathname),
 })
 
 export const env = Env.parse(process.env)

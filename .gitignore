@@ -14,3 +14,6 @@ coverage
 *.log
 src/generated
 apps/runner/bundle
+
+# Local library bucket when R2 is not configured (development)
+apps/api/.bucket

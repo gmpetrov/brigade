@@ -7,6 +7,12 @@ import { Check, Copy, ImageIcon } from 'lucide-react'
 import { memo, useState, type ComponentProps, type ReactNode } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import {
+  FileLinksProvider,
+  looksLikeFile,
+  relativeFile,
+  useFileLinks,
+} from '@/components/file-links'
 import { MentionChip } from '@/components/mention'
 import { cn } from '@/lib/utils'
 
@@ -72,6 +78,62 @@ function CodeBlock({ children, ...props }: ComponentProps<'pre'>) {
   )
 }
 
+const codeClass = 'rounded bg-muted px-1.5 py-0.5 font-mono text-[0.875em] wrap-anywhere'
+
+/** Inline code; a file path opens in the panel beside the thread. */
+function InlineCode({ className, children, ...props }: ComponentProps<'code'>) {
+  const links = useFileLinks()
+  const text = textOf(children)
+  if (!links || className || !looksLikeFile(text))
+    return (
+      <code className={cn(codeClass, className)} {...props}>
+        {children}
+      </code>
+    )
+  return (
+    <button
+      type="button"
+      onClick={() => links.open({ path: text, teammateId: links.teammateId })}
+      title={`Open ${text}`}
+      className={cn(
+        codeClass,
+        'cursor-pointer text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:bg-primary/15 hover:decoration-primary',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** A link; a relative one (a file next to this one) opens in the panel. */
+function Anchor({ href, children, ...props }: ComponentProps<'a'>) {
+  const links = useFileLinks()
+  const file = links ? relativeFile(href, links.base) : undefined
+  const className = 'font-medium text-primary underline underline-offset-2 hover:no-underline'
+  if (links && file)
+    return (
+      <button
+        type="button"
+        onClick={() => links.open({ path: file, teammateId: links.teammateId })}
+        title={`Open ${file}`}
+        className={cn(className, 'cursor-pointer')}
+      >
+        {children}
+      </button>
+    )
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      className={className}
+      {...props}
+    >
+      {children}
+    </a>
+  )
+}
+
 const components: Components = {
   p: ({ node: _, ...props }) => <p className="my-2 first:mt-0 last:mb-0" {...props} />,
   h1: ({ node: _, ...props }) => (
@@ -123,15 +185,9 @@ const components: Components = {
         />
       )
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer nofollow"
-        className="font-medium text-primary underline underline-offset-2 hover:no-underline"
-        {...props}
-      >
+      <Anchor href={href} {...props}>
         {children}
-      </a>
+      </Anchor>
     )
   },
   // Loading a remote image would tell its host who reads the thread: link to it instead.
@@ -147,16 +203,13 @@ const components: Components = {
         {alt || 'Image'}
       </a>
     ) : null,
-  code: ({ node: _, className, ...props }) => (
-    <code
-      className={cn(
-        'rounded bg-muted px-1.5 py-0.5 font-mono text-[0.875em] wrap-anywhere',
-        className,
-      )}
-      {...props}
-    />
+  code: ({ node: _, ...props }) => <InlineCode {...props} />,
+  // A code block's text is code, not links.
+  pre: ({ node: _, ...props }) => (
+    <FileLinksProvider value={null}>
+      <CodeBlock {...props} />
+    </FileLinksProvider>
   ),
-  pre: ({ node: _, ...props }) => <CodeBlock {...props} />,
   table: ({ node: _, ...props }) => (
     <div className="my-3 overflow-x-auto first:mt-0 last:mb-0">
       <table className="w-full border-collapse text-sm" {...props} />

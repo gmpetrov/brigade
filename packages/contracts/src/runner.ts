@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent } from './events.js'
+import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -21,7 +22,7 @@ export type AccountRef = z.infer<typeof AccountRef>
 /** A connection the teammate is granted, as tools. Never its credential. */
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
-  kind: z.enum(['gmail', 'google_calendar', 'stripe']),
+  kind: z.enum(['gmail', 'google_calendar', 'stripe', 'github']),
   label: z.string(),
   externalAccount: z.string().nullable(),
   scope: z.enum(['read', 'read_write']),
@@ -60,6 +61,10 @@ export const ThreadSpec = z.object({
   starter: z.boolean().default(true),
   /** Everyone in the thread, so each teammate knows who else is in it. */
   teammates: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
+  /** The teammate's grant on the workspace library: read it and search, or also save to it. */
+  library: LibraryAccess.default('read'),
+  /** A private thread does not write to workspace memory, and its summary is not searchable. */
+  private: z.boolean().default(false),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -72,6 +77,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     platform: z.string(),
     /** SHA-256 of the bundle it was installed from. Unset: running from source, never updated. */
     bundle: z.string().optional(),
+    /** On a cloud computer: SHA-256 of the root setup last applied (see cloud-bootstrap). */
+    setup: z.string().optional(),
     /** On a member's machine: which harnesses are already signed in there. Never a credential. */
     machineLogins: z
       .array(
@@ -109,6 +116,19 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     email: z.string().optional(),
     plan: z.string().optional(),
   }),
+  /** A file read for thread.file.read, or why not. */
+  z.object({
+    type: z.literal('thread.file.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    path: z.string().optional(),
+    teammateId: z.string().optional(),
+    size: z.number().int().optional(),
+    /** Unset for a binary file. */
+    text: z.string().optional(),
+    truncated: z.boolean().optional(),
+  }),
   /** The desktop's clipboard text after a desktop.clipboard command, or why it failed. */
   z.object({
     type: z.literal('desktop.clipboard.result'),
@@ -144,6 +164,44 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     purpose: z.string().max(500).optional(),
   }),
   /**
+   * A teammate searches the library, memory and past thread summaries, or
+   * saves a file to the library. The API checks its grant. Answered like a connector call.
+   */
+  z.object({
+    type: z.literal('library.call'),
+    callId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string().optional(),
+    operation: z.discriminatedUnion('name', [
+      z.object({
+        name: z.literal('search'),
+        query: z.string().trim().min(1).max(500),
+        limit: z.number().int().min(1).max(20).default(8),
+      }),
+      z.object({
+        name: z.literal('save'),
+        path: LibraryPath,
+        /** The file's bytes, base64. */
+        content: z.string(),
+        contentType: z.string().max(200).optional(),
+      }),
+    ]),
+  }),
+  /**
+   * A thread went quiet: what a short harness run took from it. The summary
+   * replaces the thread's; the edits apply to the memory files.
+   */
+  z.object({
+    type: z.literal('memory.update'),
+    sessionId: z.string(),
+    summary: z.string().trim().min(1).max(4000),
+    workspace: MemoryEdit.default({ add: [], remove: [] }),
+    teammates: z
+      .array(z.object({ teammateId: z.string(), edit: MemoryEdit }))
+      .max(10)
+      .default([]),
+  }),
+  /**
    * A teammate's reply mentioned others in the thread: they answer next, in
    * order. The API checks they are in the thread, the caps and the chain limit.
    */
@@ -164,6 +222,20 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     runnerId: z.string(),
     computerId: z.string(),
     bundle: z.string().optional(),
+  }),
+  /** The library or memory changed: fetch the manifest again. */
+  z.object({ type: z.literal('library.changed') }),
+  /**
+   * Read a file a thread mentions, for a person viewing it: relative to a
+   * teammate's working folder for the thread (tried in order), or an absolute
+   * path inside one of them or the library mirror. Text only, up to FILE_VIEW_MAX.
+   */
+  z.object({
+    type: z.literal('thread.file.read'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateIds: z.array(z.string()).min(1).max(10),
+    path: z.string().min(1).max(1000),
   }),
   /** The API now serves another runner bundle (sent to every connected runner). */
   z.object({ type: z.literal('update.available'), bundle: z.string() }),

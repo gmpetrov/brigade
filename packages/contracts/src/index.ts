@@ -2,11 +2,15 @@
 export * from './api.js'
 export * from './credentials.js'
 export * from './events.js'
+export * from './library.js'
 export * from './mentions.js'
 export * from './models.js'
 export * from './runner.js'
 
-/** Bump when the runner protocol changes. 2: threads with several teammates. 3: self-update. */
-export const PROTOCOL_VERSION = 3
+/**
+ * Bump when the runner protocol changes. 2: threads with several teammates.
+ * 3: self-update. 4: the library, memory and search.
+ */
+export const PROTOCOL_VERSION = 4
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

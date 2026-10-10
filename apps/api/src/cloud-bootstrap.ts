@@ -1,5 +1,6 @@
 // What the API runs on a new workspace computer, through the provider. Generic
 // Ubuntu with sudo: no provider names here.
+import { createHash } from 'node:crypto'
 
 /**
  * Root helper the runner may call through sudo, and nothing else as root. It
@@ -85,6 +86,28 @@ case "\${1:-}" in
 esac
 `
 
+/**
+ * The root-owned parts of a workspace computer that change with Brigade: the
+ * teammate helper and the library folder. Run by the bootstrap, and again on
+ * any computer whose runner reports another stamp (a runner update cannot
+ * change root-owned files).
+ */
+const SETUP = `set -eu
+getent group brigade-teammates >/dev/null || sudo groupadd brigade-teammates
+sudo tee /usr/local/sbin/brigade-teammate >/dev/null <<'HELPER'
+${TEAMMATE_HELPER}HELPER
+sudo chmod 755 /usr/local/sbin/brigade-teammate
+# The workspace library, mirrored by the runner and read by teammate users.
+sudo install -d -o brigade -g brigade-teammates -m 2750 /var/lib/brigade/library
+`
+
+/** Identifies the current setup; the runner reports the one last applied. */
+export const SETUP_SHA = createHash('sha256').update(SETUP).digest('hex')
+
+export const setupScript = () =>
+  `${SETUP}echo ${SETUP_SHA} | sudo tee /var/lib/brigade/setup >/dev/null
+`
+
 const install = '/opt/brigade'
 const runner = `${install}/bin/brigade-runner`
 
@@ -109,10 +132,8 @@ sudo -u brigade -H env BRIGADE_INSTALL_DIR=${install} sh -c 'curl -fsSL ${input.
 sudo install -d -o brigade -g brigade-teammates -m 2770 /var/lib/brigade/accounts
 sudo chmod 755 /var/lib/brigade
 
+${setupScript()}
 # Teammate users: the runner may create them, run as them, and share logins with them. Nothing else as root.
-sudo tee /usr/local/sbin/brigade-teammate >/dev/null <<'HELPER'
-${TEAMMATE_HELPER}HELPER
-sudo chmod 755 /usr/local/sbin/brigade-teammate
 sudo tee /etc/sudoers.d/brigade-runner >/dev/null <<'SUDOERS'
 Defaults:brigade !requiretty
 brigade ALL=(root) NOPASSWD: /usr/local/sbin/brigade-teammate

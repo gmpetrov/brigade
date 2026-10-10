@@ -177,3 +177,85 @@ export function credentialTools(credentials: Credentials): Record<string, Tool> 
     })
   return tools
 }
+
+export type LibraryCaller = (call: {
+  operation:
+    | { name: 'search'; query: string; limit: number }
+    | { name: 'save'; path: string; content: string }
+  toolCallId: string
+  toolName: string
+  input: unknown
+}) => Promise<unknown>
+
+/**
+ * The workspace's search (library, memory, past thread summaries) and, with a
+ * read-write grant, saving to the library. The API checks the grant.
+ */
+export function libraryTools(options: {
+  access: 'read' | 'read_write'
+  libraryDir: string
+  call: LibraryCaller
+  /** Reads a file the teammate wrote on this computer, as the teammate. */
+  readFile: (path: string) => Promise<Buffer>
+}): Record<string, Tool> {
+  const tools: Record<string, Tool> = {
+    search_workspace: tool({
+      description:
+        `Search the workspace's shared knowledge by keywords: its document library (mirrored read-only at ${options.libraryDir}), ` +
+        `the workspace and teammate memory, and summaries of past threads. Use it before asking a person something the team may already know.`,
+      inputSchema: jsonSchema<{ query: string; limit?: number }>({
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Keywords; "quotes" for a phrase, -word to exclude',
+          },
+          limit: { type: 'number', description: 'At most this many results (default 8, up to 20)' },
+        },
+        required: ['query'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        const hits = (await options.call({
+          operation: { name: 'search', query: input.query, limit: Math.min(input.limit ?? 8, 20) },
+          toolCallId,
+          toolName: 'search_workspace',
+          input,
+        })) as { kind: string; path: string }[]
+        return hits.map((hit) =>
+          hit.kind === 'library' ? { ...hit, file: `${options.libraryDir}/${hit.path}` } : hit,
+        )
+      },
+    }),
+  }
+  if (options.access === 'read_write')
+    tools.save_to_library = tool({
+      description:
+        `Add a file to the workspace's document library, or replace the one at that path, so the team and other teammates can use it. ` +
+        `Write the file on this computer first, then pass its path. The library copy at ${options.libraryDir} is read-only; it updates shortly after.`,
+      inputSchema: jsonSchema<{ file: string; path: string }>({
+        type: 'object',
+        properties: {
+          file: {
+            type: 'string',
+            description:
+              'The file on this computer (absolute, or relative to your working directory)',
+          },
+          path: {
+            type: 'string',
+            description: 'Where it goes in the library, e.g. "guides/refunds.md"',
+          },
+        },
+        required: ['file', 'path'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        const bytes = await options.readFile(input.file)
+        return options.call({
+          operation: { name: 'save', path: input.path, content: bytes.toString('base64') },
+          toolCallId,
+          toolName: 'save_to_library',
+          input,
+        })
+      },
+    })
+  return tools
+}

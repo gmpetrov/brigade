@@ -14,9 +14,10 @@ import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
-import { ensureRunning, touch } from './cloud.js'
+import { ensureRunning, ensureSetup, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
+import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { handoffThread } from './work.js'
@@ -101,6 +102,33 @@ export function desktopClipboard(computerId: string, text?: string) {
   })
 }
 
+type FileResult = Extract<RunnerToApi, { type: 'thread.file.result' }>
+const fileReads = new Map<string, { computerId: string; settle: (result: FileResult) => void }>()
+
+/**
+ * Read a file a thread mentions from its computer (a teammate's working folder
+ * or the library mirror), for a person viewing it. Never wakes a stopped computer.
+ */
+export function readThreadFile(
+  computerId: string,
+  request: Omit<Extract<ApiToRunner, { type: 'thread.file.read' }>, 'type' | 'requestId'>,
+) {
+  return new Promise<FileResult>((resolve) => {
+    const requestId = randomUUID()
+    const fail = (error: string) =>
+      settle({ type: 'thread.file.result', requestId, ok: false, error })
+    const timer = setTimeout(() => fail('The computer did not answer'), 10_000)
+    const settle = (result: FileResult) => {
+      clearTimeout(timer)
+      fileReads.delete(requestId)
+      resolve(result)
+    }
+    fileReads.set(requestId, { computerId, settle })
+    if (!sendToRunner(computerId, { type: 'thread.file.read', requestId, ...request }))
+      fail('The computer is offline')
+  })
+}
+
 /** Commands for cloud computers that are starting, sent when their runner connects. */
 const queued = new Map<string, { message: ApiToRunner; at: number }[]>()
 const QUEUE_TTL_MS = 10 * 60_000
@@ -143,6 +171,25 @@ function flushQueue(computerId: string) {
   queued.delete(computerId)
   for (const { message, at } of list)
     if (Date.now() - at < QUEUE_TTL_MS) sendToRunner(computerId, message)
+}
+
+const libraryTimers = new Map<string, NodeJS.Timeout>()
+
+/**
+ * Tell the workspace's connected runners the library or memory changed, so
+ * they fetch it again. Changes in quick succession go as one.
+ */
+export function notifyLibraryChanged(workspaceId: string) {
+  if (libraryTimers.has(workspaceId)) return
+  libraryTimers.set(
+    workspaceId,
+    setTimeout(() => {
+      libraryTimers.delete(workspaceId)
+      for (const conn of runners.values())
+        if (conn.workspaceId === workspaceId && conn.protocolVersion >= 4)
+          send(conn.ws, { type: 'library.changed' })
+    }, 300),
+  )
 }
 
 /** Tell dashboards a computer's status or connection changed. */
@@ -247,6 +294,11 @@ export function runnerSocket(runner: {
         where: { id: runner.computerId },
         data: { status: 'running' },
       })
+      // A cloud computer set up by an older bootstrap gets the current root setup.
+      if (computer.kind === 'cloud')
+        void ensureSetup(computer, message.setup).catch((error) =>
+          console.error(`setup on ${computer.id} failed`, error),
+        )
       if (computer.kind === 'member_machine' && computer.memberId && message.machineLogins) {
         await syncMachineLogins(computer, computer.memberId, message.machineLogins)
       }
@@ -358,6 +410,25 @@ export function runnerSocket(runner: {
       return
     }
 
+    if (message.type === 'library.call') {
+      void handleLibraryCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+      return
+    }
+
+    if (message.type === 'memory.update') {
+      void handleMemoryUpdate(runner, message).catch((error) =>
+        console.warn(`runner ${runner.id}: memory update failed: ${String(error)}`),
+      )
+      return
+    }
+
     if (message.type === 'thread.handoff') {
       // Sent when the teammate's turn ends; caps and the chain limit are checked there.
       void handoffThread(runner, message).catch((error) =>
@@ -376,6 +447,12 @@ export function runnerSocket(runner: {
           error: String(error),
         }),
       )
+      return
+    }
+
+    if (message.type === 'thread.file.result') {
+      const read = fileReads.get(message.requestId)
+      if (read?.computerId === runner.computerId) read.settle(message)
       return
     }
 

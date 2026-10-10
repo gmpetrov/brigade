@@ -38,6 +38,14 @@ export const Harness = {
 export type Harness = (typeof Harness)[keyof typeof Harness]
 
 
+export const LibraryAccess = {
+  read: 'read',
+  read_write: 'read_write'
+} as const
+
+export type LibraryAccess = (typeof LibraryAccess)[keyof typeof LibraryAccess]
+
+
 export const SessionStatus = {
   starting: 'starting',
   running: 'running',
@@ -81,7 +89,8 @@ export type AccountSource = (typeof AccountSource)[keyof typeof AccountSource]
 export const ConnectorKind = {
   gmail: 'gmail',
   google_calendar: 'google_calendar',
-  stripe: 'stripe'
+  stripe: 'stripe',
+  github: 'github'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]
@@ -142,6 +151,16 @@ export const TicketStatus = {
 } as const
 
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus]
+
+
+export const DocumentKind = {
+  library: 'library',
+  workspace_memory: 'workspace_memory',
+  teammate_memory: 'teammate_memory',
+  thread_summary: 'thread_summary'
+} as const
+
+export type DocumentKind = (typeof DocumentKind)[keyof typeof DocumentKind]
 
 
 export const ActorType = {

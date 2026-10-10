@@ -131,6 +131,7 @@ export const teammates = new Hono<AppEnv>()
         fields: Object.keys(input),
         ...(input.caps ? { caps: input.caps } : {}),
         ...(input.permissionPolicy ? { permissionPolicy: input.permissionPolicy } : {}),
+        ...(input.libraryAccess ? { libraryAccess: input.libraryAccess } : {}),
       },
     })
     return c.json(await c.var.db.teammate.findFirst({ where: { id: c.req.param('id') } }))

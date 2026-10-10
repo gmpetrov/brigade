@@ -3,6 +3,7 @@ import {
   ChevronsUpDown,
   Inbox,
   KeyRound,
+  Library,
   LogOut,
   MessagesSquare,
   Monitor,
@@ -61,6 +62,7 @@ const NAV = [
   { href: '/app', label: 'Threads', icon: MessagesSquare },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
+  { href: '/app/library', label: 'Library', icon: Library },
   { href: '/app/connections', label: 'Connections', icon: Plug },
   { href: '/app/vault', label: 'Vault', icon: KeyRound },
   { href: '/app/accounts', label: 'Accounts', icon: UserRound },
@@ -68,7 +70,13 @@ const NAV = [
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
-export function TeammateAvatar({ teammate, className }: { teammate: Pick<Teammate, 'name' | 'harness'>; className?: string }) {
+export function TeammateAvatar({
+  teammate,
+  className,
+}: {
+  teammate: Pick<Teammate, 'name' | 'harness'>
+  className?: string
+}) {
   return (
     <Avatar className={className ?? 'size-6'}>
       <AvatarFallback
@@ -140,8 +148,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       <ChevronsUpDown className="ml-auto" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-56">
-                    <DropdownMenuLabel className="text-muted-foreground text-xs">Workspaces</DropdownMenuLabel>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+                  >
+                    <DropdownMenuLabel className="text-muted-foreground text-xs">
+                      Workspaces
+                    </DropdownMenuLabel>
                     {data.workspaces.map((w) => (
                       <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
                         <span className="bg-secondary flex size-6 items-center justify-center rounded-sm text-xs font-bold">
@@ -232,7 +245,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
+        {/* min-w-0: long unwrapped text inside a page must not widen it past the window. */}
+        <SidebarInset className="min-w-0">
           <header className="flex h-12 items-center gap-2 px-4 md:hidden">
             <SidebarTrigger />
             <span className="font-semibold">{workspace?.name}</span>

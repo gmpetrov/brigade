@@ -4,8 +4,8 @@ import { providerFromEnv, type ComputerRef } from '@brigade/providers'
 import { audit } from './audit.js'
 import { defaults, env } from './config.js'
 import { prisma } from './db.js'
-import { broadcastComputer, isOnline, runnerProtocol } from './hub.js'
-import { bootstrapScript, reinstallScript } from './cloud-bootstrap.js'
+import { broadcastComputer, isOnline, notifyLibraryChanged, runnerProtocol } from './hub.js'
+import { bootstrapScript, reinstallScript, SETUP_SHA, setupScript } from './cloud-bootstrap.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
 
@@ -141,6 +141,36 @@ export async function stopComputer(
 export async function desktopUrl(computer: { providerRef: unknown }) {
   const ref = refOf(computer)
   return provider && ref ? provider.desktopUrl(ref) : null
+}
+
+/** The setup last tried per computer, so a failing one is not retried on every connect. */
+const setupTried = new Map<string, string>()
+
+/**
+ * Bring a cloud computer's root setup (teammate helper, library folder) up to
+ * date when its runner reports an older one. Nothing restarts.
+ */
+export async function ensureSetup(
+  computer: { id: string; organizationId: string; workspaceId: string; providerRef: unknown },
+  reported: string | undefined,
+) {
+  const ref = refOf(computer)
+  if (!provider || !ref || reported === SETUP_SHA) return
+  if (setupTried.get(computer.id) === SETUP_SHA) return
+  setupTried.set(computer.id, SETUP_SHA)
+  console.log(`updating the root setup on ${computer.id}`)
+  const result = await provider.exec(ref, setupScript())
+  if (result.exitCode !== 0)
+    throw new Error(`exit ${result.exitCode}: ${result.stderr.slice(-2000)}`)
+  await audit({
+    organizationId: computer.organizationId,
+    workspaceId: computer.workspaceId,
+    actor: { type: 'system', id: 'brigade' },
+    action: 'computer.setup_updated',
+    target: { type: 'computer', id: computer.id },
+  })
+  // The library folder may be new: have the runner fill it.
+  notifyLibraryChanged(computer.workspaceId)
 }
 
 /**

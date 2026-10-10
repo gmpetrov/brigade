@@ -291,6 +291,13 @@ export type JsonFilterBase<$PrismaModel = never> = {
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
 }
 
+export type EnumLibraryAccessFilter<$PrismaModel = never> = {
+  equals?: $Enums.LibraryAccess | Prisma.EnumLibraryAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel> | $Enums.LibraryAccess
+}
+
 export type EnumHarnessWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.Harness | Prisma.EnumHarnessFieldRefInput<$PrismaModel>
   in?: $Enums.Harness[] | Prisma.ListEnumHarnessFieldRefInput<$PrismaModel>
@@ -326,6 +333,16 @@ export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedJsonFilter<$PrismaModel>
   _max?: Prisma.NestedJsonFilter<$PrismaModel>
+}
+
+export type EnumLibraryAccessWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LibraryAccess | Prisma.EnumLibraryAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLibraryAccessWithAggregatesFilter<$PrismaModel> | $Enums.LibraryAccess
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel>
 }
 
 export type EnumSessionStatusFilter<$PrismaModel = never> = {
@@ -557,6 +574,23 @@ export type EnumTicketStatusWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumTicketStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumTicketStatusFilter<$PrismaModel>
+}
+
+export type EnumDocumentKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
+  in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel> | $Enums.DocumentKind
+}
+
+export type EnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
+  in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel> | $Enums.DocumentKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
 }
 
 export type BigIntFilter<$PrismaModel = never> = {
@@ -842,6 +876,13 @@ export type NestedEnumHarnessFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumHarnessFilter<$PrismaModel> | $Enums.Harness
 }
 
+export type NestedEnumLibraryAccessFilter<$PrismaModel = never> = {
+  equals?: $Enums.LibraryAccess | Prisma.EnumLibraryAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel> | $Enums.LibraryAccess
+}
+
 export type NestedEnumHarnessWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.Harness | Prisma.EnumHarnessFieldRefInput<$PrismaModel>
   in?: $Enums.Harness[] | Prisma.ListEnumHarnessFieldRefInput<$PrismaModel>
@@ -874,6 +915,16 @@ export type NestedJsonFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type NestedEnumLibraryAccessWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LibraryAccess | Prisma.EnumLibraryAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLibraryAccessWithAggregatesFilter<$PrismaModel> | $Enums.LibraryAccess
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel>
 }
 
 export type NestedEnumSessionStatusFilter<$PrismaModel = never> = {
@@ -1105,6 +1156,23 @@ export type NestedEnumTicketStatusWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumTicketStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumTicketStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumDocumentKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
+  in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel> | $Enums.DocumentKind
+}
+
+export type NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.DocumentKind | Prisma.EnumDocumentKindFieldRefInput<$PrismaModel>
+  in?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.DocumentKind[] | Prisma.ListEnumDocumentKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel> | $Enums.DocumentKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
 }
 
 export type NestedBigIntFilter<$PrismaModel = never> = {

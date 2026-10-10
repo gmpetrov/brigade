@@ -3,12 +3,15 @@
 //
 //   brigade-runner link <code> [--api <url>] [--name <name>]
 //   brigade-runner [start] [--concurrency <n>]
+import { readFile } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { parseArgs } from 'node:util'
 import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/contracts'
 import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js'
 import { Accounts, machineLogins } from './accounts.js'
 import { Connection } from './connection.js'
+import { readThreadFile } from './files.js'
+import { Library, LIBRARY_DIR } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
@@ -89,6 +92,8 @@ async function start() {
     process.exit(1)
   }
   const outbox = new Outbox(paths.outbox)
+  const library = new Library(config)
+  void library.cleanTemp()
   let connection: Connection
   // A call waiting for a person shows as an approval in its thread, then as the decision.
   const approvalHooks = (
@@ -142,6 +147,10 @@ async function start() {
       ),
     handoff: (sessionId, fromTeammateId, teammateIds) =>
       connection.send({ type: 'thread.handoff', sessionId, fromTeammateId, teammateIds }),
+    context: { libraryDir: LIBRARY_DIR, memoryFor: (teammateId) => library.memoryFor(teammateId) },
+    callLibrary: (sessionId, teammateId, { operation }) =>
+      connection.callLibrary({ sessionId, teammateId, operation }),
+    memoryUpdate: (update) => connection.send(update),
   })
   const accounts = new Accounts({
     prompt: (loginId, prompt) =>
@@ -229,6 +238,19 @@ async function start() {
               error: String(error),
             }),
         )
+      case 'library.changed':
+        return library.sync()
+      case 'thread.file.read':
+        return readThreadFile(message).then(
+          (result) => connection.send(result),
+          (error) =>
+            connection.send({
+              type: 'thread.file.result',
+              requestId: message.requestId,
+              ok: false,
+              error: String(error),
+            }),
+        )
       case 'browser.open':
         if (!CLOUD) return
         return ensureBrowser(
@@ -246,8 +268,14 @@ async function start() {
     }
   }
 
-  // On a member's own machine, report which harnesses are already signed in there.
-  const hello = async () => (CLOUD ? {} : { machineLogins: await machineLogins() })
+  // On a member's own machine, report which harnesses are already signed in there; on a
+  // cloud computer, which root setup it has. Each connect also refreshes the library.
+  const hello = async () => {
+    void library.sync()
+    if (!CLOUD) return { machineLogins: await machineLogins() }
+    const setup = await readFile('/var/lib/brigade/setup', 'utf8').catch(() => '')
+    return setup.trim() ? { setup: setup.trim() } : {}
+  }
   // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in.
   const updater = new Updater({
     apiUrl: config.apiUrl,

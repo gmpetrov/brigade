@@ -4,6 +4,12 @@
 import type { ApiToRunner, PermissionPolicy, RunnerToApi } from '@brigade/contracts'
 import { audit } from './audit.js'
 import { connectors } from './connectors/index.js'
+import {
+  GitHubInstallationGone,
+  githubHeaders,
+  installationToken,
+  type GitHubCredential,
+} from './connectors/github-app.js'
 import { refreshGoogle, type GoogleCredential } from './connectors/google-oauth.js'
 import {
   redact,
@@ -217,6 +223,34 @@ async function runOperation(
         headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
       })
       if (response.status === 401) await needsReauth()
+      return response
+    }
+    return operation.run({ fetch: authorised, callId }, input)
+  }
+
+  if (connectors[connection.kind]?.auth === 'github_app') {
+    const { installationId } = await openSecret<GitHubCredential>(db, scope, secretId)
+    const token = async (fresh = false) => {
+      try {
+        return await installationToken(installationId, fresh)
+      } catch (error) {
+        if (!(error instanceof GitHubInstallationGone)) throw error
+        await needsReauth()
+        throw new Error('Brigade is no longer installed on this GitHub account; connect it again')
+      }
+    }
+    const authorised = async (url: string, init: RequestInit = {}) => {
+      const send = async (fresh = false) =>
+        fetch(url, {
+          ...init,
+          headers: {
+            ...githubHeaders,
+            ...(init.headers as Record<string, string>),
+            authorization: `Bearer ${await token(fresh)}`,
+          },
+        })
+      let response = await send()
+      if (response.status === 401) response = await send(true)
       return response
     }
     return operation.run({ fetch: authorised, callId }, input)

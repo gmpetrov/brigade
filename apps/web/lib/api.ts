@@ -67,6 +67,7 @@ export type Teammate = {
   model: string | null
   permissionPolicy: { connectorWrites?: 'allow' | 'ask' | 'deny' } | null
   caps: Caps | null
+  libraryAccess?: 'read' | 'read_write'
   createdAt: string
 }
 
@@ -100,6 +101,8 @@ export type ThreadSummary = {
 export type Thread = Omit<ThreadSummary, 'teammates'> & {
   startedByMemberId: string
   othersMayPrompt: boolean
+  /** Adds nothing to workspace memory; its summary is the starter's only. */
+  private: boolean
   controlledByMemberId: string | null
   mayPrompt: boolean
   lastSeq: number
@@ -153,9 +156,11 @@ export const computerName = (c: { kind: string; name: string }) =>
 
 export type Connection = {
   id: string
-  kind: 'gmail' | 'google_calendar' | 'stripe'
+  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github'
   label: string
   externalAccount: string | null
+  /** Where a person manages the account at the provider, e.g. a GitHub installation's settings. */
+  externalUrl: string | null
   status: 'active' | 'needs_reauth' | 'removed'
   createdAt: string
   grants: { teammateId: string; scope: 'read' | 'read_write' }[]
@@ -166,6 +171,13 @@ export type ConnectionsResponse = {
 }
 
 export type { CredentialKind, CredentialSummary as Credential } from '@brigade/contracts'
+export type {
+  LibraryFile,
+  MemoryFile,
+  MemoryOverview,
+  SearchHit,
+  ThreadSummary as MemorySummary,
+} from '@brigade/contracts'
 
 export type CredentialUse = {
   id: string

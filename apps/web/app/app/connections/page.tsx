@@ -2,8 +2,9 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
-import { CircleCheck, ShieldCheck } from 'lucide-react'
+import { CircleCheck, ExternalLink, ShieldCheck } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
+import { ProviderTile } from '@/components/provider-logo'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,15 +28,17 @@ import {
   type Webhook,
 } from '@/lib/api'
 
-function LetterTile({ name }: { name: string }) {
-  return (
-    <span
-      aria-hidden
-      className="flex size-11 shrink-0 items-center justify-center rounded-md bg-secondary text-lg font-extrabold"
-    >
-      {name.trim().charAt(0).toUpperCase()}
-    </span>
-  )
+/** Why a connection was not created, from the error a provider's redirect brought back. */
+const CONNECT_ERRORS: Record<string, string> = {
+  expired: 'The request expired. Start again.',
+  forbidden: 'Only an owner or admin of this workspace can add connections.',
+  declined: 'Access was not granted.',
+  google: 'Google did not complete the sign-in. Try again.',
+  github: 'GitHub did not complete the sign-in. Try again.',
+  github_requested:
+    "Your request to install Brigade was sent to the GitHub organization's owners. Connect GitHub again once they approve it.",
+  github_not_yours:
+    'Your GitHub account cannot reach that installation. Sign in to GitHub as someone who can, and try again.',
 }
 
 export default function ConnectionsPage() {
@@ -67,6 +70,16 @@ function Connections() {
     }
   }
 
+  async function connectGitHub() {
+    setError(undefined)
+    try {
+      const { url } = await api<{ url: string }>('/connections/github', { body: {} })
+      window.location.href = url
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function connectStripe(form: FormData) {
     setError(undefined)
     try {
@@ -83,8 +96,13 @@ function Connections() {
     }
   }
 
-  async function remove(id: string, label: string) {
-    if (!confirm(`Disconnect ${label}? Teammates lose access; the call log is kept.`)) return
+  async function remove(c: Connection) {
+    const label = c.externalAccount ?? c.label
+    const after =
+      c.kind === 'github' ? ' Brigade stays installed on GitHub until you uninstall it there.' : ''
+    if (!confirm(`Disconnect ${label}? Teammates lose access; the call log is kept.${after}`))
+      return
+    const id = c.id
     await api(`/connections/${id}`, { method: 'DELETE' }).catch((e) =>
       setError((e as Error).message),
     )
@@ -118,7 +136,8 @@ function Connections() {
         )}
         {params.get('error') && (
           <p className="text-sm text-destructive-text">
-            The connection was not created ({params.get('error')}).
+            The connection was not created.{' '}
+            {CONNECT_ERRORS[params.get('error')!] ?? `(${params.get('error')})`}
           </p>
         )}
         {error && <p className="text-sm text-destructive-text">{error}</p>}
@@ -136,7 +155,7 @@ function Connections() {
             {connections.map((c) => (
               <div key={c.id} className="flex flex-col gap-3 px-5 py-4">
                 <div className="flex flex-wrap items-center gap-4">
-                  <LetterTile name={c.label} />
+                  <ProviderTile kind={c.kind} />
                   <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">{c.label}</span>
@@ -167,6 +186,15 @@ function Connections() {
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {admin && c.kind === 'github' && c.externalUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={c.externalUrl} target="_blank" rel="noreferrer">
+                          Repositories
+                          <ExternalLink aria-hidden />
+                          <span className="sr-only"> (choose them on GitHub)</span>
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -196,11 +224,7 @@ function Connections() {
                       Webhooks
                     </Button>
                     {admin && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => void remove(c.id, c.externalAccount ?? c.label)}
-                      >
+                      <Button variant="danger" size="sm" onClick={() => void remove(c)}>
                         Disconnect
                       </Button>
                     )}
@@ -223,6 +247,7 @@ function Connections() {
             {(
               [
                 {
+                  kind: 'gmail',
                   name: 'Gmail',
                   button: (
                     <Button
@@ -234,6 +259,7 @@ function Connections() {
                   ),
                 },
                 {
+                  kind: 'google_calendar',
                   name: 'Google Calendar',
                   button: (
                     <Button
@@ -246,6 +272,7 @@ function Connections() {
                   ),
                 },
                 {
+                  kind: 'stripe',
                   name: 'Stripe',
                   button: (
                     <Button
@@ -257,13 +284,26 @@ function Connections() {
                     </Button>
                   ),
                 },
+                {
+                  kind: 'github',
+                  name: 'GitHub',
+                  button: (
+                    <Button
+                      variant="outline"
+                      disabled={!data.data?.available.github}
+                      onClick={() => void connectGitHub()}
+                    >
+                      Connect GitHub
+                    </Button>
+                  ),
+                },
               ] as const
             ).map((option) => (
               <div
                 key={option.name}
                 className="flex flex-wrap items-center gap-4 py-3 first:pt-0 last:pb-0"
               >
-                <LetterTile name={option.name} />
+                <ProviderTile kind={option.kind} />
                 <span className="flex-1 font-semibold">{option.name}</span>
                 {option.button}
               </div>
@@ -274,6 +314,18 @@ function Connections() {
               Gmail and Google Calendar need Google OAuth configured on this Brigade server (
               <span className="font-mono text-xs">GOOGLE_CLIENT_ID</span> and{' '}
               <span className="font-mono text-xs">GOOGLE_CLIENT_SECRET</span>).
+            </p>
+          )}
+          {data.data && !data.data.available.github && (
+            <p className="text-sm text-muted-foreground">
+              GitHub needs Brigade&apos;s GitHub App configured on this Brigade server (
+              <span className="font-mono text-xs">GITHUB_APP_*</span>).
+            </p>
+          )}
+          {data.data?.available.github && (
+            <p className="text-sm text-muted-foreground">
+              Connecting GitHub installs Brigade&apos;s GitHub App on your account or organization.
+              You choose which repositories it can reach, and can change them on GitHub at any time.
             </p>
           )}
           {stripeOpen && (
@@ -375,6 +427,7 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
   const [created, setCreated] = useState<{ url: string; signingSecret?: string }>()
   const [error, setError] = useState<string>()
   const stripe = connection.kind === 'stripe'
+  const github = connection.kind === 'github'
   const idFor = (field: string) => `webhook-${connection.id}-${field}`
 
   async function create(form: FormData) {
@@ -437,8 +490,21 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                 <code className="font-mono text-xs break-all">{created.signingSecret}</code>
               </div>
               <div className="text-muted-foreground">
-                The sender signs each body with HMAC-SHA256 and sends{' '}
-                <code className="font-mono text-xs">X-Brigade-Signature: sha256=&lt;hex&gt;</code>.
+                {github ? (
+                  <>
+                    In the repository&apos;s Settings → Webhooks, add this URL with content type{' '}
+                    <code className="font-mono text-xs">application/json</code> and this secret.
+                    GitHub signs each delivery with it.
+                  </>
+                ) : (
+                  <>
+                    The sender signs each body with HMAC-SHA256 and sends{' '}
+                    <code className="font-mono text-xs">
+                      X-Brigade-Signature: sha256=&lt;hex&gt;
+                    </code>
+                    .
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -455,9 +521,7 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                     <span className="font-semibold">{w.label}</span>{' '}
                     <span className="text-muted-foreground">→ {w.teammate.name}</span>
                   </div>
-                  <code className="font-mono text-xs break-all text-muted-foreground">
-                    {w.url}
-                  </code>
+                  <code className="font-mono text-xs break-all text-muted-foreground">{w.url}</code>
                 </div>
                 {w.verification !== 'none' && !w.hasSecret ? (
                   <StatusBadge
@@ -506,7 +570,13 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                 name="label"
                 required
                 className="bg-card"
-                placeholder={stripe ? 'Disputes and failed payments' : 'New support request'}
+                placeholder={
+                  stripe
+                    ? 'Disputes and failed payments'
+                    : github
+                      ? 'New issues and pull requests'
+                      : 'New support request'
+                }
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -532,7 +602,11 @@ function Webhooks({ connection, editable }: { connection: Connection; editable: 
                 </SelectTrigger>
                 <SelectContent>
                   {stripe && <SelectItem value="stripe">Stripe signature</SelectItem>}
-                  <SelectItem value="hmac">A signing secret Brigade generates</SelectItem>
+                  <SelectItem value="hmac">
+                    {github
+                      ? 'GitHub signature (a secret Brigade generates)'
+                      : 'A signing secret Brigade generates'}
+                  </SelectItem>
                   <SelectItem value="none">Nothing (the URL alone)</SelectItem>
                 </SelectContent>
               </Select>

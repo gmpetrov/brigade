@@ -1,11 +1,13 @@
 'use client'
-import { ArrowRight, ListOrdered, Monitor } from 'lucide-react'
+import { ArrowRight, ListOrdered, Lock, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
+import { FileLinksProvider } from '@/components/file-links'
+import { FilePanel } from '@/components/file-panel'
 import { Takeover } from '@/components/takeover'
 import { TicketRow } from '@/components/ticket-row'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
@@ -28,6 +30,8 @@ export default function ThreadPage() {
   const bottom = useRef<HTMLDivElement>(null)
   const [watching, setWatching] = useDesktopPreview()
   const [expanded, setExpanded] = useState(false)
+  // A file a message names, open beside the thread in the desktop's place.
+  const [file, setFile] = useState<{ path: string; teammateId?: string }>()
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest' })
@@ -156,12 +160,34 @@ export default function ThreadPage() {
                 variant="outline"
                 size="sm"
                 aria-pressed={watching}
-                onClick={() => setWatching(!watching)}
+                onClick={() => {
+                  setFile(undefined)
+                  setWatching(!watching || Boolean(file))
+                }}
                 title="Watch the workspace computer's desktop"
               >
                 <Monitor aria-hidden />
                 {watching ? 'Hide desktop' : 'Desktop'}
               </Button>
+            )}
+            {t.startedByMemberId === me.memberId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={t.private}
+                onClick={() =>
+                  void api(`/threads/${id}`, { method: 'PATCH', body: { private: !t.private } })
+                    .then(thread.reload)
+                    .catch((e: Error) => setError(e.message))
+                }
+                title="A private thread adds nothing to workspace memory, and only you see its summary"
+              >
+                <Lock aria-hidden />
+                {t.private ? 'Private' : 'Make private'}
+              </Button>
+            ) : (
+              t.private && <StatusBadge status="private" tone="neutral" label="Private" />
             )}
             <Button asChild variant="outline" size="sm">
               <Link href={`/app/threads/${id}/log`}>
@@ -240,7 +266,21 @@ export default function ThreadPage() {
         />
       </div>
 
-      {watching && t.computer.kind === 'cloud' && (
+      {file && (
+        <FilePanel
+          key={`${file.teammateId ?? ''}:${file.path}`}
+          threadId={t.id}
+          path={file.path}
+          teammateId={file.teammateId}
+          teammateName={(teammateId) =>
+            people.find((p) => p.id === teammateId)?.name ?? t.teammate.name
+          }
+          onOpen={setFile}
+          onClose={() => setFile(undefined)}
+        />
+      )}
+
+      {!file && watching && t.computer.kind === 'cloud' && (
         <DesktopPreview
           threadId={t.id}
           teammateName={t.teammate.name}
@@ -254,18 +294,20 @@ export default function ThreadPage() {
         />
       )}
 
-      <ThreadItems
-        items={items}
-        teammate={t.teammate}
-        teammates={people}
-        canApprove={t.mayPrompt}
-        onApproval={(approvalId, approved) =>
-          void call('/approvals', { approvalId, approved }).catch(() => undefined)
-        }
-        onAnswer={(questionId, answer) =>
-          api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
-        }
-      />
+      <FileLinksProvider value={{ open: setFile }}>
+        <ThreadItems
+          items={items}
+          teammate={t.teammate}
+          teammates={people}
+          canApprove={t.mayPrompt}
+          onApproval={(approvalId, approved) =>
+            void call('/approvals', { approvalId, approved }).catch(() => undefined)
+          }
+          onAnswer={(questionId, answer) =>
+            api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
+          }
+        />
+      </FileLinksProvider>
 
       {t.controlledByMemberId ? null : t.mayPrompt ? (
         // Sticks to the bottom of the content column while the thread scrolls under it; the

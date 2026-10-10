@@ -118,5 +118,7 @@ export async function specFor(
     permissionMode: permissionMode(thread.computer.kind),
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
+    library: teammate.libraryAccess,
+    private: thread.private,
   }
 }

@@ -1,4 +1,5 @@
 'use client'
+import { Library } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ProviderTile } from '@/components/provider-logo'
 import { api, useApi, type ConnectionsResponse, type Teammate } from '@/lib/api'
 
 type Scope = 'none' | 'read' | 'read_write'
@@ -43,6 +45,16 @@ export function TeammateAccess({
     }
   }
 
+  async function setLibrary(libraryAccess: string) {
+    setError(undefined)
+    try {
+      await api(`/teammates/${teammate.id}`, { method: 'PATCH', body: { libraryAccess } })
+      onPolicyChange()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function setPolicy(connectorWrites: string) {
     await api(`/teammates/${teammate.id}`, {
       method: 'PATCH',
@@ -60,6 +72,35 @@ export function TeammateAccess({
         </CardTitle>
       </CardHeader>
       <CardContent className="px-0">
+        <div className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground"
+          >
+            <Library className="size-4" />
+          </span>
+          <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
+            <Link href="/app/library" className="truncate text-sm font-semibold hover:underline">
+              Document library
+            </Link>
+            <span className="truncate text-xs text-muted-foreground">
+              Search, memory and the shared files
+            </span>
+          </span>
+          <Select
+            value={teammate.libraryAccess ?? 'read'}
+            disabled={!editable}
+            onValueChange={(v) => void setLibrary(v)}
+          >
+            <SelectTrigger size="sm" aria-label="Document library access">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="read">Read only</SelectItem>
+              <SelectItem value="read_write">Read and write</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         {list.length === 0 ? (
           <p className="border-t px-6 py-3 text-sm text-muted-foreground">
             No connections in this workspace yet.{' '}
@@ -73,12 +114,7 @@ export function TeammateAccess({
             const scope: Scope = grants.data?.find((g) => g.connectionId === c.id)?.scope ?? 'none'
             return (
               <div key={c.id} className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
-                <span
-                  aria-hidden
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-bold text-secondary-foreground"
-                >
-                  {c.label.trim().charAt(0).toUpperCase()}
-                </span>
+                <ProviderTile kind={c.kind} small />
                 <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
                   <span className="truncate text-sm font-semibold">{c.label}</span>
                   {c.externalAccount && (

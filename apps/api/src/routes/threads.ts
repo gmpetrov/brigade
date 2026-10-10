@@ -8,6 +8,7 @@ import {
   ResolveApproval,
   SendMessage,
   StartThread,
+  type ThreadFile,
   type ThreadSpec,
   type ApiToRunner,
 } from '@brigade/contracts'
@@ -19,7 +20,8 @@ import { desktopUrl, ensureRunning } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
-import { broadcastThreadStatus, desktopClipboard, dispatch } from '../hub.js'
+import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
+import { contentTypeFor } from '../library.js'
 import { loadThread, specFor } from '../thread-spec.js'
 import { joinThread, mentionedTeammates, promptThread, startThread } from '../work.js'
 import { runLog } from '../timeline.js'
@@ -115,6 +117,70 @@ export const threads = new Hono<AppEnv>()
       ...thread,
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
     })
+  })
+
+  /**
+   * A file the thread mentions, for the panel beside it. A library path is
+   * read from the library (the computer may be stopped); anything else from
+   * the computer: the teammate's working folder for this thread, or the
+   * library mirror. Any member who can see the thread can see its files.
+   */
+  .get('/:id/file', async (c) => {
+    const { db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    // `src/a.ts:42` names a line; the panel shows the whole file.
+    const path = (c.req.query('path') ?? '')
+      .trim()
+      .replace(/:\d+(:\d+)?$/, '')
+      .replace(/^\.\//, '')
+    if (!path || path.length > 1000) throw new HTTPException(400, { message: 'Which file?' })
+
+    // The library: its own path, or its mirror's path on a computer.
+    const mirrored = path.startsWith('/') ? path.match(/\/library\/(.+)$/)?.[1] : undefined
+    const library = await db.document.findFirst({
+      where: { kind: 'library', path: { in: [path, ...(mirrored ? [mirrored] : [])] } },
+    })
+    if (library) {
+      const row = library
+      const editable = row.contentType.startsWith('text/') || /json|yaml|xml/.test(row.contentType)
+      return c.json({
+        source: 'library',
+        path: row.path,
+        documentId: row.id,
+        contentType: row.contentType,
+        size: row.size,
+        // The extracted text of a text file is the file itself (indexed up to 400k characters).
+        ...(editable && row.text.length < 400_000 ? { text: row.text } : {}),
+        truncated: false,
+      } satisfies ThreadFile)
+    }
+
+    // The teammate that mentioned it first, then the others in the thread.
+    const asked = c.req.query('teammateId')
+    const ids = [...new Set([thread.teammateId, ...thread.teammates.map((t) => t.teammateId)])]
+    const teammateIds =
+      asked && ids.includes(asked) ? [asked, ...ids.filter((i) => i !== asked)] : ids
+    const result = await readThreadFile(thread.computerId, {
+      sessionId: thread.id,
+      teammateIds,
+      path,
+    })
+    if (!result.ok)
+      throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
+        message:
+          result.error === 'not_found'
+            ? `No file "${path}" in the library or the teammate's folder`
+            : (result.error ?? 'Could not read the file'),
+      })
+    return c.json({
+      source: 'thread',
+      path: result.path ?? path,
+      contentType: contentTypeFor(result.path ?? path),
+      size: result.size ?? 0,
+      ...(result.text === undefined ? {} : { text: result.text }),
+      truncated: result.truncated ?? false,
+      ...(result.teammateId ? { teammateId: result.teammateId } : {}),
+    } satisfies ThreadFile)
   })
 
   /** The thread end to end: events, connector calls, tickets and who did what. */

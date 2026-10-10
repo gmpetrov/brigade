@@ -12,6 +12,7 @@ import { promisify } from 'node:util'
 import { accountEnv } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
+import { instructions, writeInstructions } from '../instructions.js'
 import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
 import {
@@ -27,10 +28,19 @@ import {
   askUserTool,
   connectorTools,
   credentialTools,
+  libraryTools,
   type ConnectorCaller,
+  type LibraryCaller,
 } from './tools.js'
 
-export type { ConnectorCaller } from './tools.js'
+export type { ConnectorCaller, LibraryCaller } from './tools.js'
+
+/** What a thread reaches beyond its own directory: the library and memory. */
+export type ThreadContext = {
+  libraryDir: string
+  memoryFor: (teammateId: string) => { workspace: string; teammate: string }
+  callLibrary: LibraryCaller
+}
 export type { CredentialRequester } from '../credentials.js'
 
 export { stripApiKeys } from './env.js'
@@ -60,6 +70,7 @@ function createAgent(
   callConnector: ConnectorCaller,
   credentials: ThreadCredentials,
   mcpServers: Record<string, unknown>,
+  library: Parameters<typeof libraryTools>[0],
 ) {
   // auth {}: the adapter forwards no credential. The vendor CLI uses its own
   // login in the account's config directory; the runner never reads it.
@@ -69,6 +80,7 @@ function createAgent(
   const tools = {
     ...connectorTools(spec.connectors, callConnector),
     ...credentialTools(credentials),
+    ...libraryTools(library),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
   }
@@ -117,6 +129,7 @@ export class HarnessThread {
     private readonly callConnector: ConnectorCaller,
     /** Asks the API for the vault's credentials. */
     private readonly requestCredential: CredentialRequester,
+    private readonly context: ThreadContext,
     /** On a cloud computer: the teammate's Linux user, which runs the harness. */
     private readonly runAs?: string,
   ) {
@@ -302,24 +315,18 @@ export class HarnessThread {
   private async attach(): Promise<Live> {
     if (this.live) return this.live
     const account = this.spec.account
-    let env: Record<string, string>
-    if (this.runAs) {
-      // The teammate's own Linux user, home and private link to the account's login.
-      await ensureUser(this.runAs)
-      await execFileAsync('sudo', ['-n', '-u', this.runAs, 'mkdir', '-p', this.workDir], {
-        cwd: '/',
-      })
-      const home = teammateHome(this.runAs)
-      env = harnessEnv({
-        ...(await linkAccount(this.runAs, account)),
-        HOME: home,
-        USER: this.runAs,
-        LOGNAME: this.runAs,
-      })
-    } else {
-      await mkdir(this.workDir, { recursive: true })
-      env = harnessEnv(accountEnv(account))
-    }
+    const env = await prepare(this.workDir, account, this.runAs)
+    // Memory loads through the harness's own instruction file.
+    await writeInstructions(
+      this.workDir,
+      this.spec,
+      instructions(
+        this.spec,
+        this.context.memoryFor(this.spec.teammate.id),
+        this.context.libraryDir,
+      ),
+      this.runAs,
+    ).catch((error) => console.warn(`could not write instructions: ${errorMessage(error)}`))
     // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
     const browser = this.runAs
       ? await ensureBrowser(this.spec.teammate).catch((error) => {
@@ -342,6 +349,12 @@ export class HarnessThread {
       this.callConnector,
       credentials,
       browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
+      {
+        access: this.spec.library,
+        libraryDir: this.context.libraryDir,
+        call: this.context.callLibrary,
+        readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
+      },
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
@@ -400,6 +413,95 @@ export class HarnessThread {
 
   private emit(event: DistributiveOmit<AgentEvent, 'at'>) {
     this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
+  }
+}
+
+/**
+ * The working directory and harness environment for an account: on a cloud
+ * computer the teammate's own Linux user, home and private link to the login.
+ */
+async function prepare(workDir: string, account: AccountRef, runAs?: string) {
+  if (!runAs) {
+    await mkdir(workDir, { recursive: true })
+    return harnessEnv(accountEnv(account))
+  }
+  await ensureUser(runAs)
+  await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
+  const home = teammateHome(runAs)
+  return harnessEnv({
+    ...(await linkAccount(runAs, account)),
+    HOME: home,
+    USER: runAs,
+    LOGNAME: runAs,
+  })
+}
+
+/** Most a teammate saves to the library in one call. */
+const READ_MAX = 10 * 1024 * 1024
+
+/** Read a file as the teammate's user (or as this user on a member's machine). */
+async function readAs(file: string, runAs?: string): Promise<Buffer> {
+  const { stdout } = await execFileAsync(
+    runAs ? 'sudo' : 'cat',
+    runAs ? ['-n', '-u', runAs, 'head', '-c', String(READ_MAX + 1), '--', file] : ['--', file],
+    { cwd: '/', encoding: 'buffer', maxBuffer: READ_MAX + 1024 },
+  ).catch((error: unknown) => {
+    throw new Error(`Could not read ${file}: ${errorMessage(error)}`)
+  })
+  if (stdout.byteLength > READ_MAX) throw new Error('Files saved to the library can be up to 10 MB')
+  return stdout
+}
+
+const resolvePath = (workDir: string, file: string) =>
+  file.startsWith('/') ? file : join(workDir, file)
+
+/**
+ * One short harness run outside any thread, with no tools: a prompt in, its
+ * final text out. Used to take memory from a thread that went quiet.
+ */
+export async function runOnce(input: {
+  spec: ThreadSpec
+  workDir: string
+  runAs?: string
+  prompt: string
+  signal: AbortSignal
+}): Promise<string> {
+  const { spec, workDir, runAs } = input
+  const env = await prepare(workDir, spec.account, runAs)
+  const codex = spec.teammate.harness === 'codex'
+  const settings = { auth: {} }
+  const agent = new HarnessAgent({
+    harness: codex ? createCodex(settings) : createClaudeCode(settings),
+    tools: {},
+    ...(spec.teammate.model ? { model: spec.teammate.model } : {}),
+    // Nothing to do but answer; Codex cannot ask, so it gets an empty directory.
+    permissionMode: codex ? 'allow-all' : 'allow-reads',
+    sandboxConfig: { workDir: '.' },
+  })
+  const sandbox = createLocalSandboxSession({
+    id: `${spec.sessionId}-memory`,
+    workingDirectory: workDir,
+    port: await freePort(),
+    env,
+    ...(runAs ? { runAs } : {}),
+  })
+  const session = await agent.createSession({
+    sessionId: `${spec.sessionId}-memory-${Date.now()}`,
+    sandboxSession: sandbox,
+  })
+  try {
+    let text = ''
+    const mapper = new EventMapper((event) => {
+      if (event.type === 'message.done') text = event.text
+    })
+    const result = await agent.stream({ session, prompt: input.prompt, abortSignal: input.signal })
+    for await (const part of result.fullStream) mapper.map(part)
+    if (mapper.exhausted) throw new Error('The account is out of usage')
+    if (mapper.error) throw new Error(mapper.error)
+    return text
+  } finally {
+    await session.destroy().catch(() => undefined)
+    await sandbox.destroy()
   }
 }
 

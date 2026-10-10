@@ -142,7 +142,8 @@ export type Webhook = Prisma.WebhookModel
 export type Ticket = Prisma.TicketModel
 /**
  * Model Document
- * Metadata and text-index entry for a library file.
+ * A library file (its bytes in the bucket, its text here), a memory file or a
+ * thread summary (text only). `search` is generated from path and text.
  */
 export type Document = Prisma.DocumentModel
 /**

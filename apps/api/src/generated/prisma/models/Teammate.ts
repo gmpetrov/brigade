@@ -32,6 +32,7 @@ export type TeammateMinAggregateOutputType = {
   instructions: string | null
   harness: $Enums.Harness | null
   model: string | null
+  libraryAccess: $Enums.LibraryAccess | null
   archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -45,6 +46,7 @@ export type TeammateMaxAggregateOutputType = {
   instructions: string | null
   harness: $Enums.Harness | null
   model: string | null
+  libraryAccess: $Enums.LibraryAccess | null
   archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -60,6 +62,7 @@ export type TeammateCountAggregateOutputType = {
   model: number
   caps: number
   permissionPolicy: number
+  libraryAccess: number
   archivedAt: number
   createdAt: number
   updatedAt: number
@@ -75,6 +78,7 @@ export type TeammateMinAggregateInputType = {
   instructions?: true
   harness?: true
   model?: true
+  libraryAccess?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -88,6 +92,7 @@ export type TeammateMaxAggregateInputType = {
   instructions?: true
   harness?: true
   model?: true
+  libraryAccess?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -103,6 +108,7 @@ export type TeammateCountAggregateInputType = {
   model?: true
   caps?: true
   permissionPolicy?: true
+  libraryAccess?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -191,6 +197,7 @@ export type TeammateGroupByOutputType = {
   model: string | null
   caps: runtime.JsonValue
   permissionPolicy: runtime.JsonValue
+  libraryAccess: $Enums.LibraryAccess
   archivedAt: Date | null
   createdAt: Date
   updatedAt: Date
@@ -227,6 +234,7 @@ export type TeammateWhereInput = {
   model?: Prisma.StringNullableFilter<"Teammate"> | string | null
   caps?: Prisma.JsonFilter<"Teammate">
   permissionPolicy?: Prisma.JsonFilter<"Teammate">
+  libraryAccess?: Prisma.EnumLibraryAccessFilter<"Teammate"> | $Enums.LibraryAccess
   archivedAt?: Prisma.DateTimeNullableFilter<"Teammate"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
@@ -236,6 +244,7 @@ export type TeammateWhereInput = {
   grants?: Prisma.GrantListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
+  documents?: Prisma.DocumentListRelationFilter
 }
 
 export type TeammateOrderByWithRelationInput = {
@@ -248,6 +257,7 @@ export type TeammateOrderByWithRelationInput = {
   model?: Prisma.SortOrderInput | Prisma.SortOrder
   caps?: Prisma.SortOrder
   permissionPolicy?: Prisma.SortOrder
+  libraryAccess?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -257,6 +267,7 @@ export type TeammateOrderByWithRelationInput = {
   grants?: Prisma.GrantOrderByRelationAggregateInput
   webhooks?: Prisma.WebhookOrderByRelationAggregateInput
   connectionCalls?: Prisma.ConnectionCallOrderByRelationAggregateInput
+  documents?: Prisma.DocumentOrderByRelationAggregateInput
 }
 
 export type TeammateWhereUniqueInput = Prisma.AtLeast<{
@@ -272,6 +283,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   model?: Prisma.StringNullableFilter<"Teammate"> | string | null
   caps?: Prisma.JsonFilter<"Teammate">
   permissionPolicy?: Prisma.JsonFilter<"Teammate">
+  libraryAccess?: Prisma.EnumLibraryAccessFilter<"Teammate"> | $Enums.LibraryAccess
   archivedAt?: Prisma.DateTimeNullableFilter<"Teammate"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
@@ -281,6 +293,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   grants?: Prisma.GrantListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
+  documents?: Prisma.DocumentListRelationFilter
 }, "id">
 
 export type TeammateOrderByWithAggregationInput = {
@@ -293,6 +306,7 @@ export type TeammateOrderByWithAggregationInput = {
   model?: Prisma.SortOrderInput | Prisma.SortOrder
   caps?: Prisma.SortOrder
   permissionPolicy?: Prisma.SortOrder
+  libraryAccess?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -314,6 +328,7 @@ export type TeammateScalarWhereWithAggregatesInput = {
   model?: Prisma.StringNullableWithAggregatesFilter<"Teammate"> | string | null
   caps?: Prisma.JsonWithAggregatesFilter<"Teammate">
   permissionPolicy?: Prisma.JsonWithAggregatesFilter<"Teammate">
+  libraryAccess?: Prisma.EnumLibraryAccessWithAggregatesFilter<"Teammate"> | $Enums.LibraryAccess
   archivedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Teammate"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Teammate"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Teammate"> | Date | string
@@ -328,6 +343,7 @@ export type TeammateCreateInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -337,6 +353,7 @@ export type TeammateCreateInput = {
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateInput = {
@@ -349,6 +366,7 @@ export type TeammateUncheckedCreateInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -357,6 +375,7 @@ export type TeammateUncheckedCreateInput = {
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUpdateInput = {
@@ -368,6 +387,7 @@ export type TeammateUpdateInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -377,6 +397,7 @@ export type TeammateUpdateInput = {
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateInput = {
@@ -389,6 +410,7 @@ export type TeammateUncheckedUpdateInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -397,6 +419,7 @@ export type TeammateUncheckedUpdateInput = {
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateManyInput = {
@@ -409,6 +432,7 @@ export type TeammateCreateManyInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -423,6 +447,7 @@ export type TeammateUpdateManyMutationInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -438,6 +463,7 @@ export type TeammateUncheckedUpdateManyInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -463,6 +489,7 @@ export type TeammateCountOrderByAggregateInput = {
   model?: Prisma.SortOrder
   caps?: Prisma.SortOrder
   permissionPolicy?: Prisma.SortOrder
+  libraryAccess?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -476,6 +503,7 @@ export type TeammateMaxOrderByAggregateInput = {
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
   model?: Prisma.SortOrder
+  libraryAccess?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -489,6 +517,7 @@ export type TeammateMinOrderByAggregateInput = {
   instructions?: Prisma.SortOrder
   harness?: Prisma.SortOrder
   model?: Prisma.SortOrder
+  libraryAccess?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -497,6 +526,11 @@ export type TeammateMinOrderByAggregateInput = {
 export type TeammateScalarRelationFilter = {
   is?: Prisma.TeammateWhereInput
   isNot?: Prisma.TeammateWhereInput
+}
+
+export type TeammateNullableScalarRelationFilter = {
+  is?: Prisma.TeammateWhereInput | null
+  isNot?: Prisma.TeammateWhereInput | null
 }
 
 export type TeammateCreateNestedManyWithoutWorkspaceInput = {
@@ -543,6 +577,10 @@ export type TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput = {
 
 export type EnumHarnessFieldUpdateOperationsInput = {
   set?: $Enums.Harness
+}
+
+export type EnumLibraryAccessFieldUpdateOperationsInput = {
+  set?: $Enums.LibraryAccess
 }
 
 export type TeammateCreateNestedOneWithoutSessionsInput = {
@@ -615,6 +653,22 @@ export type TeammateUpdateOneRequiredWithoutWebhooksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutWebhooksInput, Prisma.TeammateUpdateWithoutWebhooksInput>, Prisma.TeammateUncheckedUpdateWithoutWebhooksInput>
 }
 
+export type TeammateCreateNestedOneWithoutDocumentsInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutDocumentsInput, Prisma.TeammateUncheckedCreateWithoutDocumentsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutDocumentsInput
+  connect?: Prisma.TeammateWhereUniqueInput
+}
+
+export type TeammateUpdateOneWithoutDocumentsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutDocumentsInput, Prisma.TeammateUncheckedCreateWithoutDocumentsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutDocumentsInput
+  upsert?: Prisma.TeammateUpsertWithoutDocumentsInput
+  disconnect?: Prisma.TeammateWhereInput | boolean
+  delete?: Prisma.TeammateWhereInput | boolean
+  connect?: Prisma.TeammateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutDocumentsInput, Prisma.TeammateUpdateWithoutDocumentsInput>, Prisma.TeammateUncheckedUpdateWithoutDocumentsInput>
+}
+
 export type TeammateCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -624,6 +678,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -632,6 +687,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutWorkspaceInput = {
@@ -643,6 +699,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -651,6 +708,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutWorkspaceInput = {
@@ -692,6 +750,7 @@ export type TeammateScalarWhereInput = {
   model?: Prisma.StringNullableFilter<"Teammate"> | string | null
   caps?: Prisma.JsonFilter<"Teammate">
   permissionPolicy?: Prisma.JsonFilter<"Teammate">
+  libraryAccess?: Prisma.EnumLibraryAccessFilter<"Teammate"> | $Enums.LibraryAccess
   archivedAt?: Prisma.DateTimeNullableFilter<"Teammate"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Teammate"> | Date | string
@@ -706,6 +765,7 @@ export type TeammateCreateWithoutSessionsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -714,6 +774,7 @@ export type TeammateCreateWithoutSessionsInput = {
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSessionsInput = {
@@ -726,6 +787,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -733,6 +795,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSessionsInput = {
@@ -760,6 +823,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -768,6 +832,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSessionsInput = {
@@ -780,6 +845,7 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -787,6 +853,7 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutThreadSeatsInput = {
@@ -798,6 +865,7 @@ export type TeammateCreateWithoutThreadSeatsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -806,6 +874,7 @@ export type TeammateCreateWithoutThreadSeatsInput = {
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
@@ -818,6 +887,7 @@ export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -825,6 +895,7 @@ export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutThreadSeatsInput = {
@@ -852,6 +923,7 @@ export type TeammateUpdateWithoutThreadSeatsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -860,6 +932,7 @@ export type TeammateUpdateWithoutThreadSeatsInput = {
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
@@ -872,6 +945,7 @@ export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -879,6 +953,7 @@ export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutGrantsInput = {
@@ -890,6 +965,7 @@ export type TeammateCreateWithoutGrantsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -898,6 +974,7 @@ export type TeammateCreateWithoutGrantsInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutGrantsInput = {
@@ -910,6 +987,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -917,6 +995,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutGrantsInput = {
@@ -944,6 +1023,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -952,6 +1032,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutGrantsInput = {
@@ -964,6 +1045,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -971,6 +1053,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutConnectionCallsInput = {
@@ -982,6 +1065,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -990,6 +1074,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
@@ -1002,6 +1087,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1009,6 +1095,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutConnectionCallsInput = {
@@ -1036,6 +1123,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1044,6 +1132,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
@@ -1056,6 +1145,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1063,6 +1153,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutWebhooksInput = {
@@ -1074,6 +1165,7 @@ export type TeammateCreateWithoutWebhooksInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1082,6 +1174,7 @@ export type TeammateCreateWithoutWebhooksInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutWebhooksInput = {
@@ -1094,6 +1187,7 @@ export type TeammateUncheckedCreateWithoutWebhooksInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1101,6 +1195,7 @@ export type TeammateUncheckedCreateWithoutWebhooksInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutWebhooksInput = {
@@ -1128,6 +1223,7 @@ export type TeammateUpdateWithoutWebhooksInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1136,6 +1232,7 @@ export type TeammateUpdateWithoutWebhooksInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutWebhooksInput = {
@@ -1148,12 +1245,114 @@ export type TeammateUncheckedUpdateWithoutWebhooksInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateCreateWithoutDocumentsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateUncheckedCreateWithoutDocumentsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateCreateOrConnectWithoutDocumentsInput = {
+  where: Prisma.TeammateWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutDocumentsInput, Prisma.TeammateUncheckedCreateWithoutDocumentsInput>
+}
+
+export type TeammateUpsertWithoutDocumentsInput = {
+  update: Prisma.XOR<Prisma.TeammateUpdateWithoutDocumentsInput, Prisma.TeammateUncheckedUpdateWithoutDocumentsInput>
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutDocumentsInput, Prisma.TeammateUncheckedCreateWithoutDocumentsInput>
+  where?: Prisma.TeammateWhereInput
+}
+
+export type TeammateUpdateToOneWithWhereWithoutDocumentsInput = {
+  where?: Prisma.TeammateWhereInput
+  data: Prisma.XOR<Prisma.TeammateUpdateWithoutDocumentsInput, Prisma.TeammateUncheckedUpdateWithoutDocumentsInput>
+}
+
+export type TeammateUpdateWithoutDocumentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateUncheckedUpdateWithoutDocumentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
@@ -1166,6 +1365,7 @@ export type TeammateCreateManyWorkspaceInput = {
   model?: string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1180,6 +1380,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1188,6 +1389,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
@@ -1199,6 +1401,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1207,6 +1410,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1218,6 +1422,7 @@ export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
   model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1234,6 +1439,7 @@ export type TeammateCountOutputType = {
   grants: number
   webhooks: number
   connectionCalls: number
+  documents: number
 }
 
 export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1242,6 +1448,7 @@ export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   grants?: boolean | TeammateCountOutputTypeCountGrantsArgs
   webhooks?: boolean | TeammateCountOutputTypeCountWebhooksArgs
   connectionCalls?: boolean | TeammateCountOutputTypeCountConnectionCallsArgs
+  documents?: boolean | TeammateCountOutputTypeCountDocumentsArgs
 }
 
 /**
@@ -1289,6 +1496,13 @@ export type TeammateCountOutputTypeCountConnectionCallsArgs<ExtArgs extends runt
   where?: Prisma.ConnectionCallWhereInput
 }
 
+/**
+ * TeammateCountOutputType without action
+ */
+export type TeammateCountOutputTypeCountDocumentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DocumentWhereInput
+}
+
 
 export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1300,6 +1514,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   model?: boolean
   caps?: boolean
   permissionPolicy?: boolean
+  libraryAccess?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1309,6 +1524,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   grants?: boolean | Prisma.Teammate$grantsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Teammate$webhooksArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Teammate$connectionCallsArgs<ExtArgs>
+  documents?: boolean | Prisma.Teammate$documentsArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["teammate"]>
 
@@ -1322,6 +1538,7 @@ export type TeammateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   model?: boolean
   caps?: boolean
   permissionPolicy?: boolean
+  libraryAccess?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1338,6 +1555,7 @@ export type TeammateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   model?: boolean
   caps?: boolean
   permissionPolicy?: boolean
+  libraryAccess?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1354,12 +1572,13 @@ export type TeammateSelectScalar = {
   model?: boolean
   caps?: boolean
   permissionPolicy?: boolean
+  libraryAccess?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TeammateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "instructions" | "harness" | "model" | "caps" | "permissionPolicy" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["teammate"]>
+export type TeammateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "instructions" | "harness" | "model" | "caps" | "permissionPolicy" | "libraryAccess" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["teammate"]>
 export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.Teammate$sessionsArgs<ExtArgs>
@@ -1367,6 +1586,7 @@ export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   grants?: boolean | Prisma.Teammate$grantsArgs<ExtArgs>
   webhooks?: boolean | Prisma.Teammate$webhooksArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Teammate$connectionCallsArgs<ExtArgs>
+  documents?: boolean | Prisma.Teammate$documentsArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TeammateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1385,6 +1605,7 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     grants: Prisma.$GrantPayload<ExtArgs>[]
     webhooks: Prisma.$WebhookPayload<ExtArgs>[]
     connectionCalls: Prisma.$ConnectionCallPayload<ExtArgs>[]
+    documents: Prisma.$DocumentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1402,6 +1623,10 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * Per kind of action: allow, ask or deny.
      */
     permissionPolicy: runtime.JsonValue
+    /**
+     * Its grant on the workspace library: read and search it, or also save to it.
+     */
+    libraryAccess: $Enums.LibraryAccess
     archivedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -1805,6 +2030,7 @@ export interface Prisma__TeammateClient<T, Null = never, ExtArgs extends runtime
   grants<T extends Prisma.Teammate$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   webhooks<T extends Prisma.Teammate$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connectionCalls<T extends Prisma.Teammate$connectionCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$connectionCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  documents<T extends Prisma.Teammate$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1843,6 +2069,7 @@ export interface TeammateFieldRefs {
   readonly model: Prisma.FieldRef<"Teammate", 'String'>
   readonly caps: Prisma.FieldRef<"Teammate", 'Json'>
   readonly permissionPolicy: Prisma.FieldRef<"Teammate", 'Json'>
+  readonly libraryAccess: Prisma.FieldRef<"Teammate", 'LibraryAccess'>
   readonly archivedAt: Prisma.FieldRef<"Teammate", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Teammate", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Teammate", 'DateTime'>
@@ -2364,6 +2591,30 @@ export type Teammate$connectionCallsArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.ConnectionCallScalarFieldEnum | Prisma.ConnectionCallScalarFieldEnum[]
+}
+
+/**
+ * Teammate.documents
+ */
+export type Teammate$documentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Document
+   */
+  select?: Prisma.DocumentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Document
+   */
+  omit?: Prisma.DocumentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DocumentInclude<ExtArgs> | null
+  where?: Prisma.DocumentWhereInput
+  orderBy?: Prisma.DocumentOrderByWithRelationInput | Prisma.DocumentOrderByWithRelationInput[]
+  cursor?: Prisma.DocumentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DocumentScalarFieldEnum | Prisma.DocumentScalarFieldEnum[]
 }
 
 /**

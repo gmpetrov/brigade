@@ -2557,6 +2557,7 @@ export const TeammateScalarFieldEnum = {
   model: 'model',
   caps: 'caps',
   permissionPolicy: 'permissionPolicy',
+  libraryAccess: 'libraryAccess',
   archivedAt: 'archivedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -2672,6 +2673,7 @@ export const ConnectionScalarFieldEnum = {
   kind: 'kind',
   label: 'label',
   externalAccount: 'externalAccount',
+  externalUrl: 'externalUrl',
   status: 'status',
   vaultSecretId: 'vaultSecretId',
   createdByMemberId: 'createdByMemberId',
@@ -2783,10 +2785,15 @@ export const DocumentScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
+  kind: 'kind',
   path: 'path',
+  teammateId: 'teammateId',
+  sessionId: 'sessionId',
   contentType: 'contentType',
   size: 'size',
+  sha256: 'sha256',
   text: 'text',
+  indexed: 'indexed',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const
@@ -2970,6 +2977,20 @@ export type ListEnumHarnessFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
 
 
 /**
+ * Reference to a field of type 'LibraryAccess'
+ */
+export type EnumLibraryAccessFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LibraryAccess'>
+    
+
+
+/**
+ * Reference to a field of type 'LibraryAccess[]'
+ */
+export type ListEnumLibraryAccessFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LibraryAccess[]'>
+    
+
+
+/**
  * Reference to a field of type 'SessionStatus'
  */
 export type EnumSessionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SessionStatus'>
@@ -3134,6 +3155,20 @@ export type EnumTicketStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'TicketStatus[]'
  */
 export type ListEnumTicketStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TicketStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'DocumentKind'
+ */
+export type EnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DocumentKind'>
+    
+
+
+/**
+ * Reference to a field of type 'DocumentKind[]'
+ */
+export type ListEnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DocumentKind[]'>
     
 
 

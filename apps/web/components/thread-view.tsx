@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
+import { FileLinksProvider } from '@/components/file-links'
 import { Markdown } from '@/components/markdown'
 import { credentialHint, MessageText } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
@@ -276,7 +277,10 @@ export function ThreadItems({
                 {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
                   {named && <span className="text-sm font-semibold">{author.name}</span>}
-                  <Markdown text={item.text} />
+                  {/* A file it names opens from its own working folder first. */}
+                  <FileLinksProvider value={{ teammateId: item.teammateId }}>
+                    <Markdown text={item.text} />
+                  </FileLinksProvider>
                 </div>
               </div>
             )

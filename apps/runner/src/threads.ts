@@ -7,14 +7,18 @@ import {
   mentionedIds,
   type AgentEvent,
   type ApiToRunner,
+  type RunnerToApi,
   type ThreadSpec,
 } from '@brigade/contracts'
+import { memoryPrompt, parseMemory } from './memory.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
   HarnessThread,
+  runOnce,
   type ConnectorCaller,
   type CredentialRequester,
+  type ThreadContext,
   type ThreadInput,
 } from './harness/index.js'
 
@@ -26,6 +30,10 @@ const CATCH_UP_CHARS = 40_000
 const LOG_ENTRIES = 200
 /** Teammates handing the thread to one another stop after this many handoffs without a member. */
 const MAX_HANDOFFS = 40
+/** A thread this long without a turn has gone quiet: its memory is taken then. */
+const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
+/** Longest a memory run may take. */
+const MEMORY_RUN_MS = 4 * 60_000
 
 type Command = Extract<
   ApiToRunner,
@@ -39,6 +47,9 @@ type Log = {
   entries: { by: string | null; name: string; text: string }[]
   /** Per teammate: the index up to which it has been told. */
   seen: Record<string, number>
+  /** The index up to which memory was taken, and the thread's summary then. */
+  memorized?: number
+  summary?: string
 }
 
 type Thread = {
@@ -56,6 +67,10 @@ type Thread = {
   waiting: Map<string, number>
   /** Handoffs since a member last wrote. */
   handoffs: number
+  /** Fires when the thread goes quiet, to take its memory. */
+  quietTimer?: NodeJS.Timeout
+  /** The latest turn's spec: the account and teammates a memory run uses. */
+  lastSpec?: ThreadSpec
 }
 
 export class Threads {
@@ -81,6 +96,15 @@ export class Threads {
       ) => Promise<unknown>
       /** A teammate's reply mentioned others in the thread: ask the API to have them answer next. */
       handoff: (sessionId: string, fromTeammateId: string, teammateIds: string[]) => void
+      /** The library and memory threads reach. */
+      context: Omit<ThreadContext, 'callLibrary'>
+      callLibrary: (
+        sessionId: string,
+        teammateId: string,
+        call: Parameters<ThreadContext['callLibrary']>[0],
+      ) => Promise<unknown>
+      /** What a quiet thread leaves in memory. */
+      memoryUpdate: (update: Extract<RunnerToApi, { type: 'memory.update' }>) => void
     },
   ) {}
 
@@ -233,6 +257,7 @@ export class Threads {
     const thread = this.thread(spec.sessionId)
     const seat = this.harness(thread, spec)
     clearTimeout(seat.parkTimer)
+    clearTimeout(thread.quietTimer)
     this.pending++
     const me = spec.teammate.id
     thread.waiting.set(me, (thread.waiting.get(me) ?? 0) + 1)
@@ -269,6 +294,9 @@ export class Threads {
             () => void seat.harness.park().catch(console.error),
             PARK_AFTER_MS,
           )
+          thread.lastSpec = spec
+          clearTimeout(thread.quietTimer)
+          thread.quietTimer = setTimeout(() => this.memorize(spec.sessionId), QUIET_AFTER_MS)
           if (!controller.signal.aborted && !thread.takeover) this.handOn(thread, spec, seat.reply)
         }
       } catch (error) {
@@ -303,6 +331,64 @@ export class Threads {
     }
     thread.handoffs++
     this.options.handoff(spec.sessionId, me, next.slice(0, 5))
+  }
+
+  /**
+   * The thread went quiet: a short harness run takes its summary and what it
+   * taught, for the memory files. Only what was said since the last time.
+   */
+  private memorize(sessionId: string) {
+    const thread = this.threads.get(sessionId)
+    const spec = thread?.lastSpec
+    if (!thread || !spec || thread.takeover || [...thread.waiting.values()].some((n) => n > 0))
+      return
+    this.pending++
+    thread.queue = thread.queue.then(async () => {
+      try {
+        const log = await thread.log
+        const end = log.start + log.entries.length
+        const from = Math.max(log.memorized ?? 0, log.start)
+        const fresh = log.entries.slice(from - log.start)
+        // Nothing a teammate said since last time: nothing to remember.
+        if (!fresh.some((e) => e.by)) return
+        await this.acquire()
+        try {
+          const speakers = spec.teammates.filter((t) => fresh.some((e) => e.by === t.id))
+          const text = await runOnce({
+            spec,
+            ...this.memoryWorkDir(spec),
+            prompt: memoryPrompt({
+              spec,
+              entries: fresh,
+              summary: log.summary,
+              memory: this.options.context.memoryFor,
+              speakers,
+            }),
+            signal: AbortSignal.timeout(MEMORY_RUN_MS),
+          })
+          const update = parseMemory(text, spec, speakers)
+          if (!update) return console.warn(`thread ${sessionId}: memory run gave no usable answer`)
+          this.options.memoryUpdate({ type: 'memory.update', sessionId, ...update })
+          log.memorized = end
+          log.summary = update.summary
+          await this.saveLog(sessionId)
+        } finally {
+          this.release()
+        }
+      } catch (error) {
+        console.warn(`thread ${sessionId}: memory run failed: ${String(error)}`)
+      } finally {
+        this.pending--
+      }
+    })
+  }
+
+  /** Where a memory run works: an empty directory of the teammate's, never the thread's. */
+  private memoryWorkDir(spec: ThreadSpec) {
+    const user = CLOUD ? teammateUser(spec.teammate.id) : undefined
+    return user
+      ? { workDir: `${teammateHome(user)}/.memory-runs/${spec.sessionId}`, runAs: user }
+      : { workDir: join(paths.state, 'memory-runs', spec.sessionId) }
   }
 
   /**
@@ -419,6 +505,10 @@ export class Threads {
         },
         (call) => this.options.callConnector(spec.sessionId, teammateId, call),
         (request) => this.options.requestCredential(spec.sessionId, teammateId, request),
+        {
+          ...this.options.context,
+          callLibrary: (call) => this.options.callLibrary(spec.sessionId, teammateId, call),
+        },
         user,
       )
       seat = { harness, parkTimer: undefined }

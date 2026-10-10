@@ -139,9 +139,19 @@ export class Connection {
     return this.call({ type: 'credential.request', ...request }, hooks)
   }
 
+  /** Search the workspace, or save a file to its library. The API checks the grant. */
+  callLibrary(
+    request: Omit<Extract<RunnerToApi, { type: 'library.call' }>, 'type' | 'callId'>,
+  ): Promise<unknown> {
+    return this.call(
+      { type: 'library.call', ...request },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+  }
+
   private call(
     message: DistributiveOmit<
-      Extract<RunnerToApi, { type: 'connector.call' | 'credential.request' }>,
+      Extract<RunnerToApi, { type: 'connector.call' | 'credential.request' | 'library.call' }>,
       'callId'
     >,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,

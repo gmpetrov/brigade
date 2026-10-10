@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { ConnectorDefinition } from './types.js'
 import { gmail } from './gmail.js'
+import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { stripe } from './stripe.js'
 
@@ -8,6 +9,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   gmail,
   google_calendar: googleCalendar,
   stripe,
+  github,
 }
 
 /** The operations a teammate may see for a grant: reads always, writes only with read_write. */

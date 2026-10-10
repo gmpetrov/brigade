@@ -19,7 +19,7 @@ export type ConnectorContext = {
   callId: string
 }
 
-export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe'
+export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }
@@ -27,8 +27,11 @@ export type ApiKeyCredential = { apiKey: string }
 export type ConnectorDefinition = {
   kind: ConnectorKind
   label: string
-  /** google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard. */
-  auth: 'google' | 'api_key'
+  /**
+   * google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard.
+   * github_app: an installation of Brigade's GitHub App; tokens are minted per call.
+   */
+  auth: 'google' | 'api_key' | 'github_app'
   operations: Record<string, Operation>
 }
 
@@ -44,6 +47,7 @@ export function redact(text: string) {
   return text
     .replace(/\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9*]+/g, '[redacted key]')
     .replace(/\bya29\.[\w-]+/g, '[redacted token]')
+    .replace(/\b(gh[pousr]_[A-Za-z0-9]+|github_pat_\w+)/g, '[redacted token]')
     .replace(/\bBearer\s+[\w.*-]+/gi, 'Bearer [redacted]')
 }
 
@@ -53,7 +57,8 @@ export async function json<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = body.slice(0, 500)
     try {
-      message = (JSON.parse(body) as { error?: { message?: string } }).error?.message ?? message
+      const parsed = JSON.parse(body) as { error?: { message?: string }; message?: string }
+      message = parsed.error?.message ?? parsed.message ?? message
     } catch {
       // not JSON
     }
