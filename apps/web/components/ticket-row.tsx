@@ -5,7 +5,7 @@ import { isAdmin, timeAgo } from '@/components/dashboard'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import type { Me, Ticket } from '@/lib/api'
+import { pullHref, type Me, type Ticket } from '@/lib/api'
 
 const typeLabel: Record<Ticket['type'], string> = {
   approval: 'approval',
@@ -111,6 +111,13 @@ export function TicketRow({
         {t.type === 'sign_in' && (
           <Button asChild size="sm">
             <Link href="/app/accounts">Sign in</Link>
+          </Button>
+        )}
+        {t.payload.pullRequest && (
+          <Button asChild size="sm">
+            <Link href={pullHref(t.payload.pullRequest.repository, t.payload.pullRequest.number)}>
+              Open the pull request
+            </Link>
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, true)}>

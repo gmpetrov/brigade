@@ -15,7 +15,8 @@ import { credentials } from './routes/credentials.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
-import { projects } from './routes/projects.js'
+import { pulls } from './routes/pulls.js'
+import { repositories } from './routes/repositories.js'
 import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerLibrary } from './routes/runner-library.js'
@@ -46,7 +47,8 @@ app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
 app.route('/api/library', library)
 app.route('/api/attachments', attachments)
-app.route('/api/projects', projects)
+app.route('/api/repositories', repositories)
+app.route('/api/pulls', pulls)
 app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)

@@ -95,11 +95,15 @@ export type SessionEvent = Prisma.SessionEventModel
  */
 export type Account = Prisma.AccountModel
 /**
- * Model Project
- * A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
- * Reached through a GitHub connection; this only adds what teammates should do with it.
+ * Model PullRequest
+ * A pull request Brigade knows about: opened by a teammate, or put through a review.
  */
-export type Project = Prisma.ProjectModel
+export type PullRequest = Prisma.PullRequestModel
+/**
+ * Model PullRequestReview
+ * A teammate's review, from github_review_pull_request.
+ */
+export type PullRequestReview = Prisma.PullRequestReviewModel
 /**
  * Model Comment
  * A human comment on a diff or a thread.

@@ -38,6 +38,16 @@ const MAX_HANDOFFS = 40
 const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
 /** Longest a memory run may take. */
 const MEMORY_RUN_MS = 4 * 60_000
+/** Events after which a thread is no longer running a turn. */
+const OUT_OF_TURN = new Set<AgentEvent['type']>([
+  'turn.completed',
+  'error',
+  'approval.requested',
+  'question.asked',
+  'ticket.opened',
+  'control.changed',
+  'account.switched',
+])
 
 type Command = Extract<
   ApiToRunner,
@@ -206,6 +216,31 @@ export class Threads {
       }
     }
     this.enqueue(spec, input)
+  }
+
+  /**
+   * The API has these threads running here. One with no turn here, and none
+   * ended in events still on their way, was lost when this computer stopped or
+   * the runner restarted: close it as interrupted, so it does not look busy forever.
+   */
+  closeLost(
+    sessionIds: string[],
+    lastUnacknowledged: (sessionId: string) => AgentEvent | undefined,
+  ) {
+    for (const sessionId of sessionIds) {
+      if (!SAFE_ID.test(sessionId) || this.inUse(sessionId)) continue
+      const last = lastUnacknowledged(sessionId)
+      if (last && OUT_OF_TURN.has(last.type)) continue
+      const at = new Date().toISOString()
+      this.options.emit(sessionId, {
+        at,
+        type: 'raw',
+        source: 'runner',
+        value:
+          'The computer stopped during this turn, so it was interrupted. Send a message to continue.',
+      })
+      this.options.emit(sessionId, { at, type: 'turn.completed', finishReason: 'interrupted' })
+    }
   }
 
   /** A person takes control: the teammate stops now, or after its current turn. */

@@ -66,7 +66,8 @@ export const ModelName = {
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
-  Project: 'Project',
+  PullRequest: 'PullRequest',
+  PullRequestReview: 'PullRequestReview',
   Comment: 'Comment',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
@@ -331,18 +332,50 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
-export const ProjectScalarFieldEnum = {
+export const PullRequestScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   repository: 'repository',
-  setupScript: 'setupScript',
-  notes: 'notes',
+  number: 'number',
+  title: 'title',
+  headRef: 'headRef',
+  baseRef: 'baseRef',
+  sessionId: 'sessionId',
+  authorTeammateId: 'authorTeammateId',
+  reviewerTeammateId: 'reviewerTeammateId',
+  reviewStatus: 'reviewStatus',
+  autoMerge: 'autoMerge',
+  requestedByMemberId: 'requestedByMemberId',
+  round: 'round',
+  reviewedSha: 'reviewedSha',
+  note: 'note',
+  state: 'state',
+  mergedAt: 'mergedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+export type PullRequestScalarFieldEnum = (typeof PullRequestScalarFieldEnum)[keyof typeof PullRequestScalarFieldEnum]
+
+
+export const PullRequestReviewScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  pullRequestId: 'pullRequestId',
+  teammateId: 'teammateId',
+  sessionId: 'sessionId',
+  verdict: 'verdict',
+  body: 'body',
+  comments: 'comments',
+  sha: 'sha',
+  round: 'round',
+  url: 'url',
+  createdAt: 'createdAt'
+} as const
+
+export type PullRequestReviewScalarFieldEnum = (typeof PullRequestReviewScalarFieldEnum)[keyof typeof PullRequestReviewScalarFieldEnum]
 
 
 export const CommentScalarFieldEnum = {

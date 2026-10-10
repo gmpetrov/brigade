@@ -412,7 +412,8 @@ export const ModelName = {
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
-  Project: 'Project',
+  PullRequest: 'PullRequest',
+  PullRequestReview: 'PullRequestReview',
   Comment: 'Comment',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
@@ -441,7 +442,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "threadTeammate" | "sessionEvent" | "account" | "project" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry" | "attachment" | "threadAttachment"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry" | "attachment" | "threadAttachment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1555,77 +1556,151 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    Project: {
-      payload: Prisma.$ProjectPayload<ExtArgs>
-      fields: Prisma.ProjectFieldRefs
+    PullRequest: {
+      payload: Prisma.$PullRequestPayload<ExtArgs>
+      fields: Prisma.PullRequestFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.ProjectFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+          args: Prisma.PullRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.ProjectFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         findFirst: {
-          args: Prisma.ProjectFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+          args: Prisma.PullRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.ProjectFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         findMany: {
-          args: Prisma.ProjectFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+          args: Prisma.PullRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>[]
         }
         create: {
-          args: Prisma.ProjectCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         createMany: {
-          args: Prisma.ProjectCreateManyArgs<ExtArgs>
+          args: Prisma.PullRequestCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         createManyAndReturn: {
-          args: Prisma.ProjectCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+          args: Prisma.PullRequestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>[]
         }
         delete: {
-          args: Prisma.ProjectDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         update: {
-          args: Prisma.ProjectUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         deleteMany: {
-          args: Prisma.ProjectDeleteManyArgs<ExtArgs>
+          args: Prisma.PullRequestDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.ProjectUpdateManyArgs<ExtArgs>
+          args: Prisma.PullRequestUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateManyAndReturn: {
-          args: Prisma.ProjectUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+          args: Prisma.PullRequestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>[]
         }
         upsert: {
-          args: Prisma.ProjectUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+          args: Prisma.PullRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestPayload>
         }
         aggregate: {
-          args: Prisma.ProjectAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateProject>
+          args: Prisma.PullRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePullRequest>
         }
         groupBy: {
-          args: Prisma.ProjectGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.ProjectGroupByOutputType>[]
+          args: Prisma.PullRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PullRequestGroupByOutputType>[]
         }
         count: {
-          args: Prisma.ProjectCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.ProjectCountAggregateOutputType> | number
+          args: Prisma.PullRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PullRequestCountAggregateOutputType> | number
+        }
+      }
+    }
+    PullRequestReview: {
+      payload: Prisma.$PullRequestReviewPayload<ExtArgs>
+      fields: Prisma.PullRequestReviewFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PullRequestReviewFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PullRequestReviewFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        findFirst: {
+          args: Prisma.PullRequestReviewFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PullRequestReviewFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        findMany: {
+          args: Prisma.PullRequestReviewFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>[]
+        }
+        create: {
+          args: Prisma.PullRequestReviewCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        createMany: {
+          args: Prisma.PullRequestReviewCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PullRequestReviewCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>[]
+        }
+        delete: {
+          args: Prisma.PullRequestReviewDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        update: {
+          args: Prisma.PullRequestReviewUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        deleteMany: {
+          args: Prisma.PullRequestReviewDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PullRequestReviewUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PullRequestReviewUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>[]
+        }
+        upsert: {
+          args: Prisma.PullRequestReviewUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PullRequestReviewPayload>
+        }
+        aggregate: {
+          args: Prisma.PullRequestReviewAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePullRequestReview>
+        }
+        groupBy: {
+          args: Prisma.PullRequestReviewGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PullRequestReviewGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PullRequestReviewCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PullRequestReviewCountAggregateOutputType> | number
         }
       }
     }
@@ -2863,18 +2938,50 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
-export const ProjectScalarFieldEnum = {
+export const PullRequestScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   repository: 'repository',
-  setupScript: 'setupScript',
-  notes: 'notes',
+  number: 'number',
+  title: 'title',
+  headRef: 'headRef',
+  baseRef: 'baseRef',
+  sessionId: 'sessionId',
+  authorTeammateId: 'authorTeammateId',
+  reviewerTeammateId: 'reviewerTeammateId',
+  reviewStatus: 'reviewStatus',
+  autoMerge: 'autoMerge',
+  requestedByMemberId: 'requestedByMemberId',
+  round: 'round',
+  reviewedSha: 'reviewedSha',
+  note: 'note',
+  state: 'state',
+  mergedAt: 'mergedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+export type PullRequestScalarFieldEnum = (typeof PullRequestScalarFieldEnum)[keyof typeof PullRequestScalarFieldEnum]
+
+
+export const PullRequestReviewScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  pullRequestId: 'pullRequestId',
+  teammateId: 'teammateId',
+  sessionId: 'sessionId',
+  verdict: 'verdict',
+  body: 'body',
+  comments: 'comments',
+  sha: 'sha',
+  round: 'round',
+  url: 'url',
+  createdAt: 'createdAt'
+} as const
+
+export type PullRequestReviewScalarFieldEnum = (typeof PullRequestReviewScalarFieldEnum)[keyof typeof PullRequestReviewScalarFieldEnum]
 
 
 export const CommentScalarFieldEnum = {
@@ -3331,6 +3438,34 @@ export type ListEnumAccountStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'ReviewStatus'
+ */
+export type EnumReviewStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ReviewStatus[]'
+ */
+export type ListEnumReviewStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'ReviewVerdict'
+ */
+export type EnumReviewVerdictFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewVerdict'>
+    
+
+
+/**
+ * Reference to a field of type 'ReviewVerdict[]'
+ */
+export type ListEnumReviewVerdictFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReviewVerdict[]'>
+    
+
+
+/**
  * Reference to a field of type 'ConnectorKind'
  */
 export type EnumConnectorKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ConnectorKind'>
@@ -3705,7 +3840,8 @@ export type GlobalOmitConfig = {
   threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
   account?: Prisma.AccountOmit
-  project?: Prisma.ProjectOmit
+  pullRequest?: Prisma.PullRequestOmit
+  pullRequestReview?: Prisma.PullRequestReviewOmit
   comment?: Prisma.CommentOmit
   connection?: Prisma.ConnectionOmit
   vaultSecret?: Prisma.VaultSecretOmit

@@ -86,6 +86,26 @@ export const AccountSource = {
 export type AccountSource = (typeof AccountSource)[keyof typeof AccountSource]
 
 
+export const ReviewStatus = {
+  none: 'none',
+  reviewing: 'reviewing',
+  fixing: 'fixing',
+  approved: 'approved',
+  changes_requested: 'changes_requested',
+  stuck: 'stuck'
+} as const
+
+export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus]
+
+
+export const ReviewVerdict = {
+  approve: 'approve',
+  request_changes: 'request_changes'
+} as const
+
+export type ReviewVerdict = (typeof ReviewVerdict)[keyof typeof ReviewVerdict]
+
+
 export const ConnectorKind = {
   gmail: 'gmail',
   google_calendar: 'google_calendar',

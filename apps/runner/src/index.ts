@@ -206,6 +206,10 @@ async function start() {
   })
   const onCommand = async (message: ApiToRunner) => {
     switch (message.type) {
+      case 'welcome':
+        return threads.closeLost(message.runningThreads ?? [], (sessionId) =>
+          outbox.lastUnacknowledged(sessionId),
+        )
       case 'thread.prompt':
       case 'thread.approval':
       case 'thread.answer':

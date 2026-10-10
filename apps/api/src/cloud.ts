@@ -211,30 +211,61 @@ async function reinstallOldRunner(computer: {
   })
 }
 
+/** How often a computer in use pushes back its provider's own auto-stop. */
+const KEEP_ALIVE_EVERY_MS = 10 * 60_000
+const keptAlive = new Map<string, number>()
+
+/** The provider's auto-stop counts from start, not from last use: push it back while in use. */
+async function keepAlive(computer: { id: string; providerRef: unknown }) {
+  const ref = refOf(computer)
+  if (!provider || !ref) return
+  if (Date.now() - (keptAlive.get(computer.id) ?? 0) < KEEP_ALIVE_EVERY_MS) return
+  keptAlive.set(computer.id, Date.now())
+  await provider
+    .keepAlive(ref)
+    .catch((error) => console.error(`keeping ${computer.id} alive failed`, error))
+}
+
 /**
  * Stop cloud computers that have had no running thread for the idle period,
- * and reinstall old runners on the others while they are idle.
+ * keep the others alive, and reinstall old runners on them while they are idle.
+ * A computer whose runner is gone and that its provider stopped is marked
+ * stopped, so the next message resumes it.
  */
 async function stopIdle() {
   const idleMs = env.IDLE_STOP_MINUTES * 60_000
   const running = await prisma.computer.findMany({ where: { kind: 'cloud', status: 'running' } })
   for (const computer of running) {
+    const ref = refOf(computer)
+    if (provider && ref && !isOnline(computer.id)) {
+      const status = await provider.status(ref).catch(() => null)
+      if (status === 'stopped') {
+        console.log(`computer ${computer.id} was stopped outside Brigade`)
+        keptAlive.delete(computer.id)
+        await setStatus(computer, 'stopped')
+        continue
+      }
+    }
     const busy = await prisma.session.count({
       where: { computerId: computer.id, status: 'running' },
     })
     if (busy > 0) {
       touch(computer.id)
-      continue
+    } else {
+      await reinstallOldRunner(computer).catch((error) =>
+        console.error('runner reinstall failed', error),
+      )
+      const since = lastActive.get(computer.id) ?? computer.updatedAt.getTime()
+      if (Date.now() - since >= idleMs) {
+        console.log(`stopping idle computer ${computer.id}`)
+        keptAlive.delete(computer.id)
+        await stopComputer(computer, { type: 'system', id: 'brigade' }).catch((error) =>
+          console.error('idle stop failed', error),
+        )
+        continue
+      }
     }
-    await reinstallOldRunner(computer).catch((error) =>
-      console.error('runner reinstall failed', error),
-    )
-    const since = lastActive.get(computer.id) ?? computer.updatedAt.getTime()
-    if (Date.now() - since < idleMs) continue
-    console.log(`stopping idle computer ${computer.id}`)
-    await stopComputer(computer, { type: 'system', id: 'brigade' }).catch((error) =>
-      console.error('idle stop failed', error),
-    )
+    await keepAlive(computer)
   }
 }
 

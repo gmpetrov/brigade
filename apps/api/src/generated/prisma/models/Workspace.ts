@@ -190,7 +190,6 @@ export type WorkspaceWhereInput = {
   sessionEvents?: Prisma.SessionEventListRelationFilter
   threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
-  projects?: Prisma.ProjectListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
@@ -203,6 +202,8 @@ export type WorkspaceWhereInput = {
   documents?: Prisma.DocumentListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   threadAttachments?: Prisma.ThreadAttachmentListRelationFilter
+  pullRequests?: Prisma.PullRequestListRelationFilter
+  pullRequestReviews?: Prisma.PullRequestReviewListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
 }
 
@@ -220,7 +221,6 @@ export type WorkspaceOrderByWithRelationInput = {
   sessionEvents?: Prisma.SessionEventOrderByRelationAggregateInput
   threadSeats?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
-  projects?: Prisma.ProjectOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
   connections?: Prisma.ConnectionOrderByRelationAggregateInput
   vaultSecrets?: Prisma.VaultSecretOrderByRelationAggregateInput
@@ -233,6 +233,8 @@ export type WorkspaceOrderByWithRelationInput = {
   documents?: Prisma.DocumentOrderByRelationAggregateInput
   attachments?: Prisma.AttachmentOrderByRelationAggregateInput
   threadAttachments?: Prisma.ThreadAttachmentOrderByRelationAggregateInput
+  pullRequests?: Prisma.PullRequestOrderByRelationAggregateInput
+  pullRequestReviews?: Prisma.PullRequestReviewOrderByRelationAggregateInput
   auditEntries?: Prisma.AuditEntryOrderByRelationAggregateInput
 }
 
@@ -253,7 +255,6 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   sessionEvents?: Prisma.SessionEventListRelationFilter
   threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
-  projects?: Prisma.ProjectListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
@@ -266,6 +267,8 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   documents?: Prisma.DocumentListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   threadAttachments?: Prisma.ThreadAttachmentListRelationFilter
+  pullRequests?: Prisma.PullRequestListRelationFilter
+  pullRequestReviews?: Prisma.PullRequestReviewListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
 }, "id">
 
@@ -304,7 +307,6 @@ export type WorkspaceCreateInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -317,6 +319,8 @@ export type WorkspaceCreateInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -333,7 +337,6 @@ export type WorkspaceUncheckedCreateInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -346,6 +349,8 @@ export type WorkspaceUncheckedCreateInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -362,7 +367,6 @@ export type WorkspaceUpdateInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -375,6 +379,8 @@ export type WorkspaceUpdateInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -391,7 +397,6 @@ export type WorkspaceUncheckedUpdateInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -404,6 +409,8 @@ export type WorkspaceUncheckedUpdateInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -614,18 +621,32 @@ export type WorkspaceUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutAccountsInput, Prisma.WorkspaceUpdateWithoutAccountsInput>, Prisma.WorkspaceUncheckedUpdateWithoutAccountsInput>
 }
 
-export type WorkspaceCreateNestedOneWithoutProjectsInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutProjectsInput
+export type WorkspaceCreateNestedOneWithoutPullRequestsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPullRequestsInput
   connect?: Prisma.WorkspaceWhereUniqueInput
 }
 
-export type WorkspaceUpdateOneRequiredWithoutProjectsNestedInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutProjectsInput
-  upsert?: Prisma.WorkspaceUpsertWithoutProjectsInput
+export type WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPullRequestsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutPullRequestsInput
   connect?: Prisma.WorkspaceWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutProjectsInput, Prisma.WorkspaceUpdateWithoutProjectsInput>, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPullRequestsInput, Prisma.WorkspaceUpdateWithoutPullRequestsInput>, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestsInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutPullRequestReviewsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestReviewsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPullRequestReviewsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutPullRequestReviewsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestReviewsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPullRequestReviewsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutPullRequestReviewsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPullRequestReviewsInput, Prisma.WorkspaceUpdateWithoutPullRequestReviewsInput>, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutCommentsInput = {
@@ -824,7 +845,6 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -837,6 +857,8 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -852,7 +874,6 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -865,6 +886,8 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -917,7 +940,6 @@ export type WorkspaceCreateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -930,6 +952,8 @@ export type WorkspaceCreateWithoutComputersInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -945,7 +969,6 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -958,6 +981,8 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -989,7 +1014,6 @@ export type WorkspaceUpdateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1002,6 +1026,8 @@ export type WorkspaceUpdateWithoutComputersInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1017,7 +1043,6 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1030,6 +1055,8 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1045,7 +1072,6 @@ export type WorkspaceCreateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1058,6 +1084,8 @@ export type WorkspaceCreateWithoutRunnersInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1073,7 +1101,6 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1086,6 +1113,8 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1117,7 +1146,6 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1130,6 +1158,8 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1145,7 +1175,6 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1158,6 +1187,8 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1173,7 +1204,6 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1186,6 +1216,8 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1201,7 +1233,6 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1214,6 +1245,8 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1245,7 +1278,6 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1258,6 +1290,8 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1273,7 +1307,6 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1286,6 +1319,8 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1301,7 +1336,6 @@ export type WorkspaceCreateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1314,6 +1348,8 @@ export type WorkspaceCreateWithoutSessionsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1329,7 +1365,6 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1342,6 +1377,8 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1373,7 +1410,6 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1386,6 +1422,8 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1401,7 +1439,6 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1414,6 +1451,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1429,7 +1468,6 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1442,6 +1480,8 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1457,7 +1497,6 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1470,6 +1509,8 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1501,7 +1542,6 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1514,6 +1554,8 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1529,7 +1571,6 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1542,6 +1583,8 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1557,7 +1600,6 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1570,6 +1612,8 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1585,7 +1629,6 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1598,6 +1641,8 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1629,7 +1674,6 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1642,6 +1686,8 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1657,7 +1703,6 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1670,6 +1715,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1685,7 +1732,6 @@ export type WorkspaceCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1698,6 +1744,8 @@ export type WorkspaceCreateWithoutAccountsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1713,7 +1761,6 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1726,6 +1773,8 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1757,7 +1806,6 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1770,6 +1818,8 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1785,7 +1835,6 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1798,10 +1847,12 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceCreateWithoutProjectsInput = {
+export type WorkspaceCreateWithoutPullRequestsInput = {
   id?: string
   name: string
   createdAt?: Date | string
@@ -1826,10 +1877,11 @@ export type WorkspaceCreateWithoutProjectsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceUncheckedCreateWithoutProjectsInput = {
+export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   id?: string
   organizationId: string
   name: string
@@ -1854,26 +1906,27 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceCreateOrConnectWithoutProjectsInput = {
+export type WorkspaceCreateOrConnectWithoutPullRequestsInput = {
   where: Prisma.WorkspaceWhereUniqueInput
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestsInput>
 }
 
-export type WorkspaceUpsertWithoutProjectsInput = {
-  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutProjectsInput, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
+export type WorkspaceUpsertWithoutPullRequestsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestsInput>
   where?: Prisma.WorkspaceWhereInput
 }
 
-export type WorkspaceUpdateToOneWithWhereWithoutProjectsInput = {
+export type WorkspaceUpdateToOneWithWhereWithoutPullRequestsInput = {
   where?: Prisma.WorkspaceWhereInput
-  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutProjectsInput, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPullRequestsInput, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestsInput>
 }
 
-export type WorkspaceUpdateWithoutProjectsInput = {
+export type WorkspaceUpdateWithoutPullRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1898,10 +1951,11 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
+export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1926,6 +1980,139 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutPullRequestReviewsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutPullRequestReviewsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestReviewsInput>
+}
+
+export type WorkspaceUpsertWithoutPullRequestReviewsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedCreateWithoutPullRequestReviewsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutPullRequestReviewsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPullRequestReviewsInput, Prisma.WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput>
+}
+
+export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -1942,7 +2129,6 @@ export type WorkspaceCreateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -1954,6 +2140,8 @@ export type WorkspaceCreateWithoutCommentsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -1970,7 +2158,6 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1982,6 +2169,8 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2014,7 +2203,6 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2026,6 +2214,8 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2042,7 +2232,6 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2054,6 +2243,8 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2070,7 +2261,6 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -2082,6 +2272,8 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2098,7 +2290,6 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2110,6 +2301,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2142,7 +2335,6 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2154,6 +2346,8 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2170,7 +2364,6 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2182,6 +2375,8 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2198,7 +2393,6 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -2210,6 +2404,8 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2226,7 +2422,6 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2238,6 +2433,8 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2270,7 +2467,6 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2282,6 +2478,8 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2298,7 +2496,6 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2310,6 +2507,8 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2326,7 +2525,6 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2338,6 +2536,8 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2354,7 +2554,6 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2366,6 +2565,8 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2398,7 +2599,6 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2410,6 +2610,8 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2426,7 +2628,6 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2438,6 +2639,8 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2454,7 +2657,6 @@ export type WorkspaceCreateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2466,6 +2668,8 @@ export type WorkspaceCreateWithoutGrantsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2482,7 +2686,6 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2494,6 +2697,8 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2526,7 +2731,6 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2538,6 +2742,8 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2554,7 +2760,6 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2566,6 +2771,8 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2582,7 +2789,6 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2594,6 +2800,8 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2610,7 +2818,6 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2622,6 +2829,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2654,7 +2863,6 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2666,6 +2874,8 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2682,7 +2892,6 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2694,6 +2903,8 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2710,7 +2921,6 @@ export type WorkspaceCreateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2722,6 +2932,8 @@ export type WorkspaceCreateWithoutTriggersInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2738,7 +2950,6 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2750,6 +2961,8 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2782,7 +2995,6 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2794,6 +3006,8 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2810,7 +3024,6 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2822,6 +3035,8 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2838,7 +3053,6 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2850,6 +3064,8 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2866,7 +3082,6 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2878,6 +3093,8 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2910,7 +3127,6 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2922,6 +3138,8 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2938,7 +3156,6 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2950,6 +3167,8 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -2966,7 +3185,6 @@ export type WorkspaceCreateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2978,6 +3196,8 @@ export type WorkspaceCreateWithoutTicketsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -2994,7 +3214,6 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3006,6 +3225,8 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3038,7 +3259,6 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3050,6 +3270,8 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3066,7 +3288,6 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3078,6 +3299,8 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3094,7 +3317,6 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3106,6 +3328,8 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3122,7 +3346,6 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3134,6 +3357,8 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3166,7 +3391,6 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3178,6 +3402,8 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3194,7 +3420,6 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3206,6 +3431,8 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3222,7 +3449,6 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3235,6 +3461,8 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
@@ -3250,7 +3478,6 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3263,6 +3490,8 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAuditEntriesInput = {
@@ -3294,7 +3523,6 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3307,6 +3535,8 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
@@ -3322,7 +3552,6 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3335,6 +3564,8 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAttachmentsInput = {
@@ -3350,7 +3581,6 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3362,6 +3592,8 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3378,7 +3610,6 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3390,6 +3621,8 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3422,7 +3655,6 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3434,6 +3666,8 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3450,7 +3684,6 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3462,6 +3695,8 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3478,7 +3713,6 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3490,6 +3724,8 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3506,7 +3742,6 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3518,6 +3753,8 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
@@ -3550,7 +3787,6 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3562,6 +3798,8 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3578,7 +3816,6 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3590,6 +3827,8 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3612,7 +3851,6 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3625,6 +3863,8 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3640,7 +3880,6 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3653,6 +3892,8 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
@@ -3676,7 +3917,6 @@ export type WorkspaceCountOutputType = {
   sessionEvents: number
   threadSeats: number
   accounts: number
-  projects: number
   comments: number
   connections: number
   vaultSecrets: number
@@ -3689,6 +3929,8 @@ export type WorkspaceCountOutputType = {
   documents: number
   attachments: number
   threadAttachments: number
+  pullRequests: number
+  pullRequestReviews: number
   auditEntries: number
 }
 
@@ -3700,7 +3942,6 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   sessionEvents?: boolean | WorkspaceCountOutputTypeCountSessionEventsArgs
   threadSeats?: boolean | WorkspaceCountOutputTypeCountThreadSeatsArgs
   accounts?: boolean | WorkspaceCountOutputTypeCountAccountsArgs
-  projects?: boolean | WorkspaceCountOutputTypeCountProjectsArgs
   comments?: boolean | WorkspaceCountOutputTypeCountCommentsArgs
   connections?: boolean | WorkspaceCountOutputTypeCountConnectionsArgs
   vaultSecrets?: boolean | WorkspaceCountOutputTypeCountVaultSecretsArgs
@@ -3713,6 +3954,8 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   documents?: boolean | WorkspaceCountOutputTypeCountDocumentsArgs
   attachments?: boolean | WorkspaceCountOutputTypeCountAttachmentsArgs
   threadAttachments?: boolean | WorkspaceCountOutputTypeCountThreadAttachmentsArgs
+  pullRequests?: boolean | WorkspaceCountOutputTypeCountPullRequestsArgs
+  pullRequestReviews?: boolean | WorkspaceCountOutputTypeCountPullRequestReviewsArgs
   auditEntries?: boolean | WorkspaceCountOutputTypeCountAuditEntriesArgs
 }
 
@@ -3773,13 +4016,6 @@ export type WorkspaceCountOutputTypeCountThreadSeatsArgs<ExtArgs extends runtime
  */
 export type WorkspaceCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AccountWhereInput
-}
-
-/**
- * WorkspaceCountOutputType without action
- */
-export type WorkspaceCountOutputTypeCountProjectsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ProjectWhereInput
 }
 
 /**
@@ -3869,6 +4105,20 @@ export type WorkspaceCountOutputTypeCountThreadAttachmentsArgs<ExtArgs extends r
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountPullRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PullRequestWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountPullRequestReviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PullRequestReviewWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountAuditEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AuditEntryWhereInput
 }
@@ -3888,7 +4138,6 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
   threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
-  projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
@@ -3901,6 +4150,8 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
   attachments?: boolean | Prisma.Workspace$attachmentsArgs<ExtArgs>
   threadAttachments?: boolean | Prisma.Workspace$threadAttachmentsArgs<ExtArgs>
+  pullRequests?: boolean | Prisma.Workspace$pullRequestsArgs<ExtArgs>
+  pullRequestReviews?: boolean | Prisma.Workspace$pullRequestReviewsArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
@@ -3941,7 +4192,6 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
   threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
-  projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
@@ -3954,6 +4204,8 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
   attachments?: boolean | Prisma.Workspace$attachmentsArgs<ExtArgs>
   threadAttachments?: boolean | Prisma.Workspace$threadAttachmentsArgs<ExtArgs>
+  pullRequests?: boolean | Prisma.Workspace$pullRequestsArgs<ExtArgs>
+  pullRequestReviews?: boolean | Prisma.Workspace$pullRequestReviewsArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -3975,7 +4227,6 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     sessionEvents: Prisma.$SessionEventPayload<ExtArgs>[]
     threadSeats: Prisma.$ThreadTeammatePayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
-    projects: Prisma.$ProjectPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
     connections: Prisma.$ConnectionPayload<ExtArgs>[]
     vaultSecrets: Prisma.$VaultSecretPayload<ExtArgs>[]
@@ -3988,6 +4239,8 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     documents: Prisma.$DocumentPayload<ExtArgs>[]
     attachments: Prisma.$AttachmentPayload<ExtArgs>[]
     threadAttachments: Prisma.$ThreadAttachmentPayload<ExtArgs>[]
+    pullRequests: Prisma.$PullRequestPayload<ExtArgs>[]
+    pullRequestReviews: Prisma.$PullRequestReviewPayload<ExtArgs>[]
     auditEntries: Prisma.$AuditEntryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -4398,7 +4651,6 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   sessionEvents<T extends Prisma.Workspace$sessionEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$sessionEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadSeats<T extends Prisma.Workspace$threadSeatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadSeatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.Workspace$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  projects<T extends Prisma.Workspace$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Workspace$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connections<T extends Prisma.Workspace$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   vaultSecrets<T extends Prisma.Workspace$vaultSecretsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$vaultSecretsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4411,6 +4663,8 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   documents<T extends Prisma.Workspace$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   attachments<T extends Prisma.Workspace$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadAttachments<T extends Prisma.Workspace$threadAttachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadAttachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  pullRequests<T extends Prisma.Workspace$pullRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$pullRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  pullRequestReviews<T extends Prisma.Workspace$pullRequestReviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$pullRequestReviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditEntries<T extends Prisma.Workspace$auditEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$auditEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -5015,30 +5269,6 @@ export type Workspace$accountsArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Workspace.projects
- */
-export type Workspace$projectsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Project
-   */
-  select?: Prisma.ProjectSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Project
-   */
-  omit?: Prisma.ProjectOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ProjectInclude<ExtArgs> | null
-  where?: Prisma.ProjectWhereInput
-  orderBy?: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[]
-  cursor?: Prisma.ProjectWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.ProjectScalarFieldEnum | Prisma.ProjectScalarFieldEnum[]
-}
-
-/**
  * Workspace.comments
  */
 export type Workspace$commentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5324,6 +5554,54 @@ export type Workspace$threadAttachmentsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.ThreadAttachmentScalarFieldEnum | Prisma.ThreadAttachmentScalarFieldEnum[]
+}
+
+/**
+ * Workspace.pullRequests
+ */
+export type Workspace$pullRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PullRequest
+   */
+  select?: Prisma.PullRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PullRequest
+   */
+  omit?: Prisma.PullRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PullRequestInclude<ExtArgs> | null
+  where?: Prisma.PullRequestWhereInput
+  orderBy?: Prisma.PullRequestOrderByWithRelationInput | Prisma.PullRequestOrderByWithRelationInput[]
+  cursor?: Prisma.PullRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PullRequestScalarFieldEnum | Prisma.PullRequestScalarFieldEnum[]
+}
+
+/**
+ * Workspace.pullRequestReviews
+ */
+export type Workspace$pullRequestReviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PullRequestReview
+   */
+  select?: Prisma.PullRequestReviewSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PullRequestReview
+   */
+  omit?: Prisma.PullRequestReviewOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PullRequestReviewInclude<ExtArgs> | null
+  where?: Prisma.PullRequestReviewWhereInput
+  orderBy?: Prisma.PullRequestReviewOrderByWithRelationInput | Prisma.PullRequestReviewOrderByWithRelationInput[]
+  cursor?: Prisma.PullRequestReviewWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PullRequestReviewScalarFieldEnum | Prisma.PullRequestReviewScalarFieldEnum[]
 }
 
 /**

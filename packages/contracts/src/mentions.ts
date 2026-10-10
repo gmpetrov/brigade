@@ -2,7 +2,8 @@
  * Mentions inside message text. The composer writes them as `@[Label](kind:id)`:
  * a teammate reads the label and the reference; the dashboard renders a chip.
  * A member mentioning a credential lets the thread's teammate use it there.
- * A project's id is its repository, owner/name, for the teammate to check out.
+ * A repository's id is owner/name, for the teammate to check out. `project` is
+ * how messages named one before; they still render.
  */
 export const MENTION_KINDS = [
   'teammate',
@@ -10,6 +11,7 @@ export const MENTION_KINDS = [
   'thread',
   'computer',
   'credential',
+  'repository',
   'project',
 ] as const
 export type MentionKind = (typeof MENTION_KINDS)[number]

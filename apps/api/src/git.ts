@@ -3,7 +3,7 @@
 // this proxy, limited to that thread and teammate; each request is checked
 // against the teammate's GitHub grants, and pushes only reach brigade/ branches.
 import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto'
-import type { GitAccess, PermissionPolicy, ProjectSpec } from '@brigade/contracts'
+import type { GitAccess, PermissionPolicy } from '@brigade/contracts'
 import { writeCapReached } from './caps.js'
 import { env } from './config.js'
 import {
@@ -45,17 +45,15 @@ function mint(claims: Claims, seconds: number) {
 
 export const gitUrl = () => `${env.API_URL}/git/`
 
-/** What a thread's teammate gets to use git: the proxy, its token, its commit identity and the projects. */
+/** What a thread's teammate gets to use git: the proxy, its token and its commit identity. */
 export function gitAccess(
   claims: Claims & { sessionId: string },
   teammate: { name: string },
-  projects: ProjectSpec[],
 ): GitAccess {
   return {
     url: gitUrl(),
     token: mint(claims, TOKEN_DAYS * 86_400),
     author: { name: teammate.name, email: `${claims.teammateId}@teammates.brigade.invalid` },
-    projects,
   }
 }
 
@@ -121,8 +119,8 @@ async function installationRepos(installationId: number) {
 }
 
 /**
- * Every repository the workspace's GitHub connections reach, for picking a
- * project. A connection whose installation is gone is marked for reconnecting.
+ * Every repository the workspace's GitHub connections reach, for mentioning
+ * one in a message. A connection whose installation is gone is marked for reconnecting.
  */
 export async function workspaceRepositories(db: ScopedDb, scope: Scope) {
   const connections = await db.connection.findMany({
@@ -152,6 +150,46 @@ export async function workspaceRepositories(db: ScopedDb, scope: Scope) {
     }
   }
   return [...found.values()].sort((a, b) => a.repository.localeCompare(b.repository))
+}
+
+/** The workspace's GitHub connection that reaches a repository, for a person's own action. */
+export async function workspaceGitHub(db: ScopedDb, scope: Scope, repo: string) {
+  const connections = await db.connection.findMany({
+    where: { kind: 'github', status: 'active', vaultSecretId: { not: null } },
+    orderBy: { createdAt: 'asc' },
+  })
+  for (const connection of connections) {
+    const { installationId } = await openSecret<GitHubCredential>(
+      db,
+      scope,
+      connection.vaultSecretId!,
+    )
+    const found = (await installationRepos(installationId).catch(() => null))?.get(repo)
+    if (found) return { connectionId: connection.id, installationId, fullName: found.fullName }
+  }
+  return null
+}
+
+/** Whether a teammate's GitHub grants reach a repository, and with write access. */
+export async function teammateGitHub(db: ScopedDb, scope: Scope, teammateId: string, repo: string) {
+  const grants = await db.grant.findMany({
+    where: { teammateId, connection: { kind: 'github', status: 'active' } },
+    include: { connection: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  let read: { connectionId: string; write: boolean } | null = null
+  for (const grant of grants) {
+    if (!grant.connection.vaultSecretId) continue
+    const { installationId } = await openSecret<GitHubCredential>(
+      db,
+      scope,
+      grant.connection.vaultSecretId,
+    )
+    if (!(await installationRepos(installationId).catch(() => null))?.has(repo)) continue
+    if (grant.scope === 'read_write') return { connectionId: grant.connection.id, write: true }
+    read ??= { connectionId: grant.connection.id, write: false }
+  }
+  return read
 }
 
 const publicRepos = new Map<string, { fullName: string | null; until: number }>()

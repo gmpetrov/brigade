@@ -68,6 +68,7 @@ export class Connection {
         console.log(`connected to ${this.config.apiUrl} (workspace "${this.config.workspaceName}")`)
         this.ready = true
         this.flush()
+        this.onCommand(message)
         this.onBundle(message.bundle, false)
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)

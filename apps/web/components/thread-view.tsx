@@ -17,10 +17,12 @@ import {
   CircleDot,
   CircleHelp,
   ClipboardList,
+  GitPullRequest,
   ListChecks,
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { TeammateAvatar } from '@/components/dashboard'
@@ -42,7 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/api'
+import { pullHref, threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Item =
@@ -246,6 +248,24 @@ function toolSummary(toolName: string, input: unknown) {
   return typeof value === 'string' ? value : ''
 }
 
+/**
+ * The pull request a github_create_pull_request call opened. Its output reaches the
+ * thread in each harness's own wrapping, so the pull request's URL is what is looked for.
+ */
+function openedPull(item: { toolName: string; input: unknown; output?: unknown }) {
+  if (!/github_create_pull_request/.test(item.toolName)) return null
+  const found = json(item.output ?? '').match(
+    /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/,
+  )
+  if (!found) return null
+  const title = (item.input as { title?: unknown } | null)?.title
+  return {
+    repository: found[1]!.toLowerCase(),
+    number: Number(found[2]),
+    title: typeof title === 'string' ? title : null,
+  }
+}
+
 /** Raw JSON or text under a tool call, an approval or a thought. */
 const preClass =
   'max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere'
@@ -389,7 +409,28 @@ export function ThreadItems({
                 </CollapsibleContent>
               </Collapsible>
             )
-          case 'tool':
+          case 'tool': {
+            const opened = item.finished && !item.isError ? openedPull(item) : null
+            if (opened)
+              return (
+                <Link
+                  key={item.key}
+                  href={pullHref(opened.repository, opened.number)}
+                  className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50"
+                >
+                  <GitPullRequest className="size-5 flex-none text-success" aria-hidden />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-semibold">
+                      Opened pull request #{opened.number}
+                      {opened.title && `: ${opened.title}`}
+                    </span>
+                    <span className="truncate font-mono text-xs text-muted-foreground">
+                      {opened.repository}
+                    </span>
+                  </span>
+                  <span className="flex-none font-medium text-primary">See the changes</span>
+                </Link>
+              )
             return (
               <Collapsible key={item.key} className="rounded-lg border border-dashed text-sm">
                 <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 px-3 py-1.5 text-left">
@@ -413,6 +454,7 @@ export function ThreadItems({
                 </CollapsibleContent>
               </Collapsible>
             )
+          }
           case 'approval':
             return (
               <Card key={item.key} className="gap-3 border-warning/50 px-5 py-4">

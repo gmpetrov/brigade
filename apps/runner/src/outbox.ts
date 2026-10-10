@@ -62,6 +62,11 @@ export class Outbox {
     )
   }
 
+  /** The latest event of a thread the API has not acknowledged yet. */
+  lastUnacknowledged(sessionId: string): AgentEvent | undefined {
+    return this.streams.get(sessionId)?.pending.at(-1)?.event
+  }
+
   /** Every event the API has not acknowledged yet, in order per thread. */
   unacknowledged(): SequencedEvent[] {
     return [...this.streams.values()].flatMap((s) => s.pending)

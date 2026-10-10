@@ -141,7 +141,6 @@ model Workspace {
   sessionEvents  SessionEvent[]
   threadSeats    ThreadTeammate[]
   accounts       Account[]
-  projects       Project[]
   comments       Comment[]
   connections    Connection[]
   vaultSecrets   VaultSecret[]
@@ -154,6 +153,8 @@ model Workspace {
   documents      Document[]
   attachments    Attachment[]
   threadAttachments ThreadAttachment[]
+  pullRequests   PullRequest[]
+  pullRequestReviews PullRequestReview[]
   auditEntries   AuditEntry[]
 
   @@index([organizationId])
@@ -247,6 +248,9 @@ model Teammate {
   triggers         Trigger[]
   connectionCalls  ConnectionCall[]
   documents        Document[]
+  pullRequestsAuthored  PullRequest[] @relation("PullRequestAuthor")
+  pullRequestsReviewing PullRequest[] @relation("PullRequestReviewer")
+  pullRequestReviews    PullRequestReview[]
 
   @@index([workspaceId])
 }
@@ -317,6 +321,8 @@ model Session {
   attachments         ThreadAttachment[]
   /// Files teammates sent from this thread (e.g. attached to an email).
   sentAttachments     Attachment[]
+  /// Pull requests opened from this thread; their review loop runs here.
+  pullRequests        PullRequest[]
 
   @@index([workspaceId, createdAt])
   @@index([teammateId])
@@ -409,23 +415,90 @@ model Account {
 // Engineering work
 // ---------------------------------------------------------------------------
 
-/// A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
-/// Reached through a GitHub connection; this only adds what teammates should do with it.
-model Project {
-  id             String    @id @default(cuid())
+/// Where a pull request stands in Brigade's review loop. GitHub keeps its code and state.
+enum ReviewStatus {
+  /// Nobody asked for a review, or the loop was stopped.
+  none
+  /// The reviewing teammate's turn.
+  reviewing
+  /// The author teammate's turn: changes were requested, checks failed or the branch conflicts.
+  fixing
+  /// Approved. With autoMerge it merges once GitHub allows it.
+  approved
+  /// Changes requested, and no teammate wrote it to make them.
+  changes_requested
+  /// The loop stopped and a person has a ticket: rounds used up, or GitHub refuses the merge.
+  stuck
+}
+
+/// A pull request Brigade knows about: opened by a teammate, or put through a review.
+model PullRequest {
+  id                  String        @id @default(cuid())
+  organizationId      String
+  workspaceId         String
+  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// owner/name on GitHub, lowercase.
+  repository          String
+  number              Int
+  title               String
+  headRef             String
+  baseRef             String
+  /// The thread that opened it (or the review's own thread); its review loop runs there.
+  sessionId           String?
+  session             Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  authorTeammateId    String?
+  authorTeammate      Teammate?     @relation("PullRequestAuthor", fields: [authorTeammateId], references: [id], onDelete: SetNull)
+  reviewerTeammateId  String?
+  reviewerTeammate    Teammate?     @relation("PullRequestReviewer", fields: [reviewerTeammateId], references: [id], onDelete: SetNull)
+  reviewStatus        ReviewStatus  @default(none)
+  /// Merge once approved and GitHub allows it. Only an owner or admin arms it.
+  autoMerge           Boolean       @default(false)
+  requestedByMemberId String?
+  /// Review rounds in the current loop, from 1.
+  round               Int           @default(0)
+  /// The head commit the latest review looked at.
+  reviewedSha         String?
+  /// Why the loop is waiting or stopped, shown on the pull request.
+  note                String?
+  /// As last seen on GitHub: open, closed or merged.
+  state               String        @default("open")
+  mergedAt            DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  reviews             PullRequestReview[]
+
+  @@unique([workspaceId, repository, number])
+  @@index([sessionId])
+  @@index([reviewStatus, autoMerge])
+}
+
+enum ReviewVerdict {
+  approve
+  request_changes
+}
+
+/// A teammate's review, from github_review_pull_request.
+model PullRequestReview {
+  id             String        @id @default(cuid())
   organizationId String
   workspaceId    String
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  /// owner/name on GitHub, lowercase.
-  repository     String
-  /// Shell run in a fresh checkout as the teammate, e.g. "pnpm install".
-  setupScript    String?
-  /// What teammates should know about it, added to their instructions.
-  notes          String    @default("")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pullRequestId  String
+  pullRequest    PullRequest   @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  teammateId     String?
+  teammate       Teammate?     @relation(fields: [teammateId], references: [id], onDelete: SetNull)
+  sessionId      String?
+  verdict        ReviewVerdict
+  body           String
+  /// Line comments: [{ path, line, body }].
+  comments       Json          @default("[]")
+  /// The head commit it reviewed.
+  sha            String
+  round          Int
+  url            String?
+  createdAt      DateTime      @default(now())
 
-  @@unique([workspaceId, repository])
+  @@index([pullRequestId, createdAt])
 }
 
 /// A human comment on a diff or a thread.

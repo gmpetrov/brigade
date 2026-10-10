@@ -440,6 +440,40 @@ export type EnumAccountStatusWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumAccountStatusFilter<$PrismaModel>
 }
 
+export type EnumReviewStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewStatus | Prisma.EnumReviewStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel> | $Enums.ReviewStatus
+}
+
+export type EnumReviewStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewStatus | Prisma.EnumReviewStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewStatusWithAggregatesFilter<$PrismaModel> | $Enums.ReviewStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel>
+}
+
+export type EnumReviewVerdictFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewVerdict | Prisma.EnumReviewVerdictFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel> | $Enums.ReviewVerdict
+}
+
+export type EnumReviewVerdictWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewVerdict | Prisma.EnumReviewVerdictFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewVerdictWithAggregatesFilter<$PrismaModel> | $Enums.ReviewVerdict
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
+}
+
 export type EnumConnectorKindFilter<$PrismaModel = never> = {
   equals?: $Enums.ConnectorKind | Prisma.EnumConnectorKindFieldRefInput<$PrismaModel>
   in?: $Enums.ConnectorKind[] | Prisma.ListEnumConnectorKindFieldRefInput<$PrismaModel>
@@ -1071,6 +1105,40 @@ export type NestedEnumAccountStatusWithAggregatesFilter<$PrismaModel = never> = 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumAccountStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumAccountStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumReviewStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewStatus | Prisma.EnumReviewStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel> | $Enums.ReviewStatus
+}
+
+export type NestedEnumReviewStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewStatus | Prisma.EnumReviewStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewStatus[] | Prisma.ListEnumReviewStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewStatusWithAggregatesFilter<$PrismaModel> | $Enums.ReviewStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumReviewStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumReviewVerdictFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewVerdict | Prisma.EnumReviewVerdictFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel> | $Enums.ReviewVerdict
+}
+
+export type NestedEnumReviewVerdictWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ReviewVerdict | Prisma.EnumReviewVerdictFieldRefInput<$PrismaModel>
+  in?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ReviewVerdict[] | Prisma.ListEnumReviewVerdictFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumReviewVerdictWithAggregatesFilter<$PrismaModel> | $Enums.ReviewVerdict
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
 }
 
 export type NestedEnumConnectorKindFilter<$PrismaModel = never> = {

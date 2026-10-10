@@ -63,24 +63,11 @@ const code = (spec: ThreadSpec) =>
       '(to `brigade/wip/...`). New files you have not committed are not backed up. A checkout left untouched for ' +
       'two weeks with everything on GitHub is removed to free disk; `checkout_repository` brings it back, with your ' +
       'branch or backup.',
-    projects(spec),
+    'A repository has its own instructions for working on it: read its AGENTS.md, CLAUDE.md or README after ' +
+      'checking it out. A message mentions a repository as `@[owner/name](repository:owner/name)`.',
   ]
     .filter(Boolean)
     .join('\n\n')
-
-/** The workspace's projects: the repositories it works on, with what to know about each. */
-function projects(spec: ThreadSpec) {
-  const list = spec.git?.projects ?? []
-  if (list.length === 0) return ''
-  return [
-    '### Projects',
-    "The workspace's repositories, set up by the team. `checkout_repository` runs a project's setup script in a new checkout. A message mentions one as `@[owner/name](project:owner/name)`.",
-    ...list.map((p) => {
-      const notes = p.notes.trim()
-      return `- **${p.repository}**${notes ? `\n\n  ${clip(notes).replace(/\n/g, '\n  ')}` : ''}`
-    }),
-  ].join('\n\n')
-}
 
 export const instructionsFileName = (spec: ThreadSpec) =>
   spec.teammate.harness === 'codex' ? 'AGENTS.md' : 'CLAUDE.md'

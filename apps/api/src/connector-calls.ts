@@ -25,6 +25,7 @@ import {
   type Operation,
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
+import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
@@ -220,6 +221,15 @@ export async function handleConnectorCall(
       input.data,
     )
     await record({ result: 'ok', target, ...(decision ? { ticketId: decision.ticketId } : {}) })
+    // Pull requests a teammate opens or reviews feed the review loop.
+    if (connection.kind === 'github')
+      await notePullRequestCall(db, {
+        sessionId: session.id,
+        teammateId: teammate.id,
+        operation: call.operation,
+        input: input.data as Record<string, unknown>,
+        output,
+      }).catch((error) => console.warn(`pull request bookkeeping failed: ${String(error)}`))
     return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
   } catch (error) {
     const message = redact(error instanceof Error ? error.message : String(error))

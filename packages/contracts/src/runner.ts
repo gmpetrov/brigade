@@ -4,7 +4,6 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { ProjectSpec } from './projects.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -55,8 +54,6 @@ export const GitAccess = z.object({
   token: z.string(),
   /** Who the teammate's commits are by on a cloud computer. */
   author: z.object({ name: z.string(), email: z.string() }),
-  /** The workspace's projects: a setup script for fresh checkouts and notes for the teammate. */
-  projects: z.array(ProjectSpec).default([]),
 })
 export type GitAccess = z.infer<typeof GitAccess>
 
@@ -251,6 +248,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     runnerId: z.string(),
     computerId: z.string(),
     bundle: z.string().optional(),
+    /** Threads the API has as running here. One with no turn here was lost to a restart. */
+    runningThreads: z.array(z.string()).optional(),
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),

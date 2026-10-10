@@ -17,6 +17,7 @@ export interface ComputerProvider {
   create(spec: ComputerSpec): Promise<ComputerRef>
   start(ref: ComputerRef): Promise<void> // resume with its disk
   stop(ref: ComputerRef): Promise<void> // keep the disk, stop billing
+  keepAlive(ref: ComputerRef): Promise<void> // push back the provider's own auto-stop while in use
   destroy(ref: ComputerRef): Promise<void>
   exec(ref: ComputerRef, command: string): Promise<ExecResult> // install and start the runner
   desktopUrl(ref: ComputerRef): Promise<string | null> // live desktop for takeover

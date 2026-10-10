@@ -14,9 +14,6 @@ import { teammateHome, teammateUser } from './teammates.js'
 const REPO = /^([A-Za-z0-9_.-]{1,100})\/([A-Za-z0-9_.-]{1,100})$/
 const BRANCH = /^[A-Za-z0-9._/-]{1,200}$/
 const GIT_TIMEOUT_MS = 15 * 60_000
-const SETUP_TIMEOUT_MS = 20 * 60_000
-/** How much of a setup script's output a teammate is shown. */
-const SETUP_OUTPUT_CHARS = 4000
 /** A checkout untouched this long, with everything on GitHub, is removed. */
 const STALE_CHECKOUT_DAYS = 14
 /** A cache no checkout borrows from, not fetched this long, is removed. */
@@ -181,8 +178,8 @@ export type CheckoutInput = { repository: string; base?: string; directory?: str
 /**
  * Check a repository out in the thread's working directory, on the teammate's
  * branch for the thread. An existing checkout is fetched, never reset. A new one
- * continues the thread's branch, or restores its backup, and runs the
- * project's setup script.
+ * continues the thread's branch, or restores its backup. Setting it up is the
+ * teammate's own work, from the repository's instructions.
  */
 export async function checkout(input: {
   spec: ThreadSpec
@@ -210,8 +207,6 @@ export async function checkout(input: {
   const remote = `${access.url}${owner}/${name}.git`
   const dir = `${workDir}/${folder}`
   const branch = threadBranch(spec)
-  const project = access.projects.find((p) => p.repository === repository)
-  const notes = project?.notes.trim() ? { notes: project.notes.trim() } : {}
 
   await refreshCache(cachePath(repository, runAs), remote, access, runAs)
   if (await succeeds(git(['-C', dir, 'rev-parse', '--git-dir'], access, runAs))) {
@@ -221,7 +216,6 @@ export async function checkout(input: {
       branch: await git(['-C', dir, 'rev-parse', '--abbrev-ref', 'HEAD'], access, runAs),
       status: await git(['-C', dir, 'status', '--short', '--branch'], access, runAs),
       note: 'Already checked out: fetched from GitHub, your files are untouched.',
-      ...notes,
     }
   }
   await git(
@@ -267,43 +261,17 @@ export async function checkout(input: {
       access,
       runAs,
     )
-  const setup = project?.setupScript
-    ? await runSetup(project.setupScript, dir, access, runAs)
-    : undefined
   return {
     directory: dir,
     branch,
     base,
     continued: pushed,
     ...(restored ? { restored } : {}),
-    ...(setup ? { setup } : {}),
-    ...notes,
     note:
-      `Work on ${branch} (from ${base}). Commit as you go and push with \`git push -u origin HEAD\`; ` +
+      `Work on ${branch} (from ${base}). Before changing anything, read the repository's AGENTS.md, ` +
+      'CLAUDE.md or README and set it up as they say (install dependencies, copy example config). ' +
+      `Commit as you go and push with \`git push -u origin HEAD\`; ` +
       'only branches under brigade/ can be pushed. Open a pull request with the GitHub tool when it is ready.',
-  }
-}
-
-/** The project's setup script, as the teammate in the new checkout. Its failure is reported, not thrown. */
-async function runSetup(script: string, dir: string, access: GitAccess, runAs?: string) {
-  const tail = (output: Buffer) => {
-    const text = output.toString()
-    return text.length > SETUP_OUTPUT_CHARS ? `…${text.slice(-SETUP_OUTPUT_CHARS)}` : text
-  }
-  try {
-    const output = await run(
-      'sh',
-      ['-c', 'cd -- "$1" && exec sh -c "$2" 2>&1', 'setup', dir, script],
-      { runAs, env: gitEnv(access), timeout: SETUP_TIMEOUT_MS },
-    )
-    return { ok: true, output: tail(output) }
-  } catch (error) {
-    const stdout = (error as { stdout?: Buffer }).stdout ?? Buffer.alloc(0)
-    return {
-      ok: false,
-      output: tail(stdout) || message(error),
-      note: 'The project setup script failed; fix what it needs, or tell a person.',
-    }
   }
 }
 
@@ -465,7 +433,6 @@ export async function prefetch(
     url: t.url,
     token: t.token,
     author: { name: 'Brigade', email: 'brigade@brigade.invalid' },
-    projects: [],
   })
   // On a member's machine all teammates share one cache.
   const targets = CLOUD

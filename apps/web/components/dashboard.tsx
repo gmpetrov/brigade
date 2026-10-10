@@ -1,7 +1,7 @@
 'use client'
 import {
   ChevronsUpDown,
-  FolderGit2,
+  GitPullRequest,
   Inbox,
   KeyRound,
   Library,
@@ -37,6 +37,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -63,8 +64,8 @@ const NAV = [
   { href: '/app', label: 'Threads', icon: MessagesSquare },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
+  { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
-  { href: '/app/projects', label: 'Projects', icon: FolderGit2 },
   { href: '/app/connections', label: 'Connections', icon: Plug },
   { href: '/app/vault', label: 'Vault', icon: KeyRound },
   { href: '/app/accounts', label: 'Accounts', icon: UserRound },
@@ -100,6 +101,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const me = useApi<Me>('/me')
   const ready = me.data?.activeWorkspaceId ?? null
   const teammates = useApi<Teammate[]>(ready ? '/teammates' : null)
+  // Pull requests waiting on a person, refreshed as the member moves around.
+  const pullsWaiting = useApi<{ count: number }>(ready ? '/pulls/attention' : null)
+  const reloadPulls = pullsWaiting.reload
+  useEffect(() => {
+    void reloadPulls()
+  }, [pathname, reloadPulls])
 
   useEffect(() => {
     if (me.error?.status === 401) router.replace('/sign-in')
@@ -186,12 +193,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <SidebarMenu>
                   {NAV.map(({ href, label, icon: Icon }) => (
                     <SidebarMenuItem key={href}>
-                      <SidebarMenuButton asChild isActive={pathname === href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={
+                          pathname === href || (href === '/app/pulls' && pathname.startsWith(href))
+                        }
+                      >
                         <Link href={href}>
                           <Icon />
                           <span>{label}</span>
                         </Link>
                       </SidebarMenuButton>
+                      {href === '/app/pulls' && !!pullsWaiting.data?.count && (
+                        <SidebarMenuBadge aria-label={`${pullsWaiting.data.count} waiting on you`}>
+                          {pullsWaiting.data.count}
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>

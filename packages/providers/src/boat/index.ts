@@ -21,7 +21,11 @@ function idOf(ref: ComputerRef) {
 export function createBoatProvider(options: {
   apiKey: string
   basePath?: string
-  /** boat's own auto-stop. null: none, the API stops idle computers. Trial accounts require <= 7200. */
+  /**
+   * boat's own auto-stop: a deadline from start, not from last use, so the API
+   * pushes it back with keepAlive while the computer is in use. It only fires
+   * when the API is gone. null: none. Trial accounts require <= 7200.
+   */
   autoStopSeconds?: number | null
 }): ComputerProvider {
   const boat = boatClient(options.apiKey, options.basePath)
@@ -58,6 +62,12 @@ export function createBoatProvider(options: {
 
     async stop(ref) {
       await boat.stop({ sandboxId: idOf(ref) })
+    },
+
+    async keepAlive(ref) {
+      if (options.autoStopSeconds == null) return
+      // The deadline becomes now + ttlSeconds.
+      await boat.update({ sandboxId: idOf(ref), ttlSeconds: options.autoStopSeconds })
     },
 
     async destroy(ref) {

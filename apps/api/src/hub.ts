@@ -20,6 +20,7 @@ import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
+import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread } from './work.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
@@ -323,12 +324,18 @@ export function runnerSocket(runner: {
           error: 'The computer restarted during sign-in. Sign in again.',
         })
       }
+      // The runner closes any of these it no longer runs (it restarted mid-turn).
+      const runningThreads = await prisma.session.findMany({
+        where: { computerId: runner.computerId, status: 'running' },
+        select: { id: true },
+      })
       // A runner installed from another bundle updates itself once it is idle.
       send(ws, {
         type: 'welcome',
         runnerId: runner.id,
         computerId: runner.computerId,
         ...(bundle ? { bundle } : {}),
+        runningThreads: runningThreads.map((s) => s.id),
       })
       if (message.bundle && bundle && message.bundle !== bundle)
         console.log(
@@ -524,8 +531,40 @@ export function runnerSocket(runner: {
       await noteAccountState(session, fresh)
       await noteAccountSwitches(session, fresh)
       await noteTickets(session, fresh)
+      // Not awaited: a review loop may call GitHub and prompt the next teammate.
+      void noteTurnsEnded(session, fresh).catch(console.error)
     }
     send(ws, { type: 'ack', sessionId, seq: lastSeq })
+  }
+}
+
+/** Each teammate whose turn ended: a review loop in the thread may move on. */
+async function noteTurnsEnded(
+  session: { id: string; organizationId: string; workspaceId: string; teammateId: string },
+  events: SequencedEvent[],
+) {
+  let current: string | undefined
+  for (const { seq, event } of events) {
+    if (event.type === 'turn.started') current = event.teammateId
+    if (event.type !== 'turn.completed') continue
+    const started =
+      event.teammateId || current
+        ? null
+        : await prisma.sessionEvent.findFirst({
+            where: { sessionId: session.id, type: 'turn.started', seq: { lt: seq } },
+            orderBy: { seq: 'desc' },
+            select: { data: true },
+          })
+    const teammateId =
+      event.teammateId ??
+      current ??
+      (started?.data as { teammateId?: string } | undefined)?.teammateId ??
+      session.teammateId
+    await reviewTurnEnded(
+      { organizationId: session.organizationId, workspaceId: session.workspaceId },
+      session.id,
+      teammateId,
+    )
   }
 }
 

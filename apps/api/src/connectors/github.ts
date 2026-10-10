@@ -1,6 +1,7 @@
 // GitHub connector (REST API), on an installation of Brigade's GitHub App.
 // It reaches only the repositories the customer picked when installing it.
 import { z } from 'zod'
+import { env } from '../config.js'
 import { GITHUB_API } from './github-app.js'
 import { json, op, type ConnectorContext, type ConnectorDefinition } from './types.js'
 
@@ -568,6 +569,85 @@ export const github: ConnectorDefinition = {
             },
           ),
         ),
+    }),
+    github_review_pull_request: op({
+      description:
+        'Submit your review of a pull request, once, when you have read it: approve it, or request changes, ' +
+        'with a summary and comments on specific lines of the new code. Brigade sends a request for changes ' +
+        'to the author and, when a person asked for it, merges an approved pull request.',
+      write: true,
+      input: z.object({
+        repository: repo,
+        number,
+        verdict: z.enum(['approve', 'request_changes']),
+        body: z.string().min(1).max(65_000).describe('The summary of your review, in Markdown'),
+        comments: z
+          .array(
+            z.object({
+              path: filePath.refine((p) => p !== '', 'A file path'),
+              line: z
+                .number()
+                .int()
+                .positive()
+                .describe("A line number in the file's new version, inside the diff"),
+              body: z.string().min(1).max(10_000),
+            }),
+          )
+          .max(50)
+          .default([]),
+      }),
+      target: (i) => `review of ${i.repository}#${i.number} (${i.verdict.replace('_', ' ')})`,
+      run: async (ctx, i) => {
+        const path = `${repoPath(i.repository)}/pulls/${i.number}`
+        const found = await get<PullRequest & { user: { login: string; type?: string } | null }>(
+          ctx,
+          path,
+        )
+        // Every teammate acts as the app, and GitHub refuses a verdict on the app's own pull
+        // request: there the review is a comment that says it.
+        const own = found.user?.type === 'Bot' && found.user.login === `${env.GITHUB_APP_SLUG}[bot]`
+        const heading = i.verdict === 'approve' ? '**Approved**' : '**Changes requested**'
+        const review = (body: string, comments: typeof i.comments) =>
+          ctx.fetch(`${GITHUB_API}${path}/reviews`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              commit_id: found.head.sha,
+              body: own ? `${heading}\n\n${body}` : body,
+              event: own ? 'COMMENT' : i.verdict === 'approve' ? 'APPROVE' : 'REQUEST_CHANGES',
+              comments: comments.map((c) => ({
+                path: c.path,
+                line: c.line,
+                side: 'RIGHT',
+                body: c.body,
+              })),
+            }),
+          })
+        let response = await review(i.body, i.comments)
+        let inline = i.comments.length > 0
+        // A comment on a line outside the diff fails the whole review: keep them in the summary instead.
+        if (response.status === 422 && inline) {
+          inline = false
+          response = await review(
+            [
+              i.body,
+              '',
+              '**Line comments**',
+              ...i.comments.map((c) => `- \`${c.path}:${c.line}\`: ${c.body}`),
+            ].join('\n'),
+            [],
+          )
+        }
+        const created = await json<{ id: number; html_url: string }>(response)
+        return {
+          id: created.id,
+          url: created.html_url,
+          verdict: i.verdict,
+          sha: found.head.sha,
+          comments: i.comments.length,
+          inline,
+        }
+      },
     }),
     github_create_branch: op({
       description: 'Create a branch from another branch (the default branch if omitted).',

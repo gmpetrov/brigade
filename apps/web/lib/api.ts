@@ -387,6 +387,7 @@ export type Ticket = {
     accountId?: string
     memberId?: string
     triggerId?: string
+    pullRequest?: { repository: string; number: number }
   }
   createdAt: string
   resolvedAt: string | null
@@ -428,6 +429,19 @@ export async function openDesktop(
   }
 }
 
-export type { Project } from '@brigade/contracts'
+export type {
+  CheckRun,
+  DiffFile,
+  MergeMethod,
+  PullRequestDetail,
+  PullRequestList,
+  PullRequestSummary,
+  PullRequestTracking,
+  ReviewStatus,
+  TeammateReview,
+} from '@brigade/contracts'
+
+/** The dashboard's page for a pull request. */
+export const pullHref = (repository: string, number: number) => `/app/pulls/${repository}/${number}`
 /** A repository the workspace's GitHub connections reach. */
 export type RepositoryOption = { repository: string; private: boolean; connection: string }

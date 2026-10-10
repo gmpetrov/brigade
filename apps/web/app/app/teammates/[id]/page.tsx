@@ -170,7 +170,7 @@ export default function TeammatePage() {
                     value={text}
                     onChange={setText}
                     onSubmit={() => formRef.current?.requestSubmit()}
-                    placeholder={`What should ${teammate.name} do? @ to mention a connection, credential or thread. Drop files to attach them`}
+                    placeholder={`What should ${teammate.name} do? @ to mention a repository, connection, credential or thread. Drop files to attach them`}
                   />
                   <div className="flex flex-wrap items-center gap-2">
                     <AttachButton onFiles={files.add} />
