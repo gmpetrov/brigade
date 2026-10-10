@@ -29,6 +29,7 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
   {
     title: 'General',
     items: [
+      { label: 'Search', keys: [['mod', 'K']] },
       { label: 'New thread', keys: [['mod', 'shift', 'K']] },
       { label: 'Toggle the sidebar', keys: [['mod', 'B']] },
       { label: 'Keyboard shortcuts', keys: [['shift', '?']] },

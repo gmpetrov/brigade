@@ -10,6 +10,7 @@ export * from './pulls.js'
 export * from './repositories.js'
 export * from './runner.js'
 export * from './schedules.js'
+export * from './search.js'
 export * from './tasks.js'
 
 /**

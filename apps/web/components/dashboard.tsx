@@ -17,9 +17,10 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { HelpMenu } from '@/components/help-menu'
 import { QuickThread } from '@/components/quick-thread'
+import { SearchButton, SearchDialog } from '@/components/search'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,7 @@ export function useDashboard() {
 
 export { isAdmin }
 
-const NAV = [
+export const NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/tasks', label: 'Tasks', icon: SquareKanban },
   { href: '/app/automations', label: 'Automations', icon: CalendarClock },
@@ -128,6 +129,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Tasks that need a person, the same way.
   const tasks = useApi<Task[]>(ready ? '/tasks' : null)
   const reloadTasks = tasks.reload
+  const [searching, setSearching] = useState(false)
   useEffect(() => {
     void reloadPulls()
     void reloadTickets()
@@ -230,6 +232,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 </DropdownMenu>
               </SidebarMenuItem>
             </SidebarMenu>
+            <SearchButton onClick={() => setSearching(true)} />
           </SidebarHeader>
 
           <SidebarContent>
@@ -340,6 +343,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </SidebarInset>
       </SidebarProvider>
       <QuickThread />
+      <SearchDialog open={searching} onOpenChange={setSearching} />
     </DashboardContext.Provider>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 import { BookOpen, FilePlus, FileText, Library, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { Markdown } from '@/components/markdown'
 import { StatusBadge } from '@/components/status-badge'
@@ -21,6 +22,7 @@ import {
   type SearchHit,
 } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { cn } from '@/lib/utils'
 
 const contentUrl = (id: string, download = false) =>
   `${API_URL}/api/library/${id}/content${download ? '?download' : ''}`
@@ -33,6 +35,15 @@ function size(bytes: number) {
 
 /** The workspace's shared files and memory, and one search over both. */
 export default function LibraryPage() {
+  return (
+    <Suspense>
+      <LibraryView />
+    </Suspense>
+  )
+}
+
+function LibraryView() {
+  const params = useSearchParams()
   const files = useApi<LibraryFile[]>('/library')
   const memory = useApi<MemoryOverview>('/library/memory')
   const [tab, setTab] = useState('files')
@@ -41,6 +52,14 @@ export default function LibraryPage() {
   const [uploading, setUploading] = useState<string>()
   const [error, setError] = useState<string>()
   const input = useRef<HTMLInputElement>(null)
+  // ?file=<id> shows that file, ?tab=memory the memory; e.g. from search.
+  const focus = params.get('file') ?? undefined
+  useEffect(() => {
+    const asked = focus ? 'files' : params.get('tab')
+    if (asked !== 'files' && asked !== 'memory') return
+    setTab(asked)
+    setQuery('')
+  }, [focus, params])
 
   async function upload(list: FileList | null) {
     if (!list?.length) return
@@ -130,6 +149,7 @@ export default function LibraryPage() {
             )}
             <Files
               files={files.data}
+              focus={focus}
               reload={files.reload}
               onUpload={() => input.current?.click()}
             />
@@ -145,16 +165,27 @@ export default function LibraryPage() {
 
 function Files({
   files,
+  focus,
   reload,
   onUpload,
 }: {
   files: LibraryFile[] | undefined
+  /** A file asked for by the address: opened if it can be, and scrolled to. */
+  focus?: string
   reload: () => Promise<void>
   onUpload: () => void
 }) {
   const [open, setOpen] = useState<string>()
   const [renaming, setRenaming] = useState<string>()
   const [error, setError] = useState<string>()
+
+  const loaded = Boolean(files)
+  useEffect(() => {
+    if (!focus || !loaded) return
+    if (files?.find((f) => f.id === focus)?.editable) setOpen(focus)
+    document.getElementById(`library-file-${focus}`)?.scrollIntoView({ block: 'center' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
+  }, [focus, loaded])
 
   async function act(work: () => Promise<unknown>) {
     setError(undefined)
@@ -195,7 +226,14 @@ function Files({
         {files.map((f) => {
           const slash = f.path.lastIndexOf('/')
           return (
-            <div key={f.id} className="flex flex-col gap-3 px-5 py-3.5">
+            <div
+              key={f.id}
+              id={`library-file-${f.id}`}
+              className={cn(
+                'flex scroll-mt-20 flex-col gap-3 px-5 py-3.5',
+                f.id === focus && 'bg-primary/5',
+              )}
+            >
               <div className="flex flex-wrap items-center gap-4">
                 <span
                   aria-hidden

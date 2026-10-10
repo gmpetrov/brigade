@@ -21,6 +21,7 @@ import { runnerAttachments } from './routes/runner-attachments.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
+import { search } from './routes/search.js'
 import { tasks } from './routes/tasks.js'
 import { tickets } from './routes/tickets.js'
 import { customApps, events } from './routes/events.js'
@@ -55,6 +56,7 @@ app.route('/api/repositories', repositories)
 app.route('/api/pulls', pulls)
 app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)
+app.route('/api/search', search)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)
