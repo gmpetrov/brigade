@@ -1,11 +1,14 @@
 'use client'
 // Markdown in the thread: teammates' replies, thinking and questions. Raw HTML
 // is never rendered (react-markdown escapes it), remote images are not loaded
-// (a link instead), and mentions a teammate echoes back show as chips.
+// (a link instead), mentions a teammate echoes back show as chips, and code
+// blocks are highlighted (highlight.js's common languages: JSON, YAML, XML/HTML,
+// CSS, JS/TS, Python, shell, SQL, diff and more; colors in globals.css).
 import { MENTION_KINDS, type MentionKind } from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
 import { memo, useState, type ComponentProps, type ReactNode } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import {
   FileLinksProvider,
@@ -13,7 +16,7 @@ import {
   relativeFile,
   useFileLinks,
 } from '@/components/file-links'
-import { MentionChip } from '@/components/mention'
+import { MentionChip, MessageText } from '@/components/mention'
 import { cn } from '@/lib/utils'
 
 const MENTION_HREF = new RegExp(`^(${MENTION_KINDS.join('|')}):([^\\s]+)$`)
@@ -223,6 +226,11 @@ const components: Components = {
   ),
 }
 
+// Only fenced blocks that name their language: guessing is slow and often wrong.
+const rehypePlugins = [
+  [rehypeHighlight, { plainText: ['text', 'txt', 'plain'] }],
+] satisfies ComponentProps<typeof ReactMarkdown>['rehypePlugins']
+
 /** Markdown text, styled with the theme. Memoised: streaming re-renders only the message that grows. */
 export const Markdown = memo(function Markdown({
   text,
@@ -235,11 +243,91 @@ export const Markdown = memo(function Markdown({
     <div className={cn('min-w-0 leading-relaxed wrap-anywhere', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={rehypePlugins}
         components={components}
         urlTransform={urlTransform}
       >
         {text.replace(MENTION, '[$1]($2)')}
       </ReactMarkdown>
+    </div>
+  )
+})
+
+type Segment = { text: string } | { code: string; language: string }
+
+/** A message's fenced code blocks (``` or ~~~, closed or running to the end) and the text around them. */
+function splitFences(text: string): Segment[] {
+  const segments: Segment[] = []
+  const lines = text.split('\n')
+  let prose: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const open = lines[i]!.match(/^ {0,3}(`{3,}|~{3,})\s*([^\s`]*)[^`]*$/)
+    if (!open) {
+      prose.push(lines[i]!)
+      continue
+    }
+    const fence = open[1]!
+    const close = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}\\s*$`)
+    const code: string[] = []
+    while (++i < lines.length && !close.test(lines[i]!)) code.push(lines[i]!)
+    if (prose.length) segments.push({ text: prose.join('\n') })
+    prose = []
+    segments.push({ code: code.join('\n'), language: open[2]!.toLowerCase() })
+  }
+  if (prose.length) segments.push({ text: prose.join('\n') })
+  return segments
+}
+
+/** JSON that parses, as an object or array: pretty-printed when it came in one line. */
+function asJson(text: string) {
+  const trimmed = text.trim()
+  if (!/^[[{]/.test(trimmed)) return undefined
+  try {
+    const value: unknown = JSON.parse(trimmed)
+    return trimmed.includes('\n') ? trimmed : JSON.stringify(value, null, 2)
+  } catch {
+    return undefined
+  }
+}
+
+/** One code block, through the same renderer as a teammate's. */
+function CodeSnippet({ code, language }: { code: string; language: string }) {
+  const json = (!language || language === 'json') && asJson(code)
+  if (json) [code, language] = [json, 'json']
+  // A fence longer than any run of backticks inside, so the code cannot close it.
+  const longest = Math.max(0, ...(code.match(/`+/g) ?? []).map((run) => run.length))
+  const fence = '`'.repeat(Math.max(3, longest + 1))
+  return (
+    <Markdown
+      text={`${fence}${language}\n${code}\n${fence}`}
+      className="text-foreground [&_pre]:bg-background"
+    />
+  )
+}
+
+/**
+ * What a person wrote: plain text with mention chips, except its fenced code
+ * blocks (or the whole message, when it is just JSON) show as code. Plain text
+ * stays plain: a person's `*` or `#` is not formatting.
+ */
+export const MessageWithCode = memo(function MessageWithCode({ text }: { text: string }) {
+  const json = asJson(text)
+  const segments = json ? [{ code: json, language: 'json' }] : splitFences(text)
+  if (segments.every((s) => 'text' in s)) return <MessageText text={text} />
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      {segments.map((s, i) =>
+        'text' in s ? (
+          // The blank lines around a fence are the gap.
+          s.text.trim() && (
+            <div key={i}>
+              <MessageText text={s.text.replace(/^\n+|\n+$/g, '')} />
+            </div>
+          )
+        ) : (
+          <CodeSnippet key={i} code={s.code} language={s.language} />
+        ),
+      )}
     </div>
   )
 })

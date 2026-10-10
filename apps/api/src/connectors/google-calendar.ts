@@ -11,9 +11,11 @@ import {
 const API = 'https://www.googleapis.com/calendar/v3'
 
 type Attendee = { email?: string; responseStatus?: string; self?: boolean; optional?: boolean }
-type Event = {
+export type Event = {
   id: string
   status?: string
+  created?: string
+  updated?: string
   summary?: string
   description?: string
   location?: string
@@ -60,18 +62,92 @@ const sendUpdates = z
 const path = (calendar: string, suffix = '') =>
   `${API}/calendars/${encodeURIComponent(calendar)}/events${suffix}`
 
-const send = (ctx: ConnectorContext, url: string, method: string, body?: unknown) =>
-  ctx.fetch(url, {
+/**
+ * Event revisions Brigade's own calls made, so a teammate creating or changing
+ * an event does not trigger itself. In this process only, the last thousand.
+ */
+const own = new Set<string>()
+const remember = (key: string) => {
+  own.add(key)
+  if (own.size > 1000) own.delete(own.values().next().value!)
+}
+export const isOwnChange = (e: Event) =>
+  own.has(`${e.id}:${e.updated}`) || (e.status === 'cancelled' && own.has(`${e.id}:deleted`))
+
+async function send(ctx: ConnectorContext, url: string, method: string, body?: unknown) {
+  const response = await ctx.fetch(url, {
     method,
     ...(body === undefined
       ? {}
       : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
   })
+  if (response.ok && method === 'DELETE')
+    remember(`${decodeURIComponent(url.split('?')[0]!.split('/').pop()!)}:deleted`)
+  else if (response.ok) {
+    const written = (await response
+      .clone()
+      .json()
+      .catch(() => null)) as Event | null
+    if (written?.id) remember(`${written.id}:${written.updated}`)
+  }
+  return response
+}
+
+const when_ = (e: Event) => e.start?.dateTime ?? e.start?.date ?? 'no time'
+const eventLines = (e: Event) =>
+  [
+    `${e.summary ?? '(no title)'}, ${when_(e)} to ${e.end?.dateTime ?? e.end?.date ?? '?'}`,
+    ...(e.location ? [`Where: ${e.location}`] : []),
+    ...(e.organizer?.email ? [`Organizer: ${e.organizer.email}`] : []),
+    ...(e.attendees?.length
+      ? [`Guests: ${e.attendees.map((a) => `${a.email} (${a.responseStatus})`).join(', ')}`]
+      : []),
+    `Event id ${e.id}${e.htmlLink ? `, ${e.htmlLink}` : ''}`,
+  ].join('\n')
+const calendarOption = {
+  name: 'calendarId',
+  label: 'Calendar',
+  placeholder: 'primary',
+  help: "A calendar id from Google Calendar's settings. Empty: the account's own calendar.",
+}
 
 export const googleCalendar: ConnectorDefinition = {
   kind: 'google_calendar',
   label: 'Google Calendar',
   auth: 'google',
+  // Event types come from subscriptions/google-calendar.ts, which reads each change.
+  triggers: {
+    event_created: {
+      label: 'Event created',
+      description: 'An event is added to the calendar.',
+      options: [calendarOption],
+      events: ['created'],
+      describe: ({ payload }) => ({
+        title: `New event: ${(payload as Event).summary ?? '(no title)'}`,
+        summary: eventLines(payload as Event),
+      }),
+    },
+    event_changed: {
+      label: 'Event changed or canceled',
+      description: "An event's time, guests or details change, or it is canceled.",
+      options: [calendarOption],
+      events: ['updated', 'cancelled'],
+      describe: ({ type, payload }) => ({
+        title: `${type === 'cancelled' ? 'Event canceled' : 'Event changed'}: ${(payload as Event).summary ?? (payload as Event).id}`,
+        summary: eventLines(payload as Event),
+      }),
+    },
+    invited: {
+      label: 'Invited to an event',
+      description: 'Someone else invites this account, and it has not answered yet.',
+      options: [calendarOption],
+      events: ['invited'],
+      describe: ({ payload }) => ({
+        title: `Invitation: ${(payload as Event).summary ?? '(no title)'}`,
+        summary: eventLines(payload as Event),
+      }),
+    },
+  },
   operations: {
     calendar_list_calendars: op({
       description: 'List the calendars this account can see, with their ids.',

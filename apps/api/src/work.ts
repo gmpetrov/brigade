@@ -1,4 +1,4 @@
-// Starting a teammate's next turn. Members' messages, webhooks and approved
+// Starting a teammate's next turn. Members' messages, triggers and approved
 // caps all come through here, so caps are checked in one place.
 import { randomUUID } from 'node:crypto'
 import { mentionedIds } from '@brigade/contracts'
@@ -173,7 +173,7 @@ export async function handoffThread(
 
 /**
  * A new thread with a fresh context, on the starting member's accounts. For a
- * webhook, the member who set it up. Throws when they have no usable account.
+ * trigger, the member who set it up. Throws when they have no usable account.
  */
 export async function startThread(
   db: ScopedDb,
@@ -185,10 +185,10 @@ export async function startThread(
     accountId?: string | null
     title: string
     text: string
-    origin?: { webhookId: string }
+    origin?: { triggerId: string }
   },
 ) {
-  // Teammates the first message mentions answer after the starting one. A webhook's text is untrusted: it summons nobody.
+  // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
   const teammateIds = [
     input.teammate.id,
     ...(input.origin ? [] : await mentionedTeammates(db, input.text)).filter(
@@ -209,14 +209,14 @@ export async function startThread(
       computerId: input.computer.id,
       accountId: account.id,
       title: input.title.slice(0, 120),
-      ...(input.origin ? { origin: 'webhook', webhookId: input.origin.webhookId } : {}),
+      ...(input.origin ? { origin: 'trigger', triggerId: input.origin.triggerId } : {}),
     } as never,
   })
   await joinThread(db, created.id, teammateIds)
   await audit({
     ...scope,
     actor: input.origin
-      ? { type: 'system', id: `webhook:${input.origin.webhookId}` }
+      ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
       : { type: 'member', id: input.memberId },
     action: 'thread.started',
     target: { type: 'thread', id: created.id },
@@ -224,7 +224,7 @@ export async function startThread(
       teammateId: input.teammate.id,
       computerId: input.computer.id,
       accountId: account.id,
-      ...(input.origin ? { webhookId: input.origin.webhookId } : {}),
+      ...(input.origin ? { triggerId: input.origin.triggerId } : {}),
     },
   })
   const thread = await loadThread(db, created.id)

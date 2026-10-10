@@ -1,7 +1,13 @@
 // Maps AI SDK harness stream parts to Brigade's AgentEvent. Nothing outside
 // this module sees an AI SDK type.
-import { Question, type AgentEvent, type QuestionAnswer } from '@brigade/contracts'
-import { ASK_USER_TOOL } from './tools.js'
+import {
+  Ask,
+  Question,
+  type AgentEvent,
+  type QuestionAnswer,
+  type TicketAnswer,
+} from '@brigade/contracts'
+import { ASK_USER_TOOL, OPEN_TICKET_TOOL } from './tools.js'
 
 /** The AI SDK's name for a harness's built-in question tool. */
 export const QUESTION_TOOL = 'askUserQuestions'
@@ -70,6 +76,70 @@ export function askUserResult(questions: Question[], answer: QuestionAnswer) {
   }
 }
 
+/** open_ticket's input as a ticket; ids filled in where the model left them out. */
+export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | undefined {
+  const raw = input as { title?: string; asks?: Record<string, unknown>[] } | undefined
+  if (!Array.isArray(raw?.asks)) return undefined
+  const asks = Ask.array().safeParse(
+    raw.asks.map((a, i) => ({
+      ...a,
+      id: a.id || `a${i + 1}`,
+      ...(Array.isArray(a.options)
+        ? {
+            options: (a.options as { id?: string }[]).map((o, j) => ({
+              ...o,
+              id: o.id || `o${j + 1}`,
+            })),
+          }
+        : {}),
+    })),
+  )
+  if (!asks.success || asks.data.length === 0) return undefined
+  return { title: raw.title || 'A ticket', asks: asks.data }
+}
+
+/** A person's answer to open_ticket, in words the model reads. */
+export function ticketResult(asks: Ask[], answer: TicketAnswer) {
+  if (answer.action === 'declined')
+    return {
+      declined: true,
+      note: 'The person declined the ticket. Do not do what it asked about; carry on without it or stop.',
+    }
+  return {
+    replies: asks.flatMap((ask): Record<string, unknown>[] => {
+      const reply = answer.replies[ask.id]
+      if (!reply) return []
+      if (ask.type === 'approval' && reply.type === 'approval') {
+        if (reply.approved) return [{ ask: ask.title, approved: true }]
+        return [
+          {
+            ask: ask.title,
+            approved: false,
+            changes: reply.changes ?? '',
+            ...(reply.sendTo
+              ? {
+                  note: 'The person sent these changes to another teammate in this thread. Leave them to it.',
+                }
+              : {}),
+          },
+        ]
+      }
+      if (ask.type === 'decision' && reply.type === 'decision') {
+        if (!ask.options) return [{ ask: ask.question, approved: reply.optionId === 'approve' }]
+        const label = ask.options.find((o) => o.id === reply.optionId)?.label
+        return [{ ask: ask.question, chose: label ?? reply.optionId }]
+      }
+      if (ask.type === 'access' && reply.type === 'access')
+        return [{ ask: `Access to ${ask.what}`, granted: reply.granted }]
+      if (ask.type === 'action' && reply.type === 'action')
+        return [{ ask: ask.title, done: reply.done, ...(reply.note ? { note: reply.note } : {}) }]
+      if (ask.type === 'input' && reply.type === 'input')
+        return [{ ask: ask.question, answer: reply.text }]
+      return []
+    }),
+  }
+}
+
 const FILE_TOOLS = new Set([
   'write',
   'edit',
@@ -93,6 +163,8 @@ export class EventMapper {
   error: string | undefined
   /** Set when the account ran out of usage during this turn. */
   exhausted: { resetsAt: string | null } | undefined
+  /** Calls of a pausing tool (open_ticket) with input nobody could answer. */
+  rejected: { toolCallId: string; toolName: string; error: string }[] = []
 
   /** Recognise an out-of-usage error from either harness. */
   static exhaustedBy(message: string): { resetsAt: string | null } | undefined {
@@ -151,6 +223,26 @@ export class EventMapper {
               questionId: part.toolCallId,
               questions,
             })
+        }
+        // Brigade's ticket tool: a person answers every ask, then the turn continues.
+        if (part.toolName === OPEN_TICKET_TOOL) {
+          const ticket = ticketAsks(part.input)
+          if (ticket)
+            return this.emit({
+              at,
+              type: 'ticket.opened',
+              requestId: part.toolCallId,
+              title: ticket.title,
+              asks: ticket.asks,
+            })
+          // Nobody could answer it: the turn gets the error back instead of waiting.
+          this.rejected.push({
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            error:
+              'Invalid ticket: give a title and 1 to 6 asks, each with the fields its type needs ' +
+              '(approval: title, draft; decision: question; access: kind, what; action: title; input: question).',
+          })
         }
         this.emit({
           at,

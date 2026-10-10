@@ -73,7 +73,8 @@ export const ModelName = {
   Credential: 'Credential',
   Grant: 'Grant',
   ConnectionCall: 'ConnectionCall',
-  Webhook: 'Webhook',
+  Trigger: 'Trigger',
+  Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
   AuditEntry: 'AuditEntry'
@@ -270,7 +271,7 @@ export const SessionScalarFieldEnum = {
   othersMayPrompt: 'othersMayPrompt',
   controlledByMemberId: 'controlledByMemberId',
   origin: 'origin',
-  webhookId: 'webhookId',
+  triggerId: 'triggerId',
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -437,24 +438,44 @@ export const ConnectionCallScalarFieldEnum = {
 export type ConnectionCallScalarFieldEnum = (typeof ConnectionCallScalarFieldEnum)[keyof typeof ConnectionCallScalarFieldEnum]
 
 
-export const WebhookScalarFieldEnum = {
+export const TriggerScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   connectionId: 'connectionId',
   teammateId: 'teammateId',
   label: 'label',
-  source: 'source',
+  event: 'event',
+  options: 'options',
   pathToken: 'pathToken',
   verification: 'verification',
-  filter: 'filter',
-  cursor: 'cursor',
-  createdByMemberId: 'createdByMemberId',
   verificationSecretId: 'verificationSecretId',
+  createdByMemberId: 'createdByMemberId',
   createdAt: 'createdAt'
 } as const
 
-export type WebhookScalarFieldEnum = (typeof WebhookScalarFieldEnum)[keyof typeof WebhookScalarFieldEnum]
+export type TriggerScalarFieldEnum = (typeof TriggerScalarFieldEnum)[keyof typeof TriggerScalarFieldEnum]
+
+
+export const SubscriptionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  connectionId: 'connectionId',
+  resource: 'resource',
+  mode: 'mode',
+  externalId: 'externalId',
+  externalResourceId: 'externalResourceId',
+  secretId: 'secretId',
+  events: 'events',
+  cursor: 'cursor',
+  expiresAt: 'expiresAt',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SubscriptionScalarFieldEnum = (typeof SubscriptionScalarFieldEnum)[keyof typeof SubscriptionScalarFieldEnum]
 
 
 export const TicketScalarFieldEnum = {

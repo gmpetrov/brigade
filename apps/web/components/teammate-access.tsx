@@ -11,7 +11,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ProviderTile } from '@/components/provider-logo'
-import { api, useApi, type ConnectionsResponse, type Teammate, type Webhook } from '@/lib/api'
+import {
+  api,
+  useApi,
+  type ConnectionsResponse,
+  type Teammate,
+  type Trigger,
+  type TriggerCatalog,
+} from '@/lib/api'
 
 type Scope = 'none' | 'read' | 'read_write'
 
@@ -32,9 +39,10 @@ export function TeammateAccess({
   const grants = useApi<{ connectionId: string; scope: Exclude<Scope, 'none'> }[]>(
     `/teammates/${teammate.id}/grants`,
   )
-  const hooks = useApi<Webhook[]>('/webhooks')
+  const hooks = useApi<Trigger[]>('/triggers')
+  const catalog = useApi<TriggerCatalog>('/triggers/catalog')
   const [error, setError] = useState<string>()
-  const policy = (teammate.permissionPolicy?.connectorWrites ?? 'ask') as 'allow' | 'ask' | 'deny'
+  const policy = (teammate.permissionPolicy?.connectorWrites ?? 'allow') as 'allow' | 'ask' | 'deny'
 
   async function setGrant(connectionId: string, scope: Scope) {
     setError(undefined)
@@ -162,8 +170,8 @@ export function TeammateAccess({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ask">Ask a person first</SelectItem>
               <SelectItem value="allow">Allow</SelectItem>
+              <SelectItem value="ask">Ask a person first</SelectItem>
               <SelectItem value="deny">Never</SelectItem>
             </SelectContent>
           </Select>
@@ -171,14 +179,14 @@ export function TeammateAccess({
         <div className="flex flex-col gap-0.5 border-t px-6 pt-4 pb-2">
           <h3 className="text-sm font-bold">Starts threads from</h3>
           <p className="text-xs text-muted-foreground">
-            Webhooks and Gmail triggers. Their threads always ask a person before changes.
+            Triggers on connections. Their threads follow the policy above.
           </p>
         </div>
         {triggers.length === 0 ? (
           <p className="px-6 pb-3 text-sm text-muted-foreground">
             Nothing yet.{' '}
             <Link href="/app/connections" className="font-medium text-primary hover:underline">
-              Add a webhook or trigger
+              Add a trigger
             </Link>{' '}
             on a connection.
           </p>
@@ -186,15 +194,16 @@ export function TeammateAccess({
           triggers.map((w) => {
             const c = all.find((c) => c.id === w.connectionId)
             const from = c ? (c.externalAccount ?? c.label) : 'a removed connection'
+            const kind = c && catalog.data?.catalog[c.kind]?.find((k) => k.event === w.event)
             return (
               <div key={w.id} className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
                 {c && <ProviderTile kind={c.kind} small />}
                 <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
                   <span className="truncate text-sm font-semibold">{w.label}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {w.source === 'gmail'
-                      ? `New mail in ${from}${w.filter ? ` matching ${w.filter}` : ''}`
-                      : `Events posted by ${from}`}
+                    {c?.kind === 'webhook'
+                      ? `Events posted by ${from}`
+                      : `${kind?.label ?? w.event} on ${from}${Object.values(w.options).length ? ` · ${Object.values(w.options).join(' · ')}` : ''}`}
                   </span>
                 </span>
                 <Link

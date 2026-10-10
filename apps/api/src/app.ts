@@ -18,7 +18,8 @@ import { projects } from './routes/projects.js'
 import { runnerBackups } from './routes/runner-backups.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { tickets } from './routes/tickets.js'
-import { inboundWebhooks, webhooks } from './routes/webhooks.js'
+import { customApps, events } from './routes/events.js'
+import { triggers } from './routes/triggers.js'
 import { runnerInstall } from './routes/runner-install.js'
 import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
@@ -43,7 +44,7 @@ app.route('/api/credentials', credentials)
 app.route('/api/tickets', tickets)
 app.route('/api/library', library)
 app.route('/api/projects', projects)
-app.route('/api/webhooks', webhooks)
+app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
@@ -55,8 +56,10 @@ app.route('/git', gitProxy)
 app.route('/github/webhook', githubWebhook)
 // The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
 app.route('/desktop', desktopProxy)
-// Public: third-party apps post here. Verified by URL and signature, not a session.
-app.route('/hooks', inboundWebhooks)
+// Public: vendors deliver events here (Stripe, Gmail's Pub/Sub, Calendar channels), and
+// custom apps post to their triggers' URLs. Each verified, without a session.
+app.route('/events', events)
+app.route('/hooks', customApps)
 
 /** The dashboard's live socket. Scoped by the session cookie. */
 app.get(

@@ -14,14 +14,20 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false)
 
   async function submit(form: FormData) {
+    setError(undefined)
     setBusy(true)
-    const { error } = await authClient.signIn.email({
-      email: String(form.get('email')),
-      password: String(form.get('password')),
-    })
-    setBusy(false)
-    if (error) return setError(error.message ?? 'Could not sign in')
-    router.push('/app')
+    try {
+      const { error } = await authClient.signIn.email({
+        email: String(form.get('email')),
+        password: String(form.get('password')),
+      })
+      if (error) return setError(error.message ?? 'Could not sign in')
+      router.push('/app')
+    } catch {
+      setError('Could not reach Brigade. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (

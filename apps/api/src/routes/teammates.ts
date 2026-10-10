@@ -10,6 +10,7 @@ import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { deleteTriggers, resync } from './triggers.js'
 import { usageToday } from '../caps.js'
 import { teammateTimeline } from '../timeline.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -182,6 +183,12 @@ export const teammates = new Hono<AppEnv>()
       data: { archivedAt: new Date() },
     })
     if (count === 0) throw new HTTPException(404, { message: 'Teammate not found' })
+    // Its triggers go, and with them the vendor subscriptions only they needed.
+    const removed = await deleteTriggers(c.var.db, { teammateId: c.req.param('id') })
+    await resync(
+      c.var.scope,
+      removed.map((t) => t.connectionId),
+    )
     await audit({
       ...c.var.scope,
       actor: { type: 'member', id: c.var.scope.memberId },

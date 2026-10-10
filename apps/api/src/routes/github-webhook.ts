@@ -1,13 +1,15 @@
 // GitHub App webhook. A push to a repository has every online computer of the
 // workspaces using that installation fetch it into the caches it already has,
 // so the next checkout is quick. Installation changes reach the repository
-// lists and the connections' status. Verified by the app's webhook secret.
+// lists and the connections' status, and events start threads for the
+// connections' triggers (see triggers.ts). Verified by the app's webhook secret.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import { forgetInstallation, gitUrl, prefetchToken } from '../git.js'
 import { runnerProtocol, sendToRunner } from '../hub.js'
+import { dispatch } from '../triggers.js'
 
 /** Runners from this protocol on know repos.changed. */
 const REPOS_CHANGED_PROTOCOL = 5
@@ -79,6 +81,26 @@ async function installationChanged(installationId: number, action: string) {
     await prisma.connection.updateMany({ where: { id: connection.id }, data: { status } })
 }
 
+/**
+ * Offer the event to the triggers of every workspace's connection on this
+ * installation. What Brigade's own app did (a teammate's push or comment)
+ * starts nothing, so a thread never triggers itself.
+ */
+async function triggered(
+  installationId: number,
+  type: string,
+  deliveryId: string,
+  payload: { sender?: { type?: string; login?: string } },
+) {
+  if (payload.sender?.type === 'Bot' && payload.sender.login === `${env.GITHUB_APP_SLUG}[bot]`)
+    return
+  for (const connection of await connectionsOf(installationId)) {
+    if (connection.status !== 'active') continue
+    // GitHub does not retry: a thread that could not start leaves a ticket (see deliver).
+    await dispatch(connection, { id: deliveryId, type, payload })
+  }
+}
+
 export const githubWebhook = new Hono().post('/', async (c) => {
   if (!env.GITHUB_APP_WEBHOOK_SECRET) return c.json({ error: 'Not configured' }, 404)
   const body = await c.req.text()
@@ -87,6 +109,7 @@ export const githubWebhook = new Hono().post('/', async (c) => {
   const event = c.req.header('x-github-event')
   const payload = JSON.parse(body) as {
     action?: string
+    sender?: { type?: string; login?: string }
     installation?: { id?: number }
     repository?: { full_name?: string }
     deleted?: boolean
@@ -103,5 +126,13 @@ export const githubWebhook = new Hono().post('/', async (c) => {
           ? installationChanged(installationId, payload.action)
           : null
   void work?.catch((error) => console.error(`github webhook ${event} failed:`, error))
+  const delivery = c.req.header('x-github-delivery')
+  if (event && delivery)
+    void triggered(
+      installationId,
+      payload.action ? `${event}.${payload.action}` : event,
+      delivery,
+      payload,
+    ).catch((error) => console.error(`github triggers ${event} failed:`, error))
   return c.body(null, 202)
 })

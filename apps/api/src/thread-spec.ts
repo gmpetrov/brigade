@@ -6,12 +6,12 @@ import { gitAccess } from './git.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
 
 /**
- * Harness permission mode for a thread. Defaults: on a member's machine, ask
- * before every write and every command; on the cloud computer, allow built-in
- * tools (connector writes are checked by the API).
+ * Harness permission mode for a thread: built-in tools run without asking, on
+ * any computer. Brigade does not ask before an action unless the teammate
+ * opens a ticket (connector writes are still checked by the API).
  */
-function permissionMode(kind: 'cloud' | 'member_machine'): ThreadSpec['permissionMode'] {
-  return kind === 'member_machine' ? 'allow-reads' : 'allow-all'
+function permissionMode(_kind: 'cloud' | 'member_machine'): ThreadSpec['permissionMode'] {
+  return 'allow-all'
 }
 
 export async function loadThread(db: ScopedDb, id: string) {

@@ -37,7 +37,10 @@ const MEMORY_RUN_MS = 4 * 60_000
 
 type Command = Extract<
   ApiToRunner,
-  { type: 'thread.prompt' | 'thread.approval' | 'thread.answer' | 'thread.interrupt' }
+  {
+    type:
+      'thread.prompt' | 'thread.approval' | 'thread.answer' | 'thread.ticket' | 'thread.interrupt'
+  }
 >
 
 /** Who said what in a thread, so each teammate can be told what it missed. Never a credential. */
@@ -158,6 +161,16 @@ export class Threads {
         memberId: command.memberId,
       })
       input = { kind: 'answer', questionId: command.questionId, answer: command.answer }
+    } else if (command.type === 'thread.ticket') {
+      this.options.emit(spec.sessionId, {
+        at,
+        type: 'ticket.answered',
+        teammateId: spec.teammate.id,
+        requestId: command.requestId,
+        answer: command.answer,
+        memberId: command.memberId,
+      })
+      input = { kind: 'ticket', requestId: command.requestId, answer: command.answer }
     } else {
       this.options.emit(spec.sessionId, {
         at,

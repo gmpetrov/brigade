@@ -419,7 +419,8 @@ export const ModelName = {
   Credential: 'Credential',
   Grant: 'Grant',
   ConnectionCall: 'ConnectionCall',
-  Webhook: 'Webhook',
+  Trigger: 'Trigger',
+  Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
   AuditEntry: 'AuditEntry'
@@ -438,7 +439,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "threadTeammate" | "sessionEvent" | "account" | "project" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "webhook" | "ticket" | "document" | "auditEntry"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "threadTeammate" | "sessionEvent" | "account" | "project" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2070,77 +2071,151 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    Webhook: {
-      payload: Prisma.$WebhookPayload<ExtArgs>
-      fields: Prisma.WebhookFieldRefs
+    Trigger: {
+      payload: Prisma.$TriggerPayload<ExtArgs>
+      fields: Prisma.TriggerFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.WebhookFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload> | null
+          args: Prisma.TriggerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.WebhookFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         findFirst: {
-          args: Prisma.WebhookFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload> | null
+          args: Prisma.TriggerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.WebhookFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         findMany: {
-          args: Prisma.WebhookFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>[]
+          args: Prisma.TriggerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>[]
         }
         create: {
-          args: Prisma.WebhookCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         createMany: {
-          args: Prisma.WebhookCreateManyArgs<ExtArgs>
+          args: Prisma.TriggerCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         createManyAndReturn: {
-          args: Prisma.WebhookCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>[]
+          args: Prisma.TriggerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>[]
         }
         delete: {
-          args: Prisma.WebhookDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         update: {
-          args: Prisma.WebhookUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         deleteMany: {
-          args: Prisma.WebhookDeleteManyArgs<ExtArgs>
+          args: Prisma.TriggerDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.WebhookUpdateManyArgs<ExtArgs>
+          args: Prisma.TriggerUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateManyAndReturn: {
-          args: Prisma.WebhookUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>[]
+          args: Prisma.TriggerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>[]
         }
         upsert: {
-          args: Prisma.WebhookUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WebhookPayload>
+          args: Prisma.TriggerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TriggerPayload>
         }
         aggregate: {
-          args: Prisma.WebhookAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateWebhook>
+          args: Prisma.TriggerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTrigger>
         }
         groupBy: {
-          args: Prisma.WebhookGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WebhookGroupByOutputType>[]
+          args: Prisma.TriggerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TriggerGroupByOutputType>[]
         }
         count: {
-          args: Prisma.WebhookCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WebhookCountAggregateOutputType> | number
+          args: Prisma.TriggerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TriggerCountAggregateOutputType> | number
+        }
+      }
+    }
+    Subscription: {
+      payload: Prisma.$SubscriptionPayload<ExtArgs>
+      fields: Prisma.SubscriptionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SubscriptionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SubscriptionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        findFirst: {
+          args: Prisma.SubscriptionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SubscriptionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        findMany: {
+          args: Prisma.SubscriptionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>[]
+        }
+        create: {
+          args: Prisma.SubscriptionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        createMany: {
+          args: Prisma.SubscriptionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SubscriptionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>[]
+        }
+        delete: {
+          args: Prisma.SubscriptionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        update: {
+          args: Prisma.SubscriptionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        deleteMany: {
+          args: Prisma.SubscriptionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SubscriptionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SubscriptionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>[]
+        }
+        upsert: {
+          args: Prisma.SubscriptionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionPayload>
+        }
+        aggregate: {
+          args: Prisma.SubscriptionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSubscription>
+        }
+        groupBy: {
+          args: Prisma.SubscriptionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SubscriptionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SubscriptionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SubscriptionCountAggregateOutputType> | number
         }
       }
     }
@@ -2580,7 +2655,7 @@ export const SessionScalarFieldEnum = {
   othersMayPrompt: 'othersMayPrompt',
   controlledByMemberId: 'controlledByMemberId',
   origin: 'origin',
-  webhookId: 'webhookId',
+  triggerId: 'triggerId',
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -2747,24 +2822,44 @@ export const ConnectionCallScalarFieldEnum = {
 export type ConnectionCallScalarFieldEnum = (typeof ConnectionCallScalarFieldEnum)[keyof typeof ConnectionCallScalarFieldEnum]
 
 
-export const WebhookScalarFieldEnum = {
+export const TriggerScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   connectionId: 'connectionId',
   teammateId: 'teammateId',
   label: 'label',
-  source: 'source',
+  event: 'event',
+  options: 'options',
   pathToken: 'pathToken',
   verification: 'verification',
-  filter: 'filter',
-  cursor: 'cursor',
-  createdByMemberId: 'createdByMemberId',
   verificationSecretId: 'verificationSecretId',
+  createdByMemberId: 'createdByMemberId',
   createdAt: 'createdAt'
 } as const
 
-export type WebhookScalarFieldEnum = (typeof WebhookScalarFieldEnum)[keyof typeof WebhookScalarFieldEnum]
+export type TriggerScalarFieldEnum = (typeof TriggerScalarFieldEnum)[keyof typeof TriggerScalarFieldEnum]
+
+
+export const SubscriptionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  connectionId: 'connectionId',
+  resource: 'resource',
+  mode: 'mode',
+  externalId: 'externalId',
+  externalResourceId: 'externalResourceId',
+  secretId: 'secretId',
+  events: 'events',
+  cursor: 'cursor',
+  expiresAt: 'expiresAt',
+  error: 'error',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SubscriptionScalarFieldEnum = (typeof SubscriptionScalarFieldEnum)[keyof typeof SubscriptionScalarFieldEnum]
 
 
 export const TicketScalarFieldEnum = {
@@ -3120,30 +3215,30 @@ export type ListEnumGrantScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
- * Reference to a field of type 'WebhookSource'
+ * Reference to a field of type 'TriggerVerification'
  */
-export type EnumWebhookSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookSource'>
+export type EnumTriggerVerificationFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TriggerVerification'>
     
 
 
 /**
- * Reference to a field of type 'WebhookSource[]'
+ * Reference to a field of type 'TriggerVerification[]'
  */
-export type ListEnumWebhookSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookSource[]'>
+export type ListEnumTriggerVerificationFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TriggerVerification[]'>
     
 
 
 /**
- * Reference to a field of type 'WebhookVerification'
+ * Reference to a field of type 'SubscriptionMode'
  */
-export type EnumWebhookVerificationFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookVerification'>
+export type EnumSubscriptionModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionMode'>
     
 
 
 /**
- * Reference to a field of type 'WebhookVerification[]'
+ * Reference to a field of type 'SubscriptionMode[]'
  */
-export type ListEnumWebhookVerificationFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WebhookVerification[]'>
+export type ListEnumSubscriptionModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionMode[]'>
     
 
 
@@ -3403,7 +3498,8 @@ export type GlobalOmitConfig = {
   credential?: Prisma.CredentialOmit
   grant?: Prisma.GrantOmit
   connectionCall?: Prisma.ConnectionCallOmit
-  webhook?: Prisma.WebhookOmit
+  trigger?: Prisma.TriggerOmit
+  subscription?: Prisma.SubscriptionOmit
   ticket?: Prisma.TicketOmit
   document?: Prisma.DocumentOmit
   auditEntry?: Prisma.AuditEntryOmit

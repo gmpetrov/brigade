@@ -148,7 +148,8 @@ model Workspace {
   credentials    Credential[]
   grants         Grant[]
   connectionCalls ConnectionCall[]
-  webhooks       Webhook[]
+  triggers       Trigger[]
+  subscriptions  Subscription[]
   tickets        Ticket[]
   documents      Document[]
   auditEntries   AuditEntry[]
@@ -241,7 +242,7 @@ model Teammate {
   sessions         Session[]
   threadSeats      ThreadTeammate[]
   grants           Grant[]
-  webhooks         Webhook[]
+  triggers         Trigger[]
   connectionCalls  ConnectionCall[]
   documents        Document[]
 
@@ -270,7 +271,7 @@ enum SessionStatus {
 /// A thread: one conversation with one teammate, one harness session.
 enum SessionOrigin {
   member
-  webhook
+  trigger
 }
 
 model Session {
@@ -294,10 +295,10 @@ model Session {
   othersMayPrompt     Boolean        @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
-  /// member: a member's message. webhook: an inbound webhook or trigger, whose writes always need approval.
+  /// member: a member's message. trigger: an outside event, whose writes always need approval.
   origin              SessionOrigin  @default(member)
-  webhookId           String?
-  webhook             Webhook?       @relation(fields: [webhookId], references: [id], onDelete: SetNull)
+  triggerId           String?
+  trigger             Trigger?       @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// Highest contiguous event sequence number stored.
   lastSeq             Int            @default(0)
   createdAt           DateTime       @default(now())
@@ -476,7 +477,8 @@ model Connection {
   updatedAt         DateTime         @updatedAt
   grants            Grant[]
   calls             ConnectionCall[]
-  webhooks          Webhook[]
+  triggers          Trigger[]
+  subscriptions     Subscription[]
 
   @@index([workspaceId])
 }
@@ -574,51 +576,84 @@ model ConnectionCall {
   @@index([teammateId, connectionId, createdAt])
 }
 
-/// Something outside that starts threads for a teammate: an inbound URL (http) or new
-/// mail in a Gmail connection's inbox (gmail).
-model Webhook {
-  id                String     @id @default(cuid())
-  organizationId    String
-  workspaceId       String
-  workspace         Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  connectionId      String
-  connection        Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  teammateId        String
-  teammate          Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  label             String
-  source            WebhookSource @default(http)
-  /// http: the unguessable part of the webhook's URL.
-  pathToken         String?    @unique
-  /// http: how the sender is verified. gmail: none.
-  verification      WebhookVerification
-  /// gmail: a Gmail search the new message must match, e.g. "to:support@acme.com".
-  filter            String?
-  /// gmail: the mailbox history id seen up to.
-  cursor            String?
-  /// Runs on this member's accounts.
-  createdByMemberId String
-  /// The signing secret, in the vault.
+/// An event on a connection that starts a thread for a teammate, chosen from the
+/// connector's catalog (e.g. "stripe.payment_received"), or any event posted to a
+/// custom app's URL ("webhook.received").
+model Trigger {
+  id                   String     @id @default(cuid())
+  organizationId       String
+  workspaceId          String
+  workspace            Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId         String
+  connection           Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  teammateId           String
+  teammate             Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  label                String
+  /// The catalog id, e.g. gmail.email_received.
+  event                String
+  /// The trigger's options from the catalog, e.g. { "query": "to:support@acme.com" }.
+  options              Json       @default("{}")
+  /// Custom apps only: the unguessable part of the trigger's URL.
+  pathToken            String?    @unique
+  /// Custom apps only: how the sender is verified.
+  verification         TriggerVerification?
+  /// Custom apps only: the hmac signing secret, in the vault.
   verificationSecretId String?
-  createdAt         DateTime   @default(now())
-  sessions          Session[]
+  /// Runs on this member's accounts.
+  createdByMemberId    String
+  createdAt            DateTime   @default(now())
+  sessions             Session[]
 
   @@index([workspaceId])
+  @@index([connectionId])
 }
 
-enum WebhookSource {
-  /// Events posted to the webhook's URL.
-  http
-  /// New messages in a Gmail connection's inbox, polled.
-  gmail
-}
-
-enum WebhookVerification {
-  /// Stripe-Signature, with the endpoint's signing secret.
-  stripe
+enum TriggerVerification {
   /// X-Brigade-Signature: sha256=<hex HMAC of the body>.
   hmac
   /// The URL alone, for apps that sign nothing.
   none
+}
+
+/// How Brigade hears about a connection's events: a registration at the vendor
+/// (push) or, where the vendor cannot push to this server, a poll. One per
+/// connection and resource (the inbox, a calendar, the Stripe account).
+model Subscription {
+  id             String           @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId   String
+  connection     Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  /// stripe: "account". gmail: "inbox". google_calendar: the calendar id.
+  resource       String
+  mode           SubscriptionMode
+  /// The vendor's id for it: a Stripe endpoint, a Calendar channel.
+  externalId     String?
+  /// Calendar: the channel's resource id, needed to stop it.
+  externalResourceId String?
+  /// The vendor's signing secret or channel token, in the vault.
+  secretId       String?
+  /// Vendor events it covers (Stripe event types).
+  events         String[]
+  /// Where reading changes resumes: Gmail's history id, Calendar's sync token.
+  cursor         String?
+  /// When the vendor drops it unless renewed (Gmail watch, Calendar channel).
+  expiresAt      DateTime?
+  /// The last failure to subscribe or read, shown on the connection.
+  error          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([connectionId, resource])
+  @@index([workspaceId])
+}
+
+enum SubscriptionMode {
+  /// The vendor sends events to Brigade.
+  push
+  /// Brigade asks every minute: the vendor cannot reach this server.
+  poll
 }
 
 // ---------------------------------------------------------------------------
@@ -628,6 +663,8 @@ enum WebhookVerification {
 enum TicketType {
   approval
   question
+  /// A ticket the teammate opened itself (open_ticket): one or more asks.
+  request
   sign_in
   cap
   usage_limit

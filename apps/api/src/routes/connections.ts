@@ -7,7 +7,8 @@ import { connectors } from '../connectors/index.js'
 import { ConnectGoogle, ConnectStripe, ConnectWebhookApp } from '@brigade/contracts'
 import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
-import { deleteWebhooks } from './webhooks.js'
+import { syncConnection } from '../subscriptions/index.js'
+import { deleteTriggers } from './triggers.js'
 import {
   githubAccount,
   githubAuthorizeUrl,
@@ -205,7 +206,11 @@ export const connections = new Hono<AppEnv>()
   .get('/', async (c) => {
     const rows = await c.var.db.connection.findMany({
       where: { status: { not: 'removed' } },
-      include: { grants: { select: { teammateId: true, scope: true } } },
+      include: {
+        grants: { select: { teammateId: true, scope: true } },
+        // How its triggers' events reach Brigade, and the last failure, if any.
+        subscriptions: { select: { resource: true, mode: true, error: true, expiresAt: true } },
+      },
       orderBy: { createdAt: 'asc' },
     })
     return c.json({
@@ -268,7 +273,7 @@ export const connections = new Hono<AppEnv>()
 
   /**
    * A custom app that posts events to Brigade. Nothing to sign in to: its
-   * webhooks, added next, each carry their own URL and signing secret.
+   * triggers, added next, each carry their own URL and signing secret.
    */
   .post('/webhook', async (c) => {
     const { scope } = c.var
@@ -303,6 +308,11 @@ export const connections = new Hono<AppEnv>()
       where: { id: c.req.param('id'), status: { not: 'removed' } },
     })
     if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
+    // Unsubscribe at the vendor while the credential still works: Stripe endpoints, Gmail watches,
+    // Calendar channels.
+    await syncConnection(scope, connection.id, { removing: true }).catch((error) =>
+      console.error('unsubscribe failed:', error instanceof Error ? error.message : error),
+    )
     if (connection.vaultSecretId) {
       // Google tokens are revoked at Google. A Stripe key is revoked in Stripe's dashboard.
       // A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
@@ -323,7 +333,7 @@ export const connections = new Hono<AppEnv>()
       await db.connection.updateMany({ where: { id: connection.id }, data: { status: 'removed' } })
     }
     await db.grant.deleteMany({ where: { connectionId: connection.id } })
-    await deleteWebhooks(db, { connectionId: connection.id })
+    await deleteTriggers(db, { connectionId: connection.id })
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

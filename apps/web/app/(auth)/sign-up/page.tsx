@@ -14,15 +14,21 @@ export default function SignUp() {
   const [busy, setBusy] = useState(false)
 
   async function submit(form: FormData) {
+    setError(undefined)
     setBusy(true)
-    const { error } = await authClient.signUp.email({
-      name: String(form.get('name')),
-      email: String(form.get('email')),
-      password: String(form.get('password')),
-    })
-    setBusy(false)
-    if (error) return setError(error.message ?? 'Could not create the account')
-    router.push('/onboarding')
+    try {
+      const { error } = await authClient.signUp.email({
+        name: String(form.get('name')),
+        email: String(form.get('email')),
+        password: String(form.get('password')),
+      })
+      if (error) return setError(error.message ?? 'Could not create the account')
+      router.push('/onboarding')
+    } catch {
+      setError('Could not reach Brigade. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (

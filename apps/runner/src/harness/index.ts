@@ -6,7 +6,13 @@ import { dirname, join } from 'node:path'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
-import type { AccountRef, AgentEvent, QuestionAnswer, ThreadSpec } from '@brigade/contracts'
+import type {
+  AccountRef,
+  AgentEvent,
+  QuestionAnswer,
+  ThreadSpec,
+  TicketAnswer,
+} from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { accountEnv } from '../accounts.js'
@@ -22,6 +28,8 @@ import {
   errorMessage,
   EventMapper,
   QUESTION_TOOL,
+  ticketAsks,
+  ticketResult,
 } from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import {
@@ -30,6 +38,8 @@ import {
   connectorTools,
   credentialTools,
   libraryTools,
+  OPEN_TICKET_TOOL,
+  openTicketTool,
   repoTools,
   type ConnectorCaller,
   type LibraryCaller,
@@ -54,6 +64,7 @@ export type ThreadInput =
   | { kind: 'prompt'; text: string }
   | { kind: 'approval'; approvalId: string; approved: boolean; reason?: string }
   | { kind: 'answer'; questionId: string; answer: QuestionAnswer }
+  | { kind: 'ticket'; requestId: string; answer: TicketAnswer }
 
 /** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
 export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
@@ -88,6 +99,7 @@ function createAgent(
     ...(spec.git ? repoTools(checkoutRepo) : {}),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
+    [OPEN_TICKET_TOOL]: openTicketTool,
   }
   return new HarnessAgent({
     harness,
@@ -233,18 +245,22 @@ export class HarnessThread {
           },
         }
       }
-      const result =
+      let result =
         input.kind === 'prompt'
           ? await live.agent.stream({
               session: live.session,
               prompt: input.text,
               abortSignal: signal,
             })
-          : input.kind === 'answer'
+          : input.kind === 'answer' || input.kind === 'ticket'
             ? await live.agent.continueStream({
                 session: live.session,
                 abortSignal: signal,
-                toolResultContinuations: [this.answerResult(input.questionId, input.answer)],
+                toolResultContinuations: [
+                  input.kind === 'answer'
+                    ? this.answerResult(input.questionId, input.answer)
+                    : this.ticketResult(input.requestId, input.answer),
+                ],
               })
             : await live.agent.continueStream({
                 session: live.session,
@@ -259,6 +275,21 @@ export class HarnessThread {
                 ],
               })
       for await (const part of result.fullStream) mapper.map(part)
+      // A ticket nobody could answer: the error goes back and the turn carries on.
+      while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
+        const rejected = mapper.rejected.splice(0)
+        result = await live.agent.continueStream({
+          session: live.session,
+          abortSignal: signal,
+          toolResultContinuations: rejected.map((r) => ({
+            type: 'tool-result' as const,
+            toolCallId: r.toolCallId,
+            toolName: r.toolName,
+            output: { type: 'error-text' as const, value: r.error },
+          })),
+        })
+        for await (const part of result.fullStream) mapper.map(part)
+      }
       // A login refreshed during the turn goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
       if (mapper.exhausted) return { kind: 'exhausted', resetsAt: mapper.exhausted.resetsAt }
@@ -298,6 +329,18 @@ export class HarnessThread {
         type: 'json' as const,
         value: (questions ? askUserResult(questions, answer) : answer) as never,
       },
+    }
+  }
+
+  /** A person's answer as the result of the open_ticket call that opened the ticket. */
+  private ticketResult(requestId: string, answer: TicketAnswer) {
+    const call = this.toolCalls.get(requestId)
+    const asks = ticketAsks(call?.input)?.asks ?? []
+    return {
+      type: 'tool-result' as const,
+      toolCallId: requestId,
+      toolName: OPEN_TICKET_TOOL,
+      output: { type: 'json' as const, value: ticketResult(asks, answer) as never },
     }
   }
 

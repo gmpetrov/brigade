@@ -101,6 +101,80 @@
     --desktop-w: min(45vw, 960px);
   }
 
+  /* Code highlighting (rehype-highlight's hljs classes, components/markdown.tsx). */
+  .hljs {
+    --code-key: oklch(0.5 0.19 287);
+    --code-string: oklch(0.5 0.13 155);
+    --code-number: oklch(0.55 0.15 50);
+    --code-keyword: oklch(0.52 0.2 340);
+    --code-title: oklch(0.5 0.16 255);
+    --code-comment: var(--muted-foreground);
+  }
+  .dark .hljs {
+    --code-key: oklch(0.78 0.13 287);
+    --code-string: oklch(0.8 0.15 152);
+    --code-number: oklch(0.8 0.13 65);
+    --code-keyword: oklch(0.76 0.15 340);
+    --code-title: oklch(0.78 0.12 245);
+  }
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-property,
+  .hljs-name,
+  .hljs-selector-tag,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-variable,
+  .hljs-template-variable {
+    color: var(--code-key);
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-symbol,
+  .hljs-char,
+  .hljs-addition {
+    color: var(--code-string);
+  }
+  .hljs-number,
+  .hljs-literal,
+  .hljs-built_in,
+  .hljs-type,
+  .hljs-bullet,
+  .hljs-link {
+    color: var(--code-number);
+  }
+  .hljs-keyword,
+  .hljs-meta .hljs-keyword,
+  .hljs-selector-pseudo,
+  .hljs-deletion,
+  .hljs-tag {
+    color: var(--code-keyword);
+  }
+  .hljs-title,
+  .hljs-section,
+  .hljs-function .hljs-title {
+    color: var(--code-title);
+  }
+  .hljs-section {
+    font-weight: 600;
+  }
+  .hljs-comment,
+  .hljs-quote,
+  .hljs-meta,
+  .hljs-punctuation {
+    color: var(--code-comment);
+  }
+  .hljs-comment,
+  .hljs-quote {
+    font-style: italic;
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: 600;
+  }
+
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
   .composer-input p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);

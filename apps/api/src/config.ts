@@ -27,6 +27,16 @@ const Env = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   /**
+   * Gmail push, for "Email received" triggers: a Pub/Sub topic in the OAuth client's Google
+   * Cloud project, e.g. projects/acme/topics/brigade-gmail, that
+   * gmail-api-push@system.gserviceaccount.com may publish to, with a push subscription
+   * to {API_URL}/events/gmail authenticated as GMAIL_PUBSUB_PUSH_ACCOUNT (audience: that
+   * URL). Without them, Brigade checks inboxes every minute instead.
+   */
+  GMAIL_PUBSUB_TOPIC: z.string().optional(),
+  /** The service account Pub/Sub signs its pushes as. */
+  GMAIL_PUBSUB_PUSH_ACCOUNT: z.string().optional(),
+  /**
    * Brigade's GitHub App, for GitHub connections. Setup URL
    * {API_URL}/api/connections/oauth/github/setup with "Redirect on update" on;
    * callback URL {API_URL}/api/connections/oauth/github/callback.
@@ -66,8 +76,13 @@ export const defaults = {
   idleMinutesBeforeStop: 30,
   backupEvery: 'daily',
   permissionPolicy: {
-    cloud: { connectorWrites: 'ask', default: 'allow' },
-    memberMachine: { writes: 'ask', commands: 'ask', connectorWrites: 'ask', default: 'allow' },
+    cloud: { connectorWrites: 'allow', default: 'allow' },
+    memberMachine: {
+      writes: 'allow',
+      commands: 'allow',
+      connectorWrites: 'allow',
+      default: 'allow',
+    },
   },
   runnerLinkCodeMinutes: 10,
 } as const

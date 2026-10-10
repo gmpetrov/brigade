@@ -24,9 +24,47 @@ export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github' | 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }
 
+/** A trigger option, shown as a text field. */
+export type TriggerOption = {
+  name: string
+  label: string
+  placeholder?: string
+  help?: string
+  required?: boolean
+}
+
+/** A vendor event, as the ingress or the change reader hands it to the triggers. */
+export type VendorEvent = {
+  /** The vendor's id for this event, so a retried delivery starts nothing twice. */
+  id: string
+  /** The vendor's event type, e.g. payment_intent.succeeded or issues.opened. */
+  type: string
+  // biome-ignore lint: vendor payloads are untyped JSON
+  payload: any
+}
+
+/** One kind of event that can start a thread, from a connector's catalog. */
+export type TriggerDefinition = {
+  label: string
+  description: string
+  options?: TriggerOption[]
+  /** The vendor event types it listens to. */
+  events: string[]
+  /** Whether an event of a listed type concerns this trigger, given its options. */
+  matches?: (
+    event: VendorEvent,
+    options: Record<string, string>,
+    ctx: { fetch: ConnectorContext['fetch'] },
+  ) => boolean | Promise<boolean>
+  /** What the teammate reads first: a title and a few lines, before the raw payload. */
+  describe: (event: VendorEvent) => { title: string; summary: string }
+}
+
 export type ConnectorDefinition = {
   kind: ConnectorKind
   label: string
+  /** The events that can start threads, by id. */
+  triggers?: Record<string, TriggerDefinition>
   /**
    * google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard.
    * github_app: an installation of Brigade's GitHub App; tokens are minted per call.

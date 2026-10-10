@@ -114,8 +114,8 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   }[]
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
-  origin: 'member' | 'webhook'
-  webhook: { id: string; label: string; source: 'http' | 'gmail' } | null
+  origin: 'member' | 'trigger'
+  trigger: { id: string; label: string; event: string } | null
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
 }
 
@@ -165,6 +165,13 @@ export type Connection = {
   status: 'active' | 'needs_reauth' | 'removed'
   createdAt: string
   grants: { teammateId: string; scope: 'read' | 'read_write' }[]
+  /** How its triggers' events reach Brigade: one per watched resource. */
+  subscriptions: {
+    resource: string
+    mode: 'push' | 'poll'
+    error: string | null
+    expiresAt: string | null
+  }[]
 }
 export type ConnectionsResponse = {
   available: Record<Connection['kind'], boolean>
@@ -190,20 +197,39 @@ export type CredentialUse = {
   via: 'mention' | 'approval'
 }
 
-/** Starts threads for a teammate: events posted to a URL (http), or new mail in a Gmail inbox. */
-export type Webhook = {
+/** An event on a connection that starts a thread for a teammate. */
+export type Trigger = {
   id: string
   label: string
   connectionId: string
-  source: 'http' | 'gmail'
-  verification: 'stripe' | 'hmac' | 'none'
-  /** http only. */
+  /** The catalog id, e.g. payment_received. */
+  event: string
+  options: Record<string, string>
+  /** Custom apps only. */
+  verification: 'hmac' | 'none' | null
   url: string | null
-  /** gmail only: the Gmail search new mail must match. */
-  filter: string | null
   hasSecret: boolean
   createdAt: string
   teammate: { id: string; name: string }
+}
+
+export type TriggerOption = {
+  name: string
+  label: string
+  placeholder?: string
+  help?: string
+  required?: boolean
+}
+export type TriggerKind = {
+  event: string
+  label: string
+  description: string
+  options: TriggerOption[]
+}
+export type TriggerCatalog = {
+  catalog: Record<Connection['kind'], TriggerKind[]>
+  /** push: the vendor sends events. poll: Brigade asks every minute. */
+  kinds: Record<Connection['kind'], { delivery: 'push' | 'poll'; unavailable: string | null }>
 }
 
 export type TimelineState = 'working' | 'waiting' | 'blocked' | 'done'
@@ -215,7 +241,7 @@ export type Timeline = {
     id: string
     title: string
     status: string
-    origin: 'member' | 'webhook'
+    origin: 'member' | 'trigger'
     segments: { state: TimelineState; from: string; to: string; note?: string }[]
     doneAt?: string
   }[]
@@ -252,7 +278,7 @@ export type ConnectionCall = {
 
 export type Ticket = {
   id: string
-  type: 'approval' | 'question' | 'sign_in' | 'cap' | 'usage_limit'
+  type: 'approval' | 'question' | 'request' | 'sign_in' | 'cap' | 'usage_limit'
   status: 'open' | 'approved' | 'denied' | 'resolved'
   title: string
   payload: {
@@ -271,14 +297,14 @@ export type Ticket = {
     used?: number
     accountId?: string
     memberId?: string
-    webhookId?: string
+    triggerId?: string
   }
   createdAt: string
   resolvedAt: string | null
   session: {
     id: string
     title: string
-    origin: 'member' | 'webhook'
+    origin: 'member' | 'trigger'
     startedByMemberId: string
     teammate: { id: string; name: string }
   } | null

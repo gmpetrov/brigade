@@ -48,7 +48,7 @@ export type SessionMinAggregateOutputType = {
   othersMayPrompt: boolean | null
   controlledByMemberId: string | null
   origin: $Enums.SessionOrigin | null
-  webhookId: string | null
+  triggerId: string | null
   lastSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -68,7 +68,7 @@ export type SessionMaxAggregateOutputType = {
   othersMayPrompt: boolean | null
   controlledByMemberId: string | null
   origin: $Enums.SessionOrigin | null
-  webhookId: string | null
+  triggerId: string | null
   lastSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -88,7 +88,7 @@ export type SessionCountAggregateOutputType = {
   othersMayPrompt: number
   controlledByMemberId: number
   origin: number
-  webhookId: number
+  triggerId: number
   lastSeq: number
   createdAt: number
   updatedAt: number
@@ -118,7 +118,7 @@ export type SessionMinAggregateInputType = {
   othersMayPrompt?: true
   controlledByMemberId?: true
   origin?: true
-  webhookId?: true
+  triggerId?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -138,7 +138,7 @@ export type SessionMaxAggregateInputType = {
   othersMayPrompt?: true
   controlledByMemberId?: true
   origin?: true
-  webhookId?: true
+  triggerId?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -158,7 +158,7 @@ export type SessionCountAggregateInputType = {
   othersMayPrompt?: true
   controlledByMemberId?: true
   origin?: true
-  webhookId?: true
+  triggerId?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -265,7 +265,7 @@ export type SessionGroupByOutputType = {
   othersMayPrompt: boolean
   controlledByMemberId: string | null
   origin: $Enums.SessionOrigin
-  webhookId: string | null
+  triggerId: string | null
   lastSeq: number
   createdAt: Date
   updatedAt: Date
@@ -308,7 +308,7 @@ export type SessionWhereInput = {
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
-  webhookId?: Prisma.StringNullableFilter<"Session"> | string | null
+  triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -317,7 +317,7 @@ export type SessionWhereInput = {
   startedBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   computer?: Prisma.XOR<Prisma.ComputerScalarRelationFilter, Prisma.ComputerWhereInput>
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
-  webhook?: Prisma.XOR<Prisma.WebhookNullableScalarRelationFilter, Prisma.WebhookWhereInput> | null
+  trigger?: Prisma.XOR<Prisma.TriggerNullableScalarRelationFilter, Prisma.TriggerWhereInput> | null
   events?: Prisma.SessionEventListRelationFilter
   teammates?: Prisma.ThreadTeammateListRelationFilter
   comments?: Prisma.CommentListRelationFilter
@@ -340,7 +340,7 @@ export type SessionOrderByWithRelationInput = {
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   origin?: Prisma.SortOrder
-  webhookId?: Prisma.SortOrderInput | Prisma.SortOrder
+  triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -349,7 +349,7 @@ export type SessionOrderByWithRelationInput = {
   startedBy?: Prisma.MemberOrderByWithRelationInput
   computer?: Prisma.ComputerOrderByWithRelationInput
   account?: Prisma.AccountOrderByWithRelationInput
-  webhook?: Prisma.WebhookOrderByWithRelationInput
+  trigger?: Prisma.TriggerOrderByWithRelationInput
   events?: Prisma.SessionEventOrderByRelationAggregateInput
   teammates?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
@@ -375,7 +375,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
-  webhookId?: Prisma.StringNullableFilter<"Session"> | string | null
+  triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -384,7 +384,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   startedBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   computer?: Prisma.XOR<Prisma.ComputerScalarRelationFilter, Prisma.ComputerWhereInput>
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
-  webhook?: Prisma.XOR<Prisma.WebhookNullableScalarRelationFilter, Prisma.WebhookWhereInput> | null
+  trigger?: Prisma.XOR<Prisma.TriggerNullableScalarRelationFilter, Prisma.TriggerWhereInput> | null
   events?: Prisma.SessionEventListRelationFilter
   teammates?: Prisma.ThreadTeammateListRelationFilter
   comments?: Prisma.CommentListRelationFilter
@@ -407,7 +407,7 @@ export type SessionOrderByWithAggregationInput = {
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   origin?: Prisma.SortOrder
-  webhookId?: Prisma.SortOrderInput | Prisma.SortOrder
+  triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -435,7 +435,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   othersMayPrompt?: Prisma.BoolWithAggregatesFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginWithAggregatesFilter<"Session"> | $Enums.SessionOrigin
-  webhookId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  triggerId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   lastSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
@@ -458,7 +458,7 @@ export type SessionCreateInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -481,7 +481,7 @@ export type SessionUncheckedCreateInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -510,7 +510,7 @@ export type SessionUpdateInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -533,7 +533,7 @@ export type SessionUncheckedUpdateInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -559,7 +559,7 @@ export type SessionCreateManyInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -593,7 +593,7 @@ export type SessionUncheckedUpdateManyInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -623,7 +623,7 @@ export type SessionCountOrderByAggregateInput = {
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
-  webhookId?: Prisma.SortOrder
+  triggerId?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -647,7 +647,7 @@ export type SessionMaxOrderByAggregateInput = {
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
-  webhookId?: Prisma.SortOrder
+  triggerId?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -667,7 +667,7 @@ export type SessionMinOrderByAggregateInput = {
   othersMayPrompt?: Prisma.SortOrder
   controlledByMemberId?: Prisma.SortOrder
   origin?: Prisma.SortOrder
-  webhookId?: Prisma.SortOrder
+  triggerId?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -969,45 +969,45 @@ export type SessionUpdateOneRequiredWithoutConnectionCallsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutConnectionCallsInput, Prisma.SessionUpdateWithoutConnectionCallsInput>, Prisma.SessionUncheckedUpdateWithoutConnectionCallsInput>
 }
 
-export type SessionCreateNestedManyWithoutWebhookInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput> | Prisma.SessionCreateWithoutWebhookInput[] | Prisma.SessionUncheckedCreateWithoutWebhookInput[]
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutWebhookInput | Prisma.SessionCreateOrConnectWithoutWebhookInput[]
-  createMany?: Prisma.SessionCreateManyWebhookInputEnvelope
+export type SessionCreateNestedManyWithoutTriggerInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput> | Prisma.SessionCreateWithoutTriggerInput[] | Prisma.SessionUncheckedCreateWithoutTriggerInput[]
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTriggerInput | Prisma.SessionCreateOrConnectWithoutTriggerInput[]
+  createMany?: Prisma.SessionCreateManyTriggerInputEnvelope
   connect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
 }
 
-export type SessionUncheckedCreateNestedManyWithoutWebhookInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput> | Prisma.SessionCreateWithoutWebhookInput[] | Prisma.SessionUncheckedCreateWithoutWebhookInput[]
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutWebhookInput | Prisma.SessionCreateOrConnectWithoutWebhookInput[]
-  createMany?: Prisma.SessionCreateManyWebhookInputEnvelope
+export type SessionUncheckedCreateNestedManyWithoutTriggerInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput> | Prisma.SessionCreateWithoutTriggerInput[] | Prisma.SessionUncheckedCreateWithoutTriggerInput[]
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTriggerInput | Prisma.SessionCreateOrConnectWithoutTriggerInput[]
+  createMany?: Prisma.SessionCreateManyTriggerInputEnvelope
   connect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
 }
 
-export type SessionUpdateManyWithoutWebhookNestedInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput> | Prisma.SessionCreateWithoutWebhookInput[] | Prisma.SessionUncheckedCreateWithoutWebhookInput[]
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutWebhookInput | Prisma.SessionCreateOrConnectWithoutWebhookInput[]
-  upsert?: Prisma.SessionUpsertWithWhereUniqueWithoutWebhookInput | Prisma.SessionUpsertWithWhereUniqueWithoutWebhookInput[]
-  createMany?: Prisma.SessionCreateManyWebhookInputEnvelope
+export type SessionUpdateManyWithoutTriggerNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput> | Prisma.SessionCreateWithoutTriggerInput[] | Prisma.SessionUncheckedCreateWithoutTriggerInput[]
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTriggerInput | Prisma.SessionCreateOrConnectWithoutTriggerInput[]
+  upsert?: Prisma.SessionUpsertWithWhereUniqueWithoutTriggerInput | Prisma.SessionUpsertWithWhereUniqueWithoutTriggerInput[]
+  createMany?: Prisma.SessionCreateManyTriggerInputEnvelope
   set?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   disconnect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   delete?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   connect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
-  update?: Prisma.SessionUpdateWithWhereUniqueWithoutWebhookInput | Prisma.SessionUpdateWithWhereUniqueWithoutWebhookInput[]
-  updateMany?: Prisma.SessionUpdateManyWithWhereWithoutWebhookInput | Prisma.SessionUpdateManyWithWhereWithoutWebhookInput[]
+  update?: Prisma.SessionUpdateWithWhereUniqueWithoutTriggerInput | Prisma.SessionUpdateWithWhereUniqueWithoutTriggerInput[]
+  updateMany?: Prisma.SessionUpdateManyWithWhereWithoutTriggerInput | Prisma.SessionUpdateManyWithWhereWithoutTriggerInput[]
   deleteMany?: Prisma.SessionScalarWhereInput | Prisma.SessionScalarWhereInput[]
 }
 
-export type SessionUncheckedUpdateManyWithoutWebhookNestedInput = {
-  create?: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput> | Prisma.SessionCreateWithoutWebhookInput[] | Prisma.SessionUncheckedCreateWithoutWebhookInput[]
-  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutWebhookInput | Prisma.SessionCreateOrConnectWithoutWebhookInput[]
-  upsert?: Prisma.SessionUpsertWithWhereUniqueWithoutWebhookInput | Prisma.SessionUpsertWithWhereUniqueWithoutWebhookInput[]
-  createMany?: Prisma.SessionCreateManyWebhookInputEnvelope
+export type SessionUncheckedUpdateManyWithoutTriggerNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput> | Prisma.SessionCreateWithoutTriggerInput[] | Prisma.SessionUncheckedCreateWithoutTriggerInput[]
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutTriggerInput | Prisma.SessionCreateOrConnectWithoutTriggerInput[]
+  upsert?: Prisma.SessionUpsertWithWhereUniqueWithoutTriggerInput | Prisma.SessionUpsertWithWhereUniqueWithoutTriggerInput[]
+  createMany?: Prisma.SessionCreateManyTriggerInputEnvelope
   set?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   disconnect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   delete?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
   connect?: Prisma.SessionWhereUniqueInput | Prisma.SessionWhereUniqueInput[]
-  update?: Prisma.SessionUpdateWithWhereUniqueWithoutWebhookInput | Prisma.SessionUpdateWithWhereUniqueWithoutWebhookInput[]
-  updateMany?: Prisma.SessionUpdateManyWithWhereWithoutWebhookInput | Prisma.SessionUpdateManyWithWhereWithoutWebhookInput[]
+  update?: Prisma.SessionUpdateWithWhereUniqueWithoutTriggerInput | Prisma.SessionUpdateWithWhereUniqueWithoutTriggerInput[]
+  updateMany?: Prisma.SessionUpdateManyWithWhereWithoutTriggerInput | Prisma.SessionUpdateManyWithWhereWithoutTriggerInput[]
   deleteMany?: Prisma.SessionScalarWhereInput | Prisma.SessionScalarWhereInput[]
 }
 
@@ -1059,7 +1059,7 @@ export type SessionCreateWithoutStartedByInput = {
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1081,7 +1081,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1136,7 +1136,7 @@ export type SessionScalarWhereInput = {
   othersMayPrompt?: Prisma.BoolFilter<"Session"> | boolean
   controlledByMemberId?: Prisma.StringNullableFilter<"Session"> | string | null
   origin?: Prisma.EnumSessionOriginFilter<"Session"> | $Enums.SessionOrigin
-  webhookId?: Prisma.StringNullableFilter<"Session"> | string | null
+  triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -1158,7 +1158,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1180,7 +1180,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1234,7 +1234,7 @@ export type SessionCreateWithoutComputerInput = {
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1256,7 +1256,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1310,7 +1310,7 @@ export type SessionCreateWithoutTeammateInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1332,7 +1332,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1387,7 +1387,7 @@ export type SessionCreateWithoutTeammatesInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
@@ -1409,7 +1409,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1453,7 +1453,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
@@ -1475,7 +1475,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1503,7 +1503,7 @@ export type SessionCreateWithoutEventsInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
@@ -1525,7 +1525,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1569,7 +1569,7 @@ export type SessionUpdateWithoutEventsInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
@@ -1591,7 +1591,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1618,7 +1618,7 @@ export type SessionCreateWithoutAccountInput = {
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1640,7 +1640,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1695,7 +1695,7 @@ export type SessionCreateWithoutCommentsInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
@@ -1717,7 +1717,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1761,7 +1761,7 @@ export type SessionUpdateWithoutCommentsInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
@@ -1783,7 +1783,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1811,7 +1811,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -1833,7 +1833,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1877,7 +1877,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -1899,7 +1899,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1910,7 +1910,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
-export type SessionCreateWithoutWebhookInput = {
+export type SessionCreateWithoutTriggerInput = {
   id?: string
   organizationId: string
   title: string
@@ -1935,7 +1935,7 @@ export type SessionCreateWithoutWebhookInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
 }
 
-export type SessionUncheckedCreateWithoutWebhookInput = {
+export type SessionUncheckedCreateWithoutTriggerInput = {
   id?: string
   organizationId: string
   workspaceId: string
@@ -1960,30 +1960,30 @@ export type SessionUncheckedCreateWithoutWebhookInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
 }
 
-export type SessionCreateOrConnectWithoutWebhookInput = {
+export type SessionCreateOrConnectWithoutTriggerInput = {
   where: Prisma.SessionWhereUniqueInput
-  create: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput>
 }
 
-export type SessionCreateManyWebhookInputEnvelope = {
-  data: Prisma.SessionCreateManyWebhookInput | Prisma.SessionCreateManyWebhookInput[]
+export type SessionCreateManyTriggerInputEnvelope = {
+  data: Prisma.SessionCreateManyTriggerInput | Prisma.SessionCreateManyTriggerInput[]
   skipDuplicates?: boolean
 }
 
-export type SessionUpsertWithWhereUniqueWithoutWebhookInput = {
+export type SessionUpsertWithWhereUniqueWithoutTriggerInput = {
   where: Prisma.SessionWhereUniqueInput
-  update: Prisma.XOR<Prisma.SessionUpdateWithoutWebhookInput, Prisma.SessionUncheckedUpdateWithoutWebhookInput>
-  create: Prisma.XOR<Prisma.SessionCreateWithoutWebhookInput, Prisma.SessionUncheckedCreateWithoutWebhookInput>
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutTriggerInput, Prisma.SessionUncheckedUpdateWithoutTriggerInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutTriggerInput, Prisma.SessionUncheckedCreateWithoutTriggerInput>
 }
 
-export type SessionUpdateWithWhereUniqueWithoutWebhookInput = {
+export type SessionUpdateWithWhereUniqueWithoutTriggerInput = {
   where: Prisma.SessionWhereUniqueInput
-  data: Prisma.XOR<Prisma.SessionUpdateWithoutWebhookInput, Prisma.SessionUncheckedUpdateWithoutWebhookInput>
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutTriggerInput, Prisma.SessionUncheckedUpdateWithoutTriggerInput>
 }
 
-export type SessionUpdateManyWithWhereWithoutWebhookInput = {
+export type SessionUpdateManyWithWhereWithoutTriggerInput = {
   where: Prisma.SessionScalarWhereInput
-  data: Prisma.XOR<Prisma.SessionUpdateManyMutationInput, Prisma.SessionUncheckedUpdateManyWithoutWebhookInput>
+  data: Prisma.XOR<Prisma.SessionUpdateManyMutationInput, Prisma.SessionUncheckedUpdateManyWithoutTriggerInput>
 }
 
 export type SessionCreateWithoutTicketsInput = {
@@ -2003,7 +2003,7 @@ export type SessionCreateWithoutTicketsInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -2025,7 +2025,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2069,7 +2069,7 @@ export type SessionUpdateWithoutTicketsInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2091,7 +2091,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2119,7 +2119,7 @@ export type SessionCreateWithoutDocumentsInput = {
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
   computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
   account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
-  webhook?: Prisma.WebhookCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
   events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
   comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
@@ -2141,7 +2141,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2185,7 +2185,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2207,7 +2207,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2231,7 +2231,7 @@ export type SessionCreateManyStartedByInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2253,7 +2253,7 @@ export type SessionUpdateWithoutStartedByInput = {
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2275,7 +2275,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2300,7 +2300,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2319,7 +2319,7 @@ export type SessionCreateManyWorkspaceInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2341,7 +2341,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2363,7 +2363,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2388,7 +2388,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2407,7 +2407,7 @@ export type SessionCreateManyComputerInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2429,7 +2429,7 @@ export type SessionUpdateWithoutComputerInput = {
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2451,7 +2451,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2476,7 +2476,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2495,7 +2495,7 @@ export type SessionCreateManyTeammateInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2517,7 +2517,7 @@ export type SessionUpdateWithoutTeammateInput = {
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
   account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2539,7 +2539,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2564,7 +2564,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2583,7 +2583,7 @@ export type SessionCreateManyAccountInput = {
   othersMayPrompt?: boolean
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
-  webhookId?: string | null
+  triggerId?: string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2605,7 +2605,7 @@ export type SessionUpdateWithoutAccountInput = {
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
   computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
-  webhook?: Prisma.WebhookUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
   events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
   comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
@@ -2627,7 +2627,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2652,13 +2652,13 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
-  webhookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type SessionCreateManyWebhookInput = {
+export type SessionCreateManyTriggerInput = {
   id?: string
   organizationId: string
   workspaceId: string
@@ -2677,7 +2677,7 @@ export type SessionCreateManyWebhookInput = {
   updatedAt?: Date | string
 }
 
-export type SessionUpdateWithoutWebhookInput = {
+export type SessionUpdateWithoutTriggerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2702,7 +2702,7 @@ export type SessionUpdateWithoutWebhookInput = {
   documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
 }
 
-export type SessionUncheckedUpdateWithoutWebhookInput = {
+export type SessionUncheckedUpdateWithoutTriggerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2727,7 +2727,7 @@ export type SessionUncheckedUpdateWithoutWebhookInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
 }
 
-export type SessionUncheckedUpdateManyWithoutWebhookInput = {
+export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2836,7 +2836,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
   origin?: boolean
-  webhookId?: boolean
+  triggerId?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2845,7 +2845,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
   events?: boolean | Prisma.Session$eventsArgs<ExtArgs>
   teammates?: boolean | Prisma.Session$teammatesArgs<ExtArgs>
   comments?: boolean | Prisma.Session$commentsArgs<ExtArgs>
@@ -2869,7 +2869,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
   origin?: boolean
-  webhookId?: boolean
+  triggerId?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2878,7 +2878,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
 }, ExtArgs["result"]["session"]>
 
 export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2895,7 +2895,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
   origin?: boolean
-  webhookId?: boolean
+  triggerId?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2904,7 +2904,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
 }, ExtArgs["result"]["session"]>
 
 export type SessionSelectScalar = {
@@ -2921,20 +2921,20 @@ export type SessionSelectScalar = {
   othersMayPrompt?: boolean
   controlledByMemberId?: boolean
   origin?: boolean
-  webhookId?: boolean
+  triggerId?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "webhookId" | "lastSeq" | "createdAt" | "updatedAt", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "triggerId" | "lastSeq" | "createdAt" | "updatedAt", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
   events?: boolean | Prisma.Session$eventsArgs<ExtArgs>
   teammates?: boolean | Prisma.Session$teammatesArgs<ExtArgs>
   comments?: boolean | Prisma.Session$commentsArgs<ExtArgs>
@@ -2949,7 +2949,7 @@ export type SessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
 }
 export type SessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -2957,7 +2957,7 @@ export type SessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   startedBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   computer?: boolean | Prisma.ComputerDefaultArgs<ExtArgs>
   account?: boolean | Prisma.Session$accountArgs<ExtArgs>
-  webhook?: boolean | Prisma.Session$webhookArgs<ExtArgs>
+  trigger?: boolean | Prisma.Session$triggerArgs<ExtArgs>
 }
 
 export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2968,7 +2968,7 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     startedBy: Prisma.$MemberPayload<ExtArgs>
     computer: Prisma.$ComputerPayload<ExtArgs>
     account: Prisma.$AccountPayload<ExtArgs> | null
-    webhook: Prisma.$WebhookPayload<ExtArgs> | null
+    trigger: Prisma.$TriggerPayload<ExtArgs> | null
     events: Prisma.$SessionEventPayload<ExtArgs>[]
     /**
      * Every teammate in the thread, the starting one (teammateId) included.
@@ -3002,10 +3002,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     controlledByMemberId: string | null
     /**
-     * member: a member's message. webhook: an inbound webhook or trigger, whose writes always need approval.
+     * member: a member's message. trigger: an outside event, whose writes always need approval.
      */
     origin: $Enums.SessionOrigin
-    webhookId: string | null
+    triggerId: string | null
     /**
      * Highest contiguous event sequence number stored.
      */
@@ -3411,7 +3411,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   startedBy<T extends Prisma.MemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MemberDefaultArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   computer<T extends Prisma.ComputerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ComputerDefaultArgs<ExtArgs>>): Prisma.Prisma__ComputerClient<runtime.Types.Result.GetResult<Prisma.$ComputerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   account<T extends Prisma.Session$accountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$accountArgs<ExtArgs>>): Prisma.Prisma__AccountClient<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  webhook<T extends Prisma.Session$webhookArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$webhookArgs<ExtArgs>>): Prisma.Prisma__WebhookClient<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  trigger<T extends Prisma.Session$triggerArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$triggerArgs<ExtArgs>>): Prisma.Prisma__TriggerClient<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   events<T extends Prisma.Session$eventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$eventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   teammates<T extends Prisma.Session$teammatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$teammatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Session$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3460,7 +3460,7 @@ export interface SessionFieldRefs {
   readonly othersMayPrompt: Prisma.FieldRef<"Session", 'Boolean'>
   readonly controlledByMemberId: Prisma.FieldRef<"Session", 'String'>
   readonly origin: Prisma.FieldRef<"Session", 'SessionOrigin'>
-  readonly webhookId: Prisma.FieldRef<"Session", 'String'>
+  readonly triggerId: Prisma.FieldRef<"Session", 'String'>
   readonly lastSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Session", 'DateTime'>
@@ -3884,22 +3884,22 @@ export type Session$accountArgs<ExtArgs extends runtime.Types.Extensions.Interna
 }
 
 /**
- * Session.webhook
+ * Session.trigger
  */
-export type Session$webhookArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Session$triggerArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Webhook
+   * Select specific fields to fetch from the Trigger
    */
-  select?: Prisma.WebhookSelect<ExtArgs> | null
+  select?: Prisma.TriggerSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Webhook
+   * Omit specific fields from the Trigger
    */
-  omit?: Prisma.WebhookOmit<ExtArgs> | null
+  omit?: Prisma.TriggerOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.WebhookInclude<ExtArgs> | null
-  where?: Prisma.WebhookWhereInput
+  include?: Prisma.TriggerInclude<ExtArgs> | null
+  where?: Prisma.TriggerWhereInput
 }
 
 /**

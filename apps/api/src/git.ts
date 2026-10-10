@@ -279,7 +279,7 @@ export function pushRefusal(request: GitRequest) {
   if (!request.session) return 'Brigade: this token only fetches'
   if (!via) return `Brigade: ${fullName} is public and not in a GitHub connection; it is read-only`
   if (!via.write) return `Brigade: ${teammate.name} has read-only access to this GitHub connection`
-  const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
+  const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
   if (policy === 'deny') return `Brigade: ${teammate.name} may not make changes through connectors`
   return null
 }

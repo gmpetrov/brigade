@@ -537,8 +537,10 @@ function statusAfter(current: SessionStatus, event: AgentEvent): SessionStatus {
       return 'running'
     case 'approval.requested':
     case 'question.asked':
+    case 'ticket.opened':
       return 'waiting'
     case 'question.answered':
+    case 'ticket.answered':
     case 'turn.started':
       return 'running'
     case 'turn.completed':
@@ -754,6 +756,37 @@ async function noteTickets(
             questionId: event.questionId,
             questions: event.questions as unknown as Prisma.InputJsonValue,
           },
+        },
+      })
+    } else if (event.type === 'ticket.opened') {
+      const teammate = await eventTeammate(session, event)
+      const title = event.title.length > 160 ? `${event.title.slice(0, 157)}...` : event.title
+      await prisma.ticket.create({
+        data: {
+          organizationId: session.organizationId,
+          workspaceId: session.workspaceId,
+          sessionId: session.id,
+          type: 'request',
+          title: `${teammate?.name ?? 'Teammate'}: ${title}`,
+          payload: {
+            source: 'harness',
+            teammateId: teammate?.id ?? session.teammateId,
+            requestId: event.requestId,
+            asks: event.asks as unknown as Prisma.InputJsonValue,
+          },
+        },
+      })
+    } else if (event.type === 'ticket.answered') {
+      await prisma.ticket.updateMany({
+        where: {
+          sessionId: session.id,
+          status: 'open',
+          payload: { path: ['requestId'], equals: event.requestId },
+        },
+        data: {
+          status: event.answer.action === 'declined' ? 'denied' : 'resolved',
+          resolvedByMemberId: event.memberId,
+          resolvedAt: new Date(event.at),
         },
       })
     } else if (event.type === 'question.answered') {

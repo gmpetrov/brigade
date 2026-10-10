@@ -23,10 +23,17 @@ const limitOf = (caps: unknown, cap: CapName) => {
 }
 
 /** Event types that start or end a stretch of the teammate working. */
-const STARTS = new Set(['turn.started', 'message.user', 'approval.resolved', 'question.answered'])
+const STARTS = new Set([
+  'turn.started',
+  'message.user',
+  'approval.resolved',
+  'question.answered',
+  'ticket.answered',
+])
 const ENDS = new Set([
   'approval.requested',
   'question.asked',
+  'ticket.opened',
   'turn.completed',
   'error',
   'control.changed',

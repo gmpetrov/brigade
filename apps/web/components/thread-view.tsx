@@ -2,9 +2,12 @@
 import {
   formatMention,
   type AgentEvent,
+  type Ask,
+  type AskReply,
   type Question,
   type QuestionAnswer,
   type SequencedEvent,
+  type TicketAnswer,
 } from '@brigade/contracts'
 import {
   ChevronRight,
@@ -12,6 +15,7 @@ import {
   CircleCheck,
   CircleDot,
   CircleHelp,
+  ClipboardList,
   ListChecks,
   RefreshCw,
   ShieldAlert,
@@ -19,8 +23,8 @@ import {
 import { useMemo, useState } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider } from '@/components/file-links'
-import { Markdown } from '@/components/markdown'
-import { credentialHint, MessageText } from '@/components/mention'
+import { Markdown, MessageWithCode } from '@/components/markdown'
+import { credentialHint } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -67,6 +71,15 @@ type Item =
       questionId: string
       questions: Question[]
       answer?: QuestionAnswer
+    }
+  | {
+      kind: 'ticket'
+      key: string
+      requestId: string
+      title: string
+      asks: Ask[]
+      teammateId?: string
+      answer?: TicketAnswer
     }
   | { kind: 'plan'; key: string; items: Extract<AgentEvent, { type: 'plan.updated' }>['items'] }
   | { kind: 'file'; key: string; path: string }
@@ -149,6 +162,21 @@ export function useThreadItems(events: SequencedEvent[]) {
           if (item?.kind === 'question') item.answer = e.answer
           break
         }
+        case 'ticket.opened':
+          add({
+            kind: 'ticket',
+            key: `k${e.requestId}`,
+            requestId: e.requestId,
+            title: e.title,
+            asks: e.asks,
+            ...(e.teammateId ? { teammateId: e.teammateId } : {}),
+          })
+          break
+        case 'ticket.answered': {
+          const item = byKey.get(`k${e.requestId}`)
+          if (item?.kind === 'ticket') item.answer = e.answer
+          break
+        }
         case 'plan.updated':
           add({ kind: 'plan', key: `p${seq}`, items: e.items })
           break
@@ -228,6 +256,7 @@ export function ThreadItems({
   items,
   onApproval,
   onAnswer,
+  onTicket,
   canApprove,
   teammate,
   teammates = [],
@@ -235,6 +264,7 @@ export function ThreadItems({
   items: Item[]
   onApproval: (approvalId: string, approved: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
+  onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   canApprove: boolean
   /** Who answers when a message does not say: shown beside its messages. */
   teammate?: { name: string; harness: string }
@@ -256,7 +286,7 @@ export function ThreadItems({
                 key={item.key}
                 className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground"
               >
-                <MessageText text={item.text} />
+                <MessageWithCode text={item.text} />
               </div>
             )
           case 'assistant': {
@@ -372,6 +402,22 @@ export function ThreadItems({
                 item={item}
                 canAnswer={canApprove}
                 onAnswer={(answer) => onAnswer(item.questionId, answer)}
+              />
+            )
+          case 'ticket':
+            return (
+              <TicketCard
+                key={item.key}
+                item={item}
+                canAnswer={canApprove}
+                teammates={teammates}
+                askerId={item.teammateId}
+                askerName={
+                  (item.teammateId && byId.get(item.teammateId)?.name) ||
+                  teammate?.name ||
+                  'the teammate'
+                }
+                onAnswer={(answer) => onTicket(item.requestId, answer)}
               />
             )
           case 'plan':
@@ -680,5 +726,410 @@ function OptionLabel({
       {option.label}
       {option.description && <span className="text-muted-foreground"> · {option.description}</span>}
     </Label>
+  )
+}
+
+/**
+ * A ticket the teammate opened: one or more asks, each answered with its own
+ * buttons. The teammate waits; the answers go to it once every ask has one.
+ */
+function TicketCard({
+  item,
+  canAnswer,
+  teammates,
+  askerId,
+  askerName,
+  onAnswer,
+}: {
+  item: Extract<Item, { kind: 'ticket' }>
+  canAnswer: boolean
+  teammates: { id: string; name: string }[]
+  askerId: string | undefined
+  askerName: string
+  onAnswer: (answer: TicketAnswer) => Promise<void>
+}) {
+  const [replies, setReplies] = useState<Record<string, AskReply>>({})
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+
+  async function send(answer: TicketAnswer) {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await onAnswer(answer)
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  // The last reply sends the whole ticket.
+  function reply(askId: string, value: AskReply) {
+    const next = { ...replies, [askId]: value }
+    setReplies(next)
+    if (item.asks.every((a) => next[a.id])) void send({ action: 'answered', replies: next })
+  }
+  const undo = (askId: string) => setReplies(({ [askId]: _, ...rest }) => rest)
+
+  const answered = item.answer?.action === 'answered' ? item.answer.replies : undefined
+  const done = Boolean(item.answer)
+  const disabled = !canAnswer || busy || done
+
+  return (
+    <Card className="gap-4 border-primary/40 px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <CardLabel className="text-primary">
+          <ClipboardList aria-hidden />
+          Ticket
+        </CardLabel>
+        {item.answer && (
+          <StatusBadge
+            status={item.answer.action}
+            tone={item.answer.action === 'declined' ? 'warning' : 'success'}
+            label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
+          />
+        )}
+      </div>
+      <div className="font-semibold">{item.title}</div>
+      {item.asks.map((ask) => (
+        <div key={ask.id} className="flex flex-col gap-2.5 border-t pt-3">
+          <AskView
+            ask={ask}
+            reply={answered?.[ask.id] ?? replies[ask.id]}
+            disabled={disabled}
+            teammates={teammates}
+            askerId={askerId}
+            askerName={askerName}
+            onReply={(value) => reply(ask.id, value)}
+            onUndo={done || busy ? undefined : () => undo(ask.id)}
+          />
+        </div>
+      ))}
+      {done ? null : canAnswer ? (
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          {item.asks.length > 1 && (
+            <span className="text-sm text-muted-foreground">
+              {Object.keys(replies).length} of {item.asks.length} answered
+            </span>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void send({ action: 'declined' })}
+          >
+            Decline ticket
+          </Button>
+          {error && <span className="text-sm text-destructive-text">{error}</span>}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Only the member who started this thread can answer.
+        </p>
+      )}
+    </Card>
+  )
+}
+
+/** What a person answered, shown in place of the buttons. */
+function replyLabel(ask: Ask, reply: AskReply, teammates: { id: string; name: string }[]) {
+  switch (reply.type) {
+    case 'approval':
+      if (reply.approved) return 'Approved'
+      return `Changes requested${reply.sendTo ? `, sent to ${teammates.find((t) => t.id === reply.sendTo)?.name ?? 'a teammate'}` : ''}`
+    case 'decision':
+      return ask.type === 'decision' && ask.options
+        ? `Chose ${ask.options.find((o) => o.id === reply.optionId)?.label ?? reply.optionId}`
+        : reply.optionId === 'approve'
+          ? 'Approved'
+          : 'Declined'
+    case 'access':
+      return reply.granted ? 'Granted' : 'Not granted'
+    case 'action':
+      return reply.done ? 'Done' : 'Not done'
+    case 'input':
+      return 'Answered'
+  }
+}
+
+function AskView({
+  ask,
+  reply,
+  disabled,
+  teammates,
+  askerId,
+  askerName,
+  onReply,
+  onUndo,
+}: {
+  ask: Ask
+  reply: AskReply | undefined
+  disabled: boolean
+  teammates: { id: string; name: string }[]
+  askerId: string | undefined
+  askerName: string
+  onReply: (reply: AskReply) => void
+  onUndo: (() => void) | undefined
+}) {
+  const [showDraft, setShowDraft] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [sendTo, setSendTo] = useState(askerId ?? '')
+
+  const heading =
+    ask.type === 'approval' || ask.type === 'action'
+      ? ask.title
+      : ask.type === 'access'
+        ? `Access to ${ask.what}`
+        : ask.question
+  const kind = {
+    approval: 'Approval',
+    decision: 'Decision',
+    access: 'Access',
+    action: 'Action',
+    input: 'Input',
+  }[ask.type]
+
+  return (
+    <>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          {kind}
+        </span>
+        <Markdown text={heading} className="font-medium" />
+        {ask.type === 'access' && ask.reason && (
+          <p className="text-sm text-muted-foreground">{ask.reason}</p>
+        )}
+      </div>
+
+      {ask.type === 'approval' && (
+        <>
+          {showDraft && (
+            <Markdown
+              text={ask.draft}
+              className="max-h-96 overflow-auto rounded-md bg-muted px-4 py-3 text-sm"
+            />
+          )}
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto self-start p-0"
+            onClick={() => setShowDraft((s) => !s)}
+          >
+            {showDraft ? 'Hide draft' : 'Show draft'}
+          </Button>
+        </>
+      )}
+
+      {ask.type === 'action' && ask.steps?.length ? (
+        <Collapsible>
+          <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium text-primary">
+            <ChevronRight
+              className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+              aria-hidden
+            />
+            View steps
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ol className="mt-2 flex flex-col gap-2 text-sm">
+              {ask.steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <Checkbox id={`${ask.id}-step-${i}`} className="mt-0.5" />
+                  <Label htmlFor={`${ask.id}-step-${i}`} className="block leading-snug font-normal">
+                    {step}
+                  </Label>
+                </li>
+              ))}
+            </ol>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+
+      {reply ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge
+            status={reply.type}
+            tone={
+              (reply.type === 'approval' && !reply.approved) ||
+              (reply.type === 'decision' &&
+                !('options' in ask && ask.options) &&
+                reply.optionId === 'decline') ||
+              (reply.type === 'access' && !reply.granted) ||
+              (reply.type === 'action' && !reply.done)
+                ? 'warning'
+                : 'success'
+            }
+            label={replyLabel(ask, reply, teammates)}
+          />
+          {onUndo && (
+            <Button variant="link" size="sm" className="h-auto p-0" onClick={onUndo}>
+              Change
+            </Button>
+          )}
+        </div>
+      ) : disabled ? null : ask.type === 'approval' ? (
+        open ? (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              rows={3}
+              autoFocus
+              placeholder="What should change?"
+              aria-label="What should change"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Send back to</span>
+              <Select value={sendTo || askerId || ''} onValueChange={setSendTo}>
+                <SelectTrigger size="sm" aria-label="Send back to">
+                  <SelectValue placeholder={askerName} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(teammates.length
+                    ? teammates
+                    : askerId
+                      ? [{ id: askerId, name: askerName }]
+                      : []
+                  ).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                disabled={!text.trim()}
+                onClick={() =>
+                  onReply({
+                    type: 'approval',
+                    approved: false,
+                    changes: text.trim(),
+                    ...(sendTo && sendTo !== askerId ? { sendTo } : {}),
+                  })
+                }
+              >
+                Send
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onReply({ type: 'approval', approved: true })}>
+              Approve
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+              Request changes
+            </Button>
+          </div>
+        )
+      ) : ask.type === 'decision' ? (
+        <div className="flex flex-wrap gap-2">
+          {ask.options?.length ? (
+            ask.options.map((o) => (
+              <Button
+                key={o.id}
+                size="sm"
+                variant="outline"
+                title={o.description}
+                onClick={() => onReply({ type: 'decision', optionId: o.id })}
+              >
+                {o.label}
+              </Button>
+            ))
+          ) : (
+            <>
+              <Button size="sm" onClick={() => onReply({ type: 'decision', optionId: 'approve' })}>
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onReply({ type: 'decision', optionId: 'decline' })}
+              >
+                Decline
+              </Button>
+            </>
+          )}
+        </div>
+      ) : ask.type === 'access' ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a
+              href={ask.kind === 'credential' ? '/app/vault' : '/app/connections'}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {ask.kind === 'credential' ? 'Open Vault →' : 'Open Connections →'}
+            </a>
+          </Button>
+          <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>
+            Mark granted
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onReply({ type: 'access', granted: false })}
+          >
+            Can&apos;t grant
+          </Button>
+        </div>
+      ) : ask.type === 'action' ? (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => onReply({ type: 'action', done: true })}>
+            I&apos;ve done this
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onReply({ type: 'action', done: false })}
+          >
+            Can&apos;t do it
+          </Button>
+        </div>
+      ) : ask.secret ? (
+        <div className="flex flex-col gap-2">
+          <CredentialPicker value={text} onChange={setText} disabled={false} />
+          <Button
+            size="sm"
+            className="self-start"
+            disabled={!text}
+            onClick={() => onReply({ type: 'input', text })}
+          >
+            Submit
+          </Button>
+        </div>
+      ) : open ? (
+        <div className="flex flex-col gap-2">
+          <Textarea
+            rows={3}
+            autoFocus
+            placeholder="Your answer"
+            aria-label="Your answer"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={!text.trim()}
+              onClick={() => onReply({ type: 'input', text: text.trim() })}
+            >
+              Submit
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" className="self-start" onClick={() => setOpen(true)}>
+          Provide details
+        </Button>
+      )}
+    </>
   )
 }

@@ -13,6 +13,7 @@ const typeLabel: Record<Ticket['type'], string> = {
   sign_in: 'expired login',
   usage_limit: 'out of usage',
   question: 'question',
+  request: 'ticket',
 }
 
 const statusTone = (status: string): StatusTone =>
@@ -84,7 +85,11 @@ export function TicketRow({
     ) : (
       <span className="text-sm text-muted-foreground">Waiting for an admin</span>
     )
-  } else if (open && t.type === 'question' && t.payload.source === 'harness') {
+  } else if (
+    open &&
+    (t.type === 'question' || t.type === 'request') &&
+    t.payload.source === 'harness'
+  ) {
     actions =
       admin || starter ? (
         <>
@@ -131,7 +136,7 @@ export function TicketRow({
                 >
                   {t.session.title}
                 </Link>
-                {t.session.origin === 'webhook' && ' (webhook)'}
+                {t.session.origin === 'trigger' && ' (trigger)'}
               </>
             )}
             {t.type === 'usage_limit' && t.payload.resetsAt && (

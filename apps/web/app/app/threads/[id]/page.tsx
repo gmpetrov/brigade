@@ -66,11 +66,12 @@ export default function ThreadPage() {
       undefined,
     )?.teammate ??
     t.teammate
-  // Approvals, questions and caps on a connector call show in the thread itself; other open tickets above it.
+  // Approvals, questions, the teammate's own tickets and caps on a connector call show in the thread itself; other open tickets above it.
   const notices = t.tickets.filter(
     (ticket) =>
       ticket.type !== 'approval' &&
       !(ticket.type === 'question' && ticket.payload.source === 'harness') &&
+      !(ticket.type === 'request' && ticket.payload.source === 'harness') &&
       !(ticket.type === 'cap' && ticket.payload.connectionId),
   )
 
@@ -137,8 +138,8 @@ export default function ThreadPage() {
               </span>
               <span aria-hidden>·</span>
               <span>
-                {t.origin === 'webhook'
-                  ? `started by ${t.webhook?.source === 'gmail' ? 'Gmail trigger' : 'webhook'} "${t.webhook?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
+                {t.origin === 'trigger'
+                  ? `started by trigger "${t.trigger?.label ?? 'deleted'}" on ${t.startedBy.user.name}'s accounts`
                   : `started by ${t.startedBy.user.name}`}
               </span>
             </div>
@@ -305,6 +306,9 @@ export default function ThreadPage() {
           }
           onAnswer={(questionId, answer) =>
             api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
+          }
+          onTicket={(requestId, answer) =>
+            api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(() => undefined)
           }
         />
       </FileLinksProvider>

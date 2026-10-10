@@ -38,6 +38,82 @@ export const QuestionAnswer = z.discriminatedUnion('action', [
 ])
 export type QuestionAnswer = z.infer<typeof QuestionAnswer>
 
+/**
+ * One thing a teammate needs from a person, in a ticket it opens itself
+ * (open_ticket). A ticket holds one or more asks; the teammate waits until
+ * every one is answered.
+ */
+export const Ask = z.discriminatedUnion('type', [
+  /** Sign-off on a draft or a plan. */
+  z.object({
+    id: z.string(),
+    type: z.literal('approval'),
+    title: z.string(),
+    draft: z.string().max(50_000),
+  }),
+  /** A choice: one of the options, or approve / decline when there are none. */
+  z.object({
+    id: z.string(),
+    type: z.literal('decision'),
+    question: z.string(),
+    options: z
+      .array(z.object({ id: z.string(), label: z.string(), description: z.string().optional() }))
+      .max(10)
+      .optional(),
+  }),
+  /** A connection or a credential the teammate lacks. */
+  z.object({
+    id: z.string(),
+    type: z.literal('access'),
+    kind: z.enum(['connection', 'credential']),
+    what: z.string(),
+    reason: z.string().optional(),
+  }),
+  /** Something only a person can do, such as a phone call. */
+  z.object({
+    id: z.string(),
+    type: z.literal('action'),
+    title: z.string(),
+    steps: z.array(z.string()).max(30).optional(),
+  }),
+  /** Information. secret: a credential, picked from the vault by mention. */
+  z.object({
+    id: z.string(),
+    type: z.literal('input'),
+    question: z.string(),
+    secret: z.boolean().optional(),
+  }),
+])
+export type Ask = z.infer<typeof Ask>
+
+/** A person's reply to one ask. */
+export const AskReply = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('approval'),
+    approved: z.boolean(),
+    /** What to change, when not approved. */
+    changes: z.string().max(20_000).optional(),
+    /** The teammate the changes go to, when not the one that asked. */
+    sendTo: z.string().optional(),
+  }),
+  /** optionId: one of the ask's options, or approve / decline when it has none. */
+  z.object({ type: z.literal('decision'), optionId: z.string() }),
+  z.object({ type: z.literal('access'), granted: z.boolean() }),
+  z.object({
+    type: z.literal('action'),
+    done: z.boolean(),
+    note: z.string().max(20_000).optional(),
+  }),
+  z.object({ type: z.literal('input'), text: z.string().max(20_000) }),
+])
+export type AskReply = z.infer<typeof AskReply>
+
+export const TicketAnswer = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('answered'), replies: z.record(z.string(), AskReply) }),
+  z.object({ action: z.literal('declined') }),
+])
+export type TicketAnswer = z.infer<typeof TicketAnswer>
+
 export const AgentEvent = z.discriminatedUnion('type', [
   /** A human prompt sent to the thread. */
   z.object({
@@ -93,6 +169,22 @@ export const AgentEvent = z.discriminatedUnion('type', [
     type: z.literal('question.answered'),
     questionId: z.string(),
     answer: QuestionAnswer,
+    memberId: z.string().nullable(),
+  }),
+  /** The teammate opens a ticket for a person and waits until it is answered. */
+  z.object({
+    ...base,
+    type: z.literal('ticket.opened'),
+    /** The open_ticket tool call's id. */
+    requestId: z.string(),
+    title: z.string(),
+    asks: z.array(Ask),
+  }),
+  z.object({
+    ...base,
+    type: z.literal('ticket.answered'),
+    requestId: z.string(),
+    answer: TicketAnswer,
     memberId: z.string().nullable(),
   }),
   z.object({

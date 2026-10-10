@@ -179,10 +179,140 @@ async function readContent(ctx: ConnectorContext, r: string, path: string, at?: 
   }
 }
 
+// biome-ignore lint: webhook payloads are untyped JSON
+type Payload = any
+const repositoryOption = {
+  name: 'repository',
+  label: 'Repository',
+  placeholder: 'acme/website',
+  help: 'owner/name. Empty: every repository Brigade can reach.',
+}
+const inRepository = ({ payload }: { payload: Payload }, options: Record<string, string>) =>
+  !options.repository ||
+  String(payload.repository?.full_name).toLowerCase() === options.repository.toLowerCase()
+const excerpt = (text: string | null | undefined, max = 2000) =>
+  text ? (text.length > max ? `${text.slice(0, max)}…` : text) : ''
+const lines = (...l: (string | false | null | undefined)[]) => l.filter(Boolean).join('\n')
+
 export const github: ConnectorDefinition = {
   kind: 'github',
   label: 'GitHub',
   auth: 'github_app',
+  // Event types are GitHub's "event.action", from the GitHub App's webhook (routes/github-webhook.ts).
+  triggers: {
+    issue_opened: {
+      label: 'Issue opened',
+      description: 'Someone opens an issue.',
+      options: [repositoryOption],
+      events: ['issues.opened'],
+      matches: inRepository,
+      describe: ({ payload: p }) => ({
+        title: `Issue opened in ${p.repository.full_name}: #${p.issue.number} ${p.issue.title}`,
+        summary: lines(
+          `#${p.issue.number} ${p.issue.title}, by ${p.issue.user?.login}.`,
+          p.issue.html_url,
+          excerpt(p.issue.body),
+        ),
+      }),
+    },
+    pull_request_opened: {
+      label: 'Pull request opened',
+      description: 'Someone opens a pull request.',
+      options: [repositoryOption],
+      events: ['pull_request.opened'],
+      matches: inRepository,
+      describe: ({ payload: p }) => ({
+        title: `Pull request in ${p.repository.full_name}: #${p.pull_request.number} ${p.pull_request.title}`,
+        summary: lines(
+          `#${p.pull_request.number} ${p.pull_request.title}, by ${p.pull_request.user?.login}, ${p.pull_request.head?.ref} into ${p.pull_request.base?.ref}${p.pull_request.draft ? ' (draft)' : ''}.`,
+          p.pull_request.html_url,
+          excerpt(p.pull_request.body),
+        ),
+      }),
+    },
+    review_requested: {
+      label: 'Review requested',
+      description: 'Someone asks for a review on a pull request.',
+      options: [
+        repositoryOption,
+        {
+          name: 'reviewer',
+          label: 'Only when this reviewer is asked',
+          placeholder: 'octocat or team-slug',
+          help: 'A GitHub username or team slug. Empty: any review request.',
+        },
+      ],
+      events: ['pull_request.review_requested'],
+      matches: (event, options) =>
+        inRepository(event, options) &&
+        (!options.reviewer ||
+          [event.payload.requested_reviewer?.login, event.payload.requested_team?.slug]
+            .filter(Boolean)
+            .some((r: string) => r.toLowerCase() === options.reviewer!.toLowerCase())),
+      describe: ({ payload: p }) => ({
+        title: `Review requested in ${p.repository.full_name}: #${p.pull_request.number} ${p.pull_request.title}`,
+        summary: lines(
+          `${p.sender?.login} asked ${p.requested_reviewer?.login ?? p.requested_team?.name ?? 'a reviewer'} to review #${p.pull_request.number} ${p.pull_request.title}.`,
+          p.pull_request.html_url,
+        ),
+      }),
+    },
+    comment: {
+      label: 'New comment',
+      description: 'Someone comments on an issue or pull request.',
+      options: [repositoryOption],
+      events: ['issue_comment.created', 'pull_request_review_comment.created'],
+      matches: inRepository,
+      describe: ({ payload: p }) => {
+        const on = p.issue ?? p.pull_request
+        return {
+          title: `Comment on ${p.repository.full_name}#${on?.number}: ${on?.title}`,
+          summary: lines(
+            `${p.comment.user?.login} commented on #${on?.number} ${on?.title}${p.comment.path ? `, on ${p.comment.path}` : ''}.`,
+            p.comment.html_url,
+            excerpt(p.comment.body),
+          ),
+        }
+      },
+    },
+    push: {
+      label: 'Push to a branch',
+      description: 'Commits are pushed.',
+      options: [
+        repositoryOption,
+        {
+          name: 'branch',
+          label: 'Branch',
+          placeholder: 'main',
+          help: 'Empty: any branch.',
+        },
+      ],
+      events: ['push'],
+      matches: (event, options) =>
+        inRepository(event, options) &&
+        !event.payload.deleted &&
+        String(event.payload.ref).startsWith('refs/heads/') &&
+        (!options.branch || event.payload.ref === `refs/heads/${options.branch}`),
+      describe: ({ payload: p }) => {
+        const branch = String(p.ref).replace('refs/heads/', '')
+        const commits = (p.commits ?? []) as {
+          id: string
+          message: string
+          author?: { name?: string }
+        }[]
+        return {
+          title: `Push to ${p.repository.full_name} ${branch}: ${commits.length} commit${commits.length === 1 ? '' : 's'}`,
+          summary: lines(
+            `${p.pusher?.name ?? p.sender?.login} pushed to ${branch}${p.forced ? ' (force)' : ''}.`,
+            p.compare,
+            ...commits
+              .slice(-20)
+              .map((c) => `- ${c.id.slice(0, 7)} ${c.message.split('\n')[0]} (${c.author?.name})`),
+          ),
+        }
+      },
+    },
+  },
   operations: {
     github_list_repositories: op({
       description: 'List the repositories this GitHub connection can reach.',

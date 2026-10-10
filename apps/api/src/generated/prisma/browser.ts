@@ -132,11 +132,19 @@ export type Grant = Prisma.GrantModel
  */
 export type ConnectionCall = Prisma.ConnectionCallModel
 /**
- * Model Webhook
- * Something outside that starts threads for a teammate: an inbound URL (http) or new
- * mail in a Gmail connection's inbox (gmail).
+ * Model Trigger
+ * An event on a connection that starts a thread for a teammate, chosen from the
+ * connector's catalog (e.g. "stripe.payment_received"), or any event posted to a
+ * custom app's URL ("webhook.received").
  */
-export type Webhook = Prisma.WebhookModel
+export type Trigger = Prisma.TriggerModel
+/**
+ * Model Subscription
+ * How Brigade hears about a connection's events: a registration at the vendor
+ * (push) or, where the vendor cannot push to this server, a poll. One per
+ * connection and resource (the inbox, a calendar, the Stripe account).
+ */
+export type Subscription = Prisma.SubscriptionModel
 /**
  * Model Ticket
  * Something waiting on a human.

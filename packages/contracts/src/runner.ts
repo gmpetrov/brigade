@@ -1,7 +1,7 @@
 // Messages on the one WebSocket between a runner and the API.
 import { z } from 'zod'
 import { CredentialUse } from './credentials.js'
-import { QuestionAnswer, SequencedEvent } from './events.js'
+import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
 import { ProjectSpec } from './projects.js'
 
@@ -302,6 +302,15 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     thread: ThreadSpec,
     questionId: z.string(),
     answer: QuestionAnswer,
+    memberId: z.string(),
+  }),
+  /** A person's answer to a ticket the teammate opened (open_ticket). */
+  z.object({
+    type: z.literal('thread.ticket'),
+    commandId: z.string(),
+    thread: ThreadSpec,
+    requestId: z.string(),
+    answer: TicketAnswer,
     memberId: z.string(),
   }),
   z.object({ type: z.literal('thread.interrupt'), commandId: z.string(), sessionId: z.string() }),

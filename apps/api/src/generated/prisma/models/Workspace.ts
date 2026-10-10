@@ -197,7 +197,8 @@ export type WorkspaceWhereInput = {
   credentials?: Prisma.CredentialListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
-  webhooks?: Prisma.WebhookListRelationFilter
+  triggers?: Prisma.TriggerListRelationFilter
+  subscriptions?: Prisma.SubscriptionListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
@@ -224,7 +225,8 @@ export type WorkspaceOrderByWithRelationInput = {
   credentials?: Prisma.CredentialOrderByRelationAggregateInput
   grants?: Prisma.GrantOrderByRelationAggregateInput
   connectionCalls?: Prisma.ConnectionCallOrderByRelationAggregateInput
-  webhooks?: Prisma.WebhookOrderByRelationAggregateInput
+  triggers?: Prisma.TriggerOrderByRelationAggregateInput
+  subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
   tickets?: Prisma.TicketOrderByRelationAggregateInput
   documents?: Prisma.DocumentOrderByRelationAggregateInput
   auditEntries?: Prisma.AuditEntryOrderByRelationAggregateInput
@@ -254,7 +256,8 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   credentials?: Prisma.CredentialListRelationFilter
   grants?: Prisma.GrantListRelationFilter
   connectionCalls?: Prisma.ConnectionCallListRelationFilter
-  webhooks?: Prisma.WebhookListRelationFilter
+  triggers?: Prisma.TriggerListRelationFilter
+  subscriptions?: Prisma.SubscriptionListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
@@ -302,7 +305,8 @@ export type WorkspaceCreateInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -328,7 +332,8 @@ export type WorkspaceUncheckedCreateInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -354,7 +359,8 @@ export type WorkspaceUpdateInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -380,7 +386,8 @@ export type WorkspaceUncheckedUpdateInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -691,18 +698,32 @@ export type WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutConnectionCallsInput, Prisma.WorkspaceUpdateWithoutConnectionCallsInput>, Prisma.WorkspaceUncheckedUpdateWithoutConnectionCallsInput>
 }
 
-export type WorkspaceCreateNestedOneWithoutWebhooksInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutWebhooksInput, Prisma.WorkspaceUncheckedCreateWithoutWebhooksInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutWebhooksInput
+export type WorkspaceCreateNestedOneWithoutTriggersInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutTriggersInput, Prisma.WorkspaceUncheckedCreateWithoutTriggersInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutTriggersInput
   connect?: Prisma.WorkspaceWhereUniqueInput
 }
 
-export type WorkspaceUpdateOneRequiredWithoutWebhooksNestedInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutWebhooksInput, Prisma.WorkspaceUncheckedCreateWithoutWebhooksInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutWebhooksInput
-  upsert?: Prisma.WorkspaceUpsertWithoutWebhooksInput
+export type WorkspaceUpdateOneRequiredWithoutTriggersNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutTriggersInput, Prisma.WorkspaceUncheckedCreateWithoutTriggersInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutTriggersInput
+  upsert?: Prisma.WorkspaceUpsertWithoutTriggersInput
   connect?: Prisma.WorkspaceWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutWebhooksInput, Prisma.WorkspaceUpdateWithoutWebhooksInput>, Prisma.WorkspaceUncheckedUpdateWithoutWebhooksInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutTriggersInput, Prisma.WorkspaceUpdateWithoutTriggersInput>, Prisma.WorkspaceUncheckedUpdateWithoutTriggersInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutSubscriptionsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedCreateWithoutSubscriptionsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSubscriptionsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutSubscriptionsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedCreateWithoutSubscriptionsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutSubscriptionsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutSubscriptionsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutSubscriptionsInput, Prisma.WorkspaceUpdateWithoutSubscriptionsInput>, Prisma.WorkspaceUncheckedUpdateWithoutSubscriptionsInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutTicketsInput = {
@@ -768,7 +789,8 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -793,7 +815,8 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -855,7 +878,8 @@ export type WorkspaceCreateWithoutComputersInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -880,7 +904,8 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -921,7 +946,8 @@ export type WorkspaceUpdateWithoutComputersInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -946,7 +972,8 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -971,7 +998,8 @@ export type WorkspaceCreateWithoutRunnersInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -996,7 +1024,8 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1037,7 +1066,8 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1062,7 +1092,8 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1087,7 +1118,8 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1112,7 +1144,8 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1153,7 +1186,8 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1178,7 +1212,8 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1203,7 +1238,8 @@ export type WorkspaceCreateWithoutSessionsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1228,7 +1264,8 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1269,7 +1306,8 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1294,7 +1332,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1319,7 +1358,8 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1344,7 +1384,8 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1385,7 +1426,8 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1410,7 +1452,8 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1435,7 +1478,8 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1460,7 +1504,8 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1501,7 +1546,8 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1526,7 +1572,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1551,7 +1598,8 @@ export type WorkspaceCreateWithoutAccountsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1576,7 +1624,8 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1617,7 +1666,8 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1642,7 +1692,8 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1667,7 +1718,8 @@ export type WorkspaceCreateWithoutProjectsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1692,7 +1744,8 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1733,7 +1786,8 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1758,7 +1812,8 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1783,7 +1838,8 @@ export type WorkspaceCreateWithoutCommentsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1808,7 +1864,8 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1849,7 +1906,8 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1874,7 +1932,8 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1899,7 +1958,8 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1924,7 +1984,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1965,7 +2026,8 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1990,7 +2052,8 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2015,7 +2078,8 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2040,7 +2104,8 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2081,7 +2146,8 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2106,7 +2172,8 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2131,7 +2198,8 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2156,7 +2224,8 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2197,7 +2266,8 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2222,7 +2292,8 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2247,7 +2318,8 @@ export type WorkspaceCreateWithoutGrantsInput = {
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2272,7 +2344,8 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2313,7 +2386,8 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2338,7 +2412,8 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2363,7 +2438,8 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2388,7 +2464,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2429,7 +2506,8 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2454,13 +2532,14 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceCreateWithoutWebhooksInput = {
+export type WorkspaceCreateWithoutTriggersInput = {
   id?: string
   name: string
   createdAt?: Date | string
@@ -2480,12 +2559,13 @@ export type WorkspaceCreateWithoutWebhooksInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceUncheckedCreateWithoutWebhooksInput = {
+export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   id?: string
   organizationId: string
   name: string
@@ -2505,28 +2585,29 @@ export type WorkspaceUncheckedCreateWithoutWebhooksInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceCreateOrConnectWithoutWebhooksInput = {
+export type WorkspaceCreateOrConnectWithoutTriggersInput = {
   where: Prisma.WorkspaceWhereUniqueInput
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutWebhooksInput, Prisma.WorkspaceUncheckedCreateWithoutWebhooksInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutTriggersInput, Prisma.WorkspaceUncheckedCreateWithoutTriggersInput>
 }
 
-export type WorkspaceUpsertWithoutWebhooksInput = {
-  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutWebhooksInput, Prisma.WorkspaceUncheckedUpdateWithoutWebhooksInput>
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutWebhooksInput, Prisma.WorkspaceUncheckedCreateWithoutWebhooksInput>
+export type WorkspaceUpsertWithoutTriggersInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutTriggersInput, Prisma.WorkspaceUncheckedUpdateWithoutTriggersInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutTriggersInput, Prisma.WorkspaceUncheckedCreateWithoutTriggersInput>
   where?: Prisma.WorkspaceWhereInput
 }
 
-export type WorkspaceUpdateToOneWithWhereWithoutWebhooksInput = {
+export type WorkspaceUpdateToOneWithWhereWithoutTriggersInput = {
   where?: Prisma.WorkspaceWhereInput
-  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutWebhooksInput, Prisma.WorkspaceUncheckedUpdateWithoutWebhooksInput>
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutTriggersInput, Prisma.WorkspaceUncheckedUpdateWithoutTriggersInput>
 }
 
-export type WorkspaceUpdateWithoutWebhooksInput = {
+export type WorkspaceUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2546,12 +2627,13 @@ export type WorkspaceUpdateWithoutWebhooksInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceUncheckedUpdateWithoutWebhooksInput = {
+export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2571,6 +2653,127 @@ export type WorkspaceUncheckedUpdateWithoutWebhooksInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutSubscriptionsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutSubscriptionsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedCreateWithoutSubscriptionsInput>
+}
+
+export type WorkspaceUpsertWithoutSubscriptionsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedUpdateWithoutSubscriptionsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedCreateWithoutSubscriptionsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutSubscriptionsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutSubscriptionsInput, Prisma.WorkspaceUncheckedUpdateWithoutSubscriptionsInput>
+}
+
+export type WorkspaceUpdateWithoutSubscriptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2596,7 +2799,8 @@ export type WorkspaceCreateWithoutTicketsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
@@ -2621,7 +2825,8 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
@@ -2662,7 +2867,8 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2687,7 +2893,8 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2712,7 +2919,8 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
@@ -2737,7 +2945,8 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
@@ -2778,7 +2987,8 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2803,7 +3013,8 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2828,7 +3039,8 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
 }
@@ -2853,7 +3065,8 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
   connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
 }
@@ -2894,7 +3107,8 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2919,7 +3133,8 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
@@ -2950,7 +3165,8 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2975,7 +3191,8 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3008,7 +3225,8 @@ export type WorkspaceCountOutputType = {
   credentials: number
   grants: number
   connectionCalls: number
-  webhooks: number
+  triggers: number
+  subscriptions: number
   tickets: number
   documents: number
   auditEntries: number
@@ -3029,7 +3247,8 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   credentials?: boolean | WorkspaceCountOutputTypeCountCredentialsArgs
   grants?: boolean | WorkspaceCountOutputTypeCountGrantsArgs
   connectionCalls?: boolean | WorkspaceCountOutputTypeCountConnectionCallsArgs
-  webhooks?: boolean | WorkspaceCountOutputTypeCountWebhooksArgs
+  triggers?: boolean | WorkspaceCountOutputTypeCountTriggersArgs
+  subscriptions?: boolean | WorkspaceCountOutputTypeCountSubscriptionsArgs
   tickets?: boolean | WorkspaceCountOutputTypeCountTicketsArgs
   documents?: boolean | WorkspaceCountOutputTypeCountDocumentsArgs
   auditEntries?: boolean | WorkspaceCountOutputTypeCountAuditEntriesArgs
@@ -3146,8 +3365,15 @@ export type WorkspaceCountOutputTypeCountConnectionCallsArgs<ExtArgs extends run
 /**
  * WorkspaceCountOutputType without action
  */
-export type WorkspaceCountOutputTypeCountWebhooksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.WebhookWhereInput
+export type WorkspaceCountOutputTypeCountTriggersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TriggerWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountSubscriptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SubscriptionWhereInput
 }
 
 /**
@@ -3193,7 +3419,8 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   grants?: boolean | Prisma.Workspace$grantsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Workspace$connectionCallsArgs<ExtArgs>
-  webhooks?: boolean | Prisma.Workspace$webhooksArgs<ExtArgs>
+  triggers?: boolean | Prisma.Workspace$triggersArgs<ExtArgs>
+  subscriptions?: boolean | Prisma.Workspace$subscriptionsArgs<ExtArgs>
   tickets?: boolean | Prisma.Workspace$ticketsArgs<ExtArgs>
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
@@ -3243,7 +3470,8 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   grants?: boolean | Prisma.Workspace$grantsArgs<ExtArgs>
   connectionCalls?: boolean | Prisma.Workspace$connectionCallsArgs<ExtArgs>
-  webhooks?: boolean | Prisma.Workspace$webhooksArgs<ExtArgs>
+  triggers?: boolean | Prisma.Workspace$triggersArgs<ExtArgs>
+  subscriptions?: boolean | Prisma.Workspace$subscriptionsArgs<ExtArgs>
   tickets?: boolean | Prisma.Workspace$ticketsArgs<ExtArgs>
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
@@ -3274,7 +3502,8 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     credentials: Prisma.$CredentialPayload<ExtArgs>[]
     grants: Prisma.$GrantPayload<ExtArgs>[]
     connectionCalls: Prisma.$ConnectionCallPayload<ExtArgs>[]
-    webhooks: Prisma.$WebhookPayload<ExtArgs>[]
+    triggers: Prisma.$TriggerPayload<ExtArgs>[]
+    subscriptions: Prisma.$SubscriptionPayload<ExtArgs>[]
     tickets: Prisma.$TicketPayload<ExtArgs>[]
     documents: Prisma.$DocumentPayload<ExtArgs>[]
     auditEntries: Prisma.$AuditEntryPayload<ExtArgs>[]
@@ -3694,7 +3923,8 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   credentials<T extends Prisma.Workspace$credentialsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$credentialsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CredentialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   grants<T extends Prisma.Workspace$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connectionCalls<T extends Prisma.Workspace$connectionCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  webhooks<T extends Prisma.Workspace$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  triggers<T extends Prisma.Workspace$triggersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$triggersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  subscriptions<T extends Prisma.Workspace$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tickets<T extends Prisma.Workspace$ticketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$ticketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   documents<T extends Prisma.Workspace$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditEntries<T extends Prisma.Workspace$auditEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$auditEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4469,27 +4699,51 @@ export type Workspace$connectionCallsArgs<ExtArgs extends runtime.Types.Extensio
 }
 
 /**
- * Workspace.webhooks
+ * Workspace.triggers
  */
-export type Workspace$webhooksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Workspace$triggersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Webhook
+   * Select specific fields to fetch from the Trigger
    */
-  select?: Prisma.WebhookSelect<ExtArgs> | null
+  select?: Prisma.TriggerSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Webhook
+   * Omit specific fields from the Trigger
    */
-  omit?: Prisma.WebhookOmit<ExtArgs> | null
+  omit?: Prisma.TriggerOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.WebhookInclude<ExtArgs> | null
-  where?: Prisma.WebhookWhereInput
-  orderBy?: Prisma.WebhookOrderByWithRelationInput | Prisma.WebhookOrderByWithRelationInput[]
-  cursor?: Prisma.WebhookWhereUniqueInput
+  include?: Prisma.TriggerInclude<ExtArgs> | null
+  where?: Prisma.TriggerWhereInput
+  orderBy?: Prisma.TriggerOrderByWithRelationInput | Prisma.TriggerOrderByWithRelationInput[]
+  cursor?: Prisma.TriggerWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.WebhookScalarFieldEnum | Prisma.WebhookScalarFieldEnum[]
+  distinct?: Prisma.TriggerScalarFieldEnum | Prisma.TriggerScalarFieldEnum[]
+}
+
+/**
+ * Workspace.subscriptions
+ */
+export type Workspace$subscriptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Subscription
+   */
+  select?: Prisma.SubscriptionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Subscription
+   */
+  omit?: Prisma.SubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubscriptionInclude<ExtArgs> | null
+  where?: Prisma.SubscriptionWhereInput
+  orderBy?: Prisma.SubscriptionOrderByWithRelationInput | Prisma.SubscriptionOrderByWithRelationInput[]
+  cursor?: Prisma.SubscriptionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SubscriptionScalarFieldEnum | Prisma.SubscriptionScalarFieldEnum[]
 }
 
 /**

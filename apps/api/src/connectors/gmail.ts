@@ -105,10 +105,54 @@ const post = (ctx: ConnectorContext, path: string, body: unknown) =>
     body: JSON.stringify(body),
   })
 
+/** An email as the inbox reader hands it to the triggers (see subscriptions/gmail.ts). */
+export type ReceivedEmail = ReturnType<typeof full> & { rfcMessageId?: string }
+
 export const gmail: ConnectorDefinition = {
   kind: 'gmail',
   label: 'Gmail',
   auth: 'google',
+  triggers: {
+    email_received: {
+      label: 'Email received',
+      description: 'A new email arrives in the inbox.',
+      options: [
+        {
+          name: 'query',
+          label: 'Only emails matching',
+          placeholder: 'to:support@acme.com -category:promotions',
+          help: "Gmail search, as in Gmail's search box. Empty: every new email in the inbox.",
+        },
+      ],
+      events: ['email'],
+      // Gmail decides what its search matches: ask it about this one message.
+      matches: async ({ payload }, options, ctx) => {
+        if (!options.query) return true
+        const email = payload as ReceivedEmail
+        const q = email.rfcMessageId
+          ? `(${options.query}) rfc822msgid:${email.rfcMessageId}`
+          : `(${options.query}) newer_than:2d`
+        const found = await json<{ messages?: { id: string }[] }>(
+          await ctx.fetch(`${API}/messages?${new URLSearchParams({ q, maxResults: '100' })}`),
+        )
+        return Boolean(found.messages?.some((m) => m.id === email.id))
+      },
+      describe: ({ payload }) => {
+        const email = payload as ReceivedEmail
+        return {
+          title: `Email from ${email.from ?? 'unknown'}: ${email.subject || '(no subject)'}`,
+          summary: [
+            `From: ${email.from ?? ''}`,
+            `To: ${email.to ?? ''}`,
+            ...(email.cc ? [`Cc: ${email.cc}`] : []),
+            `Subject: ${email.subject ?? ''}`,
+            `Date: ${email.date ?? ''}`,
+            `Gmail message id ${email.id}, thread ${email.threadId}.`,
+          ].join('\n'),
+        }
+      },
+    },
+  },
   operations: {
     gmail_search: op({
       description:

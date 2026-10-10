@@ -68,18 +68,18 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 
 ## Build status
 
-| Step                            | Status                                                                                                                                                                                                                                                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Spike                        | Passed on macOS and on a boat VM (non-root user, subscription signed in through the dashboard, no API key, pause/resume).                                                                                                                                                                                   |
-| 2. Skeleton                     | Done.                                                                                                                                                                                                                                                                                                       |
-| 3. Runner on a member's machine | Done. One-command install: `curl -fsSL <api>/runner/install.sh \| sh`.                                                                                                                                                                                                                                      |
-| 4. Cloud computer               | Done: created with the workspace (or from Computers), runner as a systemd service, stops after the idle period, resumes on the next message or takeover, a Linux user per teammate, takeover with desktop, terminal and hand back.                                                                          |
-| 5. Accounts                     | Mostly done: sign-in from the dashboard, several accounts per provider, default and per-thread choice, usage display, automatic switching with a handoff, Codex. Switching is untested against a real exhausted account.                                                                                    |
-| 6. Vault and first connector    | Done. Tested on a real Gmail mailbox: labels, search, read, a draft after approval, a send after approval.                                                                                                                                                                                                  |
-| 7. Control                      | Done. Caps (threads started, connector writes), every ticket path, the timeline and run log, Stripe and HMAC webhook signatures, webhook writes always asking. Tested on real accounts: Gmail, Google Calendar (list, free/busy, create, get, delete), Stripe test mode (search, charges, customer update). |
-| 8. Browser                      | Done on the workspace computer: a Chrome per teammate with its own profile, driven through Playwright's MCP server, each thread in its own tabs (kept across turns), opened on the desktop from the dashboard for sign-in. Harness questions are tickets. Codex threads with the browser are untested.      |
-| 9. Memory and library           | Done on a member's machine: library in the bucket (a local folder until R2 is configured), mirrored to computers, memory through the harness's own instruction file, memory taken when a thread goes quiet, one full-text search. Not yet run on a cloud computer.                                          |
-| 10–11                           | Not started.                                                                                                                                                                                                                                                                                                |
+| Step                            | Status                                                                                                                                                                                                                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Spike                        | Passed on macOS and on a boat VM (non-root user, subscription signed in through the dashboard, no API key, pause/resume).                                                                                                                                                                              |
+| 2. Skeleton                     | Done.                                                                                                                                                                                                                                                                                                  |
+| 3. Runner on a member's machine | Done. One-command install: `curl -fsSL <api>/runner/install.sh \| sh`.                                                                                                                                                                                                                                 |
+| 4. Cloud computer               | Done: created with the workspace (or from Computers), runner as a systemd service, stops after the idle period, resumes on the next message or takeover, a Linux user per teammate, takeover with desktop, terminal and hand back.                                                                     |
+| 5. Accounts                     | Mostly done: sign-in from the dashboard, several accounts per provider, default and per-thread choice, usage display, automatic switching with a handoff, Codex. Switching is untested against a real exhausted account.                                                                               |
+| 6. Vault and first connector    | Done. Tested on a real Gmail mailbox: labels, search, read, a draft after approval, a send after approval.                                                                                                                                                                                             |
+| 7. Control                      | Done. Caps (threads started, connector writes), every ticket path, the timeline and run log, triggers' signatures. Tested on real accounts: Gmail, Google Calendar (list, free/busy, create, get, delete), Stripe test mode (search, charges, customer update).                                        |
+| 8. Browser                      | Done on the workspace computer: a Chrome per teammate with its own profile, driven through Playwright's MCP server, each thread in its own tabs (kept across turns), opened on the desktop from the dashboard for sign-in. Harness questions are tickets. Codex threads with the browser are untested. |
+| 9. Memory and library           | Done on a member's machine: library in the bucket (a local folder until R2 is configured), mirrored to computers, memory through the harness's own instruction file, memory taken when a thread goes quiet, one full-text search. Not yet run on a cloud computer.                                     |
+| 10–11                           | Not started.                                                                                                                                                                                                                                                                                           |
 
 ## Decisions where the spec is silent
 
@@ -101,7 +101,8 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   `turn.completed` → idle, `error` → failed), so it survives disconnects and replays.
 - **Event mapping.** Reasoning becomes `raw` with `source: "reasoning"`. Claude Code's `rate_limit_event` becomes
   `usage.updated` with 5-hour and 7-day utilization and reset times. Low-level `stream_event` echoes are dropped.
-- **Permission mode.** Member machine: `allow-reads` (ask before writes and commands). Cloud: `allow-all`.
+- **Permission mode.** `allow-all` on every computer: Brigade does not ask a person before an action unless the
+  teammate opens a ticket (see "Tickets from teammates"), or its policy for connector writes says `ask`.
 - **Thread directory** on a member's machine: `~/.brigade/teammates/<teammate>/threads/<thread>/`. Repositories are
   checked out inside it (see "Code from GitHub"). Idle harness sessions are stopped after 5 minutes and resumed from saved state.
 - **Approvals are answered inline** in the thread; ticket rows and the ticket queue come with steps 6–7.
@@ -145,7 +146,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **Connector calls** (`apps/api/src/connector-calls.ts`). The runner passes granted operations to `HarnessAgent` as
   AI SDK tools; each `execute` sends `connector.call` over the runner's socket. The API checks the thread is on that
   runner's computer, the grant, read vs write, and the teammate's policy for writes (`allow`, `ask`, `deny`; default
-  `ask`). `ask` opens an approval ticket and the call waits; the thread shows it as an approval, answered from the
+  `allow`). `ask` opens an approval ticket and the call waits; the thread shows it as an approval, answered from the
   thread or the Tickets page by the thread's starter or an admin. Every call, refused ones included, is recorded in
   `ConnectionCall`. A call waiting for approval does not survive an API restart (its ticket is then marked expired
   when answered). Vendor errors are scrubbed of anything that looks like a key or token before they are logged or
@@ -163,13 +164,26 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   `resolveTicket` (`apps/api/src/decide.ts`), answers tickets for both the Tickets page and the thread view.
 - **Status timeline and run log** (`apps/api/src/timeline.ts`) are computed on request from `SessionEvent`,
   `ConnectionCall`, `Ticket` and `AuditEntry`. A turn held by a cap has no events yet, so its ticket marks it blocked.
-- **Inbound webhooks** (`apps/api/src/routes/webhooks.ts`) live at `POST /hooks/<random token>`. Verification is
-  Stripe's `Stripe-Signature` (5-minute tolerance, secret pasted after adding the URL in Stripe), an HMAC Brigade
-  generates (`X-Brigade-Signature: sha256=<hex>`, shown once), or the URL alone. Retries with the same event id
-  start no second thread. The thread runs on the workspace computer, on the accounts of the admin who created the
-  webhook; the payload is its first message, under one line naming the webhook and event. Every connector write
-  in such a thread asks a person, whatever the teammate's policy. When a thread cannot start, the sender gets a
-  503 with `Retry-After` and the webhook's creator gets a ticket.
+- **Triggers** (`apps/api/src/triggers.ts`, `routes/triggers.ts`). Each connector declares a catalog of events
+  that can start a thread (Gmail: email received; Stripe: payment received or failed, new or canceled
+  subscription, dispute, refund; GitHub: issue, pull request, review request, comment, push; Calendar: event
+  created, changed, invitation), with options such as a Gmail search or a repository. A custom app connection has
+  one: any event posted to the trigger's URL (`POST /hooks/<random token>`, HMAC `X-Brigade-Signature` or the URL
+  alone). Each match starts one thread on the workspace computer, on the accounts of the admin who created the
+  trigger: a short summary, then the raw event. Retries with the same event id start no second thread. Its
+  writes follow the teammate's grants, policy and caps like any thread's: an event can ask for anything, so grant
+  a triggered teammate only what it needs, or set it to `ask`. When a thread cannot start, the
+  trigger's creator gets a ticket and the event is offered again (Stripe retries; Gmail and Calendar keep their
+  cursor).
+- **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
+  connection's triggers change: a Stripe webhook endpoint per connection listing the events needed (its signing
+  secret goes to the vault; a restricted key needs Webhook Endpoints write access); the GitHub App's one webhook;
+  a Gmail `users.watch` through Pub/Sub (`GMAIL_PUBSUB_*`, renewed before its seven days run out), or, without
+  Pub/Sub, a check every minute; a Calendar push channel per watched calendar, renewed before it expires. Vendor
+  pushes arrive at `/events/stripe/:id`, `/events/gmail` and `/events/google-calendar`, each verified. Gmail and
+  Calendar pushes only say something changed: the mailbox's history and the calendar's sync token say what.
+  Pushes need a public HTTPS `API_URL`. Brigade's own writes (a teammate's sent mail, calendar changes, GitHub
+  actions by the app) start nothing.
 - **Teammate browser** (`apps/runner/src/browsers.ts`). On the workspace computer each teammate has one Chrome,
   running as its Linux user with its profile in `~/.browser`, shown on the computer's desktop. The root helper
   starts it, lets that user draw on the display, and adds a firewall rule so only that user can reach its
@@ -189,11 +203,20 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   answer continues it, with option labels rather than ids. A question asking for a secret takes options, a
   credential picked from the vault (sent as its mention, never its value) or a decline. A site that signed the
   teammate out shows up this way, as the teammate asking a person to sign it in again.
+- **Tickets from teammates.** Both harnesses get Brigade's `open_ticket` tool (no `execute`, so the turn pauses on
+  it). A ticket holds 1–6 asks, each with a type: `approval` (sign-off on a draft or plan: Approve, or Request
+  changes with a note, sent back to the asking teammate or another one, who gets the draft and the note as a
+  message), `decision` (one button per option, or Approve / Decline), `access` (a connection or credential: open
+  Connections or the Vault, then Mark granted), `action` (something only a person can do, with an optional
+  checklist: I've done this) and `input` (Provide details; a secret one takes a credential from the vault). It
+  opens a `request` ticket (`ticket.opened`); the answer, sent once every ask has one, goes back as the tool's
+  result (`ticket.answered`). From the Tickets page it can only be declined. Invalid input is returned to the
+  teammate as a tool error instead of pausing the turn.
 - **Credentials** (`apps/api/src/credentials.ts`, `apps/runner/src/credentials.ts`). Members keep website logins,
   databases, API keys and other secrets in the vault from the Vault page; only non-secret details (URL, username,
   host) are ever returned. A teammate gets `list_credentials`, `use_credential` and, with a browser,
   `fill_credential`. The API releases a secret to the thread's runner once a member mentioned the credential in
-  that thread (`@[Name](credential:id)` in a message or an answer; a webhook payload has no member, so it cannot)
+  that thread (`@[Name](credential:id)` in a message or an answer; a trigger's event has no member, so it cannot)
   or a person approves an approval ticket; every release is audited and listed under the credential's uses. A
   website password is typed into the thread's own tab by `credential-fill`, running as the teammate's user, only
   when the page's host is the credential's host or a subdomain, then Enter is pressed: the model never sees it,
@@ -214,7 +237,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   (members' messages and the other teammates' replies, kept in `~/.brigade/state/<thread>.team.json`); a thread with
   one teammate reads exactly as before. Harness events carry `teammateId`, and each turn starts with `turn.started`
   (teammate and account), so tickets, connector grants, caps, usage and the timeline are each teammate's own. A
-  webhook's payload summons nobody. On a runner below protocol 2 the API sends turns only to the starting teammate.
+  trigger's event summons nobody. On a runner below protocol 2 the API sends turns only to the starting teammate.
 - **Runner updates** (`apps/runner/src/updater.ts`). The API's runner bundle is the only version that counts: a
   runner reports the SHA-256 of the bundle it was installed from (the installer stamps it, after checking it against
   the API's `x-bundle-sha256` header), and the API names the one it serves in `welcome`, and in `update.available`

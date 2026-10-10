@@ -525,38 +525,38 @@ export type EnumGrantScopeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumGrantScopeFilter<$PrismaModel>
 }
 
-export type EnumWebhookSourceFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookSource | Prisma.EnumWebhookSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel> | $Enums.WebhookSource
+export type EnumTriggerVerificationNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.TriggerVerification | Prisma.EnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel> | $Enums.TriggerVerification | null
 }
 
-export type EnumWebhookVerificationFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookVerification | Prisma.EnumWebhookVerificationFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel> | $Enums.WebhookVerification
+export type EnumTriggerVerificationNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TriggerVerification | Prisma.EnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTriggerVerificationNullableWithAggregatesFilter<$PrismaModel> | $Enums.TriggerVerification | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel>
 }
 
-export type EnumWebhookSourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookSource | Prisma.EnumWebhookSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookSourceWithAggregatesFilter<$PrismaModel> | $Enums.WebhookSource
+export type EnumSubscriptionModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionMode | Prisma.EnumSubscriptionModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel> | $Enums.SubscriptionMode
+}
+
+export type EnumSubscriptionModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionMode | Prisma.EnumSubscriptionModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionModeWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionMode
   _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel>
-}
-
-export type EnumWebhookVerificationWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookVerification | Prisma.EnumWebhookVerificationFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookVerificationWithAggregatesFilter<$PrismaModel> | $Enums.WebhookVerification
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel>
 }
 
 export type EnumTicketTypeFilter<$PrismaModel = never> = {
@@ -1124,38 +1124,38 @@ export type NestedEnumGrantScopeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumGrantScopeFilter<$PrismaModel>
 }
 
-export type NestedEnumWebhookSourceFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookSource | Prisma.EnumWebhookSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel> | $Enums.WebhookSource
+export type NestedEnumTriggerVerificationNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.TriggerVerification | Prisma.EnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel> | $Enums.TriggerVerification | null
 }
 
-export type NestedEnumWebhookVerificationFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookVerification | Prisma.EnumWebhookVerificationFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel> | $Enums.WebhookVerification
+export type NestedEnumTriggerVerificationNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TriggerVerification | Prisma.EnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TriggerVerification[] | Prisma.ListEnumTriggerVerificationFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTriggerVerificationNullableWithAggregatesFilter<$PrismaModel> | $Enums.TriggerVerification | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTriggerVerificationNullableFilter<$PrismaModel>
 }
 
-export type NestedEnumWebhookSourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookSource | Prisma.EnumWebhookSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookSource[] | Prisma.ListEnumWebhookSourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookSourceWithAggregatesFilter<$PrismaModel> | $Enums.WebhookSource
+export type NestedEnumSubscriptionModeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionMode | Prisma.EnumSubscriptionModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel> | $Enums.SubscriptionMode
+}
+
+export type NestedEnumSubscriptionModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionMode | Prisma.EnumSubscriptionModeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionMode[] | Prisma.ListEnumSubscriptionModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionModeWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionMode
   _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumWebhookSourceFilter<$PrismaModel>
-}
-
-export type NestedEnumWebhookVerificationWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.WebhookVerification | Prisma.EnumWebhookVerificationFieldRefInput<$PrismaModel>
-  in?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  notIn?: $Enums.WebhookVerification[] | Prisma.ListEnumWebhookVerificationFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumWebhookVerificationWithAggregatesFilter<$PrismaModel> | $Enums.WebhookVerification
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumWebhookVerificationFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionModeFilter<$PrismaModel>
 }
 
 export type NestedEnumTicketTypeFilter<$PrismaModel = never> = {

@@ -25,6 +25,7 @@ const ticketKind: Record<string, string> = {
   sign_in: 'expired-login',
   usage_limit: 'out-of-usage',
   question: 'question',
+  request: 'ticket',
 }
 
 const clip = (text: unknown, max = 280) => {
@@ -99,8 +100,8 @@ export default function RunLogPage() {
       const actor =
         d.actorType === 'member'
           ? (who(d.actorId) ?? 'a member')
-          : String(d.actorId).startsWith('webhook:')
-            ? 'Webhook'
+          : /^(trigger|webhook):/.test(String(d.actorId))
+            ? 'Trigger'
             : d.actorType === 'system'
               ? 'Brigade'
               : String(d.actorType)
@@ -114,7 +115,7 @@ export default function RunLogPage() {
     switch (e.type) {
       case 'message.user':
         return {
-          actor: who(d.memberId) ?? (t.origin === 'webhook' ? 'Webhook' : 'Brigade'),
+          actor: who(d.memberId) ?? (t.origin === 'trigger' ? 'Trigger' : 'Brigade'),
           what: clip(d.text),
           detail: d.text,
         }
@@ -213,6 +214,21 @@ export default function RunLogPage() {
           actor: teammate,
           what: `Asked: ${clip((d.questions as { question: string }[]).map((q) => q.question).join(' / '))}`,
           detail: d.questions,
+        }
+      case 'ticket.opened':
+        return {
+          actor: teammate,
+          what: `Opened a ticket: ${clip(d.title)}`,
+          detail: d.asks,
+        }
+      case 'ticket.answered':
+        return {
+          actor: who(d.memberId) ?? 'a member',
+          what:
+            (d.answer as { action: string }).action === 'declined'
+              ? 'Declined the ticket'
+              : 'Answered the ticket',
+          detail: d.answer,
         }
       case 'question.answered':
         return {

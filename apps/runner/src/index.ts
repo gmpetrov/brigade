@@ -204,6 +204,7 @@ async function start() {
       case 'thread.prompt':
       case 'thread.approval':
       case 'thread.answer':
+      case 'thread.ticket':
       case 'thread.interrupt':
         try {
           threads.handle(message)

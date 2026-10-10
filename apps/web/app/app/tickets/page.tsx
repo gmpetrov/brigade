@@ -18,6 +18,7 @@ const TYPES: { value: Ticket['type'] | ''; label: string }[] = [
   { value: 'sign_in', label: 'Expired logins' },
   { value: 'usage_limit', label: 'Out of usage' },
   { value: 'question', label: 'Questions' },
+  { value: 'request', label: 'From teammates' },
 ]
 
 /** One inbox per workspace of everything waiting on a person. */

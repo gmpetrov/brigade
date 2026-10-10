@@ -113,28 +113,25 @@ export async function handleConnectorCall(
     })
   }
 
-  // Approval and caps: the teammate's policy for connector writes, then its daily write cap.
+  // Approval and caps: the teammate's policy for connector writes (allow unless
+  // set otherwise), then its daily write cap.
   let decision: (Decision & { ticketId: string }) | undefined
   if (operation.write) {
-    const configured = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'ask'
-    if (configured === 'deny') {
+    const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
+    if (policy === 'deny') {
       await record({ result: 'denied', target, error: 'policy denies connector writes' })
       return result({
         ok: false,
         error: `${teammate.name} may not make changes through connectors`,
       })
     }
-    // A webhook payload is untrusted input: writes in its threads always wait for a person.
-    const policy = session.origin === 'webhook' ? 'ask' : configured
     const cap = await writeCapReached(db, teammate, connection.id)
     if (cap || policy === 'ask') {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
       const reason = cap
         ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
-        : session.origin === 'webhook'
-          ? 'A webhook started this thread, so every change waits for a person.'
-          : undefined
+        : undefined
       const ticket = await db.ticket.create({
         data: {
           sessionId: session.id,

@@ -242,7 +242,8 @@ export type ConnectionWhereInput = {
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
   grants?: Prisma.GrantListRelationFilter
   calls?: Prisma.ConnectionCallListRelationFilter
-  webhooks?: Prisma.WebhookListRelationFilter
+  triggers?: Prisma.TriggerListRelationFilter
+  subscriptions?: Prisma.SubscriptionListRelationFilter
 }
 
 export type ConnectionOrderByWithRelationInput = {
@@ -262,7 +263,8 @@ export type ConnectionOrderByWithRelationInput = {
   vaultSecret?: Prisma.VaultSecretOrderByWithRelationInput
   grants?: Prisma.GrantOrderByRelationAggregateInput
   calls?: Prisma.ConnectionCallOrderByRelationAggregateInput
-  webhooks?: Prisma.WebhookOrderByRelationAggregateInput
+  triggers?: Prisma.TriggerOrderByRelationAggregateInput
+  subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
 }
 
 export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
@@ -285,7 +287,8 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
   grants?: Prisma.GrantListRelationFilter
   calls?: Prisma.ConnectionCallListRelationFilter
-  webhooks?: Prisma.WebhookListRelationFilter
+  triggers?: Prisma.TriggerListRelationFilter
+  subscriptions?: Prisma.SubscriptionListRelationFilter
 }, "id" | "vaultSecretId">
 
 export type ConnectionOrderByWithAggregationInput = {
@@ -339,7 +342,8 @@ export type ConnectionCreateInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateInput = {
@@ -357,7 +361,8 @@ export type ConnectionUncheckedCreateInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUpdateInput = {
@@ -375,7 +380,8 @@ export type ConnectionUpdateInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateInput = {
@@ -393,7 +399,8 @@ export type ConnectionUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateManyInput = {
@@ -614,18 +621,32 @@ export type ConnectionUpdateOneRequiredWithoutCallsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutCallsInput, Prisma.ConnectionUpdateWithoutCallsInput>, Prisma.ConnectionUncheckedUpdateWithoutCallsInput>
 }
 
-export type ConnectionCreateNestedOneWithoutWebhooksInput = {
-  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutWebhooksInput, Prisma.ConnectionUncheckedCreateWithoutWebhooksInput>
-  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutWebhooksInput
+export type ConnectionCreateNestedOneWithoutTriggersInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutTriggersInput, Prisma.ConnectionUncheckedCreateWithoutTriggersInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutTriggersInput
   connect?: Prisma.ConnectionWhereUniqueInput
 }
 
-export type ConnectionUpdateOneRequiredWithoutWebhooksNestedInput = {
-  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutWebhooksInput, Prisma.ConnectionUncheckedCreateWithoutWebhooksInput>
-  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutWebhooksInput
-  upsert?: Prisma.ConnectionUpsertWithoutWebhooksInput
+export type ConnectionUpdateOneRequiredWithoutTriggersNestedInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutTriggersInput, Prisma.ConnectionUncheckedCreateWithoutTriggersInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutTriggersInput
+  upsert?: Prisma.ConnectionUpsertWithoutTriggersInput
   connect?: Prisma.ConnectionWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutWebhooksInput, Prisma.ConnectionUpdateWithoutWebhooksInput>, Prisma.ConnectionUncheckedUpdateWithoutWebhooksInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutTriggersInput, Prisma.ConnectionUpdateWithoutTriggersInput>, Prisma.ConnectionUncheckedUpdateWithoutTriggersInput>
+}
+
+export type ConnectionCreateNestedOneWithoutSubscriptionsInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedCreateWithoutSubscriptionsInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutSubscriptionsInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+}
+
+export type ConnectionUpdateOneRequiredWithoutSubscriptionsNestedInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedCreateWithoutSubscriptionsInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutSubscriptionsInput
+  upsert?: Prisma.ConnectionUpsertWithoutSubscriptionsInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutSubscriptionsInput, Prisma.ConnectionUpdateWithoutSubscriptionsInput>, Prisma.ConnectionUncheckedUpdateWithoutSubscriptionsInput>
 }
 
 export type ConnectionCreateWithoutWorkspaceInput = {
@@ -642,7 +663,8 @@ export type ConnectionCreateWithoutWorkspaceInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
@@ -659,7 +681,8 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutWorkspaceInput = {
@@ -720,7 +743,8 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
@@ -737,7 +761,8 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutVaultSecretInput = {
@@ -770,7 +795,8 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
@@ -787,7 +813,8 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutGrantsInput = {
@@ -804,7 +831,8 @@ export type ConnectionCreateWithoutGrantsInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutGrantsInput = {
@@ -821,7 +849,8 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutGrantsInput = {
@@ -854,7 +883,8 @@ export type ConnectionUpdateWithoutGrantsInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutGrantsInput = {
@@ -871,7 +901,8 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateWithoutCallsInput = {
@@ -888,7 +919,8 @@ export type ConnectionCreateWithoutCallsInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutCallsInput = {
@@ -905,7 +937,8 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
-  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutCallsInput = {
@@ -938,7 +971,8 @@ export type ConnectionUpdateWithoutCallsInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutCallsInput = {
@@ -955,10 +989,11 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
-export type ConnectionCreateWithoutWebhooksInput = {
+export type ConnectionCreateWithoutTriggersInput = {
   id?: string
   organizationId: string
   kind: $Enums.ConnectorKind
@@ -973,9 +1008,10 @@ export type ConnectionCreateWithoutWebhooksInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
 
-export type ConnectionUncheckedCreateWithoutWebhooksInput = {
+export type ConnectionUncheckedCreateWithoutTriggersInput = {
   id?: string
   organizationId: string
   workspaceId: string
@@ -990,25 +1026,26 @@ export type ConnectionUncheckedCreateWithoutWebhooksInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
 
-export type ConnectionCreateOrConnectWithoutWebhooksInput = {
+export type ConnectionCreateOrConnectWithoutTriggersInput = {
   where: Prisma.ConnectionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ConnectionCreateWithoutWebhooksInput, Prisma.ConnectionUncheckedCreateWithoutWebhooksInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutTriggersInput, Prisma.ConnectionUncheckedCreateWithoutTriggersInput>
 }
 
-export type ConnectionUpsertWithoutWebhooksInput = {
-  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutWebhooksInput, Prisma.ConnectionUncheckedUpdateWithoutWebhooksInput>
-  create: Prisma.XOR<Prisma.ConnectionCreateWithoutWebhooksInput, Prisma.ConnectionUncheckedCreateWithoutWebhooksInput>
+export type ConnectionUpsertWithoutTriggersInput = {
+  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutTriggersInput, Prisma.ConnectionUncheckedUpdateWithoutTriggersInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutTriggersInput, Prisma.ConnectionUncheckedCreateWithoutTriggersInput>
   where?: Prisma.ConnectionWhereInput
 }
 
-export type ConnectionUpdateToOneWithWhereWithoutWebhooksInput = {
+export type ConnectionUpdateToOneWithWhereWithoutTriggersInput = {
   where?: Prisma.ConnectionWhereInput
-  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutWebhooksInput, Prisma.ConnectionUncheckedUpdateWithoutWebhooksInput>
+  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutTriggersInput, Prisma.ConnectionUncheckedUpdateWithoutTriggersInput>
 }
 
-export type ConnectionUpdateWithoutWebhooksInput = {
+export type ConnectionUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
@@ -1023,9 +1060,10 @@ export type ConnectionUpdateWithoutWebhooksInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
-export type ConnectionUncheckedUpdateWithoutWebhooksInput = {
+export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1040,6 +1078,95 @@ export type ConnectionUncheckedUpdateWithoutWebhooksInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionCreateWithoutSubscriptionsInput = {
+  id?: string
+  organizationId: string
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
+  vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
+  grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  vaultSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionCreateOrConnectWithoutSubscriptionsInput = {
+  where: Prisma.ConnectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedCreateWithoutSubscriptionsInput>
+}
+
+export type ConnectionUpsertWithoutSubscriptionsInput = {
+  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedUpdateWithoutSubscriptionsInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedCreateWithoutSubscriptionsInput>
+  where?: Prisma.ConnectionWhereInput
+}
+
+export type ConnectionUpdateToOneWithWhereWithoutSubscriptionsInput = {
+  where?: Prisma.ConnectionWhereInput
+  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutSubscriptionsInput, Prisma.ConnectionUncheckedUpdateWithoutSubscriptionsInput>
+}
+
+export type ConnectionUpdateWithoutSubscriptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateManyWorkspaceInput = {
@@ -1070,7 +1197,8 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
@@ -1087,7 +1215,8 @@ export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
-  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1112,13 +1241,15 @@ export type ConnectionUncheckedUpdateManyWithoutWorkspaceInput = {
 export type ConnectionCountOutputType = {
   grants: number
   calls: number
-  webhooks: number
+  triggers: number
+  subscriptions: number
 }
 
 export type ConnectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   grants?: boolean | ConnectionCountOutputTypeCountGrantsArgs
   calls?: boolean | ConnectionCountOutputTypeCountCallsArgs
-  webhooks?: boolean | ConnectionCountOutputTypeCountWebhooksArgs
+  triggers?: boolean | ConnectionCountOutputTypeCountTriggersArgs
+  subscriptions?: boolean | ConnectionCountOutputTypeCountSubscriptionsArgs
 }
 
 /**
@@ -1148,8 +1279,15 @@ export type ConnectionCountOutputTypeCountCallsArgs<ExtArgs extends runtime.Type
 /**
  * ConnectionCountOutputType without action
  */
-export type ConnectionCountOutputTypeCountWebhooksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.WebhookWhereInput
+export type ConnectionCountOutputTypeCountTriggersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TriggerWhereInput
+}
+
+/**
+ * ConnectionCountOutputType without action
+ */
+export type ConnectionCountOutputTypeCountSubscriptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SubscriptionWhereInput
 }
 
 
@@ -1170,7 +1308,8 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   vaultSecret?: boolean | Prisma.Connection$vaultSecretArgs<ExtArgs>
   grants?: boolean | Prisma.Connection$grantsArgs<ExtArgs>
   calls?: boolean | Prisma.Connection$callsArgs<ExtArgs>
-  webhooks?: boolean | Prisma.Connection$webhooksArgs<ExtArgs>
+  triggers?: boolean | Prisma.Connection$triggersArgs<ExtArgs>
+  subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["connection"]>
 
@@ -1229,7 +1368,8 @@ export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   vaultSecret?: boolean | Prisma.Connection$vaultSecretArgs<ExtArgs>
   grants?: boolean | Prisma.Connection$grantsArgs<ExtArgs>
   calls?: boolean | Prisma.Connection$callsArgs<ExtArgs>
-  webhooks?: boolean | Prisma.Connection$webhooksArgs<ExtArgs>
+  triggers?: boolean | Prisma.Connection$triggersArgs<ExtArgs>
+  subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ConnectionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1248,7 +1388,8 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     vaultSecret: Prisma.$VaultSecretPayload<ExtArgs> | null
     grants: Prisma.$GrantPayload<ExtArgs>[]
     calls: Prisma.$ConnectionCallPayload<ExtArgs>[]
-    webhooks: Prisma.$WebhookPayload<ExtArgs>[]
+    triggers: Prisma.$TriggerPayload<ExtArgs>[]
+    subscriptions: Prisma.$SubscriptionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1667,7 +1808,8 @@ export interface Prisma__ConnectionClient<T, Null = never, ExtArgs extends runti
   vaultSecret<T extends Prisma.Connection$vaultSecretArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$vaultSecretArgs<ExtArgs>>): Prisma.Prisma__VaultSecretClient<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   grants<T extends Prisma.Connection$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   calls<T extends Prisma.Connection$callsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$callsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  webhooks<T extends Prisma.Connection$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  triggers<T extends Prisma.Connection$triggersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$triggersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  subscriptions<T extends Prisma.Connection$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2177,27 +2319,51 @@ export type Connection$callsArgs<ExtArgs extends runtime.Types.Extensions.Intern
 }
 
 /**
- * Connection.webhooks
+ * Connection.triggers
  */
-export type Connection$webhooksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Connection$triggersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Webhook
+   * Select specific fields to fetch from the Trigger
    */
-  select?: Prisma.WebhookSelect<ExtArgs> | null
+  select?: Prisma.TriggerSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Webhook
+   * Omit specific fields from the Trigger
    */
-  omit?: Prisma.WebhookOmit<ExtArgs> | null
+  omit?: Prisma.TriggerOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.WebhookInclude<ExtArgs> | null
-  where?: Prisma.WebhookWhereInput
-  orderBy?: Prisma.WebhookOrderByWithRelationInput | Prisma.WebhookOrderByWithRelationInput[]
-  cursor?: Prisma.WebhookWhereUniqueInput
+  include?: Prisma.TriggerInclude<ExtArgs> | null
+  where?: Prisma.TriggerWhereInput
+  orderBy?: Prisma.TriggerOrderByWithRelationInput | Prisma.TriggerOrderByWithRelationInput[]
+  cursor?: Prisma.TriggerWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.WebhookScalarFieldEnum | Prisma.WebhookScalarFieldEnum[]
+  distinct?: Prisma.TriggerScalarFieldEnum | Prisma.TriggerScalarFieldEnum[]
+}
+
+/**
+ * Connection.subscriptions
+ */
+export type Connection$subscriptionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Subscription
+   */
+  select?: Prisma.SubscriptionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Subscription
+   */
+  omit?: Prisma.SubscriptionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubscriptionInclude<ExtArgs> | null
+  where?: Prisma.SubscriptionWhereInput
+  orderBy?: Prisma.SubscriptionOrderByWithRelationInput | Prisma.SubscriptionOrderByWithRelationInput[]
+  cursor?: Prisma.SubscriptionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SubscriptionScalarFieldEnum | Prisma.SubscriptionScalarFieldEnum[]
 }
 
 /**

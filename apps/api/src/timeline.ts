@@ -32,9 +32,12 @@ function transitionOf(type: string, data: Record<string, unknown>, at: Date): Tr
     case 'message.user':
     case 'approval.resolved':
     case 'question.answered':
+    case 'ticket.answered':
       return { at, state: 'working' }
     case 'question.asked':
       return { at, state: 'waiting', note: 'question' }
+    case 'ticket.opened':
+      return { at, state: 'waiting', note: 'ticket' }
     case 'approval.requested':
       return { at, state: 'waiting', note: String(data.toolName ?? '') }
     case 'turn.completed':
@@ -57,6 +60,8 @@ const STATE_EVENTS = [
   'message.user',
   'question.asked',
   'question.answered',
+  'ticket.opened',
+  'ticket.answered',
   'approval.resolved',
   'approval.requested',
   'turn.completed',

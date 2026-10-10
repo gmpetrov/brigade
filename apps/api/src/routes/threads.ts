@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   AnswerQuestion,
+  AnswerTicket,
   DesktopClipboard,
   HandBack,
   mentionsToText,
@@ -18,7 +19,7 @@ import { z } from 'zod'
 import { audit } from '../audit.js'
 import { desktopUrl, ensureRunning } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
-import { answerQuestion, resolveTicket } from '../decide.js'
+import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
 import { contentTypeFor } from '../library.js'
@@ -104,7 +105,7 @@ export const threads = new Hono<AppEnv>()
         computer: { select: { id: true, name: true, kind: true } },
         account: { select: { id: true, label: true, status: true } },
         startedBy: { select: { id: true, user: { select: { name: true } } } },
-        webhook: { select: { id: true, label: true, source: true } },
+        trigger: { select: { id: true, label: true, event: true } },
         tickets: {
           where: { status: 'open' },
           select: { id: true, type: true, title: true, payload: true, createdAt: true },
@@ -313,6 +314,24 @@ export const threads = new Hono<AppEnv>()
     })
     if (!ticket) throw new HTTPException(404, { message: 'Question not found or already answered' })
     return c.json(await answerQuestion(scope, ticket.id, input.answer))
+  })
+
+  /** Answer a ticket the teammate opened in this thread. */
+  .post('/:id/tickets', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const input = await parseBody(c.req.raw, AnswerTicket)
+    const ticket = await db.ticket.findFirst({
+      where: {
+        sessionId: thread.id,
+        type: 'request',
+        status: 'open',
+        payload: { path: ['requestId'], equals: input.requestId },
+      },
+    })
+    if (!ticket) throw new HTTPException(404, { message: 'Ticket not found or already answered' })
+    return c.json(await answerTicket(scope, ticket.id, input.answer))
   })
 
   .post('/:id/interrupt', async (c) => {

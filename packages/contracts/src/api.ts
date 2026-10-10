@@ -1,6 +1,6 @@
 // HTTP payloads and the browser WebSocket protocol.
 import { z } from 'zod'
-import { QuestionAnswer, SequencedEvent } from './events.js'
+import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess } from './library.js'
 import { isHarnessModel } from './models.js'
 import { CLIPBOARD_MAX, HarnessId } from './runner.js'
@@ -28,7 +28,7 @@ export const CreateTeammate = z
     message: 'Not a model this agent can run',
   })
 export const PermissionPolicy = z.object({
-  /** Connector writes: allow, ask (a ticket waits for a person) or deny. */
+  /** Connector writes: allow (the default), ask (a ticket waits for a person) or deny. */
   connectorWrites: z.enum(['allow', 'ask', 'deny']).optional(),
 })
 export type PermissionPolicy = z.infer<typeof PermissionPolicy>
@@ -64,27 +64,19 @@ export const ConnectStripe = z.object({
     .regex(/^(sk|rk)_(test|live)_[A-Za-z0-9]+$/, 'A Stripe secret (sk_) or restricted (rk_) key'),
   label: z.string().trim().min(1).max(80).optional(),
 })
-/** A custom app that posts events to Brigade. No credential: its webhooks carry the trust. */
+/** A custom app that posts events to Brigade. No credential: its triggers' URLs carry the trust. */
 export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
-export const CreateWebhook = z.object({
+/** A trigger from the connection's catalog; a custom app's also says how its sender is verified. */
+export const CreateTrigger = z.object({
   connectionId: z.string(),
   teammateId: z.string(),
   label: z.string().trim().min(1).max(80),
-  /**
-   * URL webhooks only. stripe: Stripe-Signature with the endpoint's signing secret.
-   * hmac: X-Brigade-Signature. none: the URL alone. Gmail triggers verify nothing.
-   */
-  verification: z.enum(['stripe', 'hmac', 'none']).optional(),
-  /** Stripe's signing secret (whsec_…), now or later. Brigade generates the secret for hmac. */
-  signingSecret: z.string().trim().max(500).optional(),
-  /** Gmail triggers only: a Gmail search new mail must match, e.g. "to:support@acme.com". */
-  filter: z.string().trim().max(500).optional(),
-})
-export const SetWebhookSecret = z.object({
-  signingSecret: z
-    .string()
-    .trim()
-    .regex(/^whsec_\S+$/, "Stripe's signing secrets start with whsec_"),
+  /** The catalog id, e.g. payment_received. A custom app's is "received". */
+  event: z.string().max(80),
+  /** The catalog's options for it, e.g. { query: "to:support@acme.com" }. */
+  options: z.record(z.string(), z.string().trim().max(500)).default({}),
+  /** Custom apps only. hmac: X-Brigade-Signature with a secret Brigade generates. none: the URL alone. */
+  verification: z.enum(['hmac', 'none']).optional(),
 })
 export const ResolveTicket = z.object({
   approved: z.boolean(),
@@ -121,6 +113,7 @@ export const ResolveApproval = z.object({
 })
 
 export const AnswerQuestion = z.object({ questionId: z.string(), answer: QuestionAnswer })
+export const AnswerTicket = z.object({ requestId: z.string(), answer: TicketAnswer })
 export const OpenBrowser = z.object({ url: z.url({ protocol: /^https?$/ }).optional() })
 
 export const RunnerLink = z.object({

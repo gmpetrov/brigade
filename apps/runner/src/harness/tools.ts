@@ -99,6 +99,85 @@ export const askUserTool = tool({
   }),
 })
 
+/**
+ * Brigade's ticket tool, for both harnesses: the teammate asks a person for
+ * sign-off, a choice, access, an action or information. Like ask_user it has
+ * no execute; the turn pauses until every ask is answered.
+ */
+export const OPEN_TICKET_TOOL = 'open_ticket'
+
+export const openTicketTool = tool({
+  description:
+    'Open a ticket for a person and wait until they answer it. Brigade does not ask a person before your actions, ' +
+    'so open one when you judge a person should decide first: sign-off on a draft or plan before you send or apply it ' +
+    '(approval), a choice (decision), a connection or credential you lack (access), something only a person can do ' +
+    'such as a phone call (action), or information only they have (input). Put several asks in one ticket rather than ' +
+    'opening several. Never ask for a password, key or other secret in words: use an input ask with secret: true and ' +
+    'they pick a saved credential.',
+  inputSchema: jsonSchema<{ title: string; asks: unknown[] }>({
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'What the ticket is about, in a few words' },
+      asks: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 6,
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Short id, unique among these asks' },
+            type: { type: 'string', enum: ['approval', 'decision', 'access', 'action', 'input'] },
+            title: {
+              type: 'string',
+              description: 'approval and action: what to sign off on or to do',
+            },
+            draft: {
+              type: 'string',
+              description:
+                'approval: the full draft or plan, in Markdown, exactly as you would send or apply it',
+            },
+            question: { type: 'string', description: 'decision and input: what you ask' },
+            options: {
+              type: 'array',
+              description: 'decision: the choices. Leave out for approve / decline',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  label: { type: 'string' },
+                  description: { type: 'string' },
+                },
+                required: ['id', 'label'],
+              },
+            },
+            kind: {
+              type: 'string',
+              enum: ['connection', 'credential'],
+              description: 'access: what you lack',
+            },
+            what: {
+              type: 'string',
+              description: 'access: which service or credential, e.g. "Stripe"',
+            },
+            reason: { type: 'string', description: 'access: what you need it for' },
+            steps: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'action: a checklist for the person',
+            },
+            secret: {
+              type: 'boolean',
+              description: 'input: the answer is a credential; they pick one from the vault',
+            },
+          },
+          required: ['id', 'type'],
+        },
+      },
+    },
+    required: ['title', 'asks'],
+  }),
+})
+
 type Credentials = {
   canFill: boolean
   list: (call: Call) => Promise<unknown>

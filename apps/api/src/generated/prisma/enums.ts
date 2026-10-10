@@ -61,7 +61,7 @@ export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus]
 
 export const SessionOrigin = {
   member: 'member',
-  webhook: 'webhook'
+  trigger: 'trigger'
 } as const
 
 export type SessionOrigin = (typeof SessionOrigin)[keyof typeof SessionOrigin]
@@ -124,26 +124,26 @@ export const GrantScope = {
 export type GrantScope = (typeof GrantScope)[keyof typeof GrantScope]
 
 
-export const WebhookSource = {
-  http: 'http',
-  gmail: 'gmail'
-} as const
-
-export type WebhookSource = (typeof WebhookSource)[keyof typeof WebhookSource]
-
-
-export const WebhookVerification = {
-  stripe: 'stripe',
+export const TriggerVerification = {
   hmac: 'hmac',
   none: 'none'
 } as const
 
-export type WebhookVerification = (typeof WebhookVerification)[keyof typeof WebhookVerification]
+export type TriggerVerification = (typeof TriggerVerification)[keyof typeof TriggerVerification]
+
+
+export const SubscriptionMode = {
+  push: 'push',
+  poll: 'poll'
+} as const
+
+export type SubscriptionMode = (typeof SubscriptionMode)[keyof typeof SubscriptionMode]
 
 
 export const TicketType = {
   approval: 'approval',
   question: 'question',
+  request: 'request',
   sign_in: 'sign_in',
   cap: 'cap',
   usage_limit: 'usage_limit'
