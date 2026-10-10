@@ -297,6 +297,7 @@ export default function ThreadPage() {
 
       <FileLinksProvider value={{ open: setFile }}>
         <ThreadItems
+          threadId={t.id}
           items={items}
           teammate={t.teammate}
           teammates={people}

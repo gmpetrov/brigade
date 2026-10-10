@@ -29,6 +29,10 @@ export async function api<T = unknown>(
   return body as T
 }
 
+/** An image in a teammate's working folder for a thread, for an `<img>`. */
+export const threadImageUrl = (threadId: string, path: string, teammateId?: string) =>
+  `${API_URL}/api/threads/${threadId}/image?${new URLSearchParams({ path, ...(teammateId ? { teammateId } : {}) })}`
+
 /** Fetch on mount; `reload` refetches. */
 export function useApi<T>(path: string | null) {
   const [data, setData] = useState<T | undefined>()

@@ -2656,6 +2656,7 @@ export const SessionScalarFieldEnum = {
   controlledByMemberId: 'controlledByMemberId',
   origin: 'origin',
   triggerId: 'triggerId',
+  conversationKey: 'conversationKey',
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

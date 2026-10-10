@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@ai-sdk/harness-codex@1.0.149':
+    hash: in24wadag5mbupp6sgywi6iyoy
+    path: patches/@ai-sdk__harness-codex@1.0.149.patch
+
 importers:
 
   .:
@@ -86,7 +91,7 @@ importers:
         version: 1.0.151(zod@4.6.5)
       '@ai-sdk/harness-codex':
         specifier: 1.0.149
-        version: 1.0.149(zod@4.6.5)
+        version: 1.0.149(patch_hash=in24wadag5mbupp6sgywi6iyoy)(zod@4.6.5)
       '@brigade/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -275,7 +280,7 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@ai-sdk/harness-codex@1.0.149(zod@4.6.5):
+  /@ai-sdk/harness-codex@1.0.149(patch_hash=in24wadag5mbupp6sgywi6iyoy)(zod@4.6.5):
     resolution: {integrity: sha512-p3+NuEBc3uytJx3304HPkR6V6jL3xN0BD9IguPq7WWhSTTfMOoq5gRNBx2tcLK+nAqyEURn/IegJNIFNNjsW/w==}
     engines: {node: '>=22'}
     peerDependencies:
@@ -290,6 +295,7 @@ packages:
       - bufferutil
       - utf-8-validate
     dev: false
+    patched: true
 
   /@ai-sdk/harness@1.0.147(ws@8.22.0)(zod@4.6.5):
     resolution: {integrity: sha512-Rlm4bDNtd7qrvsNvEUKqlfmEYd3FQohRZjEVkcOk2EtvDk/mCM2N5L6to6GpSyc15lfZR7iP/akG3SCFZHa9YQ==}

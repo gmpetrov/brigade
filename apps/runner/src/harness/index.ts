@@ -1,8 +1,8 @@
 // The harness layer. This directory is the only place in Brigade that imports
 // the experimental AI SDK harness packages (spec: "keep every import inside
 // one module of the runner package").
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
@@ -27,6 +27,7 @@ import {
   askUserResult,
   errorMessage,
   EventMapper,
+  generatedImage,
   QUESTION_TOOL,
   ticketAsks,
   ticketResult,
@@ -274,7 +275,14 @@ export class HarnessThread {
                   },
                 ],
               })
-      for await (const part of result.fullStream) mapper.map(part)
+      const consume = async (stream: typeof result.fullStream) => {
+        for await (const part of stream) {
+          mapper.map(part)
+          const image = generatedImage(part)
+          if (image) await this.keepImage(image)
+        }
+      }
+      await consume(result.fullStream)
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
@@ -288,7 +296,7 @@ export class HarnessThread {
             output: { type: 'error-text' as const, value: r.error },
           })),
         })
-        for await (const part of result.fullStream) mapper.map(part)
+        await consume(result.fullStream)
       }
       // A login refreshed during the turn goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
@@ -315,6 +323,34 @@ export class HarnessThread {
       await this.drop()
       return { kind: 'done', result: { status: 'failed', error: message } }
     }
+  }
+
+  /**
+   * A picture the harness saved in its own folder, copied into the thread's
+   * working folder: people see it in the thread, and it stays with the work.
+   */
+  private async keepImage(image: { toolCallId: string; savedPath: string; prompt?: string }) {
+    const path = `images/${basename(image.savedPath)}`
+    const target = join(this.workDir, path)
+    try {
+      if (this.runAs) {
+        const sudo = ['-n', '-u', this.runAs]
+        await execFileAsync('sudo', [...sudo, 'mkdir', '-p', dirname(target)], { cwd: '/' })
+        await execFileAsync('sudo', [...sudo, 'cp', '--', image.savedPath, target], { cwd: '/' })
+      } else {
+        await mkdir(dirname(target), { recursive: true })
+        await copyFile(image.savedPath, target)
+      }
+    } catch (error) {
+      console.warn(`could not keep image ${image.savedPath}: ${errorMessage(error)}`)
+      return
+    }
+    this.emit({
+      type: 'image.generated',
+      path,
+      toolCallId: image.toolCallId,
+      ...(image.prompt ? { prompt: image.prompt } : {}),
+    })
   }
 
   /** A person's answer as the result of the question tool that asked it. */

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
-import { FileLinksProvider } from '@/components/file-links'
+import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useApi, type Credential, type Teammate } from '@/lib/api'
+import { threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Item =
@@ -83,6 +83,7 @@ type Item =
     }
   | { kind: 'plan'; key: string; items: Extract<AgentEvent, { type: 'plan.updated' }>['items'] }
   | { kind: 'file'; key: string; path: string }
+  | { kind: 'image'; key: string; path: string; teammateId?: string; prompt?: string }
   | { kind: 'turn'; key: string; finishReason: string }
   | { kind: 'error'; key: string; message: string }
   | { kind: 'note'; key: string; text: string }
@@ -183,6 +184,15 @@ export function useThreadItems(events: SequencedEvent[]) {
         case 'file.changed':
           add({ kind: 'file', key: `f${seq}`, path: e.path })
           break
+        case 'image.generated':
+          add({
+            kind: 'image',
+            key: `i${seq}`,
+            path: e.path,
+            ...(e.teammateId ? { teammateId: e.teammateId } : {}),
+            ...(e.prompt ? { prompt: e.prompt } : {}),
+          })
+          break
         case 'usage.updated':
           if (e.limits?.length) limits = e.limits
           break
@@ -252,7 +262,46 @@ function CardLabel({ className, children }: { className?: string; children: Reac
   )
 }
 
+/** A picture a teammate made, under its messages. Opens beside the thread. */
+function ThreadImage({
+  threadId,
+  item,
+}: {
+  threadId: string
+  item: Extract<Item, { kind: 'image' }>
+}) {
+  const links = useFileLinks()
+  const [failed, setFailed] = useState(false)
+  const name = item.path.split('/').pop()
+  if (failed)
+    return (
+      <div className="pl-11 text-sm text-muted-foreground">
+        Made <code className="font-mono text-xs text-foreground">{item.path}</code>, which can't be
+        shown while the computer is offline.
+      </div>
+    )
+  return (
+    <div className="pl-11">
+      <button
+        type="button"
+        className="block overflow-hidden rounded-lg border bg-muted"
+        title={item.prompt ?? name}
+        onClick={() => links?.open({ path: item.path, teammateId: item.teammateId })}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={threadImageUrl(threadId, item.path, item.teammateId)}
+          alt={item.prompt ?? name ?? 'A generated image'}
+          className="max-h-96 max-w-full object-contain"
+          onError={() => setFailed(true)}
+        />
+      </button>
+    </div>
+  )
+}
+
 export function ThreadItems({
+  threadId,
   items,
   onApproval,
   onAnswer,
@@ -261,6 +310,7 @@ export function ThreadItems({
   teammate,
   teammates = [],
 }: {
+  threadId: string
   items: Item[]
   onApproval: (approvalId: string, approved: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
@@ -460,6 +510,8 @@ export function ThreadItems({
                 Changed <code className="font-mono text-xs text-foreground">{item.path}</code>
               </div>
             )
+          case 'image':
+            return <ThreadImage key={item.key} threadId={threadId} item={item} />
           case 'turn':
             return item.finishReason === 'interrupted' ? (
               <div key={item.key} className="text-sm text-muted-foreground">

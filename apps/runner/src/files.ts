@@ -5,7 +5,13 @@ import { execFile } from 'node:child_process'
 import { open, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative } from 'node:path'
 import { promisify } from 'node:util'
-import { FILE_VIEW_MAX, type ApiToRunner, type RunnerToApi } from '@brigade/contracts'
+import {
+  FILE_VIEW_MAX,
+  IMAGE_FILE,
+  IMAGE_VIEW_MAX,
+  type ApiToRunner,
+  type RunnerToApi,
+} from '@brigade/contracts'
 import { CLOUD, paths } from './config.js'
 import { LIBRARY_DIR } from './library.js'
 import { teammateHome, teammateUser } from './teammates.js'
@@ -30,13 +36,13 @@ async function real(path: string, user?: string) {
   )
 }
 
-/** Size and the first FILE_VIEW_MAX + 1 bytes. */
-async function readStart(path: string, user?: string) {
+/** Size and the first `max` + 1 bytes. */
+async function readStart(path: string, user?: string, max = FILE_VIEW_MAX) {
   if (!user) {
     const size = (await stat(path)).size
     const file = await open(path, 'r')
     try {
-      const buffer = Buffer.alloc(Math.min(size, FILE_VIEW_MAX + 1))
+      const buffer = Buffer.alloc(Math.min(size, max + 1))
       const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
       return { size, bytes: buffer.subarray(0, bytesRead) }
     } finally {
@@ -47,15 +53,11 @@ async function readStart(path: string, user?: string) {
   const { stdout: sizeText } = await run('sudo', [...sudo, 'stat', '-c', '%s', '--', path], {
     cwd: '/',
   })
-  const { stdout } = await run(
-    'sudo',
-    [...sudo, 'head', '-c', String(FILE_VIEW_MAX + 1), '--', path],
-    {
-      cwd: '/',
-      encoding: 'buffer',
-      maxBuffer: FILE_VIEW_MAX + 1024,
-    },
-  )
+  const { stdout } = await run('sudo', [...sudo, 'head', '-c', String(max + 1), '--', path], {
+    cwd: '/',
+    encoding: 'buffer',
+    maxBuffer: max + 1024,
+  })
   return { size: Number(sizeText.trim()), bytes: stdout }
 }
 
@@ -77,6 +79,8 @@ export async function readThreadFile(request: Request): Promise<Result> {
   const base = { type: 'thread.file.result' as const, requestId: request.requestId }
   if (!SAFE_ID.test(request.sessionId) || !request.teammateIds.every((id) => SAFE_ID.test(id)))
     return { ...base, ok: false, error: 'Invalid thread' }
+  if (request.image && !IMAGE_FILE.test(request.path))
+    return { ...base, ok: false, error: 'Not an image' }
   for (const teammateId of request.teammateIds) {
     const user = CLOUD ? teammateUser(teammateId) : undefined
     const dir = user
@@ -90,6 +94,12 @@ export async function readThreadFile(request: Request): Promise<Result> {
     )
     if (!roots.some((root) => inside(root, target))) continue
     try {
+      if (request.image) {
+        const { size, bytes } = await readStart(target, user, IMAGE_VIEW_MAX)
+        if (bytes.length > IMAGE_VIEW_MAX)
+          return { ...base, ok: false, error: 'The image is too large to show' }
+        return { ...base, ok: true, path: target, teammateId, size, data: bytes.toString('base64') }
+      }
       const { size, bytes } = await readStart(target, user)
       const truncated = bytes.length > FILE_VIEW_MAX
       const text = asText(truncated ? bytes.subarray(0, FILE_VIEW_MAX) : bytes)

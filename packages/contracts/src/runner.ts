@@ -146,6 +146,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     size: z.number().int().optional(),
     /** Unset for a binary file. */
     text: z.string().optional(),
+    /** An image's bytes, base64, when asked for one. */
+    data: z.string().optional(),
     truncated: z.boolean().optional(),
   }),
   /** The desktop's clipboard text after a desktop.clipboard command, or why it failed. */
@@ -256,7 +258,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   /**
    * Read a file a thread mentions, for a person viewing it: relative to a
    * teammate's working folder for the thread (tried in order), or an absolute
-   * path inside one of them or the library mirror. Text only, up to FILE_VIEW_MAX.
+   * path inside one of them or the library mirror. Text up to FILE_VIEW_MAX;
+   * with `image`, an image file's bytes up to IMAGE_VIEW_MAX instead.
    */
   z.object({
     type: z.literal('thread.file.read'),
@@ -264,6 +267,7 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     sessionId: z.string(),
     teammateIds: z.array(z.string()).min(1).max(10),
     path: z.string().min(1).max(1000),
+    image: z.boolean().optional(),
   }),
   /** The API now serves another runner bundle (sent to every connected runner). */
   z.object({ type: z.literal('update.available'), bundle: z.string() }),

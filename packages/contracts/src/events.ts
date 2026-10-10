@@ -195,6 +195,14 @@ export const AgentEvent = z.discriminatedUnion('type', [
     ),
   }),
   z.object({ ...base, type: z.literal('file.changed'), path: z.string(), toolName: z.string() }),
+  /** A picture the harness made, copied into the teammate's working folder at `path`. */
+  z.object({
+    ...base,
+    type: z.literal('image.generated'),
+    path: z.string(),
+    toolCallId: z.string(),
+    prompt: z.string().optional(),
+  }),
   z.object({
     ...base,
     type: z.literal('usage.updated'),

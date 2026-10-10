@@ -18,5 +18,10 @@
     "prettier": "3.9.9",
     "turbo": "2.11.7",
     "typescript": "6.0.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@ai-sdk/harness-codex@1.0.149": "patches/@ai-sdk__harness-codex@1.0.149.patch"
+    }
   }
 }

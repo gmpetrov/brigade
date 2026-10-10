@@ -299,6 +299,8 @@ model Session {
   origin              SessionOrigin  @default(member)
   triggerId           String?
   trigger             Trigger?       @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+  /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
+  conversationKey     String?
   /// Highest contiguous event sequence number stored.
   lastSeq             Int            @default(0)
   createdAt           DateTime       @default(now())
@@ -313,6 +315,7 @@ model Session {
 
   @@index([workspaceId, createdAt])
   @@index([teammateId])
+  @@index([triggerId, conversationKey])
 }
 
 /// One AgentEvent with its sequence number. Append-only.

@@ -140,6 +140,23 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
   }
 }
 
+/** Codex's built-in image tool (named by Brigade's patch of its harness). */
+export const IMAGE_TOOL = 'image_gen'
+
+/** A picture the harness made: where it saved it, and the prompt it used. */
+export function generatedImage(
+  part: Part,
+): { toolCallId: string; savedPath: string; prompt?: string } | undefined {
+  if (part.type !== 'tool-result' || part.toolName !== IMAGE_TOOL) return
+  const output = part.output as { savedPath?: unknown; revisedPrompt?: unknown } | undefined
+  if (typeof output?.savedPath !== 'string') return
+  return {
+    toolCallId: part.toolCallId,
+    savedPath: output.savedPath,
+    ...(typeof output.revisedPrompt === 'string' ? { prompt: output.revisedPrompt } : {}),
+  }
+}
+
 const FILE_TOOLS = new Set([
   'write',
   'edit',

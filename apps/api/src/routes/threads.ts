@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  IMAGE_FILE,
   AnswerQuestion,
   AnswerTicket,
   DesktopClipboard,
@@ -33,6 +34,15 @@ import {
   type AppEnv,
   type WorkspaceScope,
 } from '../scope.js'
+
+/** The ids of a thread's teammates, the one asked for first (whose folder is tried first). */
+function teammatesFirst(
+  thread: { teammateId: string; teammates: { teammateId: string }[] },
+  asked: string | undefined,
+) {
+  const ids = [...new Set([thread.teammateId, ...thread.teammates.map((t) => t.teammateId)])]
+  return asked && ids.includes(asked) ? [asked, ...ids.filter((i) => i !== asked)] : ids
+}
 
 /** Prompting or approving spends the starter's subscription: only they may, unless they allow it. */
 function requireMayPrompt(
@@ -156,14 +166,9 @@ export const threads = new Hono<AppEnv>()
       } satisfies ThreadFile)
     }
 
-    // The teammate that mentioned it first, then the others in the thread.
-    const asked = c.req.query('teammateId')
-    const ids = [...new Set([thread.teammateId, ...thread.teammates.map((t) => t.teammateId)])]
-    const teammateIds =
-      asked && ids.includes(asked) ? [asked, ...ids.filter((i) => i !== asked)] : ids
     const result = await readThreadFile(thread.computerId, {
       sessionId: thread.id,
-      teammateIds,
+      teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
       path,
     })
     if (!result.ok)
@@ -182,6 +187,34 @@ export const threads = new Hono<AppEnv>()
       truncated: result.truncated ?? false,
       ...(result.teammateId ? { teammateId: result.teammateId } : {}),
     } satisfies ThreadFile)
+  })
+
+  /** An image in a teammate's working folder, such as one it generated, as the image itself. */
+  .get('/:id/image', async (c) => {
+    const thread = await loadThread(c.var.db, c.req.param('id'))
+    const path = (c.req.query('path') ?? '').trim().replace(/^\.\//, '')
+    if (!path || path.length > 1000 || !IMAGE_FILE.test(path))
+      throw new HTTPException(400, { message: 'Which image?' })
+    const result = await readThreadFile(thread.computerId, {
+      sessionId: thread.id,
+      teammateIds: teammatesFirst(thread, c.req.query('teammateId')),
+      path,
+      image: true,
+    })
+    if (!result.ok || result.data === undefined)
+      throw new HTTPException(result.error === 'not_found' ? 404 : 409, {
+        message:
+          result.error === 'not_found'
+            ? `No image "${path}" in the teammate's folder`
+            : (result.error ?? 'Could not read the image'),
+      })
+    return c.body(Buffer.from(result.data, 'base64'), 200, {
+      'content-type': contentTypeFor(path),
+      'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(path.split('/').pop()!)}`,
+      'x-content-type-options': 'nosniff',
+      'content-security-policy': 'sandbox',
+      'cache-control': 'private, max-age=3600',
+    })
   })
 
   /** The thread end to end: events, connector calls, tickets and who did what. */

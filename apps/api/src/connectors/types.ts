@@ -58,6 +58,8 @@ export type TriggerDefinition = {
   ) => boolean | Promise<boolean>
   /** What the teammate reads first: a title and a few lines, before the raw payload. */
   describe: (event: VendorEvent) => { title: string; summary: string }
+  /** The conversation an event belongs to (e.g. a Gmail thread): its later events continue the same thread. */
+  conversation?: (event: VendorEvent) => string | undefined
 }
 
 export type ConnectorDefinition = {

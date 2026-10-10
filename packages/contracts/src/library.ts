@@ -116,6 +116,12 @@ export type LibraryManifest = z.infer<typeof LibraryManifest>
 /** Largest text a file panel shows; longer files are cut. */
 export const FILE_VIEW_MAX = 1024 * 1024
 
+/** Largest image a thread shows from a teammate's working folder. */
+export const IMAGE_VIEW_MAX = 10 * 1024 * 1024
+
+/** Image files a thread shows as pictures, by extension. */
+export const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i
+
 /** A file a thread mentions, for the panel beside it: from the library, or from a teammate's working folder. */
 export const ThreadFile = z.object({
   source: z.enum(['library', 'thread']),

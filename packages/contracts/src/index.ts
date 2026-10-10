@@ -11,7 +11,8 @@ export * from './runner.js'
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
  * 3: self-update. 4: the library, memory and search. 5: git through the API's proxy.
+ * 6: generated images.
  */
-export const PROTOCOL_VERSION = 5
+export const PROTOCOL_VERSION = 6
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

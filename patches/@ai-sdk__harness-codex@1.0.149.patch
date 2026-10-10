@@ -1,0 +1,52 @@
+diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
+index 2ba1fd3bfb73abd0e4cd86760417ae9f48fa1a2d..1444b2aea79746c311911611f30d8e098f2fe690 100644
+--- a/dist/bridge/index.mjs
++++ b/dist/bridge/index.mjs
+@@ -810,6 +810,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+ 	const textByItem = /* @__PURE__ */ new Map();
+ 	const reasoningByItem = /* @__PURE__ */ new Map();
+ 	const nativeToolCalls = /* @__PURE__ */ new Map();
++	const startedImages = /* @__PURE__ */ new Set();
+ 	let resolveCompletion = () => {};
+ 	const completion = new Promise((resolve) => {
+ 		resolveCompletion = resolve;
+@@ -835,6 +836,39 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+ 			if (call?.name === "apply_patch" && item.type === "fileChange") call.successConfirmed = item.status === "completed";
+ 			else if (call?.name === "view_image" && item.type === "imageView") call.successConfirmed = true;
+ 		}
++		if (item.type === "imageGeneration" && typeof item.id === "string") {
++			if (!startedImages.has(item.id)) {
++				startedImages.add(item.id);
++				emitStreamEvent({
++					type: "item.started",
++					item: {
++						type: "native_tool",
++						id: item.id,
++						tool: "image_gen",
++						input: JSON.stringify({ prompt: typeof item.revisedPrompt === "string" ? item.revisedPrompt : "" })
++					}
++				});
++			}
++			if (eventType === "item.completed") {
++				const failed = item.status === "failed" || item.failure != null || typeof item.savedPath !== "string";
++				emitStreamEvent({
++					type: "item.completed",
++					item: {
++						type: "native_tool",
++						id: item.id,
++						tool: "image_gen",
++						result: {
++							status: item.status,
++							savedPath: typeof item.savedPath === "string" ? item.savedPath : null,
++							revisedPrompt: typeof item.revisedPrompt === "string" ? item.revisedPrompt : null,
++							...item.failure != null ? { failure: item.failure } : {}
++						},
++						...failed ? { isError: true } : {}
++					}
++				});
++			}
++			return;
++		}
+ 		const normalized = normalizeItem({
+ 			item,
+ 			textByItem,

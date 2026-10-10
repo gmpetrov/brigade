@@ -186,6 +186,16 @@ export default function RunLogPage() {
             </>
           ),
         }
+      case 'image.generated':
+        return {
+          actor: teammate,
+          what: (
+            <>
+              Made an image <code className="font-mono text-xs">{String(d.path)}</code>
+            </>
+          ),
+          ...(d.prompt ? { detail: d.prompt } : {}),
+        }
       case 'plan.updated':
         return { actor: teammate, what: 'Updated its plan', detail: d.items }
       case 'control.changed':

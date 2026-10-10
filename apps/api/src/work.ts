@@ -185,7 +185,7 @@ export async function startThread(
     accountId?: string | null
     title: string
     text: string
-    origin?: { triggerId: string }
+    origin?: { triggerId: string; conversationKey?: string }
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -209,7 +209,13 @@ export async function startThread(
       computerId: input.computer.id,
       accountId: account.id,
       title: input.title.slice(0, 120),
-      ...(input.origin ? { origin: 'trigger', triggerId: input.origin.triggerId } : {}),
+      ...(input.origin
+        ? {
+            origin: 'trigger',
+            triggerId: input.origin.triggerId,
+            conversationKey: input.origin.conversationKey ?? null,
+          }
+        : {}),
     } as never,
   })
   await joinThread(db, created.id, teammateIds)

@@ -9,7 +9,8 @@ import { authorisedFetch } from './connector-calls.js'
 import { triggersOf } from './connectors/index.js'
 import type { ConnectorContext, ConnectorKind, VendorEvent } from './connectors/types.js'
 import { prisma, scoped, type Scope } from './db.js'
-import { startThread } from './work.js'
+import { loadThread } from './thread-spec.js'
+import { promptThread, startThread } from './work.js'
 
 /** Raw payloads past this are cut: the summary carries what matters. */
 const PAYLOAD_MAX = 40_000
@@ -32,12 +33,19 @@ export type Delivery =
   { ok: true; threadId: string; paused: boolean } | { duplicate: true } | { error: string }
 
 /**
- * Start a thread for one event, once per event id. When it cannot start, a
- * ticket tells the member who set the trigger up; the caller retries later.
+ * Start a thread for one event, once per event id, or continue the thread of
+ * the event's conversation (a reply in the same Gmail thread). When it cannot
+ * start, a ticket tells the member who set the trigger up; the caller retries later.
  */
 export async function deliver(
   trigger: Trigger,
-  event: { eventId: string | null; eventType: string; title: string; text: string },
+  event: {
+    eventId: string | null
+    eventType: string
+    title: string
+    text: string
+    conversationKey?: string
+  },
 ): Promise<Delivery> {
   const scope: Scope = { organizationId: trigger.organizationId, workspaceId: trigger.workspaceId }
   const db = scoped(scope)
@@ -72,6 +80,37 @@ export async function deliver(
     return { error: message }
   }
 
+  const received = (threadId: string, outcome: string) =>
+    audit({
+      ...scope,
+      actor: { type: 'system', id: `trigger:${trigger.id}` },
+      action: 'trigger.received',
+      target: { type: 'trigger', id: trigger.id },
+      data: { eventId: event.eventId, eventType: event.eventType, threadId, outcome },
+    })
+
+  // The conversation's latest thread, unless it failed or a member has taken it over.
+  const ongoing =
+    event.conversationKey &&
+    (await db.session.findFirst({
+      where: { triggerId: trigger.id, conversationKey: event.conversationKey },
+      orderBy: { createdAt: 'desc' },
+    }))
+  if (ongoing && ongoing.status !== 'failed' && !ongoing.controlledByMemberId) {
+    try {
+      const outcome = await promptThread(db, scope, await loadThread(db, ongoing.id), {
+        text: event.text,
+        memberId: null,
+      })
+      if (outcome === 'offline') return failed('the computer is offline')
+      await received(ongoing.id, outcome)
+      return { ok: true, threadId: ongoing.id, paused: outcome === 'paused' }
+    } catch (error) {
+      if (error instanceof HTTPException) return failed(error.message)
+      throw error
+    }
+  }
+
   // The workspace computer, or else the member who set it up's own machine.
   const computer =
     (await db.computer.findFirst({
@@ -90,21 +129,10 @@ export async function deliver(
       memberId: trigger.createdByMemberId,
       title: event.title,
       text: event.text,
-      origin: { triggerId: trigger.id },
+      origin: { triggerId: trigger.id, conversationKey: event.conversationKey },
     })
     if (outcome === 'offline') return failed('the computer is offline')
-    await audit({
-      ...scope,
-      actor: { type: 'system', id: `trigger:${trigger.id}` },
-      action: 'trigger.received',
-      target: { type: 'trigger', id: trigger.id },
-      data: {
-        eventId: event.eventId,
-        eventType: event.eventType,
-        threadId: thread.id,
-        outcome,
-      },
-    })
+    await received(thread.id, outcome)
     return { ok: true, threadId: thread.id, paused: outcome === 'paused' }
   } catch (error) {
     if (error instanceof HTTPException) return failed(error.message)
@@ -167,6 +195,7 @@ export async function dispatch(
       eventType: event.type,
       title: `${trigger.label}: ${title}`,
       text,
+      conversationKey: definition.conversation?.(event),
     })
     if ('error' in delivery) failed = true
     if ('ok' in delivery) started++

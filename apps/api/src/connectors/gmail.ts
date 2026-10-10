@@ -137,6 +137,8 @@ export const gmail: ConnectorDefinition = {
         )
         return Boolean(found.messages?.some((m) => m.id === email.id))
       },
+      // A reply in the same Gmail thread continues the Brigade thread.
+      conversation: ({ payload }) => (payload as ReceivedEmail).threadId || undefined,
       describe: ({ payload }) => {
         const email = payload as ReceivedEmail
         return {

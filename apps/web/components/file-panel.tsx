@@ -9,7 +9,7 @@ import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
+import { api, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
@@ -58,6 +58,11 @@ export function FilePanel({
   const slash = shown.lastIndexOf('/')
   const folder = slash >= 0 ? shown.slice(0, slash) : ''
   const content = file?.documentId && `${API_URL}/api/library/${file.documentId}/content`
+  // An image in the teammate's folder shows as itself; other binary files only from the library.
+  const image =
+    file && IMAGE.test(file.contentType)
+      ? (content ?? threadImageUrl(threadId, file.path, file.teammateId))
+      : undefined
 
   return (
     <aside
@@ -126,10 +131,10 @@ export function FilePanel({
         ) : !file ? (
           <p className="p-4 text-sm text-muted-foreground">Opening {path}…</p>
         ) : file.text === undefined ? (
-          content && IMAGE.test(file.contentType) ? (
+          image ? (
             <div className="flex justify-center bg-muted p-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={content} alt={shown} className="max-w-full" />
+              <img src={image} alt={shown} className="max-w-full" />
             </div>
           ) : (
             <p className="p-4 text-sm text-muted-foreground">
