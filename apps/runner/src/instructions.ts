@@ -34,7 +34,8 @@ export function instructions(
     `You are ${spec.teammate.name}, an AI teammate in a Brigade workspace.`,
     '## Workspace library',
     `The workspace's shared documents are mirrored read-only at ${libraryDir}. ` +
-      'Search them, the memory below and summaries of past threads with `search_workspace`.' +
+      'Search them, the memory below and summaries of past threads with `search_workspace`. ' +
+      `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path.` +
       (spec.library === 'read_write'
         ? ' To add or update a library file, write it on this computer, then call `save_to_library`.'
         : ''),
