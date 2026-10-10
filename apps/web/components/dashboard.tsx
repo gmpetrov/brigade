@@ -150,6 +150,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
   // A badge counts what waits on the member; quiet ones (open pull requests) just count.
   const pullsWaitingCount = pullsWaiting.data?.count ?? 0
+  const tasksNeedingYou = tasks.data?.filter((t) => t.column === 'needs_you').length ?? 0
+  const tasksDoing = tasks.data?.filter((t) => t.column === 'doing').length ?? 0
   const badges: Record<string, { count?: number; label: string; quiet?: boolean }> = {
     '/app/tickets': {
       count: tickets.data?.filter((t) => waitsOn(t, data)).length,
@@ -161,8 +163,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       quiet: pullsWaitingCount === 0,
     },
     '/app/tasks': {
-      count: tasks.data?.filter((t) => t.column === 'needs_you').length,
-      label: 'waiting on you',
+      count: tasksNeedingYou + tasksDoing,
+      label: `active: ${tasksNeedingYou} need you, ${tasksDoing} in progress`,
+      quiet: tasksNeedingYou === 0,
     },
   }
 
