@@ -44,6 +44,29 @@ const blockedBecause: Record<string, string> = {
   unknown: 'GitHub is still checking whether it can merge.',
 }
 
+const LAST_MERGE_METHOD = 'brigade.pulls.mergeMethod'
+const mergeMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
+
+/** The merge method last picked, remembered per browser. Squash until one is picked. */
+function useLastMergeMethod() {
+  const [method, setMethod] = useState<MergeMethod>('squash')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAST_MERGE_METHOD) as MergeMethod | null
+      if (saved && mergeMethods.includes(saved)) setMethod(saved)
+    } catch {}
+  }, [])
+  return [
+    method,
+    (next: MergeMethod) => {
+      setMethod(next)
+      try {
+        localStorage.setItem(LAST_MERGE_METHOD, next)
+      } catch {}
+    },
+  ] as const
+}
+
 export default function PullRequestPage() {
   const params = useParams<{ owner: string; name: string; number: string }>()
   const path = `/pulls/${params.owner}/${params.name}/${params.number}`
@@ -55,7 +78,7 @@ export default function PullRequestPage() {
   const [asking, setAsking] = useState(false)
   const [reviewerId, setReviewerId] = useState<string>()
   const [autoMerge, setAutoMerge] = useState(admin)
-  const [method, setMethod] = useState<MergeMethod>('squash')
+  const [method, setMethod] = useLastMergeMethod()
 
   const p = pull.data
   const t = p?.tracking
