@@ -64,7 +64,7 @@ const NAV = [
   { href: '/app/computers', label: 'Computers', icon: Monitor },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/library', label: 'Library', icon: Library },
-  { href: '/app/projects', label: 'Projects', icon: FolderGit2 },
+  { href: '/app/repositories', label: 'Repositories', icon: FolderGit2 },
   { href: '/app/connections', label: 'Connections', icon: Plug },
   { href: '/app/vault', label: 'Vault', icon: KeyRound },
   { href: '/app/accounts', label: 'Accounts', icon: UserRound },

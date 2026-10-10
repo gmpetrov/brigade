@@ -119,11 +119,11 @@ export type SessionEvent = Prisma.SessionEventModel
  */
 export type Account = Prisma.AccountModel
 /**
- * Model Project
+ * Model Repository
  * A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
  * Reached through a GitHub connection; this only adds what teammates should do with it.
  */
-export type Project = Prisma.ProjectModel
+export type Repository = Prisma.RepositoryModel
 /**
  * Model Comment
  * A human comment on a diff or a thread.

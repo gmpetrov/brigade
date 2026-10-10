@@ -4,7 +4,7 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { ProjectSpec } from './projects.js'
+import { RepositorySpec } from './repositories.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -49,15 +49,22 @@ export type ConnectorGrant = z.infer<typeof ConnectorGrant>
  * capability for that proxy, limited to one thread and teammate and checked
  * against its grants on every request; never a GitHub credential.
  */
-export const GitAccess = z.object({
-  /** The proxy's base URL; a repository is at <url><owner>/<name>.git. */
-  url: z.url(),
-  token: z.string(),
-  /** Who the teammate's commits are by on a cloud computer. */
-  author: z.object({ name: z.string(), email: z.string() }),
-  /** The workspace's projects: a setup script for fresh checkouts and notes for the teammate. */
-  projects: z.array(ProjectSpec).default([]),
-})
+export const GitAccess = z.preprocess(
+  // An API from before the rename sends `projects`.
+  (v) =>
+    v && typeof v === 'object' && 'projects' in v && !('repositories' in v)
+      ? { ...v, repositories: v.projects }
+      : v,
+  z.object({
+    /** The proxy's base URL; a repository is at <url><owner>/<name>.git. */
+    url: z.url(),
+    token: z.string(),
+    /** Who the teammate's commits are by on a cloud computer. */
+    author: z.object({ name: z.string(), email: z.string() }),
+    /** The workspace's repositories: a setup script for fresh checkouts and notes for the teammate. */
+    repositories: z.array(RepositorySpec).default([]),
+  }),
+)
 export type GitAccess = z.infer<typeof GitAccess>
 
 /** What a runner needs to start or continue a thread. Never a secret, except git's proxy token. */

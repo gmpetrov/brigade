@@ -308,11 +308,13 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   the bucket at `<organization>/<workspace>/repos/<owner>/<name>/<thread>/<teammate>/<folder>.bundle`. A new checkout
   in the same thread restores the backup (GitHub's first, then the bucket's) unless the pushed branch moved past it.
   Cloned and fetched through a real installation; pushes to GitHub, and all of it on a cloud computer, are untested.
-- **Projects** (`Project`, `apps/api/src/routes/projects.ts`, the Projects page). A project is a repository
-  (`owner/name`) with an optional setup script and notes; owners and admins edit them, since the script runs on the
-  computers. They travel in the thread spec (`git.projects`): the notes go into the teammate's instruction file, and
-  `checkout_repository` runs the setup script once in each new checkout, as the teammate, for up to 20 minutes, and
-  returns its output. Projects add nothing to access: a teammate reaches what its GitHub grants reach.
+- **Repositories** (`Repository`, `apps/api/src/routes/repositories.ts`, the Repositories page; called Projects
+  before). Each is a repository (`owner/name`) with an optional setup script and notes; owners and admins edit them,
+  since the script runs on the computers. They travel in the thread spec (`git.repositories`; a runner still reads
+  `git.projects` from an older API): the notes go into the teammate's instruction file, and `checkout_repository` runs
+  the setup script once in each new checkout, as the teammate, for up to 20 minutes, and returns its output. A message
+  mentions one as `@[owner/name](repository:owner/name)`; older `project:` mentions still render. Adding one adds
+  nothing to access: a teammate reaches what its GitHub grants reach.
 - **Push webhook** (`apps/api/src/routes/github-webhook.ts`). With `GITHUB_APP_WEBHOOK_SECRET` set and the app's
   webhook at `{API_URL}/github/webhook` (event "Push"), a push sends `repos.changed` to every online computer
   (protocol 5) of the workspaces using that installation, found by the connection's settings URL ending in

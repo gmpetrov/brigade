@@ -6,7 +6,7 @@ export * from './events.js'
 export * from './library.js'
 export * from './mentions.js'
 export * from './models.js'
-export * from './projects.js'
+export * from './repositories.js'
 export * from './runner.js'
 
 /**

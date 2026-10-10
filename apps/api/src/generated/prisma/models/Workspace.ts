@@ -190,7 +190,7 @@ export type WorkspaceWhereInput = {
   sessionEvents?: Prisma.SessionEventListRelationFilter
   threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
-  projects?: Prisma.ProjectListRelationFilter
+  repositories?: Prisma.RepositoryListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
@@ -220,7 +220,7 @@ export type WorkspaceOrderByWithRelationInput = {
   sessionEvents?: Prisma.SessionEventOrderByRelationAggregateInput
   threadSeats?: Prisma.ThreadTeammateOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
-  projects?: Prisma.ProjectOrderByRelationAggregateInput
+  repositories?: Prisma.RepositoryOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
   connections?: Prisma.ConnectionOrderByRelationAggregateInput
   vaultSecrets?: Prisma.VaultSecretOrderByRelationAggregateInput
@@ -253,7 +253,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   sessionEvents?: Prisma.SessionEventListRelationFilter
   threadSeats?: Prisma.ThreadTeammateListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
-  projects?: Prisma.ProjectListRelationFilter
+  repositories?: Prisma.RepositoryListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
@@ -304,7 +304,7 @@ export type WorkspaceCreateInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -333,7 +333,7 @@ export type WorkspaceUncheckedCreateInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -362,7 +362,7 @@ export type WorkspaceUpdateInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -391,7 +391,7 @@ export type WorkspaceUncheckedUpdateInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -614,18 +614,18 @@ export type WorkspaceUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutAccountsInput, Prisma.WorkspaceUpdateWithoutAccountsInput>, Prisma.WorkspaceUncheckedUpdateWithoutAccountsInput>
 }
 
-export type WorkspaceCreateNestedOneWithoutProjectsInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutProjectsInput
+export type WorkspaceCreateNestedOneWithoutRepositoriesInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedCreateWithoutRepositoriesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutRepositoriesInput
   connect?: Prisma.WorkspaceWhereUniqueInput
 }
 
-export type WorkspaceUpdateOneRequiredWithoutProjectsNestedInput = {
-  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
-  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutProjectsInput
-  upsert?: Prisma.WorkspaceUpsertWithoutProjectsInput
+export type WorkspaceUpdateOneRequiredWithoutRepositoriesNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedCreateWithoutRepositoriesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutRepositoriesInput
+  upsert?: Prisma.WorkspaceUpsertWithoutRepositoriesInput
   connect?: Prisma.WorkspaceWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutProjectsInput, Prisma.WorkspaceUpdateWithoutProjectsInput>, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutRepositoriesInput, Prisma.WorkspaceUpdateWithoutRepositoriesInput>, Prisma.WorkspaceUncheckedUpdateWithoutRepositoriesInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutCommentsInput = {
@@ -824,7 +824,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -852,7 +852,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -917,7 +917,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -945,7 +945,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -989,7 +989,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1017,7 +1017,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1045,7 +1045,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1073,7 +1073,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1117,7 +1117,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1145,7 +1145,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1173,7 +1173,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1201,7 +1201,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1245,7 +1245,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1273,7 +1273,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1301,7 +1301,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1329,7 +1329,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1373,7 +1373,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1401,7 +1401,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1429,7 +1429,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1457,7 +1457,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1501,7 +1501,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1529,7 +1529,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1557,7 +1557,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1585,7 +1585,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1629,7 +1629,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1657,7 +1657,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1685,7 +1685,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -1713,7 +1713,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1757,7 +1757,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -1785,7 +1785,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1801,7 +1801,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceCreateWithoutProjectsInput = {
+export type WorkspaceCreateWithoutRepositoriesInput = {
   id?: string
   name: string
   createdAt?: Date | string
@@ -1829,7 +1829,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceUncheckedCreateWithoutProjectsInput = {
+export type WorkspaceUncheckedCreateWithoutRepositoriesInput = {
   id?: string
   organizationId: string
   name: string
@@ -1857,23 +1857,23 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
-export type WorkspaceCreateOrConnectWithoutProjectsInput = {
+export type WorkspaceCreateOrConnectWithoutRepositoriesInput = {
   where: Prisma.WorkspaceWhereUniqueInput
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedCreateWithoutRepositoriesInput>
 }
 
-export type WorkspaceUpsertWithoutProjectsInput = {
-  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutProjectsInput, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
-  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutProjectsInput, Prisma.WorkspaceUncheckedCreateWithoutProjectsInput>
+export type WorkspaceUpsertWithoutRepositoriesInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedUpdateWithoutRepositoriesInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedCreateWithoutRepositoriesInput>
   where?: Prisma.WorkspaceWhereInput
 }
 
-export type WorkspaceUpdateToOneWithWhereWithoutProjectsInput = {
+export type WorkspaceUpdateToOneWithWhereWithoutRepositoriesInput = {
   where?: Prisma.WorkspaceWhereInput
-  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutProjectsInput, Prisma.WorkspaceUncheckedUpdateWithoutProjectsInput>
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutRepositoriesInput, Prisma.WorkspaceUncheckedUpdateWithoutRepositoriesInput>
 }
 
-export type WorkspaceUpdateWithoutProjectsInput = {
+export type WorkspaceUpdateWithoutRepositoriesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1901,7 +1901,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
 }
 
-export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
+export type WorkspaceUncheckedUpdateWithoutRepositoriesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1942,7 +1942,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -1970,7 +1970,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2014,7 +2014,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2042,7 +2042,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2070,7 +2070,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -2098,7 +2098,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2142,7 +2142,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2170,7 +2170,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2198,7 +2198,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
@@ -2226,7 +2226,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2270,7 +2270,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
@@ -2298,7 +2298,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2326,7 +2326,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2354,7 +2354,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2398,7 +2398,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2426,7 +2426,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2454,7 +2454,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2482,7 +2482,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2526,7 +2526,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2554,7 +2554,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2582,7 +2582,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2610,7 +2610,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2654,7 +2654,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2682,7 +2682,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2710,7 +2710,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2738,7 +2738,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2782,7 +2782,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2810,7 +2810,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2838,7 +2838,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2866,7 +2866,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2910,7 +2910,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -2938,7 +2938,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2966,7 +2966,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -2994,7 +2994,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3038,7 +3038,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3066,7 +3066,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3094,7 +3094,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3122,7 +3122,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3166,7 +3166,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3194,7 +3194,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3222,7 +3222,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3250,7 +3250,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3294,7 +3294,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3322,7 +3322,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3350,7 +3350,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3378,7 +3378,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3422,7 +3422,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3450,7 +3450,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3478,7 +3478,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
@@ -3506,7 +3506,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
-  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  repositories?: Prisma.RepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3550,7 +3550,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3578,7 +3578,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3612,7 +3612,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
@@ -3640,7 +3640,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
-  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  repositories?: Prisma.RepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3676,7 +3676,7 @@ export type WorkspaceCountOutputType = {
   sessionEvents: number
   threadSeats: number
   accounts: number
-  projects: number
+  repositories: number
   comments: number
   connections: number
   vaultSecrets: number
@@ -3700,7 +3700,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   sessionEvents?: boolean | WorkspaceCountOutputTypeCountSessionEventsArgs
   threadSeats?: boolean | WorkspaceCountOutputTypeCountThreadSeatsArgs
   accounts?: boolean | WorkspaceCountOutputTypeCountAccountsArgs
-  projects?: boolean | WorkspaceCountOutputTypeCountProjectsArgs
+  repositories?: boolean | WorkspaceCountOutputTypeCountRepositoriesArgs
   comments?: boolean | WorkspaceCountOutputTypeCountCommentsArgs
   connections?: boolean | WorkspaceCountOutputTypeCountConnectionsArgs
   vaultSecrets?: boolean | WorkspaceCountOutputTypeCountVaultSecretsArgs
@@ -3778,8 +3778,8 @@ export type WorkspaceCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Ty
 /**
  * WorkspaceCountOutputType without action
  */
-export type WorkspaceCountOutputTypeCountProjectsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ProjectWhereInput
+export type WorkspaceCountOutputTypeCountRepositoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RepositoryWhereInput
 }
 
 /**
@@ -3888,7 +3888,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
   threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
-  projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
+  repositories?: boolean | Prisma.Workspace$repositoriesArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
@@ -3941,7 +3941,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   sessionEvents?: boolean | Prisma.Workspace$sessionEventsArgs<ExtArgs>
   threadSeats?: boolean | Prisma.Workspace$threadSeatsArgs<ExtArgs>
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
-  projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
+  repositories?: boolean | Prisma.Workspace$repositoriesArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
@@ -3975,7 +3975,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     sessionEvents: Prisma.$SessionEventPayload<ExtArgs>[]
     threadSeats: Prisma.$ThreadTeammatePayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
-    projects: Prisma.$ProjectPayload<ExtArgs>[]
+    repositories: Prisma.$RepositoryPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
     connections: Prisma.$ConnectionPayload<ExtArgs>[]
     vaultSecrets: Prisma.$VaultSecretPayload<ExtArgs>[]
@@ -4398,7 +4398,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   sessionEvents<T extends Prisma.Workspace$sessionEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$sessionEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadSeats<T extends Prisma.Workspace$threadSeatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadSeatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadTeammatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.Workspace$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  projects<T extends Prisma.Workspace$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  repositories<T extends Prisma.Workspace$repositoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$repositoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RepositoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Workspace$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connections<T extends Prisma.Workspace$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   vaultSecrets<T extends Prisma.Workspace$vaultSecretsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$vaultSecretsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5015,27 +5015,27 @@ export type Workspace$accountsArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Workspace.projects
+ * Workspace.repositories
  */
-export type Workspace$projectsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Workspace$repositoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Project
+   * Select specific fields to fetch from the Repository
    */
-  select?: Prisma.ProjectSelect<ExtArgs> | null
+  select?: Prisma.RepositorySelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Project
+   * Omit specific fields from the Repository
    */
-  omit?: Prisma.ProjectOmit<ExtArgs> | null
+  omit?: Prisma.RepositoryOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.ProjectInclude<ExtArgs> | null
-  where?: Prisma.ProjectWhereInput
-  orderBy?: Prisma.ProjectOrderByWithRelationInput | Prisma.ProjectOrderByWithRelationInput[]
-  cursor?: Prisma.ProjectWhereUniqueInput
+  include?: Prisma.RepositoryInclude<ExtArgs> | null
+  where?: Prisma.RepositoryWhereInput
+  orderBy?: Prisma.RepositoryOrderByWithRelationInput | Prisma.RepositoryOrderByWithRelationInput[]
+  cursor?: Prisma.RepositoryWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.ProjectScalarFieldEnum | Prisma.ProjectScalarFieldEnum[]
+  distinct?: Prisma.RepositoryScalarFieldEnum | Prisma.RepositoryScalarFieldEnum[]
 }
 
 /**

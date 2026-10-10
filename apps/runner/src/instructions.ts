@@ -63,18 +63,18 @@ const code = (spec: ThreadSpec) =>
       '(to `brigade/wip/...`). New files you have not committed are not backed up. A checkout left untouched for ' +
       'two weeks with everything on GitHub is removed to free disk; `checkout_repository` brings it back, with your ' +
       'branch or backup.',
-    projects(spec),
+    repositories(spec),
   ]
     .filter(Boolean)
     .join('\n\n')
 
-/** The workspace's projects: the repositories it works on, with what to know about each. */
-function projects(spec: ThreadSpec) {
-  const list = spec.git?.projects ?? []
+/** The workspace's repositories: the ones it works on, with what to know about each. */
+function repositories(spec: ThreadSpec) {
+  const list = spec.git?.repositories ?? []
   if (list.length === 0) return ''
   return [
-    '### Projects',
-    "The workspace's repositories, set up by the team. `checkout_repository` runs a project's setup script in a new checkout. A message mentions one as `@[owner/name](project:owner/name)`.",
+    '### Repositories',
+    "The workspace's repositories, set up by the team. `checkout_repository` runs a repository's setup script in a new checkout. A message mentions one as `@[owner/name](repository:owner/name)`.",
     ...list.map((p) => {
       const notes = p.notes.trim()
       return `- **${p.repository}**${notes ? `\n\n  ${clip(notes).replace(/\n/g, '\n  ')}` : ''}`

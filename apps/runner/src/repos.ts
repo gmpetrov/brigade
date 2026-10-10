@@ -182,7 +182,7 @@ export type CheckoutInput = { repository: string; base?: string; directory?: str
  * Check a repository out in the thread's working directory, on the teammate's
  * branch for the thread. An existing checkout is fetched, never reset. A new one
  * continues the thread's branch, or restores its backup, and runs the
- * project's setup script.
+ * repository's setup script.
  */
 export async function checkout(input: {
   spec: ThreadSpec
@@ -210,8 +210,8 @@ export async function checkout(input: {
   const remote = `${access.url}${owner}/${name}.git`
   const dir = `${workDir}/${folder}`
   const branch = threadBranch(spec)
-  const project = access.projects.find((p) => p.repository === repository)
-  const notes = project?.notes.trim() ? { notes: project.notes.trim() } : {}
+  const settings = access.repositories.find((r) => r.repository === repository)
+  const notes = settings?.notes.trim() ? { notes: settings.notes.trim() } : {}
 
   await refreshCache(cachePath(repository, runAs), remote, access, runAs)
   if (await succeeds(git(['-C', dir, 'rev-parse', '--git-dir'], access, runAs))) {
@@ -267,8 +267,8 @@ export async function checkout(input: {
       access,
       runAs,
     )
-  const setup = project?.setupScript
-    ? await runSetup(project.setupScript, dir, access, runAs)
+  const setup = settings?.setupScript
+    ? await runSetup(settings.setupScript, dir, access, runAs)
     : undefined
   return {
     directory: dir,
@@ -284,7 +284,7 @@ export async function checkout(input: {
   }
 }
 
-/** The project's setup script, as the teammate in the new checkout. Its failure is reported, not thrown. */
+/** The repository's setup script, as the teammate in the new checkout. Its failure is reported, not thrown. */
 async function runSetup(script: string, dir: string, access: GitAccess, runAs?: string) {
   const tail = (output: Buffer) => {
     const text = output.toString()
@@ -302,7 +302,7 @@ async function runSetup(script: string, dir: string, access: GitAccess, runAs?: 
     return {
       ok: false,
       output: tail(stdout) || message(error),
-      note: 'The project setup script failed; fix what it needs, or tell a person.',
+      note: 'The repository setup script failed; fix what it needs, or tell a person.',
     }
   }
 }
@@ -465,7 +465,7 @@ export async function prefetch(
     url: t.url,
     token: t.token,
     author: { name: 'Brigade', email: 'brigade@brigade.invalid' },
-    projects: [],
+    repositories: [],
   })
   // On a member's machine all teammates share one cache.
   const targets = CLOUD

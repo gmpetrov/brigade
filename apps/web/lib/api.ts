@@ -428,6 +428,6 @@ export async function openDesktop(
   }
 }
 
-export type { Project } from '@brigade/contracts'
+export type { Repository } from '@brigade/contracts'
 /** A repository the workspace's GitHub connections reach. */
 export type RepositoryOption = { repository: string; private: boolean; connection: string }

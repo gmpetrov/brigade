@@ -1,4 +1,4 @@
-// Projects: GitHub repositories the workspace works on, with what teammates
+// Repositories: GitHub repositories the workspace works on, with what teammates
 // should run and know when they check one out.
 import { z } from 'zod'
 
@@ -10,16 +10,16 @@ export const RepositoryName = z
   .refine((r) => !r.split('/').some((p) => p === '.' || p === '..'), 'owner/name, e.g. acme/web')
   .transform((r) => r.replace(/\.git$/, '').toLowerCase())
 
-export const Project = z.object({
+export const Repository = z.object({
   id: z.string(),
   repository: z.string(),
   setupScript: z.string().nullable(),
   notes: z.string(),
   updatedAt: z.string(),
 })
-export type Project = z.infer<typeof Project>
+export type Repository = z.infer<typeof Repository>
 
-export const SaveProject = z.object({
+export const SaveRepository = z.object({
   repository: RepositoryName,
   setupScript: z
     .string()
@@ -29,12 +29,12 @@ export const SaveProject = z.object({
     .transform((s) => (s?.trim() ? s : null)),
   notes: z.string().max(20_000).default(''),
 })
-export type SaveProject = z.infer<typeof SaveProject>
+export type SaveRepository = z.infer<typeof SaveRepository>
 
-/** What a teammate's runner gets per project, in the thread spec. */
-export const ProjectSpec = z.object({
+/** What a teammate's runner gets per repository, in the thread spec. */
+export const RepositorySpec = z.object({
   repository: z.string(),
   setupScript: z.string().nullable(),
   notes: z.string(),
 })
-export type ProjectSpec = z.infer<typeof ProjectSpec>
+export type RepositorySpec = z.infer<typeof RepositorySpec>

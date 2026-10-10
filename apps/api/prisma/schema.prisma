@@ -141,7 +141,7 @@ model Workspace {
   sessionEvents  SessionEvent[]
   threadSeats    ThreadTeammate[]
   accounts       Account[]
-  projects       Project[]
+  repositories   Repository[]
   comments       Comment[]
   connections    Connection[]
   vaultSecrets   VaultSecret[]
@@ -411,7 +411,7 @@ model Account {
 
 /// A GitHub repository the workspace works on, and how a teammate gets a checkout ready.
 /// Reached through a GitHub connection; this only adds what teammates should do with it.
-model Project {
+model Repository {
   id             String    @id @default(cuid())
   organizationId String
   workspaceId    String

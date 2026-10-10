@@ -66,7 +66,7 @@ export const ModelName = {
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
-  Project: 'Project',
+  Repository: 'Repository',
   Comment: 'Comment',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
@@ -331,7 +331,7 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
-export const ProjectScalarFieldEnum = {
+export const RepositoryScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
@@ -342,7 +342,7 @@ export const ProjectScalarFieldEnum = {
   updatedAt: 'updatedAt'
 } as const
 
-export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+export type RepositoryScalarFieldEnum = (typeof RepositoryScalarFieldEnum)[keyof typeof RepositoryScalarFieldEnum]
 
 
 export const CommentScalarFieldEnum = {
