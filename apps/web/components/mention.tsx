@@ -105,7 +105,7 @@ export function MentionIcon({
       </svg>
     )
   }
-  if (kind === 'project') return <ProviderLogo kind="github" className="size-3.5" />
+  if (kind === 'repository') return <ProviderLogo kind="github" className="size-3.5" />
   if (kind === 'thread')
     return (
       <svg {...line}>

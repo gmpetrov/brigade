@@ -4,7 +4,7 @@
 // (a link instead), mentions a teammate echoes back show as chips, and code
 // blocks are highlighted (highlight.js's common languages: JSON, YAML, XML/HTML,
 // CSS, JS/TS, Python, shell, SQL, diff and more; colors in globals.css).
-import { MENTION_KINDS, type MentionKind } from '@brigade/contracts'
+import { MENTION_KIND_PATTERN, mentionKind } from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
 import { memo, useState, type ComponentProps, type ReactNode } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
@@ -19,12 +19,9 @@ import {
 import { MentionChip, MessageText } from '@/components/mention'
 import { cn } from '@/lib/utils'
 
-const MENTION_HREF = new RegExp(`^(${MENTION_KINDS.join('|')}):([^\\s]+)$`)
+const MENTION_HREF = new RegExp(`^(${MENTION_KIND_PATTERN}):([^\\s]+)$`)
 /** `@[Label](kind:id)` is a link once its `@` goes: the link renderer turns it into a chip. */
-const MENTION = new RegExp(
-  `@\\[([^\\]\\n]+)\\]\\(((?:${MENTION_KINDS.join('|')}):[^)\\s]+)\\)`,
-  'g',
-)
+const MENTION = new RegExp(`@\\[([^\\]\\n]+)\\]\\(((?:${MENTION_KIND_PATTERN}):[^)\\s]+)\\)`, 'g')
 
 const urlTransform = (url: string) => (MENTION_HREF.test(url) ? url : defaultUrlTransform(url))
 
@@ -184,7 +181,7 @@ const components: Components = {
     if (mention)
       return (
         <MentionChip
-          mention={{ kind: mention[1] as MentionKind, id: mention[2]!, label: textOf(children) }}
+          mention={{ kind: mentionKind(mention[1]!), id: mention[2]!, label: textOf(children) }}
         />
       )
     return (

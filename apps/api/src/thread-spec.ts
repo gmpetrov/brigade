@@ -99,12 +99,6 @@ export async function specFor(
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
-  const projects = github
-    ? await db.project.findMany({
-        select: { repository: true, setupScript: true, notes: true },
-        orderBy: { repository: 'asc' },
-      })
-    : []
   return {
     connectors: grants
       .filter((g) => connectors[g.connection.kind])
@@ -139,7 +133,6 @@ export async function specFor(
           git: gitAccess(
             { sessionId: thread.id, teammateId: teammate.id, computerId: thread.computerId },
             teammate,
-            projects,
           ),
         }
       : {}),
