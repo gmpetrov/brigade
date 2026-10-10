@@ -13,6 +13,7 @@ import { FilePanel } from '@/components/file-panel'
 import { Takeover } from '@/components/takeover'
 import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
 import { TicketRow } from '@/components/ticket-row'
+import { useThreadOutputs } from '@/components/thread-outputs'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -28,6 +29,7 @@ export default function ThreadPage() {
   const [status, setStatus] = useState<string>()
   const { events, connected } = useThreadEvents(id, setStatus)
   const { items, limits } = useThreadItems(events)
+  const outputs = useThreadOutputs(events)
   const [error, setError] = useState<string>()
   const [text, setText] = useState('')
   const files = useUploads()
@@ -355,6 +357,8 @@ export default function ThreadPage() {
             setWatching(false)
             setExpanded(false)
           }}
+          outputs={outputs}
+          onOpenFile={setFile}
         />
       )}
 

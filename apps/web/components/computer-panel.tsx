@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
+import type { OpenFile } from '@/components/file-links'
 import { Terminal } from '@/components/terminal'
+import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
 import { Button } from '@/components/ui/button'
 import { api, harnessLabel, type Teammate, type Thread } from '@/lib/api'
 
@@ -33,7 +35,7 @@ function Section({
 /**
  * The workspace computer beside a thread: its screen, a shell once this member
  * has control, and the thread's status. Takeover starts here; hand back is in
- * the thread, where the composer was.
+ * the thread, where the composer was. Below, what the thread made.
  */
 export function ComputerPanel({
   thread,
@@ -45,6 +47,8 @@ export function ComputerPanel({
   onExpand,
   onChange,
   onClose,
+  outputs,
+  onOpenFile,
 }: {
   thread: Thread
   memberId: string
@@ -55,6 +59,9 @@ export function ComputerPanel({
   onExpand: (expanded: boolean) => void
   onChange: () => void
   onClose: () => void
+  /** What the thread made, newest first. */
+  outputs: ThreadOutput[]
+  onOpenFile: OpenFile
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -198,6 +205,12 @@ export function ComputerPanel({
             </p>
           )}
         </Section>
+
+        {outputs.length > 0 && (
+          <Section title={`Outputs · ${outputs.length}`}>
+            <ThreadOutputs outputs={outputs} onOpen={onOpenFile} />
+          </Section>
+        )}
 
         <Section title={`About ${teammate.name}`}>
           <div className="flex flex-col gap-2">
