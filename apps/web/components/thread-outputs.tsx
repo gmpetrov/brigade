@@ -37,6 +37,10 @@ const SHOWN = 6
 const DELIVERABLE =
   /\.(?:pdf|docx?|xlsx?|pptx?|odt|ods|odp|csv|zip|png|jpe?g|gif|webp|svg|mp3|mp4|wav)$/i
 
+/** Code a teammate wrote to make something (a script that renders a PDF), not the thing itself. */
+const CODE =
+  /\.(?:py|ipynb|[cm]?[jt]sx?|sh|bash|zsh|rb|go|rs|java|kt|swift|php|c|cc|cpp|h|hpp|cs|sql|css|scss|lock)$/i
+
 const json = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value ?? ''))
 
 /** The bare tool name, without an MCP server's `mcp__server__` prefix. */
@@ -64,10 +68,32 @@ export function useThreadOutputs(events: SequencedEvent[]) {
       byKey.delete(output.key)
       byKey.set(output.key, output)
     }
+    const named = (text: string, at: string, teammateId: string | undefined) => {
+      for (const path of namedFiles(text)) {
+        // Named again after it was made: not a new version.
+        if (byKey.has(`file:${path}`)) continue
+        add({
+          key: `file:${path}`,
+          kind: /\.(?:png|jpe?g|gif|webp|svg)$/i.test(path) ? 'image' : 'file',
+          label: name(path),
+          detail: path,
+          at,
+          file: { path, teammateId },
+        })
+      }
+    }
+    // Messages still streaming. One cut off when the computer stopped never gets
+    // its message.done, so what it named counts when its turn ends.
+    const streaming = new Map<string, { text: string; at: string; teammateId?: string }>()
+    const flush = () => {
+      for (const m of streaming.values()) named(m.text, m.at, m.teammateId)
+      streaming.clear()
+    }
     const calls = new Map<string, { toolName: string; input: unknown }>()
     for (const { event: e } of events) {
       switch (e.type) {
         case 'file.changed':
+          if (CODE.test(e.path)) break
           add({
             key: `file:${e.path}`,
             kind: 'file',
@@ -87,20 +113,18 @@ export function useThreadOutputs(events: SequencedEvent[]) {
             file: { path: e.path, teammateId: e.teammateId },
           })
           break
+        case 'message.delta': {
+          const m = streaming.get(e.id)
+          if (m) m.text += e.text
+          else streaming.set(e.id, { text: e.text, at: e.at, teammateId: e.teammateId })
+          break
+        }
         case 'message.done':
-          for (const path of namedFiles(e.text)) {
-            const known = byKey.get(`file:${path}`)
-            // Named again after it was made: not a new version.
-            if (known) continue
-            add({
-              key: `file:${path}`,
-              kind: /\.(?:png|jpe?g|gif|webp|svg)$/i.test(path) ? 'image' : 'file',
-              label: name(path),
-              detail: path,
-              at: e.at,
-              file: { path, teammateId: e.teammateId },
-            })
-          }
+          streaming.delete(e.id)
+          named(e.text, e.at, e.teammateId)
+          break
+        case 'turn.completed':
+          flush()
           break
         case 'tool.started':
           calls.set(`${e.teammateId ?? ''}:${e.toolCallId}`, {
@@ -167,6 +191,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
         }
       }
     }
+    flush()
     return [...byKey.values()].reverse()
   }, [events])
 }

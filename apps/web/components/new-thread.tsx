@@ -3,7 +3,7 @@ import { modelLabel } from '@brigade/contracts'
 import { ArrowRight, Check, ChevronDown, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar } from '@/components/dashboard'
@@ -82,30 +82,68 @@ function TeammatePicker({
   )
 }
 
+const LAST_TEAMMATE = 'brigade.home.teammate'
+
+/** The teammate new messages go to, remembered per browser. */
+export function useLastTeammate() {
+  const [id, setId] = useState<string>()
+  useEffect(() => {
+    try {
+      setId(localStorage.getItem(LAST_TEAMMATE) ?? undefined)
+    } catch {}
+  }, [])
+  return [
+    id,
+    (next: string) => {
+      setId(next)
+      try {
+        localStorage.setItem(LAST_TEAMMATE, next)
+      } catch {}
+    },
+  ] as const
+}
+
+/**
+ * What a new thread is being written with: its message, files, computer and account.
+ * Held by whoever owns it, so it outlives the box (the quick thread dialog closing).
+ */
+export function useThreadDraft() {
+  const [text, setText] = useState('')
+  const [computerId, setComputerId] = useState<string>()
+  const [accountId, setAccountId] = useState<string>()
+  const files = useUploads()
+  return { text, setText, computerId, setComputerId, accountId, setAccountId, files }
+}
+
+export type ThreadDraft = ReturnType<typeof useThreadDraft>
+
 /**
  * The box a new thread starts from: a message, files, where it runs and on which account.
- * With `picker`, the member also chooses the teammate it goes to.
+ * With `picker`, the member also chooses the teammate it goes to. With `draft`, what is
+ * written is kept outside; with `onStarted`, the box stays put instead of opening the thread.
  */
 export function NewThread({
   teammate,
   picker,
   placeholder,
   rows = 3,
+  draft,
+  onStarted,
 }: {
   teammate: Teammate
   picker?: { teammates: Teammate[]; onChange: (id: string) => void }
   placeholder?: string
   rows?: number
+  draft?: ThreadDraft
+  onStarted?: (thread: { id: string }) => void
 }) {
   const router = useRouter()
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
-  const [computerId, setComputerId] = useState<string>()
-  const [accountId, setAccountId] = useState<string>()
-  const [text, setText] = useState('')
+  const own = useThreadDraft()
+  const { text, setText, computerId, setComputerId, accountId, setAccountId, files } = draft ?? own
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
-  const files = useUploads()
   const drop = useFileDrop(files.add)
 
   const online = usableComputers(computers.data)
@@ -140,7 +178,11 @@ export function NewThread({
         },
       })
       files.clear()
-      router.push(`/app/threads/${thread.id}`)
+      if (onStarted) {
+        setText('')
+        setBusy(false)
+        onStarted(thread)
+      } else router.push(`/app/threads/${thread.id}`)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)

@@ -18,6 +18,8 @@ import {
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { HelpMenu } from '@/components/help-menu'
+import { QuickThread } from '@/components/quick-thread'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -314,6 +316,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <span className="truncate text-sm font-semibold">{data.user.name}</span>
                 <span className="text-muted-foreground truncate text-xs">{organization?.name}</span>
               </div>
+              <HelpMenu />
               <ThemeToggle />
               <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={signOut}>
                 <LogOut />
@@ -333,6 +336,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </SidebarInset>
       </SidebarProvider>
+      <QuickThread />
     </DashboardContext.Provider>
   )
 }

@@ -1,17 +1,14 @@
 'use client'
 import { ArrowRight, GitPullRequest, Inbox, UserPlus } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { ActivityFeed } from '@/components/activity-feed'
 import { isAdmin, StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { NewThread } from '@/components/new-thread'
+import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { harnessLabel, useApi, waitsOn, type ThreadSummary, type Ticket } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
-
-const LAST_TEAMMATE = 'brigade.home.teammate'
 
 function greeting(name: string) {
   const hour = new Date().getHours()
@@ -24,25 +21,6 @@ function greeting(name: string) {
           ? 'Good afternoon'
           : 'Good evening'
   return `${part}, ${name.split(' ')[0]}`
-}
-
-/** The teammate new messages go to, remembered per browser. */
-function useLastTeammate() {
-  const [id, setId] = useState<string>()
-  useEffect(() => {
-    try {
-      setId(localStorage.getItem(LAST_TEAMMATE) ?? undefined)
-    } catch {}
-  }, [])
-  return [
-    id,
-    (next: string) => {
-      setId(next)
-      try {
-        localStorage.setItem(LAST_TEAMMATE, next)
-      } catch {}
-    },
-  ] as const
 }
 
 const busyStatus = new Set(['starting', 'running', 'waiting'])

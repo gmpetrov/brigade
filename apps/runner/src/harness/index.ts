@@ -145,12 +145,27 @@ type Live = {
   credentials: ThreadCredentials
 }
 
+type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
+
+/**
+ * A session stopped mid-turn saves that turn as `continueFrom`, with what it
+ * waits on. Waiting on nothing: it was running when the computer stopped.
+ */
+function frozenMidRun(resume: unknown) {
+  const from = (resume as { continueFrom?: Record<string, unknown> } | undefined)?.continueFrom
+  if (!from) return false
+  const pending = (key: string) => Array.isArray(from[key]) && from[key].length > 0
+  return !pending('pendingToolApprovals') && !pending('pendingToolResults')
+}
+
 /** One thread: one harness session in its own working directory. */
 export class HarnessThread {
   private live: Live | undefined
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
+  /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
+  private frozen = false
   private readonly stateFile: string
   /**
    * Names this harness session and its saved state. The thread's id for its
@@ -257,17 +272,38 @@ export class HarnessThread {
     }, this.toolCalls)
     try {
       const live = await this.attach()
-      if (input.kind === 'prompt' && live.session.hasUnfinishedTurn()) {
-        return {
-          kind: 'done',
-          result: {
-            status: 'waiting',
-            error: 'Answer the pending approval or question first.',
-          },
+      const consume = async (stream: TurnStream) => {
+        for await (const part of stream) {
+          mapper.map(part)
+          const image = generatedImage(part)
+          if (image) await this.keepImage(image)
         }
       }
-      let result =
-        input.kind === 'prompt'
+      if (input.kind === 'prompt' && live.session.hasUnfinishedTurn()) {
+        if (!this.frozen) {
+          return {
+            kind: 'done',
+            result: {
+              status: 'waiting',
+              error: 'Answer the pending approval or question first.',
+            },
+          }
+        }
+        // The computer stopped during the last turn, which froze it with nothing
+        // waiting on a person: finish that turn, then the new message.
+        this.frozen = false
+        await consume(
+          (await live.agent.continueStream({ session: live.session, abortSignal: signal }))
+            .fullStream,
+        )
+      }
+      // The frozen turn stopped again (an approval, a question, no usage left): the message waits.
+      const held =
+        input.kind === 'prompt' &&
+        (live.session.hasUnfinishedTurn() || signal.aborted || !!mapper.exhausted || !!mapper.error)
+      let result = held
+        ? undefined
+        : input.kind === 'prompt'
           ? await live.agent.stream({
               session: live.session,
               prompt: input.text,
@@ -295,14 +331,7 @@ export class HarnessThread {
                   },
                 ],
               })
-      const consume = async (stream: typeof result.fullStream) => {
-        for await (const part of stream) {
-          mapper.map(part)
-          const image = generatedImage(part)
-          if (image) await this.keepImage(image)
-        }
-      }
-      await consume(result.fullStream)
+      if (result) await consume(result.fullStream)
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
@@ -508,6 +537,7 @@ export class HarnessThread {
       sandboxSession: sandbox,
       ...(resume ? { resumeFrom: resume as never } : {}),
     })
+    this.frozen = frozenMidRun(resume)
     this.live = { agent, session, sandbox, account, credentials }
     this.saved = { transcript: [], ...this.saved, accountId: account.id }
     return this.live
