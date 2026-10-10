@@ -88,6 +88,43 @@ export function ColumnBadge({ column }: { column: TaskColumn }) {
   return <StatusBadge status={column} tone={c.tone} label={c.label} />
 }
 
+/** Why a task is in Needs you, and where to act on it. */
+function NeedsYouNote({
+  task,
+  thread,
+}: {
+  task: TaskDetail
+  thread: NonNullable<TaskDetail['thread']>
+}) {
+  const open = task.pullRequests.filter((p) => p.state === 'open')
+  const waiting = thread.openTickets > 0 || thread.status === 'waiting'
+  const [pull] = open
+  return (
+    <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+      {thread.openTickets > 0
+        ? `${thread.openTickets} open ticket${thread.openTickets > 1 ? 's' : ''} on its thread.`
+        : thread.status === 'waiting'
+          ? 'Its thread is waiting for an approval.'
+          : open.length > 1
+            ? `${open.length} pull requests are waiting for review. Merging them marks the task done.`
+            : pull
+              ? `Pull request #${pull.number} is waiting for review. Merging it marks the task done.`
+              : task.pullRequests.some((p) => p.state === 'merged')
+                ? 'Its pull request is merged. Mark it done, or say in the thread what is left.'
+                : `${task.teammate.name} stopped at a pull request that was closed without merging.`}{' '}
+      {!waiting && pull && open.length === 1 ? (
+        <Link href={pullHref(pull.repository, pull.number)} className="font-semibold underline">
+          Review it
+        </Link>
+      ) : (
+        <Link href={`/app/threads/${thread.id}`} className="font-semibold underline">
+          {waiting ? 'Answer in the thread' : 'Open the thread'}
+        </Link>
+      )}
+    </p>
+  )
+}
+
 /** Medium and low stay quiet; only high and urgent stand out. */
 export function PriorityBadge({ priority, quiet }: { priority: TaskPriority; quiet?: boolean }) {
   const p = PRIORITIES.find((x) => x.id === priority)!
@@ -636,14 +673,7 @@ export function TaskSheet({
               </div>
 
               {task.thread && task.column === 'needs_you' && (
-                <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                  {task.thread.openTickets > 0
-                    ? `${task.thread.openTickets} open ticket${task.thread.openTickets > 1 ? 's' : ''} on its thread.`
-                    : 'Its thread is waiting for an approval.'}{' '}
-                  <Link href={`/app/threads/${task.thread.id}`} className="font-semibold underline">
-                    Answer in the thread
-                  </Link>
-                </p>
+                <NeedsYouNote task={task} thread={task.thread} />
               )}
 
               <section className="flex flex-col gap-2">

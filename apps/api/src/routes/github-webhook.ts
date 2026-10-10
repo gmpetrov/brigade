@@ -2,13 +2,16 @@
 // workspaces using that installation fetch it into the caches it already has,
 // so the next checkout is quick. Installation changes reach the repository
 // lists and the connections' status, and events start threads for the
-// connections' triggers (see triggers.ts). Verified by the app's webhook secret.
+// connections' triggers (see triggers.ts). A pull request closing or merging
+// updates Brigade's copy of it, which can finish the task that opened it.
+// Verified by the app's webhook secret.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import { forgetInstallation, gitUrl, prefetchToken } from '../git.js'
 import { runnerProtocol, sendToRunner } from '../hub.js'
+import { pullRequestEvent, type GhPull } from '../pull-requests.js'
 import { dispatch } from '../triggers.js'
 
 /** Runners from this protocol on know repos.changed. */
@@ -81,6 +84,15 @@ async function installationChanged(installationId: number, action: string) {
     await prisma.connection.updateMany({ where: { id: connection.id }, data: { status } })
 }
 
+async function pullRequestChanged(installationId: number, repository: string, pull: GhPull) {
+  for (const connection of await connectionsOf(installationId))
+    await pullRequestEvent(
+      { organizationId: connection.organizationId, workspaceId: connection.workspaceId },
+      repository,
+      pull,
+    )
+}
+
 /**
  * Offer the event to the triggers of every workspace's connection on this
  * installation. What Brigade's own app did (a teammate's push or comment)
@@ -113,6 +125,7 @@ export const githubWebhook = new Hono().post('/', async (c) => {
     installation?: { id?: number }
     repository?: { full_name?: string }
     deleted?: boolean
+    pull_request?: GhPull
   }
   const installationId = payload.installation?.id
   if (!installationId) return c.body(null, 204)
@@ -124,7 +137,12 @@ export const githubWebhook = new Hono().post('/', async (c) => {
         ? installationChanged(installationId, 'repositories')
         : event === 'installation' && payload.action
           ? installationChanged(installationId, payload.action)
-          : null
+          : event === 'pull_request' &&
+              (payload.action === 'closed' || payload.action === 'reopened') &&
+              payload.repository?.full_name &&
+              payload.pull_request
+            ? pullRequestChanged(installationId, payload.repository.full_name, payload.pull_request)
+            : null
   void work?.catch((error) => console.error(`github webhook ${event} failed:`, error))
   const delivery = c.req.header('x-github-delivery')
   if (event && delivery)

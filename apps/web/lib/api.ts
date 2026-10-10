@@ -257,6 +257,8 @@ export type Task = {
     computerId: string
     startedByMemberId: string
     openTickets: number
+    /** What it opened that waits on review and merge. */
+    openPullRequests: { repository: string; number: number }[]
   } | null
 }
 

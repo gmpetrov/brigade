@@ -1,12 +1,13 @@
 'use client'
-import { ArrowRight, ListOrdered, Lock, Monitor } from 'lucide-react'
+import { ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { DesktopPreview, useDesktopPreview } from '@/components/desktop-preview'
+import { ComputerPanel } from '@/components/computer-panel'
+import { useDesktopPreview } from '@/components/desktop-preview'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
 import { Takeover } from '@/components/takeover'
@@ -34,6 +35,8 @@ export default function ThreadPage() {
   const bottom = useRef<HTMLDivElement>(null)
   const [watching, setWatching] = useDesktopPreview()
   const [expanded, setExpanded] = useState(false)
+  // A shell on the workspace computer, in the computer panel. Needs control.
+  const [shell, setShell] = useState(false)
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
 
@@ -78,6 +81,23 @@ export default function ThreadPage() {
       !(ticket.type === 'request' && ticket.payload.source === 'harness') &&
       !(ticket.type === 'cap' && ticket.payload.connectionId),
   )
+
+  const mine = !!me.memberId && t.controlledByMemberId === me.memberId
+  const showComputer = () => {
+    setFile(undefined)
+    setWatching(true)
+  }
+  async function openShell() {
+    setError(undefined)
+    try {
+      if (!mine) await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
+      showComputer()
+      setShell(true)
+      await thread.reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
 
   async function call(path: string, body?: unknown) {
     setError(undefined)
@@ -177,20 +197,44 @@ export default function ThreadPage() {
             />
             <StatusBadge status={current} />
             {t.computer.kind === 'cloud' && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-pressed={watching}
-                onClick={() => {
-                  setFile(undefined)
-                  setWatching(!watching || Boolean(file))
-                }}
-                title="Watch the workspace computer's desktop"
-              >
-                <Monitor aria-hidden />
-                {watching ? 'Hide desktop' : 'Desktop'}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-pressed={watching && !file}
+                  onClick={() => {
+                    setFile(undefined)
+                    setWatching(!watching || Boolean(file))
+                  }}
+                  aria-label={watching && !file ? 'Hide computer' : 'Show computer'}
+                  title={
+                    watching && !file ? 'Hide computer' : "Watch the workspace computer's screen"
+                  }
+                >
+                  <Monitor aria-hidden />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-pressed={watching && !file && shell && mine}
+                  disabled={!me.memberId || (!!t.controlledByMemberId && !mine)}
+                  onClick={() =>
+                    watching && !file && shell && mine ? setShell(false) : void openShell()
+                  }
+                  aria-label="Shell"
+                  title={
+                    t.controlledByMemberId && !mine
+                      ? 'Another member has control of this thread'
+                      : mine
+                        ? `A shell on the workspace computer, as ${t.teammate.name}`
+                        : `Take control and open a shell, as ${t.teammate.name}. ${t.teammate.name} waits until you hand back`
+                  }
+                >
+                  <SquareTerminal aria-hidden />
+                </Button>
+              </>
             )}
             {t.startedByMemberId === me.memberId ? (
               <Button
@@ -283,18 +327,6 @@ export default function ThreadPage() {
         </Card>
       )}
 
-      <div className="mb-4 empty:hidden">
-        <Takeover
-          thread={t}
-          memberId={me.memberId ?? ''}
-          onChange={() => void thread.reload()}
-          onOpenDesktop={() => {
-            setWatching(true)
-            setExpanded(true)
-          }}
-        />
-      </div>
-
       {file && (
         <FilePanel
           key={`${file.teammateId ?? ''}:${file.path}`}
@@ -310,12 +342,15 @@ export default function ThreadPage() {
       )}
 
       {!file && watching && t.computer.kind === 'cloud' && (
-        <DesktopPreview
-          threadId={t.id}
-          teammateName={t.teammate.name}
-          control={!!me.memberId && t.controlledByMemberId === me.memberId}
+        <ComputerPanel
+          thread={t}
+          memberId={me.memberId ?? ''}
+          status={current}
+          shell={shell}
+          onShell={setShell}
           expanded={expanded}
           onExpand={setExpanded}
+          onChange={() => void thread.reload()}
           onClose={() => {
             setWatching(false)
             setExpanded(false)
@@ -361,7 +396,19 @@ export default function ThreadPage() {
         />
       </FileLinksProvider>
 
-      {t.controlledByMemberId ? null : t.mayPrompt ? (
+      {t.controlledByMemberId ? (
+        <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">
+          <Takeover
+            thread={t}
+            memberId={me.memberId ?? ''}
+            onChange={() => {
+              setShell(false)
+              void thread.reload()
+            }}
+            onOpenComputer={watching && !file ? undefined : showComputer}
+          />
+        </div>
+      ) : t.mayPrompt ? (
         // Sticks to the bottom of the content column while the thread scrolls under it; the
         // negative margin takes up the column's bottom padding so it never jumps at the end.
         <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">

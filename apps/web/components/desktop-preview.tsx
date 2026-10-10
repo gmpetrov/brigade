@@ -1,5 +1,5 @@
 'use client'
-import { Maximize2, Minimize2, RotateCw, X } from 'lucide-react'
+import { Maximize2, Minimize2, RotateCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { DesktopView, type DesktopConnection } from './desktop-view'
 
 const KEY = 'brigade.desktopPreview'
 
-/** Whether the desktop panel is open, remembered in this browser. */
+/** Whether the computer panel is open, remembered in this browser. */
 export function useDesktopPreview() {
   const [open, setOpen] = useState(false)
   useEffect(() => {
@@ -30,24 +30,22 @@ export function useDesktopPreview() {
 const RETRIES = 5
 
 /**
- * The workspace computer's desktop beside a thread. View only while the
- * teammate works; mouse and keyboard once this member has taken over.
+ * The workspace computer's screen, a section of the computer panel. View only
+ * while the teammate works; mouse and keyboard once this member has taken over.
  * Expanded, it fills the window.
  */
-export function DesktopPreview({
+export function DesktopScreen({
   threadId,
   teammateName,
   control,
   expanded,
   onExpand,
-  onClose,
 }: {
   threadId: string
   teammateName: string
   control: boolean
   expanded: boolean
   onExpand: (expanded: boolean) => void
-  onClose: () => void
 }) {
   const [connection, setConnection] = useState<DesktopConnection>()
   const [error, setError] = useState<string>()
@@ -111,54 +109,52 @@ export function DesktopPreview({
   }
 
   return (
-    <aside
-      data-desktop-panel
+    <section
       className={cn(
-        'flex flex-col overflow-hidden',
-        expanded
-          ? 'fixed inset-0 z-50 bg-background/95 backdrop-blur-sm'
-          : 'mb-4 h-[60vh] rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:h-auto xl:w-(--desktop-w) xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none',
+        'flex flex-col gap-2',
+        expanded && 'fixed inset-0 z-50 bg-background/95 px-6 pb-6 backdrop-blur-sm',
       )}
-      aria-label={`${teammateName}'s desktop`}
+      aria-label={`${teammateName}'s screen`}
     >
-      <div
-        className={cn('flex flex-nowrap items-center gap-2 px-3 py-2.5', !expanded && 'border-b')}
-      >
-        <strong className="min-w-0 truncate text-sm font-semibold">
-          {teammateName}&apos;s computer
-        </strong>
+      <div className={cn('flex flex-nowrap items-center gap-2', expanded && 'py-2.5')}>
+        {expanded ? (
+          <strong className="min-w-0 truncate text-sm font-semibold">
+            {teammateName}&apos;s computer
+          </strong>
+        ) : (
+          <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            Computer
+          </h2>
+        )}
         <Badge variant="secondary" className="text-muted-foreground">
           {control ? 'You have control' : 'View only'}
         </Badge>
         <div className="flex-1" />
-        <Button type="button" variant="ghost" size="sm" onClick={reload} title="Reconnect">
-          <RotateCw aria-hidden />
-          Reload
-        </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
+          onClick={reload}
+          aria-label="Reconnect"
+          title="Reconnect"
+        >
+          <RotateCw aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={() => onExpand(!expanded)}
-          aria-label={expanded ? 'Collapse desktop' : 'Expand desktop'}
-          title={expanded ? 'Collapse' : 'Expand'}
+          title={expanded ? 'Collapse' : 'Fill the window'}
         >
           {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Close desktop"
-        >
-          <X aria-hidden />
+          {expanded ? 'Collapse' : 'Expand'}
         </Button>
       </div>
       <div
         className={cn(
-          'flex min-h-0 flex-1 items-center justify-center',
-          expanded ? 'px-6 pb-6' : 'bg-muted',
+          'flex items-center justify-center overflow-hidden',
+          expanded ? 'min-h-0 flex-1' : 'aspect-video rounded-lg border bg-black',
         )}
       >
         {connection ? (
@@ -178,13 +174,11 @@ export function DesktopPreview({
           </p>
         )}
       </div>
-      {!expanded && (
-        <p className="border-t px-3 py-2 text-sm text-muted-foreground">
-          {control
-            ? 'Click the screen to use it. Copy and paste work both ways.'
-            : 'Everything on the workspace computer shows here, other teammates’ browsers included. To use it yourself, take over.'}
+      {!expanded && control && (
+        <p className="text-xs text-muted-foreground">
+          Click the screen to use it. Copy and paste work both ways.
         </p>
       )}
-    </aside>
+    </section>
   )
 }

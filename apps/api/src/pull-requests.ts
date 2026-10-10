@@ -22,6 +22,7 @@ import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import type { WorkspaceScope } from './scope.js'
+import { settleOnMerge } from './tasks.js'
 import { loadThread } from './thread-spec.js'
 import { joinThread, promptThread, startThread } from './work.js'
 
@@ -30,7 +31,7 @@ export const MAX_ROUNDS = 3
 /** Diffs shown per pull request; GitHub lists at most 3000 files. */
 const FILES_MAX = 300
 
-type GhPull = {
+export type GhPull = {
   number: number
   title: string
   html_url: string
@@ -133,8 +134,8 @@ function summary(repo: string, p: GhPull, row: Row | undefined): PullRequestSumm
   }
 }
 
-/** Keep Brigade's copy of what GitHub says in step. */
-async function sync(db: ScopedDb, row: Row | undefined, p: GhPull) {
+/** Keep Brigade's copy of what GitHub says in step. A merge can finish its thread's task. */
+async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull) {
   if (!row) return
   const state = stateOf(p)
   if (
@@ -160,6 +161,14 @@ async function sync(db: ScopedDb, row: Row | undefined, p: GhPull) {
       ...(closed ? { autoMerge: false } : {}),
     },
   })
+  if (closed && row.state !== state && row.sessionId) await settleOnMerge(scope, row.sessionId)
+}
+
+/** GitHub's pull_request event, for the workspaces tracking that pull request. */
+export async function pullRequestEvent(scope: Scope, repo: string, p: GhPull) {
+  const db = scoped(scope)
+  const row = await findRow(db, repo.toLowerCase(), p.number)
+  if (row) await sync(db, scope, row, p)
 }
 
 /**
@@ -233,7 +242,7 @@ export async function listPulls(
         )
         for (const p of list) {
           const row = byKey.get(key(repo, p.number)) ?? (await adopt(db, repo, p))
-          await sync(db, row, p)
+          await sync(db, scope, row, p)
           pulls.push(summary(repo, p, row))
         }
         // Closed on GitHub since last seen: no longer open, so the sidebar count drops.
@@ -356,7 +365,7 @@ export async function pullDetail(
     checksOf(gh, repo, p.head.sha),
     tracked ? Promise.resolve(tracked) : adopt(db, repo, p),
   ])
-  await sync(db, row ?? undefined, p)
+  await sync(db, scope, row ?? undefined, p)
   const reviews = row
     ? await db.pullRequestReview.findMany({
         where: { pullRequestId: row.id },
@@ -961,7 +970,7 @@ async function mergeOnGitHub(gh: GitHub, repo: string, p: GhPull, method: MergeM
 async function recordMerge(
   db: ScopedDb,
   scope: Scope,
-  row: { id: string; repository: string; number: number },
+  row: { id: string; repository: string; number: number; sessionId: string | null },
   actor: Actor,
   method: MergeMethod,
   data: Record<string, unknown> = {},
@@ -978,6 +987,7 @@ async function recordMerge(
     target: { type: 'pull_request', id: row.id },
     data: { repository: row.repository, number: row.number, method, ...data } as never,
   })
+  if (row.sessionId) await settleOnMerge(scope, row.sessionId)
 }
 
 /** An owner or admin merges now. */

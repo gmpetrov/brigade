@@ -6,8 +6,9 @@ export const TaskPriority = z.enum(['low', 'medium', 'high', 'urgent'])
 export type TaskPriority = z.infer<typeof TaskPriority>
 
 /**
- * Where a task sits on the board, from its thread: none is backlog, an open
- * ticket or a waiting thread is needs_you, done once marked done.
+ * Where a task sits on the board, from its thread: none is backlog; an open
+ * ticket, a waiting thread, or a pull request it opened and stopped at is
+ * needs_you; done once marked done or its pull request merged.
  */
 export const TaskColumn = z.enum(['backlog', 'needs_you', 'doing', 'done'])
 export type TaskColumn = z.infer<typeof TaskColumn>

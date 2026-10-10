@@ -32,6 +32,10 @@ const BOARD = {
       computerId: true,
       startedByMemberId: true,
       _count: { select: { tickets: { where: { status: 'open' as const } } } },
+      pullRequests: {
+        select: { repository: true, number: true, state: true },
+        orderBy: { createdAt: 'asc' as const },
+      },
     },
   },
 }
@@ -41,14 +45,27 @@ type BoardRow = Awaited<ReturnType<typeof boardRows>>[number]
 const boardRows = (db: ScopedDb, where: { id?: string } = {}) =>
   db.task.findMany({ where, include: BOARD, orderBy: { updatedAt: 'desc' }, take: 500 })
 
-/** No thread: backlog. An open ticket or a waiting thread: needs you. */
+/** A thread status while its teammate is at work. */
+const ACTIVE = ['starting', 'running']
+
+/**
+ * No thread: backlog. An open ticket, a waiting thread, or a pull request the
+ * teammate opened and stopped at (for review and merge): needs you. Its merge
+ * marks the task done (see settleOnMerge).
+ */
 export function columnOf(task: {
   completedAt: Date | null
-  session: { status: string; _count: { tickets: number } } | null
+  session: {
+    status: string
+    _count: { tickets: number }
+    pullRequests: { state: string }[]
+  } | null
 }): TaskColumn {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
   if (task.session._count.tickets > 0 || task.session.status === 'waiting') return 'needs_you'
+  if (task.session.pullRequests.length > 0 && !ACTIVE.includes(task.session.status))
+    return 'needs_you'
   return 'doing'
 }
 
@@ -63,6 +80,9 @@ const view = ({ session, ...task }: BoardRow) => ({
         computerId: session.computerId,
         startedByMemberId: session.startedByMemberId,
         openTickets: session._count.tickets,
+        openPullRequests: session.pullRequests
+          .filter((p) => p.state === 'open')
+          .map(({ repository, number }) => ({ repository, number })),
       }
     : null,
 })
@@ -378,6 +398,27 @@ export async function reopenOnMessage(
     data: { completedAt: null },
   })
   broadcastTask(scope.workspaceId, thread.task.id)
+}
+
+/**
+ * A pull request of a task's thread merged or closed. Once none is open and
+ * one merged, the work has landed: the task is done.
+ */
+export async function settleOnMerge(scope: Scope, sessionId: string) {
+  const db = scoped(scope)
+  const thread = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { task: true, pullRequests: { select: { state: true } } },
+  })
+  const task = thread?.task
+  if (!task || task.completedAt) return
+  const states = thread.pullRequests.map((p) => p.state)
+  if (states.includes('open') || !states.includes('merged')) return
+  const { count } = await db.task.updateMany({
+    where: { id: task.id, completedAt: null },
+    data: { completedAt: new Date() },
+  })
+  if (count) await changed(scope, { type: 'system', id: 'brigade' }, 'task.completed', task.id)
 }
 
 /** The task goes; its thread stays, as a plain thread. Also undoes a teammate's create_task. */

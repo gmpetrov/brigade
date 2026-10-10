@@ -1,24 +1,23 @@
 'use client'
-import { Hand, Monitor, Globe } from 'lucide-react'
+import { Hand, Monitor } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { api, openDesktop, type Thread } from '@/lib/api'
-import { Terminal } from './terminal'
+import { api, type Thread } from '@/lib/api'
 
-/** Take over the workspace computer for a thread, then hand back. */
+/** While a member has the workspace computer for a thread: hand back. Takeover starts in the computer panel. */
 export function Takeover({
   thread,
   memberId,
   onChange,
-  onOpenDesktop,
+  onOpenComputer,
 }: {
   thread: Thread
   memberId: string
   onChange: () => void
-  /** Show the desktop in this page. Without it, the desktop opens in a new tab. */
-  onOpenDesktop?: () => void
+  /** Show the computer panel, when it is closed. */
+  onOpenComputer?: () => void
 }) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string>()
@@ -48,38 +47,7 @@ export function Takeover({
     )
   }
 
-  if (!mine) {
-    return (
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-accent px-4 py-3">
-        <Hand className="size-5 flex-none text-accent-foreground" aria-hidden />
-        <span className="min-w-0 flex-[1_1_16rem] text-sm text-muted-foreground">
-          Use the computer yourself. The teammate waits until you hand back.
-        </span>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt: false } }))
-            }
-          >
-            Take over
-          </Button>
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt: true } }))
-            }
-          >
-            Take over now
-          </Button>
-        </div>
-        {error && <p className="basis-full text-sm text-destructive-text">{error}</p>}
-      </div>
-    )
-  }
+  if (!mine) return null
 
   return (
     <Card className="gap-4 border-warning/50 px-5 py-5">
@@ -91,37 +59,13 @@ export function Takeover({
             {thread.teammate.name} waits. Commands you run are recorded in the run log.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              void act(async () => {
-                if (!onOpenDesktop)
-                  return openDesktop(thread.computer.id, { teammateId: thread.teammate.id })
-                await api(`/teammates/${thread.teammate.id}/browser`, { body: {} })
-                onOpenDesktop()
-              })
-            }
-          >
-            <Globe aria-hidden />
-            Open {thread.teammate.name}&apos;s browser
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              onOpenDesktop ? onOpenDesktop() : void act(() => openDesktop(thread.computer.id))
-            }
-          >
+        {onOpenComputer && (
+          <Button variant="outline" size="sm" onClick={onOpenComputer}>
             <Monitor aria-hidden />
-            Open desktop
+            Show computer
           </Button>
-        </div>
+        )}
       </div>
-      <Terminal sessionId={thread.id} />
       <form
         className="flex flex-wrap gap-2"
         onSubmit={(e) => {
