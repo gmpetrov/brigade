@@ -1,11 +1,9 @@
 'use client'
 import { modelLabel } from '@brigade/contracts'
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
-import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
-import { Composer } from '@/components/composer'
+import { useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { NewThread } from '@/components/new-thread'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateBrowser } from '@/components/teammate-browser'
 import { TeammateForm } from '@/components/teammate-form'
@@ -13,26 +11,7 @@ import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/
 import { ThreadList } from '@/components/thread-list'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  api,
-  harnessLabel,
-  useApi,
-  usableComputers,
-  computerName,
-  type Account,
-  type ComputersResponse,
-  type ThreadSummary,
-} from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { api, harnessLabel, useApi, type ComputersResponse, type ThreadSummary } from '@/lib/api'
 
 export default function TeammatePage() {
   const { id } = useParams<{ id: string }>()
@@ -41,51 +20,10 @@ export default function TeammatePage() {
   const teammate = teammates.find((t) => t.id === id)
   const threads = useApi<ThreadSummary[]>(`/threads?teammateId=${id}`)
   const computers = useApi<ComputersResponse>('/computers')
-  const accounts = useApi<Account[]>('/accounts')
-  const [computerId, setComputerId] = useState<string>()
   const [editing, setEditing] = useState(false)
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-  const [text, setText] = useState('')
-  const formRef = useRef<HTMLFormElement>(null)
-  const files = useUploads()
-  const drop = useFileDrop(files.add)
   const oversight = useTeammateTimeline(id)
 
   if (!teammate) return <p className="text-sm text-muted-foreground">Loading…</p>
-  const online = usableComputers(computers.data)
-  const selectedComputer = computerId ?? online[0]?.id
-  const usable = (accounts.data ?? []).filter(
-    (a) =>
-      a.computer.id === selectedComputer &&
-      a.provider === teammate.harness &&
-      (a.status === 'ready' || a.status === 'unverified') &&
-      !(a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()),
-  )
-
-  const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
-
-  async function start(form: FormData) {
-    if (busy || !ready || !online.length) return
-    setBusy(true)
-    setError(undefined)
-    try {
-      const thread = await api<{ id: string }>('/threads', {
-        body: {
-          teammateId: id,
-          computerId: String(form.get('computerId')),
-          text: String(form.get('text')),
-          attachmentIds: files.ids,
-          ...(form.get('accountId') ? { accountId: String(form.get('accountId')) } : {}),
-        },
-      })
-      files.clear()
-      router.push(`/app/threads/${thread.id}`)
-    } catch (e) {
-      setError((e as Error).message)
-      setBusy(false)
-    }
-  }
 
   async function archive() {
     if (!confirm(`Archive ${teammate!.name}? Its threads stay in the run log.`)) return
@@ -93,8 +31,6 @@ export default function TeammatePage() {
     await reloadTeammates()
     router.push('/app')
   }
-
-  const link = 'font-medium text-primary hover:underline'
 
   return (
     <div className="flex flex-col gap-7">
@@ -144,103 +80,12 @@ export default function TeammatePage() {
 
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex min-w-0 flex-[999_1_32rem] flex-col gap-5">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <h2 className="text-base font-bold">
-                  <Label htmlFor="text" className="text-base font-bold">
-                    New thread
-                  </Label>
-                </h2>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form ref={formRef} action={start} className="flex flex-col gap-3.5">
-                <div
-                  className={cn(
-                    'flex flex-col gap-2 rounded-md',
-                    drop.dragging && 'ring-[3px] ring-primary/30',
-                  )}
-                  {...drop.props}
-                >
-                  <Composer
-                    id="text"
-                    name="text"
-                    rows={4}
-                    value={text}
-                    onChange={setText}
-                    onSubmit={() => formRef.current?.requestSubmit()}
-                    placeholder={`What should ${teammate.name} do? @ to mention a repository, connection, credential or thread. Drop files to attach them`}
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AttachButton onFiles={files.add} />
-                    <UploadList uploads={files.uploads} onRemove={files.remove} />
-                  </div>
-                </div>
-                {online.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No computer is online.{' '}
-                    <Link href="/app/computers" className={link}>
-                      Link your machine
-                    </Link>{' '}
-                    to run threads on it.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <Label htmlFor="computerId" className="text-muted-foreground">
-                      Run on
-                    </Label>
-                    <Select
-                      name="computerId"
-                      value={computerId ?? online[0]!.id}
-                      onValueChange={setComputerId}
-                    >
-                      <SelectTrigger id="computerId" size="sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {online.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {computerName(c)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {usable.length === 0 ? (
-                      <span className="text-sm text-muted-foreground">
-                        No {harnessLabel(teammate.harness)} account here.{' '}
-                        <Link href="/app/accounts" className={link}>
-                          Add one
-                        </Link>
-                      </span>
-                    ) : (
-                      <Select
-                        key={selectedComputer}
-                        name="accountId"
-                        defaultValue={(usable.find((a) => a.isDefault) ?? usable[0]!).id}
-                      >
-                        <SelectTrigger size="sm" aria-label="Account" className="max-w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {usable.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.label}
-                              {a.email ? ` (${a.email})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <Button type="submit" className="ml-auto" disabled={busy || !ready}>
-                      Start thread
-                    </Button>
-                  </div>
-                )}
-                {error && <p className="text-sm text-destructive-text">{error}</p>}
-              </form>
-            </CardContent>
-          </Card>
+          <section aria-labelledby="new-thread" className="flex flex-col gap-3">
+            <h2 id="new-thread" className="text-base font-bold">
+              New thread
+            </h2>
+            <NewThread teammate={teammate} rows={4} />
+          </section>
 
           <TeammateAccess
             teammate={teammate}

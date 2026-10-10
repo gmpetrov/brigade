@@ -400,6 +400,20 @@ export type Ticket = {
   } | null
 }
 
+export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
+
+/** Whether an open ticket waits on this member: the same rules that give them actions below. */
+export function waitsOn(t: Ticket, me: Me) {
+  if (t.status !== 'open') return false
+  const admin = isAdmin(me)
+  const starter = t.session?.startedByMemberId === me.memberId
+  if (t.type === 'approval') return admin || starter
+  if (t.type === 'cap') return admin
+  if ((t.type === 'question' || t.type === 'request') && t.payload.source === 'harness')
+    return admin || starter
+  return admin || (t.payload.memberId ? t.payload.memberId === me.memberId : starter)
+}
+
 export const harnessLabel = (harness: string) => (harness === 'codex' ? 'Codex' : 'Claude')
 
 /**

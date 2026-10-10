@@ -2,6 +2,7 @@
 import {
   ChevronsUpDown,
   GitPullRequest,
+  House,
   Inbox,
   KeyRound,
   Library,
@@ -44,7 +45,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, useApi, type Me, type Teammate } from '@/lib/api'
+import { api, isAdmin, useApi, waitsOn, type Me, type Teammate, type Ticket } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 
 export { StatusBadge } from '@/components/status-badge'
@@ -58,10 +59,11 @@ export function useDashboard() {
   return value
 }
 
-export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
+export { isAdmin }
 
 const NAV = [
-  { href: '/app', label: 'Threads', icon: MessagesSquare },
+  { href: '/app', label: 'Home', icon: House },
+  { href: '/app/threads', label: 'Threads', icon: MessagesSquare },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
@@ -104,9 +106,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person, refreshed as the member moves around.
   const pullsWaiting = useApi<{ count: number }>(ready ? '/pulls/attention' : null)
   const reloadPulls = pullsWaiting.reload
+  // Tickets waiting on this member, the same way.
+  const tickets = useApi<Ticket[]>(ready ? '/tickets' : null)
+  const reloadTickets = tickets.reload
   useEffect(() => {
     void reloadPulls()
-  }, [pathname, reloadPulls])
+    void reloadTickets()
+  }, [pathname, reloadPulls, reloadTickets])
 
   useEffect(() => {
     if (me.error?.status === 401) router.replace('/sign-in')
@@ -122,6 +128,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
+  const badges: Record<string, number | undefined> = {
+    '/app/tickets': tickets.data?.filter((t) => waitsOn(t, data)).length,
+    '/app/pulls': pullsWaiting.data?.count,
+  }
 
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
@@ -196,7 +206,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       <SidebarMenuButton
                         asChild
                         isActive={
-                          pathname === href || (href === '/app/pulls' && pathname.startsWith(href))
+                          pathname === href ||
+                          (['/app/pulls', '/app/threads'].includes(href) &&
+                            pathname.startsWith(href))
                         }
                       >
                         <Link href={href}>
@@ -204,9 +216,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           <span>{label}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {href === '/app/pulls' && !!pullsWaiting.data?.count && (
-                        <SidebarMenuBadge aria-label={`${pullsWaiting.data.count} waiting on you`}>
-                          {pullsWaiting.data.count}
+                      {!!badges[href] && (
+                        <SidebarMenuBadge aria-label={`${badges[href]} waiting on you`}>
+                          {badges[href]}
                         </SidebarMenuBadge>
                       )}
                     </SidebarMenuItem>
