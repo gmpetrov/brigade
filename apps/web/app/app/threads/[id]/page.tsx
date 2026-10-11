@@ -1,12 +1,5 @@
 'use client'
-import {
-  ArrowRight,
-  CornerDownRight,
-  ListOrdered,
-  Lock,
-  Monitor,
-  SquareTerminal,
-} from 'lucide-react'
+import { ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -136,8 +129,8 @@ export default function ThreadPage() {
 
   const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
 
-  /** Send the message; it shows above the composer until the thread shows it. steer: into the running turn. */
-  async function send(e?: React.FormEvent, steer = false) {
+  /** Send the message; it shows above the composer until the thread shows it. Queued while a turn runs. */
+  async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
     const message: Outgoing = {
@@ -159,7 +152,6 @@ export default function ThreadPage() {
           text: message.text,
           attachmentIds: files.ids,
           messageId: message.messageId,
-          ...(steer ? { steer: true } : {}),
         },
       })
       setError(undefined)
@@ -511,11 +503,10 @@ export default function ThreadPage() {
                 value={text}
                 onChange={setText}
                 onSubmit={() => void send().catch(() => undefined)}
-                onSubmitAlt={() => void send(undefined, busy).catch(() => undefined)}
                 rows={2}
                 placeholder={
                   busy
-                    ? `${answering.name} is working. Queue a message for after this turn, or steer it into this one`
+                    ? `${answering.name} is working. Messages you send now are queued for after this turn`
                     : people.length > 1
                       ? `Reply to ${answering.name}, or @ a teammate to ask them`
                       : 'Reply. @ a teammate to bring them in, or a connection, credential or thread'
@@ -550,25 +541,12 @@ export default function ThreadPage() {
                     Interrupt
                   </Button>
                 )}
-                {busy && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!ready}
-                    onClick={() => void send(undefined, true).catch(() => undefined)}
-                    title={`Give it to ${answering.name} now, during this turn (⌘⇧Enter)`}
-                  >
-                    <CornerDownRight aria-hidden />
-                    Steer
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   disabled={!ready || current === 'waiting'}
-                  title={busy ? `Runs after ${answering.name}'s current turn (⌘Enter)` : '⌘Enter'}
+                  title={busy ? `Queued until ${answering.name}'s turn ends (⌘Enter)` : '⌘Enter'}
                 >
-                  {busy ? 'Queue' : 'Send'}
+                  Send
                   <ArrowRight aria-hidden />
                 </Button>
               </div>
