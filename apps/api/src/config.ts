@@ -77,9 +77,17 @@ const Env = z.object({
   DESIGN_URL: z.preprocess((v) => v || undefined, z.url().optional()),
   /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
   COLLAB_SECRET: z.string().min(32).optional(),
+  /**
+   * The dashboard is shown in another site's frame (a preview in a thread):
+   * session cookies are SameSite=None and partitioned, so the frame keeps them.
+   */
+  CROSS_SITE_COOKIES: z.stringbool().default(false),
 })
 
-const parsed = Env.parse(process.env)
+// An empty value (KEY= in .env, as .env.example has them) means unset.
+const parsed = Env.parse(
+  Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== '')),
+)
 export const env = {
   ...parsed,
   DESIGN_URL: (

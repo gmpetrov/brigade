@@ -15,6 +15,9 @@ coverage
 src/generated
 apps/runner/bundle
 
+# Local database and state of scripts/preview
+.preview
+
 # Local library bucket when R2 is not configured (development)
 apps/api/.bucket
 

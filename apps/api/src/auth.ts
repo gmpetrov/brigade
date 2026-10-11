@@ -29,6 +29,9 @@ export const auth = betterAuth({
     },
   },
   account: { modelName: 'authAccount' },
+  ...(env.CROSS_SITE_COOKIES && {
+    advanced: { defaultCookieAttributes: { sameSite: 'none', secure: true, partitioned: true } },
+  }),
   plugins: [
     organization({
       organizationHooks: {
