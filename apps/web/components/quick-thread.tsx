@@ -4,7 +4,7 @@
 // by mistake loses nothing; sending closes it and says so in the corner.
 import { ArrowRight, CircleCheck, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
@@ -19,21 +19,6 @@ export function useIsMac() {
   return mac
 }
 
-/** Straight into the message, at its end; the editor may take a frame to appear. */
-function focusMessage(root: HTMLElement | null, tries = 10) {
-  const editor = root?.querySelector<HTMLElement>('[contenteditable=true]')
-  if (!editor) {
-    if (root && tries > 0) requestAnimationFrame(() => focusMessage(root, tries - 1))
-    return
-  }
-  editor.focus()
-  const range = document.createRange()
-  range.selectNodeContents(editor)
-  range.collapse(false)
-  getSelection()?.removeAllRanges()
-  getSelection()?.addRange(range)
-}
-
 export function QuickThread() {
   const [open, onOpenChange] = useState(false)
   const { teammates } = useDashboard()
@@ -41,7 +26,6 @@ export function QuickThread() {
   const teammate = teammates.find((t) => t.id === chosen) ?? teammates[0]
   const draft = useThreadDraft()
   const [started, setStarted] = useState<{ id: string; teammate: string }>()
-  const content = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -75,14 +59,11 @@ export function QuickThread() {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          ref={content}
           data-quick-thread
           showCloseButton={false}
           className="top-[20%] translate-y-0 gap-3 p-3 sm:max-w-2xl"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            focusMessage(content.current)
-          }}
+          // Not the first button: the message box focuses itself once its editor is up.
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogTitle className="sr-only">New thread</DialogTitle>
           <DialogDescription className="sr-only">
@@ -92,6 +73,7 @@ export function QuickThread() {
             teammate={teammate}
             rows={4}
             draft={draft}
+            autoFocus
             picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
             placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or credential`}
             onStarted={(thread) => {
