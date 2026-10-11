@@ -303,6 +303,7 @@ export function Composer({
   id,
   threadId,
   bare,
+  autoFocus,
 }: {
   value: string
   onChange: (text: string) => void
@@ -318,6 +319,8 @@ export function Composer({
   threadId?: string
   /** No border of its own: the surrounding card frames it. */
   bare?: boolean
+  /** Focused at the end of its text once the editor is ready. */
+  autoFocus?: boolean
 }) {
   const options = useMentionOptions(threadId)
   // The editor is built once; these keep its callbacks current.
@@ -327,6 +330,8 @@ export function Composer({
 
   const editor = useEditor({
     immediatelyRender: false,
+    // The editor is built after mount, so a focus from outside can miss it; it focuses itself.
+    autofocus: autoFocus ? 'end' : false,
     extensions: [
       Document,
       Paragraph,
