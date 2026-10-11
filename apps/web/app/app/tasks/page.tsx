@@ -253,25 +253,41 @@ export default function Tasks() {
                 aria-labelledby={`column-${column.id}`}
                 className="flex flex-col gap-3 rounded-xl bg-secondary/50 p-3"
               >
-                <h2
-                  id={`column-${column.id}`}
-                  className="flex items-center gap-2 px-1 text-sm font-bold"
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'size-2 rounded-full',
-                      column.tone === 'warning' && 'bg-warning',
-                      column.tone === 'progress' && 'bg-primary',
-                      column.tone === 'success' && 'bg-success',
-                      column.tone === 'neutral' && 'bg-muted-foreground',
-                    )}
-                  />
-                  {column.label}
-                  <span className="font-mono text-xs font-normal text-muted-foreground">
-                    {tasks.data ? all.length : ''}
-                  </span>
-                </h2>
+                {/* Archive all sits up top, in reach however long Done gets. */}
+                <div className="flex min-h-6 items-center gap-2">
+                  <h2
+                    id={`column-${column.id}`}
+                    className="flex items-center gap-2 px-1 text-sm font-bold"
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'size-2 rounded-full',
+                        column.tone === 'warning' && 'bg-warning',
+                        column.tone === 'progress' && 'bg-primary',
+                        column.tone === 'success' && 'bg-success',
+                        column.tone === 'neutral' && 'bg-muted-foreground',
+                      )}
+                    />
+                    {column.label}
+                    <span className="font-mono text-xs font-normal text-muted-foreground">
+                      {tasks.data ? all.length : ''}
+                    </span>
+                  </h2>
+                  {column.id === 'done' && all.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="ml-auto text-muted-foreground"
+                      aria-label={`Archive all ${all.length} done tasks`}
+                      disabled={archiving}
+                      onClick={() => void archiveDone()}
+                    >
+                      <Archive aria-hidden />
+                      Archive all
+                    </Button>
+                  )}
+                </div>
                 {!tasks.data ? (
                   <Skeleton className="h-20 w-full" />
                 ) : all.length === 0 ? (
@@ -288,18 +304,6 @@ export default function Tasks() {
                 {shown.length < all.length && (
                   <Button variant="ghost" size="sm" onClick={() => setAllDone(true)}>
                     Show all {all.length}
-                  </Button>
-                )}
-                {column.id === 'done' && all.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground"
-                    disabled={archiving}
-                    onClick={() => void archiveDone()}
-                  >
-                    <Archive aria-hidden />
-                    Archive all {all.length}
                   </Button>
                 )}
               </section>
