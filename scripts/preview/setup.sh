@@ -7,13 +7,6 @@ use_node
 use_pnpm
 cd "$REPO"
 
-say "Installing dependencies"
-"${PNPM[@]}" install --frozen-lockfile
-
-say "Building shared packages"
-"${PNPM[@]}" exec turbo run build --filter='@brigade/api^...' --filter='@brigade/web^...'
-"${PNPM[@]}" --filter @brigade/api exec prisma generate
-
 if [ ! -f apps/api/.env ]; then
   say "Writing apps/api/.env"
   secret=$(node -p 'require("crypto").randomBytes(32).toString("hex")')
@@ -21,6 +14,13 @@ if [ ! -f apps/api/.env ]; then
   sed -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$secret|" -e "s|^VAULT_KEY=.*|VAULT_KEY=$vault|" \
     apps/api/.env.example >apps/api/.env
 fi
+
+say "Installing dependencies"
+"${PNPM[@]}" install --frozen-lockfile
+
+say "Building shared packages"
+"${PNPM[@]}" exec turbo run build --filter='@brigade/api^...' --filter='@brigade/web^...'
+"${PNPM[@]}" --filter @brigade/api exec prisma generate
 
 say "Starting PostgreSQL"
 mkdir -p "$DATA"
