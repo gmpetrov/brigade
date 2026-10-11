@@ -25,6 +25,31 @@ export const Question = z.object({
 })
 export type Question = z.infer<typeof Question>
 
+/**
+ * Alternatives a teammate offers to pick from (its offer_choices tool), such as
+ * designs. It does not pause the turn: a person clicks one and it is sent as
+ * their next message, or they write one of their own.
+ */
+export const OFFER_CHOICES_TOOL = 'offer_choices'
+export const Choices = z.object({
+  question: z.string(),
+  options: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        description: z.string().optional(),
+        /** A design saved in the library (`<folder>.design`): shown by its picture, opens beside the thread. */
+        design: z.string().optional(),
+      }),
+    )
+    .min(2)
+    .max(6),
+})
+export type Choices = z.infer<typeof Choices>
+/** The message a click on a choice sends. */
+export const choiceMessage = (option: { label: string }) => `Go with ${option.label}`
+
 export const QuestionAnswer = z.discriminatedUnion('action', [
   z.object({
     action: z.enum(['answered', 'partially-answered']),

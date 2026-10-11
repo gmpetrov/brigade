@@ -1,5 +1,5 @@
 'use client'
-import { parseMentions, type Mention } from '@brigade/contracts'
+import { DESIGN_SYSTEM_README, parseMentions, type Mention } from '@brigade/contracts'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -61,7 +61,14 @@ export function MentionChip({
   const links = useFileLinks()
   if (mention.kind === 'teammate')
     return <strong className={cn('font-semibold', className)}>@{mention.label}</strong>
-  const open = (mention.kind === 'document' || mention.kind === 'design') && links
+  // A design system opens on its rules, the one file every system has.
+  const path =
+    mention.kind === 'design-system'
+      ? `${mention.id}/${DESIGN_SYSTEM_README}`
+      : mention.kind === 'document' || mention.kind === 'design'
+        ? mention.label
+        : undefined
+  const open = path !== undefined && links
   const Tag = open ? 'button' : 'span'
   return (
     <Tag
@@ -69,7 +76,7 @@ export function MentionChip({
       {...(open && {
         type: 'button' as const,
         title: `Open ${mention.label}`,
-        onClick: () => links.open({ path: mention.label }),
+        onClick: () => links.open({ path }),
       })}
       className={cn(
         open && 'cursor-pointer hover:bg-accent',
@@ -128,6 +135,16 @@ export function MentionIcon({
       <svg {...line}>
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <path d="M3 9h18M8 9v11" />
+      </svg>
+    )
+  if (kind === 'design-system')
+    // A palette.
+    return (
+      <svg {...line}>
+        <path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.7-.9 1.4-1.9-.3-1 .4-2.1 1.5-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z" />
+        <circle cx="7.5" cy="11.5" r="1" />
+        <circle cx="10.5" cy="7.5" r="1" />
+        <circle cx="15.5" cy="8.5" r="1" />
       </svg>
     )
   if (kind === 'thread')

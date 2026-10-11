@@ -68,7 +68,8 @@ export function instructions(
       'Search them, the memory below and summaries of past threads with `search_workspace`. ' +
       `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path; ` +
       `and a design as \`@[path](design:path)\`: the folder at ${libraryDir}/path (its \`${DESIGN_ENTRY}\`, ` +
-      `\`${DESIGN_MANIFEST}\`, \`${DESIGN_KNOBS}\` and assets). Asked to build a design in a product, match it at ` +
+      `\`${DESIGN_MANIFEST}\`, \`${DESIGN_KNOBS}\` and assets); and a design system as \`@[name](design-system:path)\`: ` +
+      `the one named, its folder at ${libraryDir}/path. Asked to build a design in a product, match it at ` +
       "each of its viewports with the product's own components and conventions, and use the values in its " +
       `\`${DESIGN_KNOBS}\`.` +
       saving(spec),
@@ -127,6 +128,9 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       'what is off or any error it reports. Then save it with `save_design` to a library path ending in ' +
       `\`${DESIGN_SUFFIX}\`, next to the work it belongs to, and mention it in your reply as ` +
       '`@[path](design:path)`: it opens beside the thread. Saving again replaces it; the library keeps earlier versions.',
+    'When you offer alternatives (several directions to choose from), make each its own design folder, check and ' +
+      'save each one, and describe them in your reply. Then call `offer_choices` last, with one option per design ' +
+      'and its library path in `design`: the person picks one by its picture. Their pick arrives as their next message.',
     'People comment on a design from its viewer: such a message starts with "Comment on the design" and names the ' +
       'element by its `data-id` (or a CSS path) and the viewport. Change the design, check it and save it again.',
     [
@@ -149,7 +153,7 @@ function designs(spec: ThreadSpec, libraryDir: string) {
     systems.length > 0
       ? [
           '### Design systems',
-          'A design follows exactly one design system: the one the person names; else one for the library ' +
+          'A design follows exactly one design system: the one the person names or mentions; else one for the library ' +
             'folder the design goes in; else one for the repository you are working in; else yours; else the ' +
             'default. When none applies and there are several, ask which one. Before designing, read its ' +
             `folder in ${libraryDir}: its README.md first, and what that points to. Use its tokens and ` +

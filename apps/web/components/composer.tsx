@@ -2,6 +2,7 @@
 import {
   designFolderOf,
   formatMention,
+  type DesignSystem,
   parseMentions,
   type Mention,
   type MentionKind,
@@ -45,6 +46,7 @@ export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[]
   { kind: 'teammate', title: 'Teammates', max: 5 },
   { kind: 'connection', title: 'Connections', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
+  { kind: 'design-system', title: 'Design systems', max: 5 },
   { kind: 'design', title: 'Designs', max: 5 },
   { kind: 'document', title: 'Library', max: 5 },
   { kind: 'credential', title: 'Secrets', max: 5 },
@@ -61,6 +63,7 @@ export function useMentionOptions(threadId?: string): Option[] {
   const credentials = useApi<Credential[]>('/credentials')
   const repositories = useApi<RepositoryOption[]>('/repositories')
   const library = useApi<LibraryFile[]>('/library')
+  const designSystems = useApi<DesignSystem[]>('/design-systems')
   return useMemo(
     () => [
       ...teammates.map((t) => ({
@@ -84,6 +87,12 @@ export function useMentionOptions(threadId?: string): Option[] {
         id: r.repository,
         label: r.repository,
         hint: r.private ? 'GitHub, private' : 'GitHub',
+      })),
+      ...(designSystems.data ?? []).map((s) => ({
+        kind: 'design-system' as const,
+        id: s.path,
+        label: s.name,
+        hint: s.isDefault ? 'Design system, default' : 'Design system',
       })),
       // A design is one thing to mention: its folder, not its files.
       ...[...new Set((library.data ?? []).flatMap((f) => designFolderOf(f.path) ?? []))].map(
@@ -125,6 +134,7 @@ export function useMentionOptions(threadId?: string): Option[] {
       connections.data,
       repositories.data,
       library.data,
+      designSystems.data,
       credentials.data,
       threads.data,
       computers.data,

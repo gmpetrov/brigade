@@ -1,7 +1,12 @@
 'use client'
 import {
+  Choices,
+  choiceMessage,
+  DESIGN_THUMBNAIL,
   formatMention,
   mentionsToText,
+  OFFER_CHOICES_TOOL,
+  type LibraryFile,
   type AgentEvent,
   type Ask,
   type AskReply,
@@ -20,6 +25,7 @@ import {
   ClipboardList,
   GitPullRequest,
   Hand,
+  LayoutTemplate,
   ListChecks,
   Monitor,
   Plus,
@@ -32,6 +38,7 @@ import { MessageAttachments } from '@/components/attachments'
 import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
+import { contentUrl } from '@/components/library-browser'
 import { Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
@@ -338,6 +345,13 @@ function openedPull(item: { toolName: string; input: unknown; output?: unknown }
   }
 }
 
+/** The alternatives an offer_choices call put up, once it went through. */
+function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
+  if (item.toolName.replace(/^mcp__.+?__/, '') !== OFFER_CHOICES_TOOL) return null
+  if (!item.finished || item.isError) return null
+  return Choices.safeParse(item.input).data ?? null
+}
+
 /** Raw JSON or text under a tool call, an approval or a thought. */
 const preClass =
   'max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere'
@@ -400,6 +414,7 @@ export function ThreadItems({
   onApproval,
   onAnswer,
   onTicket,
+  onChoose,
   canApprove,
   takeover,
   teammate,
@@ -410,6 +425,8 @@ export function ThreadItems({
   onApproval: (approvalId: string, approved: boolean, always?: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
+  /** Sends a choice someone clicked as their message. Unset when they cannot send one now. */
+  onChoose?: (text: string) => Promise<void>
   canApprove: boolean
   /** Unset when this member cannot take over the computer (a member's own machine, another in control). */
   takeover?: TicketTakeover
@@ -494,6 +511,21 @@ export function ThreadItems({
               </Collapsible>
             )
           case 'tool': {
+            const choices = offeredChoices(item)
+            if (choices) {
+              // Answered by the next message anyone sent, a click or their own words.
+              const reply = items
+                .slice(i + 1)
+                .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
+              return (
+                <ChoicesCard
+                  key={item.key}
+                  choices={choices}
+                  reply={reply?.text}
+                  onChoose={onChoose}
+                />
+              )
+            }
             const opened = item.finished && !item.isError ? openedPull(item) : null
             if (opened)
               return (
@@ -1491,5 +1523,127 @@ function AskView({
         </Button>
       )}
     </>
+  )
+}
+
+/**
+ * Alternatives a teammate offers: a card each, with the design's picture when
+ * the option is one (it opens beside the thread). Picking sends the choice as a
+ * message; any message after it closes the offer.
+ */
+function ChoicesCard({
+  choices,
+  reply,
+  onChoose,
+}: {
+  choices: Choices
+  /** The next message in the thread, if there is one. */
+  reply?: string
+  onChoose?: (text: string) => Promise<void>
+}) {
+  const links = useFileLinks()
+  const designs = choices.options.some((o) => o.design)
+  const library = useApi<LibraryFile[]>(designs ? '/library' : null)
+  const [sending, setSending] = useState<string>()
+  const [error, setError] = useState<string>()
+  const picked = choices.options.find((o) => reply === choiceMessage(o))
+  const open = reply === undefined && !!onChoose && !sending
+
+  async function choose(option: Choices['options'][number]) {
+    if (!onChoose) return
+    setSending(option.id)
+    setError(undefined)
+    try {
+      await onChoose(choiceMessage(option))
+    } catch (e) {
+      setError((e as Error).message)
+      setSending(undefined)
+    }
+  }
+
+  return (
+    <Card className="gap-4 border-primary/40 px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <CardLabel className="text-primary">
+          <LayoutTemplate aria-hidden />
+          Pick one
+        </CardLabel>
+        {reply !== undefined && (
+          <StatusBadge
+            status={picked ? 'answered' : 'replied'}
+            tone={picked ? 'success' : 'neutral'}
+            label={picked ? 'Picked' : 'Replied'}
+          />
+        )}
+      </div>
+      <div className="font-semibold">
+        <Markdown text={choices.question} className="[&>p]:inline" />
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {choices.options.map((o) => {
+          const design = o.design?.replace(/\/+$/, '')
+          const thumbnail =
+            design && library.data?.find((f) => f.path === `${design}/${DESIGN_THUMBNAIL}`)
+          const chosen = picked?.id === o.id || sending === o.id
+          return (
+            <li
+              key={o.id}
+              className={cn(
+                'flex flex-col overflow-hidden rounded-lg border bg-card',
+                chosen && 'border-primary ring-2 ring-primary/30',
+                picked && !chosen && 'opacity-60',
+              )}
+            >
+              {design && (
+                <button
+                  type="button"
+                  className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"
+                  title={`Open ${design}`}
+                  aria-label={`Open ${o.label}`}
+                  onClick={() => links?.open({ path: design })}
+                >
+                  {thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
+                    <img
+                      src={contentUrl(thumbnail.id)}
+                      alt=""
+                      loading="lazy"
+                      className="size-full object-cover object-top transition group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <LayoutTemplate aria-hidden className="size-7 text-muted-foreground/60" />
+                  )}
+                  <span className="absolute right-2 bottom-2 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
+                    Open
+                  </span>
+                </button>
+              )}
+              <div className="flex flex-1 flex-col gap-1 px-3.5 py-3">
+                <span className="font-semibold">{o.label}</span>
+                {o.description && (
+                  <span className="text-sm text-muted-foreground">{o.description}</span>
+                )}
+                {open && (
+                  <div className="mt-auto pt-2">
+                    <Button size="sm" variant="outline" onClick={() => void choose(o)}>
+                      Pick this one
+                    </Button>
+                  </div>
+                )}
+                {sending === o.id && !picked && (
+                  <span className="mt-2 text-sm text-muted-foreground">Sending…</span>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+      {open && (
+        <p className="text-xs text-muted-foreground">
+          Or write what you want instead: mix two, or change one.
+        </p>
+      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </Card>
   )
 }

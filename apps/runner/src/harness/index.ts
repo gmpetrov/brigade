@@ -11,6 +11,7 @@ import {
   ATTACHMENT_MAX,
   type AccountRef,
   type AgentEvent,
+  OFFER_CHOICES_TOOL,
   type QuestionAnswer,
   type ThreadSpec,
   type TicketAnswer,
@@ -42,6 +43,7 @@ import {
   connectorTools,
   credentialTools,
   libraryTools,
+  offerChoicesTool,
   OPEN_TICKET_TOOL,
   openTicketTool,
   repoTools,
@@ -125,6 +127,7 @@ function createAgent(
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
+    [OFFER_CHOICES_TOOL]: offerChoicesTool,
   }
   return new HarnessAgent({
     harness,

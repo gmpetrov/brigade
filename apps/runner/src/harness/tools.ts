@@ -12,6 +12,7 @@ import {
   DESIGN_SYSTEM_TOKENS,
   DESIGN_THUMBNAIL,
   designFolderOf,
+  Choices,
   type ConnectorGrant,
   type TeammateDesignSystem,
   type ScheduleOperation,
@@ -218,6 +219,56 @@ export const openTicketTool = tool({
     },
     required: ['title', 'asks'],
   }),
+})
+
+/**
+ * Alternatives for a person to pick from, shown in the thread as cards (with
+ * the design's picture when an option is one). Unlike ask_user it does not
+ * pause: the turn ends, and a click sends the pick as the person's next message.
+ */
+export const offerChoicesTool = tool({
+  description:
+    'Show the person alternatives you made (designs, approaches, drafts) as cards they pick from with one click. ' +
+    'Call it last, after your reply describes them; their pick arrives as their next message ("Go with <label>"), ' +
+    'or they write their own. For a choice you cannot go on without, ask a question instead.',
+  inputSchema: jsonSchema<Choices>({
+    type: 'object',
+    properties: {
+      question: { type: 'string', description: 'e.g. "Which card should I build?"' },
+      options: {
+        type: 'array',
+        minItems: 2,
+        maxItems: 6,
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Short id, unique among these options' },
+            label: { type: 'string', description: 'A few words, e.g. "A · Signature swatches"' },
+            description: { type: 'string', description: 'One sentence: what sets it apart' },
+            design: {
+              type: 'string',
+              description: `Its design's library path, ending in "${DESIGN_SUFFIX}", saved with save_design: its picture shows on the card`,
+            },
+          },
+          required: ['id', 'label'],
+        },
+      },
+    },
+    required: ['question', 'options'],
+  }),
+  execute: async (input) => {
+    const parsed = Choices.safeParse(input)
+    if (!parsed.success) throw new Error(`Invalid choices: ${parsed.error.message}`)
+    for (const o of parsed.data.options)
+      if (o.design !== undefined && designFolderOf(o.design) !== o.design.replace(/\/+$/, ''))
+        throw new Error(
+          `"${o.design}" is not a design's library path (one ending in "${DESIGN_SUFFIX}")`,
+        )
+    return {
+      shown: parsed.data.options.length,
+      next: 'End your reply: the pick arrives as their next message.',
+    }
+  },
 })
 
 type Credentials = {

@@ -4,7 +4,8 @@
  * A member mentioning a credential lets the thread's teammate use it there.
  * A repository's id is owner/name, for the teammate to check out. A library
  * file (`document`) is labelled with its library path; a design's id and label are
- * its folder's library path ("acme/pricing.design"). `project` is
+ * its folder's library path ("acme/pricing.design"); a design system's id is its
+ * library folder ("design-systems/acme") and its label its name. `project` is
  * how messages named one before; they still render.
  */
 export const MENTION_KINDS = [
@@ -15,6 +16,8 @@ export const MENTION_KINDS = [
   'credential',
   'repository',
   'document',
+  // Before `design`, which it starts with.
+  'design-system',
   'design',
   'project',
 ] as const

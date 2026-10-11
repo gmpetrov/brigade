@@ -140,14 +140,28 @@ export default function ThreadPage() {
 
   const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
 
-  /** Send the message; it shows above the composer until the thread shows it. Queued while a turn runs. */
+  /** Send the composer's message; it shows above the composer until the thread shows it. Queued while a turn runs. */
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
+    const sending = text.trim()
+    setText('')
+    try {
+      await deliver(sending, files.ids)
+      files.clear()
+    } catch (err) {
+      // Not sent: back in the composer, as it was.
+      setText((current) => current || sending)
+      setError((err as Error).message)
+    }
+  }
+
+  /** Send a message to the thread: the composer's, or a choice someone clicked. Throws when it is not sent. */
+  async function deliver(sending: string, attachmentIds: string[] = []) {
     const message: Outgoing = {
       messageId: newMessageId(),
-      text: text.trim(),
-      files: files.ids.length,
+      text: sending,
+      files: attachmentIds.length,
       afterSeq: events.at(-1)?.seq ?? 0,
       state: 'sending',
     }
@@ -156,17 +170,11 @@ export default function ThreadPage() {
         list.map((o) => (o.messageId === message.messageId ? { ...o, state } : o)),
       )
     setOutgoing((list) => [...list, message])
-    setText('')
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
-        body: {
-          text: message.text,
-          attachmentIds: files.ids,
-          messageId: message.messageId,
-        },
+        body: { text: message.text, attachmentIds, messageId: message.messageId },
       })
       setError(undefined)
-      files.clear()
       const starting = sent.delivery === 'starting'
       update(starting ? 'starting' : 'sent')
       // The computer says it got a message within seconds, or a few minutes when it starts first.
@@ -177,10 +185,8 @@ export default function ThreadPage() {
         starting ? 10 * 60_000 : 20_000,
       )
     } catch (err) {
-      // Not sent: back in the composer, as it was.
       setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
-      setText((current) => current || message.text)
-      setError((err as Error).message)
+      throw err
     }
   }
 
@@ -447,6 +453,7 @@ export default function ThreadPage() {
           onAnswer={(questionId, answer) =>
             api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
           }
+          onChoose={t.mayPrompt && current !== 'waiting' ? (text) => deliver(text) : undefined}
           onTicket={(requestId, answer) =>
             // Answering may hand control back: show the composer again.
             api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
