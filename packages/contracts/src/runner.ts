@@ -276,6 +276,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     bundle: z.string().optional(),
     /** Threads the API has as running here. One with no turn here was lost to a restart. */
     runningThreads: z.array(z.string()).optional(),
+    /** Messages the API has as queued here. One the runner does not hold was lost to a restart. */
+    queuedMessages: z.array(z.object({ sessionId: z.string(), messageId: z.string() })).optional(),
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
@@ -324,6 +326,10 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     handoff: z.boolean().optional(),
     /** The files that came with this message (all the thread's are in each spec). */
     attachments: z.array(ThreadAttachmentRef).default([]),
+    /** The sender's id for the message: it names it while queued, and in message.user. */
+    messageId: z.string().max(64).optional(),
+    /** Give it to the first teammate during its running turn, if it is running one; else queue it. */
+    steer: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('thread.approval'),
@@ -352,7 +358,27 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     answer: TicketAnswer,
     memberId: z.string(),
   }),
-  z.object({ type: z.literal('thread.interrupt'), commandId: z.string(), sessionId: z.string() }),
+  z.object({
+    type: z.literal('thread.interrupt'),
+    commandId: z.string(),
+    sessionId: z.string(),
+    /** Stop only this turn (turn.started's turnId). Unset: whichever runs. */
+    turnId: z.string().optional(),
+  }),
+  /**
+   * A queued message: cancel it, change its text, or steer it into the
+   * teammate's running turn (it stays queued if that cannot be done).
+   */
+  z.object({
+    type: z.literal('thread.queued'),
+    commandId: z.string(),
+    sessionId: z.string(),
+    messageId: z.string(),
+    action: z.enum(['cancel', 'edit', 'steer']),
+    /** The new text, for edit. */
+    text: z.string().max(100_000).optional(),
+    memberId: z.string(),
+  }),
   /**
    * Open a window of the teammate's browser on the computer's desktop, e.g. for
    * a person to sign it in to a site. Cloud computers only.

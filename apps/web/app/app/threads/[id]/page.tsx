@@ -1,8 +1,15 @@
 'use client'
-import { ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
+import {
+  ArrowRight,
+  CornerDownRight,
+  ListOrdered,
+  Lock,
+  Monitor,
+  SquareTerminal,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -10,6 +17,7 @@ import { ComputerPanel } from '@/components/computer-panel'
 import { useDesktopPreview } from '@/components/desktop-preview'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
+import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
 import { TicketRow } from '@/components/ticket-row'
@@ -28,7 +36,7 @@ export default function ThreadPage() {
   const thread = useApi<Thread>(`/threads/${id}`)
   const [status, setStatus] = useState<string>()
   const { events, connected } = useThreadEvents(id, setStatus)
-  const { items, limits } = useThreadItems(events)
+  const { items, limits, queued, seen, turnId } = useThreadItems(events)
   const outputs = useThreadOutputs(events)
   const [error, setError] = useState<string>()
   const [text, setText] = useState('')
@@ -41,6 +49,21 @@ export default function ThreadPage() {
   const [shell, setShell] = useState(false)
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
+  // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
+  const [outgoing, setOutgoing] = useState<Outgoing[]>([])
+  const pendingOut = useMemo(() => {
+    // A runner too old for message ids shows the message without one: matched by its text.
+    const plain = events.filter((e) => e.event.type === 'message.user' && !e.event.messageId)
+    return outgoing.filter(
+      (o) =>
+        !seen.has(o.messageId) &&
+        !plain.some(
+          (e) => e.seq > o.afterSeq && e.event.type === 'message.user' && e.event.text === o.text,
+        ),
+    )
+  }, [outgoing, seen, events])
+  const pendingRef = useRef(pendingOut)
+  pendingRef.current = pendingOut
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest' })
@@ -113,13 +136,55 @@ export default function ThreadPage() {
 
   const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
 
-  async function send(e?: React.FormEvent) {
+  /** Send the message; it shows above the composer until the thread shows it. steer: into the running turn. */
+  async function send(e?: React.FormEvent, steer = false) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
-    await call('/messages', { text, attachmentIds: files.ids })
+    const message: Outgoing = {
+      messageId: newMessageId(),
+      text: text.trim(),
+      files: files.ids.length,
+      afterSeq: events.at(-1)?.seq ?? 0,
+      state: 'sending',
+    }
+    const update = (state: Outgoing['state']) =>
+      setOutgoing((list) =>
+        list.map((o) => (o.messageId === message.messageId ? { ...o, state } : o)),
+      )
+    setOutgoing((list) => [...list, message])
     setText('')
-    files.clear()
+    try {
+      const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
+        body: {
+          text: message.text,
+          attachmentIds: files.ids,
+          messageId: message.messageId,
+          ...(steer ? { steer: true } : {}),
+        },
+      })
+      setError(undefined)
+      files.clear()
+      const starting = sent.delivery === 'starting'
+      update(starting ? 'starting' : 'sent')
+      // The computer says it got a message within seconds, or a few minutes when it starts first.
+      setTimeout(
+        () => {
+          if (pendingRef.current.some((o) => o.messageId === message.messageId)) update('failed')
+        },
+        starting ? 10 * 60_000 : 20_000,
+      )
+    } catch (err) {
+      // Not sent: back in the composer, as it was.
+      setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
+      setText((current) => current || message.text)
+      setError((err as Error).message)
+    }
   }
+
+  const queueAction = (
+    messageId: string,
+    action: { action: 'cancel' } | { action: 'steer' } | { action: 'edit'; text: string },
+  ) => call(`/messages/${messageId}`, action).catch(() => undefined)
 
   return (
     <div className="flex flex-col">
@@ -416,6 +481,20 @@ export default function ThreadPage() {
         // Sticks to the bottom of the content column while the thread scrolls under it; the
         // negative margin takes up the column's bottom padding so it never jumps at the end.
         <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">
+          <QueuedMessages
+            queued={queued}
+            outgoing={pendingOut}
+            teammateName={answering.name}
+            canSteer={busy}
+            onAction={queueAction}
+            onResend={(m) => {
+              setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))
+              setText((current) => current || m.text)
+            }}
+            onDiscard={(messageId) =>
+              setOutgoing((list) => list.filter((o) => o.messageId !== messageId))
+            }
+          />
           <form onSubmit={(e) => void send(e).catch(() => undefined)}>
             <Card
               data-composer-frame
@@ -432,10 +511,11 @@ export default function ThreadPage() {
                 value={text}
                 onChange={setText}
                 onSubmit={() => void send().catch(() => undefined)}
+                onSubmitAlt={() => void send(undefined, busy).catch(() => undefined)}
                 rows={2}
                 placeholder={
                   busy
-                    ? `${answering.name} is working. Your message will run next. @ to mention`
+                    ? `${answering.name} is working. Queue a message for after this turn, or steer it into this one`
                     : people.length > 1
                       ? `Reply to ${answering.name}, or @ a teammate to ask them`
                       : 'Reply. @ a teammate to bring them in, or a connection, credential or thread'
@@ -458,13 +538,37 @@ export default function ThreadPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => void call('/interrupt').catch(() => undefined)}
+                    onClick={() =>
+                      void call('/interrupt', turnId ? { turnId } : {}).catch(() => undefined)
+                    }
+                    title={
+                      queued.length
+                        ? `Stop ${answering.name} now; the queued messages run next`
+                        : `Stop ${answering.name} now`
+                    }
                   >
                     Interrupt
                   </Button>
                 )}
-                <Button size="sm" disabled={!ready || current === 'waiting'}>
-                  Send
+                {busy && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!ready}
+                    onClick={() => void send(undefined, true).catch(() => undefined)}
+                    title={`Give it to ${answering.name} now, during this turn (⌘⇧Enter)`}
+                  >
+                    <CornerDownRight aria-hidden />
+                    Steer
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  disabled={!ready || current === 'waiting'}
+                  title={busy ? `Runs after ${answering.name}'s current turn (⌘Enter)` : '⌘Enter'}
+                >
+                  {busy ? 'Queue' : 'Send'}
                   <ArrowRight aria-hidden />
                 </Button>
               </div>
@@ -481,3 +585,11 @@ export default function ThreadPage() {
     </div>
   )
 }
+
+/** crypto.randomUUID needs a secure context; a dashboard on a plain-http address has none. */
+const newMessageId = () =>
+  typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('')

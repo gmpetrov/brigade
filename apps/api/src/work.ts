@@ -29,6 +29,10 @@ type Prompt = {
   handoff?: boolean
   /** The files that came with it, already in the thread. */
   attachments?: ThreadAttachmentRef[]
+  /** The sender's id for it, shown while it is queued (see SendMessage). */
+  messageId?: string
+  /** Give it to the teammate's running turn instead of queuing it. */
+  steer?: boolean
 }
 
 const MAX_TEAMMATES_PER_MESSAGE = 5
@@ -134,6 +138,8 @@ export async function promptThread(
     then,
     ...(prompt.handoff ? { handoff: true } : {}),
     attachments: prompt.attachments ?? [],
+    ...(prompt.messageId ? { messageId: prompt.messageId } : {}),
+    ...(prompt.steer ? { steer: true } : {}),
   })
 }
 

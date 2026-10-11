@@ -296,6 +296,7 @@ export function Composer({
   value,
   onChange,
   onSubmit,
+  onSubmitAlt,
   placeholder,
   disabled,
   rows = 3,
@@ -309,6 +310,8 @@ export function Composer({
   onChange: (text: string) => void
   /** Cmd/Ctrl+Enter. */
   onSubmit?: () => void
+  /** Cmd/Ctrl+Shift+Enter, e.g. send and steer. */
+  onSubmitAlt?: () => void
   placeholder?: string
   disabled?: boolean
   rows?: number
@@ -324,8 +327,8 @@ export function Composer({
 }) {
   const options = useMentionOptions(threadId)
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, onChange, onSubmit, placeholder })
-  latest.current = { options, onChange, onSubmit, placeholder }
+  const latest = useRef({ options, onChange, onSubmit, onSubmitAlt, placeholder })
+  latest.current = { options, onChange, onSubmit, onSubmitAlt, placeholder }
   const text = useRef(value)
 
   const editor = useEditor({
@@ -366,6 +369,11 @@ export function Composer({
         addKeyboardShortcuts: () => ({
           'Mod-Enter': () => {
             latest.current.onSubmit?.()
+            return true
+          },
+          'Mod-Shift-Enter': () => {
+            const submit = latest.current.onSubmitAlt ?? latest.current.onSubmit
+            submit?.()
             return true
           },
         }),

@@ -241,6 +241,29 @@ export class HarnessThread {
     return this.live !== undefined
   }
 
+  /**
+   * The last turn stopped on an approval, a question or a ticket: a new prompt
+   * waits until a person answers it. A turn frozen mid-run waits on nobody.
+   */
+  async awaitingPerson() {
+    if (this.live) return this.live.session.hasUnfinishedTurn() && !this.frozen
+    await this.load()
+    const resume = this.saved?.resume as { continueFrom?: unknown } | undefined
+    return !!resume?.continueFrom && !frozenMidRun(resume)
+  }
+
+  /**
+   * Give a message to the running turn, which reads it at its next step; what
+   * it does about it stays in this turn. Throws when no turn runs, or the
+   * harness cannot take one mid-turn.
+   */
+  async steer(text: string) {
+    const live = this.live
+    if (!live) throw new Error('No turn is running')
+    await live.agent.experimental_steer({ session: live.session, text })
+    this.remember('user', text)
+  }
+
   /** Stop the harness and keep its saved state, so the next message resumes it. */
   async park() {
     const live = this.live
