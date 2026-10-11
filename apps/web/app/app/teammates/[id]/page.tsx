@@ -5,13 +5,12 @@ import { useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { NewThread } from '@/components/new-thread'
 import { TeammateAccess } from '@/components/teammate-access'
-import { TeammateBrowser } from '@/components/teammate-browser'
 import { TeammateForm } from '@/components/teammate-form'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
 import { ThreadList } from '@/components/thread-list'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { api, harnessLabel, useApi, type ComputersResponse, type ThreadSummary } from '@/lib/api'
+import { api, harnessLabel, useApi, type ThreadSummary } from '@/lib/api'
 
 export default function TeammatePage() {
   const { id } = useParams<{ id: string }>()
@@ -19,7 +18,6 @@ export default function TeammatePage() {
   const { me, teammates, reloadTeammates } = useDashboard()
   const teammate = teammates.find((t) => t.id === id)
   const threads = useApi<ThreadSummary[]>(`/threads?teammateId=${id}`)
-  const computers = useApi<ComputersResponse>('/computers')
   const [editing, setEditing] = useState(false)
   const oversight = useTeammateTimeline(id)
 
@@ -91,13 +89,6 @@ export default function TeammatePage() {
             teammate={teammate}
             editable={isAdmin(me)}
             onPolicyChange={() => void reloadTeammates()}
-          />
-
-          <TeammateBrowser
-            teammate={teammate}
-            computer={computers.data?.computers.find(
-              (c) => c.kind === 'cloud' && !['destroyed', 'error'].includes(c.status),
-            )}
           />
 
           <TeammateCaps
