@@ -32,6 +32,8 @@ pnpm dev                                   # api :3001, web :3000, collab :8787,
 
 Open http://localhost:3000, create an account, an organization and a workspace, then a teammate.
 
+Without Docker, or for a preview in a Brigade thread: `scripts/preview/setup.sh`, then `scripts/preview/start.sh` (see AGENTS.md).
+
 ### Run threads on your machine
 
 In the dashboard, open **Computers → Get a link code**, then in a shell where `claude` is signed in:

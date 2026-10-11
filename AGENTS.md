@@ -8,3 +8,16 @@ Read `docs/README.md` inside that installed package first, then read the relevan
 
 This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
 <!-- END:turborepo-agent-rules -->
+
+# Preview Brigade in a thread
+
+To run Brigade for someone to try (a Brigade preview), or locally without Docker:
+
+```bash
+scripts/preview/setup.sh   # once, and again after pulling: Node 22, dependencies, builds, apps/api/.env, database, dev accounts
+scripts/preview/start.sh   # PostgreSQL, the API and the dashboard at one address, port 3000
+```
+
+In a thread, run `setup.sh` in your shell, then `start_preview` with the command `scripts/preview/start.sh` and port 3000, nothing else: the API answers at `/api` on the same address, so the preview needs one port and its session cookie works in the thread's preview pane. Sign in as `ada@example.com` (or `bob@`, `carol@`) with the password `correct-horse-battery`; each goes through onboarding first.
+
+PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `embedded-postgres` package (no Docker or root needed), with its data in `.preview/`; delete that folder to start over. Downloads (Node, PostgreSQL) are cached in `~/.cache/brigade-preview`. If the dashboard goes blank, Next crashed: `start.sh` starts it again, and the page reloads by itself.
