@@ -426,8 +426,12 @@ export default function ThreadPage() {
           teammate={t.teammate}
           teammates={people}
           canApprove={t.mayPrompt}
-          onApproval={(approvalId, approved) =>
-            void call('/approvals', { approvalId, approved }).catch(() => undefined)
+          onApproval={(approvalId, approved, always) =>
+            void call('/approvals', {
+              approvalId,
+              approved,
+              ...(always ? { always: true } : {}),
+            }).catch(() => undefined)
           }
           onAnswer={(questionId, answer) =>
             api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
@@ -509,7 +513,7 @@ export default function ThreadPage() {
                     ? `${answering.name} is working. Messages you send now are queued for after this turn`
                     : people.length > 1
                       ? `Reply to ${answering.name}, or @ a teammate to ask them`
-                      : 'Reply. @ a teammate to bring them in, or a connection, credential or thread'
+                      : 'Reply. @ a teammate to bring them in, or a connection, secret or thread'
                 }
               />
               <div className="flex flex-wrap items-center gap-2">

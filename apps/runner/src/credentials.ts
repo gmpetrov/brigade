@@ -6,16 +6,22 @@ import { spawn } from 'node:child_process'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { CredentialSecret, CredentialSummary, CredentialUse } from '@brigade/contracts'
+import type {
+  CredentialSecret,
+  CredentialSummary,
+  CredentialUse,
+  TeammateCredentialSave,
+} from '@brigade/contracts'
 import { HOME } from './config.js'
 import { teammateHome } from './teammates.js'
 
 /** Asks the API; the call that made it is shown to the person when an approval is needed. */
 export type CredentialRequester = (request: {
-  action: 'list' | 'release'
+  action: 'list' | 'release' | 'save'
   credentialId?: string
   use?: CredentialUse
   purpose?: string
+  save?: TeammateCredentialSave
   toolCallId: string
   toolName: string
   input: unknown
@@ -118,6 +124,8 @@ export class ThreadCredentials {
       runAs?: string
       /** The teammate's browser, when it has one: its debugging port and this thread's tabs. */
       browser?: { port: number; tabsFile: string }
+      /** Read a file the teammate names, as its user: where a secret it saves comes from. */
+      readFile: (file: string) => Promise<Buffer>
     },
   ) {}
 
@@ -222,6 +230,45 @@ export class ThreadCredentials {
     })
     if (!result.ok) throw new Error(result.error)
     return { credential, url: result.url, filled: result.filled, submitted: result.submitted }
+  }
+
+  /**
+   * Save a secret the teammate produced, read from a file so it never goes in
+   * a tool call: a new credential, or a new secret for one it may use. A person
+   * approves first.
+   */
+  async save(
+    input:
+      | {
+          mode: 'create'
+          kind: CredentialSummary['kind']
+          name: string
+          details: object
+          secretFile: string
+        }
+      | { mode: 'update'; credentialId: string; changes: object; secretFile?: string },
+    call: Call,
+  ) {
+    const secret = input.secretFile
+      ? (await this.options.readFile(input.secretFile)).toString('utf8').replace(/\r?\n$/, '')
+      : undefined
+    if (input.secretFile && !secret) throw new Error(`${input.secretFile} is empty`)
+    const save: TeammateCredentialSave =
+      input.mode === 'create'
+        ? {
+            mode: 'create',
+            kind: input.kind,
+            name: input.name,
+            details: input.details,
+            secret: secret ?? '',
+          }
+        : {
+            mode: 'update',
+            credentialId: input.credentialId,
+            changes: input.changes,
+            ...(secret ? { secret } : {}),
+          }
+    return (await this.options.request({ action: 'save', save, ...call })) as CredentialSummary
   }
 
   /** Remove the thread's env files. */

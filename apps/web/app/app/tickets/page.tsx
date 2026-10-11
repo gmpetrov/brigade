@@ -29,10 +29,10 @@ export default function Tickets() {
   const tickets = useApi<Ticket[]>(`/tickets${all ? '?status=all' : ''}`)
   const [error, setError] = useState<string>()
 
-  async function resolve(id: string, approved: boolean) {
+  async function resolve(id: string, approved: boolean, always?: boolean) {
     setError(undefined)
     try {
-      await api(`/tickets/${id}/resolve`, { body: { approved } })
+      await api(`/tickets/${id}/resolve`, { body: { approved, ...(always ? { always } : {}) } })
     } catch (e) {
       setError((e as Error).message)
     }

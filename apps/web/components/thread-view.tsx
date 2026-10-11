@@ -79,6 +79,8 @@ type Item =
       toolName: string
       input: unknown
       reason?: string
+      /** A credential: may also be allowed for good. */
+      always?: boolean
       resolved?: { approved: boolean }
     }
   | {
@@ -208,6 +210,7 @@ export function useThreadItems(events: SequencedEvent[]) {
             toolName: e.toolName,
             input: e.input,
             ...(e.reason ? { reason: e.reason } : {}),
+            ...(e.always ? { always: true } : {}),
           })
           break
         case 'approval.resolved': {
@@ -404,7 +407,7 @@ export function ThreadItems({
 }: {
   threadId: string
   items: Item[]
-  onApproval: (approvalId: string, approved: boolean) => void
+  onApproval: (approvalId: string, approved: boolean, always?: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   canApprove: boolean
@@ -557,8 +560,18 @@ export function ThreadItems({
                 ) : canApprove ? (
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
-                      Approve
+                      {item.always ? 'Allow in this thread' : 'Approve'}
                     </Button>
+                    {item.always && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title="Let this teammate use it from now on, in any thread, without asking"
+                        onClick={() => onApproval(item.approvalId, true, true)}
+                      >
+                        Always allow
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -682,7 +695,7 @@ function CredentialPicker({
   value,
   onChange,
   disabled,
-  intro = 'This asks for a secret. Pick one from the vault, or add it there: your teammate can then use it in this thread without ever seeing it.',
+  intro = 'This asks for a secret. Pick a saved one, or add it: your teammate can then use it in this thread without ever seeing it.',
   onNew,
 }: {
   value: string
@@ -719,10 +732,8 @@ function CredentialPicker({
             onChange(c ? formatMention(mentionOf(c)) : '')
           }}
         >
-          <SelectTrigger aria-label="Credential" className="min-w-0 flex-[1_1_14rem]">
-            <SelectValue
-              placeholder={list.length ? 'Choose a credential…' : 'The vault is empty'}
-            />
+          <SelectTrigger aria-label="Secret" className="min-w-0 flex-[1_1_14rem]">
+            <SelectValue placeholder={list.length ? 'Choose a secret…' : 'No secrets saved yet'} />
           </SelectTrigger>
           <SelectContent>
             {list.map((c) => (
@@ -740,7 +751,7 @@ function CredentialPicker({
           onClick={() => (onNew ? onNew() : setAdding(true))}
         >
           <Plus aria-hidden />
-          New credential
+          New secret
         </Button>
         <Button
           type="button"
@@ -788,7 +799,7 @@ function CredentialAccess({
           value={picked}
           onChange={setPicked}
           disabled={false}
-          intro={`Pick one from the vault: ${askerName} can then use it in this thread without ever seeing it.`}
+          intro={`Pick a saved secret: ${askerName} can then use it in this thread without ever seeing it.`}
           onNew={() => setFromVault(false)}
         />
         <div className="flex flex-wrap items-center gap-2">
@@ -802,8 +813,8 @@ function CredentialAccess({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">
-        Save it to the vault here and {askerName} uses it in this thread right away. The secret is
-        encrypted the moment you save it; {askerName} never sees it.
+        Save it here and {askerName} uses it in this thread right away. It is encrypted the moment
+        you save it; {askerName} never sees it.
       </p>
       <CredentialForm
         inline
@@ -813,7 +824,7 @@ function CredentialAccess({
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="link" onClick={() => setFromVault(true)}>
-          It&apos;s already in the vault
+          It&apos;s already saved
         </Button>
         {refuse}
       </div>

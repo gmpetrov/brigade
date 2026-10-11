@@ -18,7 +18,8 @@ export * from './tasks.js'
  * 3: self-update. 4: the library, memory and search. 5: git through the API's proxy.
  * 6: generated images. 7: attachments. 8: welcome lists running threads, to close lost turns.
  * 9: tasks. 10: schedules. 11: queued messages (cancel, edit, steer) and interrupts by turn.
+ * 12: teammates save credentials; approvals that may allow a credential for good.
  */
-export const PROTOCOL_VERSION = 11
+export const PROTOCOL_VERSION = 12
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

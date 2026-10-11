@@ -177,7 +177,7 @@ export default function Home() {
           teammate={teammate}
           rows={3}
           picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
-          placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or credential`}
+          placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret`}
         />
       ) : (
         <section className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-6 py-12 text-center">

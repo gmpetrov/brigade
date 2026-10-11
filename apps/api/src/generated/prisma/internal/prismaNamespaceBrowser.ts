@@ -74,6 +74,7 @@ export const ModelName = {
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
   Credential: 'Credential',
+  CredentialGrant: 'CredentialGrant',
   Grant: 'Grant',
   ConnectionCall: 'ConnectionCall',
   Trigger: 'Trigger',
@@ -478,13 +479,29 @@ export const CredentialScalarFieldEnum = {
   kind: 'kind',
   name: 'name',
   details: 'details',
+  access: 'access',
   vaultSecretId: 'vaultSecretId',
+  previousVaultSecretId: 'previousVaultSecretId',
   createdByMemberId: 'createdByMemberId',
+  createdByTeammateId: 'createdByTeammateId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type CredentialScalarFieldEnum = (typeof CredentialScalarFieldEnum)[keyof typeof CredentialScalarFieldEnum]
+
+
+export const CredentialGrantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  credentialId: 'credentialId',
+  teammateId: 'teammateId',
+  withoutAsking: 'withoutAsking',
+  createdAt: 'createdAt'
+} as const
+
+export type CredentialGrantScalarFieldEnum = (typeof CredentialGrantScalarFieldEnum)[keyof typeof CredentialGrantScalarFieldEnum]
 
 
 export const GrantScalarFieldEnum = {

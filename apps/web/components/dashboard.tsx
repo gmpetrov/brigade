@@ -12,6 +12,7 @@ import {
   Monitor,
   Plug,
   Plus,
+  ShieldCheck,
   SquareKanban,
   UserRound,
 } from 'lucide-react'
@@ -84,7 +85,8 @@ export const NAV = [
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
   { href: '/app/connections', label: 'Connections', icon: Plug },
-  { href: '/app/vault', label: 'Vault', icon: KeyRound },
+  { href: '/app/vault', label: 'Secrets', icon: KeyRound },
+  { href: '/app/security', label: 'Security', icon: ShieldCheck },
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
   { href: '/app/threads', label: 'Threads', icon: MessagesSquare },
   { href: '/app/computers', label: 'Computers', icon: Monitor },

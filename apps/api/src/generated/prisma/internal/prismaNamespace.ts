@@ -420,6 +420,7 @@ export const ModelName = {
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
   Credential: 'Credential',
+  CredentialGrant: 'CredentialGrant',
   Grant: 'Grant',
   ConnectionCall: 'ConnectionCall',
   Trigger: 'Trigger',
@@ -444,7 +445,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry" | "attachment" | "threadAttachment"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry" | "attachment" | "threadAttachment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2150,6 +2151,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CredentialGrant: {
+      payload: Prisma.$CredentialGrantPayload<ExtArgs>
+      fields: Prisma.CredentialGrantFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CredentialGrantFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CredentialGrantFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        findFirst: {
+          args: Prisma.CredentialGrantFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CredentialGrantFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        findMany: {
+          args: Prisma.CredentialGrantFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>[]
+        }
+        create: {
+          args: Prisma.CredentialGrantCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        createMany: {
+          args: Prisma.CredentialGrantCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CredentialGrantCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>[]
+        }
+        delete: {
+          args: Prisma.CredentialGrantDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        update: {
+          args: Prisma.CredentialGrantUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        deleteMany: {
+          args: Prisma.CredentialGrantDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CredentialGrantUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CredentialGrantUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>[]
+        }
+        upsert: {
+          args: Prisma.CredentialGrantUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CredentialGrantPayload>
+        }
+        aggregate: {
+          args: Prisma.CredentialGrantAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCredentialGrant>
+        }
+        groupBy: {
+          args: Prisma.CredentialGrantGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CredentialGrantGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CredentialGrantCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CredentialGrantCountAggregateOutputType> | number
+        }
+      }
+    }
     Grant: {
       payload: Prisma.$GrantPayload<ExtArgs>
       fields: Prisma.GrantFieldRefs
@@ -3232,13 +3307,29 @@ export const CredentialScalarFieldEnum = {
   kind: 'kind',
   name: 'name',
   details: 'details',
+  access: 'access',
   vaultSecretId: 'vaultSecretId',
+  previousVaultSecretId: 'previousVaultSecretId',
   createdByMemberId: 'createdByMemberId',
+  createdByTeammateId: 'createdByTeammateId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type CredentialScalarFieldEnum = (typeof CredentialScalarFieldEnum)[keyof typeof CredentialScalarFieldEnum]
+
+
+export const CredentialGrantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  credentialId: 'credentialId',
+  teammateId: 'teammateId',
+  withoutAsking: 'withoutAsking',
+  createdAt: 'createdAt'
+} as const
+
+export type CredentialGrantScalarFieldEnum = (typeof CredentialGrantScalarFieldEnum)[keyof typeof CredentialGrantScalarFieldEnum]
 
 
 export const GrantScalarFieldEnum = {
@@ -3729,6 +3820,20 @@ export type ListEnumCredentialKindFieldRefInput<$PrismaModel> = FieldRefInputTyp
 
 
 /**
+ * Reference to a field of type 'CredentialAccess'
+ */
+export type EnumCredentialAccessFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CredentialAccess'>
+    
+
+
+/**
+ * Reference to a field of type 'CredentialAccess[]'
+ */
+export type ListEnumCredentialAccessFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CredentialAccess[]'>
+    
+
+
+/**
  * Reference to a field of type 'GrantScope'
  */
 export type EnumGrantScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GrantScope'>
@@ -4055,6 +4160,7 @@ export type GlobalOmitConfig = {
   connection?: Prisma.ConnectionOmit
   vaultSecret?: Prisma.VaultSecretOmit
   credential?: Prisma.CredentialOmit
+  credentialGrant?: Prisma.CredentialGrantOmit
   grant?: Prisma.GrantOmit
   connectionCall?: Prisma.ConnectionCallOmit
   trigger?: Prisma.TriggerOmit

@@ -5,7 +5,7 @@ import { isAdmin, timeAgo } from '@/components/dashboard'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { pullHref, type Me, type Ticket } from '@/lib/api'
+import { credentialManagersOnly, pullHref, type Me, type Ticket } from '@/lib/api'
 
 const typeLabel: Record<Ticket['type'], string> = {
   approval: 'approval',
@@ -53,15 +53,53 @@ export function TicketRow({
 }: {
   ticket: Ticket
   me: Me
-  onResolve: (id: string, approved: boolean) => Promise<void>
+  onResolve: (id: string, approved: boolean, always?: boolean) => Promise<void>
 }) {
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
   const open = t.status === 'open'
   const concerns = t.payload.memberId ? t.payload.memberId === me.memberId : starter
 
+  const owner = t.payload.credentialOwnerId === me.memberId
   let actions: React.ReactNode = null
-  if (open && t.type === 'approval' && (admin || starter)) {
+  if (open && t.type === 'approval' && t.payload.credentialAction) {
+    // A credential's ticket: sharing or changing it is for its creator or an admin.
+    const managersOnly = credentialManagersOnly(t)
+    const mayDecide = managersOnly ? admin || owner : admin || starter
+    // Allowing it for good changes who may use it: the creator's or an admin's call.
+    const mayAlways =
+      t.payload.always && (t.payload.credentialAction === 'create' ? mayDecide : admin || owner)
+    actions = mayDecide ? (
+      <>
+        <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+          {t.payload.credentialAction === 'create'
+            ? 'Save'
+            : t.payload.credentialAction === 'update'
+              ? 'Allow the change'
+              : 'Allow in this thread'}
+        </Button>
+        {mayAlways && (
+          <Button
+            size="sm"
+            variant="outline"
+            title="Let this teammate use it from now on, in any thread, without asking"
+            onClick={() => void onResolve(t.id, true, true)}
+          >
+            {t.payload.credentialAction === 'create' ? 'Save, use without asking' : 'Always allow'}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+          Deny
+        </Button>
+      </>
+    ) : (
+      <span className="text-sm text-muted-foreground">
+        {managersOnly
+          ? 'Waiting for the secret’s creator or an admin'
+          : 'For the member who started the thread'}
+      </span>
+    )
+  } else if (open && t.type === 'approval' && (admin || starter)) {
     actions = (
       <>
         <Button size="sm" onClick={() => void onResolve(t.id, true)}>
@@ -160,6 +198,23 @@ export function TicketRow({
       </div>
       {t.payload.reason && (
         <p className="mt-1.5 text-sm text-muted-foreground">{t.payload.reason}</p>
+      )}
+      {t.payload.credentialAction === 'create' && t.payload.details && (
+        <Detail summary={`What ${t.payload.credential} would hold (never its value)`}>
+          {JSON.stringify({ kind: t.payload.kind, ...t.payload.details }, null, 2)}
+        </Detail>
+      )}
+      {t.payload.credentialAction === 'update' && t.payload.changes && (
+        <Detail summary="The change (never the value)">
+          {JSON.stringify(
+            {
+              ...t.payload.changes,
+              ...(t.payload.secretReplaced ? { secret: 'replaced; the old value is kept' } : {}),
+            },
+            null,
+            2,
+          )}
+        </Detail>
       )}
       {t.type === 'cap' && t.payload.pending && (
         <Detail summary="The message waiting to run">{t.payload.pending.text}</Detail>

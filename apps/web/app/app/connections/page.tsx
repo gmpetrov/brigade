@@ -148,7 +148,7 @@ function Connections() {
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent-foreground" aria-hidden />
           <p>
             <span className="font-semibold text-accent-foreground">
-              The credential stays in Brigade&apos;s vault and never reaches a computer:
+              The account’s key stays encrypted in Brigade and never reaches a computer:
             </span>{' '}
             every call goes through Brigade, which checks the teammate&apos;s grant, asks a person
             before changes when its policy says so, and logs the call.
@@ -424,8 +424,8 @@ function Connections() {
             >
               <p className="text-sm text-muted-foreground">
                 Create a restricted key in Stripe&apos;s dashboard with only the access your
-                teammates need, and paste it here. It goes straight into Brigade&apos;s vault and is
-                never shown again.
+                teammates need, and paste it here. It is encrypted in Brigade at once and is never
+                shown again.
               </p>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="apiKey">Secret or restricted key</Label>

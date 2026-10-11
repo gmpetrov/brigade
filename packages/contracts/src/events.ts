@@ -206,6 +206,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     input: z.unknown(),
     /** Why a person must decide, when it is not the usual approval, e.g. a reached cap. */
     reason: z.string().optional(),
+    /** The person may also allow it for good: a credential's grant, without asking. */
+    always: z.boolean().optional(),
   }),
   z.object({
     ...base,

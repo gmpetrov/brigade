@@ -12,7 +12,7 @@ const CREDENTIAL_KINDS: Record<Credential['kind'], string> = {
   website: 'Website',
   database: 'Database',
   api_key: 'API key',
-  other: 'Secret',
+  other: 'Other',
 }
 
 /** What a credential's menu row shows beside its name: never the secret. */

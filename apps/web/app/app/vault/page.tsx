@@ -9,24 +9,48 @@ import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
-import { api, useApi, type Credential, type CredentialUse } from '@/lib/api'
+import { api, useApi, type CredentialUse, type CredentialWithGrants } from '@/lib/api'
 
 export default function VaultPage() {
-  const { me } = useDashboard()
-  const credentials = useApi<Credential[]>('/credentials')
+  const { me, teammates } = useDashboard()
+  const credentials = useApi<CredentialWithGrants[]>('/credentials')
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<string>()
   const [uses, setUses] = useState<string>()
   const [error, setError] = useState<string>()
-  const mayEdit = (c: Credential) => isAdmin(me) || c.createdByMemberId === me.memberId
+  const mayEdit = (c: CredentialWithGrants) => isAdmin(me) || c.createdByMemberId === me.memberId
+  const nameOf = (id: string | null) => teammates.find((t) => t.id === id)?.name
 
-  async function remove(c: Credential) {
+  /** Who may use it, in a few words. */
+  function whoUses(c: CredentialWithGrants) {
+    const free = c.grants.filter((g) => g.withoutAsking).length
+    const base =
+      c.access === 'all'
+        ? 'all teammates'
+        : c.grants.length === 0
+          ? 'no teammate'
+          : c.grants.length === 1
+            ? (nameOf(c.grants[0]!.teammateId) ?? '1 teammate')
+            : `${c.grants.length} teammates`
+    return free ? `${base}, ${free} without asking` : base
+  }
+
+  async function restore(c: CredentialWithGrants) {
     if (
       !confirm(
-        `Delete ${c.name}? Its secret is erased from the vault; teammates can no longer use it.`,
+        `Restore the value ${c.name} had before its last change? The current one is kept, so you can switch back.`,
       )
     )
       return
+    setError(undefined)
+    await api(`/credentials/${c.id}/restore`, { method: 'POST' }).catch((e) =>
+      setError((e as Error).message),
+    )
+    await credentials.reload()
+  }
+
+  async function remove(c: CredentialWithGrants) {
+    if (!confirm(`Delete ${c.name}? It is erased for good; teammates can no longer use it.`)) return
     setError(undefined)
     await api(`/credentials/${c.id}`, { method: 'DELETE' }).catch((e) =>
       setError((e as Error).message),
@@ -39,7 +63,7 @@ export default function VaultPage() {
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight">Vault</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">Secrets</h1>
             <p className="max-w-prose text-muted-foreground">
               Logins, databases and keys your teammates can use.
             </p>
@@ -47,7 +71,7 @@ export default function VaultPage() {
           {!adding && (
             <Button onClick={() => setAdding(true)}>
               <Plus />
-              Add a credential
+              Add a secret
             </Button>
           )}
         </div>
@@ -58,8 +82,15 @@ export default function VaultPage() {
               A secret is encrypted the moment you save it and is never shown again, here or to a
               teammate&apos;s model.
             </span>{' '}
-            Type <code className="font-mono">@</code> and its name in a thread to let that
-            thread&apos;s teammate use it; anywhere else, it has to ask and a person approves.
+            Pick who can use each one. Type <code className="font-mono">@</code> and its name in a
+            thread to let that thread&apos;s teammate use it; anywhere else, it has to ask and a
+            person approves, unless it may use it without asking.{' '}
+            <Link
+              href="/app/security"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              See every teammate&apos;s access
+            </Link>
           </p>
         </div>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
@@ -83,10 +114,10 @@ export default function VaultPage() {
           >
             <KeyRound className="size-5" />
           </span>
-          <p className="font-semibold">Nothing in the vault yet.</p>
+          <p className="font-semibold">No secrets yet.</p>
           <Button onClick={() => setAdding(true)}>
             <Plus />
-            Add a credential
+            Add a secret
           </Button>
         </Card>
       ) : (credentials.data ?? []).length > 0 ? (
@@ -104,6 +135,11 @@ export default function VaultPage() {
                   <span className="font-semibold">{c.name}</span>
                   <span className="truncate text-sm text-muted-foreground">
                     {credentialHint(c)} · updated {timeAgo(c.updatedAt)}
+                  </span>
+                  <span className="truncate text-sm text-muted-foreground">
+                    Used by {whoUses(c)}
+                    {c.createdByTeammateId &&
+                      ` · saved by ${nameOf(c.createdByTeammateId) ?? 'a teammate'}`}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -125,6 +161,11 @@ export default function VaultPage() {
                       >
                         Edit
                       </Button>
+                      {c.hasPrevious && (
+                        <Button variant="outline" size="sm" onClick={() => void restore(c)}>
+                          Restore previous value
+                        </Button>
+                      )}
                       <Button variant="danger" size="sm" onClick={() => void remove(c)}>
                         Delete
                       </Button>
@@ -151,6 +192,13 @@ export default function VaultPage() {
   )
 }
 
+const VIA_LABEL: Record<CredentialUse['via'], string> = {
+  mention: 'mentioned',
+  approval: 'approved',
+  thread: 'approved earlier',
+  grant: 'without asking',
+}
+
 function Uses({ credentialId }: { credentialId: string }) {
   const uses = useApi<CredentialUse[]>(`/credentials/${credentialId}/uses`)
   if (!uses.data) return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -172,8 +220,8 @@ function Uses({ credentialId }: { credentialId: string }) {
               <TableCell>
                 <StatusBadge
                   status={u.via}
-                  tone={u.via === 'mention' ? 'success' : 'warning'}
-                  label={u.via === 'mention' ? 'mentioned' : 'approved'}
+                  tone={u.via === 'approval' ? 'warning' : 'success'}
+                  label={VIA_LABEL[u.via]}
                 />
               </TableCell>
               <TableCell>

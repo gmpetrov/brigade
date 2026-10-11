@@ -1,5 +1,5 @@
 'use client'
-import { Library } from 'lucide-react'
+import { KeyRound, Library } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,11 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { levelOf, LEVEL_LABEL } from '@/components/credential-access'
+import { useDashboard } from '@/components/dashboard'
+import { credentialHint } from '@/components/mention'
 import { ProviderTile } from '@/components/provider-logo'
 import {
   api,
+  isAdmin,
   useApi,
   type ConnectionsResponse,
+  type CredentialGrantLevel,
+  type CredentialWithGrants,
   type Teammate,
   type Trigger,
   type TriggerCatalog,
@@ -23,8 +29,8 @@ import {
 type Scope = 'none' | 'read' | 'read_write'
 
 /**
- * Which connections a teammate may use, whether its changes wait for a person,
- * and what outside starts threads for it.
+ * Which connections and credentials a teammate may use, whether its changes
+ * wait for a person, and what outside starts threads for it.
  */
 export function TeammateAccess({
   teammate,
@@ -39,6 +45,8 @@ export function TeammateAccess({
   const grants = useApi<{ connectionId: string; scope: Exclude<Scope, 'none'> }[]>(
     `/teammates/${teammate.id}/grants`,
   )
+  const credentials = useApi<CredentialWithGrants[]>('/credentials')
+  const { me } = useDashboard()
   const hooks = useApi<Trigger[]>('/triggers')
   const catalog = useApi<TriggerCatalog>('/triggers/catalog')
   const [error, setError] = useState<string>()
@@ -52,6 +60,19 @@ export function TeammateAccess({
         body: { connectionId, scope },
       })
       await grants.reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function setCredential(credentialId: string, level: CredentialGrantLevel) {
+    setError(undefined)
+    try {
+      await api(`/credentials/${credentialId}/grants`, {
+        method: 'PUT',
+        body: { teammateId: teammate.id, level },
+      })
+      await credentials.reload()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -156,17 +177,66 @@ export function TeammateAccess({
             )
           })
         )}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-t px-6 pt-4 pb-2">
+          <h3 className="flex-1 text-sm font-bold">Secrets</h3>
+          <Link href="/app/security" className="text-xs font-medium text-primary hover:underline">
+            Every teammate&apos;s access
+          </Link>
+        </div>
+        {credentials.data?.length === 0 ? (
+          <p className="px-6 pb-3 text-sm text-muted-foreground">
+            No secrets yet.{' '}
+            <Link href="/app/vault" className="font-medium text-primary hover:underline">
+              Add a secret
+            </Link>
+            .
+          </p>
+        ) : (
+          (credentials.data ?? []).map((c) => {
+            const level = levelOf(c, teammate.id)
+            // Its creator or an admin decides who uses it.
+            const mayChange = isAdmin(me) || c.createdByMemberId === me.memberId
+            return (
+              <div key={c.id} className="flex flex-wrap items-center gap-3 border-t px-6 py-3">
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground"
+                >
+                  <KeyRound className="size-4" />
+                </span>
+                <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
+                  <span className="truncate text-sm font-semibold">{c.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {c.access === 'all' ? 'Shared with all teammates' : credentialHint(c)}
+                  </span>
+                </span>
+                <Select
+                  value={level}
+                  disabled={!mayChange}
+                  onValueChange={(v) => void setCredential(c.id, v as CredentialGrantLevel)}
+                >
+                  <SelectTrigger size="sm" aria-label={`${c.name} access`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {c.access === 'selected' && (
+                      <SelectItem value="none">{LEVEL_LABEL.none}</SelectItem>
+                    )}
+                    <SelectItem value="use">{LEVEL_LABEL.use}</SelectItem>
+                    <SelectItem value="without_asking">{LEVEL_LABEL.without_asking}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          })
+        )}
         <div className="flex flex-wrap items-center gap-3 border-t bg-secondary px-6 py-3.5">
           <span className="flex-[1_1_16rem] text-sm font-semibold">
-            Changes through connections{' '}
+            Acts without approval{' '}
             <span className="font-normal text-muted-foreground">(sending, editing, deleting)</span>
           </span>
           <Select value={policy} disabled={!editable} onValueChange={(v) => void setPolicy(v)}>
-            <SelectTrigger
-              size="sm"
-              aria-label="Changes through connections"
-              className="bg-background"
-            >
+            <SelectTrigger size="sm" aria-label="Acts without approval" className="bg-background">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

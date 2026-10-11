@@ -19,7 +19,7 @@ type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 type PendingCall = {
   resolve: (result: Result) => void
   reject: (error: Error) => void
-  onPending: (ticketId: string, reason?: string) => void
+  onPending: (ticketId: string, reason?: string, always?: boolean) => void
   onDecision: (decision: { ticketId: string; approved: boolean; memberId: string }) => void
 }
 
@@ -73,7 +73,7 @@ export class Connection {
       } else if (message.type === 'ack') {
         this.outbox.ack(message.sessionId, message.seq)
       } else if (message.type === 'connector.pending') {
-        this.calls.get(message.callId)?.onPending(message.ticketId, message.reason)
+        this.calls.get(message.callId)?.onPending(message.ticketId, message.reason, message.always)
       } else if (message.type === 'connector.result') {
         const call = this.calls.get(message.callId)
         if (!call) return
@@ -139,7 +139,7 @@ export class Connection {
     return { output: result.output, attachments: result.attachments ?? [] }
   }
 
-  /** List the workspace's credentials, or ask for one. A release may wait for a person. */
+  /** List the credentials the teammate may use, ask for one, or save one. Releases and saves may wait for a person. */
   async requestCredential(
     request: Omit<Extract<RunnerToApi, { type: 'credential.request' }>, 'type' | 'callId'>,
     hooks: Pick<PendingCall, 'onPending' | 'onDecision'>,

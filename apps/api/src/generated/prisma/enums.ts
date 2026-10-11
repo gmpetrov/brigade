@@ -147,6 +147,14 @@ export const CredentialKind = {
 export type CredentialKind = (typeof CredentialKind)[keyof typeof CredentialKind]
 
 
+export const CredentialAccess = {
+  all: 'all',
+  selected: 'selected'
+} as const
+
+export type CredentialAccess = (typeof CredentialAccess)[keyof typeof CredentialAccess]
+
+
 export const GrantScope = {
   read: 'read',
   read_write: 'read_write'

@@ -75,7 +75,7 @@ export function QuickThread() {
             draft={draft}
             autoFocus
             picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
-            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or credential`}
+            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret`}
             onStarted={(thread) => {
               onOpenChange(false)
               setStarted({ id: thread.id, teammate: teammate.name })

@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { CredentialAccessPicker, type AccessValue } from '@/components/credential-access'
+import { useDashboard } from '@/components/dashboard'
 import { cn } from '@/lib/utils'
-import { api, type Credential, type CredentialKind } from '@/lib/api'
+import { api, type Credential, type CredentialKind, type CredentialWithGrants } from '@/lib/api'
 
 const KINDS: { kind: CredentialKind; label: string; hint: string }[] = [
   {
@@ -45,7 +47,7 @@ const SECRET_LABEL: Record<CredentialKind, string> = {
   website: 'Password',
   database: 'Password',
   api_key: 'API key',
-  other: 'Secret',
+  other: 'Value',
 }
 const SECRET_FIELD = {
   website: 'password',
@@ -66,7 +68,7 @@ export function CredentialForm({
   onCancel,
   onSaved,
 }: {
-  credential?: Credential
+  credential?: Credential | CredentialWithGrants
   /** A new credential's starting values. */
   draft?: CredentialDraft
   /** Inside another card: a quieter frame. */
@@ -80,6 +82,14 @@ export function CredentialForm({
   const [busy, setBusy] = useState(false)
   const d = credential?.details ?? { url: draft?.url, username: draft?.username }
   const prefix = useId()
+  const { teammates } = useDashboard()
+  // In the Vault only: one saved from a thread is shared like any other, and shared later.
+  const showAccess = !draft && (!credential || 'grants' in credential)
+  const initialAccess: AccessValue = {
+    access: credential?.access ?? 'all',
+    grants: credential && 'grants' in credential ? credential.grants : [],
+  }
+  const [access, setAccess] = useState<AccessValue>(initialAccess)
 
   async function save(event: FormEvent<HTMLFormElement>) {
     // Not a form action: React would clear what was typed when saving fails.
@@ -112,8 +122,16 @@ export function CredentialForm({
             body: { name: text('name'), details, ...secret },
           })
         : await api<Credential>('/credentials', {
-            body: { kind, name: text('name'), details, ...secret },
+            body: {
+              kind,
+              name: text('name'),
+              details,
+              ...secret,
+              ...(showAccess ? { access } : {}),
+            },
           })
+      if (credential && showAccess && JSON.stringify(access) !== JSON.stringify(initialAccess))
+        await api(`/credentials/${credential.id}/access`, { method: 'PUT', body: access })
       await onSaved(saved)
     } catch (e) {
       setError((e as Error).message)
@@ -242,7 +260,7 @@ export function CredentialForm({
         required: !credential,
         placeholder: credential ? 'Leave empty to keep the saved one' : '',
       })}
-      {/* A new one saved from a thread stays short; notes can be added in the Vault. */}
+      {/* A new one saved from a thread stays short; notes can be added on the Secrets page. */}
       {(credential || !inline) && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${prefix}-notes`}>Notes for teammates (optional)</Label>
@@ -257,6 +275,14 @@ export function CredentialForm({
           />
         </div>
       )}
+      {showAccess && (
+        <CredentialAccessPicker
+          value={access}
+          onChange={setAccess}
+          teammates={teammates}
+          idPrefix={`${prefix}-access`}
+        />
+      )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       <div className="flex justify-end gap-2">
         {onCancel && (
@@ -264,7 +290,7 @@ export function CredentialForm({
             Cancel
           </Button>
         )}
-        <Button disabled={busy}>{submitLabel ?? (credential ? 'Save' : 'Add to vault')}</Button>
+        <Button disabled={busy}>{submitLabel ?? (credential ? 'Save' : 'Add secret')}</Button>
       </div>
     </form>
   )

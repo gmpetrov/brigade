@@ -94,7 +94,7 @@ export type Browser = { ready: true } | { ready: false; error?: string }
 const credentials = (browser: Browser) =>
   [
     '## Credentials',
-    "Logins, API keys and other secrets live in the workspace's vault: `list_credentials` shows what it holds. " +
+    "Logins, API keys and other secrets live in the workspace's vault: `list_credentials` shows those you may use. " +
       (browser.ready
         ? 'Sign in to a website with `fill_credential` on its sign-in page in your browser; '
         : browser.error
@@ -106,6 +106,9 @@ const credentials = (browser: Browser) =>
       '(its kind, a name, the sign-in page or API URL, the username if you know it). The person saves it to the vault ' +
       'right in the ticket, and the answer gives you its mention, which lets you use it in this thread at once. ' +
       'Then use it and finish the task.',
+    'When you produce a secret yourself (you create an account, generate an API key, or a site makes you reset a ' +
+      'password), save it with `save_credential` so it is not lost: write it alone to a file without printing it, ' +
+      'pass the path, and delete the file once saved. A person approves first.',
     browser.ready &&
       'When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a bot or firewall ' +
         'block page) or a step only a person can do in the browser, do not try to get around it and do not stop to ' +

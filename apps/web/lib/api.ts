@@ -1,5 +1,13 @@
 'use client'
-import type { AttachmentInfo, TaskColumn, TaskPriority, UploadTicket } from '@brigade/contracts'
+import type {
+  AttachmentInfo,
+  CredentialGrant,
+  CredentialKind,
+  CredentialSummary,
+  TaskColumn,
+  TaskPriority,
+  UploadTicket,
+} from '@brigade/contracts'
 import { useCallback, useEffect, useState } from 'react'
 import { API_URL } from './config'
 
@@ -335,6 +343,47 @@ export type ConnectionsResponse = {
 }
 
 export type { CredentialKind, CredentialSummary as Credential } from '@brigade/contracts'
+export type { CredentialGrant, CredentialGrantLevel } from '@brigade/contracts'
+
+/** A credential with the teammates granted it, as the Vault lists it. */
+export type CredentialWithGrants = CredentialSummary & { grants: CredentialGrant[] }
+
+/** Everything the access matrix shows: GET /security/access. */
+export type AccessOverview = {
+  teammates: {
+    id: string
+    name: string
+    harness: Teammate['harness']
+    libraryAccess: 'read' | 'read_write'
+    connectorWrites: 'allow' | 'ask' | 'deny'
+  }[]
+  connections: {
+    id: string
+    kind: Connection['kind']
+    label: string
+    externalAccount: string | null
+    status: Connection['status']
+    lastUsedAt: string | null
+  }[]
+  connectionGrants: { teammateId: string; connectionId: string; scope: 'read' | 'read_write' }[]
+  credentials: (CredentialWithGrants & { lastUsedAt: string | null; creatorActive: boolean })[]
+  members: Record<string, string>
+}
+
+/** One entry of the Activity feed: GET /security/activity. */
+export type ActivityItem = {
+  id: string
+  at: string
+  actor: { type: 'member' | 'teammate' | 'runner' | 'system'; id: string }
+  action: string
+  target: { type: string; id: string }
+  data: Record<string, unknown>
+}
+export type ActivityPage = {
+  items: ActivityItem[]
+  names: Record<'teammate' | 'member' | 'credential' | 'connection', Record<string, string>>
+  next: string | null
+}
 export type {
   LibraryFile,
   MemoryFile,
@@ -349,8 +398,11 @@ export type CredentialUse = {
   teammate: string
   sessionId: string | null
   use: 'browser' | 'env' | null
-  /** mention: a member mentioned it in the thread. approval: a person approved the request. */
-  via: 'mention' | 'approval'
+  /**
+   * mention: a member mentioned it in the thread. approval: a person approved the request.
+   * thread: a person approved it earlier in the thread. grant: it may use it without asking.
+   */
+  via: 'mention' | 'approval' | 'thread' | 'grant'
 }
 
 /** An event on a connection that starts a thread for a teammate. */
@@ -455,6 +507,18 @@ export type Ticket = {
     memberId?: string
     triggerId?: string
     pullRequest?: { repository: string; number: number }
+    /** A credential's ticket: use one, grant one, keep one a teammate saved, or change one. */
+    credentialAction?: 'use' | 'grant' | 'create' | 'update'
+    credentialId?: string
+    credential?: string
+    /** Its creator: with an admin, the one who may grant it or change it. */
+    credentialOwnerId?: string
+    /** May also be allowed for good. */
+    always?: boolean
+    kind?: CredentialKind
+    details?: CredentialSummary['details']
+    changes?: Record<string, string>
+    secretReplaced?: boolean
   }
   createdAt: string
   resolvedAt: string | null
@@ -469,12 +533,19 @@ export type Ticket = {
 
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
 
+/** A credential's ticket only its creator or an admin decides: sharing it, or changing it. */
+export const credentialManagersOnly = (t: Ticket) =>
+  t.payload.credentialAction === 'grant' || t.payload.credentialAction === 'update'
+
 /** Whether an open ticket waits on this member: the same rules that give them actions below. */
 export function waitsOn(t: Ticket, me: Me) {
   if (t.status !== 'open') return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
-  if (t.type === 'approval') return admin || starter
+  if (t.type === 'approval')
+    return credentialManagersOnly(t)
+      ? admin || t.payload.credentialOwnerId === me.memberId
+      : admin || starter
   if (t.type === 'cap') return admin
   if ((t.type === 'question' || t.type === 'request') && t.payload.source === 'harness')
     return admin || starter

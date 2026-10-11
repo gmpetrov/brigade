@@ -523,6 +523,8 @@ export class HarnessThread {
       request: this.requestCredential,
       ...(this.runAs ? { runAs: this.runAs } : {}),
       ...(browser && tabsFile ? { browser: { port: browser, tabsFile } } : {}),
+      readFile: (file) =>
+        readAs(resolvePath(this.workDir, file), this.runAs, 1024 * 1024, 'A secret file'),
     })
     const agent = createAgent(
       this.spec,

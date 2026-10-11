@@ -156,9 +156,16 @@ export type VaultSecret = Prisma.VaultSecretModel
 /**
  * Model Credential
  * A secret a member keeps for teammates: a website login, a database, an API key.
- * A teammate may use it in a thread where a member mentioned it, or once a person approves.
+ * all: every teammate may use it; selected: only teammates with a CredentialGrant.
+ * A teammate may use it in a thread where a member mentioned it, once a person
+ * approves, or always when its grant lets it use the credential without asking.
  */
 export type Credential = Prisma.CredentialModel
+/**
+ * Model CredentialGrant
+ * Permission for one teammate to use one credential.
+ */
+export type CredentialGrant = Prisma.CredentialGrantModel
 /**
  * Model Grant
  * Permission for one teammate to use one connection.

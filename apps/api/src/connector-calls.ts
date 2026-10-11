@@ -30,7 +30,8 @@ import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
 import { openSecret, replaceSecret } from './vault.js'
 
-type Decision = { approved: boolean; memberId: string; reason?: string }
+/** always: a credential's ticket, also allowed for good (see credentials.ts). */
+export type Decision = { approved: boolean; memberId: string; reason?: string; always?: boolean }
 const waiting = new Map<string, (decision: Decision) => void>()
 
 type Call = Extract<RunnerToApi, { type: 'connector.call' }>
@@ -342,7 +343,7 @@ export const awaitDecision = (ticketId: string) =>
 export async function decideTicket(
   scope: Scope & { memberId: string },
   ticketId: string,
-  decision: { approved: boolean; reason?: string },
+  decision: { approved: boolean; reason?: string; always?: boolean },
 ): Promise<boolean> {
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
@@ -372,12 +373,20 @@ export async function decideTicket(
         : 'expired'
     }`,
     target: { type: 'ticket', id: ticketId },
-    ...(decision.reason ? { data: { reason: decision.reason } } : {}),
+    ...(decision.reason || decision.always
+      ? {
+          data: {
+            ...(decision.reason ? { reason: decision.reason } : {}),
+            ...(decision.always && decision.approved ? { always: true } : {}),
+          },
+        }
+      : {}),
   })
   resolve?.({
     approved: decision.approved,
     memberId: scope.memberId,
     ...(decision.reason ? { reason: decision.reason } : {}),
+    ...(decision.always && decision.approved ? { always: true } : {}),
   })
   return Boolean(resolve)
 }

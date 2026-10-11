@@ -12,6 +12,7 @@ import { attachments } from './routes/attachments.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
+import { security } from './routes/security.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
@@ -47,6 +48,7 @@ app.route('/api/computers', computers)
 app.route('/api/accounts', accounts)
 app.route('/api/connections', connections)
 app.route('/api/credentials', credentials)
+app.route('/api/security', security)
 app.route('/api/tickets', tickets)
 app.route('/api/tasks', tasks)
 app.route('/api/schedules', schedules)

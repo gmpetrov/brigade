@@ -147,6 +147,7 @@ model Workspace {
   connections    Connection[]
   vaultSecrets   VaultSecret[]
   credentials    Credential[]
+  credentialGrants CredentialGrant[]
   grants         Grant[]
   connectionCalls ConnectionCall[]
   triggers       Trigger[]
@@ -249,6 +250,8 @@ model Teammate {
   sessions         Session[]
   threadSeats      ThreadTeammate[]
   grants           Grant[]
+  credentialGrants CredentialGrant[]
+  savedCredentials Credential[]
   triggers         Trigger[]
   connectionCalls  ConnectionCall[]
   documents        Document[]
@@ -668,6 +671,7 @@ model VaultSecret {
   updatedAt      DateTime    @updatedAt
   connection     Connection?
   credential     Credential?
+  previousOf     Credential? @relation("CredentialPrevious")
 
   @@index([workspaceId])
 }
@@ -679,24 +683,58 @@ enum CredentialKind {
   other
 }
 
+enum CredentialAccess {
+  all
+  selected
+}
+
 /// A secret a member keeps for teammates: a website login, a database, an API key.
-/// A teammate may use it in a thread where a member mentioned it, or once a person approves.
+/// all: every teammate may use it; selected: only teammates with a CredentialGrant.
+/// A teammate may use it in a thread where a member mentioned it, once a person
+/// approves, or always when its grant lets it use the credential without asking.
 model Credential {
-  id                String         @id @default(cuid())
-  organizationId    String
-  workspaceId       String
-  workspace         Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  kind              CredentialKind
-  name              String
+  id                    String            @id @default(cuid())
+  organizationId        String
+  workspaceId           String
+  workspace             Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind                  CredentialKind
+  name                  String
   /// Non-secret fields: URL, username, host, port, database. Never the secret.
-  details           Json           @default("{}")
-  vaultSecretId     String         @unique
-  vaultSecret       VaultSecret    @relation(fields: [vaultSecretId], references: [id], onDelete: Cascade)
-  createdByMemberId String
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  details               Json              @default("{}")
+  access                CredentialAccess  @default(all)
+  vaultSecretId         String            @unique
+  vaultSecret           VaultSecret       @relation(fields: [vaultSecretId], references: [id], onDelete: Cascade)
+  /// The secret before its last replacement, to roll back to.
+  previousVaultSecretId String?           @unique
+  previousVaultSecret   VaultSecret?      @relation("CredentialPrevious", fields: [previousVaultSecretId], references: [id], onDelete: SetNull)
+  /// The member who added it, or who approved a teammate saving it. They may change it.
+  createdByMemberId     String
+  /// Set when a teammate saved it.
+  createdByTeammateId   String?
+  createdByTeammate     Teammate?         @relation(fields: [createdByTeammateId], references: [id], onDelete: SetNull)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  grants                CredentialGrant[]
 
   @@index([workspaceId])
+}
+
+/// Permission for one teammate to use one credential.
+model CredentialGrant {
+  id             String     @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  credentialId   String
+  credential     Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  teammateId     String
+  teammate       Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// Use it in any thread without a mention or a person's approval.
+  withoutAsking  Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+
+  @@unique([credentialId, teammateId])
+  @@index([teammateId])
 }
 
 enum GrantScope {

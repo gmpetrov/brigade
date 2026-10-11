@@ -15,7 +15,9 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 /**
  * Model Credential
  * A secret a member keeps for teammates: a website login, a database, an API key.
- * A teammate may use it in a thread where a member mentioned it, or once a person approves.
+ * all: every teammate may use it; selected: only teammates with a CredentialGrant.
+ * A teammate may use it in a thread where a member mentioned it, once a person
+ * approves, or always when its grant lets it use the credential without asking.
  */
 export type CredentialModel = runtime.Types.Result.DefaultSelection<Prisma.$CredentialPayload>
 
@@ -31,8 +33,11 @@ export type CredentialMinAggregateOutputType = {
   workspaceId: string | null
   kind: $Enums.CredentialKind | null
   name: string | null
+  access: $Enums.CredentialAccess | null
   vaultSecretId: string | null
+  previousVaultSecretId: string | null
   createdByMemberId: string | null
+  createdByTeammateId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -43,8 +48,11 @@ export type CredentialMaxAggregateOutputType = {
   workspaceId: string | null
   kind: $Enums.CredentialKind | null
   name: string | null
+  access: $Enums.CredentialAccess | null
   vaultSecretId: string | null
+  previousVaultSecretId: string | null
   createdByMemberId: string | null
+  createdByTeammateId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -56,8 +64,11 @@ export type CredentialCountAggregateOutputType = {
   kind: number
   name: number
   details: number
+  access: number
   vaultSecretId: number
+  previousVaultSecretId: number
   createdByMemberId: number
+  createdByTeammateId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -70,8 +81,11 @@ export type CredentialMinAggregateInputType = {
   workspaceId?: true
   kind?: true
   name?: true
+  access?: true
   vaultSecretId?: true
+  previousVaultSecretId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -82,8 +96,11 @@ export type CredentialMaxAggregateInputType = {
   workspaceId?: true
   kind?: true
   name?: true
+  access?: true
   vaultSecretId?: true
+  previousVaultSecretId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -95,8 +112,11 @@ export type CredentialCountAggregateInputType = {
   kind?: true
   name?: true
   details?: true
+  access?: true
   vaultSecretId?: true
+  previousVaultSecretId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -181,8 +201,11 @@ export type CredentialGroupByOutputType = {
   kind: $Enums.CredentialKind
   name: string
   details: runtime.JsonValue
+  access: $Enums.CredentialAccess
   vaultSecretId: string
+  previousVaultSecretId: string | null
   createdByMemberId: string
+  createdByTeammateId: string | null
   createdAt: Date
   updatedAt: Date
   _count: CredentialCountAggregateOutputType | null
@@ -215,12 +238,18 @@ export type CredentialWhereInput = {
   kind?: Prisma.EnumCredentialKindFilter<"Credential"> | $Enums.CredentialKind
   name?: Prisma.StringFilter<"Credential"> | string
   details?: Prisma.JsonFilter<"Credential">
+  access?: Prisma.EnumCredentialAccessFilter<"Credential"> | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFilter<"Credential"> | string
+  previousVaultSecretId?: Prisma.StringNullableFilter<"Credential"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Credential"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Credential"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretScalarRelationFilter, Prisma.VaultSecretWhereInput>
+  previousVaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
+  createdByTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
+  grants?: Prisma.CredentialGrantListRelationFilter
 }
 
 export type CredentialOrderByWithRelationInput = {
@@ -230,17 +259,24 @@ export type CredentialOrderByWithRelationInput = {
   kind?: Prisma.SortOrder
   name?: Prisma.SortOrder
   details?: Prisma.SortOrder
+  access?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
+  previousVaultSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   vaultSecret?: Prisma.VaultSecretOrderByWithRelationInput
+  previousVaultSecret?: Prisma.VaultSecretOrderByWithRelationInput
+  createdByTeammate?: Prisma.TeammateOrderByWithRelationInput
+  grants?: Prisma.CredentialGrantOrderByRelationAggregateInput
 }
 
 export type CredentialWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   vaultSecretId?: string
+  previousVaultSecretId?: string
   AND?: Prisma.CredentialWhereInput | Prisma.CredentialWhereInput[]
   OR?: Prisma.CredentialWhereInput[]
   NOT?: Prisma.CredentialWhereInput | Prisma.CredentialWhereInput[]
@@ -249,12 +285,17 @@ export type CredentialWhereUniqueInput = Prisma.AtLeast<{
   kind?: Prisma.EnumCredentialKindFilter<"Credential"> | $Enums.CredentialKind
   name?: Prisma.StringFilter<"Credential"> | string
   details?: Prisma.JsonFilter<"Credential">
+  access?: Prisma.EnumCredentialAccessFilter<"Credential"> | $Enums.CredentialAccess
   createdByMemberId?: Prisma.StringFilter<"Credential"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Credential"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretScalarRelationFilter, Prisma.VaultSecretWhereInput>
-}, "id" | "vaultSecretId">
+  previousVaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
+  createdByTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
+  grants?: Prisma.CredentialGrantListRelationFilter
+}, "id" | "vaultSecretId" | "previousVaultSecretId">
 
 export type CredentialOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -263,8 +304,11 @@ export type CredentialOrderByWithAggregationInput = {
   kind?: Prisma.SortOrder
   name?: Prisma.SortOrder
   details?: Prisma.SortOrder
+  access?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
+  previousVaultSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.CredentialCountOrderByAggregateInput
@@ -282,8 +326,11 @@ export type CredentialScalarWhereWithAggregatesInput = {
   kind?: Prisma.EnumCredentialKindWithAggregatesFilter<"Credential"> | $Enums.CredentialKind
   name?: Prisma.StringWithAggregatesFilter<"Credential"> | string
   details?: Prisma.JsonWithAggregatesFilter<"Credential">
+  access?: Prisma.EnumCredentialAccessWithAggregatesFilter<"Credential"> | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringWithAggregatesFilter<"Credential"> | string
+  previousVaultSecretId?: Prisma.StringNullableWithAggregatesFilter<"Credential"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Credential"> | string
+  createdByTeammateId?: Prisma.StringNullableWithAggregatesFilter<"Credential"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Credential"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Credential"> | Date | string
 }
@@ -294,11 +341,15 @@ export type CredentialCreateInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   createdByMemberId: string
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutCredentialsInput
   vaultSecret: Prisma.VaultSecretCreateNestedOneWithoutCredentialInput
+  previousVaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutPreviousOfInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSavedCredentialsInput
+  grants?: Prisma.CredentialGrantCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialUncheckedCreateInput = {
@@ -308,10 +359,14 @@ export type CredentialUncheckedCreateInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   vaultSecretId: string
+  previousVaultSecretId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  grants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialUpdateInput = {
@@ -320,11 +375,15 @@ export type CredentialUpdateInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneRequiredWithoutCredentialNestedInput
+  previousVaultSecret?: Prisma.VaultSecretUpdateOneWithoutPreviousOfNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSavedCredentialsNestedInput
+  grants?: Prisma.CredentialGrantUpdateManyWithoutCredentialNestedInput
 }
 
 export type CredentialUncheckedUpdateInput = {
@@ -334,10 +393,14 @@ export type CredentialUncheckedUpdateInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutCredentialNestedInput
 }
 
 export type CredentialCreateManyInput = {
@@ -347,8 +410,11 @@ export type CredentialCreateManyInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   vaultSecretId: string
+  previousVaultSecretId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -359,6 +425,7 @@ export type CredentialUpdateManyMutationInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -371,8 +438,11 @@ export type CredentialUncheckedUpdateManyInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -399,8 +469,11 @@ export type CredentialCountOrderByAggregateInput = {
   kind?: Prisma.SortOrder
   name?: Prisma.SortOrder
   details?: Prisma.SortOrder
+  access?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
+  previousVaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -411,8 +484,11 @@ export type CredentialMaxOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  access?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
+  previousVaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -423,10 +499,18 @@ export type CredentialMinOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  access?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
+  previousVaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type CredentialScalarRelationFilter = {
+  is?: Prisma.CredentialWhereInput
+  isNot?: Prisma.CredentialWhereInput
 }
 
 export type CredentialCreateNestedManyWithoutWorkspaceInput = {
@@ -471,15 +555,69 @@ export type CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   deleteMany?: Prisma.CredentialScalarWhereInput | Prisma.CredentialScalarWhereInput[]
 }
 
+export type CredentialCreateNestedManyWithoutCreatedByTeammateInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.CredentialCreateWithoutCreatedByTeammateInput[] | Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput | Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.CredentialCreateManyCreatedByTeammateInputEnvelope
+  connect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+}
+
+export type CredentialUncheckedCreateNestedManyWithoutCreatedByTeammateInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.CredentialCreateWithoutCreatedByTeammateInput[] | Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput | Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.CredentialCreateManyCreatedByTeammateInputEnvelope
+  connect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+}
+
+export type CredentialUpdateManyWithoutCreatedByTeammateNestedInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.CredentialCreateWithoutCreatedByTeammateInput[] | Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput | Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput[]
+  upsert?: Prisma.CredentialUpsertWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.CredentialUpsertWithWhereUniqueWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.CredentialCreateManyCreatedByTeammateInputEnvelope
+  set?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  disconnect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  delete?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  connect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  update?: Prisma.CredentialUpdateWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.CredentialUpdateWithWhereUniqueWithoutCreatedByTeammateInput[]
+  updateMany?: Prisma.CredentialUpdateManyWithWhereWithoutCreatedByTeammateInput | Prisma.CredentialUpdateManyWithWhereWithoutCreatedByTeammateInput[]
+  deleteMany?: Prisma.CredentialScalarWhereInput | Prisma.CredentialScalarWhereInput[]
+}
+
+export type CredentialUncheckedUpdateManyWithoutCreatedByTeammateNestedInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.CredentialCreateWithoutCreatedByTeammateInput[] | Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput | Prisma.CredentialCreateOrConnectWithoutCreatedByTeammateInput[]
+  upsert?: Prisma.CredentialUpsertWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.CredentialUpsertWithWhereUniqueWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.CredentialCreateManyCreatedByTeammateInputEnvelope
+  set?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  disconnect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  delete?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  connect?: Prisma.CredentialWhereUniqueInput | Prisma.CredentialWhereUniqueInput[]
+  update?: Prisma.CredentialUpdateWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.CredentialUpdateWithWhereUniqueWithoutCreatedByTeammateInput[]
+  updateMany?: Prisma.CredentialUpdateManyWithWhereWithoutCreatedByTeammateInput | Prisma.CredentialUpdateManyWithWhereWithoutCreatedByTeammateInput[]
+  deleteMany?: Prisma.CredentialScalarWhereInput | Prisma.CredentialScalarWhereInput[]
+}
+
 export type CredentialCreateNestedOneWithoutVaultSecretInput = {
   create?: Prisma.XOR<Prisma.CredentialCreateWithoutVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutVaultSecretInput>
   connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutVaultSecretInput
   connect?: Prisma.CredentialWhereUniqueInput
 }
 
+export type CredentialCreateNestedOneWithoutPreviousVaultSecretInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutPreviousVaultSecretInput
+  connect?: Prisma.CredentialWhereUniqueInput
+}
+
 export type CredentialUncheckedCreateNestedOneWithoutVaultSecretInput = {
   create?: Prisma.XOR<Prisma.CredentialCreateWithoutVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutVaultSecretInput>
   connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutVaultSecretInput
+  connect?: Prisma.CredentialWhereUniqueInput
+}
+
+export type CredentialUncheckedCreateNestedOneWithoutPreviousVaultSecretInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutPreviousVaultSecretInput
   connect?: Prisma.CredentialWhereUniqueInput
 }
 
@@ -493,6 +631,16 @@ export type CredentialUpdateOneWithoutVaultSecretNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CredentialUpdateToOneWithWhereWithoutVaultSecretInput, Prisma.CredentialUpdateWithoutVaultSecretInput>, Prisma.CredentialUncheckedUpdateWithoutVaultSecretInput>
 }
 
+export type CredentialUpdateOneWithoutPreviousVaultSecretNestedInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutPreviousVaultSecretInput
+  upsert?: Prisma.CredentialUpsertWithoutPreviousVaultSecretInput
+  disconnect?: Prisma.CredentialWhereInput | boolean
+  delete?: Prisma.CredentialWhereInput | boolean
+  connect?: Prisma.CredentialWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CredentialUpdateToOneWithWhereWithoutPreviousVaultSecretInput, Prisma.CredentialUpdateWithoutPreviousVaultSecretInput>, Prisma.CredentialUncheckedUpdateWithoutPreviousVaultSecretInput>
+}
+
 export type CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput = {
   create?: Prisma.XOR<Prisma.CredentialCreateWithoutVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutVaultSecretInput>
   connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutVaultSecretInput
@@ -503,8 +651,36 @@ export type CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CredentialUpdateToOneWithWhereWithoutVaultSecretInput, Prisma.CredentialUpdateWithoutVaultSecretInput>, Prisma.CredentialUncheckedUpdateWithoutVaultSecretInput>
 }
 
+export type CredentialUncheckedUpdateOneWithoutPreviousVaultSecretNestedInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutPreviousVaultSecretInput
+  upsert?: Prisma.CredentialUpsertWithoutPreviousVaultSecretInput
+  disconnect?: Prisma.CredentialWhereInput | boolean
+  delete?: Prisma.CredentialWhereInput | boolean
+  connect?: Prisma.CredentialWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CredentialUpdateToOneWithWhereWithoutPreviousVaultSecretInput, Prisma.CredentialUpdateWithoutPreviousVaultSecretInput>, Prisma.CredentialUncheckedUpdateWithoutPreviousVaultSecretInput>
+}
+
 export type EnumCredentialKindFieldUpdateOperationsInput = {
   set?: $Enums.CredentialKind
+}
+
+export type EnumCredentialAccessFieldUpdateOperationsInput = {
+  set?: $Enums.CredentialAccess
+}
+
+export type CredentialCreateNestedOneWithoutGrantsInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutGrantsInput, Prisma.CredentialUncheckedCreateWithoutGrantsInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutGrantsInput
+  connect?: Prisma.CredentialWhereUniqueInput
+}
+
+export type CredentialUpdateOneRequiredWithoutGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.CredentialCreateWithoutGrantsInput, Prisma.CredentialUncheckedCreateWithoutGrantsInput>
+  connectOrCreate?: Prisma.CredentialCreateOrConnectWithoutGrantsInput
+  upsert?: Prisma.CredentialUpsertWithoutGrantsInput
+  connect?: Prisma.CredentialWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CredentialUpdateToOneWithWhereWithoutGrantsInput, Prisma.CredentialUpdateWithoutGrantsInput>, Prisma.CredentialUncheckedUpdateWithoutGrantsInput>
 }
 
 export type CredentialCreateWithoutWorkspaceInput = {
@@ -513,10 +689,14 @@ export type CredentialCreateWithoutWorkspaceInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   createdByMemberId: string
   createdAt?: Date | string
   updatedAt?: Date | string
   vaultSecret: Prisma.VaultSecretCreateNestedOneWithoutCredentialInput
+  previousVaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutPreviousOfInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSavedCredentialsInput
+  grants?: Prisma.CredentialGrantCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialUncheckedCreateWithoutWorkspaceInput = {
@@ -525,10 +705,14 @@ export type CredentialUncheckedCreateWithoutWorkspaceInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   vaultSecretId: string
+  previousVaultSecretId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  grants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialCreateOrConnectWithoutWorkspaceInput = {
@@ -567,10 +751,71 @@ export type CredentialScalarWhereInput = {
   kind?: Prisma.EnumCredentialKindFilter<"Credential"> | $Enums.CredentialKind
   name?: Prisma.StringFilter<"Credential"> | string
   details?: Prisma.JsonFilter<"Credential">
+  access?: Prisma.EnumCredentialAccessFilter<"Credential"> | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFilter<"Credential"> | string
+  previousVaultSecretId?: Prisma.StringNullableFilter<"Credential"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Credential"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Credential"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Credential"> | Date | string
+}
+
+export type CredentialCreateWithoutCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutCredentialsInput
+  vaultSecret: Prisma.VaultSecretCreateNestedOneWithoutCredentialInput
+  previousVaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutPreviousOfInput
+  grants?: Prisma.CredentialGrantCreateNestedManyWithoutCredentialInput
+}
+
+export type CredentialUncheckedCreateWithoutCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  vaultSecretId: string
+  previousVaultSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  grants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutCredentialInput
+}
+
+export type CredentialCreateOrConnectWithoutCreatedByTeammateInput = {
+  where: Prisma.CredentialWhereUniqueInput
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput>
+}
+
+export type CredentialCreateManyCreatedByTeammateInputEnvelope = {
+  data: Prisma.CredentialCreateManyCreatedByTeammateInput | Prisma.CredentialCreateManyCreatedByTeammateInput[]
+  skipDuplicates?: boolean
+}
+
+export type CredentialUpsertWithWhereUniqueWithoutCreatedByTeammateInput = {
+  where: Prisma.CredentialWhereUniqueInput
+  update: Prisma.XOR<Prisma.CredentialUpdateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedUpdateWithoutCreatedByTeammateInput>
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedCreateWithoutCreatedByTeammateInput>
+}
+
+export type CredentialUpdateWithWhereUniqueWithoutCreatedByTeammateInput = {
+  where: Prisma.CredentialWhereUniqueInput
+  data: Prisma.XOR<Prisma.CredentialUpdateWithoutCreatedByTeammateInput, Prisma.CredentialUncheckedUpdateWithoutCreatedByTeammateInput>
+}
+
+export type CredentialUpdateManyWithWhereWithoutCreatedByTeammateInput = {
+  where: Prisma.CredentialScalarWhereInput
+  data: Prisma.XOR<Prisma.CredentialUpdateManyMutationInput, Prisma.CredentialUncheckedUpdateManyWithoutCreatedByTeammateInput>
 }
 
 export type CredentialCreateWithoutVaultSecretInput = {
@@ -579,10 +824,14 @@ export type CredentialCreateWithoutVaultSecretInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   createdByMemberId: string
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutCredentialsInput
+  previousVaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutPreviousOfInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSavedCredentialsInput
+  grants?: Prisma.CredentialGrantCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialUncheckedCreateWithoutVaultSecretInput = {
@@ -592,14 +841,55 @@ export type CredentialUncheckedCreateWithoutVaultSecretInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  previousVaultSecretId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  grants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutCredentialInput
 }
 
 export type CredentialCreateOrConnectWithoutVaultSecretInput = {
   where: Prisma.CredentialWhereUniqueInput
   create: Prisma.XOR<Prisma.CredentialCreateWithoutVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutVaultSecretInput>
+}
+
+export type CredentialCreateWithoutPreviousVaultSecretInput = {
+  id?: string
+  organizationId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutCredentialsInput
+  vaultSecret: Prisma.VaultSecretCreateNestedOneWithoutCredentialInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSavedCredentialsInput
+  grants?: Prisma.CredentialGrantCreateNestedManyWithoutCredentialInput
+}
+
+export type CredentialUncheckedCreateWithoutPreviousVaultSecretInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  vaultSecretId: string
+  createdByMemberId: string
+  createdByTeammateId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  grants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutCredentialInput
+}
+
+export type CredentialCreateOrConnectWithoutPreviousVaultSecretInput = {
+  where: Prisma.CredentialWhereUniqueInput
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
 }
 
 export type CredentialUpsertWithoutVaultSecretInput = {
@@ -619,10 +909,14 @@ export type CredentialUpdateWithoutVaultSecretInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput
+  previousVaultSecret?: Prisma.VaultSecretUpdateOneWithoutPreviousOfNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSavedCredentialsNestedInput
+  grants?: Prisma.CredentialGrantUpdateManyWithoutCredentialNestedInput
 }
 
 export type CredentialUncheckedUpdateWithoutVaultSecretInput = {
@@ -632,7 +926,134 @@ export type CredentialUncheckedUpdateWithoutVaultSecretInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutCredentialNestedInput
+}
+
+export type CredentialUpsertWithoutPreviousVaultSecretInput = {
+  update: Prisma.XOR<Prisma.CredentialUpdateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedUpdateWithoutPreviousVaultSecretInput>
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedCreateWithoutPreviousVaultSecretInput>
+  where?: Prisma.CredentialWhereInput
+}
+
+export type CredentialUpdateToOneWithWhereWithoutPreviousVaultSecretInput = {
+  where?: Prisma.CredentialWhereInput
+  data: Prisma.XOR<Prisma.CredentialUpdateWithoutPreviousVaultSecretInput, Prisma.CredentialUncheckedUpdateWithoutPreviousVaultSecretInput>
+}
+
+export type CredentialUpdateWithoutPreviousVaultSecretInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneRequiredWithoutCredentialNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSavedCredentialsNestedInput
+  grants?: Prisma.CredentialGrantUpdateManyWithoutCredentialNestedInput
+}
+
+export type CredentialUncheckedUpdateWithoutPreviousVaultSecretInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutCredentialNestedInput
+}
+
+export type CredentialCreateWithoutGrantsInput = {
+  id?: string
+  organizationId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutCredentialsInput
+  vaultSecret: Prisma.VaultSecretCreateNestedOneWithoutCredentialInput
+  previousVaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutPreviousOfInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSavedCredentialsInput
+}
+
+export type CredentialUncheckedCreateWithoutGrantsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  vaultSecretId: string
+  previousVaultSecretId?: string | null
+  createdByMemberId: string
+  createdByTeammateId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type CredentialCreateOrConnectWithoutGrantsInput = {
+  where: Prisma.CredentialWhereUniqueInput
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutGrantsInput, Prisma.CredentialUncheckedCreateWithoutGrantsInput>
+}
+
+export type CredentialUpsertWithoutGrantsInput = {
+  update: Prisma.XOR<Prisma.CredentialUpdateWithoutGrantsInput, Prisma.CredentialUncheckedUpdateWithoutGrantsInput>
+  create: Prisma.XOR<Prisma.CredentialCreateWithoutGrantsInput, Prisma.CredentialUncheckedCreateWithoutGrantsInput>
+  where?: Prisma.CredentialWhereInput
+}
+
+export type CredentialUpdateToOneWithWhereWithoutGrantsInput = {
+  where?: Prisma.CredentialWhereInput
+  data: Prisma.XOR<Prisma.CredentialUpdateWithoutGrantsInput, Prisma.CredentialUncheckedUpdateWithoutGrantsInput>
+}
+
+export type CredentialUpdateWithoutGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneRequiredWithoutCredentialNestedInput
+  previousVaultSecret?: Prisma.VaultSecretUpdateOneWithoutPreviousOfNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSavedCredentialsNestedInput
+}
+
+export type CredentialUncheckedUpdateWithoutGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -643,8 +1064,11 @@ export type CredentialCreateManyWorkspaceInput = {
   kind: $Enums.CredentialKind
   name: string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
   vaultSecretId: string
+  previousVaultSecretId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -655,10 +1079,14 @@ export type CredentialUpdateWithoutWorkspaceInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vaultSecret?: Prisma.VaultSecretUpdateOneRequiredWithoutCredentialNestedInput
+  previousVaultSecret?: Prisma.VaultSecretUpdateOneWithoutPreviousOfNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSavedCredentialsNestedInput
+  grants?: Prisma.CredentialGrantUpdateManyWithoutCredentialNestedInput
 }
 
 export type CredentialUncheckedUpdateWithoutWorkspaceInput = {
@@ -667,10 +1095,14 @@ export type CredentialUncheckedUpdateWithoutWorkspaceInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutCredentialNestedInput
 }
 
 export type CredentialUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -679,12 +1111,106 @@ export type CredentialUncheckedUpdateManyWithoutWorkspaceInput = {
   kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
   name?: Prisma.StringFieldUpdateOperationsInput | string
   details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
   vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type CredentialCreateManyCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind: $Enums.CredentialKind
+  name: string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: $Enums.CredentialAccess
+  vaultSecretId: string
+  previousVaultSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type CredentialUpdateWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCredentialsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneRequiredWithoutCredentialNestedInput
+  previousVaultSecret?: Prisma.VaultSecretUpdateOneWithoutPreviousOfNestedInput
+  grants?: Prisma.CredentialGrantUpdateManyWithoutCredentialNestedInput
+}
+
+export type CredentialUncheckedUpdateWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutCredentialNestedInput
+}
+
+export type CredentialUncheckedUpdateManyWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumCredentialKindFieldUpdateOperationsInput | $Enums.CredentialKind
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  details?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  access?: Prisma.EnumCredentialAccessFieldUpdateOperationsInput | $Enums.CredentialAccess
+  vaultSecretId?: Prisma.StringFieldUpdateOperationsInput | string
+  previousVaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type CredentialCountOutputType
+ */
+
+export type CredentialCountOutputType = {
+  grants: number
+}
+
+export type CredentialCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  grants?: boolean | CredentialCountOutputTypeCountGrantsArgs
+}
+
+/**
+ * CredentialCountOutputType without action
+ */
+export type CredentialCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CredentialCountOutputType
+   */
+  select?: Prisma.CredentialCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * CredentialCountOutputType without action
+ */
+export type CredentialCountOutputTypeCountGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CredentialGrantWhereInput
+}
 
 
 export type CredentialSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -694,12 +1220,19 @@ export type CredentialSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   kind?: boolean
   name?: boolean
   details?: boolean
+  access?: boolean
   vaultSecretId?: boolean
+  previousVaultSecretId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
+  grants?: boolean | Prisma.Credential$grantsArgs<ExtArgs>
+  _count?: boolean | Prisma.CredentialCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["credential"]>
 
 export type CredentialSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -709,12 +1242,17 @@ export type CredentialSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   kind?: boolean
   name?: boolean
   details?: boolean
+  access?: boolean
   vaultSecretId?: boolean
+  previousVaultSecretId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
 }, ExtArgs["result"]["credential"]>
 
 export type CredentialSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -724,12 +1262,17 @@ export type CredentialSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   kind?: boolean
   name?: boolean
   details?: boolean
+  access?: boolean
   vaultSecretId?: boolean
+  previousVaultSecretId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
 }, ExtArgs["result"]["credential"]>
 
 export type CredentialSelectScalar = {
@@ -739,24 +1282,35 @@ export type CredentialSelectScalar = {
   kind?: boolean
   name?: boolean
   details?: boolean
+  access?: boolean
   vaultSecretId?: boolean
+  previousVaultSecretId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type CredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "name" | "details" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["credential"]>
+export type CredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "name" | "details" | "access" | "vaultSecretId" | "previousVaultSecretId" | "createdByMemberId" | "createdByTeammateId" | "createdAt" | "updatedAt", ExtArgs["result"]["credential"]>
 export type CredentialInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
+  grants?: boolean | Prisma.Credential$grantsArgs<ExtArgs>
+  _count?: boolean | Prisma.CredentialCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CredentialIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
 }
 export type CredentialIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   vaultSecret?: boolean | Prisma.VaultSecretDefaultArgs<ExtArgs>
+  previousVaultSecret?: boolean | Prisma.Credential$previousVaultSecretArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Credential$createdByTeammateArgs<ExtArgs>
 }
 
 export type $CredentialPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -764,6 +1318,9 @@ export type $CredentialPayload<ExtArgs extends runtime.Types.Extensions.Internal
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     vaultSecret: Prisma.$VaultSecretPayload<ExtArgs>
+    previousVaultSecret: Prisma.$VaultSecretPayload<ExtArgs> | null
+    createdByTeammate: Prisma.$TeammatePayload<ExtArgs> | null
+    grants: Prisma.$CredentialGrantPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -775,8 +1332,20 @@ export type $CredentialPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * Non-secret fields: URL, username, host, port, database. Never the secret.
      */
     details: runtime.JsonValue
+    access: $Enums.CredentialAccess
     vaultSecretId: string
+    /**
+     * The secret before its last replacement, to roll back to.
+     */
+    previousVaultSecretId: string | null
+    /**
+     * The member who added it, or who approved a teammate saving it. They may change it.
+     */
     createdByMemberId: string
+    /**
+     * Set when a teammate saved it.
+     */
+    createdByTeammateId: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["credential"]>
@@ -1175,6 +1744,9 @@ export interface Prisma__CredentialClient<T, Null = never, ExtArgs extends runti
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   vaultSecret<T extends Prisma.VaultSecretDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.VaultSecretDefaultArgs<ExtArgs>>): Prisma.Prisma__VaultSecretClient<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  previousVaultSecret<T extends Prisma.Credential$previousVaultSecretArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Credential$previousVaultSecretArgs<ExtArgs>>): Prisma.Prisma__VaultSecretClient<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  createdByTeammate<T extends Prisma.Credential$createdByTeammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Credential$createdByTeammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  grants<T extends Prisma.Credential$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Credential$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CredentialGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1210,8 +1782,11 @@ export interface CredentialFieldRefs {
   readonly kind: Prisma.FieldRef<"Credential", 'CredentialKind'>
   readonly name: Prisma.FieldRef<"Credential", 'String'>
   readonly details: Prisma.FieldRef<"Credential", 'Json'>
+  readonly access: Prisma.FieldRef<"Credential", 'CredentialAccess'>
   readonly vaultSecretId: Prisma.FieldRef<"Credential", 'String'>
+  readonly previousVaultSecretId: Prisma.FieldRef<"Credential", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Credential", 'String'>
+  readonly createdByTeammateId: Prisma.FieldRef<"Credential", 'String'>
   readonly createdAt: Prisma.FieldRef<"Credential", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Credential", 'DateTime'>
 }
@@ -1612,6 +2187,68 @@ export type CredentialDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Limit how many Credentials to delete.
    */
   limit?: number
+}
+
+/**
+ * Credential.previousVaultSecret
+ */
+export type Credential$previousVaultSecretArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VaultSecret
+   */
+  select?: Prisma.VaultSecretSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VaultSecret
+   */
+  omit?: Prisma.VaultSecretOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VaultSecretInclude<ExtArgs> | null
+  where?: Prisma.VaultSecretWhereInput
+}
+
+/**
+ * Credential.createdByTeammate
+ */
+export type Credential$createdByTeammateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Teammate
+   */
+  select?: Prisma.TeammateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Teammate
+   */
+  omit?: Prisma.TeammateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeammateInclude<ExtArgs> | null
+  where?: Prisma.TeammateWhereInput
+}
+
+/**
+ * Credential.grants
+ */
+export type Credential$grantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CredentialGrant
+   */
+  select?: Prisma.CredentialGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CredentialGrant
+   */
+  omit?: Prisma.CredentialGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CredentialGrantInclude<ExtArgs> | null
+  where?: Prisma.CredentialGrantWhereInput
+  orderBy?: Prisma.CredentialGrantOrderByWithRelationInput | Prisma.CredentialGrantOrderByWithRelationInput[]
+  cursor?: Prisma.CredentialGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CredentialGrantScalarFieldEnum | Prisma.CredentialGrantScalarFieldEnum[]
 }
 
 /**

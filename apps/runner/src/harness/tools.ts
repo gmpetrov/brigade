@@ -217,18 +217,29 @@ type Credentials = {
     credential: { name: string; details: unknown }
   }>
   fill: (credentialId: string, submit: boolean, call: Call) => Promise<unknown>
+  save: (input: SaveInput, call: Call) => Promise<unknown>
 }
+type SaveInput =
+  | {
+      mode: 'create'
+      kind: 'website' | 'database' | 'api_key' | 'other'
+      name: string
+      details: object
+      secretFile: string
+    }
+  | { mode: 'update'; credentialId: string; changes: object; secretFile?: string }
 type Call = { toolCallId: string; toolName: string; input: unknown }
 
 const MENTIONS =
-  'Members mention credentials in messages as @[Name](credential:<id>); a credential mentioned by a member in this thread is yours to use here, any other needs a person to approve it. ' +
+  'Members mention credentials in messages as @[Name](credential:<id>). You may use a credential shared with you once a member mentions it in this thread or a person approves, or right away when you may use it without asking (list_credentials says which). ' +
+  'One not shared with you needs its creator or an admin to allow it. ' +
   'For one the vault lacks, open a ticket with an access ask of kind credential: the person saves it from the ticket.'
 
 /** The vault's credentials, as tools. Their secrets never appear in a tool result. */
 export function credentialTools(credentials: Credentials): Record<string, Tool> {
   const tools: Record<string, Tool> = {
     list_credentials: tool({
-      description: `List the credentials saved in the workspace's vault: names, kinds and non-secret details such as URL, username or host, never the secrets. ${MENTIONS}`,
+      description: `List the vault's credentials you may use, and those mentioned in this thread: names, kinds, non-secret details such as URL, username or host, and whether using one needs approval. Never the secrets. ${MENTIONS}`,
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) =>
         credentials.list({ toolCallId, toolName: 'list_credentials', input }),
@@ -260,6 +271,108 @@ export function credentialTools(credentials: Credentials): Record<string, Tool> 
       },
     }),
   }
+  tools.save_credential = tool({
+    description:
+      `Save a secret you produced to the vault: a password you set while creating an account, an API key you generated, a password a site made you reset. ` +
+      `Write the secret alone to a file first, without printing it (e.g. redirect the command that makes it), and pass the file's path: never put a secret in a tool call. ` +
+      `mode create: a new credential, which only you may use until someone shares it. mode update: a new secret, and optionally a new name, username, database or notes, for one you may use; ` +
+      `where a credential's secret goes (its URL, host or port) cannot be changed here. A person approves before anything is kept; the replaced secret can be restored. ` +
+      `Delete the file once it is saved.`,
+    inputSchema: jsonSchema<{
+      mode: 'create' | 'update'
+      secretFile?: string
+      credentialId?: string
+      kind?: 'website' | 'database' | 'api_key' | 'other'
+      name?: string
+      url?: string
+      username?: string
+      engine?: 'postgres' | 'mysql' | 'mongodb' | 'other'
+      host?: string
+      port?: number
+      database?: string
+      notes?: string
+    }>({
+      type: 'object',
+      properties: {
+        mode: { type: 'string', enum: ['create', 'update'] },
+        secretFile: {
+          type: 'string',
+          description:
+            'Path to a file holding only the secret. Required to create; optional to update.',
+        },
+        credentialId: { type: 'string', description: 'update: the credential to change' },
+        kind: {
+          type: 'string',
+          enum: ['website', 'database', 'api_key', 'other'],
+          description:
+            'create: website (a login typed into a sign-in page), database, api_key or other',
+        },
+        name: { type: 'string', description: 'A short name, e.g. "Acme dashboard (support bot)"' },
+        url: {
+          type: 'string',
+          description: "create: a website's sign-in page, or an API's base URL",
+        },
+        username: { type: 'string' },
+        engine: { type: 'string', enum: ['postgres', 'mysql', 'mongodb', 'other'] },
+        host: { type: 'string', description: "create: a database's host" },
+        port: { type: 'number' },
+        database: { type: 'string' },
+        notes: { type: 'string', description: 'For teammates: what it is for, any limits' },
+      },
+      required: ['mode'],
+    }),
+    execute: async (input, { toolCallId }) => {
+      const call = { toolCallId, toolName: 'save_credential', input }
+      const defined = <T extends object>(o: T) =>
+        Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== ''))
+      if (input.mode === 'create') {
+        if (!input.secretFile || !input.kind || !input.name)
+          throw new Error('To create a credential, give secretFile, kind and name')
+        const saved = await credentials.save(
+          {
+            mode: 'create',
+            kind: input.kind,
+            name: input.name,
+            details: defined({
+              url: input.url,
+              username: input.username,
+              engine: input.engine,
+              host: input.host,
+              port: input.port,
+              database: input.database,
+              notes: input.notes,
+            }),
+            secretFile: input.secretFile,
+          },
+          call,
+        )
+        return { saved, note: 'Saved. Delete the secret file now.' }
+      }
+      if (!input.credentialId) throw new Error('To update a credential, give its credentialId')
+      if (input.url || input.host || input.port || input.engine || input.kind)
+        throw new Error(
+          "Where a credential's secret goes (its URL, host, port, engine) or its kind can only be changed by a person in the vault",
+        )
+      const saved = await credentials.save(
+        {
+          mode: 'update',
+          credentialId: input.credentialId,
+          changes: defined({
+            name: input.name,
+            username: input.username,
+            database: input.database,
+            notes: input.notes,
+          }),
+          ...(input.secretFile ? { secretFile: input.secretFile } : {}),
+        },
+        call,
+      )
+      return {
+        saved,
+        ...(input.secretFile ? { note: 'Saved. Delete the secret file now.' } : {}),
+      }
+    },
+  })
   if (credentials.canFill)
     tools.fill_credential = tool({
       description:

@@ -137,7 +137,7 @@ async function start() {
     const emit = (event: AgentEvent) =>
       connection.sendEvent(outbox.push(sessionId, { ...event, teammateId }))
     return {
-      onPending: (ticketId: string, reason?: string) =>
+      onPending: (ticketId: string, reason?: string, always?: boolean) =>
         emit({
           at: new Date().toISOString(),
           type: 'approval.requested',
@@ -146,6 +146,7 @@ async function start() {
           toolName: call.toolName,
           input: call.input,
           ...(reason ? { reason } : {}),
+          ...(always ? { always: true } : {}),
         }),
       onDecision: (d: { ticketId: string; approved: boolean; memberId: string }) =>
         emit({
@@ -172,7 +173,7 @@ async function start() {
         },
         approvalHooks(sessionId, teammateId, call),
       ),
-    // So do credentials: released once a member mentioned them in the thread, or a person approves.
+    // So do credentials: released once a member mentioned them, a person approves, or a grant allows it.
     requestCredential: (sessionId, teammateId, { toolCallId, toolName, input, ...request }) =>
       connection.requestCredential(
         { sessionId, teammateId, ...request },

@@ -13,6 +13,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
+import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
@@ -58,7 +59,7 @@ export async function answerQuestion(
       )
         throw new HTTPException(400, {
           message:
-            'Brigade never passes a secret in a message. Pick a credential from the vault instead, or decline.',
+            'Brigade never passes a secret in a message. Pick a saved secret instead, or decline.',
         })
     }
   }
@@ -131,7 +132,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
         if (!reply.text.trim()) throw new HTTPException(400, { message: `Answer ${ask.id}` })
         if (ask.secret && !onlyCredentialMentions(reply.text))
           throw new HTTPException(400, {
-            message: 'Pick a credential from the vault: Brigade never passes a secret in a message',
+            message: 'Pick a saved secret: Brigade never passes a secret in a message',
           })
       }
       if (ask.type === 'access' && reply.type === 'access' && reply.credential) {
@@ -143,7 +144,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
           !onlyCredentialMentions(reply.credential) ||
           (await db.credential.count({ where: { id: { in: ids } } })) !== new Set(ids).size
         )
-          throw new HTTPException(400, { message: 'Pick a credential from the vault' })
+          throw new HTTPException(400, { message: 'Pick a saved secret' })
       }
       if (ask.type === 'approval' && reply.type === 'approval' && !reply.approved) {
         if (!reply.changes?.trim())
@@ -240,12 +241,51 @@ type TicketPayload = {
   accountId?: string
   /** The member a notice is for. */
   memberId?: string
+  /** A credential's ticket: what it asks, and whether it may be allowed for good. */
+  credentialAction?: CredentialAction
+  credentialId?: string
+  always?: boolean
+}
+
+/**
+ * Who decides a credential's ticket. Using a credential shared with the
+ * teammate, or keeping one it saved: the member who started the thread, or an
+ * admin. Sharing one with it, changing one, or letting it use one without
+ * asking from now on: the credential's creator, or an admin.
+ */
+async function mayDecideCredential(
+  db: ReturnType<typeof scoped>,
+  scope: WorkspaceScope,
+  payload: TicketPayload,
+  who: { isAdmin: boolean; isStarter: boolean; always?: boolean },
+) {
+  if (who.always && !payload.always)
+    throw new HTTPException(400, { message: 'This can only be allowed once' })
+  const action = payload.credentialAction
+  const managers = action === 'grant' || action === 'update' || (who.always && action !== 'create')
+  if (!managers) {
+    if (who.isAdmin || who.isStarter) return
+    throw new HTTPException(403, {
+      message: 'Only the member who started the thread, or an admin, can decide',
+    })
+  }
+  const credential = payload.credentialId
+    ? await db.credential.findFirst({ where: { id: payload.credentialId } })
+    : null
+  if (!credential) throw new HTTPException(404, { message: 'That secret is gone' })
+  if (!mayManage(scope, credential))
+    throw new HTTPException(403, {
+      message:
+        action === 'grant' || action === 'update'
+          ? 'Only the secret’s creator, or an admin, can decide'
+          : 'Only the secret’s creator, or an admin, can allow it for good',
+    })
 }
 
 export async function resolveTicket(
   scope: WorkspaceScope,
   ticketId: string,
-  input: { approved: boolean; reason?: string },
+  input: { approved: boolean; reason?: string; always?: boolean },
 ): Promise<{ ok: true; live: boolean }> {
   const db = scoped(scope)
   const ticket = await db.ticket.findFirst({
@@ -292,6 +332,10 @@ export async function resolveTicket(
   }
 
   if (ticket.type === 'approval') {
+    if (payload.credentialAction) {
+      await mayDecideCredential(db, scope, payload, { isAdmin, isStarter, always: input.always })
+      return { ok: true, live: await decideTicket(scope, ticket.id, input) }
+    }
     if (!isAdmin && !isStarter)
       throw new HTTPException(403, {
         message: 'Only the member who started the thread, or an admin, can decide',

@@ -39,7 +39,7 @@ const groups: { kind: MentionKind; title: string; max: number }[] = [
   { kind: 'connection', title: 'Connections', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
   { kind: 'document', title: 'Library', max: 5 },
-  { kind: 'credential', title: 'Credentials', max: 5 },
+  { kind: 'credential', title: 'Secrets', max: 5 },
   { kind: 'thread', title: 'Threads', max: 4 },
   { kind: 'computer', title: 'Computers', max: 3 },
 ]

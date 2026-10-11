@@ -1,7 +1,7 @@
 // Messages on the one WebSocket between a runner and the API.
 import { z } from 'zod'
 import { ThreadAttachmentRef } from './attachments.js'
-import { CredentialUse } from './credentials.js'
+import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
 import { ScheduleOperation } from './schedules.js'
@@ -178,18 +178,22 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     input: z.unknown(),
   }),
   /**
-   * A teammate lists the workspace's credentials (never their secrets), or asks
-   * for one to use. The API releases it once a member mentioned it in the thread
-   * or approved the request. Answered like a connector call.
+   * A teammate lists the credentials it may use (never their secrets), asks for
+   * one to use, or saves one. The API releases a credential the teammate is
+   * granted once a member mentioned it in the thread, a person approved, or its
+   * grant lets it use it without asking; it keeps a saved one once a person
+   * approves. Answered like a connector call.
    */
   z.object({
     type: z.literal('credential.request'),
     callId: z.string(),
     sessionId: z.string(),
     teammateId: z.string().optional(),
-    action: z.enum(['list', 'release']),
+    action: z.enum(['list', 'release', 'save']),
     credentialId: z.string().optional(),
     use: CredentialUse.optional(),
+    /** save: the credential to keep, its secret read from the file the teammate named. */
+    save: TeammateCredentialSave.optional(),
     /** Shown to the person approving, e.g. the page the password goes into. */
     purpose: z.string().max(500).optional(),
   }),
@@ -438,6 +442,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     target: z.string(),
     /** Why a person must decide, when it is not the usual approval, e.g. a reached cap. */
     reason: z.string().optional(),
+    /** The person may also allow it for good: a credential's grant, without asking. */
+    always: z.boolean().optional(),
   }),
   /** Answers a connector call or a credential request. A released credential's secret is in output. */
   z.object({

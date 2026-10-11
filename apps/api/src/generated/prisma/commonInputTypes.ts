@@ -549,6 +549,13 @@ export type EnumCredentialKindFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel> | $Enums.CredentialKind
 }
 
+export type EnumCredentialAccessFilter<$PrismaModel = never> = {
+  equals?: $Enums.CredentialAccess | Prisma.EnumCredentialAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel> | $Enums.CredentialAccess
+}
+
 export type EnumCredentialKindWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.CredentialKind | Prisma.EnumCredentialKindFieldRefInput<$PrismaModel>
   in?: $Enums.CredentialKind[] | Prisma.ListEnumCredentialKindFieldRefInput<$PrismaModel>
@@ -557,6 +564,16 @@ export type EnumCredentialKindWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel>
+}
+
+export type EnumCredentialAccessWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CredentialAccess | Prisma.EnumCredentialAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCredentialAccessWithAggregatesFilter<$PrismaModel> | $Enums.CredentialAccess
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel>
 }
 
 export type EnumGrantScopeFilter<$PrismaModel = never> = {
@@ -1233,6 +1250,13 @@ export type NestedEnumCredentialKindFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel> | $Enums.CredentialKind
 }
 
+export type NestedEnumCredentialAccessFilter<$PrismaModel = never> = {
+  equals?: $Enums.CredentialAccess | Prisma.EnumCredentialAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel> | $Enums.CredentialAccess
+}
+
 export type NestedEnumCredentialKindWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.CredentialKind | Prisma.EnumCredentialKindFieldRefInput<$PrismaModel>
   in?: $Enums.CredentialKind[] | Prisma.ListEnumCredentialKindFieldRefInput<$PrismaModel>
@@ -1241,6 +1265,16 @@ export type NestedEnumCredentialKindWithAggregatesFilter<$PrismaModel = never> =
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumCredentialKindFilter<$PrismaModel>
+}
+
+export type NestedEnumCredentialAccessWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CredentialAccess | Prisma.EnumCredentialAccessFieldRefInput<$PrismaModel>
+  in?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CredentialAccess[] | Prisma.ListEnumCredentialAccessFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCredentialAccessWithAggregatesFilter<$PrismaModel> | $Enums.CredentialAccess
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCredentialAccessFilter<$PrismaModel>
 }
 
 export type NestedEnumGrantScopeFilter<$PrismaModel = never> = {

@@ -251,6 +251,7 @@ export type VaultSecretWhereInput = {
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   credential?: Prisma.XOR<Prisma.CredentialNullableScalarRelationFilter, Prisma.CredentialWhereInput> | null
+  previousOf?: Prisma.XOR<Prisma.CredentialNullableScalarRelationFilter, Prisma.CredentialWhereInput> | null
 }
 
 export type VaultSecretOrderByWithRelationInput = {
@@ -266,6 +267,7 @@ export type VaultSecretOrderByWithRelationInput = {
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   connection?: Prisma.ConnectionOrderByWithRelationInput
   credential?: Prisma.CredentialOrderByWithRelationInput
+  previousOf?: Prisma.CredentialOrderByWithRelationInput
 }
 
 export type VaultSecretWhereUniqueInput = Prisma.AtLeast<{
@@ -284,6 +286,7 @@ export type VaultSecretWhereUniqueInput = Prisma.AtLeast<{
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   credential?: Prisma.XOR<Prisma.CredentialNullableScalarRelationFilter, Prisma.CredentialWhereInput> | null
+  previousOf?: Prisma.XOR<Prisma.CredentialNullableScalarRelationFilter, Prisma.CredentialWhereInput> | null
 }, "id">
 
 export type VaultSecretOrderByWithAggregationInput = {
@@ -330,6 +333,7 @@ export type VaultSecretCreateInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutVaultSecretsInput
   connection?: Prisma.ConnectionCreateNestedOneWithoutVaultSecretInput
   credential?: Prisma.CredentialCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretUncheckedCreateInput = {
@@ -344,6 +348,7 @@ export type VaultSecretUncheckedCreateInput = {
   updatedAt?: Date | string
   connection?: Prisma.ConnectionUncheckedCreateNestedOneWithoutVaultSecretInput
   credential?: Prisma.CredentialUncheckedCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialUncheckedCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretUpdateInput = {
@@ -358,6 +363,7 @@ export type VaultSecretUpdateInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutVaultSecretsNestedInput
   connection?: Prisma.ConnectionUpdateOneWithoutVaultSecretNestedInput
   credential?: Prisma.CredentialUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretUncheckedUpdateInput = {
@@ -372,6 +378,7 @@ export type VaultSecretUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUncheckedUpdateOneWithoutVaultSecretNestedInput
   credential?: Prisma.CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUncheckedUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretCreateManyInput = {
@@ -541,12 +548,28 @@ export type VaultSecretCreateNestedOneWithoutCredentialInput = {
   connect?: Prisma.VaultSecretWhereUniqueInput
 }
 
+export type VaultSecretCreateNestedOneWithoutPreviousOfInput = {
+  create?: Prisma.XOR<Prisma.VaultSecretCreateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedCreateWithoutPreviousOfInput>
+  connectOrCreate?: Prisma.VaultSecretCreateOrConnectWithoutPreviousOfInput
+  connect?: Prisma.VaultSecretWhereUniqueInput
+}
+
 export type VaultSecretUpdateOneRequiredWithoutCredentialNestedInput = {
   create?: Prisma.XOR<Prisma.VaultSecretCreateWithoutCredentialInput, Prisma.VaultSecretUncheckedCreateWithoutCredentialInput>
   connectOrCreate?: Prisma.VaultSecretCreateOrConnectWithoutCredentialInput
   upsert?: Prisma.VaultSecretUpsertWithoutCredentialInput
   connect?: Prisma.VaultSecretWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.VaultSecretUpdateToOneWithWhereWithoutCredentialInput, Prisma.VaultSecretUpdateWithoutCredentialInput>, Prisma.VaultSecretUncheckedUpdateWithoutCredentialInput>
+}
+
+export type VaultSecretUpdateOneWithoutPreviousOfNestedInput = {
+  create?: Prisma.XOR<Prisma.VaultSecretCreateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedCreateWithoutPreviousOfInput>
+  connectOrCreate?: Prisma.VaultSecretCreateOrConnectWithoutPreviousOfInput
+  upsert?: Prisma.VaultSecretUpsertWithoutPreviousOfInput
+  disconnect?: Prisma.VaultSecretWhereInput | boolean
+  delete?: Prisma.VaultSecretWhereInput | boolean
+  connect?: Prisma.VaultSecretWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.VaultSecretUpdateToOneWithWhereWithoutPreviousOfInput, Prisma.VaultSecretUpdateWithoutPreviousOfInput>, Prisma.VaultSecretUncheckedUpdateWithoutPreviousOfInput>
 }
 
 export type VaultSecretCreateWithoutWorkspaceInput = {
@@ -560,6 +583,7 @@ export type VaultSecretCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   connection?: Prisma.ConnectionCreateNestedOneWithoutVaultSecretInput
   credential?: Prisma.CredentialCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretUncheckedCreateWithoutWorkspaceInput = {
@@ -573,6 +597,7 @@ export type VaultSecretUncheckedCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   connection?: Prisma.ConnectionUncheckedCreateNestedOneWithoutVaultSecretInput
   credential?: Prisma.CredentialUncheckedCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialUncheckedCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretCreateOrConnectWithoutWorkspaceInput = {
@@ -627,6 +652,7 @@ export type VaultSecretCreateWithoutConnectionInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutVaultSecretsInput
   credential?: Prisma.CredentialCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretUncheckedCreateWithoutConnectionInput = {
@@ -640,6 +666,7 @@ export type VaultSecretUncheckedCreateWithoutConnectionInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   credential?: Prisma.CredentialUncheckedCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialUncheckedCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretCreateOrConnectWithoutConnectionInput = {
@@ -669,6 +696,7 @@ export type VaultSecretUpdateWithoutConnectionInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutVaultSecretsNestedInput
   credential?: Prisma.CredentialUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretUncheckedUpdateWithoutConnectionInput = {
@@ -682,6 +710,7 @@ export type VaultSecretUncheckedUpdateWithoutConnectionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   credential?: Prisma.CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUncheckedUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretCreateWithoutCredentialInput = {
@@ -695,6 +724,7 @@ export type VaultSecretCreateWithoutCredentialInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutVaultSecretsInput
   connection?: Prisma.ConnectionCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretUncheckedCreateWithoutCredentialInput = {
@@ -708,11 +738,45 @@ export type VaultSecretUncheckedCreateWithoutCredentialInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   connection?: Prisma.ConnectionUncheckedCreateNestedOneWithoutVaultSecretInput
+  previousOf?: Prisma.CredentialUncheckedCreateNestedOneWithoutPreviousVaultSecretInput
 }
 
 export type VaultSecretCreateOrConnectWithoutCredentialInput = {
   where: Prisma.VaultSecretWhereUniqueInput
   create: Prisma.XOR<Prisma.VaultSecretCreateWithoutCredentialInput, Prisma.VaultSecretUncheckedCreateWithoutCredentialInput>
+}
+
+export type VaultSecretCreateWithoutPreviousOfInput = {
+  id?: string
+  organizationId: string
+  ciphertext: runtime.Bytes
+  iv: runtime.Bytes
+  authTag: runtime.Bytes
+  keyVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutVaultSecretsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutVaultSecretInput
+  credential?: Prisma.CredentialCreateNestedOneWithoutVaultSecretInput
+}
+
+export type VaultSecretUncheckedCreateWithoutPreviousOfInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  ciphertext: runtime.Bytes
+  iv: runtime.Bytes
+  authTag: runtime.Bytes
+  keyVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  connection?: Prisma.ConnectionUncheckedCreateNestedOneWithoutVaultSecretInput
+  credential?: Prisma.CredentialUncheckedCreateNestedOneWithoutVaultSecretInput
+}
+
+export type VaultSecretCreateOrConnectWithoutPreviousOfInput = {
+  where: Prisma.VaultSecretWhereUniqueInput
+  create: Prisma.XOR<Prisma.VaultSecretCreateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedCreateWithoutPreviousOfInput>
 }
 
 export type VaultSecretUpsertWithoutCredentialInput = {
@@ -737,6 +801,7 @@ export type VaultSecretUpdateWithoutCredentialInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutVaultSecretsNestedInput
   connection?: Prisma.ConnectionUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretUncheckedUpdateWithoutCredentialInput = {
@@ -750,6 +815,46 @@ export type VaultSecretUncheckedUpdateWithoutCredentialInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUncheckedUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUncheckedUpdateOneWithoutPreviousVaultSecretNestedInput
+}
+
+export type VaultSecretUpsertWithoutPreviousOfInput = {
+  update: Prisma.XOR<Prisma.VaultSecretUpdateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedUpdateWithoutPreviousOfInput>
+  create: Prisma.XOR<Prisma.VaultSecretCreateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedCreateWithoutPreviousOfInput>
+  where?: Prisma.VaultSecretWhereInput
+}
+
+export type VaultSecretUpdateToOneWithWhereWithoutPreviousOfInput = {
+  where?: Prisma.VaultSecretWhereInput
+  data: Prisma.XOR<Prisma.VaultSecretUpdateWithoutPreviousOfInput, Prisma.VaultSecretUncheckedUpdateWithoutPreviousOfInput>
+}
+
+export type VaultSecretUpdateWithoutPreviousOfInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  ciphertext?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  iv?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  authTag?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  keyVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutVaultSecretsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutVaultSecretNestedInput
+  credential?: Prisma.CredentialUpdateOneWithoutVaultSecretNestedInput
+}
+
+export type VaultSecretUncheckedUpdateWithoutPreviousOfInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  ciphertext?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  iv?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  authTag?: Prisma.BytesFieldUpdateOperationsInput | runtime.Bytes
+  keyVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  connection?: Prisma.ConnectionUncheckedUpdateOneWithoutVaultSecretNestedInput
+  credential?: Prisma.CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput
 }
 
 export type VaultSecretCreateManyWorkspaceInput = {
@@ -774,6 +879,7 @@ export type VaultSecretUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUpdateOneWithoutVaultSecretNestedInput
   credential?: Prisma.CredentialUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretUncheckedUpdateWithoutWorkspaceInput = {
@@ -787,6 +893,7 @@ export type VaultSecretUncheckedUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUncheckedUpdateOneWithoutVaultSecretNestedInput
   credential?: Prisma.CredentialUncheckedUpdateOneWithoutVaultSecretNestedInput
+  previousOf?: Prisma.CredentialUncheckedUpdateOneWithoutPreviousVaultSecretNestedInput
 }
 
 export type VaultSecretUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -815,6 +922,7 @@ export type VaultSecretSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.VaultSecret$connectionArgs<ExtArgs>
   credential?: boolean | Prisma.VaultSecret$credentialArgs<ExtArgs>
+  previousOf?: boolean | Prisma.VaultSecret$previousOfArgs<ExtArgs>
 }, ExtArgs["result"]["vaultSecret"]>
 
 export type VaultSecretSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -860,6 +968,7 @@ export type VaultSecretInclude<ExtArgs extends runtime.Types.Extensions.Internal
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.VaultSecret$connectionArgs<ExtArgs>
   credential?: boolean | Prisma.VaultSecret$credentialArgs<ExtArgs>
+  previousOf?: boolean | Prisma.VaultSecret$previousOfArgs<ExtArgs>
 }
 export type VaultSecretIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -874,6 +983,7 @@ export type $VaultSecretPayload<ExtArgs extends runtime.Types.Extensions.Interna
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     connection: Prisma.$ConnectionPayload<ExtArgs> | null
     credential: Prisma.$CredentialPayload<ExtArgs> | null
+    previousOf: Prisma.$CredentialPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1282,6 +1392,7 @@ export interface Prisma__VaultSecretClient<T, Null = never, ExtArgs extends runt
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   connection<T extends Prisma.VaultSecret$connectionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.VaultSecret$connectionArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   credential<T extends Prisma.VaultSecret$credentialArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.VaultSecret$credentialArgs<ExtArgs>>): Prisma.Prisma__CredentialClient<runtime.Types.Result.GetResult<Prisma.$CredentialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  previousOf<T extends Prisma.VaultSecret$previousOfArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.VaultSecret$previousOfArgs<ExtArgs>>): Prisma.Prisma__CredentialClient<runtime.Types.Result.GetResult<Prisma.$CredentialPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1743,6 +1854,25 @@ export type VaultSecret$connectionArgs<ExtArgs extends runtime.Types.Extensions.
  * VaultSecret.credential
  */
 export type VaultSecret$credentialArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Credential
+   */
+  select?: Prisma.CredentialSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Credential
+   */
+  omit?: Prisma.CredentialOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CredentialInclude<ExtArgs> | null
+  where?: Prisma.CredentialWhereInput
+}
+
+/**
+ * VaultSecret.previousOf
+ */
+export type VaultSecret$previousOfArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the Credential
    */

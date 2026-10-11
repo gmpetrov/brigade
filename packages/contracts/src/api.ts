@@ -82,6 +82,8 @@ export const CreateTrigger = z.object({
 export const ResolveTicket = z.object({
   approved: z.boolean(),
   reason: z.string().max(2000).optional(),
+  /** A credential's ticket: also let the teammate use it from now on, without asking. */
+  always: z.boolean().optional(),
 })
 
 const hasContent = (m: { text: string; attachmentIds: string[] }) =>
@@ -137,6 +139,7 @@ export const ResolveApproval = z.object({
   approvalId: z.string(),
   approved: z.boolean(),
   reason: z.string().max(2000).optional(),
+  always: z.boolean().optional(),
 })
 
 export const AnswerQuestion = z.object({ questionId: z.string(), answer: QuestionAnswer })

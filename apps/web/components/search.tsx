@@ -55,7 +55,7 @@ const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
   { kind: 'memory', label: 'Memory', icon: Brain },
   { kind: 'connection', label: 'Connections', icon: Plug },
   { kind: 'trigger', label: 'Triggers', icon: Zap },
-  { kind: 'credential', label: 'Vault', icon: KeyRound },
+  { kind: 'credential', label: 'Secrets', icon: KeyRound },
   { kind: 'account', label: 'AI accounts', icon: UserRound },
   { kind: 'computer', label: 'Computers', icon: Monitor },
 ]

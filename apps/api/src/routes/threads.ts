@@ -394,6 +394,7 @@ export const threads = new Hono<AppEnv>()
         await resolveTicket(scope, ticket.id, {
           approved: input.approved,
           ...(input.reason ? { reason: input.reason } : {}),
+          ...(input.always ? { always: true } : {}),
         }),
       )
     }

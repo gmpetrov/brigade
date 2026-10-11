@@ -235,7 +235,7 @@ export function NewThread({
           autoFocus={autoFocus}
           placeholder={
             placeholder ??
-            `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or credential`
+            `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or secret`
           }
         />
         <div className="flex flex-wrap items-center gap-1">
