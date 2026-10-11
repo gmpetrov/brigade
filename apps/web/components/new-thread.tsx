@@ -129,6 +129,7 @@ export function NewThread({
   rows = 3,
   draft,
   onStarted,
+  autoFocus,
 }: {
   teammate: Teammate
   picker?: { teammates: Teammate[]; onChange: (id: string) => void }
@@ -136,6 +137,8 @@ export function NewThread({
   rows?: number
   draft?: ThreadDraft
   onStarted?: (thread: { id: string }) => void
+  /** Puts the cursor in the message as soon as the box appears. */
+  autoFocus?: boolean
 }) {
   const router = useRouter()
   const computers = useApi<ComputersResponse>('/computers')
@@ -229,6 +232,7 @@ export function NewThread({
           onChange={setText}
           onSubmit={() => void start()}
           disabled={busy}
+          autoFocus={autoFocus}
           placeholder={
             placeholder ??
             `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or credential`

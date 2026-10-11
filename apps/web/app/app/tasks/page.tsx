@@ -1,11 +1,11 @@
 'use client'
-import { Plus } from 'lucide-react'
+import { Archive, ArrowLeft, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { COLUMNS, NewTaskDialog, PriorityBadge, priorityRank, TaskSheet } from '@/components/tasks'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useApi, type Task } from '@/lib/api'
+import { api, useApi, type Task } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,7 @@ function order(a: Task, b: Task) {
 
 /** What the card says about where the work is. */
 function progress(task: Task) {
+  if (task.archivedAt) return `Archived ${timeAgo(task.archivedAt)}`
   if (task.completedAt) return `Done ${timeAgo(task.completedAt)}`
   if (!task.thread) return `Added ${timeAgo(task.createdAt)}`
   if (task.thread.openTickets > 0)
@@ -59,17 +60,30 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   )
 }
 
-/** The Tasks board: Backlog, Needs you, Doing and Done. */
+/** The Tasks board: Backlog, Needs you, Doing and Done; or the archived tasks. */
 export default function Tasks() {
-  const tasks = useApi<Task[]>('/tasks')
+  const [archived, setArchived] = useState(false)
+  const tasks = useApi<Task[]>(archived ? '/tasks?archived=true' : '/tasks')
   const [open, setOpen] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [allDone, setAllDone] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [error, setError] = useState<string>()
 
-  // /app/tasks?task=<id> opens that task, e.g. from its thread.
+  // /app/tasks?task=<id> opens that task, e.g. from its thread; ?view=archived the archive.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('task')
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('task')
     if (id) setOpen(id)
+    if (params.get('view') === 'archived') setArchived(true)
+  }, [])
+  const showArchived = useCallback((on: boolean) => {
+    setArchived(on)
+    setError(undefined)
+    const url = new URL(window.location.href)
+    if (on) url.searchParams.set('view', 'archived')
+    else url.searchParams.delete('view')
+    window.history.replaceState(null, '', url)
   }, [])
   const openTask = useCallback((id: string | null) => {
     setOpen(id)
@@ -84,77 +98,141 @@ export default function Tasks() {
     if (message.type === 'task.updated' || message.type === 'thread.updated') void reload()
   })
 
+  // Right after switching views, the other view's tasks are still loaded.
+  const list = tasks.data?.filter((t) => Boolean(t.archivedAt) === archived)
   const byColumn = (column: Task['column']) =>
-    (tasks.data ?? []).filter((t) => t.column === column).sort(order)
+    (list ?? []).filter((t) => t.column === column).sort(order)
+
+  async function archiveDone() {
+    setArchiving(true)
+    setError(undefined)
+    try {
+      await api('/tasks/archive-done', { method: 'POST', body: {} })
+      setAllDone(false)
+      await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setArchiving(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-extrabold tracking-tight">Tasks</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            {archived ? 'Archived tasks' : 'Tasks'}
+          </h1>
           <p className="max-w-prose text-muted-foreground">
-            Bigger work your teammates are on. Ask in a thread and they track it here, or add one
-            yourself.
+            {archived
+              ? 'Done tasks put away, most recently archived first. Restore or reopen one to bring it back to the board.'
+              : 'Bigger work your teammates are on. Ask in a thread and they track it here, or add one yourself.'}
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus aria-hidden />
-          New task
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {archived ? (
+            <Button variant="outline" onClick={() => showArchived(false)}>
+              <ArrowLeft aria-hidden />
+              Back to the board
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => showArchived(true)}>
+                <Archive aria-hidden />
+                Archived
+              </Button>
+              <Button onClick={() => setCreating(true)}>
+                <Plus aria-hidden />
+                New task
+              </Button>
+            </>
+          )}
+        </div>
       </header>
 
-      <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {COLUMNS.map((column) => {
-          const all = byColumn(column.id)
-          const shown = column.id === 'done' && !allDone ? all.slice(0, DONE_SHOWN) : all
-          return (
-            <section
-              key={column.id}
-              aria-labelledby={`column-${column.id}`}
-              className="flex flex-col gap-3 rounded-xl bg-secondary/50 p-3"
-            >
-              <h2
-                id={`column-${column.id}`}
-                className="flex items-center gap-2 px-1 text-sm font-bold"
+      {archived ? (
+        !list ? (
+          <Skeleton className="h-20 w-full" />
+        ) : list.length === 0 ? (
+          <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+            No archived tasks. Archive done tasks to keep the board short.
+          </p>
+        ) : (
+          <ul className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {list.map((t) => (
+              <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
+            ))}
+          </ul>
+        )
+      ) : (
+        <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {COLUMNS.map((column) => {
+            const all = byColumn(column.id)
+            const shown = column.id === 'done' && !allDone ? all.slice(0, DONE_SHOWN) : all
+            return (
+              <section
+                key={column.id}
+                aria-labelledby={`column-${column.id}`}
+                className="flex flex-col gap-3 rounded-xl bg-secondary/50 p-3"
               >
-                <span
-                  aria-hidden
-                  className={cn(
-                    'size-2 rounded-full',
-                    column.tone === 'warning' && 'bg-warning',
-                    column.tone === 'progress' && 'bg-primary',
-                    column.tone === 'success' && 'bg-success',
-                    column.tone === 'neutral' && 'bg-muted-foreground',
-                  )}
-                />
-                {column.label}
-                <span className="font-mono text-xs font-normal text-muted-foreground">
-                  {tasks.data ? all.length : ''}
-                </span>
-              </h2>
-              {!tasks.data ? (
-                <Skeleton className="h-20 w-full" />
-              ) : all.length === 0 ? (
-                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-                  {column.empty}
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {shown.map((t) => (
-                    <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
-                  ))}
-                </ul>
-              )}
-              {shown.length < all.length && (
-                <Button variant="ghost" size="sm" onClick={() => setAllDone(true)}>
-                  Show all {all.length}
-                </Button>
-              )}
-            </section>
-          )
-        })}
-      </div>
-      {tasks.error && <p className="text-sm text-destructive-text">{tasks.error.message}</p>}
+                <h2
+                  id={`column-${column.id}`}
+                  className="flex items-center gap-2 px-1 text-sm font-bold"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'size-2 rounded-full',
+                      column.tone === 'warning' && 'bg-warning',
+                      column.tone === 'progress' && 'bg-primary',
+                      column.tone === 'success' && 'bg-success',
+                      column.tone === 'neutral' && 'bg-muted-foreground',
+                    )}
+                  />
+                  {column.label}
+                  <span className="font-mono text-xs font-normal text-muted-foreground">
+                    {tasks.data ? all.length : ''}
+                  </span>
+                </h2>
+                {!tasks.data ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : all.length === 0 ? (
+                  <p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
+                    {column.empty}
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {shown.map((t) => (
+                      <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
+                    ))}
+                  </ul>
+                )}
+                {shown.length < all.length && (
+                  <Button variant="ghost" size="sm" onClick={() => setAllDone(true)}>
+                    Show all {all.length}
+                  </Button>
+                )}
+                {column.id === 'done' && all.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    disabled={archiving}
+                    onClick={() => void archiveDone()}
+                  >
+                    <Archive aria-hidden />
+                    Archive all {all.length}
+                  </Button>
+                )}
+              </section>
+            )
+          })}
+        </div>
+      )}
+      {(error ?? tasks.error) && (
+        <p className="text-sm text-destructive-text">{error ?? tasks.error?.message}</p>
+      )}
 
       <NewTaskDialog
         open={creating}

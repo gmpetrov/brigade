@@ -248,6 +248,8 @@ export type Task = {
   summary: string | null
   deliverables: { label: string; url: string }[]
   completedAt: string | null
+  /** Put away off the board; reopening brings it back. */
+  archivedAt: string | null
   createdAt: string
   updatedAt: string
   thread: {

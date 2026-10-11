@@ -36,6 +36,7 @@ export type TaskMinAggregateOutputType = {
   createdByMemberId: string | null
   summary: string | null
   completedAt: Date | null
+  archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -51,6 +52,7 @@ export type TaskMaxAggregateOutputType = {
   createdByMemberId: string | null
   summary: string | null
   completedAt: Date | null
+  archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -67,6 +69,7 @@ export type TaskCountAggregateOutputType = {
   summary: number
   deliverables: number
   completedAt: number
+  archivedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -84,6 +87,7 @@ export type TaskMinAggregateInputType = {
   createdByMemberId?: true
   summary?: true
   completedAt?: true
+  archivedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -99,6 +103,7 @@ export type TaskMaxAggregateInputType = {
   createdByMemberId?: true
   summary?: true
   completedAt?: true
+  archivedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -115,6 +120,7 @@ export type TaskCountAggregateInputType = {
   summary?: true
   deliverables?: true
   completedAt?: true
+  archivedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -204,6 +210,7 @@ export type TaskGroupByOutputType = {
   summary: string | null
   deliverables: runtime.JsonValue
   completedAt: Date | null
+  archivedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: TaskCountAggregateOutputType | null
@@ -241,6 +248,7 @@ export type TaskWhereInput = {
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -261,6 +269,7 @@ export type TaskOrderByWithRelationInput = {
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -284,6 +293,7 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -304,6 +314,7 @@ export type TaskOrderByWithAggregationInput = {
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.TaskCountOrderByAggregateInput
@@ -326,6 +337,7 @@ export type TaskScalarWhereWithAggregatesInput = {
   summary?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   deliverables?: Prisma.JsonWithAggregatesFilter<"Task">
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
+  archivedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Task"> | Date | string
 }
@@ -339,6 +351,7 @@ export type TaskCreateInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
@@ -359,6 +372,7 @@ export type TaskUncheckedCreateInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   session?: Prisma.SessionUncheckedCreateNestedOneWithoutTaskInput
@@ -373,6 +387,7 @@ export type TaskUpdateInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
@@ -393,6 +408,7 @@ export type TaskUncheckedUpdateInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUncheckedUpdateOneWithoutTaskNestedInput
@@ -410,6 +426,7 @@ export type TaskCreateManyInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -423,6 +440,7 @@ export type TaskUpdateManyMutationInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -439,6 +457,7 @@ export type TaskUncheckedUpdateManyInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -470,6 +489,7 @@ export type TaskCountOrderByAggregateInput = {
   summary?: Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -485,6 +505,7 @@ export type TaskMaxOrderByAggregateInput = {
   createdByMemberId?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -500,6 +521,7 @@ export type TaskMinOrderByAggregateInput = {
   createdByMemberId?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -659,6 +681,7 @@ export type TaskCreateWithoutCreatedByInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
@@ -677,6 +700,7 @@ export type TaskUncheckedCreateWithoutCreatedByInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   session?: Prisma.SessionUncheckedCreateNestedOneWithoutTaskInput
@@ -723,6 +747,7 @@ export type TaskScalarWhereInput = {
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
 }
@@ -736,6 +761,7 @@ export type TaskCreateWithoutWorkspaceInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teammate: Prisma.TeammateCreateNestedOneWithoutTasksInput
@@ -754,6 +780,7 @@ export type TaskUncheckedCreateWithoutWorkspaceInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   session?: Prisma.SessionUncheckedCreateNestedOneWithoutTaskInput
@@ -794,6 +821,7 @@ export type TaskCreateWithoutTeammateInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
@@ -812,6 +840,7 @@ export type TaskUncheckedCreateWithoutTeammateInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   session?: Prisma.SessionUncheckedCreateNestedOneWithoutTaskInput
@@ -852,6 +881,7 @@ export type TaskCreateWithoutSessionInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
@@ -871,6 +901,7 @@ export type TaskUncheckedCreateWithoutSessionInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -900,6 +931,7 @@ export type TaskUpdateWithoutSessionInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
@@ -919,6 +951,7 @@ export type TaskUncheckedUpdateWithoutSessionInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -934,6 +967,7 @@ export type TaskCreateManyCreatedByInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -947,6 +981,7 @@ export type TaskUpdateWithoutCreatedByInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
@@ -965,6 +1000,7 @@ export type TaskUncheckedUpdateWithoutCreatedByInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUncheckedUpdateOneWithoutTaskNestedInput
@@ -981,6 +1017,7 @@ export type TaskUncheckedUpdateManyWithoutCreatedByInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -996,6 +1033,7 @@ export type TaskCreateManyWorkspaceInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1009,6 +1047,7 @@ export type TaskUpdateWithoutWorkspaceInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTasksNestedInput
@@ -1027,6 +1066,7 @@ export type TaskUncheckedUpdateWithoutWorkspaceInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUncheckedUpdateOneWithoutTaskNestedInput
@@ -1043,6 +1083,7 @@ export type TaskUncheckedUpdateManyWithoutWorkspaceInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1058,6 +1099,7 @@ export type TaskCreateManyTeammateInput = {
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
+  archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1071,6 +1113,7 @@ export type TaskUpdateWithoutTeammateInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
@@ -1089,6 +1132,7 @@ export type TaskUncheckedUpdateWithoutTeammateInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUncheckedUpdateOneWithoutTaskNestedInput
@@ -1105,6 +1149,7 @@ export type TaskUncheckedUpdateManyWithoutTeammateInput = {
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1123,6 +1168,7 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
+  archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1143,6 +1189,7 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
+  archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1162,6 +1209,7 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
+  archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1181,11 +1229,12 @@ export type TaskSelectScalar = {
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
+  archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "title" | "description" | "priority" | "teammateId" | "createdByMemberId" | "summary" | "deliverables" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
+export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "title" | "description" | "priority" | "teammateId" | "createdByMemberId" | "summary" | "deliverables" | "completedAt" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
 export type TaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -1235,6 +1284,10 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      */
     deliverables: runtime.JsonValue
     completedAt: Date | null
+    /**
+     * Off the board: a done task put away. Reopening it brings it back.
+     */
+    archivedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["task"]>
@@ -1675,6 +1728,7 @@ export interface TaskFieldRefs {
   readonly summary: Prisma.FieldRef<"Task", 'String'>
   readonly deliverables: Prisma.FieldRef<"Task", 'Json'>
   readonly completedAt: Prisma.FieldRef<"Task", 'DateTime'>
+  readonly archivedAt: Prisma.FieldRef<"Task", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Task", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Task", 'DateTime'>
 }

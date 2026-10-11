@@ -2,6 +2,8 @@ import { CompleteTask, CreateTask, ReassignTask, StartTask, UpdateTask } from '@
 import { Hono } from 'hono'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import {
+  archiveDoneTasks,
+  archiveTask,
   completeTask,
   createTask,
   deleteTask,
@@ -10,6 +12,7 @@ import {
   reassignTask,
   reopenTask,
   startTask,
+  unarchiveTask,
   updateTask,
 } from '../tasks.js'
 
@@ -17,7 +20,10 @@ import {
 export const tasks = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
-  .get('/', async (c) => c.json(await listTasks(c.var.db)))
+  /** The board; ?archived=true for the done tasks put away instead. */
+  .get('/', async (c) =>
+    c.json(await listTasks(c.var.db, { archived: c.req.query('archived') === 'true' })),
+  )
 
   .get('/:id', async (c) => c.json(await getTask(c.var.db, c.req.param('id'))))
 
@@ -49,6 +55,17 @@ export const tasks = new Hono<AppEnv>()
 
   .post('/:id/reopen', async (c) =>
     c.json(await reopenTask(c.var.db, c.var.scope, c.req.param('id'))),
+  )
+
+  /** Every done task off the board. */
+  .post('/archive-done', async (c) => c.json(await archiveDoneTasks(c.var.db, c.var.scope)))
+
+  .post('/:id/archive', async (c) =>
+    c.json(await archiveTask(c.var.db, c.var.scope, c.req.param('id'))),
+  )
+
+  .post('/:id/unarchive', async (c) =>
+    c.json(await unarchiveTask(c.var.db, c.var.scope, c.req.param('id'))),
   )
 
   /** The task goes; its thread stays as a plain thread. */
