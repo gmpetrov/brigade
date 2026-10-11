@@ -361,6 +361,7 @@ export function runnerSocket(runner: {
         computerId: runner.computerId,
         ...(bundle ? { bundle } : {}),
         runningThreads: runningThreads.map((s) => s.id),
+        queuedMessages: await queuedMessagesOn(runner.computerId),
       })
       if (message.bundle && bundle && message.bundle !== bundle)
         console.log(
@@ -585,6 +586,44 @@ export function runnerSocket(runner: {
     }
     send(ws, { type: 'ack', sessionId, seq: lastSeq })
   }
+}
+
+/** How far back a message may still be queued on a runner. */
+const QUEUED_FOR_MS = 7 * 24 * 60 * 60_000
+
+/**
+ * The messages shown as queued on a computer's threads: queued, and neither
+ * read (message.user) nor cancelled since. The runner says which it lost.
+ */
+async function queuedMessagesOn(computerId: string) {
+  const queued = await prisma.sessionEvent.findMany({
+    where: {
+      type: 'message.queued',
+      at: { gte: new Date(Date.now() - QUEUED_FOR_MS) },
+      session: { computerId },
+    },
+    select: { sessionId: true, seq: true },
+  })
+  if (queued.length === 0) return []
+  const rows = await prisma.sessionEvent.findMany({
+    where: {
+      sessionId: { in: [...new Set(queued.map((q) => q.sessionId))] },
+      type: { in: ['message.queued', 'message.user', 'message.cancelled'] },
+      seq: { gte: Math.min(...queued.map((q) => q.seq)) },
+    },
+    orderBy: { seq: 'asc' },
+    select: { sessionId: true, data: true },
+  })
+  const open = new Map<string, { sessionId: string; messageId: string }>()
+  for (const { sessionId, data } of rows) {
+    const event = data as unknown as AgentEvent
+    const messageId = 'messageId' in event ? event.messageId : undefined
+    if (!messageId) continue
+    const key = `${sessionId}:${messageId}`
+    if (event.type === 'message.queued') open.set(key, { sessionId, messageId })
+    else open.delete(key)
+  }
+  return [...open.values()]
 }
 
 /** Each teammate whose turn ended: a review loop in the thread may move on. */

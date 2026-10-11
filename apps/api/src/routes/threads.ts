@@ -6,7 +6,9 @@ import {
   AnswerTicket,
   DesktopClipboard,
   HandBack,
+  InterruptThread,
   mentionsToText,
+  QueuedMessageAction,
   TakeOver,
   ResolveApproval,
   SendMessage,
@@ -24,7 +26,13 @@ import { desktopUrl, ensureRunning } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
-import { broadcastThreadStatus, desktopClipboard, dispatch, readThreadFile } from '../hub.js'
+import {
+  broadcastThreadStatus,
+  desktopClipboard,
+  dispatch,
+  readThreadFile,
+  runnerProtocol,
+} from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
 import {
@@ -296,7 +304,7 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
-    const { text, attachmentIds } = await parseBody(c.req.raw, SendMessage)
+    const { text, attachmentIds, messageId, steer } = await parseBody(c.req.raw, SendMessage)
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
     const mentioned = await mentionedTeammates(db, text)
     const joined = mentioned.filter((id) => !thread.teammates.some((t) => t.teammateId === id))
@@ -310,6 +318,8 @@ export const threads = new Hono<AppEnv>()
         memberId: scope.memberId,
         ...(mentioned.length ? { teammateIds: mentioned } : {}),
         attachmentIds,
+        ...(messageId ? { messageId } : {}),
+        ...(steer ? { steer } : {}),
       },
       { memberId: scope.memberId },
     )
@@ -325,7 +335,42 @@ export const threads = new Hono<AppEnv>()
       ...(joined.length > 0 ? { data: { joined } } : {}),
     })
     await reopenOnMessage(scope, thread)
-    return c.json({ ok: true, paused: outcome === 'paused' })
+    // starting: a stopped computer starts first, and gets the message when its runner connects.
+    return c.json({
+      ok: true,
+      paused: outcome === 'paused',
+      delivery: outcome === 'queued' ? 'starting' : outcome,
+    })
+  })
+
+  /** A message still queued: cancel it, change its text, or steer it into the running turn. */
+  .post('/:id/messages/:messageId', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const input = await parseBody(c.req.raw, QueuedMessageAction)
+    const protocol = runnerProtocol(thread.computer.id)
+    if (protocol !== undefined && protocol < 11)
+      throw new HTTPException(409, {
+        message: "This computer's runner is too old to change queued messages. Update it.",
+      })
+    await deliver(thread.computer, {
+      type: 'thread.queued',
+      commandId: randomUUID(),
+      sessionId: thread.id,
+      messageId: c.req.param('messageId'),
+      action: input.action,
+      ...(input.action === 'edit' ? { text: input.text } : {}),
+      memberId: scope.memberId,
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: `thread.message_${input.action === 'cancel' ? 'cancelled' : input.action === 'edit' ? 'edited' : 'steered'}`,
+      target: { type: 'thread', id: thread.id },
+      data: { messageId: c.req.param('messageId') },
+    })
+    return c.json({ ok: true })
   })
 
   .post('/:id/approvals', async (c) => {
@@ -411,10 +456,13 @@ export const threads = new Hono<AppEnv>()
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
+    // The body is optional: without a turn, whichever runs stops.
+    const turnId = InterruptThread.safeParse(await c.req.json().catch(() => ({}))).data?.turnId
     await deliver(thread.computer, {
       type: 'thread.interrupt',
       commandId: randomUUID(),
       sessionId: thread.id,
+      ...(turnId ? { turnId } : {}),
     })
     await audit({
       ...scope,

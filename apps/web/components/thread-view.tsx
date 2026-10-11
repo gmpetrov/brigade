@@ -53,7 +53,14 @@ import { pullHref, threadImageUrl, useApi, type Credential, type Teammate } from
 import { cn } from '@/lib/utils'
 
 type Item =
-  | { kind: 'user'; key: string; text: string; attachments: MessageAttachment[] }
+  | {
+      kind: 'user'
+      key: string
+      text: string
+      attachments: MessageAttachment[]
+      /** Given to this teammate during its running turn. */
+      steeredTo?: string
+    }
   | { kind: 'assistant'; key: string; text: string; done: boolean; teammateId?: string }
   | { kind: 'thinking'; key: string; text: string }
   | {
@@ -99,12 +106,25 @@ type Item =
 
 export type Limits = NonNullable<Extract<AgentEvent, { type: 'usage.updated' }>['limits']>
 
+/** A message waiting to be read, shown above the composer rather than in the thread. */
+export type QueuedMessage = {
+  messageId: string
+  text: string
+  attachments: MessageAttachment[]
+  waitingFor: 'turn' | 'person'
+  note?: string
+}
+
 /** Fold the event log into what a person reads: messages, tool calls, approvals. */
 export function useThreadItems(events: SequencedEvent[]) {
   return useMemo(() => {
     const items: Item[] = []
     const byKey = new Map<string, Item>()
     let limits: Limits | undefined
+    // Messages still queued, and every message id the thread has seen (queued, read or cancelled).
+    const queued = new Map<string, QueuedMessage>()
+    const seen = new Set<string>()
+    let turnTeammate: string | undefined
     const add = (item: Item) => {
       items.push(item)
       byKey.set(item.key, item)
@@ -112,7 +132,43 @@ export function useThreadItems(events: SequencedEvent[]) {
     for (const { seq, event: e } of events) {
       switch (e.type) {
         case 'message.user':
-          add({ kind: 'user', key: `u${seq}`, text: e.text, attachments: e.attachments ?? [] })
+          if (e.messageId) {
+            seen.add(e.messageId)
+            queued.delete(e.messageId)
+          }
+          add({
+            kind: 'user',
+            key: `u${seq}`,
+            text: e.text,
+            attachments: e.attachments ?? [],
+            ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
+          })
+          break
+        case 'message.queued':
+          seen.add(e.messageId)
+          queued.set(e.messageId, {
+            messageId: e.messageId,
+            text: e.text,
+            attachments: e.attachments ?? [],
+            waitingFor: e.waitingFor,
+            ...(e.note ? { note: e.note } : {}),
+          })
+          break
+        case 'message.cancelled': {
+          seen.add(e.messageId)
+          const message = queued.get(e.messageId)
+          queued.delete(e.messageId)
+          // Cancelled by its sender: it just goes. Otherwise say it was not sent, and why.
+          if (e.reason)
+            add({
+              kind: 'note',
+              key: `n${seq}`,
+              text: `A queued message was not sent. ${e.reason}${message?.text ? ` “${clipText(mentionsToText(message.text), 200)}”` : ''}`,
+            })
+          break
+        }
+        case 'turn.started':
+          turnTeammate = e.teammateId
           break
         // Ids come from each teammate's own harness: keyed by teammate too.
         case 'message.delta': {
@@ -240,9 +296,17 @@ export function useThreadItems(events: SequencedEvent[]) {
           break
       }
     }
-    return { items, limits }
+    // The turn running now, for an interrupt to name: the last one, unless it ended.
+    const lastTurn = events.findLast(
+      (e) => e.event.type === 'turn.started' || e.event.type === 'turn.completed',
+    )?.event
+    const turnId = lastTurn?.type === 'turn.started' ? lastTurn.turnId : undefined
+    return { items, limits, queued: [...queued.values()], seen, turnId }
   }, [events])
 }
+
+const clipText = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max)}…` : text
 
 const json = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value, null, 2)
@@ -370,6 +434,15 @@ export function ThreadItems({
                 )}
                 {item.attachments.length > 0 && (
                   <MessageAttachments attachments={item.attachments} className="justify-end" />
+                )}
+                {item.steeredTo && (
+                  <span className="text-xs text-muted-foreground">
+                    Steered into{' '}
+                    {(byId.get(item.steeredTo) ?? teammate)?.name
+                      ? `${(byId.get(item.steeredTo) ?? teammate)!.name}’s`
+                      : 'the'}{' '}
+                    running turn
+                  </span>
                 )}
               </div>
             )
