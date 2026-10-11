@@ -8,6 +8,7 @@ import {
   HandBack,
   InterruptThread,
   mentionsToText,
+  PreviewAction,
   QueuedMessageAction,
   TakeOver,
   ResolveApproval,
@@ -16,13 +17,15 @@ import {
   type ThreadFile,
   type ThreadSpec,
   type ApiToRunner,
+  type PreviewView,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { readAttachment, toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
-import { desktopUrl, ensureRunning } from '../cloud.js'
+import { livePreview, previewLogs, touchPreview } from '../app-previews.js'
+import { desktopUrl, ensureRunning, hostedPort } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
@@ -32,6 +35,7 @@ import {
   dispatch,
   readThreadFile,
   runnerProtocol,
+  sendToRunner,
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
@@ -523,6 +527,73 @@ export const threads = new Hono<AppEnv>()
         })
       }),
     )
+  })
+
+  /**
+   * Open the thread's live preview: the address of the app its teammate runs.
+   * On the workspace computer the provider hosts it publicly, behind a token
+   * only people who may see the thread get; on a member's own machine it is
+   * that machine's localhost. touch: the dashboard still has it open, which
+   * keeps it (and the workspace computer) from stopping.
+   */
+  .post('/:id/preview', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    const { touch } = await parseBody(c.req.raw, z.object({ touch: z.boolean().optional() }))
+    const preview = await livePreview(db, thread)
+    if (touch) {
+      touchPreview(thread.computer.id, thread.id)
+      return c.body(null, 204)
+    }
+    // Its events may be stale (the runner restarted): ask the runner, which also touches it.
+    const live = await previewLogs(thread.computer.id, thread.id)
+    if (!live.ok)
+      throw new HTTPException(409, {
+        message: `The preview is no longer running. Ask ${thread.teammate.name} to start it again.`,
+      })
+    touchPreview(thread.computer.id, thread.id)
+    if (thread.computer.kind !== 'cloud')
+      return c.json({ url: `http://localhost:${preview.port}`, local: true } satisfies PreviewView)
+    const { url } = await hostedPort(thread.computer, preview.port)
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'preview.opened',
+      target: { type: 'thread', id: thread.id },
+      data: { port: preview.port },
+    })
+    return c.json({ url } satisfies PreviewView)
+  })
+
+  /** Restart or stop the thread's preview. For people who may prompt the thread. */
+  .post('/:id/preview/control', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt)
+      throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+    const { action } = await parseBody(c.req.raw, z.object({ action: PreviewAction }))
+    await livePreview(db, thread)
+    if (
+      !sendToRunner(thread.computer.id, { type: 'preview.control', sessionId: thread.id, action })
+    )
+      throw new HTTPException(409, { message: 'The computer is offline' })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: action === 'stop' ? 'preview.stopped' : 'preview.restarted',
+      target: { type: 'thread', id: thread.id },
+    })
+    return c.json({ ok: true })
+  })
+
+  /** The preview's recent output (its dev server's console). */
+  .get('/:id/preview/logs', async (c) => {
+    const { db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    await livePreview(db, thread)
+    const result = await previewLogs(thread.computer.id, thread.id)
+    if (!result.ok) throw new HTTPException(409, { message: result.error ?? 'No output' })
+    return c.json({ text: result.text ?? '' })
   })
 
   /**

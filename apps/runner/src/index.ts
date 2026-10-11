@@ -18,6 +18,7 @@ import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
+import { Previews } from './previews.js'
 import { Threads } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
@@ -158,8 +159,14 @@ async function start() {
         }),
     }
   }
+  // Apps teammates run for people to try. On a cloud computer the API has their ports hosted.
+  const previews = new Previews({
+    emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
+    expose: CLOUD ? (sessionId, ports) => connection.exposePreview(sessionId, ports) : null,
+  })
   const threads = new Threads({
     concurrency: Number(values.concurrency),
+    previews,
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     // Connector calls go to the API. A write waiting for a person shows as an approval in the thread.
     callConnector: (sessionId, teammateId, call) =>
@@ -289,6 +296,29 @@ async function start() {
               error: String(error),
             }),
         )
+      case 'preview.control':
+        if (message.action === 'touch') return previews.touch(message.sessionId)
+        if (message.action === 'stop')
+          return void previews.stop(message.sessionId, 'Stopped by a person')
+        return previews
+          .restart(message.sessionId)
+          .catch((error) => console.warn(`preview restart failed: ${String(error)}`))
+      case 'preview.logs':
+        try {
+          return connection.send({
+            type: 'preview.logs.result',
+            requestId: message.requestId,
+            ok: true,
+            text: previews.logs(message.sessionId),
+          })
+        } catch (error) {
+          return connection.send({
+            type: 'preview.logs.result',
+            requestId: message.requestId,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
       case 'repos.changed':
         return prefetch(message.repository, message.fetch)
       case 'library.changed':
@@ -329,14 +359,15 @@ async function start() {
     const setup = await readFile('/var/lib/brigade/setup', 'utf8').catch(() => '')
     return setup.trim() ? { setup: setup.trim() } : {}
   }
-  // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in.
+  // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in, no preview.
   const updater = new Updater({
     apiUrl: config.apiUrl,
-    idle: () => !threads.busy && terminals.count === 0 && !accounts.busy,
+    idle: () => !threads.busy && terminals.count === 0 && !accounts.busy && previews.count === 0,
     stop: async () => {
       // No new commands once disconnected; a turn that slipped in finishes first.
       connection.close()
       terminals.closeAll()
+      await previews.stopAll('The computer updated Brigade')
       await threads.settle()
       await threads.parkAll()
     },
@@ -361,6 +392,8 @@ async function start() {
   const shutdown = async () => {
     console.log('stopping: saving thread state')
     terminals.closeAll()
+    // Reported before the connection closes; the outbox keeps it otherwise.
+    await previews.stopAll('The computer stopped')
     connection.close()
     await threads.parkAll()
     process.exit(0)

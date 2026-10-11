@@ -180,13 +180,27 @@ export class Connection {
     return result.output
   }
 
+  /** The public origins of a thread's preview ports, by port. Cloud computers only. */
+  async exposePreview(sessionId: string, ports: number[]): Promise<Record<number, string>> {
+    const result = await this.call(
+      { type: 'preview.expose', sessionId, ports },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+    return (result.output as { origins: Record<number, string> }).origins
+  }
+
   private call(
     message: DistributiveOmit<
       Extract<
         RunnerToApi,
         {
           type:
-            'connector.call' | 'credential.request' | 'library.call' | 'task.call' | 'schedule.call'
+            | 'connector.call'
+            | 'credential.request'
+            | 'library.call'
+            | 'task.call'
+            | 'schedule.call'
+            | 'preview.expose'
         }
       >,
       'callId'

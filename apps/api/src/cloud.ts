@@ -159,6 +159,20 @@ export async function desktopUrl(computer: { providerRef: unknown }) {
   }
 }
 
+/** A port of a cloud computer on a public address (a thread's preview). */
+export async function hostedPort(computer: { providerRef: unknown }, port: number) {
+  const ref = refOf(computer)
+  if (!provider || !ref)
+    throw new HTTPException(409, { message: 'No cloud provider for this computer' })
+  try {
+    return await provider.hostPort(ref, port)
+  } catch (error) {
+    throw new HTTPException(503, {
+      message: `The workspace computer's provider did not host the preview: ${await providerReason(error)}`,
+    })
+  }
+}
+
 /** The setup last tried per computer, so a failing one is not retried on every connect. */
 const setupTried = new Map<string, string>()
 

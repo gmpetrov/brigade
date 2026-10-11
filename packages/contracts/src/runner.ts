@@ -5,6 +5,7 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { PREVIEW_PORTS_MAX, PreviewAction, PreviewPort } from './previews.js'
 import { ScheduleOperation } from './schedules.js'
 import { TaskOperation } from './tasks.js'
 
@@ -257,6 +258,26 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     operation: ScheduleOperation,
   }),
   /**
+   * A teammate starts a preview on a cloud computer: the public addresses of
+   * its ports, to give the app before it starts (an app calling its own API
+   * needs that API's address). Answered like a connector call, with
+   * { origins: { [port]: origin } }; origins carry no token.
+   */
+  z.object({
+    type: z.literal('preview.expose'),
+    callId: z.string(),
+    sessionId: z.string(),
+    ports: z.array(PreviewPort).min(1).max(PREVIEW_PORTS_MAX),
+  }),
+  /** A preview's recent output, for preview.logs, or why not. */
+  z.object({
+    type: z.literal('preview.logs.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    text: z.string().optional(),
+  }),
+  /**
    * A thread went quiet: what a short harness run took from it. The summary
    * replaces the thread's; the edits apply to the memory files.
    */
@@ -321,6 +342,17 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     path: z.string().min(1).max(1000),
     image: z.boolean().optional(),
   }),
+  /**
+   * A person restarts or stops a thread's preview; touch: someone has it open,
+   * which keeps it from expiring.
+   */
+  z.object({
+    type: z.literal('preview.control'),
+    sessionId: z.string(),
+    action: z.union([PreviewAction, z.literal('touch')]),
+  }),
+  /** A thread's preview output, for a person viewing it. */
+  z.object({ type: z.literal('preview.logs'), requestId: z.string(), sessionId: z.string() }),
   /** The API now serves another runner bundle (sent to every connected runner). */
   z.object({ type: z.literal('update.available'), bundle: z.string() }),
   z.object({

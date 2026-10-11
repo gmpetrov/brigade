@@ -75,6 +75,7 @@ export function instructions(
       saving(spec),
     designs(spec, libraryDir),
     spec.git && code(spec),
+    PREVIEWS,
     tasks(spec),
     SCHEDULES,
     credentials(browser),
@@ -193,6 +194,15 @@ const tasks = (spec: ThreadSpec) =>
       'Do not ask first: create it, say so in one line, and do the work.'
 
 /** Schedules: recurring work, set up when the person asks for it. */
+const PREVIEWS =
+  '## Previews\n\n' +
+  'When you build or change an app people can use in a browser, run it with `start_preview` once it works, so ' +
+  'the person tries it from this thread instead of reading the diff. Install dependencies and do one-off setup ' +
+  '(env files, database, migrations, seed data) with your shell first; start_preview runs only the long-running ' +
+  'command. It keeps running between your turns, and reloads as you edit when it is a dev server. Check it ' +
+  'yourself (in your browser if you have one, else with curl) before saying it is ready. If it fails, read `preview_logs`. ' +
+  'In your reply, say how you started it (command, ports, setup) so it is remembered for next time.'
+
 const SCHEDULES =
   '## Schedules\n\n' +
   'When the person asks for something to happen repeatedly or at set times, set it up with `create_schedule`: ' +

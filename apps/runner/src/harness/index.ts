@@ -46,16 +46,24 @@ import {
   offerChoicesTool,
   OPEN_TICKET_TOOL,
   openTicketTool,
+  previewTools,
   repoTools,
   scheduleTools,
   taskTools,
   type ConnectorCaller,
   type LibraryCaller,
+  type PreviewTools,
   type ScheduleCaller,
   type TaskCaller,
 } from './tools.js'
 
-export type { ConnectorCaller, LibraryCaller, ScheduleCaller, TaskCaller } from './tools.js'
+export type {
+  ConnectorCaller,
+  LibraryCaller,
+  PreviewTools,
+  ScheduleCaller,
+  TaskCaller,
+} from './tools.js'
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
@@ -67,6 +75,8 @@ export type ThreadContext = {
   callTask: TaskCaller
   /** Create, list or change the teammate's schedules. */
   callSchedule: ScheduleCaller
+  /** The thread's live preview: an app the teammate runs for people to try. */
+  preview: PreviewTools
   bundles: BundleStore
   /** Send a file of the teammate's to the API, to go with a connector call. Returns its id. */
   uploadFile: (input: {
@@ -110,6 +120,7 @@ function createAgent(
   checkoutRepo: (input: CheckoutInput) => Promise<unknown>,
   callTask: TaskCaller,
   callSchedule: ScheduleCaller,
+  preview: PreviewTools,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -124,6 +135,7 @@ function createAgent(
     ...(spec.git ? repoTools(checkoutRepo) : {}),
     ...taskTools(callTask),
     ...scheduleTools(callSchedule),
+    ...previewTools(preview),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
@@ -560,6 +572,7 @@ export class HarnessThread {
         }),
       this.context.callTask,
       this.context.callSchedule,
+      this.context.preview,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,

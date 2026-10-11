@@ -20,6 +20,7 @@ import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
 import { handleScheduleCall } from './schedules.js'
 import { handleTaskCall } from './tasks.js'
+import { handlePreviewExpose, settlePreviewLogs } from './app-previews.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
@@ -514,6 +515,20 @@ export function runnerSocket(runner: {
       )
       return
     }
+
+    if (message.type === 'preview.expose') {
+      void handlePreviewExpose(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+      return
+    }
+
+    if (message.type === 'preview.logs.result') return settlePreviewLogs(runner.computerId, message)
 
     if (message.type === 'thread.file.result') {
       const read = fileReads.get(message.requestId)

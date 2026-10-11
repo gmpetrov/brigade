@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { MessageAttachment } from './attachments.js'
 import { CredentialKind } from './credentials.js'
+import { PreviewInfo } from './previews.js'
 
 const base = {
   /** ISO time the event happened on the computer. */
@@ -342,6 +343,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     reason: z.enum(['usage_limit', 'unavailable']),
     resetsAt: z.iso.datetime().nullable(),
   }),
+  /** A thread's live preview started, answers, failed or stopped. The latest one is its state. */
+  z.object({ ...base, type: z.literal('preview.changed'), ...PreviewInfo.shape }),
   z.object({ ...base, type: z.literal('error'), message: z.string() }),
   z.object({ ...base, type: z.literal('raw'), source: z.string(), value: z.unknown() }),
 ])

@@ -7,6 +7,7 @@ export * from './events.js'
 export * from './library.js'
 export * from './mentions.js'
 export * from './models.js'
+export * from './previews.js'
 export * from './pulls.js'
 export * from './repositories.js'
 export * from './runner.js'
@@ -21,8 +22,9 @@ export * from './tasks.js'
  * 9: tasks. 10: schedules. 11: queued messages (cancel, edit, steer) and interrupts by turn.
  * 12: teammates save credentials; approvals that may allow a credential for good.
  * 13: a library mirror per teammate, of only the folders it may read.
+ * 14: live previews (an app a teammate runs, for people to open).
  */
-export const PROTOCOL_VERSION = 13
+export const PROTOCOL_VERSION = 14
 /** Runners from this version on keep restricted folders from teammates without access. */
 export const LIBRARY_VIEWS_PROTOCOL = 13
 /** The API rejects runners below this protocol version. */

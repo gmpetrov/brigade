@@ -17,6 +17,7 @@ import {
   type TicketAnswer,
 } from '@brigade/contracts'
 import {
+  AppWindow,
   ChevronRight,
   Circle,
   CircleCheck,
@@ -112,6 +113,13 @@ type Item =
   | { kind: 'turn'; key: string; finishReason: string }
   | { kind: 'error'; key: string; message: string }
   | { kind: 'note'; key: string; text: string }
+  | {
+      kind: 'preview'
+      key: string
+      status: 'running' | 'failed' | 'stopped'
+      port: number
+      reason?: string
+    }
 
 export type Limits = NonNullable<Extract<AgentEvent, { type: 'usage.updated' }>['limits']>
 
@@ -297,6 +305,17 @@ export function useThreadItems(events: SequencedEvent[]) {
         case 'terminal.command':
           add({ kind: 'note', key: `n${seq}`, text: `$ ${e.command}` })
           break
+        case 'preview.changed':
+          // Starting shows as the teammate's tool call; what came of it shows here.
+          if (e.status !== 'starting')
+            add({
+              kind: 'preview',
+              key: `v${seq}`,
+              status: e.status,
+              port: e.port,
+              ...(e.reason ? { reason: e.reason } : {}),
+            })
+          break
         case 'control.changed':
           add({
             kind: 'note',
@@ -419,6 +438,7 @@ export function ThreadItems({
   takeover,
   teammate,
   teammates = [],
+  onOpenPreview,
 }: {
   threadId: string
   items: Item[]
@@ -434,6 +454,8 @@ export function ThreadItems({
   teammate?: { name: string; harness: string }
   /** Everyone in the thread. With several, each message shows who wrote it. */
   teammates?: { id: string; name: string; harness: string }[]
+  /** Opens the thread's preview beside it; set while one runs. */
+  onOpenPreview?: () => void
 }) {
   // A teammate carries its harness as a plain string; the avatar only tells codex apart.
   const avatarOf = (t: { name: string; harness: string } | undefined) =>
@@ -707,6 +729,30 @@ export function ThreadItems({
             return (
               <div key={item.key} className="text-sm text-muted-foreground">
                 {item.text}
+              </div>
+            )
+          case 'preview':
+            return (
+              <div
+                key={item.key}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+              >
+                <AppWindow aria-hidden className="size-4 shrink-0" />
+                <span>
+                  {item.status === 'running'
+                    ? `Preview running on port ${item.port}`
+                    : item.status === 'failed'
+                      ? `Preview failed${item.reason ? `: ${item.reason}` : ''}`
+                      : `Preview stopped${item.reason ? `: ${item.reason}` : ''}`}
+                </span>
+                {item.status === 'running' &&
+                  onOpenPreview &&
+                  // Only the latest run opens: an earlier one has been replaced.
+                  !items.slice(i + 1).some((later) => later.kind === 'preview') && (
+                    <Button type="button" size="sm" variant="outline" onClick={onOpenPreview}>
+                      Open preview
+                    </Button>
+                  )}
               </div>
             )
         }

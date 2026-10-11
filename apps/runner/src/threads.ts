@@ -17,6 +17,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
+import type { Previews } from './previews.js'
 import { memoryPrompt, parseMemory } from './memory.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
@@ -154,7 +155,9 @@ export class Threads {
       /** A teammate's reply mentioned others in the thread: ask the API to have them answer next. */
       handoff: (sessionId: string, fromTeammateId: string, teammateIds: string[]) => void
       /** The library and memory threads reach. */
-      context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule'>
+      context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule' | 'preview'>
+      /** Apps teammates run for people to try, one per thread. */
+      previews: Previews
       callLibrary: (
         sessionId: string,
         teammateId: string,
@@ -923,6 +926,12 @@ export class Threads {
           callLibrary: (call) => this.options.callLibrary(spec.sessionId, teammateId, call),
           callTask: (call) => this.options.callTask(spec.sessionId, teammateId, call),
           callSchedule: (call) => this.options.callSchedule(spec.sessionId, teammateId, call),
+          preview: this.options.previews.forSeat({
+            sessionId: spec.sessionId,
+            teammateId,
+            workDir: folder.workDir,
+            ...(user ? { runAs: user } : {}),
+          }),
         },
         user,
       )

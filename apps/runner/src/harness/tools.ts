@@ -980,3 +980,102 @@ export function repoTools(
     }),
   }
 }
+
+/** A teammate's thread preview: what previewTools reach (see previews.ts). */
+export type PreviewTools = {
+  start(
+    input: { command: string; cwd?: string; port: number; ports?: number[]; timeoutMs?: number },
+    signal?: AbortSignal,
+  ): Promise<{
+    status: string
+    origins: Record<number, string>
+    reason?: string
+    logs?: string
+  }>
+  stop(): Promise<{ stopped: boolean }>
+  logs(lines?: number): { status: string; logs: string }
+}
+
+/** Run the app being built so people can try it from the thread, and read its output. */
+export function previewTools(previews: PreviewTools): Record<string, Tool> {
+  return {
+    start_preview: tool({
+      description:
+        'Run the app you are working on as a live preview people open from this thread, e.g. its dev server, ' +
+        'to try what you built. It keeps running after your turn ends; the thread has one preview, and starting ' +
+        'another replaces it. Waits until the port answers and returns its address. ' +
+        'The app must listen on 0.0.0.0 (or all interfaces), not only localhost, on `port`: PORT and HOST are set. ' +
+        "Its public address is in BRIGADE_PREVIEW_URL, and each port's in BRIGADE_PREVIEW_URL_<port>: pass them where " +
+        'the app needs its own URL (e.g. `NEXT_PUBLIC_API_URL=$BRIGADE_PREVIEW_URL_3001`, auth callback URLs, allowed origins). ' +
+        'Dev servers that check the Host header need the preview host allowed (Vite: server.allowedHosts; ' +
+        'Next.js: allowedDevOrigins). Use this instead of starting a server in the background yourself: those stop when your turn ends.',
+      inputSchema: jsonSchema<{
+        command: string
+        cwd?: string
+        port: number
+        ports?: number[]
+        timeoutSeconds?: number
+      }>({
+        type: 'object',
+        properties: {
+          command: {
+            type: 'string',
+            description:
+              'Starts the app and keeps running, e.g. "pnpm dev --port 5173 --host 0.0.0.0". Install dependencies and run one-off setup first, with your shell',
+          },
+          cwd: {
+            type: 'string',
+            description: 'Where to run it, relative to your working directory, e.g. the checkout',
+          },
+          port: { type: 'number', description: 'The port of the page people open' },
+          ports: {
+            type: 'array',
+            items: { type: 'number' },
+            maxItems: 3,
+            description:
+              "Other ports the app's pages call from the browser, e.g. its API's: they get public addresses too",
+          },
+          timeoutSeconds: {
+            type: 'number',
+            description: 'How long to wait for the port to answer (default 120, up to 600)',
+          },
+        },
+        required: ['command', 'port'],
+      }),
+      execute: async (input, { abortSignal }) => {
+        const result = await previews.start(
+          {
+            command: input.command,
+            ...(input.cwd ? { cwd: input.cwd } : {}),
+            port: input.port,
+            ...(input.ports?.length ? { ports: input.ports } : {}),
+            ...(input.timeoutSeconds ? { timeoutMs: input.timeoutSeconds * 1000 } : {}),
+          },
+          abortSignal,
+        )
+        return result.status === 'running'
+          ? {
+              ...result,
+              note:
+                'It runs. Check it yourself (your browser, or curl) at http://localhost:' +
+                `${input.port}, then tell the person it is ready: they open it with Preview at the top of the thread.`,
+            }
+          : result
+      },
+    }),
+    stop_preview: tool({
+      description: "Stop this thread's preview.",
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: () => previews.stop(),
+    }),
+    preview_logs: tool({
+      description:
+        "The latest output of this thread's preview (its dev server's console), e.g. to see why a page fails.",
+      inputSchema: jsonSchema<{ lines?: number }>({
+        type: 'object',
+        properties: { lines: { type: 'number', description: 'How many lines (default 100)' } },
+      }),
+      execute: (input) => previews.logs(input.lines ?? 100),
+    }),
+  }
+}

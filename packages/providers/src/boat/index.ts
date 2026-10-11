@@ -90,6 +90,17 @@ export function createBoatProvider(options: {
       return desktop.desktopUrl ?? null
     },
 
+    async hostPort(ref, port) {
+      // Stable per sandbox and port, and idempotent: the same address and token each time.
+      const hosted = await boat.hostPort({
+        sandboxId: idOf(ref),
+        hostPortRequest: { port, title: `Brigade preview :${port}` },
+      })
+      if (!hosted.url) throw new Error(`boat did not host port ${port}`)
+      const url = new URL(hosted.url)
+      return { origin: url.origin, url: hosted.url }
+    },
+
     async status(ref): Promise<ComputerStatus> {
       const { sandbox } = await boat.get({ sandboxId: idOf(ref) })
       switch (sandbox.state) {

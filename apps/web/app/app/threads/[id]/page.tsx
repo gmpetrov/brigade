@@ -1,5 +1,5 @@
 'use client'
-import { ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
+import { AppWindow, ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -11,6 +11,7 @@ import { useDesktopPreview } from '@/components/desktop-preview'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
+import { PreviewPanel, previewLive, useThreadPreview } from '@/components/preview-panel'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
@@ -32,6 +33,7 @@ export default function ThreadPage() {
   const { events, connected } = useThreadEvents(id, setStatus)
   const { items, limits, queued, seen, turnId } = useThreadItems(events)
   const outputs = useThreadOutputs(events)
+  const preview = useThreadPreview(events)
   const [error, setError] = useState<string>()
   const [text, setText] = useState('')
   const files = useUploads()
@@ -43,14 +45,25 @@ export default function ThreadPage() {
   const [shell, setShell] = useState(false)
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
-  // One panel beside the thread: a document opened anywhere replaces the file or computer.
+  // The app the teammate runs, beside the thread in the desktop's place.
+  const [previewing, setPreviewing] = useState(false)
+  // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.
   const documents = useDocumentPanel()
   const openFile = (f: { path: string; teammateId?: string }) => {
     documents.close()
+    setPreviewing(false)
     setFile(f)
   }
+  const openPreview = () => {
+    documents.close()
+    setFile(undefined)
+    setPreviewing(true)
+  }
   useEffect(() => {
-    if (documents.current) setFile(undefined)
+    if (documents.current) {
+      setFile(undefined)
+      setPreviewing(false)
+    }
   }, [documents.current])
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
   const [outgoing, setOutgoing] = useState<Outgoing[]>([])
@@ -113,6 +126,7 @@ export default function ThreadPage() {
   const mine = !!me.memberId && t.controlledByMemberId === me.memberId
   const showComputer = () => {
     setFile(undefined)
+    setPreviewing(false)
     documents.close()
     setWatching(true)
   }
@@ -272,20 +286,40 @@ export default function ThreadPage() {
               aria-label={connected ? 'Live' : 'Reconnecting'}
             />
             <StatusBadge status={current} />
+            {(previewLive(preview) || (previewing && preview)) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={previewing}
+                onClick={() => (previewing ? setPreviewing(false) : openPreview())}
+                title={previewing ? 'Hide preview' : `Try the app ${answering.name} runs`}
+              >
+                <AppWindow aria-hidden />
+                Preview
+                {preview?.status === 'starting' && (
+                  <span className="size-1.5 animate-pulse rounded-full bg-warning" aria-hidden />
+                )}
+              </Button>
+            )}
             {t.computer.kind === 'cloud' && (
               <>
                 <Button
                   type="button"
                   variant="outline"
                   size="icon-sm"
-                  aria-pressed={watching && !file}
+                  aria-pressed={watching && !file && !previewing}
                   onClick={() => {
+                    const hidden = Boolean(file) || previewing
                     setFile(undefined)
-                    setWatching(!watching || Boolean(file))
+                    setPreviewing(false)
+                    setWatching(!watching || hidden)
                   }}
-                  aria-label={watching && !file ? 'Hide computer' : 'Show computer'}
+                  aria-label={watching && !file && !previewing ? 'Hide computer' : 'Show computer'}
                   title={
-                    watching && !file ? 'Hide computer' : "Watch the workspace computer's screen"
+                    watching && !file && !previewing
+                      ? 'Hide computer'
+                      : "Watch the workspace computer's screen"
                   }
                 >
                   <Monitor aria-hidden />
@@ -417,7 +451,18 @@ export default function ThreadPage() {
         />
       )}
 
-      {!file && !documents.current && watching && t.computer.kind === 'cloud' && (
+      {!file && !documents.current && previewing && preview && (
+        <PreviewPanel
+          threadId={t.id}
+          preview={preview}
+          teammateName={people.find((p) => p.id === preview.teammateId)?.name ?? answering.name}
+          computerName={t.computer.name}
+          mayControl={t.mayPrompt}
+          onClose={() => setPreviewing(false)}
+        />
+      )}
+
+      {!file && !documents.current && !previewing && watching && t.computer.kind === 'cloud' && (
         <ComputerPanel
           thread={t}
           memberId={me.memberId ?? ''}
@@ -443,6 +488,7 @@ export default function ThreadPage() {
           teammate={t.teammate}
           teammates={people}
           canApprove={t.mayPrompt}
+          onOpenPreview={previewLive(preview) ? openPreview : undefined}
           onApproval={(approvalId, approved, always) =>
             void call('/approvals', {
               approvalId,
