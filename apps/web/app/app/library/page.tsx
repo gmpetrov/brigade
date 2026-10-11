@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
+import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { Markdown } from '@/components/markdown'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -12,9 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import type { EditTarget } from '@brigade/contracts'
 import {
   api,
-  ApiError,
   useApi,
   type LibraryFile,
   type MemoryFile,
@@ -49,6 +50,17 @@ function LibraryView() {
   const [tab, setTab] = useState('files')
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
+  const [open, setOpen] = useState<string>()
+  const documents = useDocumentPanel()
+  // What the panel saved: sizes, times and memory previews, once it closes or switches.
+  const shown = JSON.stringify(documents.current?.target ?? null)
+  const reloadFiles = files.reload
+  const reloadMemory = memory.reload
+  useEffect(() => {
+    void reloadFiles()
+    void reloadMemory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the open document changes
+  }, [shown])
   const [uploading, setUploading] = useState<string>()
   const [error, setError] = useState<string>()
   const input = useRef<HTMLInputElement>(null)
@@ -130,7 +142,11 @@ function LibraryView() {
       {error && <p className="text-sm text-destructive-text">{error}</p>}
 
       {query.trim() ? (
-        <SearchResults query={query.trim()} onMemory={() => (setQuery(''), setTab('memory'))} />
+        <SearchResults
+          query={query.trim()}
+          onMemory={() => (setQuery(''), setTab('memory'))}
+          onFile={() => setQuery('')}
+        />
       ) : (
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
@@ -141,15 +157,19 @@ function LibraryView() {
             {creating && (
               <NewFile
                 onCancel={() => setCreating(false)}
-                onSaved={async () => {
+                onCreated={async (file) => {
                   setCreating(false)
                   await files.reload()
+                  if (file.contentType === 'text/markdown') documents.open(libraryDocument(file))
+                  else setOpen(file.id)
                 }}
               />
             )}
             <Files
               files={files.data}
               focus={focus}
+              open={open}
+              setOpen={setOpen}
               reload={files.reload}
               onUpload={() => input.current?.click()}
             />
@@ -166,23 +186,33 @@ function LibraryView() {
 function Files({
   files,
   focus,
+  open,
+  setOpen,
   reload,
   onUpload,
 }: {
   files: LibraryFile[] | undefined
   /** A file asked for by the address: opened if it can be, and scrolled to. */
   focus?: string
+  /** The file open in place. */
+  open: string | undefined
+  setOpen: (id: string | undefined) => void
   reload: () => Promise<void>
   onUpload: () => void
 }) {
-  const [open, setOpen] = useState<string>()
+  const documents = useDocumentPanel()
+  const current = documents.current?.target
+  const inPanel = (id: string) => current?.kind === 'library' && current.id === id
   const [renaming, setRenaming] = useState<string>()
   const [error, setError] = useState<string>()
 
   const loaded = Boolean(files)
   useEffect(() => {
     if (!focus || !loaded) return
-    if (files?.find((f) => f.id === focus)?.editable) setOpen(focus)
+    const file = files?.find((f) => f.id === focus)
+    if (file?.contentType === 'text/markdown' && file.editable)
+      documents.open(libraryDocument(file))
+    else if (file?.editable) setOpen(focus)
     document.getElementById(`library-file-${focus}`)?.scrollIntoView({ block: 'center' })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
   }, [focus, loaded])
@@ -231,7 +261,7 @@ function Files({
               id={`library-file-${f.id}`}
               className={cn(
                 'flex scroll-mt-20 flex-col gap-3 px-5 py-3.5',
-                f.id === focus && 'bg-primary/5',
+                (f.id === focus || inPanel(f.id)) && 'bg-primary/5',
               )}
             >
               <div className="flex flex-wrap items-center gap-4">
@@ -256,7 +286,18 @@ function Files({
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {f.editable ? (
+                  {f.editable && f.contentType === 'text/markdown' ? (
+                    <Button
+                      variant={inPanel(f.id) ? 'default' : 'outline'}
+                      size="sm"
+                      aria-pressed={inPanel(f.id)}
+                      onClick={() =>
+                        inPanel(f.id) ? documents.close() : documents.open(libraryDocument(f))
+                      }
+                    >
+                      {inPanel(f.id) ? 'Close' : 'Open'}
+                    </Button>
+                  ) : f.editable ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -288,7 +329,10 @@ function Files({
                     size="sm"
                     onClick={() =>
                       confirm(`Delete ${f.path} from the library?`) &&
-                      void act(() => api(`/library/${f.id}`, { method: 'DELETE' }))
+                      void act(async () => {
+                        await api(`/library/${f.id}`, { method: 'DELETE' })
+                        if (inPanel(f.id)) documents.close()
+                      })
                     }
                   >
                     Delete
@@ -335,7 +379,7 @@ function Files({
   )
 }
 
-/** A text file, read and edited in place. */
+/** A plain text file (not Markdown, which opens in the document panel), read and edited in place. */
 function TextFile({
   file,
   onSaved,
@@ -372,17 +416,12 @@ function TextFile({
 
   if (text === undefined)
     return <p className="text-sm text-muted-foreground">{error ?? 'Loading…'}</p>
-  const markdown = file.contentType === 'text/markdown'
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
       {draft === undefined ? (
-        markdown ? (
-          <Markdown text={text} className="text-sm" />
-        ) : (
-          <pre className="max-h-[32rem] overflow-auto font-mono text-xs whitespace-pre-wrap">
-            {text}
-          </pre>
-        )
+        <pre className="max-h-[32rem] overflow-auto font-mono text-xs whitespace-pre-wrap">
+          {text}
+        </pre>
       ) : (
         <Textarea
           aria-label={`Contents of ${file.path}`}
@@ -418,18 +457,26 @@ function TextFile({
   )
 }
 
-function NewFile({ onCancel, onSaved }: { onCancel: () => void; onSaved: () => Promise<void> }) {
+/** A new file: named here, then written in the editor. A name without an extension is Markdown. */
+function NewFile({
+  onCancel,
+  onCreated,
+}: {
+  onCancel: () => void
+  onCreated: (file: LibraryFile) => Promise<void>
+}) {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
-  async function save(form: FormData) {
+  async function create(form: FormData) {
     setBusy(true)
     setError(undefined)
+    const path = String(form.get('path') ?? '').trim()
     try {
-      await api('/library/text', {
-        body: { path: String(form.get('path') ?? ''), text: String(form.get('text') ?? '') },
+      const file = await api<LibraryFile>('/library/text', {
+        body: { path: /\.[a-z0-9]+$/i.test(path) ? path : `${path}.md`, text: '' },
       })
-      await onSaved()
+      await onCreated(file)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
@@ -437,27 +484,24 @@ function NewFile({ onCancel, onSaved }: { onCancel: () => void; onSaved: () => P
   }
 
   return (
-    <form action={save} className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm">
+    <form action={create} className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-2">
         <Label htmlFor="new-path">Path</Label>
         <Input
           id="new-path"
           name="path"
           required
+          autoFocus
           placeholder="guides/refunds.md"
           className="font-mono text-sm"
         />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="new-text">Contents</Label>
-        <Textarea id="new-text" name="text" rows={10} className="font-mono text-sm" />
       </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button disabled={busy}>Add to library</Button>
+        <Button disabled={busy}>Create and open</Button>
       </div>
     </form>
   )
@@ -477,7 +521,7 @@ function Memory({
         title="Workspace"
         description="People, terms, decisions and where things live. Every teammate loads it."
         file={overview.workspace}
-        path="/library/memory/workspace"
+        target={{ kind: 'workspace_memory' }}
         onSaved={reload}
       />
       {overview.teammates.map((t) => (
@@ -486,7 +530,7 @@ function Memory({
           title={t.name}
           description={`What ${t.name} has learned about its job. Only ${t.name} loads it.`}
           file={t.memory}
-          path={`/library/memory/teammates/${t.teammateId}`}
+          target={{ kind: 'teammate_memory', teammateId: t.teammateId }}
           onSaved={reload}
         />
       ))}
@@ -532,31 +576,17 @@ function MemoryCard({
   title,
   description,
   file,
-  path,
+  target,
   onSaved,
 }: {
   title: string
   description: string
   file: MemoryFile
-  path: string
+  target: EditTarget
   onSaved: () => Promise<void>
 }) {
-  const [draft, setDraft] = useState<string>()
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-
-  async function save() {
-    setBusy(true)
-    setError(undefined)
-    try {
-      await api(path, { method: 'PUT', body: { text: draft } })
-      setDraft(undefined)
-      await onSaved()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e))
-    }
-    setBusy(false)
-  }
+  const documents = useDocumentPanel()
+  const editing = JSON.stringify(documents.current?.target) === JSON.stringify(target)
 
   const body = file.text.replace(/^#[^\n]*\n+/, '').trim()
   return (
@@ -572,38 +602,27 @@ function MemoryCard({
             {file.updatedAt && ` Updated ${timeAgo(file.updatedAt)}.`}
           </p>
         </div>
-        {draft === undefined && (
-          <Button variant="outline" size="sm" onClick={() => setDraft(file.text)}>
-            Edit
-          </Button>
-        )}
+        <Button
+          variant={editing ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={editing}
+          onClick={() => {
+            if (!editing) {
+              documents.open({ target, title: `${title} memory`, subtitle: description })
+              return
+            }
+            documents.close()
+            void onSaved()
+          }}
+        >
+          {editing ? 'Done' : 'Edit'}
+        </Button>
       </div>
-      <CardContent className="flex flex-col gap-3">
-        {draft === undefined ? (
-          body ? (
-            <Markdown text={body} className="text-sm" />
-          ) : (
-            <p className="text-sm text-muted-foreground">Nothing remembered yet.</p>
-          )
+      <CardContent>
+        {body ? (
+          <Markdown text={body} className="text-sm" />
         ) : (
-          <>
-            <Textarea
-              aria-label={`${title} memory`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={Math.min(24, Math.max(6, draft.split('\n').length + 1))}
-              className="font-mono text-sm"
-            />
-            {error && <p className="text-sm text-destructive-text">{error}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setDraft(undefined)}>
-                Cancel
-              </Button>
-              <Button size="sm" disabled={busy} onClick={() => void save()}>
-                Save
-              </Button>
-            </div>
-          </>
+          <p className="text-sm text-muted-foreground">Nothing remembered yet.</p>
         )}
       </CardContent>
     </Card>
@@ -635,7 +654,15 @@ function Snippet({ text }: { text: string }) {
   )
 }
 
-function SearchResults({ query, onMemory }: { query: string; onMemory: () => void }) {
+function SearchResults({
+  query,
+  onMemory,
+  onFile,
+}: {
+  query: string
+  onMemory: () => void
+  onFile: () => void
+}) {
   const [hits, setHits] = useState<SearchHit[]>()
   const [error, setError] = useState<string>()
 
@@ -666,14 +693,13 @@ function SearchResults({ query, onMemory }: { query: string; onMemory: () => voi
             <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
               <StatusBadge status={h.kind} tone="neutral" label={KIND_LABEL[h.kind]} />
               {h.kind === 'library' ? (
-                <a
-                  href={contentUrl(h.documentId)}
-                  target="_blank"
-                  rel="noreferrer"
+                <Link
+                  href={`/app/library?file=${h.documentId}`}
+                  onClick={onFile}
                   className="min-w-0 hover:underline"
                 >
                   {title}
-                </a>
+                </Link>
               ) : h.kind === 'thread_summary' && h.sessionId ? (
                 <Link href={`/app/threads/${h.sessionId}`} className="min-w-0 hover:underline">
                   {title}

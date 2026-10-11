@@ -130,37 +130,37 @@ model Invitation {
 // ---------------------------------------------------------------------------
 
 model Workspace {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  computers      Computer[]
-  runners        Runner[]
-  teammates      Teammate[]
-  sessions       Session[]
-  sessionEvents  SessionEvent[]
-  threadSeats    ThreadTeammate[]
-  accounts       Account[]
-  comments       Comment[]
-  connections    Connection[]
-  vaultSecrets   VaultSecret[]
-  credentials    Credential[]
-  credentialGrants CredentialGrant[]
-  grants         Grant[]
-  connectionCalls ConnectionCall[]
-  triggers       Trigger[]
-  subscriptions  Subscription[]
-  tickets        Ticket[]
-  documents      Document[]
-  attachments    Attachment[]
-  threadAttachments ThreadAttachment[]
-  pullRequests   PullRequest[]
+  id                 String              @id @default(cuid())
+  organizationId     String
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  computers          Computer[]
+  runners            Runner[]
+  teammates          Teammate[]
+  sessions           Session[]
+  sessionEvents      SessionEvent[]
+  threadSeats        ThreadTeammate[]
+  accounts           Account[]
+  comments           Comment[]
+  connections        Connection[]
+  vaultSecrets       VaultSecret[]
+  credentials        Credential[]
+  credentialGrants   CredentialGrant[]
+  grants             Grant[]
+  connectionCalls    ConnectionCall[]
+  triggers           Trigger[]
+  subscriptions      Subscription[]
+  tickets            Ticket[]
+  documents          Document[]
+  attachments        Attachment[]
+  threadAttachments  ThreadAttachment[]
+  pullRequests       PullRequest[]
   pullRequestReviews PullRequestReview[]
-  tasks          Task[]
-  schedules      Schedule[]
-  auditEntries   AuditEntry[]
+  tasks              Task[]
+  schedules          Schedule[]
+  auditEntries       AuditEntry[]
 
   @@index([organizationId])
 }
@@ -230,37 +230,37 @@ enum Harness {
 
 /// An AI teammate: a saved identity, not a running process.
 model Teammate {
-  id               String     @id @default(cuid())
-  organizationId   String
-  workspaceId      String
-  workspace        Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name             String
-  instructions     String     @default("")
-  harness          Harness    @default(claude_code)
-  model            String?
+  id                    String              @id @default(cuid())
+  organizationId        String
+  workspaceId           String
+  workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                  String
+  instructions          String              @default("")
+  harness               Harness             @default(claude_code)
+  model                 String?
   /// { threadsPerDay, computerHoursPerDay, writeCallsPerConnectionPerDay }
-  caps             Json       @default("{}")
+  caps                  Json                @default("{}")
   /// Per kind of action: allow, ask or deny.
-  permissionPolicy Json       @default("{}")
+  permissionPolicy      Json                @default("{}")
   /// Its grant on the workspace library: read and search it, or also save to it.
-  libraryAccess    LibraryAccess @default(read)
-  archivedAt       DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  sessions         Session[]
-  threadSeats      ThreadTeammate[]
-  grants           Grant[]
-  credentialGrants CredentialGrant[]
-  savedCredentials Credential[]
-  triggers         Trigger[]
-  connectionCalls  ConnectionCall[]
-  documents        Document[]
-  pullRequestsAuthored  PullRequest[] @relation("PullRequestAuthor")
-  pullRequestsReviewing PullRequest[] @relation("PullRequestReviewer")
+  libraryAccess         LibraryAccess       @default(read)
+  archivedAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  sessions              Session[]
+  threadSeats           ThreadTeammate[]
+  grants                Grant[]
+  credentialGrants      CredentialGrant[]
+  savedCredentials      Credential[]
+  triggers              Trigger[]
+  connectionCalls       ConnectionCall[]
+  documents             Document[]
+  pullRequestsAuthored  PullRequest[]       @relation("PullRequestAuthor")
+  pullRequestsReviewing PullRequest[]       @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
-  tasks            Task[]
-  schedules        Schedule[]
-  schedulesCreated Schedule[] @relation("ScheduleCreatedByTeammate")
+  tasks                 Task[]
+  schedules             Schedule[]
+  schedulesCreated      Schedule[]          @relation("ScheduleCreatedByTeammate")
 
   @@index([workspaceId])
 }
@@ -292,53 +292,53 @@ enum SessionOrigin {
 }
 
 model Session {
-  id                  String         @id @default(cuid())
-  organizationId      String
-  workspaceId         String
-  workspace           Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  teammateId          String
-  teammate            Teammate       @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  startedByMemberId   String
-  startedBy           Member         @relation(fields: [startedByMemberId], references: [id], onDelete: Cascade)
-  computerId          String
-  computer            Computer       @relation(fields: [computerId], references: [id], onDelete: Cascade)
-  accountId           String?
-  account             Account?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  title               String
-  status              SessionStatus  @default(starting)
+  id                   String             @id @default(cuid())
+  organizationId       String
+  workspaceId          String
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teammateId           String
+  teammate             Teammate           @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  startedByMemberId    String
+  startedBy            Member             @relation(fields: [startedByMemberId], references: [id], onDelete: Cascade)
+  computerId           String
+  computer             Computer           @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  accountId            String?
+  account              Account?           @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  title                String
+  status               SessionStatus      @default(starting)
   /// A private thread does not write to workspace memory.
-  private             Boolean        @default(false)
+  private              Boolean            @default(false)
   /// Lets other members prompt or approve on the starter's subscription.
-  othersMayPrompt     Boolean        @default(false)
+  othersMayPrompt      Boolean            @default(false)
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
   /// member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
-  origin              SessionOrigin  @default(member)
-  triggerId           String?
-  trigger             Trigger?       @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+  origin               SessionOrigin      @default(member)
+  triggerId            String?
+  trigger              Trigger?           @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
-  conversationKey     String?
-  scheduleId          String?
-  schedule            Schedule?      @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  conversationKey      String?
+  scheduleId           String?
+  schedule             Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   /// Highest contiguous event sequence number stored.
-  lastSeq             Int            @default(0)
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  events              SessionEvent[]
+  lastSeq              Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  events               SessionEvent[]
   /// Every teammate in the thread, the starting one (teammateId) included.
-  teammates           ThreadTeammate[]
-  comments            Comment[]
-  connectionCalls     ConnectionCall[]
-  tickets             Ticket[]
-  documents           Document[]
-  attachments         ThreadAttachment[]
+  teammates            ThreadTeammate[]
+  comments             Comment[]
+  connectionCalls      ConnectionCall[]
+  tickets              Ticket[]
+  documents            Document[]
+  attachments          ThreadAttachment[]
   /// Files teammates sent from this thread (e.g. attached to an email).
-  sentAttachments     Attachment[]
+  sentAttachments      Attachment[]
   /// Pull requests opened from this thread; their review loop runs here.
-  pullRequests        PullRequest[]
+  pullRequests         PullRequest[]
   /// The task this thread works on. One thread per task for now.
-  taskId              String?        @unique
-  task                Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskId               String?            @unique
+  task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
   @@index([teammateId])
@@ -525,10 +525,10 @@ enum ReviewStatus {
 
 /// A pull request Brigade knows about: opened by a teammate, or put through a review.
 model PullRequest {
-  id                  String        @id @default(cuid())
+  id                  String              @id @default(cuid())
   organizationId      String
   workspaceId         String
-  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   /// owner/name on GitHub, lowercase.
   repository          String
   number              Int
@@ -537,26 +537,26 @@ model PullRequest {
   baseRef             String
   /// The thread that opened it (or the review's own thread); its review loop runs there.
   sessionId           String?
-  session             Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  session             Session?            @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   authorTeammateId    String?
-  authorTeammate      Teammate?     @relation("PullRequestAuthor", fields: [authorTeammateId], references: [id], onDelete: SetNull)
+  authorTeammate      Teammate?           @relation("PullRequestAuthor", fields: [authorTeammateId], references: [id], onDelete: SetNull)
   reviewerTeammateId  String?
-  reviewerTeammate    Teammate?     @relation("PullRequestReviewer", fields: [reviewerTeammateId], references: [id], onDelete: SetNull)
-  reviewStatus        ReviewStatus  @default(none)
+  reviewerTeammate    Teammate?           @relation("PullRequestReviewer", fields: [reviewerTeammateId], references: [id], onDelete: SetNull)
+  reviewStatus        ReviewStatus        @default(none)
   /// Merge once approved and GitHub allows it. Only an owner or admin arms it.
-  autoMerge           Boolean       @default(false)
+  autoMerge           Boolean             @default(false)
   requestedByMemberId String?
   /// Review rounds in the current loop, from 1.
-  round               Int           @default(0)
+  round               Int                 @default(0)
   /// The head commit the latest review looked at.
   reviewedSha         String?
   /// Why the loop is waiting or stopped, shown on the pull request.
   note                String?
   /// As last seen on GitHub: open, closed or merged.
-  state               String        @default("open")
+  state               String              @default("open")
   mergedAt            DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
 
   @@unique([workspaceId, repository, number])
@@ -789,28 +789,28 @@ model ConnectionCall {
 /// connector's catalog (e.g. "stripe.payment_received"), or any event posted to a
 /// custom app's URL ("webhook.received").
 model Trigger {
-  id                   String     @id @default(cuid())
+  id                   String               @id @default(cuid())
   organizationId       String
   workspaceId          String
-  workspace            Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace            Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   connectionId         String
-  connection           Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection           Connection           @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   teammateId           String
-  teammate             Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  teammate             Teammate             @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   label                String
   /// The catalog id, e.g. gmail.email_received.
   event                String
   /// The trigger's options from the catalog, e.g. { "query": "to:support@acme.com" }.
-  options              Json       @default("{}")
+  options              Json                 @default("{}")
   /// Custom apps only: the unguessable part of the trigger's URL.
-  pathToken            String?    @unique
+  pathToken            String?              @unique
   /// Custom apps only: how the sender is verified.
   verification         TriggerVerification?
   /// Custom apps only: the hmac signing secret, in the vault.
   verificationSecretId String?
   /// Runs on this member's accounts.
   createdByMemberId    String
-  createdAt            DateTime   @default(now())
+  createdAt            DateTime             @default(now())
   sessions             Session[]
 
   @@index([workspaceId])
@@ -828,31 +828,31 @@ enum TriggerVerification {
 /// (push) or, where the vendor cannot push to this server, a poll. One per
 /// connection and resource (the inbox, a calendar, the Stripe account).
 model Subscription {
-  id             String           @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  connectionId   String
-  connection     Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId       String
+  connection         Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   /// stripe: "account". gmail: "inbox". google_calendar: the calendar id.
-  resource       String
-  mode           SubscriptionMode
+  resource           String
+  mode               SubscriptionMode
   /// The vendor's id for it: a Stripe endpoint, a Calendar channel.
-  externalId     String?
+  externalId         String?
   /// Calendar: the channel's resource id, needed to stop it.
   externalResourceId String?
   /// The vendor's signing secret or channel token, in the vault.
-  secretId       String?
+  secretId           String?
   /// Vendor events it covers (Stripe event types).
-  events         String[]
+  events             String[]
   /// Where reading changes resumes: Gmail's history id, Calendar's sync token.
-  cursor         String?
+  cursor             String?
   /// When the vendor drops it unless renewed (Gmail watch, Calendar channel).
-  expiresAt      DateTime?
+  expiresAt          DateTime?
   /// The last failure to subscribe or read, shown on the connection.
-  error          String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  error              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@unique([connectionId, resource])
   @@index([workspaceId])
@@ -917,33 +917,60 @@ enum DocumentKind {
 /// A library file (its bytes in the bucket, its text here), a memory file or a
 /// thread summary (text only). `search` is generated from path and text.
 model Document {
-  id             String       @id @default(cuid())
+  id             String                   @id @default(cuid())
   organizationId String
   workspaceId    String
-  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  kind           DocumentKind @default(library)
+  workspace      Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind           DocumentKind             @default(library)
   /// Library: the file's path. Memory: workspace.md, teammates/<id>.md or threads/<id>.md.
   path           String
   /// Set for a teammate's memory and a thread summary.
   teammateId     String?
-  teammate       Teammate?    @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  teammate       Teammate?                @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   /// Set for a thread summary.
   sessionId      String?
-  session        Session?     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session        Session?                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   contentType    String
   size           Int
   /// SHA-256 of the stored bytes (library) or of the text (memory).
-  sha256         String       @default("")
-  text           String       @default("")
+  sha256         String                   @default("")
+  text           String                   @default("")
   /// Whether the text could be read for search.
-  indexed        Boolean      @default(false)
+  indexed        Boolean                  @default(false)
   /// Generated by PostgreSQL (see the library_memory migration); never written.
   search         Unsupported("tsvector")? @default(dbgenerated("(setweight(to_tsvector('simple'::regconfig, translate(path, '/._-'::text, '    '::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, text), 'B'::\"char\"))"))
-  updatedAt      DateTime     @updatedAt
-  createdAt      DateTime     @default(now())
+  updatedAt      DateTime                 @updatedAt
+  createdAt      DateTime                 @default(now())
+  assets         DocumentAsset[]
 
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
+}
+
+/// A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes
+/// are in the bucket under <organization>/<workspace>/assets/<id>; the document refers to it as
+/// `asset:<id>`. The hourly sweep removes the ones no document refers to any more.
+model DocumentAsset {
+  id                 String           @id @default(cuid())
+  organizationId     String
+  /// No relation: a deleted workspace's assets are found by the sweep and their bytes removed.
+  workspaceId        String
+  /// The document it was added to. Null once that document is gone; another document that
+  /// refers to it (a block copied over) takes it on, or the sweep removes it.
+  documentId         String?
+  document           Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  name               String
+  contentType        String
+  size               Int
+  status             AttachmentStatus @default(ready)
+  uploadedByMemberId String?
+  createdAt          DateTime         @default(now())
+  /// When the sweep last found a document referring to it.
+  checkedAt          DateTime?
+
+  @@index([documentId])
+  @@index([workspaceId])
+  @@index([checkedAt])
 }
 
 enum ActorType {
@@ -996,30 +1023,30 @@ enum AttachmentStatus {
 /// A file's bytes (in the bucket, keyed by id) and where they came from. One
 /// file can be in several threads, e.g. an email two triggers matched.
 model Attachment {
-  id                 String           @id @default(cuid())
+  id                 String             @id @default(cuid())
   organizationId     String
   workspaceId        String
-  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace          Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   /// The file's name, made safe: no folders, no hidden or control characters.
   name               String
   contentType        String
   size               Int
-  sha256             String           @default("")
-  status             AttachmentStatus @default(ready)
+  sha256             String             @default("")
+  status             AttachmentStatus   @default(ready)
   /// Why it is blocked.
   note               String?
   source             AttachmentSource
   uploadedByMemberId String?
   connectionId       String?
-  connection         Connection?      @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  connection         Connection?        @relation(fields: [connectionId], references: [id], onDelete: SetNull)
   /// The vendor's stable name for it, e.g. gmail:<messageId>:<partId>: fetched once.
   externalRef        String?
   /// Set for a file a teammate sent: the thread it was sent from.
   sessionId          String?
-  session            Session?         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session            Session?           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   /// Extracted for search, like a library file's.
-  text               String           @default("")
-  createdAt          DateTime         @default(now())
+  text               String             @default("")
+  createdAt          DateTime           @default(now())
   threads            ThreadAttachment[]
 
   @@unique([connectionId, externalRef])

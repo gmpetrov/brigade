@@ -2,22 +2,31 @@
 // edit and correct; every change is audited and synced to the computers.
 import {
   CreateLibraryText,
+  EditTarget,
   LibraryPath,
   MoveLibraryFile,
   WriteLibraryText,
   WriteMemory,
+  type EditSession,
   type MemoryFile,
   type MemoryOverview,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
+import { env } from '../config.js'
+import { prisma } from '../db.js'
 import {
   deleteLibraryFile,
+  documentText,
+  ensureMemory,
+  isMarkdown,
   libraryFile,
   memoryHeader,
   moveLibraryFile,
   readLibraryFile,
   readMemory,
+  saveDocumentText,
   saveLibraryFile,
   search,
   toLibraryFile,
@@ -160,6 +169,57 @@ export const library = new Hono<AppEnv>()
       { kind: 'teammate_memory', teammateId: teammate.id },
       text,
     )
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Open a Markdown file or a memory file to edit (memory is created on first
+   * open). Live through the collab server when it is configured.
+   */
+  .post('/edit', async (c) => {
+    const { db, scope } = c.var
+    const target = await parseBody(c.req.raw, EditTarget)
+    let row
+    if (target.kind === 'library') {
+      row = await libraryFile(db, target.id)
+      if (!isMarkdown(row))
+        throw new HTTPException(400, { message: 'Only Markdown files open in the editor' })
+    } else if (target.kind === 'workspace_memory') {
+      row = await ensureMemory(db, scope, target)
+    } else {
+      const teammate = await db.teammate.findFirst({
+        where: { id: target.teammateId, archivedAt: null },
+      })
+      if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+      row = await ensureMemory(db, scope, target, teammate.name)
+    }
+    let live: EditSession['live'] = null
+    if (collabEnabled()) {
+      const user = await prisma.user.findUnique({ where: { id: scope.userId } })
+      const name = user?.name || user?.email || 'Someone'
+      live = {
+        url: env.COLLAB_URL,
+        party: COLLAB_PARTY,
+        room: row.id,
+        token: editToken({ room: row.id, memberId: scope.memberId, name }),
+        user: { name, color: cursorColor(scope.memberId) },
+      }
+    }
+    const session: EditSession = {
+      documentId: row.id,
+      text: await documentText(scope, row),
+      live,
+    }
+    return c.json(session)
+  })
+
+  /** Save an opened document whole, when the collab server is not configured. */
+  .put('/edit/:documentId', async (c) => {
+    const { db, scope } = c.var
+    const row = await db.document.findFirst({ where: { id: c.req.param('documentId') } })
+    if (!row || !isMarkdown(row)) throw new HTTPException(404, { message: 'Document not found' })
+    const { text } = await parseBody(c.req.raw, WriteLibraryText)
+    await saveDocumentText(db, scope, { type: 'member', id: scope.memberId }, row, text)
     return c.json({ ok: true })
   })
 

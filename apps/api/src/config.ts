@@ -62,6 +62,14 @@ const Env = z.object({
   R2_BUCKET: z.string().optional(),
   /** Without R2 (development only): a local folder stands in for the bucket. */
   BUCKET_DIR: z.string().default(new URL('../.bucket', import.meta.url).pathname),
+  /**
+   * The collab server (apps/collab, a Cloudflare Worker) that syncs documents
+   * people edit together. Without a secret, the dashboard edits documents
+   * without live sync and saves them whole.
+   */
+  COLLAB_URL: z.url().default('http://localhost:8787'),
+  /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
+  COLLAB_SECRET: z.string().min(32).optional(),
 })
 
 export const env = Env.parse(process.env)

@@ -1,7 +1,7 @@
 // The one bucket (Cloudflare R2, through its S3 API). Every key starts with
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
@@ -39,6 +39,13 @@ export function attachmentKey(scope: Scope, attachmentId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, attachmentId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
   return `${scope.organizationId}/${scope.workspaceId}/attachments/${attachmentId}`
+}
+
+/** The bucket key of a file put in a document from the editor. */
+export function assetKey(scope: Scope, assetId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, assetId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/assets/${assetId}`
 }
 
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
@@ -82,6 +89,44 @@ export async function presignPut(key: string, size: number, contentType: string)
   })
   // The browser sets content-length itself; it only sends the type.
   return { url: signed.url, headers: { 'content-type': contentType } }
+}
+
+/** How long a signed download URL works. */
+const DOWNLOAD_URL_SECONDS = 5 * 60
+
+/**
+ * A short-lived URL the browser can GET one object from, served with the
+ * given type and disposition. The bucket answers range requests, so video
+ * seeks without the API in the way.
+ */
+export async function presignGet(
+  key: string,
+  response: { contentType: string; disposition: string },
+) {
+  if (!r2) throw new Error('Signed downloads need R2')
+  const query = new URLSearchParams({
+    'X-Amz-Expires': String(DOWNLOAD_URL_SECONDS),
+    'response-content-type': response.contentType,
+    'response-content-disposition': response.disposition,
+  })
+  const signed = await r2.client.sign(`${url(key)}?${query}`, {
+    method: 'GET',
+    aws: { signQuery: true },
+  })
+  return { url: signed.url, seconds: DOWNLOAD_URL_SECONDS }
+}
+
+/** The object's size, or null when it is not there. Without reading it. */
+export async function objectSize(key: string): Promise<number | null> {
+  if (!r2)
+    return stat(join(env.BUCKET_DIR, key)).then(
+      (s) => s.size,
+      () => null,
+    )
+  const response = await r2.client.fetch(url(key), { method: 'HEAD' })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`bucket head failed: ${response.status}`)
+  return Number(response.headers.get('content-length'))
 }
 
 export async function putObject(key: string, body: Uint8Array, contentType: string) {

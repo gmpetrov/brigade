@@ -14,6 +14,8 @@ pnpm workspaces + Turborepo.
 | `apps/api`           | `@brigade/api`       | Hono on Node.js: auth, workspaces, teammates, threads, runner linking, the WebSocket hub. The only package that touches PostgreSQL. |
 | `apps/runner`        | `@brigade/runner`    | `brigade-runner`: links a computer to a workspace and runs its threads through the AI SDK harness layer.                            |
 | `apps/web`           | `@brigade/web`       | Next.js dashboard and landing page.                                                                                                 |
+| `packages/editor`    | `@brigade/editor`    | The document editor's schema (mentions) and lossless Markdown conversion for media and mentions. Used by `api` and `web`.           |
+| `apps/collab`        | `@brigade/collab`    | Cloudflare Worker: one Durable Object per document people edit together, syncing their editors over Yjs (y-partyserver).            |
 
 ## Develop
 
@@ -24,7 +26,8 @@ pnpm install
 docker compose up -d                       # PostgreSQL on localhost:5433
 cp apps/api/.env.example apps/api/.env     # then set BETTER_AUTH_SECRET
 pnpm --filter @brigade/api db:migrate      # apply migrations
-pnpm dev                                   # api :3001, web :3000, package watchers
+cp apps/collab/.dev.vars.example apps/collab/.dev.vars   # optional: COLLAB_SECRET, the same as in apps/api/.env
+pnpm dev                                   # api :3001, web :3000, collab :8787, package watchers
 ```
 
 Open http://localhost:3000, create an account, an organization and a workspace, then a teammate.
@@ -272,6 +275,24 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   type, size, SHA-256 and the text (UTF-8 files and PDFs; other files are kept but not searchable). Any member
   uploads, edits, renames and deletes from the Library page; every change is audited. A file is served inline only
   for types that cannot run script (`Content-Security-Policy: sandbox` always); anything else downloads.
+- **Editing documents** (`apps/web/components/document-editor.tsx`, `apps/api/src/collab.ts`, `apps/collab`). Markdown
+  library files and memory open in one BlockNote editor, live: everyone with a document open sees the others'
+  edits and cursors, and edits save as people type. Each document is a room on the collab server (a Durable
+  Object, its Yjs state in SQLite); the API signs a 10-minute token for the room (`POST /api/library/edit`) and
+  stays the only writer of documents. A room asks the API for the stored text as a Yjs update and saves its state
+  back (`/collab/documents/:id`, authenticated by `COLLAB_SECRET`); the API converts with `@blocknote/server-util`
+  and skips saves that only reformat. When a teammate or a thread writes a document, the API tells its room, which
+  merges the change: the API diffs top-level blocks from the room's last saved state to the new text, so edits
+  people have not saved yet survive. Without `COLLAB_SECRET`, the editor works alone with a Save button. Media: files dropped, pasted or picked
+  into a document go to the bucket under `<organization>/<workspace>/assets/<id>` (`DocumentAsset`; direct
+  uploads with R2, through the API without) and are read through 5-minute signed URLs, so video seeks. The document
+  refers to them as `asset:<id>`. The hourly sweep removes files no document refers to after a day (a block copied
+  into another document moves the file there), unfinished uploads after an hour, and a deleted file's at once.
+  Mentions: `@` in a document names a library file, teammate, thread, connection or repository, stored as
+  `@[label](kind:id)` like messages. `@brigade/editor` (`packages/editor`) holds the editor schema and the Markdown
+  forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. Deploy with
+  `pnpm --filter @brigade/collab deploy` after `wrangler secret put COLLAB_SECRET` and setting `API_URL` in
+  `wrangler.jsonc`; set the API's `COLLAB_URL` to the Worker's URL.
 - **Library on computers** (`apps/runner/src/library.ts`). The runner mirrors the library read-only, at
   `/var/lib/brigade/library` on the workspace computer (written by the runner, read by teammate users) and
   `~/.brigade/library` on a member's machine. It fetches a manifest from `GET /runner/library` (runner token) on

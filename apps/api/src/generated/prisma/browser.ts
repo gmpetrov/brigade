@@ -178,6 +178,13 @@ export type Ticket = Prisma.TicketModel
  */
 export type Document = Prisma.DocumentModel
 /**
+ * Model DocumentAsset
+ * A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes
+ * are in the bucket under <organization>/<workspace>/assets/<id>; the document refers to it as
+ * `asset:<id>`. The hourly sweep removes the ones no document refers to any more.
+ */
+export type DocumentAsset = Prisma.DocumentAssetModel
+/**
  * Model AuditEntry
  * Append-only record of an action. workspaceId is null for organization-level actions.
  */

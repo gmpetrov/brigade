@@ -752,10 +752,6 @@ export type AttachmentUncheckedUpdateManyWithoutConnectionNestedInput = {
   deleteMany?: Prisma.AttachmentScalarWhereInput | Prisma.AttachmentScalarWhereInput[]
 }
 
-export type EnumAttachmentStatusFieldUpdateOperationsInput = {
-  set?: $Enums.AttachmentStatus
-}
-
 export type EnumAttachmentSourceFieldUpdateOperationsInput = {
   set?: $Enums.AttachmentSource
 }

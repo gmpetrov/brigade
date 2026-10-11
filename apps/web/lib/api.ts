@@ -1,9 +1,11 @@
 'use client'
 import type {
+  AssetTicket,
   AttachmentInfo,
   CredentialGrant,
   CredentialKind,
   CredentialSummary,
+  DocumentAsset,
   TaskColumn,
   TaskPriority,
   UploadTicket,
@@ -115,6 +117,35 @@ export async function uploadAttachment(
     throw error
   }
 }
+
+/**
+ * Upload one file into a document, from the editor. Resolves to what its
+ * block refers to it by (`asset:<id>`). Straight to the bucket when the API
+ * hands out a signed URL; otherwise through the API.
+ */
+export async function uploadDocumentAsset(documentId: string, file: File): Promise<DocumentAsset> {
+  const ticket = await api<AssetTicket>('/library/assets/uploads', {
+    body: { documentId, name: file.name || 'file', size: file.size, contentType: file.type },
+  })
+  if (!ticket.direct) {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('documentId', documentId)
+    const url = `${API_URL}/api/library/assets`
+    return (await send({ method: 'POST', url, credentials: true }, form, () => {})) as DocumentAsset
+  }
+  await send(
+    { method: ticket.method, url: ticket.url, headers: ticket.headers, credentials: false },
+    file,
+    () => {},
+  )
+  // A half-done upload is swept by the API after an hour.
+  return api<DocumentAsset>(`/library/assets/${ticket.asset.id}/complete`, { body: {} })
+}
+
+/** Where a document's block finds its file: `asset:<id>` is one uploaded to the document. */
+export const documentFileUrl = (url: string) =>
+  url.startsWith('asset:') ? `${API_URL}/api/library/assets/${url.slice(6)}` : url
 
 /** A file given to a thread (or an unsent upload), as itself; `download` saves it instead. */
 export const attachmentUrl = (id: string, download = false) =>

@@ -7,6 +7,7 @@ import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
 import { Terminal } from '@/components/terminal'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
+import { PanelResizeHandle } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { api, harnessLabel, type Teammate, type Thread } from '@/lib/api'
 
@@ -88,9 +89,10 @@ export function ComputerPanel({
   return (
     <aside
       data-desktop-panel
-      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:w-(--desktop-w) xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
+      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
       aria-label={`${teammate.name}'s computer`}
     >
+      <PanelResizeHandle />
       <div className="flex flex-nowrap items-center gap-3 border-b px-4 py-3">
         <TeammateAvatar
           teammate={{ name: teammate.name, harness: teammate.harness as Teammate['harness'] }}

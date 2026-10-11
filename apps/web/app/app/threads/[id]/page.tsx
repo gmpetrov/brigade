@@ -8,6 +8,7 @@ import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { ComputerPanel } from '@/components/computer-panel'
 import { useDesktopPreview } from '@/components/desktop-preview'
+import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
@@ -42,6 +43,15 @@ export default function ThreadPage() {
   const [shell, setShell] = useState(false)
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
+  // One panel beside the thread: a document opened anywhere replaces the file or computer.
+  const documents = useDocumentPanel()
+  const openFile = (f: { path: string; teammateId?: string }) => {
+    documents.close()
+    setFile(f)
+  }
+  useEffect(() => {
+    if (documents.current) setFile(undefined)
+  }, [documents.current])
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
   const [outgoing, setOutgoing] = useState<Outgoing[]>([])
   const pendingOut = useMemo(() => {
@@ -103,6 +113,7 @@ export default function ThreadPage() {
   const mine = !!me.memberId && t.controlledByMemberId === me.memberId
   const showComputer = () => {
     setFile(undefined)
+    documents.close()
     setWatching(true)
   }
   async function openShell() {
@@ -395,12 +406,12 @@ export default function ThreadPage() {
           teammateName={(teammateId) =>
             people.find((p) => p.id === teammateId)?.name ?? t.teammate.name
           }
-          onOpen={setFile}
+          onOpen={openFile}
           onClose={() => setFile(undefined)}
         />
       )}
 
-      {!file && watching && t.computer.kind === 'cloud' && (
+      {!file && !documents.current && watching && t.computer.kind === 'cloud' && (
         <ComputerPanel
           thread={t}
           memberId={me.memberId ?? ''}
@@ -415,11 +426,11 @@ export default function ThreadPage() {
             setExpanded(false)
           }}
           outputs={outputs}
-          onOpenFile={setFile}
+          onOpenFile={openFile}
         />
       )}
 
-      <FileLinksProvider value={{ open: setFile }}>
+      <FileLinksProvider value={{ open: openFile }}>
         <ThreadItems
           threadId={t.id}
           items={items}
@@ -452,6 +463,7 @@ export default function ThreadPage() {
                     if (t.controlledByMemberId !== me.memberId)
                       await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
                     setFile(undefined)
+                    documents.close()
                     setWatching(true)
                     await thread.reload()
                   },

@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server'
 import { WebSocketServer } from 'ws'
 import { app } from './app.js'
+import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { env } from './config.js'
 import { watchMerges } from './pull-requests.js'
@@ -22,8 +23,10 @@ watchSubscriptions()
 watchMerges()
 watchSchedules()
 
-// Uploads abandoned mid-way or never sent with a message.
-const sweep = () =>
+// Uploads abandoned mid-way or never sent with a message; files no document refers to.
+const sweep = () => {
   void sweepUploads().catch((error) => console.warn(`upload sweep failed: ${String(error)}`))
+  void sweepAssets().catch((error) => console.warn(`asset sweep failed: ${String(error)}`))
+}
 setTimeout(sweep, 60_000).unref()
 setInterval(sweep, 60 * 60_000).unref()

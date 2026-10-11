@@ -6,6 +6,9 @@
 @import 'tw-animate-css';
 @import './theme.css';
 
+/* BlockNote's shadcn UI (components/document-editor-view.tsx) is styled with Tailwind classes. */
+@source '../node_modules/@blocknote/shadcn';
+
 @custom-variant dark (&:is(.dark *));
 
 /* Brigade status colors: not part of a shadcn theme, so they live here. */
@@ -194,4 +197,21 @@
     max-width: none;
     padding-right: calc(var(--desktop-w) + 2.5rem);
   }
+}
+
+/* The document editor sits in cards: no background of its own, the app's font. */
+.document-editor .bn-editor {
+  background-color: transparent;
+  font-family: var(--font-sans);
+  padding-inline: 3rem 0.5rem;
+}
+/* Headings sized for a card, not a page. Level 1 is the default and carries no data-level. */
+.document-editor [data-content-type='heading']:not([data-level]) {
+  --level: 1.6em;
+}
+.document-editor [data-content-type='heading'][data-level='2'] {
+  --level: 1.35em;
+}
+.document-editor [data-content-type='heading'][data-level='3'] {
+  --level: 1.15em;
 }

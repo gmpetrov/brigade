@@ -32,9 +32,10 @@ import {
 import { cn } from '@/lib/utils'
 
 /** Something to mention, with what the menu shows beside it. */
-type Option = Mention & { hint?: string; connectionKind?: ConnectionKind }
+export type MentionOption = Mention & { hint?: string; connectionKind?: ConnectionKind }
+type Option = MentionOption
 
-const groups: { kind: MentionKind; title: string; max: number }[] = [
+export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[] = [
   { kind: 'teammate', title: 'Teammates', max: 5 },
   { kind: 'connection', title: 'Connections', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
@@ -45,7 +46,7 @@ const groups: { kind: MentionKind; title: string; max: number }[] = [
 ]
 
 /** Everything in the workspace a message can mention. */
-function useMentionOptions(threadId?: string): Option[] {
+export function useMentionOptions(threadId?: string): Option[] {
   const { teammates } = useDashboard()
   const connections = useApi<ConnectionsResponse>('/connections')
   const threads = useApi<ThreadSummary[]>('/threads')
@@ -115,9 +116,9 @@ function useMentionOptions(threadId?: string): Option[] {
 }
 
 /** Matches for a query, grouped by kind; names that start with it first. */
-function search(options: Option[], query: string) {
+export function searchMentions(options: Option[], query: string) {
   const q = query.trim().toLowerCase()
-  return groups.flatMap((g) =>
+  return MENTION_GROUPS.flatMap((g) =>
     options
       .filter((o) => o.kind === g.kind && o.label.toLowerCase().includes(q))
       .sort(
@@ -158,7 +159,7 @@ function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
         <div key={`${o.kind}:${o.id}`}>
           {o.kind !== items[i - 1]?.kind && (
             <div className="px-2 pt-2 pb-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              {groups.find((g) => g.kind === o.kind)?.title}
+              {MENTION_GROUPS.find((g) => g.kind === o.kind)?.title}
             </div>
           )}
           <button
@@ -357,7 +358,7 @@ export function Composer({
         renderText: ({ node }) => formatMention(node.attrs as Mention),
         suggestion: {
           char: '@',
-          items: ({ query }) => search(latest.current.options, query),
+          items: ({ query }) => searchMentions(latest.current.options, query),
           render: renderMenu,
         },
       }),

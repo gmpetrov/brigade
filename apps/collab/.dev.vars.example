@@ -1,0 +1,2 @@
+# Copy to .dev.vars. The same value as COLLAB_SECRET in apps/api/.env (openssl rand -hex 32).
+COLLAB_SECRET=

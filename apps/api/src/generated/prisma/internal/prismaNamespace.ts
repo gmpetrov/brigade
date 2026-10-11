@@ -427,6 +427,7 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  DocumentAsset: 'DocumentAsset',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment'
@@ -445,7 +446,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "auditEntry" | "attachment" | "threadAttachment"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2669,6 +2670,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DocumentAsset: {
+      payload: Prisma.$DocumentAssetPayload<ExtArgs>
+      fields: Prisma.DocumentAssetFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DocumentAssetFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DocumentAssetFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        findFirst: {
+          args: Prisma.DocumentAssetFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DocumentAssetFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        findMany: {
+          args: Prisma.DocumentAssetFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>[]
+        }
+        create: {
+          args: Prisma.DocumentAssetCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        createMany: {
+          args: Prisma.DocumentAssetCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DocumentAssetCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>[]
+        }
+        delete: {
+          args: Prisma.DocumentAssetDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        update: {
+          args: Prisma.DocumentAssetUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        deleteMany: {
+          args: Prisma.DocumentAssetDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DocumentAssetUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DocumentAssetUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>[]
+        }
+        upsert: {
+          args: Prisma.DocumentAssetUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentAssetPayload>
+        }
+        aggregate: {
+          args: Prisma.DocumentAssetAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDocumentAsset>
+        }
+        groupBy: {
+          args: Prisma.DocumentAssetGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentAssetGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DocumentAssetCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentAssetCountAggregateOutputType> | number
+        }
+      }
+    }
     AuditEntry: {
       payload: Prisma.$AuditEntryPayload<ExtArgs>
       fields: Prisma.AuditEntryFieldRefs
@@ -3441,6 +3516,23 @@ export const DocumentScalarFieldEnum = {
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
 
 
+export const DocumentAssetScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  name: 'name',
+  contentType: 'contentType',
+  size: 'size',
+  status: 'status',
+  uploadedByMemberId: 'uploadedByMemberId',
+  createdAt: 'createdAt',
+  checkedAt: 'checkedAt'
+} as const
+
+export type DocumentAssetScalarFieldEnum = (typeof DocumentAssetScalarFieldEnum)[keyof typeof DocumentAssetScalarFieldEnum]
+
+
 export const AuditEntryScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -3918,6 +4010,20 @@ export type ListEnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<
 
 
 /**
+ * Reference to a field of type 'AttachmentStatus'
+ */
+export type EnumAttachmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'AttachmentStatus[]'
+ */
+export type ListEnumAttachmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'BigInt'
  */
 export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
@@ -3942,20 +4048,6 @@ export type EnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
  * Reference to a field of type 'ActorType[]'
  */
 export type ListEnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType[]'>
-    
-
-
-/**
- * Reference to a field of type 'AttachmentStatus'
- */
-export type EnumAttachmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentStatus'>
-    
-
-
-/**
- * Reference to a field of type 'AttachmentStatus[]'
- */
-export type ListEnumAttachmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentStatus[]'>
     
 
 
@@ -4167,6 +4259,7 @@ export type GlobalOmitConfig = {
   subscription?: Prisma.SubscriptionOmit
   ticket?: Prisma.TicketOmit
   document?: Prisma.DocumentOmit
+  documentAsset?: Prisma.DocumentAssetOmit
   auditEntry?: Prisma.AuditEntryOmit
   attachment?: Prisma.AttachmentOmit
   threadAttachment?: Prisma.ThreadAttachmentOmit

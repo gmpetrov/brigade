@@ -17,3 +17,7 @@ apps/runner/bundle
 
 # Local library bucket when R2 is not configured (development)
 apps/api/.bucket
+
+# Collab server (Wrangler) local state and secrets
+.wrangler
+.dev.vars

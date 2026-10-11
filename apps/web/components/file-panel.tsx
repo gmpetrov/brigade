@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
+import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
+import { SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
@@ -116,6 +118,7 @@ export function FilePanel({
   const [file, setFile] = useState<ThreadFile>()
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
+  const documents = useDocumentPanel()
 
   useEffect(() => {
     let live = true
@@ -123,12 +126,22 @@ export function FilePanel({
     setError(undefined)
     const query = new URLSearchParams({ path, ...(teammateId ? { teammateId } : {}) })
     api<ThreadFile>(`/threads/${threadId}/file?${query}`).then(
-      (f) => live && setFile(f),
+      (f) => {
+        if (!live) return
+        // The library's own Markdown is a document: it opens in the document panel, to edit.
+        if (f.source === 'library' && f.documentId && f.contentType === 'text/markdown') {
+          documents.open(libraryDocument({ id: f.documentId, path: f.path }))
+          onClose()
+          return
+        }
+        setFile(f)
+      },
       (e: Error) => live && setError(e.message),
     )
     return () => {
       live = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file, not when callbacks change
   }, [threadId, path, teammateId])
 
   const shown = file?.path ?? path
@@ -146,12 +159,7 @@ export function FilePanel({
   const pdf = file?.contentType === 'application/pdf' ? own : undefined
 
   return (
-    <aside
-      data-desktop-panel
-      // A sheet from the bottom on narrow screens; beside the thread on wide ones.
-      className="fixed inset-x-0 bottom-0 z-40 flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg xl:inset-y-0 xl:right-0 xl:left-auto xl:z-10 xl:h-auto xl:w-(--desktop-w) xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none"
-      aria-label={`File ${shown}`}
-    >
+    <SidePanel aria-label={`File ${shown}`} onClose={onClose}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -195,7 +203,10 @@ export function FilePanel({
         )}
         {file?.source === 'library' && (
           <Button asChild variant="ghost" size="icon-sm" title="Open the library">
-            <Link href="/app/library" aria-label="Open the library">
+            <Link
+              href={file.documentId ? `/app/library?file=${file.documentId}` : '/app/library'}
+              aria-label="Open the library"
+            >
               <Library aria-hidden />
             </Link>
           </Button>
@@ -254,6 +265,6 @@ export function FilePanel({
           </p>
         )}
       </div>
-    </aside>
+    </SidePanel>
   )
 }

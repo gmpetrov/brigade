@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "brigade-collab",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "durable_objects": {
+    "bindings": [{ "name": "DocRoom", "class_name": "DocRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DocRoom"] }],
+  "vars": {
+    // Where rooms load and save documents. Set to the API's public URL when deploying.
+    "API_URL": "http://localhost:3001",
+  },
+  // COLLAB_SECRET: the API's, with `wrangler secret put COLLAB_SECRET` (.dev.vars locally).
+  "observability": { "enabled": true },
+}

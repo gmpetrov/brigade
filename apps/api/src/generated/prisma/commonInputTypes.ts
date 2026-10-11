@@ -678,6 +678,23 @@ export type EnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
 }
 
+export type EnumAttachmentStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel> | $Enums.AttachmentStatus
+}
+
+export type EnumAttachmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttachmentStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
+}
+
 export type BigIntFilter<$PrismaModel = never> = {
   equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
   in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
@@ -722,28 +739,11 @@ export type EnumActorTypeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumActorTypeFilter<$PrismaModel>
 }
 
-export type EnumAttachmentStatusFilter<$PrismaModel = never> = {
-  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
-  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel> | $Enums.AttachmentStatus
-}
-
 export type EnumAttachmentSourceFilter<$PrismaModel = never> = {
   equals?: $Enums.AttachmentSource | Prisma.EnumAttachmentSourceFieldRefInput<$PrismaModel>
   in?: $Enums.AttachmentSource[] | Prisma.ListEnumAttachmentSourceFieldRefInput<$PrismaModel>
   notIn?: $Enums.AttachmentSource[] | Prisma.ListEnumAttachmentSourceFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumAttachmentSourceFilter<$PrismaModel> | $Enums.AttachmentSource
-}
-
-export type EnumAttachmentStatusWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
-  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttachmentStatus
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
 }
 
 export type EnumAttachmentSourceWithAggregatesFilter<$PrismaModel = never> = {
@@ -1379,6 +1379,23 @@ export type NestedEnumDocumentKindWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumDocumentKindFilter<$PrismaModel>
 }
 
+export type NestedEnumAttachmentStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel> | $Enums.AttachmentStatus
+}
+
+export type NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttachmentStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
+}
+
 export type NestedBigIntFilter<$PrismaModel = never> = {
   equals?: bigint | number | Prisma.BigIntFieldRefInput<$PrismaModel>
   in?: bigint[] | number[] | Prisma.ListBigIntFieldRefInput<$PrismaModel>
@@ -1423,28 +1440,11 @@ export type NestedEnumActorTypeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumActorTypeFilter<$PrismaModel>
 }
 
-export type NestedEnumAttachmentStatusFilter<$PrismaModel = never> = {
-  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
-  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel> | $Enums.AttachmentStatus
-}
-
 export type NestedEnumAttachmentSourceFilter<$PrismaModel = never> = {
   equals?: $Enums.AttachmentSource | Prisma.EnumAttachmentSourceFieldRefInput<$PrismaModel>
   in?: $Enums.AttachmentSource[] | Prisma.ListEnumAttachmentSourceFieldRefInput<$PrismaModel>
   notIn?: $Enums.AttachmentSource[] | Prisma.ListEnumAttachmentSourceFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumAttachmentSourceFilter<$PrismaModel> | $Enums.AttachmentSource
-}
-
-export type NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.AttachmentStatus | Prisma.EnumAttachmentStatusFieldRefInput<$PrismaModel>
-  in?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  notIn?: $Enums.AttachmentStatus[] | Prisma.ListEnumAttachmentStatusFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumAttachmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.AttachmentStatus
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumAttachmentStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumAttachmentSourceWithAggregatesFilter<$PrismaModel = never> = {

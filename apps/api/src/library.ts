@@ -13,8 +13,10 @@ import {
   type SearchHit,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
 import { deleteObject, documentKey, getObject, putObject } from './bucket.js'
+import { notifyCollab } from './collab.js'
 import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
 
@@ -53,7 +55,17 @@ const OTHER_TYPES: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.avif': 'image/avif',
   '.svg': 'image/svg+xml',
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.oga': 'audio/ogg',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -113,6 +125,16 @@ export const toLibraryFile = (row: DocumentRow): LibraryFile => ({
   updatedAt: row.updatedAt.toISOString(),
 })
 
+/** A document the dashboard edits as rich text: Markdown files and memory. */
+export const isMarkdown = (row: { kind?: string; contentType: string; size: number }) =>
+  row.kind !== 'thread_summary' && row.contentType === 'text/markdown' && row.size <= EDITABLE_BYTES
+
+/** A document's whole text: a library file's bytes (its `text` is cut for search), or memory. */
+export async function documentText(scope: Scope, row: { id: string; kind: string; text: string }) {
+  if (row.kind !== 'library') return row.text
+  return new TextDecoder().decode(await readLibraryFile(scope, row.id))
+}
+
 /** Create a library file, or replace the one at that path. */
 export async function saveLibraryFile(
   db: ScopedDb,
@@ -121,6 +143,8 @@ export async function saveLibraryFile(
   input: { path: string; bytes: Uint8Array; contentType?: string | null },
   /** Recorded with the change, e.g. the thread a teammate saved it from. */
   context: Record<string, string> = {},
+  /** Set when the collab server saves what people edited: its room already has it. */
+  options: { fromCollab?: boolean } = {},
 ) {
   if (input.bytes.byteLength > LIBRARY_FILE_MAX)
     throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
@@ -155,6 +179,7 @@ export async function saveLibraryFile(
     data: { path: row.path, size: row.size, ...context },
   })
   notifyLibraryChanged(scope.workspaceId)
+  if (existing && !options.fromCollab && isMarkdown(row)) notifyCollab(row.id)
   return row
 }
 
@@ -198,7 +223,16 @@ export async function moveLibraryFile(
 
 export async function deleteLibraryFile(db: ScopedDb, scope: Scope, actor: Actor, id: string) {
   const row = await libraryFile(db, id)
+  const assets = await db.documentAsset.findMany({
+    where: { documentId: id },
+    select: { id: true },
+  })
   await db.document.delete({ where: { id } })
+  // Its files go too, now, unless another document refers to them.
+  if (assets.length > 0)
+    void sweepAssets(assets.map((a) => a.id)).catch((error) =>
+      console.warn(`library: files of ${id} not swept: ${String(error)}`),
+    )
   await deleteObject(documentKey(scope, id)).catch((error) =>
     console.warn(`library: could not delete ${id} from the bucket: ${String(error)}`),
   )
@@ -210,6 +244,7 @@ export async function deleteLibraryFile(db: ScopedDb, scope: Scope, actor: Actor
     data: { path: row.path },
   })
   notifyLibraryChanged(scope.workspaceId)
+  notifyCollab(id, 'delete')
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +267,57 @@ export async function readMemory(db: ScopedDb, target: MemoryTarget) {
   return db.document.findFirst({ where: { kind: target.kind, path: memoryPath(target) } })
 }
 
+/** The memory file, created with just its heading if nothing was remembered yet. */
+export async function ensureMemory(
+  db: ScopedDb,
+  scope: Scope,
+  target: MemoryTarget,
+  teammateName?: string,
+) {
+  return (
+    (await readMemory(db, target)) ??
+    upsertText(db, scope, target.kind, memoryPath(target), memoryHeader(target, teammateName), {
+      ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
+    })
+  )
+}
+
+/** Which memory file a document row is. */
+export function memoryTarget(row: { kind: string; teammateId: string | null }): MemoryTarget {
+  if (row.kind === 'workspace_memory') return { kind: 'workspace_memory' }
+  if (row.kind === 'teammate_memory' && row.teammateId)
+    return { kind: 'teammate_memory', teammateId: row.teammateId }
+  throw new HTTPException(400, { message: 'Not a memory file' })
+}
+
+/**
+ * Save a Markdown document's new text, as a library file or memory. From the
+ * dashboard's editor, directly or through the collab server.
+ */
+export async function saveDocumentText(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  row: { id: string; kind: string; path: string; contentType: string; teammateId: string | null },
+  text: string,
+  options: { fromCollab?: boolean } = {},
+) {
+  if (row.kind === 'library')
+    return saveLibraryFile(
+      db,
+      scope,
+      actor,
+      { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
+      {},
+      options,
+    )
+  if (text.length > MEMORY_MAX)
+    throw new HTTPException(413, {
+      message: `Memory files can be up to ${MEMORY_MAX.toLocaleString('en')} characters`,
+    })
+  return writeMemory(db, scope, actor, memoryTarget(row), text, options)
+}
+
 /** Replace a memory file's text (a person correcting it). */
 export async function writeMemory(
   db: ScopedDb,
@@ -239,6 +325,8 @@ export async function writeMemory(
   actor: Actor,
   target: MemoryTarget,
   text: string,
+  /** Set when the collab server saves what people edited: its room already has it. */
+  options: { fromCollab?: boolean } = {},
 ) {
   const row = await upsertText(db, scope, target.kind, memoryPath(target), text, {
     ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
@@ -254,6 +342,7 @@ export async function writeMemory(
     },
   })
   notifyLibraryChanged(scope.workspaceId)
+  if (!options.fromCollab) notifyCollab(row.id)
   return row
 }
 
@@ -301,7 +390,7 @@ export async function editMemory(
 ) {
   if (edit.add.length === 0 && edit.remove.length === 0) return
   // One edit at a time per file, so concurrent threads both land.
-  return prisma.$transaction(async (tx) => {
+  const row = await prisma.$transaction(async (tx) => {
     const path = memoryPath(target)
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:${path}`}))`
     const current = await tx.document.findFirst({
@@ -340,6 +429,9 @@ export async function editMemory(
     })
     return row
   })
+  // Merged into what people may be editing, line by line as the thread asked.
+  if (row) notifyCollab(row.id)
+  return row
 }
 
 /** The thread's summary: replaced each time the thread goes quiet. */

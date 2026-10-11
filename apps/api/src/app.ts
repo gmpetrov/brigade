@@ -8,7 +8,9 @@ import { env } from './config.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
+import { documentAssets } from './routes/assets.js'
 import { attachments } from './routes/attachments.js'
+import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
@@ -52,6 +54,8 @@ app.route('/api/security', security)
 app.route('/api/tickets', tickets)
 app.route('/api/tasks', tasks)
 app.route('/api/schedules', schedules)
+// Before the library: its own routes would read /assets/<id> as a file id.
+app.route('/api/library/assets', documentAssets)
 app.route('/api/library', library)
 app.route('/api/attachments', attachments)
 app.route('/api/repositories', repositories)
@@ -70,6 +74,8 @@ app.route('/git', gitProxy)
 app.route('/github/webhook', githubWebhook)
 // The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
 app.route('/desktop', desktopProxy)
+// The collab server's calls: documents people edit together. Verified by COLLAB_SECRET.
+app.route('/collab', collab)
 // Public: vendors deliver events here (Stripe, Gmail's Pub/Sub, Calendar channels), and
 // custom apps post to their triggers' URLs. Each verified, without a session.
 app.route('/events', events)

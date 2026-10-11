@@ -19,6 +19,7 @@ import {
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { HelpMenu } from '@/components/help-menu'
 import { QuickThread } from '@/components/quick-thread'
 import { SearchButton, SearchDialog } from '@/components/search'
@@ -187,165 +188,170 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <DashboardContext.Provider
       value={{ me: data, teammates: teammates.data ?? [], reloadTeammates: teammates.reload }}
     >
-      <SidebarProvider>
-        <Sidebar>
-          <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
-                      <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-sm font-bold">
-                        {initial(workspace?.name ?? '')}
-                      </span>
-                      <span className="grid flex-1 text-left leading-tight">
-                        <span className="truncate font-semibold">{workspace?.name}</span>
-                        <span className="text-muted-foreground truncate text-xs">
-                          {organization?.name}
+      <DocumentPanelProvider>
+        <SidebarProvider>
+          <Sidebar>
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
+                        <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-sm font-bold">
+                          {initial(workspace?.name ?? '')}
                         </span>
-                      </span>
-                      <ChevronsUpDown className="ml-auto" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-                  >
-                    <DropdownMenuLabel className="text-muted-foreground text-xs">
-                      Workspaces
-                    </DropdownMenuLabel>
-                    {data.workspaces.map((w) => (
-                      <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
-                        <span className="bg-secondary flex size-6 items-center justify-center rounded-sm text-xs font-bold">
-                          {initial(w.name)}
+                        <span className="grid flex-1 text-left leading-tight">
+                          <span className="truncate font-semibold">{workspace?.name}</span>
+                          <span className="text-muted-foreground truncate text-xs">
+                            {organization?.name}
+                          </span>
                         </span>
-                        {w.name}
-                      </DropdownMenuItem>
-                    ))}
-                    {isAdmin(data) && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
-                          <Plus /> New workspace
+                        <ChevronsUpDown className="ml-auto" />
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+                    >
+                      <DropdownMenuLabel className="text-muted-foreground text-xs">
+                        Workspaces
+                      </DropdownMenuLabel>
+                      {data.workspaces.map((w) => (
+                        <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
+                          <span className="bg-secondary flex size-6 items-center justify-center rounded-sm text-xs font-bold">
+                            {initial(w.name)}
+                          </span>
+                          {w.name}
                         </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
-            <SearchButton onClick={() => setSearching(true)} />
-          </SidebarHeader>
+                      ))}
+                      {isAdmin(data) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
+                            <Plus /> New workspace
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <SearchButton onClick={() => setSearching(true)} />
+            </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {NAV.map(({ href, label, icon: Icon }) => {
-                    const badge = badges[href]
-                    return (
-                      <SidebarMenuItem key={href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={
-                            pathname === href ||
-                            (['/app/pulls', '/app/threads'].includes(href) &&
-                              pathname.startsWith(href))
-                          }
-                        >
-                          <Link href={href}>
-                            <Icon />
-                            <span>{label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                        {!!badge?.count && (
-                          <SidebarMenuBadge
-                            aria-label={`${badge.count} ${badge.label}`}
-                            className="right-2"
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {NAV.map(({ href, label, icon: Icon }) => {
+                      const badge = badges[href]
+                      return (
+                        <SidebarMenuItem key={href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={
+                              pathname === href ||
+                              (['/app/pulls', '/app/threads'].includes(href) &&
+                                pathname.startsWith(href))
+                            }
                           >
-                            <span
-                              className={cn(
-                                'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
-                                badge.quiet
-                                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                                  : 'bg-primary text-primary-foreground',
-                              )}
+                            <Link href={href}>
+                              <Icon />
+                              <span>{label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                          {!!badge?.count && (
+                            <SidebarMenuBadge
+                              aria-label={`${badge.count} ${badge.label}`}
+                              className="right-2"
                             >
-                              {badge.count > 99 ? '99+' : badge.count}
-                            </span>
-                          </SidebarMenuBadge>
-                        )}
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                              <span
+                                className={cn(
+                                  'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
+                                  badge.quiet
+                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                    : 'bg-primary text-primary-foreground',
+                                )}
+                              >
+                                {badge.count > 99 ? '99+' : badge.count}
+                              </span>
+                            </SidebarMenuBadge>
+                          )}
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>AI teammates</SidebarGroupLabel>
-              {isAdmin(data) && (
-                <SidebarGroupAction asChild title="New teammate">
-                  <Link href="/app/teammates/new">
-                    <Plus />
-                    <span className="sr-only">New teammate</span>
-                  </Link>
-                </SidebarGroupAction>
-              )}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {(teammates.data ?? []).map((t) => {
-                    const href = `/app/teammates/${t.id}`
-                    return (
-                      <SidebarMenuItem key={t.id}>
-                        <SidebarMenuButton asChild isActive={pathname === href}>
-                          <Link href={href}>
-                            <TeammateAvatar teammate={t} className="size-5" />
-                            <span>{t.name}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>AI teammates</SidebarGroupLabel>
+                {isAdmin(data) && (
+                  <SidebarGroupAction asChild title="New teammate">
+                    <Link href="/app/teammates/new">
+                      <Plus />
+                      <span className="sr-only">New teammate</span>
+                    </Link>
+                  </SidebarGroupAction>
+                )}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(teammates.data ?? []).map((t) => {
+                      const href = `/app/teammates/${t.id}`
+                      return (
+                        <SidebarMenuItem key={t.id}>
+                          <SidebarMenuButton asChild isActive={pathname === href}>
+                            <Link href={href}>
+                              <TeammateAvatar teammate={t} className="size-5" />
+                              <span>{t.name}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
 
-          <SidebarFooter>
-            <div className="bg-card flex items-center gap-2 rounded-lg border p-2">
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-secondary text-xs font-bold">
-                  {initial(data.user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid min-w-0 flex-1 leading-tight">
-                <span className="truncate text-sm font-semibold">{data.user.name}</span>
-                <span className="text-muted-foreground truncate text-xs">{organization?.name}</span>
+            <SidebarFooter>
+              <div className="bg-card flex items-center gap-2 rounded-lg border p-2">
+                <Avatar className="size-8">
+                  <AvatarFallback className="bg-secondary text-xs font-bold">
+                    {initial(data.user.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid min-w-0 flex-1 leading-tight">
+                  <span className="truncate text-sm font-semibold">{data.user.name}</span>
+                  <span className="text-muted-foreground truncate text-xs">
+                    {organization?.name}
+                  </span>
+                </div>
+                <HelpMenu />
+                <ThemeToggle />
+                <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={signOut}>
+                  <LogOut />
+                </Button>
               </div>
-              <HelpMenu />
-              <ThemeToggle />
-              <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={signOut}>
-                <LogOut />
-              </Button>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
+            </SidebarFooter>
+          </Sidebar>
 
-        {/* min-w-0: long unwrapped text inside a page must not widen it past the window. */}
-        <SidebarInset className="min-w-0">
-          <header className="flex h-12 items-center gap-2 px-4 md:hidden">
-            <SidebarTrigger />
-            <span className="font-semibold">{workspace?.name}</span>
-          </header>
-          <div className="mx-auto w-full max-w-5xl min-w-0 px-4 pt-6 pb-16 md:px-10 md:pt-10">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-      <QuickThread />
-      <SearchDialog open={searching} onOpenChange={setSearching} />
+          {/* min-w-0: long unwrapped text inside a page must not widen it past the window. */}
+          <SidebarInset className="min-w-0">
+            <header className="flex h-12 items-center gap-2 px-4 md:hidden">
+              <SidebarTrigger />
+              <span className="font-semibold">{workspace?.name}</span>
+            </header>
+            <DocumentPanel />
+            <div className="mx-auto w-full max-w-5xl min-w-0 px-4 pt-6 pb-16 md:px-10 md:pt-10">
+              {children}
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+        <QuickThread />
+        <SearchDialog open={searching} onOpenChange={setSearching} />
+      </DocumentPanelProvider>
     </DashboardContext.Provider>
   )
 }

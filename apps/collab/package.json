@@ -1,0 +1,22 @@
+{
+  "name": "@brigade/collab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .wrangler .turbo"
+  },
+  "dependencies": {
+    "partyserver": "0.5.10",
+    "y-partyserver": "2.2.0",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260702.1",
+    "typescript": "6.0.3",
+    "wrangler": "4.149.0"
+  }
+}

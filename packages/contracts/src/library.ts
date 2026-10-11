@@ -113,6 +113,81 @@ export const LibraryManifest = z.object({
 })
 export type LibraryManifest = z.infer<typeof LibraryManifest>
 
+/** A document people edit in the dashboard: a Markdown library file, or a memory file. */
+export const EditTarget = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('library'), id: z.string() }),
+  z.object({ kind: z.literal('workspace_memory') }),
+  z.object({ kind: z.literal('teammate_memory'), teammateId: z.string() }),
+])
+export type EditTarget = z.infer<typeof EditTarget>
+
+/** The Yjs fragment a document's blocks live in, in the editor and on the collab server. */
+export const DOCUMENT_FRAGMENT = 'document-store'
+
+/**
+ * Opening a document to edit. With `live`, the editor syncs through the collab
+ * server; without it (no collab server configured), it saves `text` back with
+ * PUT /api/library/edit/:documentId.
+ */
+export const EditSession = z.object({
+  documentId: z.string(),
+  text: z.string(),
+  live: z
+    .object({
+      /** The collab server, e.g. https://collab.example.com. */
+      url: z.string(),
+      /** Its Durable Object class, as the URL names it. */
+      party: z.string(),
+      room: z.string(),
+      /** Short-lived; ask again for a new one when reconnecting. */
+      token: z.string(),
+      user: z.object({ name: z.string(), color: z.string() }),
+    })
+    .nullable(),
+})
+export type EditSession = z.infer<typeof EditSession>
+
+/** Largest file put in a document when the browser uploads straight to the bucket. */
+export const ASSET_MAX = 100 * 1024 * 1024
+/** ... and when it goes through the API (development, without R2). */
+export const ASSET_MAX_THROUGH_API = 25 * 1024 * 1024
+
+/** A file in a document: what the editor puts in its block. */
+export const DocumentAsset = z.object({
+  id: z.string(),
+  /** `asset:<id>`, as the document refers to it. */
+  url: z.string(),
+  name: z.string(),
+  contentType: z.string(),
+  size: z.number().int(),
+})
+export type DocumentAsset = z.infer<typeof DocumentAsset>
+
+export const StartAssetUpload = z.object({
+  documentId: z.string(),
+  name: z.string().trim().min(1).max(255),
+  size: z.number().int().min(1).max(ASSET_MAX, 'Files in a document can be up to 100 MB'),
+  contentType: z.string().max(255).default('application/octet-stream'),
+})
+export type StartAssetUpload = z.infer<typeof StartAssetUpload>
+
+/**
+ * How the browser sends a document's file: straight to the bucket (PUT the
+ * bytes to `url`, then POST /api/library/assets/:id/complete), or through
+ * the API (POST /api/library/assets, multipart `file` and `documentId`).
+ */
+export const AssetTicket = z.discriminatedUnion('direct', [
+  z.object({ direct: z.literal(false) }),
+  z.object({
+    direct: z.literal(true),
+    asset: DocumentAsset,
+    url: z.string(),
+    method: z.literal('PUT'),
+    headers: z.record(z.string(), z.string()),
+  }),
+])
+export type AssetTicket = z.infer<typeof AssetTicket>
+
 /** Largest text a file panel shows; longer files are cut. */
 export const FILE_VIEW_MAX = 1024 * 1024
 
