@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse, TeammateCredentialSave } from './credentials.js'
+import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
 import { ScheduleOperation } from './schedules.js'
@@ -100,6 +101,8 @@ export const ThreadSpec = z.object({
   attachments: z.array(ThreadAttachmentRef).default([]),
   /** The task this thread works on, if it is one. */
   task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
+  /** The workspace's design systems, for designs the teammate makes. */
+  designSystems: z.array(ThreadDesignSystem).default([]),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -205,8 +208,9 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     purpose: z.string().max(500).optional(),
   }),
   /**
-   * A teammate searches the library, memory and past thread summaries, or
-   * saves a file to the library. The API checks its grant. Answered like a connector call.
+   * A teammate searches the library, memory and past thread summaries,
+   * saves a file to the library, or registers a design system it saved there.
+   * The API checks its grant. Answered like a connector call.
    */
   z.object({
     type: z.literal('library.call'),
@@ -226,6 +230,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
         content: z.string(),
         contentType: z.string().max(200).optional(),
       }),
+      /** Register a design system whose folder is saved, or change one. */
+      z.object({ name: z.literal('design_system'), designSystem: TeammateDesignSystem }),
     ]),
   }),
   /**

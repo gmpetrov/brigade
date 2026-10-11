@@ -68,11 +68,24 @@ const Env = z.object({
    * without live sync and saves them whole.
    */
   COLLAB_URL: z.url().default('http://localhost:8787'),
+  /**
+   * The sandbox origin designs are served from: a separate host (e.g.
+   * https://designs.example.com) that points at this API, so a design's script
+   * never runs where the dashboard's session is. designs.localhost in
+   * development: browsers send it to this computer, as another site than localhost.
+   */
+  DESIGN_URL: z.preprocess((v) => v || undefined, z.url().optional()),
   /** Shared with the collab server: signs editors' tokens and authenticates its calls. */
   COLLAB_SECRET: z.string().min(32).optional(),
 })
 
-export const env = Env.parse(process.env)
+const parsed = Env.parse(process.env)
+export const env = {
+  ...parsed,
+  DESIGN_URL: (
+    parsed.DESIGN_URL ?? parsed.API_URL.replace(/\/\/localhost([:/]|$)/, '//designs.localhost$1')
+  ).replace(/\/+$/, ''),
+}
 
 /**
  * Defaults chosen without the owner's confirmation (spec, "Defaults and

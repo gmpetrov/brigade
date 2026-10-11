@@ -1,7 +1,22 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
 import { jsonSchema, tool, type Tool } from 'ai'
-import type { ConnectorGrant, ScheduleOperation, TaskOperation } from '@brigade/contracts'
+import {
+  DESIGN_ENTRY,
+  DESIGN_FILES_MAX,
+  DESIGN_MANIFEST,
+  DESIGN_SUFFIX,
+  DESIGN_SYSTEM_FILES_MAX,
+  DESIGN_SYSTEM_PREVIEW,
+  DESIGN_SYSTEM_README,
+  DESIGN_SYSTEM_TOKENS,
+  DESIGN_THUMBNAIL,
+  designFolderOf,
+  type ConnectorGrant,
+  type TeammateDesignSystem,
+  type ScheduleOperation,
+  type TaskOperation,
+} from '@brigade/contracts'
 
 export type ConnectorCaller = (call: {
   connectionId: string
@@ -402,6 +417,7 @@ export type LibraryCaller = (call: {
   operation:
     | { name: 'search'; query: string; limit: number }
     | { name: 'save'; path: string; content: string }
+    | { name: 'design_system'; designSystem: TeammateDesignSystem }
   toolCallId: string
   toolName: string
   input: unknown
@@ -420,7 +436,57 @@ export function libraryTools(options: {
   call: LibraryCaller
   /** Reads a file the teammate wrote on this computer, as the teammate. */
   readFile: (path: string) => Promise<Buffer>
+  /** The files in a folder on this computer, as the teammate: paths relative to it. */
+  listFiles: (folder: string) => Promise<string[]>
+  /** Render a design folder with this computer's Chrome: screenshots and the page's errors. */
+  renderDesign: (
+    folder: string,
+    options: { viewports?: string[]; shots?: boolean; thumbnail?: boolean },
+  ) => Promise<{ screenshots: string[]; errors: string[]; thumbnail?: string }>
 }): Record<string, Tool> {
+  /** A folder's files on this computer, as paths relative to it, without dotfiles and node_modules. */
+  const folderFiles = async (folder: string) =>
+    (await options.listFiles(folder)).filter(
+      (f) => !f.split('/').some((part) => part.startsWith('.') || part === 'node_modules'),
+    )
+  /**
+   * Save a folder's files to the library under `path`, with a picture for each
+   * design in it that has none (`''` for the folder itself). Best effort: not
+   * every computer has Chrome.
+   */
+  const saveFolder = async (
+    folder: string,
+    path: string,
+    files: string[],
+    designs: string[],
+    call: { toolCallId: string; toolName: string; input: unknown },
+  ) => {
+    const sources = new Map(files.map((f) => [f, `${folder}/${f}`]))
+    for (const design of designs) {
+      const at = (file: string) => (design ? `${design}/${file}` : file)
+      if (sources.has(at(DESIGN_THUMBNAIL)) || !sources.has(at(DESIGN_ENTRY))) continue
+      const shot = await options
+        .renderDesign(design ? `${folder}/${design}` : folder, { shots: false, thumbnail: true })
+        .catch(() => undefined)
+      if (shot?.thumbnail) sources.set(at(DESIGN_THUMBNAIL), shot.thumbnail)
+    }
+    const saved: string[] = []
+    for (const [file, source] of sources) {
+      const bytes = await options.readFile(source)
+      try {
+        await options.call({
+          ...call,
+          operation: { name: 'save', path: `${path}/${file}`, content: bytes.toString('base64') },
+        })
+      } catch (error) {
+        throw new Error(
+          `Saved ${saved.length} of ${sources.size} files, then ${file} failed: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+      saved.push(file)
+    }
+    return saved.length
+  }
   const tools: Record<string, Tool> = {
     search_workspace: tool({
       description:
@@ -450,7 +516,7 @@ export function libraryTools(options: {
       },
     }),
   }
-  if (options.access === 'read_write' || options.folders?.some((f) => f.access === 'read_write'))
+  if (options.access === 'read_write' || options.folders?.some((f) => f.access === 'read_write')) {
     tools.save_to_library = tool({
       description:
         `Add a file to the workspace's document library, or replace the one at that path, so the team and other teammates can use it. ` +
@@ -480,6 +546,167 @@ export function libraryTools(options: {
         })
       },
     })
+    tools.save_design = tool({
+      description:
+        `Save a design (a page, screen, prototype, slide or one-pager) to the library, where people view and comment on it. ` +
+        `Make it in a folder on this computer with ${DESIGN_ENTRY} and ${DESIGN_MANIFEST} at its top, then pass the folder. ` +
+        `Every file in it is saved; saving again replaces them.`,
+      inputSchema: jsonSchema<{ folder: string; path: string }>({
+        type: 'object',
+        properties: {
+          folder: {
+            type: 'string',
+            description:
+              'The folder on this computer (absolute, or relative to your working directory)',
+          },
+          path: {
+            type: 'string',
+            description: `Where it goes in the library, ending in "${DESIGN_SUFFIX}", e.g. "acme/pricing-page${DESIGN_SUFFIX}"`,
+          },
+        },
+        required: ['folder', 'path'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        const path = input.path.replace(/\/+$/, '')
+        if (!path.endsWith(DESIGN_SUFFIX) || path.split('/').pop() === DESIGN_SUFFIX)
+          throw new Error(`The library path must end in "<name>${DESIGN_SUFFIX}"`)
+        const files = await folderFiles(input.folder)
+        for (const needed of [DESIGN_ENTRY, DESIGN_MANIFEST])
+          if (!files.includes(needed)) throw new Error(`The folder has no ${needed} at its top`)
+        if (files.length > DESIGN_FILES_MAX)
+          throw new Error(
+            `A design can have up to ${DESIGN_FILES_MAX} files; this folder has ${files.length}`,
+          )
+        const folder = input.folder.replace(/\/+$/, '')
+        const saved = await saveFolder(folder, path, files, [''], {
+          toolCallId,
+          toolName: 'save_design',
+          input,
+        })
+        return { path, files: saved }
+      },
+    })
+    tools.save_design_system = tool({
+      description:
+        'Save a design system to the library and register it, so teammates follow it in their designs. ' +
+        `Make it in a folder on this computer: ${DESIGN_SYSTEM_README} (the rules), ${DESIGN_SYSTEM_TOKENS} (the tokens), ` +
+        `assets/ and ${DESIGN_SYSTEM_PREVIEW}/ (a design that shows it), then pass the folder. Every file in it is saved. ` +
+        'Saving again with the same name replaces its files and updates it; what you leave out keeps its value.',
+      inputSchema: jsonSchema<{
+        folder: string
+        path: string
+        name: string
+        description?: string
+        default?: boolean
+        repositories?: string[]
+        folders?: string[]
+      }>({
+        type: 'object',
+        properties: {
+          folder: {
+            type: 'string',
+            description:
+              'The folder on this computer (absolute, or relative to your working directory)',
+          },
+          path: {
+            type: 'string',
+            description: 'Its library folder, e.g. "design-systems/acme"',
+          },
+          name: { type: 'string', description: 'What designs name it, e.g. "acme"' },
+          description: {
+            type: 'string',
+            description: 'One line: the product or brand it is for',
+          },
+          default: {
+            type: 'boolean',
+            description:
+              "Use it where no other applies. Default: yes for the workspace's first design system",
+          },
+          repositories: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Work in these repositories (owner/name) follows it',
+          },
+          folders: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Designs saved in these library folders follow it',
+          },
+        },
+        required: ['folder', 'path', 'name'],
+      }),
+      execute: async (input, { toolCallId }) => {
+        const path = input.path.replace(/\/+$/, '')
+        if (designFolderOf(path))
+          throw new Error(
+            `A design system's library path is a plain folder, not one ending in "${DESIGN_SUFFIX}"`,
+          )
+        const files = await folderFiles(input.folder)
+        for (const needed of [DESIGN_SYSTEM_README, DESIGN_SYSTEM_TOKENS])
+          if (!files.includes(needed)) throw new Error(`The folder has no ${needed} at its top`)
+        if (files.length > DESIGN_SYSTEM_FILES_MAX)
+          throw new Error(
+            `A design system can have up to ${DESIGN_SYSTEM_FILES_MAX} files; this folder has ${files.length}`,
+          )
+        const folder = input.folder.replace(/\/+$/, '')
+        const designs = [...new Set(files.map((f) => designFolderOf(f)).filter((d) => d != null))]
+        const call = { toolCallId, toolName: 'save_design_system', input }
+        const saved = await saveFolder(folder, path, files, designs, call)
+        const registered = await options.call({
+          ...call,
+          operation: {
+            name: 'design_system',
+            designSystem: {
+              name: input.name,
+              path,
+              ...(input.description !== undefined ? { description: input.description } : {}),
+              ...(input.default !== undefined ? { isDefault: input.default } : {}),
+              ...(input.repositories ? { repositories: input.repositories } : {}),
+              ...(input.folders ? { folders: input.folders } : {}),
+            },
+          },
+        })
+        return {
+          ...(registered as object),
+          files: saved,
+          ...(designs.includes(DESIGN_SYSTEM_PREVIEW)
+            ? { preview: `${path}/${DESIGN_SYSTEM_PREVIEW}` }
+            : {}),
+        }
+      },
+    })
+    tools.check_design = tool({
+      description:
+        'Render a design folder on this computer with Chrome, before you hand it over: screenshots at its viewports ' +
+        '(one per slide for a deck) and the errors its page logged (scripts, files that failed to load). ' +
+        'Open the screenshots to look at them, fix what is off, and check again.',
+      inputSchema: jsonSchema<{ folder: string; viewports?: ('desktop' | 'tablet' | 'mobile')[] }>({
+        type: 'object',
+        properties: {
+          folder: {
+            type: 'string',
+            description: `The design folder on this computer, with ${DESIGN_ENTRY} at its top`,
+          },
+          viewports: {
+            type: 'array',
+            items: { type: 'string', enum: ['desktop', 'tablet', 'mobile'] },
+            description: `Default: those in ${DESIGN_MANIFEST}, else desktop and mobile`,
+          },
+        },
+        required: ['folder'],
+      }),
+      execute: async (input) => {
+        const result = await options.renderDesign(input.folder, {
+          ...(input.viewports ? { viewports: input.viewports } : {}),
+        })
+        return {
+          screenshots: result.screenshots,
+          errors: result.errors.length ? result.errors : 'none',
+          next: 'Open each screenshot file to look at it.',
+        }
+      },
+    })
+  }
   return tools
 }
 

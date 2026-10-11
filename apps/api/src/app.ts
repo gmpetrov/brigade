@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
 import { env } from './config.js'
+import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { authenticateRunner, browserSocket, runnerSocket } from './hub.js'
 import { accounts } from './routes/accounts.js'
@@ -14,6 +15,7 @@ import { collab } from './routes/collab.js'
 import { computers, runnerLink } from './routes/computers.js'
 import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
+import { designs, designSystems } from './routes/designs.js'
 import { security } from './routes/security.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
@@ -37,6 +39,7 @@ import { resolveScope } from './scope.js'
 
 export const app = new Hono()
 
+app.use(sandboxHostOnlyDesigns)
 app.use('/api/*', cors({ origin: env.WEB_URL, credentials: true }))
 
 app.get('/health', (c) =>
@@ -57,6 +60,8 @@ app.route('/api/schedules', schedules)
 // Before the library: its own routes would read /assets/<id> as a file id.
 app.route('/api/library/assets', documentAssets)
 app.route('/api/library', library)
+app.route('/api/design-systems', designSystems)
+app.route('/api/designs', designs)
 app.route('/api/attachments', attachments)
 app.route('/api/repositories', repositories)
 app.route('/api/pulls', pulls)
@@ -74,6 +79,8 @@ app.route('/git', gitProxy)
 app.route('/github/webhook', githubWebhook)
 // The desktop relay. Its views are short-lived bearer ids from POST /api/threads/:id/desktop.
 app.route('/desktop', desktopProxy)
+// Designs' pages, on the sandbox origin (DESIGN_URL). Their addresses are signed and short-lived.
+app.route('/v', designFiles)
 // The collab server's calls: documents people edit together. Verified by COLLAB_SECRET.
 app.route('/collab', collab)
 // Public: vendors deliver events here (Stripe, Gmail's Pub/Sub, Calendar channels), and

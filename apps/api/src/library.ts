@@ -43,6 +43,7 @@ const TEXT_TYPES: Record<string, string> = {
   '.htm': 'text/html',
   '.css': 'text/css',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
   '.ts': 'text/plain',
   '.tsx': 'text/plain',
   '.py': 'text/x-python',
@@ -74,6 +75,12 @@ const OTHER_TYPES: Record<string, string> = {
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   '.zip': 'application/zip',
+  // Designs load these.
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.ico': 'image/x-icon',
 }
 
 /** The file's type, from its extension first: browsers often send none or a generic one. */

@@ -1,9 +1,11 @@
-// A teammate's search and library saves, and the memory a quiet thread
+// A teammate's search, library saves and design systems, and the memory a quiet thread
 // leaves behind. Both come from a runner over its socket; the API checks the
 // thread is on that runner's computer and the teammate's grant.
 import { LIBRARY_SAVE_MAX, type ApiToRunner, type RunnerToApi } from '@brigade/contracts'
+import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { scoped, type Scope } from './db.js'
+import { saveTeammateDesignSystem } from './designs.js'
 import { notifyLibraryChanged } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { editMemory, saveLibraryFile, saveSummary, search } from './library.js'
@@ -34,6 +36,30 @@ export async function handleLibraryCall(
   if (op.name === 'search') {
     const hits = await search(scope, { query: op.query, limit: op.limit, teammate })
     return done(hits)
+  }
+
+  if (op.name === 'design_system') {
+    const library = await teammateLibraryAccess(db, teammate)
+    try {
+      const { row, created } = await saveTeammateDesignSystem(
+        db,
+        scope,
+        teammate.id,
+        op.designSystem,
+        (path) => library.of(path) === 'read_write',
+      )
+      return done({
+        name: row.name,
+        path: row.path,
+        created,
+        isDefault: row.isDefault,
+        folders: row.folders,
+        repositories: row.repositories,
+      })
+    } catch (error) {
+      if (error instanceof HTTPException) return fail(error.message)
+      throw error
+    }
   }
 
   const access = (await teammateLibraryAccess(db, teammate)).of(op.path)

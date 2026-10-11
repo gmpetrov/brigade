@@ -242,3 +242,10 @@ export type Attachment = Prisma.AttachmentModel
  * A file in a thread: copied into each teammate's working folder at `path` before its turn.
  */
 export type ThreadAttachment = Prisma.ThreadAttachmentModel
+/**
+ * Model DesignSystem
+ * A design system: rules, tokens and assets in a library folder, and where it applies.
+ * Teammates making a design pick one: named in the message, then by the library folder
+ * the design goes in, the repository the thread works in, the teammate, the default.
+ */
+export type DesignSystem = Prisma.DesignSystemModel

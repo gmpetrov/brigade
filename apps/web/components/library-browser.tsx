@@ -4,6 +4,8 @@
 // who made it and who changed it last; its versions and a preview open beside
 // the page. Admins decide which teammates reach a folder.
 import {
+  designFolderOf,
+  designName,
   folderAccessFor,
   type FolderAccess,
   type FolderRule,
@@ -25,6 +27,7 @@ import {
   FolderLock,
   History,
   Library,
+  Palette,
   Pencil,
   Presentation,
   ShieldCheck,
@@ -34,6 +37,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react'
 import { timeAgo } from '@/components/dashboard'
+import { DesignPanel } from '@/components/design-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { FilePreview } from '@/components/file-preview'
 import { ActorName, FileHistory, size } from '@/components/library-history'
@@ -139,6 +143,7 @@ export function LibraryBrowser({
   folder,
   setFolder,
   focus,
+  focusDesign,
   reload,
   upload,
   teammates,
@@ -152,6 +157,8 @@ export function LibraryBrowser({
   setFolder: (folder: string) => void
   /** A file asked for by the address: opened, and scrolled to. */
   focus?: string
+  /** A design asked for by the address (its folder): opened beside the page. */
+  focusDesign?: string
   reload: () => Promise<void>
   upload: (files: Upload[]) => Promise<void>
   teammates: Teammate[] | undefined
@@ -161,6 +168,8 @@ export function LibraryBrowser({
 }) {
   const documents = useDocumentPanel()
   const [panel, setPanel] = useState<{ id: string; tab: 'preview' | 'history' }>()
+  /** The design open beside the page: its folder. */
+  const [design, setDesign] = useState<string>()
   const [renaming, setRenaming] = useState<string>()
   const [access, setAccess] = useState<string>()
   const [error, setError] = useState<string>()
@@ -188,6 +197,12 @@ export function LibraryBrowser({
     if (!focus || !tree) return
     const file = tree.files.find((f) => f.id === focus)
     if (!file) return
+    const inDesign = designFolderOf(file.path)
+    if (inDesign) {
+      setFolder(parentOf(inDesign))
+      openDesign(inDesign)
+      return
+    }
     setFolder(parentOf(file.path))
     open(file)
     setTimeout(
@@ -196,6 +211,17 @@ export function LibraryBrowser({
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
   }, [focus, loaded])
+  useEffect(() => {
+    if (!focusDesign || !tree) return
+    setFolder(parentOf(focusDesign))
+    openDesign(focusDesign)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
+  }, [focusDesign, loaded])
+  // A design whose files all went away closes.
+  const designFiles = design ? tree?.files.filter((f) => f.path.startsWith(`${design}/`)) : []
+  useEffect(() => {
+    if (design && tree && designFiles?.length === 0) setDesign(undefined)
+  }, [design, tree, designFiles?.length])
   // A file that went away (moved to the trash elsewhere) closes.
   useEffect(() => {
     if (panel && tree && !opened) setPanel(undefined)
@@ -209,7 +235,14 @@ export function LibraryBrowser({
       return
     }
     documents.close()
+    setDesign(undefined)
     setPanel({ id: file.id, tab })
+  }
+
+  function openDesign(path: string) {
+    documents.close()
+    setPanel(undefined)
+    setDesign(path)
   }
 
   async function act(work: () => Promise<unknown>) {
@@ -347,7 +380,8 @@ export function LibraryBrowser({
             {subfolders.map((f) => {
               const inside = tree.files.filter((file) => file.path.startsWith(`${f.path}/`)).length
               const guarded = f.restricted || f.grants.length > 0
-              const Icon = guarded ? FolderLock : Folder
+              const isDesign = designFolderOf(f.path) === f.path
+              const Icon = isDesign ? Palette : guarded ? FolderLock : Folder
               return (
                 <div key={f.path}>
                   <div
@@ -356,6 +390,7 @@ export function LibraryBrowser({
                     className={cn(
                       'flex items-center gap-4 px-5 py-3',
                       over === f.path && 'bg-primary/10',
+                      design === f.path && 'bg-primary/5',
                     )}
                   >
                     <span
@@ -366,14 +401,16 @@ export function LibraryBrowser({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setFolder(f.path)}
+                      onClick={() => (isDesign ? openDesign(f.path) : setFolder(f.path))}
                       className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
                     >
                       <span className="truncate text-sm font-semibold hover:underline">
-                        {nameOf(f.path)}
+                        {isDesign ? designName(f.path) : nameOf(f.path)}
                       </span>
                       <span className="text-xs text-muted-foreground">
+                        {isDesign && 'Design · '}
                         {inside === 0 ? 'Empty' : `${inside} file${inside === 1 ? '' : 's'}`}
+                        {isDesign && updatedIn(tree.files, f.path)}
                       </span>
                     </button>
                     {f.restricted ? (
@@ -382,9 +419,15 @@ export function LibraryBrowser({
                       f.grants.length > 0 && <Badge variant="secondary">Custom access</Badge>
                     )}
                     <RowMenu label={`Actions for folder ${nameOf(f.path)}`}>
+                      {isDesign && (
+                        <DropdownMenuItem onSelect={() => openDesign(f.path)}>
+                          <Palette aria-hidden />
+                          View design
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onSelect={() => setFolder(f.path)}>
                         <Folder aria-hidden />
-                        Open
+                        {isDesign ? 'Its files' : 'Open'}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setRenaming(`folder:${f.path}`)}>
                         <Pencil aria-hidden />
@@ -539,6 +582,14 @@ export function LibraryBrowser({
         upload them here.
       </p>
 
+      {design && (
+        <DesignPanel
+          folder={design}
+          version={designFiles?.reduce((v, f) => (f.updatedAt > v ? f.updatedAt : v), '')}
+          libraryLink={false}
+          onClose={() => setDesign(undefined)}
+        />
+      )}
       {opened && panel && (
         <LibraryFilePanel
           file={opened}
@@ -561,6 +612,14 @@ export function LibraryBrowser({
       )}
     </>
   )
+}
+
+/** When a folder's newest file changed, as " · 5 minutes ago". */
+function updatedIn(files: LibraryFile[], folder: string) {
+  const latest = files
+    .filter((f) => f.path.startsWith(`${folder}/`))
+    .reduce((v, f) => (f.updatedAt > v ? f.updatedAt : v), '')
+  return latest ? ` · ${timeAgo(latest)}` : ''
 }
 
 function RowMenu({ label, children }: { label: string; children: ReactNode }) {

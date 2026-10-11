@@ -21,7 +21,9 @@
     "@ai-sdk/harness-codex": "1.0.149",
     "@brigade/contracts": "workspace:*",
     "@playwright/mcp": "0.0.82",
+    "@xterm/headless": "6.0.0",
     "ai": "7.0.136",
+    "playwright-core": "1.64.0-alpha-1789764292000",
     "pnpm": "10.34.6",
     "ws": "8.22.0",
     "zod": "4.6.5"

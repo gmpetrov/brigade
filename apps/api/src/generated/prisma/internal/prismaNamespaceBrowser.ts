@@ -87,7 +87,8 @@ export const ModelName = {
   DocumentAsset: 'DocumentAsset',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
-  ThreadAttachment: 'ThreadAttachment'
+  ThreadAttachment: 'ThreadAttachment',
+  DesignSystem: 'DesignSystem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -738,6 +739,24 @@ export const ThreadAttachmentScalarFieldEnum = {
 } as const
 
 export type ThreadAttachmentScalarFieldEnum = (typeof ThreadAttachmentScalarFieldEnum)[keyof typeof ThreadAttachmentScalarFieldEnum]
+
+
+export const DesignSystemScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  path: 'path',
+  isDefault: 'isDefault',
+  folders: 'folders',
+  repositories: 'repositories',
+  teammateIds: 'teammateIds',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DesignSystemScalarFieldEnum = (typeof DesignSystemScalarFieldEnum)[keyof typeof DesignSystemScalarFieldEnum]
 
 
 export const SortOrder = {

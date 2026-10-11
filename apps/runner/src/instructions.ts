@@ -5,7 +5,16 @@
 import { spawn } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { ThreadSpec } from '@brigade/contracts'
+import {
+  DESIGN_ENTRY,
+  DESIGN_KNOBS,
+  DESIGN_MANIFEST,
+  DESIGN_SUFFIX,
+  DESIGN_SYSTEM_PREVIEW,
+  DESIGN_SYSTEM_README,
+  DESIGN_SYSTEM_TOKENS,
+  type ThreadSpec,
+} from '@brigade/contracts'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
@@ -57,8 +66,13 @@ export function instructions(
     '## Workspace library',
     `The workspace's shared documents are mirrored read-only at ${libraryDir}. ` +
       'Search them, the memory below and summaries of past threads with `search_workspace`. ' +
-      `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path.` +
+      `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path; ` +
+      `and a design as \`@[path](design:path)\`: the folder at ${libraryDir}/path (its \`${DESIGN_ENTRY}\`, ` +
+      `\`${DESIGN_MANIFEST}\`, \`${DESIGN_KNOBS}\` and assets). Asked to build a design in a product, match it at ` +
+      "each of its viewports with the product's own components and conventions, and use the values in its " +
+      `\`${DESIGN_KNOBS}\`.` +
       saving(spec),
+    designs(spec, libraryDir),
     spec.git && code(spec),
     tasks(spec),
     SCHEDULES,
@@ -73,6 +87,85 @@ export function instructions(
     .filter(Boolean)
     .join('\n\n')
     .concat('\n')
+}
+
+/** Making designs as HTML, and the design systems they follow. Only for teammates who can save them. */
+function designs(spec: ThreadSpec, libraryDir: string) {
+  const canSave =
+    spec.library === 'read_write' ||
+    (spec.libraryFolders ?? []).some((f) => f.access === 'read_write')
+  if (!canSave) return ''
+  const systems = spec.designSystems ?? []
+  const appliesTo = (s: ThreadSpec['designSystems'][number]) =>
+    [
+      ...s.folders.map((f) => `designs in ${f}/`),
+      ...s.repositories.map((r) => `work in ${r}`),
+      s.teammate && 'you',
+      s.isDefault && 'the default',
+    ]
+      .filter(Boolean)
+      .join(', ')
+  return [
+    '## Designs',
+    'When asked for a visual design (a page, a screen, a prototype, slides, a one-pager), make it as a web page: ' +
+      `a folder with \`${DESIGN_ENTRY}\` and \`${DESIGN_MANIFEST}\` at its top, and its assets beside them. ` +
+      'Link everything in it by relative paths; libraries and fonts from public CDNs are fine, but the page may ' +
+      'not fetch data from other sites (it is shown in a sandbox), so put sample data in the page. ' +
+      `\`${DESIGN_MANIFEST}\` holds \`{"title": "…", "description": "…", "designSystem": "<name>", "viewports": ["desktop", "mobile"]}\`.`,
+    'Give every element someone may talk about a stable `data-id` (`hero`, `plan-pro`, `signup-form`) and keep ' +
+      'it when you change the design: people point at elements by it.',
+    'Slides: set `"kind": "slides"` in the manifest and make each slide an element with `data-slide`, 1280×720 ' +
+      '(16:9), its speaker notes in `data-notes`. Add print CSS (`@page { size: 1280px 720px; margin: 0 }`, a page ' +
+      'break after each slide) so it exports to PDF one slide per page; it also exports to PowerPoint.',
+    `Knobs: when a few values are worth tuning by eye (brand color, corner radius, spacing, type scale), write ` +
+      `\`${DESIGN_KNOBS}\`: \`{"knobs": [{"var": "--radius", "label": "Corner radius", "type": "range", "min": 0, ` +
+      `"max": 32, "step": 1, "unit": "px", "value": "12px"}]}\` (types: color, range, select with \`options\` ` +
+      `[{label, value}], text). Use those CSS custom properties in the design; the viewer lets people try values ` +
+      `and save them into \`${DESIGN_KNOBS}\`, whose values win over the design's own. Read it again before ` +
+      'you change a design: people may have changed them.',
+    `Before you hand a design over, call \`check_design\` on its folder, open the screenshots it makes and fix ` +
+      'what is off or any error it reports. Then save it with `save_design` to a library path ending in ' +
+      `\`${DESIGN_SUFFIX}\`, next to the work it belongs to, and mention it in your reply as ` +
+      '`@[path](design:path)`: it opens beside the thread. Saving again replaces it; the library keeps earlier versions.',
+    'People comment on a design from its viewer: such a message starts with "Comment on the design" and names the ' +
+      'element by its `data-id` (or a CSS path) and the viewport. Change the design, check it and save it again.',
+    [
+      '### Making a design system',
+      'When asked for a design system (from a repository, a site, an export or a brief), make it in a folder on ' +
+        'this computer. It is not a design: do not save it with `save_design`.',
+      `- \`${DESIGN_SYSTEM_README}\`: the rules a designer follows. Color use, typography, spacing, radius, shadows, ` +
+        'layout, imagery and voice, the main components and when to use each, with do and don’t examples. ' +
+        'Point to the files below.',
+      `- \`${DESIGN_SYSTEM_TOKENS}\`: every token as a CSS custom property on \`:root\`, and dark mode values if it has them.`,
+      '- `assets/`: the logos, fonts and icons designs need.',
+      `- \`${DESIGN_SYSTEM_PREVIEW}/\`: a design that shows the palette, type scale and main components. A design ` +
+        'only reaches its own folder, so copy the tokens and assets it uses into it.',
+      'Take values from the source, not from guesses, and say what you could not find. Check the preview with ' +
+        '`check_design`, then call `save_design_system` with the folder, a library folder under ' +
+        '`design-systems/` and its name, and say where it applies: the repository it comes from, the library ' +
+        'folders or the default, as the person asks. It applies to threads that start after that. Mention its ' +
+        'preview in your reply.',
+    ].join('\n'),
+    systems.length > 0
+      ? [
+          '### Design systems',
+          'A design follows exactly one design system: the one the person names; else one for the library ' +
+            'folder the design goes in; else one for the repository you are working in; else yours; else the ' +
+            'default. When none applies and there are several, ask which one. Before designing, read its ' +
+            `folder in ${libraryDir}: its README.md first, and what that points to. Use its tokens and ` +
+            'components, copy the files the design needs (stylesheets, fonts, logos) into the design folder, ' +
+            `and put its name in \`${DESIGN_MANIFEST}\`.`,
+          systems
+            .map((s) => {
+              const about = [s.description, appliesTo(s) && `Applies to ${appliesTo(s)}.`]
+              const text = about.filter(Boolean).join(' ')
+              return `- **${s.name}** (\`${s.path}\`)${text ? `: ${text}` : ''}`
+            })
+            .join('\n'),
+        ].join('\n\n')
+      : 'The workspace has no design system yet. Follow the look of the product the design is for when you can ' +
+        'find it (its repository, its site), and say which choices you made.',
+  ].join('\n\n')
 }
 
 /** The Tasks board: this thread's task, or when to make one. */

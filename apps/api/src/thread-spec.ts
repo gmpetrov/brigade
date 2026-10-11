@@ -4,6 +4,7 @@ import { threadAttachments } from './attachments.js'
 import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
+import { threadDesignSystems } from './designs.js'
 import { gitAccess } from './git.js'
 import { folderRules } from './library-folders.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
@@ -137,6 +138,7 @@ export async function specFor(
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
+    designSystems: await threadDesignSystems(db, teammate.id),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {

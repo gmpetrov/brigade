@@ -61,7 +61,7 @@ export function MentionChip({
   const links = useFileLinks()
   if (mention.kind === 'teammate')
     return <strong className={cn('font-semibold', className)}>@{mention.label}</strong>
-  const open = mention.kind === 'document' && links
+  const open = (mention.kind === 'document' || mention.kind === 'design') && links
   const Tag = open ? 'button' : 'span'
   return (
     <Tag
@@ -121,6 +121,13 @@ export function MentionIcon({
     return (
       <svg {...line}>
         <path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6" />
+      </svg>
+    )
+  if (kind === 'design')
+    return (
+      <svg {...line}>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 9h18M8 9v11" />
       </svg>
     )
   if (kind === 'thread')

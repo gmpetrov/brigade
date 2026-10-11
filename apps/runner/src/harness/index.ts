@@ -2,7 +2,8 @@
 // the experimental AI SDK harness packages (spec: "keep every import inside
 // one module of the runner package").
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, extname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
@@ -16,7 +17,8 @@ import {
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { accountEnv } from '../accounts.js'
+import type { ShotResult } from '../design-shot.js'
+import { accountEnv, accountToken } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { instructions, writeInstructions } from '../instructions.js'
@@ -107,8 +109,9 @@ function createAgent(
   callTask: TaskCaller,
   callSchedule: ScheduleCaller,
 ) {
-  // auth {}: the adapter forwards no credential. The vendor CLI uses its own
-  // login in the account's config directory; the runner never reads it.
+  // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
+  // account's token from the environment if it has one, else the login in its
+  // config directory.
   const settings = { auth: {}, mcpServers }
   const codex = spec.teammate.harness === 'codex'
   const harness = codex ? createCodex(settings) : createClaudeCode(settings)
@@ -371,7 +374,7 @@ export class HarnessThread {
         })
         await consume(result.fullStream)
       }
-      // A login refreshed during the turn goes back to the shared account directory.
+      // A login from before tokens, refreshed during the turn, goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
       if (mapper.exhausted) return { kind: 'exhausted', resetsAt: mapper.exhausted.resetsAt }
       if (live.session.hasUnfinishedTurn()) return { kind: 'done', result: { status: 'waiting' } }
@@ -539,6 +542,9 @@ export class HarnessThread {
         libraryDir,
         call: this.context.callLibrary,
         readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
+        listFiles: (folder) => listAs(resolvePath(this.workDir, folder), this.runAs),
+        renderDesign: (folder, options) =>
+          renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
       },
       (request) =>
         checkout({
@@ -647,7 +653,7 @@ export class HarnessThread {
 
 /**
  * The working directory and harness environment for an account: on a cloud
- * computer the teammate's own Linux user, home and private link to the login.
+ * computer the teammate's own Linux user, home and private config directory.
  */
 async function prepare(workDir: string, account: AccountRef, runAs?: string) {
   if (!runAs) {
@@ -659,6 +665,7 @@ async function prepare(workDir: string, account: AccountRef, runAs?: string) {
   const home = teammateHome(runAs)
   return harnessEnv({
     ...(await linkAccount(runAs, account)),
+    ...accountToken(account),
     HOME: home,
     USER: runAs,
     LOGNAME: runAs,
@@ -687,6 +694,58 @@ async function readAs(
   if (stdout.byteLength > max)
     throw new Error(`${what} can be up to ${Math.round(max / (1024 * 1024))} MB`)
   return stdout
+}
+
+const SHOT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  `design-shot${extname(fileURLToPath(import.meta.url))}`,
+)
+
+/**
+ * Render a design with the computer's Chrome, as the teammate: screenshots
+ * next to its folder (in `.design-shots/<name>`), and the errors its page logged.
+ */
+async function renderDesign(
+  folder: string,
+  runAs: string | undefined,
+  options: { viewports?: string[]; shots?: boolean; thumbnail?: boolean },
+): Promise<ShotResult> {
+  const dir = folder.replace(/\/+$/, '')
+  const input = JSON.stringify({
+    folder: dir,
+    out: join(dirname(dir), '.design-shots', basename(dir)),
+    ...options,
+  })
+  const args = [SHOT, input]
+  const { stdout } = await execFileAsync(
+    runAs ? 'sudo' : process.execPath,
+    runAs ? ['-n', '-u', runAs, process.execPath, ...args] : args,
+    { cwd: '/', timeout: 180_000, maxBuffer: 1024 * 1024 },
+  ).catch((error: { stderr?: string } & Error) => {
+    throw new Error(
+      `Could not render the design: ${(error.stderr || errorMessage(error)).trim().slice(0, 1000)}`,
+    )
+  })
+  return JSON.parse(stdout) as ShotResult
+}
+
+/** The files under a folder, as the teammate on a cloud computer: paths relative to it. */
+async function listAs(folder: string, runAs?: string): Promise<string[]> {
+  const dir = folder.replace(/\/+$/, '')
+  const args = [dir, '-type', 'f', '-print0']
+  const { stdout } = await execFileAsync(
+    runAs ? 'sudo' : 'find',
+    runAs ? ['-n', '-u', runAs, 'find', ...args] : args,
+    { cwd: '/', maxBuffer: 4 * 1024 * 1024 },
+  ).catch((error: unknown) => {
+    throw new Error(`Could not read the folder ${folder}: ${errorMessage(error)}`)
+  })
+  return stdout
+    .split('\0')
+    .filter((p) => p.startsWith(`${dir}/`))
+    .map((p) => p.slice(dir.length + 1))
+    .sort()
 }
 
 const resolvePath = (workDir: string, file: string) =>

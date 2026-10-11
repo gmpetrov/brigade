@@ -1,5 +1,6 @@
-// The environment harness processes run with. Brigade sets no API key: with
-// none present, the vendor CLIs use their own subscription logins.
+// The environment harness processes run with. Brigade sets no API key: the
+// vendor CLIs use their own subscription logins, and a turn on a Claude account
+// with a token gets it explicitly (accountEnv).
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'

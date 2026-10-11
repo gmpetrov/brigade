@@ -433,7 +433,8 @@ export const ModelName = {
   DocumentAsset: 'DocumentAsset',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
-  ThreadAttachment: 'ThreadAttachment'
+  ThreadAttachment: 'ThreadAttachment',
+  DesignSystem: 'DesignSystem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -449,7 +450,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3191,6 +3192,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DesignSystem: {
+      payload: Prisma.$DesignSystemPayload<ExtArgs>
+      fields: Prisma.DesignSystemFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DesignSystemFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DesignSystemFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        findFirst: {
+          args: Prisma.DesignSystemFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DesignSystemFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        findMany: {
+          args: Prisma.DesignSystemFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>[]
+        }
+        create: {
+          args: Prisma.DesignSystemCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        createMany: {
+          args: Prisma.DesignSystemCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DesignSystemCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>[]
+        }
+        delete: {
+          args: Prisma.DesignSystemDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        update: {
+          args: Prisma.DesignSystemUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        deleteMany: {
+          args: Prisma.DesignSystemDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DesignSystemUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DesignSystemUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>[]
+        }
+        upsert: {
+          args: Prisma.DesignSystemUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DesignSystemPayload>
+        }
+        aggregate: {
+          args: Prisma.DesignSystemAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDesignSystem>
+        }
+        groupBy: {
+          args: Prisma.DesignSystemGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DesignSystemGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DesignSystemCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DesignSystemCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3862,6 +3937,24 @@ export const ThreadAttachmentScalarFieldEnum = {
 } as const
 
 export type ThreadAttachmentScalarFieldEnum = (typeof ThreadAttachmentScalarFieldEnum)[keyof typeof ThreadAttachmentScalarFieldEnum]
+
+
+export const DesignSystemScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  path: 'path',
+  isDefault: 'isDefault',
+  folders: 'folders',
+  repositories: 'repositories',
+  teammateIds: 'teammateIds',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DesignSystemScalarFieldEnum = (typeof DesignSystemScalarFieldEnum)[keyof typeof DesignSystemScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -4546,6 +4639,7 @@ export type GlobalOmitConfig = {
   auditEntry?: Prisma.AuditEntryOmit
   attachment?: Prisma.AttachmentOmit
   threadAttachment?: Prisma.ThreadAttachmentOmit
+  designSystem?: Prisma.DesignSystemOmit
 }
 
 /* Types for Logging */

@@ -150,14 +150,18 @@ export const accounts = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
-  /** The code shown on the vendor's page. Relayed to the computer; never stored or logged. */
+  /**
+   * The code shown on the vendor's page. Relayed to the computer; never stored or logged.
+   * With it, optionally, the account's email, which a Claude token cannot tell.
+   */
   .post('/:id/code', async (c) => {
     const { scope, db } = c.var
     const account = await loadOwn(db, scope, c.req.param('id'))
     const login = loginForAccount(account.id)
     if (!login || login.memberId !== scope.memberId)
       throw new HTTPException(409, { message: 'This account is not waiting for a code' })
-    const { code } = await parseBody(c.req.raw, SubmitLoginCode)
+    const { code, email } = await parseBody(c.req.raw, SubmitLoginCode)
+    if (email) login.email = email
     if (
       !sendToRunner(login.computerId, { type: 'account.login.code', loginId: login.loginId, code })
     ) {

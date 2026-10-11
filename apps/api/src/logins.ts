@@ -9,6 +9,8 @@ export type PendingLogin = {
   memberId: string
   computerId: string
   account: AccountRef
+  /** The account's email as the member gave it, kept if the sign-in succeeds. */
+  email?: string
   /** The last progress message, so a dashboard that opens later can catch up. */
   last: Extract<ApiToBrowser, { type: 'account.login' }>
 }

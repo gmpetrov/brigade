@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
+import { DesignGallery } from '@/components/design-gallery'
+import { DesignSystems } from '@/components/design-systems'
 import { useDocumentPanel } from '@/components/document-panel'
 import { join, LibraryBrowser } from '@/components/library-browser'
 import { LibraryTrash } from '@/components/library-trash'
@@ -42,7 +44,7 @@ export default function LibraryPage() {
   )
 }
 
-type Tab = 'files' | 'memory' | 'trash'
+type Tab = 'files' | 'designs' | 'memory' | 'design-systems' | 'trash'
 
 function LibraryView() {
   const params = useSearchParams()
@@ -71,6 +73,7 @@ function LibraryView() {
   // ?folder=<path> shows that folder, ?file=<id> that file, ?tab=memory the memory; e.g. from search.
   const folder = params.get('folder') ?? ''
   const focus = params.get('file') ?? undefined
+  const focusDesign = params.get('design') ?? undefined
   const setFolder = useCallback(
     (path: string) => {
       setCreating(null)
@@ -81,11 +84,12 @@ function LibraryView() {
     [router],
   )
   useEffect(() => {
-    const asked = focus ? 'files' : params.get('tab')
-    if (asked !== 'files' && asked !== 'memory' && asked !== 'trash') return
-    setTab(asked)
+    const asked = focus || focusDesign ? 'files' : params.get('tab')
+    const tabs: Tab[] = ['files', 'designs', 'memory', 'design-systems', 'trash']
+    if (!tabs.includes(asked as Tab)) return
+    setTab(asked as Tab)
     setQuery('')
-  }, [focus, params])
+  }, [focus, focusDesign, params])
 
   async function upload(list: { file: File; path: string }[]) {
     if (list.length === 0) return
@@ -214,7 +218,9 @@ function LibraryView() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList>
             <TabsTrigger value="files">Files</TabsTrigger>
+            <TabsTrigger value="designs">Designs</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
+            <TabsTrigger value="design-systems">Design systems</TabsTrigger>
             <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>
           <TabsContent value="files" className="flex flex-col gap-4 pt-2">
@@ -223,6 +229,7 @@ function LibraryView() {
               folder={folder}
               setFolder={setFolder}
               focus={focus}
+              focusDesign={focusDesign}
               reload={tree.reload}
               upload={upload}
               teammates={teammates.data}
@@ -231,8 +238,18 @@ function LibraryView() {
               setCreating={setCreating}
             />
           </TabsContent>
+          <TabsContent value="designs" className="flex flex-col gap-4 pt-2">
+            <DesignGallery tree={tree.data} />
+          </TabsContent>
           <TabsContent value="memory" className="flex flex-col gap-4 pt-2">
             <Memory overview={memory.data} reload={memory.reload} />
+          </TabsContent>
+          <TabsContent value="design-systems" className="flex flex-col gap-4 pt-2">
+            <DesignSystems
+              tree={tree.data}
+              teammates={teammates.data}
+              admin={me.data ? isAdmin(me.data) : false}
+            />
           </TabsContent>
           <TabsContent value="trash" className="flex flex-col gap-4 pt-2">
             <LibraryTrash

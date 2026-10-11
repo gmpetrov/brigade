@@ -3,7 +3,8 @@
  * a teammate reads the label and the reference; the dashboard renders a chip.
  * A member mentioning a credential lets the thread's teammate use it there.
  * A repository's id is owner/name, for the teammate to check out. A library
- * file (`document`) is labelled with its library path. `project` is
+ * file (`document`) is labelled with its library path; a design's id and label are
+ * its folder's library path ("acme/pricing.design"). `project` is
  * how messages named one before; they still render.
  */
 export const MENTION_KINDS = [
@@ -14,6 +15,7 @@ export const MENTION_KINDS = [
   'credential',
   'repository',
   'document',
+  'design',
   'project',
 ] as const
 export type MentionKind = (typeof MENTION_KINDS)[number]

@@ -110,7 +110,11 @@ export const TakeOver = z.object({ interrupt: z.boolean().default(false) })
 export const HandBack = z.object({ note: z.string().max(20_000).default('') })
 /** With text: put it on the desktop's clipboard. Without: read the clipboard. */
 export const DesktopClipboard = z.object({ text: z.string().max(CLIPBOARD_MAX).optional() })
-export const SubmitLoginCode = z.object({ code: z.string().trim().min(1).max(4000) })
+export const SubmitLoginCode = z.object({
+  code: z.string().trim().min(1).max(4000),
+  /** The account's email, as the member gives it, for a sign-in that cannot tell (a Claude token). */
+  email: z.string().trim().max(254).pipe(z.email()).optional(),
+})
 export const UpdateAccount = z.object({
   label: z.string().trim().min(1).max(80).optional(),
   isDefault: z.literal(true).optional(),

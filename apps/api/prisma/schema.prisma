@@ -163,6 +163,7 @@ model Workspace {
   tasks               Task[]
   schedules           Schedule[]
   auditEntries        AuditEntry[]
+  designSystems       DesignSystem[]
 
   @@index([organizationId])
 }
@@ -1148,4 +1149,31 @@ model ThreadAttachment {
   @@unique([sessionId, path])
   @@unique([sessionId, attachmentId])
   @@index([attachmentId])
+}
+
+/// A design system: rules, tokens and assets in a library folder, and where it applies.
+/// Teammates making a design pick one: named in the message, then by the library folder
+/// the design goes in, the repository the thread works in, the teammate, the default.
+model DesignSystem {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String    @default("")
+  /// Its library folder, e.g. "design-systems/acme".
+  path           String
+  /// Applies where nothing more specific does. At most one per workspace.
+  isDefault      Boolean   @default(false)
+  /// Library folders whose designs follow it.
+  folders        String[]
+  /// Repositories (owner/name, lowercase) whose threads follow it.
+  repositories   String[]
+  /// Teammates who follow it by default. Archived ones are skipped.
+  teammateIds    String[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
 }

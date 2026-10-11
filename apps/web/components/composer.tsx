@@ -1,5 +1,11 @@
 'use client'
-import { formatMention, parseMentions, type Mention, type MentionKind } from '@brigade/contracts'
+import {
+  designFolderOf,
+  formatMention,
+  parseMentions,
+  type Mention,
+  type MentionKind,
+} from '@brigade/contracts'
 import { Extension, type JSONContent } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import HardBreak from '@tiptap/extension-hard-break'
@@ -39,6 +45,7 @@ export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[]
   { kind: 'teammate', title: 'Teammates', max: 5 },
   { kind: 'connection', title: 'Connections', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
+  { kind: 'design', title: 'Designs', max: 5 },
   { kind: 'document', title: 'Library', max: 5 },
   { kind: 'credential', title: 'Secrets', max: 5 },
   { kind: 'thread', title: 'Threads', max: 4 },
@@ -78,12 +85,23 @@ export function useMentionOptions(threadId?: string): Option[] {
         label: r.repository,
         hint: r.private ? 'GitHub, private' : 'GitHub',
       })),
-      ...(library.data ?? []).map((f) => ({
-        kind: 'document' as const,
-        id: f.id,
-        label: f.path,
-        hint: 'Library',
-      })),
+      // A design is one thing to mention: its folder, not its files.
+      ...[...new Set((library.data ?? []).flatMap((f) => designFolderOf(f.path) ?? []))].map(
+        (folder) => ({
+          kind: 'design' as const,
+          id: folder,
+          label: folder,
+          hint: 'Design',
+        }),
+      ),
+      ...(library.data ?? [])
+        .filter((f) => !designFolderOf(f.path))
+        .map((f) => ({
+          kind: 'document' as const,
+          id: f.id,
+          label: f.path,
+          hint: 'Library',
+        })),
       ...(credentials.data ?? []).map((c) => ({
         kind: 'credential' as const,
         id: c.id,

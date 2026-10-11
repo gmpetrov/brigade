@@ -2,10 +2,11 @@
 // A file the thread mentions, beside it: from the library, the thread's
 // attachments, or the teammate's working folder on its computer. Takes the
 // desktop panel's place. Text shows as text, images and PDFs as themselves.
-import type { ThreadFile } from '@brigade/contracts'
+import { designFolderOf, type ThreadFile } from '@brigade/contracts'
 import { Check, Copy, Download, FileText, Library, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { DesignPanel } from '@/components/design-view'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
 import { FilePreview, PdfView } from '@/components/file-preview'
 import { Markdown } from '@/components/markdown'
@@ -24,14 +25,7 @@ function size(bytes: number) {
   return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`
 }
 
-export function FilePanel({
-  threadId,
-  path,
-  teammateId,
-  teammateName,
-  onOpen,
-  onClose,
-}: {
+type FilePanelProps = {
   threadId: string
   path: string
   teammateId?: string
@@ -39,8 +33,27 @@ export function FilePanel({
   teammateName: (id: string | undefined) => string
   onOpen: OpenFile
   onClose: () => void
-}) {
+}
+
+/** A library design's folder ("acme/pricing.design") shows as the design; anything else as a file. */
+export function FilePanel(props: FilePanelProps) {
+  const folder = props.path.trim().replace(/\/+$/, '')
+  if (!folder.startsWith('/') && designFolderOf(folder) === folder)
+    return <DesignPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
+  return <ThreadFilePanel {...props} />
+}
+
+function ThreadFilePanel({
+  threadId,
+  path,
+  teammateId,
+  teammateName,
+  onOpen,
+  onClose,
+}: FilePanelProps) {
   const [file, setFile] = useState<ThreadFile>()
+  /** A file of a library design: the design shows instead. */
+  const [design, setDesign] = useState<string>()
   const [error, setError] = useState<string>()
   const [copied, setCopied] = useState(false)
   const documents = useDocumentPanel()
@@ -59,6 +72,8 @@ export function FilePanel({
           onClose()
           return
         }
+        const folder = f.source === 'library' ? designFolderOf(f.path) : undefined
+        if (folder) return setDesign(folder)
         setFile(f)
       },
       (e: Error) => live && setError(e.message),
@@ -68,6 +83,8 @@ export function FilePanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per file, not when callbacks change
   }, [threadId, path, teammateId])
+
+  if (design) return <DesignPanel folder={design} threadId={threadId} onClose={onClose} />
 
   const shown = file?.path ?? path
   const slash = shown.lastIndexOf('/')

@@ -129,8 +129,20 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   and nothing comes back through Brigade. Claude has no device flow: the dashboard opens Claude's page, Claude shows a
   one-time code, and the member pastes it into the dashboard. The API relays that code to the computer without storing
   or logging it. It is bound to a PKCE verifier that never leaves the computer, so it is useless on its own.
-- **The runner never reads a login.** The adapters get an empty auth environment (`auth: {}`), so they forward no
-  credential and the vendor CLI uses its own login from the account's config directory.
+- **On the workspace computer a Claude account is a long-lived token.** There the runner signs in with
+  `claude setup-token` (in a pseudo-terminal, as it draws a terminal UI) instead of `claude auth login`, and keeps the
+  token it prints in `<account dir>/.oauth-token`, mode 600, readable only by the runner. Each turn gets it as
+  `CLAUDE_CODE_OAUTH_TOKEN`. It lasts a year and never refreshes. `claude auth login` does not work there: its access
+  token is short-lived and each refresh rotates the refresh token, while every teammate user has its own copy of the
+  login, so the first teammate to refresh left the others with a dead one (a "Sign in again" ticket about once a day).
+  The token is inference-only, so Brigade does not learn the account's plan, nor its email unless the member gives it
+  with the sign-in code. A teammate can still see its
+  own account's token, as it could see the shared login file before. Accounts signed in before still use their
+  config-directory login until they are signed in again. On a member's machine (one user, one config directory)
+  Claude's own login keeps working, and is still used.
+- **The runner never sends a login anywhere, and reads none but those tokens.** The adapters get an empty auth
+  environment (`auth: {}`), so they add no credential of their own; the vendor CLI uses the account's token or its
+  login from the account's config directory.
 - **Machine logins.** On a member's own machine the runner reports, on connect, which harnesses are signed in there
   (from `claude auth status` / `codex login status`, never a credential). The API keeps an account per login.
 - **Stacking and switching.** A thread runs on the starter's chosen or default account on its computer. When the
@@ -144,10 +156,11 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   systemd service. The runner's token stays in `/home/brigade` (mode 700).
 - **Teammate Linux users.** On the workspace computer each teammate runs as `bt-<id>` with a private home; its threads
   live in `~/threads/<thread>`. The runner may only call a small root helper (`/usr/local/sbin/brigade-teammate`) and
-  run commands as teammate users. Account logins live in `/var/lib/brigade/accounts`, readable by teammate users only
-  (one trust zone, per the spec). Each teammate gets a private config directory per account that links only the login
-  file, so conversation history stays private; a login refreshed during a turn is moved back to the shared place
-  without being read.
+  run commands as teammate users. Account logins live in `/var/lib/brigade/accounts`. A Claude account's token stays
+  readable by the runner only and reaches a teammate in its turn's environment. Codex logins (and Claude logins from
+  before tokens) are readable by teammate users (one trust zone, per the spec). Each teammate gets a private config
+  directory per account that links only the login file, so conversation history stays private; a login refreshed
+  during a turn is moved back to the shared place without being read.
 - **Takeover.** Take over (after the current turn, or now) stops the teammate; prompts are refused meanwhile. The
   desktop comes from the provider. The terminal runs as the teammate in the thread's directory, through `script`, and
   is relayed over the runner's existing socket. Each command run is logged as a `terminal.command` event under the
@@ -316,6 +329,35 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   folder reaches only the teammates granted access to it or to a folder inside. The deepest folder with a rule
   wins (`libraryAccessFor` in `@brigade/contracts`). Search, `save_to_library` and the mirror all follow it, and
   the teammate's instructions name the folders where its access differs. Members see the whole library.
+- **Designs** (`apps/api/src/designs.ts`, `@brigade/contracts` `design.ts`). A design is a library folder named
+  `<name>.design` with `index.html` and `design.json` (title, description, design system, viewports; a deck sets
+  `kind: "slides"` and marks slides with `data-slide` and `data-notes`) at its top, and optionally `knobs.json`.
+  Teammates make them as plain HTML in any harness. `check_design` renders the folder with the computer's Chrome
+  (`apps/runner/src/design-shot.ts`, run as the teammate, the folder served on a private port) and returns
+  screenshots per viewport or slide and the page's errors; `save_design` saves the folder (one `save` call per
+  file, no protocol change) with a rendered `thumbnail.png` when Chrome is there. The library shows each design
+  folder as one item and in a Designs gallery (without design systems' previews, which their cards open), and
+  opens it in a viewer beside the page or the thread (`components/design-view.tsx`). Its page runs the
+  teammate's script, so it is served only from `DESIGN_URL`, another host pointing at the API
+  (`designs.localhost:<port>` in development), under a signed four-hour address (`POST /api/designs/view`, then
+  `/v/<token>/...`), with a `sandbox` CSP that makes its origin opaque,
+  `connect-src` limited to itself and public CDNs, and no form submissions. On that host nothing else of the API
+  answers. Use a separate domain in production. The host adds a bridge script to its pages
+  (`apps/api/src/design-bridge.ts`), which the viewer talks to by `postMessage`: pick an element to comment on
+  (by `data-id`), try knob values live, print to PDF, capture PNGs with html-to-image (html2canvas cannot run in
+  an opaque-origin sandbox). A comment is a message to the thread that saved the design last (the files'
+  `updatedInSessionId`, when the member may prompt it), else a new thread to the same teammate. Knobs are saved
+  into `knobs.json` (`PUT /api/designs/knobs`) and applied to the page as `:root:root` custom properties.
+  Export: the folder as a zip (`GET /api/designs/zip`), PDF, PNG, and for decks PowerPoint (one picture per
+  slide with its notes, pptxgenjs). A message mentions a design as `@[path](design:path)`; Hand off starts a
+  thread that builds it. **Design systems** are `DesignSystem` rows over a library folder (`README.md` rules,
+  `tokens.css`, assets, an optional `preview.design`), shown under Library → Design systems. Each says where it
+  applies: library folders, repositories, teammates, or the workspace default. Every thread's spec carries the
+  catalog, and the teammate's instructions say how to pick one: named in the message, then folder, repository,
+  teammate, default; it asks when none applies. A teammate makes one with `save_design_system`: it saves the
+  folder, then a `library.call` registers it (by name, so saving again updates it), which needs write access to
+  that folder and is audited as the teammate; the workspace's first is the default. "Ask a teammate" under Library
+  → Design systems drafts that thread.
 - **Memory** is three kinds of Markdown `Document` with no bucket object: workspace (`workspace.md`), teammate
   (`teammates/<id>.md`) and thread summaries (`threads/<id>.md`). Memory loads through the harness's own file: the
   runner writes `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex) into the thread's directory each time a harness

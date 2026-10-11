@@ -75,9 +75,9 @@ export default function Accounts() {
       <header className="flex flex-col gap-3">
         <h1 className="text-3xl font-extrabold tracking-tight">Accounts</h1>
         <p className="max-w-prose text-muted-foreground">
-          Your Claude and Codex subscriptions. Add several of each: when one runs out of usage,
-          your threads continue on the next. Accounts are yours alone; nobody else&apos;s threads
-          use them.
+          Your Claude and Codex subscriptions. Add several of each: when one runs out of usage, your
+          threads continue on the next. Accounts are yours alone; nobody else&apos;s threads use
+          them.
         </p>
         <div className="flex gap-3 rounded-lg bg-accent p-4 text-sm text-accent-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -163,6 +163,9 @@ function AccountCard({
   onAct: (p: Promise<unknown>) => Promise<void>
 }) {
   const [code, setCode] = useState('')
+  const [email, setEmail] = useState(a.email ?? '')
+  // On the workspace computer a Claude account is a token, which cannot tell whose it is.
+  const asksEmail = a.provider === 'claude_code' && a.computer.kind === 'cloud'
   const exhausted = a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()
   const signingIn =
     a.status === 'signing_in' && login && login.state !== 'done' && login.state !== 'failed'
@@ -261,7 +264,12 @@ function AccountCard({
               className="flex flex-col gap-3"
               onSubmit={(e) => {
                 e.preventDefault()
-                void onAct(api(`/accounts/${a.id}/code`, { body: { code } }))
+                const given = asksEmail ? email.trim() : ''
+                void onAct(
+                  api(`/accounts/${a.id}/code`, {
+                    body: { code, ...(given ? { email: given } : {}) },
+                  }),
+                )
               }}
             >
               <p className="flex items-center gap-2">
@@ -273,6 +281,27 @@ function AccountCard({
                 </Button>
               </p>
               <p>2. Sign in to the Claude account you want to add. Claude then shows a code.</p>
+              {asksEmail && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={`email-${a.id}`}>
+                    Account email{' '}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </Label>
+                  <p className="text-muted-foreground">
+                    Claude doesn&apos;t tell Brigade which account this is. Add its email to tell
+                    your accounts apart.
+                  </p>
+                  <Input
+                    id={`email-${a.id}`}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="off"
+                    className="bg-card"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Label htmlFor={`code-${a.id}`} className="sr-only">
                   Sign-in code

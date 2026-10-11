@@ -2,7 +2,7 @@
 // What a thread made, beside it: files its teammates wrote or named, library
 // documents, images, pull requests, emails and schedules. Read from the event
 // log, newest first; a file made again keeps one row.
-import type { SequencedEvent } from '@brigade/contracts'
+import { designName, type SequencedEvent } from '@brigade/contracts'
 import {
   CalendarClock,
   FileText,
@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Library,
   Mail,
+  Palette,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
@@ -18,7 +19,7 @@ import { pullHref } from '@/lib/api'
 
 export type ThreadOutput = {
   key: string
-  kind: 'file' | 'library' | 'image' | 'pull' | 'email' | 'schedule'
+  kind: 'file' | 'library' | 'design' | 'image' | 'pull' | 'email' | 'schedule'
   label: string
   detail?: string
   at: string
@@ -148,6 +149,29 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               file: { path: input.path },
             })
+          } else if (tool === 'save_design' && typeof input.path === 'string') {
+            const path = input.path.replace(/\/+$/, '')
+            add({
+              key: `design:${path}`,
+              kind: 'design',
+              label: designName(path) || name(path),
+              detail: `Design · ${path}`,
+              at: e.at,
+              file: { path },
+            })
+          } else if (tool === 'save_design_system' && typeof input.path === 'string') {
+            // Shown by its preview, a design inside its folder.
+            const output = (e.output ?? {}) as { name?: unknown; preview?: unknown }
+            if (typeof output.preview !== 'string') break
+            const path = input.path.replace(/\/+$/, '')
+            add({
+              key: `design:${output.preview}`,
+              kind: 'design',
+              label: `${typeof output.name === 'string' ? output.name : name(path)} design system`,
+              detail: `Design system · ${path}`,
+              at: e.at,
+              file: { path: output.preview },
+            })
           } else if (tool === 'github_create_pull_request') {
             const found = json(e.output).match(
               /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/,
@@ -199,6 +223,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
 const ICONS = {
   file: FileText,
   library: Library,
+  design: Palette,
   image: ImageIcon,
   pull: GitPullRequest,
   email: Mail,

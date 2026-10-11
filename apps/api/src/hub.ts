@@ -416,7 +416,8 @@ export function runnerSocket(runner: {
           ? {
               status: 'ready',
               exhaustedUntil: null,
-              email: message.email ?? null,
+              // A token cannot tell whose it is: the member may have said.
+              email: message.email ?? login.email ?? null,
               plan: message.plan ?? null,
             }
           : { status: 'needs_sign_in' },
