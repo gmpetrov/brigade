@@ -139,7 +139,10 @@ export const TicketAnswer = z.discriminatedUnion('action', [
 export type TicketAnswer = z.infer<typeof TicketAnswer>
 
 export const AgentEvent = z.discriminatedUnion('type', [
-  /** A human prompt sent to the thread. */
+  /**
+   * A human prompt sent to the thread, where the teammate reads it: when its
+   * turn starts, or in the running turn when steered.
+   */
   z.object({
     ...base,
     type: z.literal('message.user'),
@@ -147,6 +150,35 @@ export const AgentEvent = z.discriminatedUnion('type', [
     memberId: z.string().nullable(),
     /** The files that came with it. */
     attachments: z.array(MessageAttachment).optional(),
+    /** The id the sender gave it; set when it was queued first (message.queued). */
+    messageId: z.string().optional(),
+    /** Given to the teammate during its running turn rather than in a turn of its own. */
+    steered: z.boolean().optional(),
+  }),
+  /**
+   * A message waits for the turn before it to end, or for a person to answer
+   * what the teammate asked. Sent again when it is edited or its wait changes.
+   */
+  z.object({
+    ...base,
+    type: z.literal('message.queued'),
+    messageId: z.string(),
+    text: z.string(),
+    memberId: z.string().nullable(),
+    attachments: z.array(MessageAttachment).optional(),
+    /** turn: another turn runs first. person: an approval, question or ticket is answered first. */
+    waitingFor: z.enum(['turn', 'person']),
+    /** Why a request on it did not happen, e.g. it could not be steered. */
+    note: z.string().optional(),
+  }),
+  /** A queued message will not run: its sender cancelled it, or it was lost. */
+  z.object({
+    ...base,
+    type: z.literal('message.cancelled'),
+    messageId: z.string(),
+    memberId: z.string().nullable(),
+    /** Set when nobody cancelled it, e.g. a person took over or the computer restarted. */
+    reason: z.string().optional(),
   }),
   z.object({ ...base, type: z.literal('message.delta'), id: z.string(), text: z.string() }),
   z.object({ ...base, type: z.literal('message.done'), id: z.string(), text: z.string() }),
@@ -260,6 +292,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     teammateId: z.string(),
     /** The account it runs on; usage and sign-in problems after this belong to it. */
     accountId: z.string(),
+    /** Names this turn, so an interrupt stops it and not the one after it. */
+    turnId: z.string().optional(),
   }),
   z.object({ ...base, type: z.literal('turn.completed'), finishReason: z.string() }),
   /** A command a person ran in the computer's terminal during takeover. */

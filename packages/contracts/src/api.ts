@@ -117,8 +117,22 @@ export const SendMessage = z
   .object({
     text: z.string().trim().max(100_000).default(''),
     attachmentIds: AttachmentIds,
+    /** The sender's id for it, so it can be shown as queued at once and found again. */
+    messageId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/)
+      .optional(),
+    /** Give it to the teammate during its running turn instead of queuing it. */
+    steer: z.boolean().optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
+/** Cancel a queued message, change its text, or steer it into the running turn. */
+export const QueuedMessageAction = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('cancel') }),
+  z.object({ action: z.literal('steer') }),
+  z.object({ action: z.literal('edit'), text: z.string().trim().min(1).max(100_000) }),
+])
+export const InterruptThread = z.object({ turnId: z.string().max(64).optional() })
 export const ResolveApproval = z.object({
   approvalId: z.string(),
   approved: z.boolean(),

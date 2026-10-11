@@ -211,6 +211,7 @@ async function start() {
   const onCommand = async (message: ApiToRunner) => {
     switch (message.type) {
       case 'welcome':
+        threads.dropLost(message.queuedMessages ?? [])
         return threads.closeLost(message.runningThreads ?? [], (sessionId) =>
           outbox.lastUnacknowledged(sessionId),
         )
@@ -219,6 +220,7 @@ async function start() {
       case 'thread.answer':
       case 'thread.ticket':
       case 'thread.interrupt':
+      case 'thread.queued':
         try {
           threads.handle(message)
         } catch (error) {

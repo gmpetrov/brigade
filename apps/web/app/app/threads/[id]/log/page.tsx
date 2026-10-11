@@ -122,6 +122,19 @@ export default function RunLogPage() {
           detail: [d.text, attached].filter(Boolean).join('\n\n'),
         }
       }
+      case 'message.queued':
+        return {
+          actor: who(d.memberId) ?? 'Brigade',
+          what: `Queued${d.note ? ` (${String(d.note)})` : ''}: ${clip(String(d.text))}`,
+          detail: d.text,
+        }
+      case 'message.cancelled':
+        return {
+          actor: d.reason ? 'Runner' : (who(d.memberId) ?? 'Brigade'),
+          what: d.reason
+            ? `Queued message not sent: ${String(d.reason)}`
+            : 'Cancelled a queued message',
+        }
       case 'message.done':
         return { actor: teammate, what: clip(d.text), detail: d.text }
       case 'tool.started':
