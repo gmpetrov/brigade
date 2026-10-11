@@ -1,6 +1,6 @@
 'use client'
 import { Archive, ArrowLeft, Plus } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { COLUMNS, NewTaskDialog, PriorityBadge, priorityRank, TaskSheet } from '@/components/tasks'
 import { Button } from '@/components/ui/button'
@@ -60,10 +60,71 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   )
 }
 
+type ArchivePage = { tasks: Task[]; next: string | null }
+
+const archivePage = (before: string | null) =>
+  api<ArchivePage>(`/tasks?archived=true${before ? `&before=${encodeURIComponent(before)}` : ''}`)
+
+/** The archived tasks, a page at a time. A reload refetches every page shown. */
+function useArchive(on: boolean) {
+  const [pages, setPages] = useState<ArchivePage[]>()
+  const [error, setError] = useState<Error>()
+  const [loading, setLoading] = useState(false)
+  const shown = useRef(1)
+
+  const reload = useCallback(async () => {
+    if (!on) return
+    try {
+      const fresh: ArchivePage[] = []
+      let before: string | null = null
+      do {
+        const page: ArchivePage = await archivePage(before)
+        fresh.push(page)
+        before = page.next
+      } while (before && fresh.length < shown.current)
+      setPages(fresh)
+      setError(undefined)
+    } catch (e) {
+      setError(e as Error)
+    }
+  }, [on])
+  useEffect(() => {
+    shown.current = 1
+    setPages(undefined)
+    void reload()
+  }, [reload])
+
+  const next = pages?.at(-1)?.next
+  async function loadMore() {
+    if (!next) return
+    setLoading(true)
+    try {
+      const page = await archivePage(next)
+      setPages((loaded) => [...(loaded ?? []), page])
+      shown.current += 1
+      setError(undefined)
+    } catch (e) {
+      setError(e as Error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return {
+    tasks: pages?.flatMap((p) => p.tasks),
+    more: Boolean(next),
+    loading,
+    loadMore,
+    error,
+    reload,
+  }
+}
+
 /** The Tasks board: Backlog, Needs you, Doing and Done; or the archived tasks. */
 export default function Tasks() {
   const [archived, setArchived] = useState(false)
-  const tasks = useApi<Task[]>(archived ? '/tasks?archived=true' : '/tasks')
+  const tasks = useApi<Task[]>(archived ? null : '/tasks')
+  const archive = useArchive(archived)
   const [open, setOpen] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [allDone, setAllDone] = useState(false)
@@ -93,15 +154,19 @@ export default function Tasks() {
     window.history.replaceState(null, '', url)
   }, [])
 
-  const reload = tasks.reload
+  const reload = useCallback(
+    () => (archived ? archive.reload() : tasks.reload()),
+    [archived, archive.reload, tasks.reload],
+  )
   useLive((message) => {
     if (message.type === 'task.updated' || message.type === 'thread.updated') void reload()
   })
 
-  // Right after switching views, the other view's tasks are still loaded.
-  const list = tasks.data?.filter((t) => Boolean(t.archivedAt) === archived)
+  // Right after leaving the archive, the board loaded before is still shown.
+  const board = tasks.data?.filter((t) => !t.archivedAt)
+  const list = archive.tasks
   const byColumn = (column: Task['column']) =>
-    (list ?? []).filter((t) => t.column === column).sort(order)
+    (board ?? []).filter((t) => t.column === column).sort(order)
 
   async function archiveDone() {
     setArchiving(true)
@@ -159,11 +224,23 @@ export default function Tasks() {
             No archived tasks. Archive done tasks to keep the board short.
           </p>
         ) : (
-          <ul className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {list.map((t) => (
-              <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
-            ))}
-          </ul>
+          <div className="flex flex-col items-center gap-3">
+            <ul className="grid w-full items-start gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {list.map((t) => (
+                <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
+              ))}
+            </ul>
+            {archive.more && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={archive.loading}
+                onClick={() => void archive.loadMore()}
+              >
+                Load more
+              </Button>
+            )}
+          </div>
         )
       ) : (
         <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -230,8 +307,10 @@ export default function Tasks() {
           })}
         </div>
       )}
-      {(error ?? tasks.error) && (
-        <p className="text-sm text-destructive-text">{error ?? tasks.error?.message}</p>
+      {(error ?? (archived ? archive.error : tasks.error)) && (
+        <p className="text-sm text-destructive-text">
+          {error ?? (archived ? archive.error : tasks.error)?.message}
+        </p>
       )}
 
       <NewTaskDialog

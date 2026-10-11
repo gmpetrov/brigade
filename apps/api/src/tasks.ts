@@ -13,7 +13,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { scoped, type Scope, type ScopedDb } from './db.js'
+import { scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastTask, dispatch } from './hub.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
@@ -42,13 +42,12 @@ const BOARD = {
 
 type BoardRow = Awaited<ReturnType<typeof boardRows>>[number]
 
-const boardRows = (db: ScopedDb, where: { id?: string; archivedAt?: null | { not: null } } = {}) =>
-  db.task.findMany({
-    where,
-    include: BOARD,
-    orderBy: where.archivedAt ? { archivedAt: 'desc' } : { updatedAt: 'desc' },
-    take: 500,
-  })
+const boardRows = (
+  db: ScopedDb,
+  where: Prisma.TaskWhereInput = {},
+  orderBy: Prisma.TaskOrderByWithRelationInput[] = [{ updatedAt: 'desc' }],
+  take = 500,
+) => db.task.findMany({ where, include: BOARD, orderBy, take })
 
 /** A thread status while its teammate is at work. */
 const ACTIVE = ['starting', 'running']
@@ -92,9 +91,50 @@ const view = ({ session, ...task }: BoardRow) => ({
     : null,
 })
 
-/** The board, or with archived the done tasks put away, most recently first. */
-export async function listTasks(db: ScopedDb, { archived = false } = {}) {
-  return (await boardRows(db, { archivedAt: archived ? { not: null } : null })).map(view)
+/** The board: every task not archived, most recently touched first. */
+export async function listTasks(db: ScopedDb) {
+  return (await boardRows(db, { archivedAt: null })).map(view)
+}
+
+/** Archived tasks shown at a time. */
+const ARCHIVE_PAGE = 100
+
+/**
+ * The done tasks put away, most recently archived first, a page at a time:
+ * next is the cursor for the page after this one, null on the last.
+ */
+export async function listArchivedTasks(db: ScopedDb, before?: string) {
+  const after = before ? parseCursor(before) : null
+  const rows = await boardRows(
+    db,
+    {
+      archivedAt: { not: null },
+      ...(after && {
+        OR: [
+          { archivedAt: { lt: after.archivedAt } },
+          { archivedAt: after.archivedAt, id: { lt: after.id } },
+        ],
+      }),
+    },
+    [{ archivedAt: 'desc' }, { id: 'desc' }],
+    ARCHIVE_PAGE + 1,
+  )
+  const page = rows.slice(0, ARCHIVE_PAGE)
+  const last = page.at(-1)
+  return {
+    tasks: page.map(view),
+    next:
+      rows.length > ARCHIVE_PAGE && last ? `${last.archivedAt!.toISOString()}_${last.id}` : null,
+  }
+}
+
+function parseCursor(cursor: string) {
+  const at = cursor.indexOf('_')
+  const archivedAt = new Date(cursor.slice(0, at))
+  const id = cursor.slice(at + 1)
+  if (at < 0 || !id || Number.isNaN(archivedAt.getTime()))
+    throw new HTTPException(400, { message: 'Invalid cursor' })
+  return { archivedAt, id }
 }
 
 /** One task, with the pull requests its thread opened. */
@@ -407,25 +447,30 @@ export async function reopenOnMessage(
   broadcastTask(scope.workspaceId, thread.task.id)
 }
 
-/** A done task goes off the board. Its thread stays as it is. */
+/**
+ * A done task goes off the board. Its thread stays as it is. The write checks
+ * the task is still done: a reopen racing it wins and the task stays put.
+ */
 export async function archiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const task = await loadTask(db, id)
   if (!task.completedAt)
     throw new HTTPException(409, { message: 'Only a done task can be archived' })
-  if (!task.archivedAt) {
-    await db.task.updateMany({ where: { id }, data: { archivedAt: new Date() } })
-    await changed(scope, member(scope), 'task.archived', id)
-  }
+  const { count } = await db.task.updateMany({
+    where: { id, completedAt: { not: null }, archivedAt: null },
+    data: { archivedAt: new Date() },
+  })
+  if (count) await changed(scope, member(scope), 'task.archived', id)
   return getTask(db, id)
 }
 
 /** An archived task back in Done. */
 export async function unarchiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
-  const task = await loadTask(db, id)
-  if (task.archivedAt) {
-    await db.task.updateMany({ where: { id }, data: { archivedAt: null } })
-    await changed(scope, member(scope), 'task.unarchived', id)
-  }
+  await loadTask(db, id)
+  const { count } = await db.task.updateMany({
+    where: { id, archivedAt: { not: null } },
+    data: { archivedAt: null },
+  })
+  if (count) await changed(scope, member(scope), 'task.unarchived', id)
   return getTask(db, id)
 }
 
