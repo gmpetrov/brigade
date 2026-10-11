@@ -1,5 +1,7 @@
 'use client'
 import {
+  Archive,
+  ArchiveRestore,
   ArrowRight,
   Check,
   ExternalLink,
@@ -609,6 +611,9 @@ export function TaskSheet({
             <SheetHeader className="gap-3 border-b pr-12">
               <div className="flex flex-wrap items-center gap-2">
                 <ColumnBadge column={task.column} />
+                {task.archivedAt && (
+                  <StatusBadge status="archived" tone="neutral" label="Archived" />
+                )}
                 <PriorityBadge priority={task.priority} quiet />
               </div>
               {editing ? (
@@ -664,6 +669,18 @@ export function TaskSheet({
                   <Button size="sm" variant="outline" onClick={() => void act('/reopen')}>
                     <RotateCcw aria-hidden />
                     Reopen
+                  </Button>
+                )}
+                {task.completedAt && !task.archivedAt && (
+                  <Button size="sm" variant="outline" onClick={() => void act('/archive')}>
+                    <Archive aria-hidden />
+                    Archive
+                  </Button>
+                )}
+                {task.archivedAt && (
+                  <Button size="sm" variant="outline" onClick={() => void act('/unarchive')}>
+                    <ArchiveRestore aria-hidden />
+                    Restore
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={() => setDialog('reassign')}>

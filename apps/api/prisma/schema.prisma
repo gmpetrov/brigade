@@ -374,11 +374,14 @@ model Task {
   /// Links to what it produced: [{ label, url }].
   deliverables      Json         @default("[]")
   completedAt       DateTime?
+  /// Off the board: a done task put away. Reopening it brings it back.
+  archivedAt        DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   session           Session?
 
   @@index([workspaceId, completedAt])
+  @@index([workspaceId, archivedAt])
   @@index([teammateId])
 }
 

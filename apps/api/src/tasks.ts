@@ -42,8 +42,13 @@ const BOARD = {
 
 type BoardRow = Awaited<ReturnType<typeof boardRows>>[number]
 
-const boardRows = (db: ScopedDb, where: { id?: string } = {}) =>
-  db.task.findMany({ where, include: BOARD, orderBy: { updatedAt: 'desc' }, take: 500 })
+const boardRows = (db: ScopedDb, where: { id?: string; archivedAt?: null | { not: null } } = {}) =>
+  db.task.findMany({
+    where,
+    include: BOARD,
+    orderBy: where.archivedAt ? { archivedAt: 'desc' } : { updatedAt: 'desc' },
+    take: 500,
+  })
 
 /** A thread status while its teammate is at work. */
 const ACTIVE = ['starting', 'running']
@@ -87,8 +92,9 @@ const view = ({ session, ...task }: BoardRow) => ({
     : null,
 })
 
-export async function listTasks(db: ScopedDb) {
-  return (await boardRows(db)).map(view)
+/** The board, or with archived the done tasks put away, most recently first. */
+export async function listTasks(db: ScopedDb, { archived = false } = {}) {
+  return (await boardRows(db, { archivedAt: archived ? { not: null } : null })).map(view)
 }
 
 /** One task, with the pull requests its thread opened. */
@@ -259,7 +265,8 @@ export async function startTask(
       message: 'That computer is offline. Start its runner and try again.',
     })
   }
-  if (task.completedAt) await db.task.updateMany({ where: { id }, data: { completedAt: null } })
+  if (task.completedAt)
+    await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
   await changed(scope, member(scope), 'task.started', id, { sessionId: thread.id })
   return { ...(await getTask(db, id)), paused: outcome === 'paused' }
 }
@@ -353,7 +360,7 @@ export async function reassignTask(
 
   await db.task.updateMany({
     where: { id },
-    data: { teammateId: teammate.id, completedAt: null },
+    data: { teammateId: teammate.id, completedAt: null, archivedAt: null },
   })
   await changed(scope, member(scope), 'task.reassigned', id, {
     from: task.teammateId,
@@ -382,12 +389,12 @@ export async function completeTask(
 export async function reopenTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const task = await loadTask(db, id)
   await requireMayAct(db, scope, task)
-  await db.task.updateMany({ where: { id }, data: { completedAt: null } })
+  await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
   await changed(scope, member(scope), 'task.reopened', id)
   return getTask(db, id)
 }
 
-/** A message to a done task's thread puts it back in Doing. */
+/** A message to a done task's thread puts it back in Doing, archived or not. */
 export async function reopenOnMessage(
   scope: Scope,
   thread: { task: { id: string; completedAt: Date | null } | null },
@@ -395,9 +402,54 @@ export async function reopenOnMessage(
   if (!thread.task?.completedAt) return
   await scoped(scope).task.updateMany({
     where: { id: thread.task.id },
-    data: { completedAt: null },
+    data: { completedAt: null, archivedAt: null },
   })
   broadcastTask(scope.workspaceId, thread.task.id)
+}
+
+/** A done task goes off the board. Its thread stays as it is. */
+export async function archiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
+  const task = await loadTask(db, id)
+  if (!task.completedAt)
+    throw new HTTPException(409, { message: 'Only a done task can be archived' })
+  if (!task.archivedAt) {
+    await db.task.updateMany({ where: { id }, data: { archivedAt: new Date() } })
+    await changed(scope, member(scope), 'task.archived', id)
+  }
+  return getTask(db, id)
+}
+
+/** An archived task back in Done. */
+export async function unarchiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
+  const task = await loadTask(db, id)
+  if (task.archivedAt) {
+    await db.task.updateMany({ where: { id }, data: { archivedAt: null } })
+    await changed(scope, member(scope), 'task.unarchived', id)
+  }
+  return getTask(db, id)
+}
+
+/** Clear the Done column: every done task goes off the board at once. */
+export async function archiveDoneTasks(db: ScopedDb, scope: WorkspaceScope) {
+  const done = await db.task.findMany({
+    where: { completedAt: { not: null }, archivedAt: null },
+    select: { id: true },
+  })
+  if (!done.length) return { archived: 0 }
+  const ids = done.map((t) => t.id)
+  const { count } = await db.task.updateMany({
+    where: { id: { in: ids }, completedAt: { not: null }, archivedAt: null },
+    data: { archivedAt: new Date() },
+  })
+  await audit({
+    ...scope,
+    actor: member(scope),
+    action: 'task.archived',
+    target: { type: 'workspace', id: scope.workspaceId },
+    data: { taskIds: ids },
+  })
+  broadcastTask(scope.workspaceId, ids[0]!)
+  return { archived: count }
 }
 
 /**
