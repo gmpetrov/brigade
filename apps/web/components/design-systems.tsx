@@ -3,11 +3,17 @@
 // and assets) and where it applies. Teammates making a design pick one: the
 // one named, then by library folder, repository, teammate, the default.
 // Owners and admins change them; a teammate makes one and registers it.
-import { DESIGN_SYSTEM_PREVIEW, type DesignSystem, type LibraryFile } from '@brigade/contracts'
+import {
+  DESIGN_SYSTEM_PREVIEW,
+  DESIGN_THUMBNAIL,
+  type DesignSystem,
+  type LibraryFile,
+} from '@brigade/contracts'
 import { Ellipsis, FolderOpen, Palette, Pencil, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { DesignPanel } from '@/components/design-view'
+import { contentUrl } from '@/components/library-browser'
 import { Markdown } from '@/components/markdown'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { Badge } from '@/components/ui/badge'
@@ -168,6 +174,24 @@ function tokensOf(css: string) {
 
 const COLOR = /^(#[0-9a-f]{3,8}|(rgb|hsl|oklch|oklab|lab|lch|color)a?\(.+\))$/i
 
+/** What the card says about a system from its tokens: its primary color, font, dark mode. */
+type Facts = { primary?: string; font?: string; dark: boolean }
+
+function factsOf(css: string): Facts {
+  // The first value of each name: light mode, when dark redefines them.
+  const first = (name: string) => tokensOf(css).find((t) => t.name === name)?.value
+  const primary = first('--primary')
+  const font = first('--font-sans')
+    ?.split(',')[0]
+    ?.trim()
+    .replace(/^['"]|['"]$/g, '')
+  return {
+    ...(primary && COLOR.test(primary) ? { primary } : {}),
+    ...(font && !font.startsWith('var(') ? { font } : {}),
+    dark: /(^|[\s,}])\.dark\b|prefers-color-scheme:\s*dark/.test(css),
+  }
+}
+
 function SystemCard({
   system,
   files,
@@ -188,25 +212,17 @@ function SystemCard({
   const readme = files.find((f) => f.path === `${system.path}/README.md`)
   const tokens = files.find((f) => f.path === `${system.path}/tokens.css`)
   const hasPreview = files.some((f) => f.path === `${system.path}/${PREVIEW}/index.html`)
-  const [colors, setColors] = useState<{ name: string; value: string }[]>([])
+  const thumbnail = files.find((f) => f.path === `${system.path}/${PREVIEW}/${DESIGN_THUMBNAIL}`)
+  const [facts, setFacts] = useState<Facts>()
   const [readmeText, setReadmeText] = useState<string>()
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!tokens) return setColors([])
+    if (!tokens) return setFacts(undefined)
     let live = true
     void fetch(`${API_URL}/api/library/${tokens.id}/content`, { credentials: 'include' })
       .then((r) => (r.ok ? r.text() : ''))
-      .then((css) => {
-        if (!live) return
-        // The first value of each name: light mode, when dark redefines them.
-        const seen = new Set<string>()
-        setColors(
-          tokensOf(css).filter(
-            (t) => COLOR.test(t.value) && !seen.has(t.name) && Boolean(seen.add(t.name)),
-          ),
-        )
-      })
+      .then((css) => live && setFacts(factsOf(css)))
     return () => {
       live = false
     }
@@ -233,124 +249,165 @@ function SystemCard({
     })),
   ]
 
+  const picture = thumbnail ? (
+    // eslint-disable-next-line @next/next/no-img-element -- a library file through the API
+    <img
+      src={contentUrl(thumbnail.id)}
+      alt=""
+      loading="lazy"
+      className="size-full object-cover object-top transition group-hover:scale-[1.02]"
+    />
+  ) : (
+    <Palette aria-hidden className="size-7 text-muted-foreground/60" />
+  )
+  const frame =
+    'group relative flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/50 sm:w-48'
+
   return (
-    <Card className="gap-3 px-6">
-      <div className="flex items-start gap-4">
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
-        >
-          <Palette className="size-4" />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="flex flex-wrap items-center gap-2 text-base font-bold">
-            {system.name}
-            {system.isDefault && (
-              <Badge variant="secondary">
-                <Star aria-hidden />
-                Default
-              </Badge>
-            )}
-          </h2>
-          {system.description && (
-            <p className="text-sm text-muted-foreground">{system.description}</p>
-          )}
-          <Link
-            href={`/app/library?folder=${encodeURIComponent(system.path)}`}
-            className="w-fit font-mono text-xs text-muted-foreground hover:underline"
-          >
-            {system.path}/
-          </Link>
-        </div>
-        {hasPreview && (
-          <Button variant="outline" size="sm" onClick={onPreview}>
-            Preview
-          </Button>
-        )}
-        {admin && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Actions for ${system.name}`}
-                title="Actions"
-              >
-                <Ellipsis aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={onEdit}>
-                <Pencil aria-hidden />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/app/library?folder=${encodeURIComponent(system.path)}`}>
-                  <FolderOpen aria-hidden />
-                  Its files
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={onRemove}>
-                <Trash2 aria-hidden />
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-
-      {colors.length > 0 && (
-        <ul aria-label="Colors" className="flex flex-wrap gap-1.5">
-          {colors.slice(0, 32).map((c) => (
-            <li
-              key={c.name}
-              title={`${c.name}: ${c.value}`}
-              className="size-7 rounded-md border shadow-xs"
-              style={{ background: c.value }}
-            />
-          ))}
-        </ul>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        {applies.length === 0 && !system.isDefault ? (
-          'Used when a message names it.'
-        ) : (
-          <span className="flex flex-wrap items-center gap-1.5">
-            {applies.length > 0 && 'For'}
-            {applies.map((a) => (
-              <Badge key={a.key} variant="outline" className={a.mono ? 'font-mono' : undefined}>
-                {a.label}
-              </Badge>
-            ))}
-            {system.isDefault && (applies.length > 0 ? 'and everything else' : 'For everything')}
-          </span>
-        )}
-      </p>
-
-      {readme ? (
-        <div className="flex flex-col gap-2">
+    <Card className="gap-4 px-5 py-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+        {hasPreview ? (
           <button
             type="button"
-            onClick={() => setOpen(!open)}
-            className="w-fit text-xs font-medium text-primary hover:underline"
+            onClick={onPreview}
+            aria-label={`Preview ${system.name}`}
+            className={`${frame} transition hover:border-primary/40`}
           >
-            {open ? 'Hide the rules' : 'Show the rules (README.md)'}
+            {picture}
+            <span className="absolute right-2 bottom-2 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm">
+              Preview
+            </span>
           </button>
-          {open &&
-            (readmeText === undefined ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          <span className={frame}>{picture}</span>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <h2 className="flex flex-wrap items-center gap-2 text-base font-bold">
+                {system.name}
+                {system.isDefault && (
+                  <Badge variant="secondary">
+                    <Star aria-hidden />
+                    Default
+                  </Badge>
+                )}
+              </h2>
+              {system.description && (
+                <p className="line-clamp-2 text-sm text-muted-foreground">{system.description}</p>
+              )}
+            </div>
+            {admin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Actions for ${system.name}`}
+                    title="Actions"
+                  >
+                    <Ellipsis aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onEdit}>
+                    <Pencil aria-hidden />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/app/library?folder=${encodeURIComponent(system.path)}`}>
+                      <FolderOpen aria-hidden />
+                      Its files
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={onRemove}>
+                    <Trash2 aria-hidden />
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {facts && (facts.primary || facts.font || facts.dark) && (
+            <ul aria-label="At a glance" className="flex flex-wrap gap-1.5">
+              {facts.primary && (
+                <Fact>
+                  <span
+                    aria-hidden
+                    className="size-2 rounded-full"
+                    style={{ background: facts.primary }}
+                  />
+                  <span title={facts.primary}>Primary</span>
+                </Fact>
+              )}
+              {facts.font && <Fact>{facts.font}</Fact>}
+              {facts.dark && <Fact>Light + dark</Fact>}
+            </ul>
+          )}
+
+          <p className="mt-auto flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+            {applies.length === 0 && !system.isDefault ? (
+              <span>Used when a message names it</span>
             ) : (
-              <Markdown text={readmeText} className="rounded-md border p-4 text-sm" />
-            ))}
+              <>
+                {applies.length > 0 && 'For'}
+                {applies.map((a) => (
+                  <Badge key={a.key} variant="outline" className={a.mono ? 'font-mono' : undefined}>
+                    {a.label}
+                  </Badge>
+                ))}
+                {system.isDefault &&
+                  (applies.length > 0 ? 'and everything else' : 'For everything')}
+              </>
+            )}
+            <span aria-hidden>·</span>
+            <Link
+              href={`/app/library?folder=${encodeURIComponent(system.path)}`}
+              className="font-mono hover:underline"
+            >
+              {system.path}/
+            </Link>
+            {readme ? (
+              <>
+                <span aria-hidden>·</span>
+                <button
+                  type="button"
+                  onClick={() => setOpen(!open)}
+                  aria-expanded={open}
+                  className="font-semibold text-foreground hover:underline"
+                >
+                  {open ? 'Hide the rules' : 'Show the rules'}
+                </button>
+              </>
+            ) : (
+              <>
+                <span aria-hidden>·</span>
+                <span>No README.md yet: teammates have no rules to follow</span>
+              </>
+            )}
+          </p>
         </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Its folder has no README.md yet: teammates have no rules to follow.
-        </p>
-      )}
+      </div>
+
+      {open &&
+        readme &&
+        (readmeText === undefined ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          <Markdown text={readmeText} className="rounded-md border p-4 text-sm" />
+        ))}
     </Card>
+  )
+}
+
+function Fact({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex h-6 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-xs font-medium text-secondary-foreground">
+      {children}
+    </li>
   )
 }
 
