@@ -8,6 +8,7 @@ import {
   createTask,
   deleteTask,
   getTask,
+  listArchivedTasks,
   listTasks,
   reassignTask,
   reopenTask,
@@ -20,9 +21,13 @@ import {
 export const tasks = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
-  /** The board; ?archived=true for the done tasks put away instead. */
+  /** The board; ?archived=true for the done tasks put away instead, a page at a time. */
   .get('/', async (c) =>
-    c.json(await listTasks(c.var.db, { archived: c.req.query('archived') === 'true' })),
+    c.json(
+      c.req.query('archived') === 'true'
+        ? await listArchivedTasks(c.var.db, c.req.query('before'))
+        : await listTasks(c.var.db),
+    ),
   )
 
   .get('/:id', async (c) => c.json(await getTask(c.var.db, c.req.param('id'))))
