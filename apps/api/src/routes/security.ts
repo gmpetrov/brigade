@@ -5,6 +5,7 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { summarize } from '../credentials.js'
+import { folderRules } from '../library-folders.js'
 import { requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Audit actions the Activity feed shows, by category. */
@@ -12,7 +13,7 @@ const CATEGORIES = {
   credentials: ['credential.'],
   connections: ['connection.', 'grant.set'],
   approvals: ['approval.', 'cap.'],
-  teammates: ['teammate.'],
+  teammates: ['teammate.', 'library.folder_access_changed'],
   members: ['member.', 'invitation.', 'takeover.'],
 } as const
 type Category = keyof typeof CATEGORIES
@@ -95,6 +96,7 @@ export const security = new Hono<AppEnv>()
         creatorActive: memberIds.has(cr.createdByMemberId),
       })),
       members: Object.fromEntries(members.map((m) => [m.id, m.user.name])),
+      libraryFolders: await folderRules(db),
     })
   })
 

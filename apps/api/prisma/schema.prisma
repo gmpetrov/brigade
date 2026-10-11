@@ -130,37 +130,39 @@ model Invitation {
 // ---------------------------------------------------------------------------
 
 model Workspace {
-  id                 String              @id @default(cuid())
-  organizationId     String
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name               String
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  computers          Computer[]
-  runners            Runner[]
-  teammates          Teammate[]
-  sessions           Session[]
-  sessionEvents      SessionEvent[]
-  threadSeats        ThreadTeammate[]
-  accounts           Account[]
-  comments           Comment[]
-  connections        Connection[]
-  vaultSecrets       VaultSecret[]
-  credentials        Credential[]
-  credentialGrants   CredentialGrant[]
-  grants             Grant[]
-  connectionCalls    ConnectionCall[]
-  triggers           Trigger[]
-  subscriptions      Subscription[]
-  tickets            Ticket[]
-  documents          Document[]
-  attachments        Attachment[]
-  threadAttachments  ThreadAttachment[]
-  pullRequests       PullRequest[]
-  pullRequestReviews PullRequestReview[]
-  tasks              Task[]
-  schedules          Schedule[]
-  auditEntries       AuditEntry[]
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  computers           Computer[]
+  runners             Runner[]
+  teammates           Teammate[]
+  sessions            Session[]
+  sessionEvents       SessionEvent[]
+  threadSeats         ThreadTeammate[]
+  accounts            Account[]
+  comments            Comment[]
+  connections         Connection[]
+  vaultSecrets        VaultSecret[]
+  credentials         Credential[]
+  credentialGrants    CredentialGrant[]
+  grants              Grant[]
+  connectionCalls     ConnectionCall[]
+  triggers            Trigger[]
+  subscriptions       Subscription[]
+  tickets             Ticket[]
+  documents           Document[]
+  libraryFolders      LibraryFolder[]
+  libraryFolderGrants LibraryFolderGrant[]
+  attachments         Attachment[]
+  threadAttachments   ThreadAttachment[]
+  pullRequests        PullRequest[]
+  pullRequestReviews  PullRequestReview[]
+  tasks               Task[]
+  schedules           Schedule[]
+  auditEntries        AuditEntry[]
 
   @@index([organizationId])
 }
@@ -230,23 +232,23 @@ enum Harness {
 
 /// An AI teammate: a saved identity, not a running process.
 model Teammate {
-  id                    String              @id @default(cuid())
+  id                    String               @id @default(cuid())
   organizationId        String
   workspaceId           String
-  workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace             Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                  String
-  instructions          String              @default("")
-  harness               Harness             @default(claude_code)
+  instructions          String               @default("")
+  harness               Harness              @default(claude_code)
   model                 String?
   /// { threadsPerDay, computerHoursPerDay, writeCallsPerConnectionPerDay }
-  caps                  Json                @default("{}")
+  caps                  Json                 @default("{}")
   /// Per kind of action: allow, ask or deny.
-  permissionPolicy      Json                @default("{}")
+  permissionPolicy      Json                 @default("{}")
   /// Its grant on the workspace library: read and search it, or also save to it.
-  libraryAccess         LibraryAccess       @default(read)
+  libraryAccess         LibraryAccess        @default(read)
   archivedAt            DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   sessions              Session[]
   threadSeats           ThreadTeammate[]
   grants                Grant[]
@@ -255,12 +257,13 @@ model Teammate {
   triggers              Trigger[]
   connectionCalls       ConnectionCall[]
   documents             Document[]
-  pullRequestsAuthored  PullRequest[]       @relation("PullRequestAuthor")
-  pullRequestsReviewing PullRequest[]       @relation("PullRequestReviewer")
+  libraryFolderGrants   LibraryFolderGrant[]
+  pullRequestsAuthored  PullRequest[]        @relation("PullRequestAuthor")
+  pullRequestsReviewing PullRequest[]        @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
   tasks                 Task[]
   schedules             Schedule[]
-  schedulesCreated      Schedule[]          @relation("ScheduleCreatedByTeammate")
+  schedulesCreated      Schedule[]           @relation("ScheduleCreatedByTeammate")
 
   @@index([workspaceId])
 }
@@ -917,34 +920,109 @@ enum DocumentKind {
 /// A library file (its bytes in the bucket, its text here), a memory file or a
 /// thread summary (text only). `search` is generated from path and text.
 model Document {
-  id             String                   @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  kind           DocumentKind             @default(library)
+  id                 String                   @id @default(cuid())
+  organizationId     String
+  workspaceId        String
+  workspace          Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind               DocumentKind             @default(library)
   /// Library: the file's path. Memory: workspace.md, teammates/<id>.md or threads/<id>.md.
-  path           String
+  path               String
   /// Set for a teammate's memory and a thread summary.
-  teammateId     String?
-  teammate       Teammate?                @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  teammateId         String?
+  teammate           Teammate?                @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   /// Set for a thread summary.
-  sessionId      String?
-  session        Session?                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  contentType    String
-  size           Int
+  sessionId          String?
+  session            Session?                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  contentType        String
+  size               Int
   /// SHA-256 of the stored bytes (library) or of the text (memory).
-  sha256         String                   @default("")
-  text           String                   @default("")
+  sha256             String                   @default("")
+  text               String                   @default("")
   /// Whether the text could be read for search.
-  indexed        Boolean                  @default(false)
+  indexed            Boolean                  @default(false)
   /// Generated by PostgreSQL (see the library_memory migration); never written.
-  search         Unsupported("tsvector")? @default(dbgenerated("(setweight(to_tsvector('simple'::regconfig, translate(path, '/._-'::text, '    '::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, text), 'B'::\"char\"))"))
-  updatedAt      DateTime                 @updatedAt
-  createdAt      DateTime                 @default(now())
-  assets         DocumentAsset[]
+  search             Unsupported("tsvector")? @default(dbgenerated("(setweight(to_tsvector('simple'::regconfig, translate(path, '/._-'::text, '    '::text)), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, text), 'B'::\"char\"))"))
+  /// Who added a library file, and who changed it last: a member or a teammate.
+  createdByType      ActorType?
+  createdById        String?
+  updatedByType      ActorType?
+  updatedById        String?
+  /// The thread a teammate last changed it from.
+  updatedInSessionId String?
+  /// Set while a library file is in the trash. Its path is then ".trash/<id>/<path it had>",
+  /// which no live file can have; the hourly sweep deletes it 30 days on.
+  deletedAt          DateTime?
+  deletedByType      ActorType?
+  deletedById        String?
+  updatedAt          DateTime                 @updatedAt
+  createdAt          DateTime                 @default(now())
+  assets             DocumentAsset[]
+  versions           DocumentVersion[]
 
   @@unique([workspaceId, kind, path])
   @@index([search], type: Gin)
+  @@index([workspaceId, deletedAt])
+}
+
+/// A saved state of a library file. Its bytes are in the bucket under
+/// <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
+/// Saves by the same author from the same thread within minutes update one version.
+model DocumentVersion {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  documentId     String
+  document       Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  /// Where the file was when saved.
+  path           String
+  contentType    String
+  size           Int
+  sha256         String
+  actorType      ActorType
+  actorId        String
+  sessionId      String?
+  /// Set when this version brought back an older one.
+  restoredFromId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([documentId, createdAt])
+}
+
+/// A library folder someone made, or one with access rules. Folders also exist
+/// implicitly, as the paths of the files in them.
+model LibraryFolder {
+  id             String               @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// "hr" or "hr/payroll": no leading or trailing slash.
+  path           String
+  /// Teammates reach it only through a grant on it or on a folder inside it.
+  restricted     Boolean              @default(false)
+  createdByType  ActorType?
+  createdById    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  grants         LibraryFolderGrant[]
+
+  @@unique([workspaceId, path])
+}
+
+/// A teammate's access to a folder and everything in it, over its default library access.
+model LibraryFolderGrant {
+  id             String        @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folderId       String
+  folder         LibraryFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  teammateId     String
+  teammate       Teammate      @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  access         LibraryAccess
+
+  @@unique([folderId, teammateId])
+  @@index([teammateId])
 }
 
 /// A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes

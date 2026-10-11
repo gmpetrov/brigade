@@ -34,6 +34,13 @@ export function documentKey(scope: Scope, documentId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/library/${documentId}`
 }
 
+/** The bucket key of a saved version of a library file. */
+export function versionKey(scope: Scope, versionId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, versionId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/library-versions/${versionId}`
+}
+
 /** The bucket key of an attachment's bytes: a file given to a thread. */
 export function attachmentKey(scope: Scope, attachmentId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, attachmentId])

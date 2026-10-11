@@ -109,6 +109,10 @@ function describe(item: ActivityItem, names: ActivityPage['names']) {
       return `${actor} changed ${target('a teammate')}${
         Array.isArray(d.fields) && d.fields.length ? ` (${d.fields.join(', ')})` : ''
       }`
+    case 'library.folder_access_changed':
+      return `${actor} set teammate access to the library folder ${String(d.path)}/${
+        d.restricted ? ' (restricted)' : ''
+      }`
     default:
       return `${actor}: ${item.action.replace(/[._]/g, ' ')}`
   }

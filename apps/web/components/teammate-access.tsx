@@ -1,4 +1,10 @@
 'use client'
+import {
+  folderAccessFor,
+  type FolderAccess,
+  type FolderRule,
+  type LibraryAccess,
+} from '@brigade/contracts'
 import { KeyRound, Library } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -18,6 +24,7 @@ import {
   api,
   isAdmin,
   useApi,
+  type LibraryFolder,
   type ConnectionsResponse,
   type CredentialGrantLevel,
   type CredentialWithGrants,
@@ -49,6 +56,7 @@ export function TeammateAccess({
   const { me } = useDashboard()
   const hooks = useApi<Trigger[]>('/triggers')
   const catalog = useApi<TriggerCatalog>('/triggers/catalog')
+  const folders = useApi<LibraryFolder[]>('/library/folders')
   const [error, setError] = useState<string>()
   const policy = (teammate.permissionPolicy?.connectorWrites ?? 'allow') as 'allow' | 'ask' | 'deny'
 
@@ -136,6 +144,10 @@ export function TeammateAccess({
               <SelectItem value="read_write">Read and write</SelectItem>
             </SelectContent>
           </Select>
+          <FolderExceptions
+            teammate={{ id: teammate.id, library: teammate.libraryAccess ?? 'read' }}
+            folders={folders.data}
+          />
         </div>
         {list.length === 0 ? (
           <p className="border-t px-6 py-3 text-sm text-muted-foreground">
@@ -289,5 +301,57 @@ export function TeammateAccess({
         {error && <p className="border-t px-6 py-3 text-sm text-destructive-text">{error}</p>}
       </CardContent>
     </Card>
+  )
+}
+
+const FOLDER_ACCESS: Record<FolderAccess, string> = {
+  none: 'no access',
+  read: 'read only',
+  read_write: 'read and write',
+}
+
+/** The library folders where this teammate's access differs from the folder above. */
+function FolderExceptions({
+  teammate,
+  folders,
+}: {
+  teammate: { id: string; library: LibraryAccess }
+  folders: LibraryFolder[] | undefined
+}) {
+  const rules: FolderRule[] = (folders ?? [])
+    .filter((f) => f.restricted || f.grants.length > 0)
+    .map((f) => ({
+      path: f.path,
+      restricted: f.restricted,
+      grants: Object.fromEntries(f.grants.map((g) => [g.teammateId, g.access])),
+    }))
+  const differ = rules
+    .map((r) => {
+      const access = folderAccessFor(r.path, teammate, rules)
+      const parent = r.path.includes('/')
+        ? folderAccessFor(r.path.slice(0, r.path.lastIndexOf('/')), teammate, rules)
+        : teammate.library
+      return { path: r.path, access, differs: access !== parent }
+    })
+    .filter((r) => r.differs)
+    .sort((a, b) => a.path.localeCompare(b.path))
+  if (differ.length === 0) return null
+  return (
+    <p className="basis-full pl-11 text-xs text-muted-foreground">
+      Except{' '}
+      {differ.map((r, i) => (
+        <span key={r.path}>
+          {i > 0 && ', '}
+          <Link
+            href={`/app/library?folder=${encodeURIComponent(r.path)}`}
+            className="font-mono text-foreground hover:underline"
+          >
+            {r.path}/
+          </Link>{' '}
+          ({FOLDER_ACCESS[r.access]})
+        </span>
+      ))}
+      .
+    </p>
   )
 }

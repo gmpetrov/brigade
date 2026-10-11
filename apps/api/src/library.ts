@@ -6,6 +6,8 @@ import { createHash } from 'node:crypto'
 import { extname } from 'node:path'
 import {
   LIBRARY_FILE_MAX,
+  LIBRARY_VIEWS_PROTOCOL,
+  libraryAccessFor,
   MEMORY_MAX,
   type LibraryFile,
   type LibraryManifest,
@@ -13,12 +15,14 @@ import {
   type SearchHit,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { sweepAssets } from './assets.js'
 import { audit, type Actor } from './audit.js'
-import { deleteObject, documentKey, getObject, putObject } from './bucket.js'
+import { documentKey, getObject, putObject } from './bucket.js'
 import { notifyCollab } from './collab.js'
-import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
+import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
+import { folderRules, teammateLibraryAccess } from './library-folders.js'
+import { actorNames, ensureFirstVersion, recordVersion } from './library-history.js'
+import { DOCX, officeText, PPTX, XLSX } from './previews.js'
 
 /** Text kept for search per file; PostgreSQL's tsvector has a 1 MB limit. */
 const INDEX_CHARS = 400_000
@@ -85,7 +89,7 @@ export const isText = (contentType: string) =>
   contentType.startsWith('text/') ||
   ['application/json', 'application/yaml', 'application/xml'].includes(contentType)
 
-/** The text to index, or '' when the file has none Brigade can read (images, office files). */
+/** The text to index, or '' when the file has none Brigade can read (images, audio, video). */
 export async function extractText(bytes: Uint8Array, contentType: string) {
   // PostgreSQL text cannot hold NUL, which PDFs (and some text files) put in their text.
   const storable = (text: string) => text.replace(/\u0000/g, '').slice(0, INDEX_CHARS)
@@ -98,6 +102,8 @@ export async function extractText(bytes: Uint8Array, contentType: string) {
       const { text } = await pdfText(pdf, { mergePages: true })
       return storable(text)
     }
+    if ([DOCX, XLSX, PPTX].includes(contentType))
+      return storable(await officeText(bytes, contentType))
   } catch {
     // Not valid UTF-8, or a damaged PDF: kept, just not searchable.
   }
@@ -113,17 +119,42 @@ type DocumentRow = {
   size: number
   indexed: boolean
   updatedAt: Date
+  createdAt: Date
+  createdByType: string | null
+  createdById: string | null
+  updatedByType: string | null
+  updatedById: string | null
+  updatedInSessionId: string | null
 }
 
-export const toLibraryFile = (row: DocumentRow): LibraryFile => ({
-  id: row.id,
-  path: row.path,
-  contentType: row.contentType,
-  size: row.size,
-  indexed: row.indexed,
-  editable: isText(row.contentType) && row.size <= EDITABLE_BYTES,
-  updatedAt: row.updatedAt.toISOString(),
-})
+/** Library files as the dashboard lists them, with who made and changed each. */
+export async function libraryFiles(db: ScopedDb, rows: DocumentRow[]): Promise<LibraryFile[]> {
+  const who = await actorNames(
+    db,
+    rows.flatMap((r) => [
+      { type: r.createdByType ?? '', id: r.createdById ?? '' },
+      { type: r.updatedByType ?? '', id: r.updatedById ?? '' },
+    ]),
+  )
+  return rows.map((row) => ({
+    id: row.id,
+    path: row.path,
+    contentType: row.contentType,
+    size: row.size,
+    indexed: row.indexed,
+    editable: isEditable(row),
+    updatedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    createdBy: who(row.createdByType, row.createdById),
+    updatedBy: who(row.updatedByType, row.updatedById, row.updatedInSessionId),
+  }))
+}
+
+export const libraryFileOf = async (db: ScopedDb, row: DocumentRow) =>
+  (await libraryFiles(db, [row]))[0]!
+
+export const isEditable = (row: { contentType: string; size: number }) =>
+  isText(row.contentType) && row.size <= EDITABLE_BYTES
 
 /** A document the dashboard edits as rich text: Markdown files and memory. */
 export const isMarkdown = (row: { kind?: string; contentType: string; size: number }) =>
@@ -135,42 +166,76 @@ export async function documentText(scope: Scope, row: { id: string; kind: string
   return new TextDecoder().decode(await readLibraryFile(scope, row.id))
 }
 
-/** Create a library file, or replace the one at that path. */
+/**
+ * Create a library file, or replace the one at that path. Every save that
+ * changes it leaves a version, credited to the actor (and its thread).
+ */
 export async function saveLibraryFile(
   db: ScopedDb,
   scope: Scope,
   actor: Actor,
   input: { path: string; bytes: Uint8Array; contentType?: string | null },
-  /** Recorded with the change, e.g. the thread a teammate saved it from. */
+  /** Recorded with the change, e.g. the thread a teammate saved it from (`sessionId`). */
   context: Record<string, string> = {},
-  /** Set when the collab server saves what people edited: its room already has it. */
-  options: { fromCollab?: boolean } = {},
+  options: {
+    /** Set when the collab server saves what people edited: its room already has it. */
+    fromCollab?: boolean
+    /** Set when the save brings back an older version. */
+    restoredFromId?: string
+  } = {},
 ) {
   if (input.bytes.byteLength > LIBRARY_FILE_MAX)
     throw new HTTPException(413, { message: 'Files in the library can be up to 25 MB' })
   const contentType = contentTypeFor(input.path, input.contentType)
+  const hash = sha256(input.bytes)
+  const existing = await db.document.findFirst({
+    where: { kind: 'library', path: input.path, deletedAt: null },
+  })
+  // The same bytes again: nothing changed, nothing to record.
+  if (
+    existing &&
+    existing.sha256 === hash &&
+    existing.contentType === contentType &&
+    !options.restoredFromId
+  )
+    return existing
   const text = await extractText(input.bytes, contentType)
+  const sessionId = context.sessionId ?? null
   const fields = {
     contentType,
     size: input.bytes.byteLength,
-    sha256: sha256(input.bytes),
+    sha256: hash,
     text,
     indexed: text.trim().length > 0,
+    updatedByType: actor.type,
+    updatedById: actor.id,
+    updatedInSessionId: sessionId,
   }
-  const existing = await db.document.findFirst({ where: { kind: 'library', path: input.path } })
   let row
   if (existing) {
+    // A file from before versions keeps what it was as its first.
+    await ensureFirstVersion(db, scope, existing)
     await putObject(documentKey(scope, existing.id), input.bytes, contentType)
     row = await db.document.update({ where: { id: existing.id }, data: fields })
   } else {
     row = await db.document.create({
-      data: { kind: 'library', path: input.path, ...fields } as never,
+      data: {
+        kind: 'library',
+        path: input.path,
+        ...fields,
+        createdByType: actor.type,
+        createdById: actor.id,
+      } as never,
     })
     await putObject(documentKey(scope, row.id), input.bytes, contentType).catch(async (error) => {
       await db.document.delete({ where: { id: row!.id } })
       throw error
     })
   }
+  await recordVersion(db, scope, row, input.bytes, actor, {
+    sessionId,
+    ...(options.restoredFromId ? { restoredFromId: options.restoredFromId } : {}),
+  }).catch((error) => console.warn(`library: no version kept of ${row.id}: ${String(error)}`))
   await audit({
     ...scope,
     actor,
@@ -184,7 +249,7 @@ export async function saveLibraryFile(
 }
 
 export async function libraryFile(db: ScopedDb, id: string) {
-  const row = await db.document.findFirst({ where: { id, kind: 'library' } })
+  const row = await db.document.findFirst({ where: { id, kind: 'library', deletedAt: null } })
   if (!row) throw new HTTPException(404, { message: 'File not found' })
   return row
 }
@@ -219,32 +284,6 @@ export async function moveLibraryFile(
   })
   notifyLibraryChanged(scope.workspaceId)
   return moved
-}
-
-export async function deleteLibraryFile(db: ScopedDb, scope: Scope, actor: Actor, id: string) {
-  const row = await libraryFile(db, id)
-  const assets = await db.documentAsset.findMany({
-    where: { documentId: id },
-    select: { id: true },
-  })
-  await db.document.delete({ where: { id } })
-  // Its files go too, now, unless another document refers to them.
-  if (assets.length > 0)
-    void sweepAssets(assets.map((a) => a.id)).catch((error) =>
-      console.warn(`library: files of ${id} not swept: ${String(error)}`),
-    )
-  await deleteObject(documentKey(scope, id)).catch((error) =>
-    console.warn(`library: could not delete ${id} from the bucket: ${String(error)}`),
-  )
-  await audit({
-    ...scope,
-    actor,
-    action: 'library.file_deleted',
-    target: { type: 'document', id },
-    data: { path: row.path },
-  })
-  notifyLibraryChanged(scope.workspaceId)
-  notifyCollab(id, 'delete')
 }
 
 // ---------------------------------------------------------------------------
@@ -486,10 +525,21 @@ async function upsertText(
  */
 export async function search(
   scope: Scope,
-  input: { query: string; limit: number; teammateId?: string; memberId?: string },
+  input: {
+    query: string
+    limit: number
+    /** A teammate searching: its own memory only, and the folders it may read. */
+    teammate?: { id: string; libraryAccess: 'read' | 'read_write' }
+    memberId?: string
+  },
 ): Promise<SearchHit[]> {
-  const ownMemory = input.teammateId
-    ? Prisma.sql`AND (d.kind <> 'teammate_memory' OR d."teammateId" = ${input.teammateId})`
+  const access = input.teammate
+    ? await teammateLibraryAccess(scoped(scope), input.teammate)
+    : undefined
+  // Hits from folders the teammate cannot see are dropped after ranking: ask for more.
+  const limit = access?.rules.length ? input.limit + 40 : input.limit
+  const ownMemory = input.teammate
+    ? Prisma.sql`AND (d.kind <> 'teammate_memory' OR d."teammateId" = ${input.teammate.id})`
     : Prisma.empty
   const summaries = input.memberId
     ? Prisma.sql`AND (d.kind <> 'thread_summary' OR s.private = false OR s."startedByMemberId" = ${input.memberId})`
@@ -518,32 +568,43 @@ export async function search(
     WHERE d."organizationId" = ${scope.organizationId}
       AND d."workspaceId" = ${scope.workspaceId}
       AND d.search @@ q.query
+      AND d."deletedAt" IS NULL
       ${ownMemory}
       ${summaries}
     ORDER BY ts_rank(d.search, q.query) DESC, d."updatedAt" DESC
-    LIMIT ${input.limit}`
-  return rows.map((r) => ({
-    kind: r.kind,
-    path: r.path,
-    documentId: r.id,
-    sessionId: r.sessionId,
-    title:
-      r.kind === 'library'
-        ? r.path
-        : r.kind === 'workspace_memory'
-          ? 'Workspace memory'
-          : r.kind === 'teammate_memory'
-            ? `${r.teammateName ?? 'A teammate'}'s memory`
-            : `Thread: ${r.title ?? r.sessionId}`,
-    snippet: r.snippet,
-  }))
+    LIMIT ${limit}`
+  return rows
+    .filter((r) => r.kind !== 'library' || !access || access.of(r.path) !== 'none')
+    .slice(0, input.limit)
+    .map((r) => ({
+      kind: r.kind,
+      path: r.path,
+      documentId: r.id,
+      sessionId: r.sessionId,
+      title:
+        r.kind === 'library'
+          ? r.path
+          : r.kind === 'workspace_memory'
+            ? 'Workspace memory'
+            : r.kind === 'teammate_memory'
+              ? `${r.teammateName ?? 'A teammate'}'s memory`
+              : `Thread: ${r.title ?? r.sessionId}`,
+      snippet: r.snippet,
+    }))
 }
 
-/** What a computer mirrors: every library file, and the memory each teammate loads. */
-export async function manifest(db: ScopedDb): Promise<LibraryManifest> {
-  const [files, memory] = await Promise.all([
+/**
+ * What a computer mirrors: the library files, who may read which, and the
+ * memory each teammate loads. A runner too old to keep a mirror per teammate
+ * gets only the files every teammate may read.
+ */
+export async function manifest(
+  db: ScopedDb,
+  runner: { protocolVersion: number | null },
+): Promise<LibraryManifest> {
+  const [files, memory, teammates, folders] = await Promise.all([
     db.document.findMany({
-      where: { kind: 'library' },
+      where: { kind: 'library', deletedAt: null },
       select: { id: true, path: true, sha256: true, size: true },
       orderBy: { path: 'asc' },
     }),
@@ -551,9 +612,23 @@ export async function manifest(db: ScopedDb): Promise<LibraryManifest> {
       where: { kind: { in: ['workspace_memory', 'teammate_memory'] } },
       select: { kind: true, teammateId: true, text: true },
     }),
+    db.teammate.findMany({
+      where: { archivedAt: null },
+      select: { id: true, libraryAccess: true },
+    }),
+    folderRules(db),
   ])
+  const access = {
+    teammates: teammates.map((t) => ({ id: t.id, library: t.libraryAccess })),
+    folders,
+  }
+  const shared = (path: string) =>
+    access.teammates.every((t) => libraryAccessFor(path, t, folders) !== 'none')
   return {
-    files,
+    files:
+      (runner.protocolVersion ?? 0) >= LIBRARY_VIEWS_PROTOCOL
+        ? files
+        : files.filter((f) => shared(f.path)),
     memory: {
       workspace: memory.find((m) => m.kind === 'workspace_memory')?.text ?? '',
       teammates: Object.fromEntries(
@@ -562,5 +637,6 @@ export async function manifest(db: ScopedDb): Promise<LibraryManifest> {
           .map((m) => [m.teammateId!, m.text]),
       ),
     },
+    access,
   }
 }

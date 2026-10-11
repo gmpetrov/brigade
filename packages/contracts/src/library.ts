@@ -40,6 +40,17 @@ export const DocumentKind = z.enum([
 ])
 export type DocumentKind = z.infer<typeof DocumentKind>
 
+/** Who did something to a library file: a person, a teammate (from a thread), or Brigade. */
+export const LibraryActor = z.object({
+  type: z.enum(['member', 'teammate', 'runner', 'system']),
+  id: z.string(),
+  /** The person's or teammate's name; "Brigade" for the system. */
+  name: z.string(),
+  /** The thread a teammate did it from. */
+  sessionId: z.string().nullable().default(null),
+})
+export type LibraryActor = z.infer<typeof LibraryActor>
+
 export const LibraryFile = z.object({
   id: z.string(),
   path: z.string(),
@@ -50,8 +61,164 @@ export const LibraryFile = z.object({
   /** Whether it is plain text the dashboard can edit. */
   editable: z.boolean(),
   updatedAt: z.string(),
+  createdAt: z.string(),
+  /** Unknown for files from before this was kept. */
+  createdBy: LibraryActor.nullable(),
+  updatedBy: LibraryActor.nullable(),
 })
 export type LibraryFile = z.infer<typeof LibraryFile>
+
+/** Days a file stays in the trash before it is deleted for good. */
+export const TRASH_DAYS = 30
+
+export const TrashedFile = z.object({
+  id: z.string(),
+  /** Where it was, and where a restore puts it back. */
+  path: z.string(),
+  contentType: z.string(),
+  size: z.number().int(),
+  deletedAt: z.string(),
+  deletedBy: LibraryActor.nullable(),
+  /** When it is deleted for good. */
+  purgeAt: z.string(),
+})
+export type TrashedFile = z.infer<typeof TrashedFile>
+
+export const LibraryVersion = z.object({
+  id: z.string(),
+  path: z.string(),
+  contentType: z.string(),
+  size: z.number().int(),
+  sha256: z.string(),
+  by: LibraryActor,
+  /** Set when this version brought back an older one. */
+  restoredFromId: z.string().nullable(),
+  createdAt: z.string(),
+  /** Later than createdAt when saves were folded into it. */
+  updatedAt: z.string(),
+  /** The file as it is now. */
+  current: z.boolean(),
+})
+export type LibraryVersion = z.infer<typeof LibraryVersion>
+
+/** Versions kept per file; older ones are deleted. */
+export const VERSIONS_KEPT = 50
+
+/** What a teammate may do in a folder: nothing (it does not see it), read, or also save. */
+export const FolderAccess = z.enum(['none', 'read', 'read_write'])
+export type FolderAccess = z.infer<typeof FolderAccess>
+
+export const LibraryFolder = z.object({
+  path: z.string(),
+  /** Made by someone, or holding access rules; other folders exist through their files. */
+  explicit: z.boolean(),
+  /** Only teammates granted access here, or in a folder inside, reach it. */
+  restricted: z.boolean(),
+  grants: z.array(z.object({ teammateId: z.string(), access: LibraryAccess })),
+})
+export type LibraryFolder = z.infer<typeof LibraryFolder>
+
+export const LibraryTree = z.object({
+  files: z.array(LibraryFile),
+  folders: z.array(LibraryFolder),
+})
+export type LibraryTree = z.infer<typeof LibraryTree>
+
+export const CreateLibraryFolder = z.object({ path: LibraryPath })
+export const MoveLibraryFolder = z.object({ path: LibraryPath, to: LibraryPath })
+export const SetFolderAccess = z.object({
+  path: LibraryPath,
+  restricted: z.boolean(),
+  grants: z
+    .array(z.object({ teammateId: z.string(), access: LibraryAccess }))
+    .max(200)
+    .default([]),
+})
+export type SetFolderAccess = z.infer<typeof SetFolderAccess>
+
+/** A folder's access rules, as the API, the runner and the dashboard read them. */
+export type FolderRule = {
+  path: string
+  restricted: boolean
+  /** Teammate id to its access there. */
+  grants: Record<string, LibraryAccess>
+}
+
+/** Whether `path` is `folder` itself or inside it. */
+export const inFolder = (path: string, folder: string) =>
+  path === folder || path.startsWith(`${folder}/`)
+
+/**
+ * What a teammate may do with a library file: the grant of the deepest folder
+ * holding it that has one for this teammate; nothing if a restricted folder
+ * comes first; at the top, its default library access.
+ */
+export function libraryAccessFor(
+  path: string,
+  teammate: { id: string; library: LibraryAccess },
+  folders: FolderRule[],
+): FolderAccess {
+  const holding = folders
+    .filter((f) => path !== f.path && inFolder(path, f.path))
+    .sort((a, b) => b.path.length - a.path.length)
+  for (const folder of holding) {
+    const grant = folder.grants[teammate.id]
+    if (grant) return grant
+    if (folder.restricted) return 'none'
+  }
+  return teammate.library
+}
+
+/** The same for what is directly in a folder. */
+export const folderAccessFor = (
+  folder: string,
+  teammate: { id: string; library: LibraryAccess },
+  folders: FolderRule[],
+) => libraryAccessFor(`${folder}/*`, teammate, folders)
+
+/**
+ * The folders where a teammate's access differs from the folder holding them
+ * (its default at the top): read-only, or open to saving. Folders it cannot
+ * see are left out, names included.
+ */
+export function folderExceptions(
+  teammate: { id: string; library: LibraryAccess },
+  rules: FolderRule[],
+): { path: string; access: 'read' | 'read_write' }[] {
+  const out: { path: string; access: 'read' | 'read_write' }[] = []
+  for (const rule of [...rules].sort((a, b) => a.path.localeCompare(b.path))) {
+    const access = folderAccessFor(rule.path, teammate, rules)
+    if (access === 'none') continue
+    const parent = rule.path.includes('/')
+      ? folderAccessFor(rule.path.slice(0, rule.path.lastIndexOf('/')), teammate, rules)
+      : teammate.library
+    if (access !== parent) out.push({ path: rule.path, access })
+  }
+  return out
+}
+
+/** A preview of a file the browser cannot show as itself, made by the API. */
+export const LibraryPreview = z.discriminatedUnion('kind', [
+  /** A Word document as HTML, shown in a sandboxed frame that runs no script. */
+  z.object({ kind: z.literal('html'), html: z.string() }),
+  z.object({
+    kind: z.literal('sheets'),
+    sheets: z.array(
+      z.object({
+        name: z.string(),
+        rows: z.array(z.array(z.string())),
+        /** Rows or columns were left out. */
+        truncated: z.boolean(),
+      }),
+    ),
+  }),
+  z.object({
+    kind: z.literal('slides'),
+    slides: z.array(z.object({ title: z.string(), lines: z.array(z.string()) })),
+  }),
+  z.object({ kind: z.literal('none'), reason: z.string() }),
+])
+export type LibraryPreview = z.infer<typeof LibraryPreview>
 
 export const MoveLibraryFile = z.object({ path: LibraryPath })
 export const WriteLibraryText = z.object({ text: z.string().max(5_000_000) })
@@ -110,6 +277,22 @@ export const LibraryManifest = z.object({
     workspace: z.string(),
     teammates: z.record(z.string(), z.string()),
   }),
+  /**
+   * Who may read what: each teammate's default access and the folders' rules.
+   * The runner gives each teammate a mirror of only what it may read.
+   */
+  access: z
+    .object({
+      teammates: z.array(z.object({ id: z.string(), library: LibraryAccess })),
+      folders: z.array(
+        z.object({
+          path: z.string(),
+          restricted: z.boolean(),
+          grants: z.record(z.string(), LibraryAccess),
+        }),
+      ),
+    })
+    .optional(),
 })
 export type LibraryManifest = z.infer<typeof LibraryManifest>
 

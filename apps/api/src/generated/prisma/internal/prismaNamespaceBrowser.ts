@@ -81,6 +81,9 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  DocumentVersion: 'DocumentVersion',
+  LibraryFolder: 'LibraryFolder',
+  LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
@@ -607,11 +610,66 @@ export const DocumentScalarFieldEnum = {
   sha256: 'sha256',
   text: 'text',
   indexed: 'indexed',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  updatedByType: 'updatedByType',
+  updatedById: 'updatedById',
+  updatedInSessionId: 'updatedInSessionId',
+  deletedAt: 'deletedAt',
+  deletedByType: 'deletedByType',
+  deletedById: 'deletedById',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const DocumentVersionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  path: 'path',
+  contentType: 'contentType',
+  size: 'size',
+  sha256: 'sha256',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  sessionId: 'sessionId',
+  restoredFromId: 'restoredFromId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DocumentVersionScalarFieldEnum = (typeof DocumentVersionScalarFieldEnum)[keyof typeof DocumentVersionScalarFieldEnum]
+
+
+export const LibraryFolderScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  path: 'path',
+  restricted: 'restricted',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LibraryFolderScalarFieldEnum = (typeof LibraryFolderScalarFieldEnum)[keyof typeof LibraryFolderScalarFieldEnum]
+
+
+export const LibraryFolderGrantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  folderId: 'folderId',
+  teammateId: 'teammateId',
+  access: 'access'
+} as const
+
+export type LibraryFolderGrantScalarFieldEnum = (typeof LibraryFolderGrantScalarFieldEnum)[keyof typeof LibraryFolderGrantScalarFieldEnum]
 
 
 export const DocumentAssetScalarFieldEnum = {

@@ -12,7 +12,9 @@ const SHA = 'x-collab-sha'
 
 async function document(id: string) {
   const row = await prisma.document.findUnique({ where: { id } })
-  if (!row || !isMarkdown(row)) throw new HTTPException(404, { message: 'Document not found' })
+  // A file in the trash is not edited; its room was closed when it went there.
+  if (!row || row.deletedAt || !isMarkdown(row))
+    throw new HTTPException(404, { message: 'Document not found' })
   const scope = { organizationId: row.organizationId, workspaceId: row.workspaceId }
   return { row, scope, db: scoped(scope) }
 }

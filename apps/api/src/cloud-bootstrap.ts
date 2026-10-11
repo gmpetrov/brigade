@@ -41,6 +41,11 @@ case "\${1:-}" in
       chown -h "$2:$2" "$D/$F"
     fi
     ;;
+  library-view) # <user>: the teammate's own library mirror, which only it (and the runner) reads
+    user_ok "$2"
+    id "$2" >/dev/null 2>&1 || fail "no such user"
+    install -d -o brigade -g "$2" -m 2750 "/var/lib/brigade/library/$2"
+    ;;
   browser) # <user> <port> <title> [url]: the teammate's Chrome on the desktop, its own profile
     user_ok "$2"
     echo "$3" | grep -Eq '^[0-9]{4,5}$' || fail "bad port"
@@ -107,8 +112,10 @@ getent group brigade-teammates >/dev/null || sudo groupadd brigade-teammates
 sudo tee /usr/local/sbin/brigade-teammate >/dev/null <<'HELPER'
 ${TEAMMATE_HELPER}HELPER
 sudo chmod 755 /usr/local/sbin/brigade-teammate
-# The workspace library, mirrored by the runner and read by teammate users.
-sudo install -d -o brigade -g brigade-teammates -m 2750 /var/lib/brigade/library
+# The workspace library, mirrored by the runner: one folder per teammate user, made by the
+# helper, holding only what that teammate may read. Teammates pass through, never list it.
+sudo install -d -o brigade -g brigade-teammates -m 2710 /var/lib/brigade/library
+sudo chmod 2710 /var/lib/brigade/library
 `
 
 /** Identifies the current setup; the runner reports the one last applied. */

@@ -202,6 +202,24 @@ export type Ticket = Prisma.TicketModel
  */
 export type Document = Prisma.DocumentModel
 /**
+ * Model DocumentVersion
+ * A saved state of a library file. Its bytes are in the bucket under
+ * <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
+ * Saves by the same author from the same thread within minutes update one version.
+ */
+export type DocumentVersion = Prisma.DocumentVersionModel
+/**
+ * Model LibraryFolder
+ * A library folder someone made, or one with access rules. Folders also exist
+ * implicitly, as the paths of the files in them.
+ */
+export type LibraryFolder = Prisma.LibraryFolderModel
+/**
+ * Model LibraryFolderGrant
+ * A teammate's access to a folder and everything in it, over its default library access.
+ */
+export type LibraryFolderGrant = Prisma.LibraryFolderGrantModel
+/**
  * Model DocumentAsset
  * A file put in a document from the editor: an image, a video, a recording, a PDF. Its bytes
  * are in the bucket under <organization>/<workspace>/assets/<id>; the document refers to it as

@@ -1,10 +1,11 @@
-import type { ThreadSpec } from '@brigade/contracts'
+import { folderExceptions, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { threadAttachments } from './attachments.js'
 import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { gitAccess } from './git.js'
+import { folderRules } from './library-folders.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
 
 /**
@@ -127,6 +128,10 @@ export async function specFor(
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
     library: teammate.libraryAccess,
+    libraryFolders: folderExceptions(
+      { id: teammate.id, library: teammate.libraryAccess },
+      await folderRules(db),
+    ),
     private: thread.private,
     attachments: await threadAttachments(db, thread.id),
     task: thread.task

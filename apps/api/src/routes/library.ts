@@ -1,27 +1,52 @@
 // The library and memory, from the dashboard. Any member may upload, read,
 // edit and correct; every change is audited and synced to the computers.
 import {
+  CreateLibraryFolder,
   CreateLibraryText,
   EditTarget,
   LibraryPath,
   MoveLibraryFile,
+  MoveLibraryFolder,
+  SetFolderAccess,
+  TRASH_DAYS,
   WriteLibraryText,
   WriteMemory,
   type EditSession,
+  type LibraryTree,
+  type LibraryVersion,
   type MemoryFile,
   type MemoryOverview,
+  type TrashedFile,
 } from '@brigade/contracts'
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { collabEnabled, COLLAB_PARTY, cursorColor, editToken } from '../collab.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
 import {
-  deleteLibraryFile,
+  createFolder,
+  explicitFolders,
+  moveFolder,
+  setFolderAccess,
+  trashFolder,
+} from '../library-folders.js'
+import {
+  actorNames,
+  ensureFirstVersion,
+  originalPath,
+  purgeLibraryFile,
+  readVersion,
+  restoreLibraryFile,
+  trashLibraryFile,
+} from '../library-history.js'
+import {
   documentText,
   ensureMemory,
+  isEditable,
   isMarkdown,
   libraryFile,
+  libraryFileOf,
+  libraryFiles,
   memoryHeader,
   moveLibraryFile,
   readLibraryFile,
@@ -29,14 +54,40 @@ import {
   saveDocumentText,
   saveLibraryFile,
   search,
-  toLibraryFile,
   writeMemory,
 } from '../library.js'
-import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import { libraryPreview } from '../previews.js'
+import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 const INLINE =
-  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp))$/
+  /^(text\/plain|text\/markdown|text\/csv|text\/tab-separated-values|application\/json|application\/pdf|image\/(png|jpeg|gif|webp|avif)|video\/(mp4|webm|quicktime)|audio\/(mpeg|mp4|wav|ogg))$/
+
+/** A file's bytes, to show or download. Never run as a page on this origin. */
+function fileResponse(
+  c: Context,
+  bytes: Uint8Array,
+  file: { path: string; contentType: string },
+  download: boolean,
+) {
+  const inline = !download && INLINE.test(file.contentType)
+  const name = file.path.split('/').pop()!
+  return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+    'content-type': file.contentType.startsWith('text/')
+      ? `${file.contentType}; charset=utf-8`
+      : file.contentType,
+    'content-disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`,
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': 'sandbox',
+    'cache-control': 'private, no-cache',
+  })
+}
+
+const folderParam = (value: string | undefined) => {
+  const path = LibraryPath.safeParse(value ?? '')
+  if (!path.success) throw new HTTPException(400, { message: 'Name a folder' })
+  return path.data
+}
 
 const memoryFile = (
   kind: MemoryFile['kind'],
@@ -52,11 +103,117 @@ export const library = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
   .get('/', async (c) => {
-    const rows = await c.var.db.document.findMany({
-      where: { kind: 'library' },
+    const { db } = c.var
+    const rows = await db.document.findMany({
+      where: { kind: 'library', deletedAt: null },
       orderBy: { path: 'asc' },
     })
-    return c.json(rows.map(toLibraryFile))
+    return c.json(await libraryFiles(db, rows))
+  })
+
+  /** The files and the folders people made or set access on, at once. */
+  .get('/tree', async (c) => {
+    const { db } = c.var
+    const [rows, folders] = await Promise.all([
+      db.document.findMany({
+        where: { kind: 'library', deletedAt: null },
+        orderBy: { path: 'asc' },
+      }),
+      explicitFolders(db),
+    ])
+    return c.json({ files: await libraryFiles(db, rows), folders } satisfies LibraryTree)
+  })
+
+  /** The folders people made or set access on. */
+  .get('/folders', async (c) => c.json(await explicitFolders(c.var.db)))
+
+  .post('/folders', async (c) => {
+    const { scope, db } = c.var
+    const { path } = await parseBody(c.req.raw, CreateLibraryFolder)
+    await createFolder(db, scope, { type: 'member', id: scope.memberId }, path)
+    return c.json({ path }, 201)
+  })
+
+  /** Rename or move a folder, with everything in it. */
+  .patch('/folders', async (c) => {
+    const { scope, db } = c.var
+    const { path, to } = await parseBody(c.req.raw, MoveLibraryFolder)
+    await moveFolder(db, scope, { type: 'member', id: scope.memberId }, path, to)
+    return c.json({ path: to })
+  })
+
+  /** Everything in the folder goes to the trash. */
+  .delete('/folders', async (c) => {
+    const { scope, db } = c.var
+    await trashFolder(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      folderParam(c.req.query('path')),
+    )
+    return c.body(null, 204)
+  })
+
+  /** Which teammates reach a folder. Admins only, like every other teammate grant. */
+  .put('/folders/access', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    const { scope, db } = c.var
+    const input = await parseBody(c.req.raw, SetFolderAccess)
+    await setFolderAccess(db, scope, { type: 'member', id: scope.memberId }, input)
+    return c.json({ ok: true })
+  })
+
+  .get('/trash', async (c) => {
+    const { db } = c.var
+    const rows = await db.document.findMany({
+      where: { kind: 'library', deletedAt: { not: null } },
+      orderBy: { deletedAt: 'desc' },
+    })
+    const who = await actorNames(
+      db,
+      rows.map((r) => ({ type: r.deletedByType ?? '', id: r.deletedById ?? '' })),
+    )
+    return c.json(
+      rows.map((r): TrashedFile => ({
+        id: r.id,
+        path: originalPath(r.path),
+        contentType: r.contentType,
+        size: r.size,
+        deletedAt: r.deletedAt!.toISOString(),
+        deletedBy: who(r.deletedByType, r.deletedById),
+        purgeAt: new Date(r.deletedAt!.getTime() + TRASH_DAYS * 24 * 60 * 60_000).toISOString(),
+      })),
+    )
+  })
+
+  .post('/trash/:id/restore', async (c) => {
+    const { scope, db } = c.var
+    const row = await restoreLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      c.req.param('id'),
+    )
+    return c.json(await libraryFileOf(db, row))
+  })
+
+  /** Delete one file for good. */
+  .delete('/trash/:id', async (c) => {
+    const { scope, db } = c.var
+    await purgeLibraryFile(db, scope, { type: 'member', id: scope.memberId }, c.req.param('id'))
+    return c.body(null, 204)
+  })
+
+  /** Empty the trash. */
+  .delete('/trash', async (c) => {
+    const { scope, db } = c.var
+    const rows = await db.document.findMany({
+      where: { kind: 'library', deletedAt: { not: null } },
+      select: { id: true },
+    })
+    for (const row of rows)
+      await purgeLibraryFile(db, scope, { type: 'member', id: scope.memberId }, row.id)
+    return c.body(null, 204)
   })
 
   /** Upload one file (multipart: `file`, and `path` to put it somewhere other than its name). */
@@ -75,7 +232,7 @@ export const library = new Hono<AppEnv>()
       { type: 'member', id: scope.memberId },
       { path: path.data, bytes: new Uint8Array(await file.arrayBuffer()), contentType: file.type },
     )
-    return c.json(toLibraryFile(row), 201)
+    return c.json(await libraryFileOf(db, row), 201)
   })
 
   /** A new text file written in the dashboard. */
@@ -90,7 +247,7 @@ export const library = new Hono<AppEnv>()
       { type: 'member', id: scope.memberId },
       { path: input.path, bytes: new TextEncoder().encode(input.text) },
     )
-    return c.json(toLibraryFile(row), 201)
+    return c.json(await libraryFileOf(db, row), 201)
   })
 
   /** Full-text search over the library, memory and thread summaries. */
@@ -216,7 +373,9 @@ export const library = new Hono<AppEnv>()
   /** Save an opened document whole, when the collab server is not configured. */
   .put('/edit/:documentId', async (c) => {
     const { db, scope } = c.var
-    const row = await db.document.findFirst({ where: { id: c.req.param('documentId') } })
+    const row = await db.document.findFirst({
+      where: { id: c.req.param('documentId'), deletedAt: null },
+    })
     if (!row || !isMarkdown(row)) throw new HTTPException(404, { message: 'Document not found' })
     const { text } = await parseBody(c.req.raw, WriteLibraryText)
     await saveDocumentText(db, scope, { type: 'member', id: scope.memberId }, row, text)
@@ -227,24 +386,92 @@ export const library = new Hono<AppEnv>()
   .get('/:id/content', async (c) => {
     const row = await libraryFile(c.var.db, c.req.param('id'))
     const bytes = await readLibraryFile(c.var.scope, row.id)
-    const inline = c.req.query('download') === undefined && INLINE.test(row.contentType)
-    const name = row.path.split('/').pop()!
-    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
-      'content-type': row.contentType.startsWith('text/')
-        ? `${row.contentType}; charset=utf-8`
-        : row.contentType,
-      'content-disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`,
-      'x-content-type-options': 'nosniff',
-      'content-security-policy': 'sandbox',
-      'cache-control': 'private, no-cache',
+    return fileResponse(c, bytes, row, c.req.query('download') !== undefined)
+  })
+
+  /** A Word document, spreadsheet or deck, readable in the dashboard. `?version=` for an older one. */
+  .get('/:id/preview', async (c) => {
+    const { db, scope } = c.var
+    const row = await libraryFile(db, c.req.param('id'))
+    const versionId = c.req.query('version')
+    const version = versionId
+      ? await db.documentVersion.findFirst({ where: { id: versionId, documentId: row.id } })
+      : null
+    if (versionId && !version) throw new HTTPException(404, { message: 'Version not found' })
+    const bytes = version
+      ? await readVersion(scope, version.id)
+      : await readLibraryFile(scope, row.id)
+    return c.json(await libraryPreview(bytes, version?.contentType ?? row.contentType))
+  })
+
+  /** Every kept version, newest first. */
+  .get('/:id/versions', async (c) => {
+    const { db, scope } = c.var
+    const row = await libraryFile(db, c.req.param('id'))
+    await ensureFirstVersion(db, scope, row)
+    const versions = await db.documentVersion.findMany({
+      where: { documentId: row.id },
+      orderBy: { createdAt: 'desc' },
     })
+    const who = await actorNames(
+      db,
+      versions.map((v) => ({ type: v.actorType, id: v.actorId })),
+    )
+    return c.json(
+      versions.map((v, i): LibraryVersion => ({
+        id: v.id,
+        path: v.path,
+        contentType: v.contentType,
+        size: v.size,
+        sha256: v.sha256,
+        by: who(v.actorType, v.actorId, v.sessionId)!,
+        restoredFromId: v.restoredFromId,
+        createdAt: v.createdAt.toISOString(),
+        updatedAt: v.updatedAt.toISOString(),
+        current: i === 0 && v.sha256 === row.sha256,
+      })),
+    )
+  })
+
+  .get('/:id/versions/:versionId/content', async (c) => {
+    const { db, scope } = c.var
+    const row = await libraryFile(db, c.req.param('id'))
+    const version = await db.documentVersion.findFirst({
+      where: { id: c.req.param('versionId'), documentId: row.id },
+    })
+    if (!version) throw new HTTPException(404, { message: 'Version not found' })
+    const bytes = await readVersion(scope, version.id)
+    return fileResponse(c, bytes, version, c.req.query('download') !== undefined)
+  })
+
+  /** Make an older version the current one. The newer ones stay in the history. */
+  .post('/:id/versions/:versionId/restore', async (c) => {
+    const { db, scope } = c.var
+    const row = await libraryFile(db, c.req.param('id'))
+    const version = await db.documentVersion.findFirst({
+      where: { id: c.req.param('versionId'), documentId: row.id },
+    })
+    if (!version) throw new HTTPException(404, { message: 'Version not found' })
+    const saved = await saveLibraryFile(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      {
+        path: row.path,
+        bytes: await readVersion(scope, version.id),
+        contentType: version.contentType,
+      },
+      { restoredFrom: version.id },
+      { restoredFromId: version.id },
+    )
+    return c.json(await libraryFileOf(db, saved))
   })
 
   /** Replace a text file's contents. */
   .put('/:id/text', async (c) => {
     const { scope, db } = c.var
     const row = await libraryFile(db, c.req.param('id'))
-    if (!toLibraryFile(row).editable)
+    if (!isEditable(row))
       throw new HTTPException(400, { message: 'Only text files can be edited here' })
     const { text } = await parseBody(c.req.raw, WriteLibraryText)
     const saved = await saveLibraryFile(
@@ -253,7 +480,7 @@ export const library = new Hono<AppEnv>()
       { type: 'member', id: scope.memberId },
       { path: row.path, bytes: new TextEncoder().encode(text), contentType: row.contentType },
     )
-    return c.json(toLibraryFile(saved))
+    return c.json(await libraryFileOf(db, saved))
   })
 
   /** Rename or move. */
@@ -267,11 +494,12 @@ export const library = new Hono<AppEnv>()
       c.req.param('id'),
       path,
     )
-    return c.json(toLibraryFile(row))
+    return c.json(await libraryFileOf(db, row))
   })
 
+  /** To the trash: restorable for TRASH_DAYS days. */
   .delete('/:id', async (c) => {
     const { scope, db } = c.var
-    await deleteLibraryFile(db, scope, { type: 'member', id: scope.memberId }, c.req.param('id'))
+    await trashLibraryFile(db, scope, { type: 'member', id: scope.memberId }, c.req.param('id'))
     return c.body(null, 204)
   })

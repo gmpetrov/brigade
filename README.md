@@ -272,9 +272,19 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   the provider while idle.
 - **Library** (`apps/api/src/library.ts`). Files go in the one bucket under `<organization>/<workspace>/library/<document id>`
   (Cloudflare R2 through its S3 API; without `R2_*`, development uses `apps/api/.bucket`). `Document` keeps path,
-  type, size, SHA-256 and the text (UTF-8 files and PDFs; other files are kept but not searchable). Any member
-  uploads, edits, renames and deletes from the Library page; every change is audited. A file is served inline only
-  for types that cannot run script (`Content-Security-Policy: sandbox` always); anything else downloads.
+  type, size, SHA-256 and the text (UTF-8 files, PDFs and Word, Excel and PowerPoint files; others are kept but
+  not searchable). Any member uploads (files or a whole folder, or by dropping them on the page), edits, moves and
+  deletes from the Library page; every change is audited. Folders exist through their files' paths, and as
+  `LibraryFolder` rows when someone makes an empty one or sets access on it; moving a folder rewrites every path
+  under it at once. Each file records who added it and who changed it last (a member, or a teammate and its
+  thread). Every save leaves a `DocumentVersion`, its bytes under `<organization>/<workspace>/library-versions/<id>`;
+  saves by one author from one place within 10 minutes fold into one version, and the newest 50 are kept. A
+  restore saves the old bytes as a new version. Deleting moves a file to the trash: its path becomes
+  `.trash/<id>/<path>` (no live path starts with "."), so nothing else finds it; restore puts it back (beside a
+  file that took its place), and the hourly sweep deletes it 30 days on. A file is served inline only for types
+  that cannot run script (`Content-Security-Policy: sandbox` always); anything else downloads. Word documents,
+  spreadsheets and decks are read on the API (`apps/api/src/previews.ts`) for previews: Word as HTML in a frame
+  that runs no script, the first rows of each sheet, the text of each slide.
 - **Editing documents** (`apps/web/components/document-editor.tsx`, `apps/api/src/collab.ts`, `apps/collab`). Markdown
   library files and memory open in one BlockNote editor, live: everyone with a document open sees the others'
   edits and cursors, and edits save as people type. Each document is a room on the collab server (a Durable
@@ -293,12 +303,19 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. Deploy with
   `pnpm --filter @brigade/collab deploy` after `wrangler secret put COLLAB_SECRET` and setting `API_URL` in
   `wrangler.jsonc`; set the API's `COLLAB_URL` to the Worker's URL.
-- **Library on computers** (`apps/runner/src/library.ts`). The runner mirrors the library read-only, at
-  `/var/lib/brigade/library` on the workspace computer (written by the runner, read by teammate users) and
-  `~/.brigade/library` on a member's machine. It fetches a manifest from `GET /runner/library` (runner token) on
-  every connect, when the API sends `library.changed`, and every 15 minutes. A teammate's grant on the library is
-  `read` (default) or `read_write`; with write it gets `save_to_library`, which sends a file it wrote through the
-  API. There is no "no access": the workspace is one trust zone and the mirror is shared.
+- **Library on computers** (`apps/runner/src/library.ts`). The runner keeps a read-only mirror per teammate, of
+  only what it may read, at `<library>/bt-<teammate id>` under `/var/lib/brigade/library` on the workspace computer
+  and `~/.brigade/library` on a member's machine: hard links into one store of the files' bytes (`.files`, by
+  SHA-256, the runner's alone). On the workspace computer the root helper makes each mirror for the teammate
+  user's own group, so no other teammate opens it; on a member's machine every teammate runs as the member, so
+  the split keeps teammates to their folders but is not a security boundary. A teammate's mirror is filled
+  before its first thread there. The runner fetches a manifest from `GET /runner/library` (runner token) on
+  every connect, when the API sends `library.changed`, and every 15 minutes; runners before protocol 13 get only
+  the files every teammate may read. A teammate's grant on the library is `read` (default) or `read_write`;
+  folders override it: an admin sets a teammate's access to a folder (`LibraryFolderGrant`), and a restricted
+  folder reaches only the teammates granted access to it or to a folder inside. The deepest folder with a rule
+  wins (`libraryAccessFor` in `@brigade/contracts`). Search, `save_to_library` and the mirror all follow it, and
+  the teammate's instructions name the folders where its access differs. Members see the whole library.
 - **Memory** is three kinds of Markdown `Document` with no bucket object: workspace (`workspace.md`), teammate
   (`teammates/<id>.md`) and thread summaries (`threads/<id>.md`). Memory loads through the harness's own file: the
   runner writes `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex) into the thread's directory each time a harness

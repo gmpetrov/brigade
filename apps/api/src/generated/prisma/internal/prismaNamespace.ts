@@ -427,6 +427,9 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  DocumentVersion: 'DocumentVersion',
+  LibraryFolder: 'LibraryFolder',
+  LibraryFolderGrant: 'LibraryFolderGrant',
   DocumentAsset: 'DocumentAsset',
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
@@ -446,7 +449,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2670,6 +2673,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DocumentVersion: {
+      payload: Prisma.$DocumentVersionPayload<ExtArgs>
+      fields: Prisma.DocumentVersionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DocumentVersionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DocumentVersionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        findFirst: {
+          args: Prisma.DocumentVersionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DocumentVersionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        findMany: {
+          args: Prisma.DocumentVersionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>[]
+        }
+        create: {
+          args: Prisma.DocumentVersionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        createMany: {
+          args: Prisma.DocumentVersionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DocumentVersionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>[]
+        }
+        delete: {
+          args: Prisma.DocumentVersionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        update: {
+          args: Prisma.DocumentVersionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        deleteMany: {
+          args: Prisma.DocumentVersionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DocumentVersionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DocumentVersionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>[]
+        }
+        upsert: {
+          args: Prisma.DocumentVersionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DocumentVersionPayload>
+        }
+        aggregate: {
+          args: Prisma.DocumentVersionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDocumentVersion>
+        }
+        groupBy: {
+          args: Prisma.DocumentVersionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentVersionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DocumentVersionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DocumentVersionCountAggregateOutputType> | number
+        }
+      }
+    }
+    LibraryFolder: {
+      payload: Prisma.$LibraryFolderPayload<ExtArgs>
+      fields: Prisma.LibraryFolderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LibraryFolderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LibraryFolderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        findFirst: {
+          args: Prisma.LibraryFolderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LibraryFolderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        findMany: {
+          args: Prisma.LibraryFolderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>[]
+        }
+        create: {
+          args: Prisma.LibraryFolderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        createMany: {
+          args: Prisma.LibraryFolderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LibraryFolderCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>[]
+        }
+        delete: {
+          args: Prisma.LibraryFolderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        update: {
+          args: Prisma.LibraryFolderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        deleteMany: {
+          args: Prisma.LibraryFolderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LibraryFolderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LibraryFolderUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>[]
+        }
+        upsert: {
+          args: Prisma.LibraryFolderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderPayload>
+        }
+        aggregate: {
+          args: Prisma.LibraryFolderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLibraryFolder>
+        }
+        groupBy: {
+          args: Prisma.LibraryFolderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryFolderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LibraryFolderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryFolderCountAggregateOutputType> | number
+        }
+      }
+    }
+    LibraryFolderGrant: {
+      payload: Prisma.$LibraryFolderGrantPayload<ExtArgs>
+      fields: Prisma.LibraryFolderGrantFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LibraryFolderGrantFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LibraryFolderGrantFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        findFirst: {
+          args: Prisma.LibraryFolderGrantFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LibraryFolderGrantFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        findMany: {
+          args: Prisma.LibraryFolderGrantFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>[]
+        }
+        create: {
+          args: Prisma.LibraryFolderGrantCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        createMany: {
+          args: Prisma.LibraryFolderGrantCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LibraryFolderGrantCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>[]
+        }
+        delete: {
+          args: Prisma.LibraryFolderGrantDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        update: {
+          args: Prisma.LibraryFolderGrantUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        deleteMany: {
+          args: Prisma.LibraryFolderGrantDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LibraryFolderGrantUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LibraryFolderGrantUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>[]
+        }
+        upsert: {
+          args: Prisma.LibraryFolderGrantUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LibraryFolderGrantPayload>
+        }
+        aggregate: {
+          args: Prisma.LibraryFolderGrantAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLibraryFolderGrant>
+        }
+        groupBy: {
+          args: Prisma.LibraryFolderGrantGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryFolderGrantGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LibraryFolderGrantCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LibraryFolderGrantCountAggregateOutputType> | number
+        }
+      }
+    }
     DocumentAsset: {
       payload: Prisma.$DocumentAssetPayload<ExtArgs>
       fields: Prisma.DocumentAssetFieldRefs
@@ -3509,11 +3734,66 @@ export const DocumentScalarFieldEnum = {
   sha256: 'sha256',
   text: 'text',
   indexed: 'indexed',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  updatedByType: 'updatedByType',
+  updatedById: 'updatedById',
+  updatedInSessionId: 'updatedInSessionId',
+  deletedAt: 'deletedAt',
+  deletedByType: 'deletedByType',
+  deletedById: 'deletedById',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const DocumentVersionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  path: 'path',
+  contentType: 'contentType',
+  size: 'size',
+  sha256: 'sha256',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  sessionId: 'sessionId',
+  restoredFromId: 'restoredFromId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DocumentVersionScalarFieldEnum = (typeof DocumentVersionScalarFieldEnum)[keyof typeof DocumentVersionScalarFieldEnum]
+
+
+export const LibraryFolderScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  path: 'path',
+  restricted: 'restricted',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LibraryFolderScalarFieldEnum = (typeof LibraryFolderScalarFieldEnum)[keyof typeof LibraryFolderScalarFieldEnum]
+
+
+export const LibraryFolderGrantScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  folderId: 'folderId',
+  teammateId: 'teammateId',
+  access: 'access'
+} as const
+
+export type LibraryFolderGrantScalarFieldEnum = (typeof LibraryFolderGrantScalarFieldEnum)[keyof typeof LibraryFolderGrantScalarFieldEnum]
 
 
 export const DocumentAssetScalarFieldEnum = {
@@ -4010,6 +4290,20 @@ export type ListEnumDocumentKindFieldRefInput<$PrismaModel> = FieldRefInputType<
 
 
 /**
+ * Reference to a field of type 'ActorType'
+ */
+export type EnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType'>
+    
+
+
+/**
+ * Reference to a field of type 'ActorType[]'
+ */
+export type ListEnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType[]'>
+    
+
+
+/**
  * Reference to a field of type 'AttachmentStatus'
  */
 export type EnumAttachmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttachmentStatus'>
@@ -4034,20 +4328,6 @@ export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
  * Reference to a field of type 'BigInt[]'
  */
 export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
-    
-
-
-/**
- * Reference to a field of type 'ActorType'
- */
-export type EnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType'>
-    
-
-
-/**
- * Reference to a field of type 'ActorType[]'
- */
-export type ListEnumActorTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActorType[]'>
     
 
 
@@ -4259,6 +4539,9 @@ export type GlobalOmitConfig = {
   subscription?: Prisma.SubscriptionOmit
   ticket?: Prisma.TicketOmit
   document?: Prisma.DocumentOmit
+  documentVersion?: Prisma.DocumentVersionOmit
+  libraryFolder?: Prisma.LibraryFolderOmit
+  libraryFolderGrant?: Prisma.LibraryFolderGrantOmit
   documentAsset?: Prisma.DocumentAssetOmit
   auditEntry?: Prisma.AuditEntryOmit
   attachment?: Prisma.AttachmentOmit

@@ -409,10 +409,13 @@ export type LibraryCaller = (call: {
 
 /**
  * The workspace's search (library, memory, past thread summaries) and, with a
- * read-write grant, saving to the library. The API checks the grant.
+ * read-write grant on the library or a folder of it, saving to the library.
+ * The API checks the grant.
  */
 export function libraryTools(options: {
   access: 'read' | 'read_write'
+  /** Folders where the teammate's access differs from `access`. */
+  folders?: { path: string; access: 'read' | 'read_write' }[]
   libraryDir: string
   call: LibraryCaller
   /** Reads a file the teammate wrote on this computer, as the teammate. */
@@ -447,7 +450,7 @@ export function libraryTools(options: {
       },
     }),
   }
-  if (options.access === 'read_write')
+  if (options.access === 'read_write' || options.folders?.some((f) => f.access === 'read_write'))
     tools.save_to_library = tool({
       description:
         `Add a file to the workspace's document library, or replace the one at that path, so the team and other teammates can use it. ` +

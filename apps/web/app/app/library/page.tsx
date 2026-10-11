@@ -1,38 +1,37 @@
 'use client'
-import { BookOpen, FilePlus, FileText, Library, Search, Upload } from 'lucide-react'
+import { BookOpen, ChevronDown, FilePlus, FolderPlus, FolderUp, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
-import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
+import { useDocumentPanel } from '@/components/document-panel'
+import { join, LibraryBrowser } from '@/components/library-browser'
+import { LibraryTrash } from '@/components/library-trash'
 import { Markdown } from '@/components/markdown'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
 import type { EditTarget } from '@brigade/contracts'
 import {
   api,
+  isAdmin,
   useApi,
-  type LibraryFile,
+  type LibraryTree,
+  type Me,
   type MemoryFile,
   type MemoryOverview,
   type SearchHit,
+  type Teammate,
 } from '@/lib/api'
 import { API_URL } from '@/lib/config'
-import { cn } from '@/lib/utils'
-
-const contentUrl = (id: string, download = false) =>
-  `${API_URL}/api/library/${id}/content${download ? '?download' : ''}`
-
-function size(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`
-  return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`
-}
 
 /** The workspace's shared files and memory, and one search over both. */
 export default function LibraryPage() {
@@ -43,43 +42,59 @@ export default function LibraryPage() {
   )
 }
 
+type Tab = 'files' | 'memory' | 'trash'
+
 function LibraryView() {
   const params = useSearchParams()
-  const files = useApi<LibraryFile[]>('/library')
+  const router = useRouter()
+  const tree = useApi<LibraryTree>('/library/tree')
   const memory = useApi<MemoryOverview>('/library/memory')
-  const [tab, setTab] = useState('files')
+  const teammates = useApi<Teammate[]>('/teammates')
+  const me = useApi<Me>('/me')
+  const [tab, setTab] = useState<Tab>('files')
   const [query, setQuery] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [open, setOpen] = useState<string>()
+  const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
   const documents = useDocumentPanel()
   // What the panel saved: sizes, times and memory previews, once it closes or switches.
   const shown = JSON.stringify(documents.current?.target ?? null)
-  const reloadFiles = files.reload
+  const reloadTree = tree.reload
   const reloadMemory = memory.reload
   useEffect(() => {
-    void reloadFiles()
+    void reloadTree()
     void reloadMemory()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- when the open document changes
   }, [shown])
   const [uploading, setUploading] = useState<string>()
   const [error, setError] = useState<string>()
-  const input = useRef<HTMLInputElement>(null)
-  // ?file=<id> shows that file, ?tab=memory the memory; e.g. from search.
+  const files = useRef<HTMLInputElement>(null)
+  const folders = useRef<HTMLInputElement>(null)
+  // ?folder=<path> shows that folder, ?file=<id> that file, ?tab=memory the memory; e.g. from search.
+  const folder = params.get('folder') ?? ''
   const focus = params.get('file') ?? undefined
+  const setFolder = useCallback(
+    (path: string) => {
+      setCreating(null)
+      router.replace(path ? `/app/library?folder=${encodeURIComponent(path)}` : '/app/library', {
+        scroll: false,
+      })
+    },
+    [router],
+  )
   useEffect(() => {
     const asked = focus ? 'files' : params.get('tab')
-    if (asked !== 'files' && asked !== 'memory') return
+    if (asked !== 'files' && asked !== 'memory' && asked !== 'trash') return
     setTab(asked)
     setQuery('')
   }, [focus, params])
 
-  async function upload(list: FileList | null) {
-    if (!list?.length) return
+  async function upload(list: { file: File; path: string }[]) {
+    if (list.length === 0) return
     setError(undefined)
-    for (const file of Array.from(list)) {
-      setUploading(file.name)
+    for (const [i, { file, path }] of list.entries()) {
+      setUploading(list.length > 1 ? `${i + 1} of ${list.length}` : file.name)
       const form = new FormData()
       form.set('file', file)
+      form.set('path', path)
       const response = await fetch(`${API_URL}/api/library/upload`, {
         method: 'POST',
         credentials: 'include',
@@ -87,14 +102,23 @@ function LibraryView() {
       })
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string }
-        setError(`${file.name}: ${body.error ?? response.statusText}`)
+        setError(`${path}: ${body.error ?? response.statusText}`)
         break
       }
     }
     setUploading(undefined)
-    if (input.current) input.current.value = ''
-    await files.reload()
+    for (const input of [files.current, folders.current]) if (input) input.value = ''
+    await tree.reload()
   }
+
+  /** Files picked from the computer, into the folder shown; a picked folder keeps its own. */
+  const picked = (list: FileList | null) =>
+    upload(
+      Array.from(list ?? []).map((file) => ({
+        file,
+        path: join(folder, file.webkitRelativePath || file.name),
+      })),
+    )
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,25 +126,64 @@ function LibraryView() {
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-extrabold tracking-tight">Library</h1>
           <p className="max-w-2xl text-muted-foreground">
-            Shared files and memory. Every teammate reads the library on its computer and searches
-            it; when a thread goes quiet, what it taught goes into memory.
+            Shared files and memory. Teammates read the folders they have access to on their
+            computer and search them; when a thread goes quiet, what it taught goes into memory.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCreating((c) => !c)}>
+          <Button
+            variant="outline"
+            onClick={() => (
+              setTab('files'),
+              setQuery(''),
+              setCreating(creating === 'folder' ? null : 'folder')
+            )}
+          >
+            <FolderPlus />
+            New folder
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => (
+              setTab('files'),
+              setQuery(''),
+              setCreating(creating === 'file' ? null : 'file')
+            )}
+          >
             <FilePlus />
             New file
           </Button>
-          <Button disabled={Boolean(uploading)} onClick={() => input.current?.click()}>
-            <Upload />
-            {uploading ? `Uploading ${uploading}…` : 'Upload'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={Boolean(uploading)}>
+                <Upload />
+                {uploading ? `Uploading ${uploading}…` : 'Upload'}
+                <ChevronDown aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => files.current?.click()}>
+                <Upload aria-hidden />
+                Files
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => folders.current?.click()}>
+                <FolderUp aria-hidden />A folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <input
-            ref={input}
+            ref={files}
             type="file"
             multiple
             hidden
-            onChange={(e) => void upload(e.target.files)}
+            onChange={(e) => void picked(e.target.files)}
+          />
+          <input
+            ref={folders}
+            type="file"
+            hidden
+            {...{ webkitdirectory: '' }}
+            onChange={(e) => void picked(e.target.files)}
           />
         </div>
       </header>
@@ -148,362 +211,40 @@ function LibraryView() {
           onFile={() => setQuery('')}
         />
       ) : (
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList>
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
+            <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>
           <TabsContent value="files" className="flex flex-col gap-4 pt-2">
-            {creating && (
-              <NewFile
-                onCancel={() => setCreating(false)}
-                onCreated={async (file) => {
-                  setCreating(false)
-                  await files.reload()
-                  if (file.contentType === 'text/markdown') documents.open(libraryDocument(file))
-                  else setOpen(file.id)
-                }}
-              />
-            )}
-            <Files
-              files={files.data}
+            <LibraryBrowser
+              tree={tree.data}
+              folder={folder}
+              setFolder={setFolder}
               focus={focus}
-              open={open}
-              setOpen={setOpen}
-              reload={files.reload}
-              onUpload={() => input.current?.click()}
+              reload={tree.reload}
+              upload={upload}
+              teammates={teammates.data}
+              admin={me.data ? isAdmin(me.data) : false}
+              creating={creating}
+              setCreating={setCreating}
             />
           </TabsContent>
           <TabsContent value="memory" className="flex flex-col gap-4 pt-2">
             <Memory overview={memory.data} reload={memory.reload} />
           </TabsContent>
+          <TabsContent value="trash" className="flex flex-col gap-4 pt-2">
+            <LibraryTrash
+              onRestored={async (id) => {
+                await tree.reload()
+                router.replace(`/app/library?file=${id}`, { scroll: false })
+              }}
+            />
+          </TabsContent>
         </Tabs>
       )}
     </div>
-  )
-}
-
-function Files({
-  files,
-  focus,
-  open,
-  setOpen,
-  reload,
-  onUpload,
-}: {
-  files: LibraryFile[] | undefined
-  /** A file asked for by the address: opened if it can be, and scrolled to. */
-  focus?: string
-  /** The file open in place. */
-  open: string | undefined
-  setOpen: (id: string | undefined) => void
-  reload: () => Promise<void>
-  onUpload: () => void
-}) {
-  const documents = useDocumentPanel()
-  const current = documents.current?.target
-  const inPanel = (id: string) => current?.kind === 'library' && current.id === id
-  const [renaming, setRenaming] = useState<string>()
-  const [error, setError] = useState<string>()
-
-  const loaded = Boolean(files)
-  useEffect(() => {
-    if (!focus || !loaded) return
-    const file = files?.find((f) => f.id === focus)
-    if (file?.contentType === 'text/markdown' && file.editable)
-      documents.open(libraryDocument(file))
-    else if (file?.editable) setOpen(focus)
-    document.getElementById(`library-file-${focus}`)?.scrollIntoView({ block: 'center' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once the list is in, not on each reload
-  }, [focus, loaded])
-
-  async function act(work: () => Promise<unknown>) {
-    setError(undefined)
-    try {
-      await work()
-      await reload()
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
-  if (!files) return <p className="text-sm text-muted-foreground">Loading…</p>
-  if (files.length === 0)
-    return (
-      <Card className="items-center gap-3 border-dashed px-6 py-12 text-center shadow-none">
-        <span
-          aria-hidden
-          className="flex size-11 items-center justify-center rounded-md bg-primary/15 text-primary"
-        >
-          <Library className="size-5" />
-        </span>
-        <p className="font-semibold">The library is empty.</p>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Add guides, price lists, policies or anything your teammates should know. Text and PDF
-          files are searchable.
-        </p>
-        <Button onClick={onUpload}>
-          <Upload />
-          Upload files
-        </Button>
-      </Card>
-    )
-
-  return (
-    <>
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <Card className="gap-0 divide-y py-0">
-        {files.map((f) => {
-          const slash = f.path.lastIndexOf('/')
-          return (
-            <div
-              key={f.id}
-              id={`library-file-${f.id}`}
-              className={cn(
-                'flex scroll-mt-20 flex-col gap-3 px-5 py-3.5',
-                (f.id === focus || inPanel(f.id)) && 'bg-primary/5',
-              )}
-            >
-              <div className="flex flex-wrap items-center gap-4">
-                <span
-                  aria-hidden
-                  className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground"
-                >
-                  <FileText className="size-4" />
-                </span>
-                <div className="flex min-w-0 flex-1 basis-48 flex-col gap-0.5">
-                  <span className="truncate text-sm">
-                    {slash > 0 && (
-                      <span className="text-muted-foreground">{f.path.slice(0, slash + 1)}</span>
-                    )}
-                    <span className="font-semibold">{f.path.slice(slash + 1)}</span>
-                  </span>
-                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {size(f.size)} · updated {timeAgo(f.updatedAt)}
-                    {!f.indexed && (
-                      <StatusBadge status="unindexed" tone="neutral" label="not searchable" />
-                    )}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {f.editable && f.contentType === 'text/markdown' ? (
-                    <Button
-                      variant={inPanel(f.id) ? 'default' : 'outline'}
-                      size="sm"
-                      aria-pressed={inPanel(f.id)}
-                      onClick={() =>
-                        inPanel(f.id) ? documents.close() : documents.open(libraryDocument(f))
-                      }
-                    >
-                      {inPanel(f.id) ? 'Close' : 'Open'}
-                    </Button>
-                  ) : f.editable ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-expanded={open === f.id}
-                      onClick={() => setOpen(open === f.id ? undefined : f.id)}
-                    >
-                      {open === f.id ? 'Close' : 'Open'}
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={contentUrl(f.id)} target="_blank" rel="noreferrer">
-                        Open
-                      </a>
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={contentUrl(f.id, true)}>Download</a>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-expanded={renaming === f.id}
-                    onClick={() => setRenaming(renaming === f.id ? undefined : f.id)}
-                  >
-                    Rename
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() =>
-                      confirm(`Delete ${f.path} from the library?`) &&
-                      void act(async () => {
-                        await api(`/library/${f.id}`, { method: 'DELETE' })
-                        if (inPanel(f.id)) documents.close()
-                      })
-                    }
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-              {renaming === f.id && (
-                <form
-                  className="flex flex-wrap items-end gap-2 rounded-lg border bg-muted/50 p-3"
-                  action={(form) =>
-                    act(async () => {
-                      await api(`/library/${f.id}`, {
-                        method: 'PATCH',
-                        body: { path: String(form.get('path') ?? '') },
-                      })
-                      setRenaming(undefined)
-                    })
-                  }
-                >
-                  <div className="flex flex-1 basis-64 flex-col gap-2">
-                    <Label htmlFor={`path-${f.id}`}>Path</Label>
-                    <Input
-                      id={`path-${f.id}`}
-                      name="path"
-                      defaultValue={f.path}
-                      required
-                      className="bg-card font-mono text-sm"
-                    />
-                  </div>
-                  <Button type="button" variant="outline" onClick={() => setRenaming(undefined)}>
-                    Cancel
-                  </Button>
-                  <Button>Save</Button>
-                </form>
-              )}
-              {open === f.id && (
-                <TextFile file={f} onSaved={reload} onClose={() => setOpen(undefined)} />
-              )}
-            </div>
-          )
-        })}
-      </Card>
-    </>
-  )
-}
-
-/** A plain text file (not Markdown, which opens in the document panel), read and edited in place. */
-function TextFile({
-  file,
-  onSaved,
-  onClose,
-}: {
-  file: LibraryFile
-  onSaved: () => Promise<void>
-  onClose: () => void
-}) {
-  const [text, setText] = useState<string>()
-  const [draft, setDraft] = useState<string>()
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    fetch(contentUrl(file.id), { credentials: 'include' })
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(r.statusText))))
-      .then(setText, (e: Error) => setError(e.message))
-  }, [file.id, file.updatedAt])
-
-  async function save() {
-    setBusy(true)
-    setError(undefined)
-    try {
-      await api(`/library/${file.id}/text`, { method: 'PUT', body: { text: draft } })
-      setText(draft)
-      setDraft(undefined)
-      await onSaved()
-    } catch (e) {
-      setError((e as Error).message)
-    }
-    setBusy(false)
-  }
-
-  if (text === undefined)
-    return <p className="text-sm text-muted-foreground">{error ?? 'Loading…'}</p>
-  return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
-      {draft === undefined ? (
-        <pre className="max-h-[32rem] overflow-auto font-mono text-xs whitespace-pre-wrap">
-          {text}
-        </pre>
-      ) : (
-        <Textarea
-          aria-label={`Contents of ${file.path}`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={Math.min(30, Math.max(8, draft.split('\n').length + 1))}
-          className="bg-card font-mono text-sm"
-        />
-      )}
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <div className="flex justify-end gap-2">
-        {draft === undefined ? (
-          <>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Close
-            </Button>
-            <Button size="sm" onClick={() => setDraft(text)}>
-              Edit
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outline" size="sm" onClick={() => setDraft(undefined)}>
-              Cancel
-            </Button>
-            <Button size="sm" disabled={busy} onClick={() => void save()}>
-              Save
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** A new file: named here, then written in the editor. A name without an extension is Markdown. */
-function NewFile({
-  onCancel,
-  onCreated,
-}: {
-  onCancel: () => void
-  onCreated: (file: LibraryFile) => Promise<void>
-}) {
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-
-  async function create(form: FormData) {
-    setBusy(true)
-    setError(undefined)
-    const path = String(form.get('path') ?? '').trim()
-    try {
-      const file = await api<LibraryFile>('/library/text', {
-        body: { path: /\.[a-z0-9]+$/i.test(path) ? path : `${path}.md`, text: '' },
-      })
-      await onCreated(file)
-    } catch (e) {
-      setError((e as Error).message)
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form action={create} className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="new-path">Path</Label>
-        <Input
-          id="new-path"
-          name="path"
-          required
-          autoFocus
-          placeholder="guides/refunds.md"
-          className="font-mono text-sm"
-        />
-      </div>
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button disabled={busy}>Create and open</Button>
-      </div>
-    </form>
   )
 }
 

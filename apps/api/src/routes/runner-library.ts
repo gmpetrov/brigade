@@ -16,7 +16,7 @@ export const runnerLibrary = new Hono<{
     await next()
   })
 
-  .get('/', async (c) => c.json(await manifest(scoped(c.var.runner))))
+  .get('/', async (c) => c.json(await manifest(scoped(c.var.runner), c.var.runner)))
 
   .get('/files/:id', async (c) => {
     const { runner } = c.var

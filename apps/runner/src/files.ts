@@ -13,7 +13,7 @@ import {
   type RunnerToApi,
 } from '@brigade/contracts'
 import { CLOUD, paths } from './config.js'
-import { LIBRARY_DIR } from './library.js'
+import { libraryDirFor } from './library.js'
 import { teammateHome, teammateUser } from './teammates.js'
 
 const run = promisify(execFile)
@@ -89,7 +89,7 @@ export async function readThreadFile(request: Request): Promise<Result> {
     const path = isAbsolute(request.path) ? request.path : join(dir, request.path)
     const target = await real(path, user)
     if (!target) continue
-    const roots = (await Promise.all([real(dir, user), real(LIBRARY_DIR)])).filter(
+    const roots = (await Promise.all([real(dir, user), real(libraryDirFor(teammateId))])).filter(
       (r): r is string => Boolean(r),
     )
     if (!roots.some((root) => inside(root, target))) continue

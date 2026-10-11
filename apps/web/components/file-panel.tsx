@@ -5,8 +5,9 @@
 import type { ThreadFile } from '@brigade/contracts'
 import { Check, Copy, Download, FileText, Library, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FileLinksProvider, type OpenFile } from '@/components/file-links'
+import { FilePreview, PdfView } from '@/components/file-preview'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
@@ -16,82 +17,6 @@ import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
-
-/** Pages a PDF shows here; the rest are a download away. */
-const PDF_PAGES = 50
-
-let pdfWorker: Worker | undefined
-
-/**
- * A PDF, drawn page by page with pdf.js to the panel's width: the same in every
- * browser, including those that show no PDF in a frame. Loaded only when one opens.
- */
-function PdfView({ url, name }: { url: string; name: string }) {
-  const pages = useRef<HTMLDivElement>(null)
-  const [status, setStatus] = useState<{ error?: string; count?: number }>({})
-  useEffect(() => {
-    let cancelled = false
-    let destroy: (() => Promise<void>) | undefined
-    setStatus({})
-    pages.current?.replaceChildren()
-    void (async () => {
-      const response = await fetch(url, { credentials: 'include', cache: 'no-store' })
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string }
-        throw new Error(body.error ?? `Could not open it (${response.status})`)
-      }
-      const data = new Uint8Array(await response.arrayBuffer())
-      const pdfjs = await import('pdfjs-dist')
-      pdfWorker ??= new Worker(new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url), {
-        type: 'module',
-      })
-      pdfjs.GlobalWorkerOptions.workerPort = pdfWorker
-      const task = pdfjs.getDocument({ data })
-      destroy = () => task.destroy()
-      const doc = await task.promise
-      if (cancelled) return
-      setStatus({ count: doc.numPages })
-      const root = pages.current
-      if (!root) return
-      const width = Math.max(200, root.clientWidth - 32)
-      const ratio = window.devicePixelRatio || 1
-      for (let n = 1; n <= Math.min(doc.numPages, PDF_PAGES) && !cancelled; n++) {
-        const page = await doc.getPage(n)
-        const scale = width / page.getViewport({ scale: 1 }).width
-        const viewport = page.getViewport({ scale: scale * ratio })
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.floor(viewport.width)
-        canvas.height = Math.floor(viewport.height)
-        canvas.style.width = `${Math.floor(viewport.width / ratio)}px`
-        canvas.setAttribute('aria-label', `Page ${n} of ${doc.numPages}`)
-        canvas.className = 'mx-auto block rounded-sm bg-white shadow-sm'
-        root.append(canvas)
-        await page.render({ canvas, viewport }).promise
-      }
-    })().catch((e: Error) => !cancelled && setStatus({ error: e.message }))
-    return () => {
-      cancelled = true
-      void destroy?.()
-    }
-  }, [url])
-  return (
-    <div className="flex min-h-full flex-col gap-4 bg-muted p-4">
-      {status.error ? (
-        <p className="text-sm text-destructive-text">{status.error}</p>
-      ) : (
-        status.count === undefined && (
-          <p className="text-sm text-muted-foreground">Opening {name}…</p>
-        )
-      )}
-      <div ref={pages} role="document" aria-label={name} className="flex flex-col gap-4" />
-      {(status.count ?? 0) > PDF_PAGES && (
-        <p className="text-center text-xs text-muted-foreground">
-          Showing the first {PDF_PAGES} of {status.count} pages. Download it to see the rest.
-        </p>
-      )}
-    </div>
-  )
-}
 
 function size(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -228,6 +153,15 @@ export function FilePanel({
           <p className="p-4 text-sm text-muted-foreground">Opening {path}…</p>
         ) : pdf ? (
           <PdfView url={pdf} name={shown.slice(slash + 1)} />
+        ) : file.documentId && content && file.text === undefined ? (
+          // A library file: whatever it is, shown as the library shows it.
+          <FilePreview
+            url={content}
+            previewUrl={`/library/${file.documentId}/preview`}
+            name={shown.slice(slash + 1)}
+            contentType={file.contentType}
+            download={`${content}?download`}
+          />
         ) : file.text === undefined ? (
           image ? (
             <div className="flex justify-center bg-muted p-4">

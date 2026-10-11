@@ -5,6 +5,7 @@ import { LIBRARY_SAVE_MAX, type ApiToRunner, type RunnerToApi } from '@brigade/c
 import { audit } from './audit.js'
 import { scoped, type Scope } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
+import { teammateLibraryAccess } from './library-folders.js'
 import { editMemory, saveLibraryFile, saveSummary, search } from './library.js'
 import { actingTeammate } from './thread-spec.js'
 
@@ -31,13 +32,16 @@ export async function handleLibraryCall(
   const op = call.operation
 
   if (op.name === 'search') {
-    const hits = await search(scope, { query: op.query, limit: op.limit, teammateId: teammate.id })
+    const hits = await search(scope, { query: op.query, limit: op.limit, teammate })
     return done(hits)
   }
 
-  if (teammate.libraryAccess !== 'read_write')
+  const access = (await teammateLibraryAccess(db, teammate)).of(op.path)
+  if (access !== 'read_write')
     return fail(
-      `${teammate.name} may read the library but not save to it. An admin can allow it on the teammate's page.`,
+      access === 'none'
+        ? `${teammate.name} has no access to that folder of the library.`
+        : `${teammate.name} may read ${op.path.includes('/') ? 'that folder of ' : ''}the library but not save to it. An admin can allow it in the library or on the teammate's page.`,
     )
   const bytes = Buffer.from(op.content, 'base64')
   if (bytes.byteLength > LIBRARY_SAVE_MAX)

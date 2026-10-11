@@ -19,7 +19,10 @@ export * from './tasks.js'
  * 6: generated images. 7: attachments. 8: welcome lists running threads, to close lost turns.
  * 9: tasks. 10: schedules. 11: queued messages (cancel, edit, steer) and interrupts by turn.
  * 12: teammates save credentials; approvals that may allow a credential for good.
+ * 13: a library mirror per teammate, of only the folders it may read.
  */
-export const PROTOCOL_VERSION = 12
+export const PROTOCOL_VERSION = 13
+/** Runners from this version on keep restricted folders from teammates without access. */
+export const LIBRARY_VIEWS_PROTOCOL = 13
 /** The API rejects runners below this protocol version. */
 export const MIN_PROTOCOL_VERSION = 1

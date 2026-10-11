@@ -182,10 +182,17 @@ export const threads = new Hono<AppEnv>()
       } satisfies ThreadFile)
     }
 
-    // The library: its own path, or its mirror's path on a computer.
-    const mirrored = path.startsWith('/') ? path.match(/\/library\/(.+)$/)?.[1] : undefined
+    // The library: its own path, or its mirror's path on a computer (a teammate's own
+    // mirror, in a folder named after its Linux user, on runners since protocol 13).
+    const mirrored = path.startsWith('/')
+      ? path.match(/\/library\/(?:bt-[a-z0-9]{1,28}\/)?(.+)$/)?.[1]
+      : undefined
     const library = await db.document.findFirst({
-      where: { kind: 'library', path: { in: [path, ...(mirrored ? [mirrored] : [])] } },
+      where: {
+        kind: 'library',
+        deletedAt: null,
+        path: { in: [path, ...(mirrored ? [mirrored] : [])] },
+      },
     })
     if (library) {
       const row = library

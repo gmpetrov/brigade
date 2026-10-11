@@ -1,4 +1,5 @@
 'use client'
+import type { FolderRule } from '@brigade/contracts'
 import type {
   AssetTicket,
   AttachmentInfo,
@@ -399,6 +400,8 @@ export type AccessOverview = {
   connectionGrants: { teammateId: string; connectionId: string; scope: 'read' | 'read_write' }[]
   credentials: (CredentialWithGrants & { lastUsedAt: string | null; creatorActive: boolean })[]
   members: Record<string, string>
+  /** Library folders with access rules of their own. */
+  libraryFolders: FolderRule[]
 }
 
 /** One entry of the Activity feed: GET /security/activity. */
@@ -416,7 +419,13 @@ export type ActivityPage = {
   next: string | null
 }
 export type {
+  LibraryActor,
   LibraryFile,
+  LibraryFolder,
+  LibraryPreview,
+  LibraryTree,
+  LibraryVersion,
+  TrashedFile,
   MemoryFile,
   MemoryOverview,
   SearchHit,

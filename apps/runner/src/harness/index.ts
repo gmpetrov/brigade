@@ -55,7 +55,8 @@ export type { ConnectorCaller, LibraryCaller, ScheduleCaller, TaskCaller } from 
 
 /** What a thread reaches beyond its own directory: the library, memory, git backups and file uploads. */
 export type ThreadContext = {
-  libraryDir: string
+  /** A teammate's own mirror of the library, filled before its first thread here. */
+  libraryDir: (teammateId: string) => Promise<string>
   memoryFor: (teammateId: string) => { workspace: string; teammate: string }
   callLibrary: LibraryCaller
   /** Create a task from the thread, or complete its task. */
@@ -504,6 +505,7 @@ export class HarnessThread {
       browser && this.runAs
         ? `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`
         : undefined
+    const libraryDir = await this.context.libraryDir(this.spec.teammate.id)
     // Memory loads through the harness's own instruction file.
     await writeInstructions(
       this.workDir,
@@ -511,7 +513,7 @@ export class HarnessThread {
       instructions(
         this.spec,
         this.context.memoryFor(this.spec.teammate.id),
-        this.context.libraryDir,
+        libraryDir,
         tabsFile
           ? { ready: true }
           : { ready: false, ...(browserError ? { error: browserError } : {}) },
@@ -533,7 +535,8 @@ export class HarnessThread {
       browser && tabsFile ? { browser: browserMcpServer(browser, tabsFile) } : {},
       {
         access: this.spec.library,
-        libraryDir: this.context.libraryDir,
+        folders: this.spec.libraryFolders,
+        libraryDir,
         call: this.context.callLibrary,
         readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
       },

@@ -48,6 +48,14 @@ export type DocumentMinAggregateOutputType = {
   sha256: string | null
   text: string | null
   indexed: boolean | null
+  createdByType: $Enums.ActorType | null
+  createdById: string | null
+  updatedByType: $Enums.ActorType | null
+  updatedById: string | null
+  updatedInSessionId: string | null
+  deletedAt: Date | null
+  deletedByType: $Enums.ActorType | null
+  deletedById: string | null
   updatedAt: Date | null
   createdAt: Date | null
 }
@@ -65,6 +73,14 @@ export type DocumentMaxAggregateOutputType = {
   sha256: string | null
   text: string | null
   indexed: boolean | null
+  createdByType: $Enums.ActorType | null
+  createdById: string | null
+  updatedByType: $Enums.ActorType | null
+  updatedById: string | null
+  updatedInSessionId: string | null
+  deletedAt: Date | null
+  deletedByType: $Enums.ActorType | null
+  deletedById: string | null
   updatedAt: Date | null
   createdAt: Date | null
 }
@@ -82,6 +98,14 @@ export type DocumentCountAggregateOutputType = {
   sha256: number
   text: number
   indexed: number
+  createdByType: number
+  createdById: number
+  updatedByType: number
+  updatedById: number
+  updatedInSessionId: number
+  deletedAt: number
+  deletedByType: number
+  deletedById: number
   updatedAt: number
   createdAt: number
   _all: number
@@ -109,6 +133,14 @@ export type DocumentMinAggregateInputType = {
   sha256?: true
   text?: true
   indexed?: true
+  createdByType?: true
+  createdById?: true
+  updatedByType?: true
+  updatedById?: true
+  updatedInSessionId?: true
+  deletedAt?: true
+  deletedByType?: true
+  deletedById?: true
   updatedAt?: true
   createdAt?: true
 }
@@ -126,6 +158,14 @@ export type DocumentMaxAggregateInputType = {
   sha256?: true
   text?: true
   indexed?: true
+  createdByType?: true
+  createdById?: true
+  updatedByType?: true
+  updatedById?: true
+  updatedInSessionId?: true
+  deletedAt?: true
+  deletedByType?: true
+  deletedById?: true
   updatedAt?: true
   createdAt?: true
 }
@@ -143,6 +183,14 @@ export type DocumentCountAggregateInputType = {
   sha256?: true
   text?: true
   indexed?: true
+  createdByType?: true
+  createdById?: true
+  updatedByType?: true
+  updatedById?: true
+  updatedInSessionId?: true
+  deletedAt?: true
+  deletedByType?: true
+  deletedById?: true
   updatedAt?: true
   createdAt?: true
   _all?: true
@@ -247,6 +295,14 @@ export type DocumentGroupByOutputType = {
   sha256: string
   text: string
   indexed: boolean
+  createdByType: $Enums.ActorType | null
+  createdById: string | null
+  updatedByType: $Enums.ActorType | null
+  updatedById: string | null
+  updatedInSessionId: string | null
+  deletedAt: Date | null
+  deletedByType: $Enums.ActorType | null
+  deletedById: string | null
   updatedAt: Date
   createdAt: Date
   _count: DocumentCountAggregateOutputType | null
@@ -287,12 +343,21 @@ export type DocumentWhereInput = {
   sha256?: Prisma.StringFilter<"Document"> | string
   text?: Prisma.StringFilter<"Document"> | string
   indexed?: Prisma.BoolFilter<"Document"> | boolean
+  createdByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  createdById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
+  deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  deletedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"Document"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Document"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   assets?: Prisma.DocumentAssetListRelationFilter
+  versions?: Prisma.DocumentVersionListRelationFilter
 }
 
 export type DocumentOrderByWithRelationInput = {
@@ -308,12 +373,21 @@ export type DocumentOrderByWithRelationInput = {
   sha256?: Prisma.SortOrder
   text?: Prisma.SortOrder
   indexed?: Prisma.SortOrder
+  createdByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdById?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedInSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedById?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
   assets?: Prisma.DocumentAssetOrderByRelationAggregateInput
+  versions?: Prisma.DocumentVersionOrderByRelationAggregateInput
 }
 
 export type DocumentWhereUniqueInput = Prisma.AtLeast<{
@@ -333,12 +407,21 @@ export type DocumentWhereUniqueInput = Prisma.AtLeast<{
   sha256?: Prisma.StringFilter<"Document"> | string
   text?: Prisma.StringFilter<"Document"> | string
   indexed?: Prisma.BoolFilter<"Document"> | boolean
+  createdByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  createdById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
+  deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  deletedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"Document"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Document"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   assets?: Prisma.DocumentAssetListRelationFilter
+  versions?: Prisma.DocumentVersionListRelationFilter
 }, "id" | "workspaceId_kind_path">
 
 export type DocumentOrderByWithAggregationInput = {
@@ -354,6 +437,14 @@ export type DocumentOrderByWithAggregationInput = {
   sha256?: Prisma.SortOrder
   text?: Prisma.SortOrder
   indexed?: Prisma.SortOrder
+  createdByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdById?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
+  updatedInSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedByType?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedById?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.DocumentCountOrderByAggregateInput
@@ -379,6 +470,14 @@ export type DocumentScalarWhereWithAggregatesInput = {
   sha256?: Prisma.StringWithAggregatesFilter<"Document"> | string
   text?: Prisma.StringWithAggregatesFilter<"Document"> | string
   indexed?: Prisma.BoolWithAggregatesFilter<"Document"> | boolean
+  createdByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Document"> | $Enums.ActorType | null
+  createdById?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
+  updatedByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Document"> | $Enums.ActorType | null
+  updatedById?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
+  updatedInSessionId?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
+  deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Document"> | Date | string | null
+  deletedByType?: Prisma.EnumActorTypeNullableWithAggregatesFilter<"Document"> | $Enums.ActorType | null
+  deletedById?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Document"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Document"> | Date | string
 }
@@ -393,12 +492,21 @@ export type DocumentCreateInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
   session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateInput = {
@@ -414,9 +522,18 @@ export type DocumentUncheckedCreateInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUpdateInput = {
@@ -429,12 +546,21 @@ export type DocumentUpdateInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
   session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateInput = {
@@ -450,9 +576,18 @@ export type DocumentUncheckedUpdateInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateManyInput = {
@@ -468,6 +603,14 @@ export type DocumentCreateManyInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
@@ -482,6 +625,14 @@ export type DocumentUpdateManyMutationInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -499,6 +650,14 @@ export type DocumentUncheckedUpdateManyInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -532,6 +691,14 @@ export type DocumentCountOrderByAggregateInput = {
   sha256?: Prisma.SortOrder
   text?: Prisma.SortOrder
   indexed?: Prisma.SortOrder
+  createdByType?: Prisma.SortOrder
+  createdById?: Prisma.SortOrder
+  updatedByType?: Prisma.SortOrder
+  updatedById?: Prisma.SortOrder
+  updatedInSessionId?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedByType?: Prisma.SortOrder
+  deletedById?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -553,6 +720,14 @@ export type DocumentMaxOrderByAggregateInput = {
   sha256?: Prisma.SortOrder
   text?: Prisma.SortOrder
   indexed?: Prisma.SortOrder
+  createdByType?: Prisma.SortOrder
+  createdById?: Prisma.SortOrder
+  updatedByType?: Prisma.SortOrder
+  updatedById?: Prisma.SortOrder
+  updatedInSessionId?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedByType?: Prisma.SortOrder
+  deletedById?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -570,12 +745,25 @@ export type DocumentMinOrderByAggregateInput = {
   sha256?: Prisma.SortOrder
   text?: Prisma.SortOrder
   indexed?: Prisma.SortOrder
+  createdByType?: Prisma.SortOrder
+  createdById?: Prisma.SortOrder
+  updatedByType?: Prisma.SortOrder
+  updatedById?: Prisma.SortOrder
+  updatedInSessionId?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
+  deletedByType?: Prisma.SortOrder
+  deletedById?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type DocumentSumOrderByAggregateInput = {
   size?: Prisma.SortOrder
+}
+
+export type DocumentScalarRelationFilter = {
+  is?: Prisma.DocumentWhereInput
+  isNot?: Prisma.DocumentWhereInput
 }
 
 export type DocumentNullableScalarRelationFilter = {
@@ -713,6 +901,24 @@ export type EnumDocumentKindFieldUpdateOperationsInput = {
   set?: $Enums.DocumentKind
 }
 
+export type NullableEnumActorTypeFieldUpdateOperationsInput = {
+  set?: $Enums.ActorType | null
+}
+
+export type DocumentCreateNestedOneWithoutVersionsInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutVersionsInput, Prisma.DocumentUncheckedCreateWithoutVersionsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutVersionsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+}
+
+export type DocumentUpdateOneRequiredWithoutVersionsNestedInput = {
+  create?: Prisma.XOR<Prisma.DocumentCreateWithoutVersionsInput, Prisma.DocumentUncheckedCreateWithoutVersionsInput>
+  connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutVersionsInput
+  upsert?: Prisma.DocumentUpsertWithoutVersionsInput
+  connect?: Prisma.DocumentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DocumentUpdateToOneWithWhereWithoutVersionsInput, Prisma.DocumentUpdateWithoutVersionsInput>, Prisma.DocumentUncheckedUpdateWithoutVersionsInput>
+}
+
 export type DocumentCreateNestedOneWithoutAssetsInput = {
   create?: Prisma.XOR<Prisma.DocumentCreateWithoutAssetsInput, Prisma.DocumentUncheckedCreateWithoutAssetsInput>
   connectOrCreate?: Prisma.DocumentCreateOrConnectWithoutAssetsInput
@@ -739,11 +945,20 @@ export type DocumentCreateWithoutWorkspaceInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
   session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutWorkspaceInput = {
@@ -758,9 +973,18 @@ export type DocumentUncheckedCreateWithoutWorkspaceInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutWorkspaceInput = {
@@ -805,6 +1029,14 @@ export type DocumentScalarWhereInput = {
   sha256?: Prisma.StringFilter<"Document"> | string
   text?: Prisma.StringFilter<"Document"> | string
   indexed?: Prisma.BoolFilter<"Document"> | boolean
+  createdByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  createdById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  updatedById?: Prisma.StringNullableFilter<"Document"> | string | null
+  updatedInSessionId?: Prisma.StringNullableFilter<"Document"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"Document"> | Date | string | null
+  deletedByType?: Prisma.EnumActorTypeNullableFilter<"Document"> | $Enums.ActorType | null
+  deletedById?: Prisma.StringNullableFilter<"Document"> | string | null
   updatedAt?: Prisma.DateTimeFilter<"Document"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Document"> | Date | string
 }
@@ -819,11 +1051,20 @@ export type DocumentCreateWithoutTeammateInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
   session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutTeammateInput = {
@@ -838,9 +1079,18 @@ export type DocumentUncheckedCreateWithoutTeammateInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutTeammateInput = {
@@ -879,11 +1129,20 @@ export type DocumentCreateWithoutSessionInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
   assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutSessionInput = {
@@ -898,9 +1157,18 @@ export type DocumentUncheckedCreateWithoutSessionInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutSessionInput = {
@@ -929,6 +1197,126 @@ export type DocumentUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.DocumentUpdateManyMutationInput, Prisma.DocumentUncheckedUpdateManyWithoutSessionInput>
 }
 
+export type DocumentCreateWithoutVersionsInput = {
+  id?: string
+  organizationId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
+  teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
+  session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
+  assets?: Prisma.DocumentAssetCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentUncheckedCreateWithoutVersionsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  kind?: $Enums.DocumentKind
+  path: string
+  teammateId?: string | null
+  sessionId?: string | null
+  contentType: string
+  size: number
+  sha256?: string
+  text?: string
+  indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
+  updatedAt?: Date | string
+  createdAt?: Date | string
+  assets?: Prisma.DocumentAssetUncheckedCreateNestedManyWithoutDocumentInput
+}
+
+export type DocumentCreateOrConnectWithoutVersionsInput = {
+  where: Prisma.DocumentWhereUniqueInput
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutVersionsInput, Prisma.DocumentUncheckedCreateWithoutVersionsInput>
+}
+
+export type DocumentUpsertWithoutVersionsInput = {
+  update: Prisma.XOR<Prisma.DocumentUpdateWithoutVersionsInput, Prisma.DocumentUncheckedUpdateWithoutVersionsInput>
+  create: Prisma.XOR<Prisma.DocumentCreateWithoutVersionsInput, Prisma.DocumentUncheckedCreateWithoutVersionsInput>
+  where?: Prisma.DocumentWhereInput
+}
+
+export type DocumentUpdateToOneWithWhereWithoutVersionsInput = {
+  where?: Prisma.DocumentWhereInput
+  data: Prisma.XOR<Prisma.DocumentUpdateWithoutVersionsInput, Prisma.DocumentUncheckedUpdateWithoutVersionsInput>
+}
+
+export type DocumentUpdateWithoutVersionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
+  teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
+  session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
+  assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+}
+
+export type DocumentUncheckedUpdateWithoutVersionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumDocumentKindFieldUpdateOperationsInput | $Enums.DocumentKind
+  path?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contentType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+}
+
 export type DocumentCreateWithoutAssetsInput = {
   id?: string
   organizationId: string
@@ -939,11 +1327,20 @@ export type DocumentCreateWithoutAssetsInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutDocumentsInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutDocumentsInput
   session?: Prisma.SessionCreateNestedOneWithoutDocumentsInput
+  versions?: Prisma.DocumentVersionCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentUncheckedCreateWithoutAssetsInput = {
@@ -959,8 +1356,17 @@ export type DocumentUncheckedCreateWithoutAssetsInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
+  versions?: Prisma.DocumentVersionUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type DocumentCreateOrConnectWithoutAssetsInput = {
@@ -989,11 +1395,20 @@ export type DocumentUpdateWithoutAssetsInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
   session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutAssetsInput = {
@@ -1009,8 +1424,17 @@ export type DocumentUncheckedUpdateWithoutAssetsInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentCreateManyWorkspaceInput = {
@@ -1025,6 +1449,14 @@ export type DocumentCreateManyWorkspaceInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
@@ -1039,11 +1471,20 @@ export type DocumentUpdateWithoutWorkspaceInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
   session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
@@ -1058,9 +1499,18 @@ export type DocumentUncheckedUpdateWithoutWorkspaceInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1075,6 +1525,14 @@ export type DocumentUncheckedUpdateManyWithoutWorkspaceInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1091,6 +1549,14 @@ export type DocumentCreateManyTeammateInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
@@ -1105,11 +1571,20 @@ export type DocumentUpdateWithoutTeammateInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
   session?: Prisma.SessionUpdateOneWithoutDocumentsNestedInput
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutTeammateInput = {
@@ -1124,9 +1599,18 @@ export type DocumentUncheckedUpdateWithoutTeammateInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutTeammateInput = {
@@ -1141,6 +1625,14 @@ export type DocumentUncheckedUpdateManyWithoutTeammateInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1157,6 +1649,14 @@ export type DocumentCreateManySessionInput = {
   sha256?: string
   text?: string
   indexed?: boolean
+  createdByType?: $Enums.ActorType | null
+  createdById?: string | null
+  updatedByType?: $Enums.ActorType | null
+  updatedById?: string | null
+  updatedInSessionId?: string | null
+  deletedAt?: Date | string | null
+  deletedByType?: $Enums.ActorType | null
+  deletedById?: string | null
   updatedAt?: Date | string
   createdAt?: Date | string
 }
@@ -1171,11 +1671,20 @@ export type DocumentUpdateWithoutSessionInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutDocumentsNestedInput
   assets?: Prisma.DocumentAssetUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateWithoutSessionInput = {
@@ -1190,9 +1699,18 @@ export type DocumentUncheckedUpdateWithoutSessionInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assets?: Prisma.DocumentAssetUncheckedUpdateManyWithoutDocumentNestedInput
+  versions?: Prisma.DocumentVersionUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type DocumentUncheckedUpdateManyWithoutSessionInput = {
@@ -1207,6 +1725,14 @@ export type DocumentUncheckedUpdateManyWithoutSessionInput = {
   sha256?: Prisma.StringFieldUpdateOperationsInput | string
   text?: Prisma.StringFieldUpdateOperationsInput | string
   indexed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  updatedInSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletedByType?: Prisma.NullableEnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType | null
+  deletedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1218,10 +1744,12 @@ export type DocumentUncheckedUpdateManyWithoutSessionInput = {
 
 export type DocumentCountOutputType = {
   assets: number
+  versions: number
 }
 
 export type DocumentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assets?: boolean | DocumentCountOutputTypeCountAssetsArgs
+  versions?: boolean | DocumentCountOutputTypeCountVersionsArgs
 }
 
 /**
@@ -1241,6 +1769,13 @@ export type DocumentCountOutputTypeCountAssetsArgs<ExtArgs extends runtime.Types
   where?: Prisma.DocumentAssetWhereInput
 }
 
+/**
+ * DocumentCountOutputType without action
+ */
+export type DocumentCountOutputTypeCountVersionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DocumentVersionWhereInput
+}
+
 
 export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1255,12 +1790,21 @@ export type DocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   sha256?: boolean
   text?: boolean
   indexed?: boolean
+  createdByType?: boolean
+  createdById?: boolean
+  updatedByType?: boolean
+  updatedById?: boolean
+  updatedInSessionId?: boolean
+  deletedAt?: boolean
+  deletedByType?: boolean
+  deletedById?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Document$teammateArgs<ExtArgs>
   session?: boolean | Prisma.Document$sessionArgs<ExtArgs>
   assets?: boolean | Prisma.Document$assetsArgs<ExtArgs>
+  versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["document"]>
 
@@ -1277,6 +1821,14 @@ export type DocumentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   sha256?: boolean
   text?: boolean
   indexed?: boolean
+  createdByType?: boolean
+  createdById?: boolean
+  updatedByType?: boolean
+  updatedById?: boolean
+  updatedInSessionId?: boolean
+  deletedAt?: boolean
+  deletedByType?: boolean
+  deletedById?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1297,6 +1849,14 @@ export type DocumentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   sha256?: boolean
   text?: boolean
   indexed?: boolean
+  createdByType?: boolean
+  createdById?: boolean
+  updatedByType?: boolean
+  updatedById?: boolean
+  updatedInSessionId?: boolean
+  deletedAt?: boolean
+  deletedByType?: boolean
+  deletedById?: boolean
   updatedAt?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -1317,16 +1877,25 @@ export type DocumentSelectScalar = {
   sha256?: boolean
   text?: boolean
   indexed?: boolean
+  createdByType?: boolean
+  createdById?: boolean
+  updatedByType?: boolean
+  updatedById?: boolean
+  updatedInSessionId?: boolean
+  deletedAt?: boolean
+  deletedByType?: boolean
+  deletedById?: boolean
   updatedAt?: boolean
   createdAt?: boolean
 }
 
-export type DocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "path" | "teammateId" | "sessionId" | "contentType" | "size" | "sha256" | "text" | "indexed" | "updatedAt" | "createdAt", ExtArgs["result"]["document"]>
+export type DocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "path" | "teammateId" | "sessionId" | "contentType" | "size" | "sha256" | "text" | "indexed" | "createdByType" | "createdById" | "updatedByType" | "updatedById" | "updatedInSessionId" | "deletedAt" | "deletedByType" | "deletedById" | "updatedAt" | "createdAt", ExtArgs["result"]["document"]>
 export type DocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Document$teammateArgs<ExtArgs>
   session?: boolean | Prisma.Document$sessionArgs<ExtArgs>
   assets?: boolean | Prisma.Document$assetsArgs<ExtArgs>
+  versions?: boolean | Prisma.Document$versionsArgs<ExtArgs>
   _count?: boolean | Prisma.DocumentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DocumentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1347,6 +1916,7 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     teammate: Prisma.$TeammatePayload<ExtArgs> | null
     session: Prisma.$SessionPayload<ExtArgs> | null
     assets: Prisma.$DocumentAssetPayload<ExtArgs>[]
+    versions: Prisma.$DocumentVersionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1376,6 +1946,24 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * Whether the text could be read for search.
      */
     indexed: boolean
+    /**
+     * Who added a library file, and who changed it last: a member or a teammate.
+     */
+    createdByType: $Enums.ActorType | null
+    createdById: string | null
+    updatedByType: $Enums.ActorType | null
+    updatedById: string | null
+    /**
+     * The thread a teammate last changed it from.
+     */
+    updatedInSessionId: string | null
+    /**
+     * Set while a library file is in the trash. Its path is then ".trash/<id>/<path it had>",
+     * which no live file can have; the hourly sweep deletes it 30 days on.
+     */
+    deletedAt: Date | null
+    deletedByType: $Enums.ActorType | null
+    deletedById: string | null
     updatedAt: Date
     createdAt: Date
   }, ExtArgs["result"]["document"]>
@@ -1776,6 +2364,7 @@ export interface Prisma__DocumentClient<T, Null = never, ExtArgs extends runtime
   teammate<T extends Prisma.Document$teammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$teammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.Document$sessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$sessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   assets<T extends Prisma.Document$assetsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$assetsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentAssetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  versions<T extends Prisma.Document$versionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Document$versionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1817,6 +2406,14 @@ export interface DocumentFieldRefs {
   readonly sha256: Prisma.FieldRef<"Document", 'String'>
   readonly text: Prisma.FieldRef<"Document", 'String'>
   readonly indexed: Prisma.FieldRef<"Document", 'Boolean'>
+  readonly createdByType: Prisma.FieldRef<"Document", 'ActorType'>
+  readonly createdById: Prisma.FieldRef<"Document", 'String'>
+  readonly updatedByType: Prisma.FieldRef<"Document", 'ActorType'>
+  readonly updatedById: Prisma.FieldRef<"Document", 'String'>
+  readonly updatedInSessionId: Prisma.FieldRef<"Document", 'String'>
+  readonly deletedAt: Prisma.FieldRef<"Document", 'DateTime'>
+  readonly deletedByType: Prisma.FieldRef<"Document", 'ActorType'>
+  readonly deletedById: Prisma.FieldRef<"Document", 'String'>
   readonly updatedAt: Prisma.FieldRef<"Document", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Document", 'DateTime'>
 }
@@ -2279,6 +2876,30 @@ export type Document$assetsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.DocumentAssetScalarFieldEnum | Prisma.DocumentAssetScalarFieldEnum[]
+}
+
+/**
+ * Document.versions
+ */
+export type Document$versionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DocumentVersion
+   */
+  select?: Prisma.DocumentVersionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DocumentVersion
+   */
+  omit?: Prisma.DocumentVersionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DocumentVersionInclude<ExtArgs> | null
+  where?: Prisma.DocumentVersionWhereInput
+  orderBy?: Prisma.DocumentVersionOrderByWithRelationInput | Prisma.DocumentVersionOrderByWithRelationInput[]
+  cursor?: Prisma.DocumentVersionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DocumentVersionScalarFieldEnum | Prisma.DocumentVersionScalarFieldEnum[]
 }
 
 /**

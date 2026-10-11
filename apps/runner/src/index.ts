@@ -12,7 +12,7 @@ import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { readThreadFile } from './files.js'
-import { Library, LIBRARY_DIR } from './library.js'
+import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
@@ -183,7 +183,7 @@ async function start() {
     handoff: (sessionId, fromTeammateId, teammateIds) =>
       connection.send({ type: 'thread.handoff', sessionId, fromTeammateId, teammateIds }),
     context: {
-      libraryDir: LIBRARY_DIR,
+      libraryDir: (teammateId) => library.view(teammateId),
       memoryFor: (teammateId) => library.memoryFor(teammateId),
       bundles,
       uploadFile: (input) => attachments.upload(input),

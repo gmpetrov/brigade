@@ -4,6 +4,7 @@
 // Each cell opens a menu of the levels its row allows; a cell this member
 // may not change shows its level and why. At phone width it shows one
 // teammate at a time.
+import { folderAccessFor, type FolderRule } from '@brigade/contracts'
 import { Check, KeyRound, Library, Lock, ShieldAlert, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
@@ -33,6 +34,17 @@ import { cn } from '@/lib/utils'
 import type { AccessOverview, CredentialGrantLevel } from '@/lib/api'
 
 type Teammate = AccessOverview['teammates'][number]
+
+/** Library folders where the teammate's access differs from the folder above, hidden ones included. */
+function folderExceptionCount(t: Teammate, rules: FolderRule[]) {
+  const who = { id: t.id, library: t.libraryAccess }
+  return rules.filter((r) => {
+    const parent = r.path.includes('/')
+      ? folderAccessFor(r.path.slice(0, r.path.lastIndexOf('/')), who, rules)
+      : t.libraryAccess
+    return folderAccessFor(r.path, who, rules) !== parent
+  }).length
+}
 type Look = 'none' | 'partial' | 'full' | 'free'
 type Option = { value: string; label: string; hint: string; look: Look; text?: string }
 
@@ -359,6 +371,19 @@ export function AccessMatrix({
                     locked={adminOnly}
                     onChange={(v) => actions.setLibrary(t.id, v)}
                   />
+                  {(() => {
+                    const differ = folderExceptionCount(t, data.libraryFolders ?? [])
+                    return (
+                      differ > 0 && (
+                        <Link
+                          href="/app/library"
+                          className="mt-1 block text-xs text-muted-foreground hover:underline"
+                        >
+                          {differ === 1 ? '1 folder differs' : `${differ} folders differ`}
+                        </Link>
+                      )
+                    )
+                  })()}
                 </td>
               ))}
             </tr>

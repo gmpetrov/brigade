@@ -515,10 +515,6 @@ export type BigIntFieldUpdateOperationsInput = {
   divide?: bigint | number
 }
 
-export type EnumActorTypeFieldUpdateOperationsInput = {
-  set?: $Enums.ActorType
-}
-
 export type AuditEntryCreateWithoutWorkspaceInput = {
   id?: bigint | number
   organizationId: string

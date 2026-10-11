@@ -85,6 +85,13 @@ export const ThreadSpec = z.object({
   teammates: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
   /** The teammate's grant on the workspace library: read it and search, or also save to it. */
   library: LibraryAccess.default('read'),
+  /**
+   * Folders where the teammate's access differs from `library`: read-only,
+   * or open to saving. Folders it may not see are left out.
+   */
+  libraryFolders: z
+    .array(z.object({ path: z.string(), access: z.enum(['read', 'read_write']) }))
+    .default([]),
   /** A private thread does not write to workspace memory, and its summary is not searchable. */
   private: z.boolean().default(false),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */

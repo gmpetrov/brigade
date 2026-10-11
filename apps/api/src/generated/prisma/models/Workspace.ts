@@ -201,6 +201,8 @@ export type WorkspaceWhereInput = {
   subscriptions?: Prisma.SubscriptionListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
+  libraryFolders?: Prisma.LibraryFolderListRelationFilter
+  libraryFolderGrants?: Prisma.LibraryFolderGrantListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   threadAttachments?: Prisma.ThreadAttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
@@ -235,6 +237,8 @@ export type WorkspaceOrderByWithRelationInput = {
   subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
   tickets?: Prisma.TicketOrderByRelationAggregateInput
   documents?: Prisma.DocumentOrderByRelationAggregateInput
+  libraryFolders?: Prisma.LibraryFolderOrderByRelationAggregateInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantOrderByRelationAggregateInput
   attachments?: Prisma.AttachmentOrderByRelationAggregateInput
   threadAttachments?: Prisma.ThreadAttachmentOrderByRelationAggregateInput
   pullRequests?: Prisma.PullRequestOrderByRelationAggregateInput
@@ -272,6 +276,8 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   subscriptions?: Prisma.SubscriptionListRelationFilter
   tickets?: Prisma.TicketListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
+  libraryFolders?: Prisma.LibraryFolderListRelationFilter
+  libraryFolderGrants?: Prisma.LibraryFolderGrantListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
   threadAttachments?: Prisma.ThreadAttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
@@ -327,6 +333,8 @@ export type WorkspaceCreateInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -360,6 +368,8 @@ export type WorkspaceUncheckedCreateInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -393,6 +403,8 @@ export type WorkspaceUpdateInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -426,6 +438,8 @@ export type WorkspaceUncheckedUpdateInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -852,6 +866,34 @@ export type WorkspaceUpdateOneRequiredWithoutDocumentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutDocumentsInput, Prisma.WorkspaceUpdateWithoutDocumentsInput>, Prisma.WorkspaceUncheckedUpdateWithoutDocumentsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutLibraryFoldersInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFoldersInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibraryFoldersInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutLibraryFoldersNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFoldersInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibraryFoldersInput
+  upsert?: Prisma.WorkspaceUpsertWithoutLibraryFoldersInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutLibraryFoldersInput, Prisma.WorkspaceUpdateWithoutLibraryFoldersInput>, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFoldersInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutLibraryFolderGrantsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutLibraryFolderGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutLibraryFolderGrantsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUpdateWithoutLibraryFolderGrantsInput>, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutAuditEntriesInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutAuditEntriesInput, Prisma.WorkspaceUncheckedCreateWithoutAuditEntriesInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutAuditEntriesInput
@@ -919,6 +961,8 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -951,6 +995,8 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1020,6 +1066,8 @@ export type WorkspaceCreateWithoutComputersInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1052,6 +1100,8 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1100,6 +1150,8 @@ export type WorkspaceUpdateWithoutComputersInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1132,6 +1184,8 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1164,6 +1218,8 @@ export type WorkspaceCreateWithoutRunnersInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1196,6 +1252,8 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1244,6 +1302,8 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1276,6 +1336,8 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1308,6 +1370,8 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1340,6 +1404,8 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1388,6 +1454,8 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1420,6 +1488,8 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1452,6 +1522,8 @@ export type WorkspaceCreateWithoutSessionsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1484,6 +1556,8 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1532,6 +1606,8 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1564,6 +1640,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1597,6 +1675,8 @@ export type WorkspaceCreateWithoutTasksInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1629,6 +1709,8 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1677,6 +1759,8 @@ export type WorkspaceUpdateWithoutTasksInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1709,6 +1793,8 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1741,6 +1827,8 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1773,6 +1861,8 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1821,6 +1911,8 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1853,6 +1945,8 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1884,6 +1978,8 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -1916,6 +2012,8 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1964,6 +2062,8 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -1996,6 +2096,8 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2028,6 +2130,8 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2060,6 +2164,8 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2108,6 +2214,8 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -2140,6 +2248,8 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2172,6 +2282,8 @@ export type WorkspaceCreateWithoutAccountsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2204,6 +2316,8 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2252,6 +2366,8 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -2284,6 +2400,8 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2317,6 +2435,8 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
@@ -2349,6 +2469,8 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2397,6 +2519,8 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
@@ -2429,6 +2553,8 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2461,6 +2587,8 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2493,6 +2621,8 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2541,6 +2671,8 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -2573,6 +2705,8 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2604,6 +2738,8 @@ export type WorkspaceCreateWithoutCommentsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2636,6 +2772,8 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2684,6 +2822,8 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -2716,6 +2856,8 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2748,6 +2890,8 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2780,6 +2924,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2828,6 +2974,8 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -2860,6 +3008,8 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2892,6 +3042,8 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -2924,6 +3076,8 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2972,6 +3126,8 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3004,6 +3160,8 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3036,6 +3194,8 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3068,6 +3228,8 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3116,6 +3278,8 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3148,6 +3312,8 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3180,6 +3346,8 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3212,6 +3380,8 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3260,6 +3430,8 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3292,6 +3464,8 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3324,6 +3498,8 @@ export type WorkspaceCreateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3356,6 +3532,8 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3404,6 +3582,8 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3436,6 +3616,8 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3468,6 +3650,8 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3500,6 +3684,8 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3548,6 +3734,8 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3580,6 +3768,8 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3612,6 +3802,8 @@ export type WorkspaceCreateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3644,6 +3836,8 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3692,6 +3886,8 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3724,6 +3920,8 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3756,6 +3954,8 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3788,6 +3988,8 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3836,6 +4038,8 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -3868,6 +4072,8 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3900,6 +4106,8 @@ export type WorkspaceCreateWithoutTicketsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -3932,6 +4140,8 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3980,6 +4190,8 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -4012,6 +4224,8 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4044,6 +4258,8 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -4076,6 +4292,8 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4124,6 +4342,8 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -4156,6 +4376,312 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutLibraryFoldersInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutLibraryFoldersInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFoldersInput>
+}
+
+export type WorkspaceUpsertWithoutLibraryFoldersInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFoldersInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFoldersInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutLibraryFoldersInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibraryFoldersInput, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFoldersInput>
+}
+
+export type WorkspaceUpdateWithoutLibraryFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput>
+}
+
+export type WorkspaceUpsertWithoutLibraryFolderGrantsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutLibraryFolderGrantsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutLibraryFolderGrantsInput, Prisma.WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput>
+}
+
+export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4189,6 +4715,8 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
@@ -4221,6 +4749,8 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4269,6 +4799,8 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -4301,6 +4833,8 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4333,6 +4867,8 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
@@ -4365,6 +4901,8 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4413,6 +4951,8 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
@@ -4445,6 +4985,8 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4477,6 +5019,8 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
@@ -4509,6 +5053,8 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
   tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4557,6 +5103,8 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
@@ -4589,6 +5137,8 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4627,6 +5177,8 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
@@ -4659,6 +5211,8 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
   tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4699,6 +5253,8 @@ export type WorkspaceCountOutputType = {
   subscriptions: number
   tickets: number
   documents: number
+  libraryFolders: number
+  libraryFolderGrants: number
   attachments: number
   threadAttachments: number
   pullRequests: number
@@ -4727,6 +5283,8 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   subscriptions?: boolean | WorkspaceCountOutputTypeCountSubscriptionsArgs
   tickets?: boolean | WorkspaceCountOutputTypeCountTicketsArgs
   documents?: boolean | WorkspaceCountOutputTypeCountDocumentsArgs
+  libraryFolders?: boolean | WorkspaceCountOutputTypeCountLibraryFoldersArgs
+  libraryFolderGrants?: boolean | WorkspaceCountOutputTypeCountLibraryFolderGrantsArgs
   attachments?: boolean | WorkspaceCountOutputTypeCountAttachmentsArgs
   threadAttachments?: boolean | WorkspaceCountOutputTypeCountThreadAttachmentsArgs
   pullRequests?: boolean | WorkspaceCountOutputTypeCountPullRequestsArgs
@@ -4875,6 +5433,20 @@ export type WorkspaceCountOutputTypeCountDocumentsArgs<ExtArgs extends runtime.T
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountLibraryFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LibraryFolderWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountLibraryFolderGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LibraryFolderGrantWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountAttachmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AttachmentWhereInput
 }
@@ -4947,6 +5519,8 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   subscriptions?: boolean | Prisma.Workspace$subscriptionsArgs<ExtArgs>
   tickets?: boolean | Prisma.Workspace$ticketsArgs<ExtArgs>
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
+  libraryFolders?: boolean | Prisma.Workspace$libraryFoldersArgs<ExtArgs>
+  libraryFolderGrants?: boolean | Prisma.Workspace$libraryFolderGrantsArgs<ExtArgs>
   attachments?: boolean | Prisma.Workspace$attachmentsArgs<ExtArgs>
   threadAttachments?: boolean | Prisma.Workspace$threadAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Workspace$pullRequestsArgs<ExtArgs>
@@ -5004,6 +5578,8 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   subscriptions?: boolean | Prisma.Workspace$subscriptionsArgs<ExtArgs>
   tickets?: boolean | Prisma.Workspace$ticketsArgs<ExtArgs>
   documents?: boolean | Prisma.Workspace$documentsArgs<ExtArgs>
+  libraryFolders?: boolean | Prisma.Workspace$libraryFoldersArgs<ExtArgs>
+  libraryFolderGrants?: boolean | Prisma.Workspace$libraryFolderGrantsArgs<ExtArgs>
   attachments?: boolean | Prisma.Workspace$attachmentsArgs<ExtArgs>
   threadAttachments?: boolean | Prisma.Workspace$threadAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Workspace$pullRequestsArgs<ExtArgs>
@@ -5042,6 +5618,8 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     subscriptions: Prisma.$SubscriptionPayload<ExtArgs>[]
     tickets: Prisma.$TicketPayload<ExtArgs>[]
     documents: Prisma.$DocumentPayload<ExtArgs>[]
+    libraryFolders: Prisma.$LibraryFolderPayload<ExtArgs>[]
+    libraryFolderGrants: Prisma.$LibraryFolderGrantPayload<ExtArgs>[]
     attachments: Prisma.$AttachmentPayload<ExtArgs>[]
     threadAttachments: Prisma.$ThreadAttachmentPayload<ExtArgs>[]
     pullRequests: Prisma.$PullRequestPayload<ExtArgs>[]
@@ -5469,6 +6047,8 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   subscriptions<T extends Prisma.Workspace$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tickets<T extends Prisma.Workspace$ticketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$ticketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   documents<T extends Prisma.Workspace$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  libraryFolders<T extends Prisma.Workspace$libraryFoldersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$libraryFoldersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LibraryFolderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  libraryFolderGrants<T extends Prisma.Workspace$libraryFolderGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$libraryFolderGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LibraryFolderGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   attachments<T extends Prisma.Workspace$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadAttachments<T extends Prisma.Workspace$threadAttachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadAttachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pullRequests<T extends Prisma.Workspace$pullRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$pullRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -6340,6 +6920,54 @@ export type Workspace$documentsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.DocumentScalarFieldEnum | Prisma.DocumentScalarFieldEnum[]
+}
+
+/**
+ * Workspace.libraryFolders
+ */
+export type Workspace$libraryFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LibraryFolder
+   */
+  select?: Prisma.LibraryFolderSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LibraryFolder
+   */
+  omit?: Prisma.LibraryFolderOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LibraryFolderInclude<ExtArgs> | null
+  where?: Prisma.LibraryFolderWhereInput
+  orderBy?: Prisma.LibraryFolderOrderByWithRelationInput | Prisma.LibraryFolderOrderByWithRelationInput[]
+  cursor?: Prisma.LibraryFolderWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LibraryFolderScalarFieldEnum | Prisma.LibraryFolderScalarFieldEnum[]
+}
+
+/**
+ * Workspace.libraryFolderGrants
+ */
+export type Workspace$libraryFolderGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LibraryFolderGrant
+   */
+  select?: Prisma.LibraryFolderGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LibraryFolderGrant
+   */
+  omit?: Prisma.LibraryFolderGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LibraryFolderGrantInclude<ExtArgs> | null
+  where?: Prisma.LibraryFolderGrantWhereInput
+  orderBy?: Prisma.LibraryFolderGrantOrderByWithRelationInput | Prisma.LibraryFolderGrantOrderByWithRelationInput[]
+  cursor?: Prisma.LibraryFolderGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LibraryFolderGrantScalarFieldEnum | Prisma.LibraryFolderGrantScalarFieldEnum[]
 }
 
 /**

@@ -20,6 +20,28 @@ const clip = (text: string) =>
 /** Strip a memory file's own top heading; the section gives one. */
 const body = (text: string) => text.replace(/^#\s[^\n]*\n+/, '').trim()
 
+/** Where the teammate may save to the library: everywhere, nowhere, or some folders. */
+function saving(spec: ThreadSpec) {
+  const folders = spec.libraryFolders ?? []
+  const list = (access: 'read' | 'read_write') =>
+    folders
+      .filter((f) => f.access === access)
+      .map((f) => `${f.path}/`)
+      .join(', ')
+  const how = 'write it on this computer, then call `save_to_library`'
+  if (spec.library === 'read_write') {
+    const readOnly = list('read')
+    return (
+      ` To add or update a library file, ${how}.` +
+      (readOnly ? ` These folders are read-only for you: ${readOnly}.` : '')
+    )
+  }
+  const writable = list('read_write')
+  return writable
+    ? ` To add or update a file in ${writable}, ${how}. The rest is read-only for you.`
+    : ''
+}
+
 export function instructions(
   spec: ThreadSpec,
   memory: { workspace: string; teammate: string },
@@ -36,9 +58,7 @@ export function instructions(
     `The workspace's shared documents are mirrored read-only at ${libraryDir}. ` +
       'Search them, the memory below and summaries of past threads with `search_workspace`. ' +
       `A message mentions a library file as \`@[path](document:id)\`: the file at ${libraryDir}/path.` +
-      (spec.library === 'read_write'
-        ? ' To add or update a library file, write it on this computer, then call `save_to_library`.'
-        : ''),
+      saving(spec),
     spec.git && code(spec),
     tasks(spec),
     SCHEDULES,
