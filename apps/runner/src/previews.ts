@@ -27,7 +27,7 @@ import {
 import { harnessEnv } from './harness/env.js'
 import type { CheckResult } from './preview-check.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
-import { teammateHome } from './teammates.js'
+import { containerEnv, teammateHome } from './teammates.js'
 
 const run = promisify(execFile)
 
@@ -407,6 +407,7 @@ export class Previews {
     const env = harnessEnv({
       ...(seat.runAs
         ? {
+            ...(await containerEnv(seat.runAs)),
             HOME: teammateHome(seat.runAs),
             USER: seat.runAs,
             LOGNAME: seat.runAs,
