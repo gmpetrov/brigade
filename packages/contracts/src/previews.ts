@@ -198,7 +198,7 @@ export const SetPreviewVariables = z.object({
       ]),
     )
     .min(1)
-    .max(50),
+    .max(200),
 })
 export type SetPreviewVariables = z.infer<typeof SetPreviewVariables>
 

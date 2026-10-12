@@ -3,10 +3,17 @@
 // settings) beside the setup a teammate saved. Set in the ticket a teammate
 // opens when it needs them, or on the Saved previews list. A secret's value is
 // never shown again, and the teammate never sees it: each start of the
-// preview gives it to the app.
-import type { Ask, AskReply, PreviewVariable, PreviewVariableKind } from '@brigade/contracts'
-import { KeyRound, LoaderCircle, Sparkles, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+// preview gives it to the app. Pasting a .env file into any field fills in
+// each of its variables, as on Vercel.
+import {
+  reservedPreviewVariable,
+  type Ask,
+  type AskReply,
+  type PreviewVariable,
+  type PreviewVariableKind,
+} from '@brigade/contracts'
+import { KeyRound, LoaderCircle, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { useState, type ClipboardEvent } from 'react'
 import { timeAgo, useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { api, isAdmin, useApi } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { pastedEnv, type EnvEntry } from '@/lib/dotenv'
 
 /** Prefixes frameworks build into the pages browsers download. */
 const PUBLIC_PREFIX = /^(NEXT_PUBLIC_|VITE_|PUBLIC_|REACT_APP_|EXPO_PUBLIC_|NUXT_PUBLIC_|GATSBY_)/
@@ -44,6 +51,79 @@ export function variableWarning(name: string, kind: PreviewVariableKind, value: 
 
 const path = (repository: string) => `/repositories/${repository.toLowerCase()}/preview/variables`
 
+/** A variable being added, before it is saved. */
+type Row = { key: number; name: string; kind: PreviewVariableKind; value: string }
+
+let rowKeys = 0
+/**
+ * A new row: a secret, unless it comes from a pasted file and is empty (a
+ * secret cannot be) or one browsers read anyway (NEXT_PUBLIC_…): a setting.
+ */
+const newRow = (name = '', value = '', pasted = false): Row => ({
+  key: ++rowKeys,
+  name,
+  kind: pasted && (value === '' || PUBLIC_PREFIX.test(name)) ? 'setting' : 'secret',
+  value,
+})
+
+/** Why a name cannot be saved, if it cannot. */
+function nameProblem(name: string) {
+  if (!ENV_NAME.test(name)) return 'Letters, digits and _, not starting with a digit'
+  if (reservedPreviewVariable(name)) return 'The preview sets this one itself'
+}
+
+/** A pasted .env file's variables, split into those a preview may have and the names left out. */
+function usable(entries: EnvEntry[]) {
+  const left = entries.filter((e) => reservedPreviewVariable(e.name)).map((e) => e.name)
+  return { entries: entries.filter((e) => !left.includes(e.name)), left }
+}
+
+const leftOutNote = (names: string[]) =>
+  names.length
+    ? `Left out ${names.join(', ')}: the preview sets ${names.length === 1 ? 'it' : 'them'} itself.`
+    : undefined
+
+/**
+ * Pasted variables into rows: the row pasted into is replaced unless it is
+ * filled in, a row of the same name takes the new value, the rest are added
+ * where the paste was.
+ */
+function mergeRows(rows: Row[], into: number | undefined, entries: EnvEntry[]) {
+  const at = rows.findIndex((r) => r.key === into)
+  const target = rows[at]
+  const keep = !target || (target.name !== '' && target.value !== '')
+  const next = keep ? [...rows] : rows.filter((r) => r.key !== into)
+  const added: Row[] = []
+  for (const { name, value } of entries) {
+    const same = next.findIndex((r) => r.name === name)
+    if (same >= 0)
+      next[same] = {
+        ...next[same]!,
+        value,
+        kind: next[same]!.kind === 'generated' ? 'secret' : next[same]!.kind,
+      }
+    else added.push(newRow(name, value, true))
+  }
+  next.splice(keep ? next.length : at, 0, ...added)
+  return next.length ? next : [newRow()]
+}
+
+/** Rows that say something: a row with neither name nor value is left out. */
+const filled = (rows: Row[]) => rows.filter((r) => r.name !== '' || r.value !== '')
+
+const rowProblem = (row: Row, rows: Row[]) =>
+  nameProblem(row.name) ??
+  (rows.filter((r) => r.name === row.name).length > 1 ? 'Twice in the list' : undefined) ??
+  (row.kind === 'secret' && !row.value.trim() ? 'Give it a value' : undefined)
+
+/** Rows as the API takes them. */
+const asVariables = (rows: Row[]) =>
+  filled(rows).map((r) =>
+    r.kind === 'generated'
+      ? { name: r.name, kind: r.kind }
+      : { name: r.name, kind: r.kind, value: r.kind === 'secret' ? r.value.trim() : r.value },
+  )
+
 type Entry =
   | { mode: 'value'; value: string }
   | { mode: 'generate' }
@@ -66,25 +146,48 @@ export function VariablesAsk({
 }) {
   const existing = useApi<PreviewVariable[]>(path(ask.repository))
   const [entries, setEntries] = useState<Record<string, Entry>>({})
+  // Other variables of a pasted .env file, saved with these.
+  const [extra, setExtra] = useState<Row[]>([])
+  const [leftOut, setLeftOut] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  const asked = ask.variables.map((v) => v.name)
+
+  /** A .env file pasted into a field: the values asked for go in their fields, the rest below. */
+  function paste(e: ClipboardEvent<HTMLInputElement>, name: string) {
+    const pasted = pastedEnv(e.clipboardData.getData('text'), { value: true, name })
+    if (!pasted) return
+    e.preventDefault()
+    const { entries: found, left } = usable(pasted)
+    setLeftOut(left)
+    setEntries((current) => {
+      const next = { ...current }
+      for (const entry of found)
+        if (asked.includes(entry.name)) next[entry.name] = { mode: 'value', value: entry.value }
+      return next
+    })
+    const others = found.filter((entry) => !asked.includes(entry.name))
+    if (others.length) setExtra((rows) => filled(mergeRows(rows, undefined, others)))
+  }
 
   const isSet = (name: string) => existing.data?.some((v) => v.name === name) ?? false
   const entryOf = (name: string): Entry =>
     entries[name] ?? (isSet(name) ? { mode: 'keep' } : { mode: 'value', value: '' })
   const set = (name: string, entry: Entry) => setEntries((e) => ({ ...e, [name]: entry }))
+  const extraRows = filled(extra)
   const ready =
     existing.data !== undefined &&
     ask.variables.every((v) => {
       const entry = entryOf(v.name)
       return entry.mode !== 'value' || entry.value.trim() !== ''
-    })
+    }) &&
+    extraRows.every((r) => !rowProblem(r, [...extraRows, ...asked.map((n) => newRow(n))]))
 
   async function save() {
     setBusy(true)
     setError(undefined)
     try {
-      const variables = ask.variables.flatMap((v) => {
+      const variables: object[] = ask.variables.flatMap((v) => {
         const entry = entryOf(v.name)
         const description = v.description ? { description: v.description } : {}
         if (entry.mode === 'generate') return [{ name: v.name, kind: 'generated', ...description }]
@@ -98,6 +201,7 @@ export function VariablesAsk({
           },
         ]
       })
+      variables.push(...asVariables(extra))
       if (variables.length) await api(path(ask.repository), { method: 'PUT', body: { variables } })
       const skipped = ask.variables
         .filter((v) => entryOf(v.name).mode === 'skip')
@@ -179,6 +283,7 @@ export function VariablesAsk({
                       className="min-w-0 flex-1 basis-56 font-mono text-sm"
                       value={entry.value}
                       onChange={(e) => set(v.name, { mode: 'value', value: e.target.value })}
+                      onPaste={(e) => paste(e, v.name)}
                     />
                     {secret && (
                       <Button
@@ -202,6 +307,25 @@ export function VariablesAsk({
           )
         })}
       </ul>
+      {extra.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">Also in the file</span>
+          <DraftRows
+            rows={extra}
+            onChange={(rows) => setExtra(filled(rows))}
+            taken={existing.data?.map((v) => v.name) ?? []}
+            others={asked}
+            onLeftOut={setLeftOut}
+          />
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Paste a .env file into any field to fill in each variable it has.
+        </p>
+      )}
+      {leftOutNote(leftOut) && (
+        <p className="text-xs text-muted-foreground">{leftOutNote(leftOut)}</p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" disabled={!ready || busy} onClick={() => void save()}>
           {busy && <LoaderCircle aria-hidden className="animate-spin" />}
@@ -263,7 +387,7 @@ export function PreviewVariables({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">Variables</span>
+        <span className="text-sm font-medium">Environment Variables</span>
         <span className="text-xs text-muted-foreground">
           Given to the app each time it starts; the teammate sees their names only.
         </span>
@@ -275,7 +399,6 @@ export function PreviewVariables({
               <li key={v.name} className="px-3 py-2">
                 <VariableForm
                   initial={{ name: v.name, kind: v.kind, value: v.value ?? '' }}
-                  fixedName
                   busy={busy}
                   onCancel={() => setEditing(undefined)}
                   onSave={async (kind, value) => {
@@ -339,17 +462,17 @@ export function PreviewVariables({
         </ul>
       )}
       {adding ? (
-        <div className="rounded-md border px-3 py-2">
-          <VariableForm
-            initial={{ name: '', kind: 'secret', value: '' }}
-            taken={variables.map((v) => v.name)}
-            busy={busy}
-            onCancel={() => setAdding(false)}
-            onSave={async (kind, value, name) => {
-              if (await save(name, kind, value)) setAdding(false)
-            }}
-          />
-        </div>
+        <NewVariables
+          taken={variables.map((v) => v.name)}
+          busy={busy}
+          onCancel={() => setAdding(false)}
+          onSave={async (rows) => {
+            const saved = await run(() =>
+              api(path(repository), { method: 'PUT', body: { variables: asVariables(rows) } }),
+            )
+            if (saved) setAdding(false)
+          }}
+        />
       ) : (
         <Button
           variant="outline"
@@ -362,7 +485,7 @@ export function PreviewVariables({
           }}
         >
           <KeyRound aria-hidden />
-          Add a variable
+          Add variables
         </Button>
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
@@ -375,83 +498,49 @@ export function PreviewVariables({
   )
 }
 
+/** Replace or edit one variable that is set: its name stays. */
 function VariableForm({
   initial,
-  fixedName,
-  taken = [],
   busy,
   onCancel,
   onSave,
 }: {
   initial: { name: string; kind: PreviewVariableKind; value: string }
-  fixedName?: boolean
-  taken?: string[]
   busy: boolean
   onCancel: () => void
-  onSave: (kind: PreviewVariableKind, value: string, name: string) => Promise<void>
+  onSave: (kind: PreviewVariableKind, value: string) => Promise<void>
 }) {
-  const [name, setName] = useState(initial.name)
+  const { name } = initial
   // A secret is replaced, never shown: its field starts empty.
   const [kind, setKind] = useState<PreviewVariableKind>(initial.kind)
   const [value, setValue] = useState(initial.kind === 'setting' ? initial.value : '')
-  const nameProblem = !name
-    ? undefined
-    : !ENV_NAME.test(name)
-      ? 'Letters, digits and _, not starting with a digit'
-      : !fixedName && taken.includes(name)
-        ? 'Already set: replace it in the list'
-        : undefined
   const warning = kind === 'generated' ? undefined : variableWarning(name, kind, value)
-  const ready =
-    name !== '' &&
-    !nameProblem &&
-    (kind === 'generated' || kind === 'setting' || value.trim() !== '')
+  const ready = kind !== 'secret' || value.trim() !== ''
 
   return (
     <form
       className="flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault()
-        if (ready) void onSave(kind, kind === 'secret' ? value.trim() : value, name)
+        if (ready) void onSave(kind, kind === 'secret' ? value.trim() : value)
       }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        {fixedName ? (
-          <code className="basis-48 font-mono text-xs font-semibold break-all">{name}</code>
-        ) : (
-          <Input
-            autoFocus
-            aria-label="Name"
-            placeholder="NAME"
-            spellCheck={false}
-            className="min-w-0 basis-48 font-mono text-sm"
-            value={name}
-            onChange={(e) => setName(e.target.value.trim())}
-          />
-        )}
-        <Select value={kind} onValueChange={(k) => setKind(k as PreviewVariableKind)}>
-          <SelectTrigger size="sm" aria-label="Kind" className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="secret">Secret</SelectItem>
-            <SelectItem value="setting">Setting</SelectItem>
-            <SelectItem value="generated">Generated</SelectItem>
-          </SelectContent>
-        </Select>
+        <code className="basis-48 font-mono text-xs font-semibold break-all">{name}</code>
+        <KindSelect kind={kind} onChange={setKind} />
         {kind === 'generated' ? (
           <span className="min-w-0 flex-1 basis-56 text-sm text-muted-foreground">
-            {fixedName ? 'Brigade makes a new random value.' : 'Brigade makes a random value.'}
+            Brigade makes a new random value.
           </span>
         ) : (
           <Input
-            autoFocus={fixedName}
+            autoFocus
             type={kind === 'secret' ? 'password' : 'text'}
             autoComplete="off"
             spellCheck={false}
             aria-label="Value"
             placeholder={kind === 'secret' ? 'Paste the value' : 'Value'}
-            className={cn('min-w-0 flex-1 basis-56 font-mono text-sm')}
+            className="min-w-0 flex-1 basis-56 font-mono text-sm"
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />
@@ -464,8 +553,182 @@ function VariableForm({
           Cancel
         </Button>
       </div>
-      {nameProblem && <p className="text-sm text-destructive-text">{nameProblem}</p>}
       {warning && <p className="text-sm text-warning">{warning}</p>}
     </form>
+  )
+}
+
+function KindSelect({
+  kind,
+  onChange,
+}: {
+  kind: PreviewVariableKind
+  onChange: (kind: PreviewVariableKind) => void
+}) {
+  return (
+    <Select value={kind} onValueChange={(k) => onChange(k as PreviewVariableKind)}>
+      <SelectTrigger size="sm" aria-label="Kind" className="w-32">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="secret">Secret</SelectItem>
+        <SelectItem value="setting">Setting</SelectItem>
+        <SelectItem value="generated">Generated</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
+/** New variables for the list: one row to start, a row each for a pasted .env file's. */
+function NewVariables({
+  taken,
+  busy,
+  onCancel,
+  onSave,
+}: {
+  taken: string[]
+  busy: boolean
+  onCancel: () => void
+  onSave: (rows: Row[]) => Promise<void>
+}) {
+  const [rows, setRows] = useState<Row[]>(() => [newRow()])
+  const [leftOut, setLeftOut] = useState<string[]>([])
+  const list = filled(rows)
+  const ready = list.length > 0 && list.every((r) => !rowProblem(r, list))
+
+  return (
+    <form
+      className="flex flex-col gap-2 rounded-md border px-3 py-2"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (ready) void onSave(list)
+      }}
+    >
+      <DraftRows rows={rows} onChange={setRows} taken={taken} onLeftOut={setLeftOut} autoFocus />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" size="sm" disabled={!ready || busy}>
+          {busy && <LoaderCircle aria-hidden className="animate-spin" />}
+          {list.length > 1 ? `Save ${list.length} variables` : 'Save'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setRows((r) => [...r, newRow()])}
+        >
+          <Plus aria-hidden />
+          Another
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {leftOutNote(leftOut) ?? 'Paste a .env file into a field to add each of its variables.'}
+        </span>
+      </div>
+    </form>
+  )
+}
+
+/**
+ * Rows of variables being added: name, kind, value. A .env file pasted into
+ * a field becomes a row per variable.
+ */
+function DraftRows({
+  rows,
+  onChange,
+  taken,
+  others = [],
+  onLeftOut,
+  autoFocus,
+}: {
+  rows: Row[]
+  onChange: (rows: Row[]) => void
+  /** Already set for the preview: a row of that name replaces it. */
+  taken: string[]
+  /** Names set elsewhere in the same form. */
+  others?: string[]
+  onLeftOut: (names: string[]) => void
+  autoFocus?: boolean
+}) {
+  const update = (key: number, change: Partial<Row>) =>
+    onChange(rows.map((r) => (r.key === key ? { ...r, ...change } : r)))
+
+  function paste(e: ClipboardEvent<HTMLInputElement>, row: Row, field: 'name' | 'value') {
+    const pasted = pastedEnv(
+      e.clipboardData.getData('text'),
+      field === 'name' ? { value: false } : { value: true, name: row.name },
+    )
+    if (!pasted) return
+    e.preventDefault()
+    const { entries, left } = usable(pasted)
+    onLeftOut(left)
+    if (entries.length) onChange(mergeRows(rows, row.key, entries))
+  }
+
+  const all = [...rows, ...others.map((n) => newRow(n))]
+  return (
+    <ul className="flex flex-col gap-2">
+      {rows.map((row, i) => {
+        const empty = row.name === '' && row.value === ''
+        const problem = empty || row.name === '' ? undefined : rowProblem(row, filled(all))
+        const warning =
+          row.kind === 'generated' ? undefined : variableWarning(row.name, row.kind, row.value)
+        return (
+          <li key={row.key} className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                autoFocus={autoFocus && i === 0}
+                aria-label="Name"
+                placeholder="NAME"
+                spellCheck={false}
+                className="min-w-0 basis-48 font-mono text-sm"
+                value={row.name}
+                onChange={(e) => update(row.key, { name: e.target.value.trim() })}
+                onPaste={(e) => paste(e, row, 'name')}
+              />
+              <KindSelect kind={row.kind} onChange={(kind) => update(row.key, { kind })} />
+              {/* The value and its remove button wrap together. */}
+              <div className="flex min-w-0 flex-1 basis-56 items-center gap-2">
+                {row.kind === 'generated' ? (
+                  <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                    Brigade makes a random value.
+                  </span>
+                ) : (
+                  <Input
+                    type={row.kind === 'secret' ? 'password' : 'text'}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-label={row.name ? `Value of ${row.name}` : 'Value'}
+                    placeholder={row.kind === 'secret' ? 'Paste the value' : 'Value'}
+                    className="min-w-0 flex-1 font-mono text-sm"
+                    value={row.value}
+                    onChange={(e) => update(row.key, { value: e.target.value })}
+                    onPaste={(e) => paste(e, row, 'value')}
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={row.name ? `Remove ${row.name}` : 'Remove this row'}
+                  title="Remove this row"
+                  onClick={() => onChange(rows.filter((r) => r.key !== row.key))}
+                >
+                  <X aria-hidden />
+                </Button>
+              </div>
+            </div>
+            {problem ? (
+              <p className="text-sm text-destructive-text">{problem}</p>
+            ) : warning ? (
+              <p className="text-sm text-warning">{warning}</p>
+            ) : taken.includes(row.name) ? (
+              <p className="text-xs text-muted-foreground">Replaces the value set now.</p>
+            ) : null}
+          </li>
+        )
+      })}
+    </ul>
   )
 }

@@ -61,10 +61,10 @@ export async function setVariables(
   const names = input.variables.map((v) => v.name)
   if (new Set(names).size !== names.length)
     throw new HTTPException(400, { message: 'Each variable once' })
+  // A whole .env file at once: the rows it replaces, read in one go.
+  const rows = await db.previewVariable.findMany({ where: { repository, name: { in: names } } })
   for (const variable of input.variables) {
-    const existing = await db.previewVariable.findFirst({
-      where: { repository, name: variable.name },
-    })
+    const existing = rows.find((r) => r.name === variable.name)
     const secret =
       variable.kind === 'setting'
         ? null
