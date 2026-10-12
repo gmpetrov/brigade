@@ -1,5 +1,5 @@
 // Pull requests: any member reads them and asks a teammate to review one;
-// owners and admins merge, or arm a review to merge once approved.
+// owners and admins merge, close or reopen one, or arm a review to merge once approved.
 import { MergePullRequest, RepositoryName, RequestReview } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
@@ -10,6 +10,7 @@ import {
   openCount,
   pullDetail,
   requestReview,
+  setPullState,
   stopLoop,
 } from '../pull-requests.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -57,5 +58,17 @@ export const pulls = new Hono<AppEnv>()
     const { repo, number } = target(c.req.param())
     const input = await parseBody(c.req.raw, MergePullRequest)
     await mergeNow(c.var.scope, repo, number, input.method)
+    return c.json({ ok: true })
+  })
+
+  .post('/:owner/:name/:number/close', async (c) => {
+    const { repo, number } = target(c.req.param())
+    await setPullState(c.var.scope, repo, number, 'closed')
+    return c.json({ ok: true })
+  })
+
+  .post('/:owner/:name/:number/reopen', async (c) => {
+    const { repo, number } = target(c.req.param())
+    await setPullState(c.var.scope, repo, number, 'open')
     return c.json({ ok: true })
   })

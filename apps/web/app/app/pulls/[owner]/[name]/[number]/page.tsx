@@ -6,8 +6,10 @@ import {
   CircleX,
   ExternalLink,
   GitMerge,
+  GitPullRequestClosed,
   MessagesSquare,
   Repeat,
+  RotateCcw,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -137,6 +139,11 @@ export default function PullRequestPage() {
     void act(() => api(`${path}/merge`, { body: { method } }))
   }
   const stop = () => void act(() => api(`${path}/stop`, { body: {} }))
+  const close = () => {
+    if (!confirm(`Close #${p.number} without merging it?`)) return
+    void act(() => api(`${path}/close`, { body: {} }))
+  }
+  const reopen = () => void act(() => api(`${path}/reopen`, { body: {} }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -226,7 +233,19 @@ export default function PullRequestPage() {
               Stop the review
             </Button>
           )}
+          {admin && (
+            <Button variant="ghost" className="ml-auto" disabled={busy} onClick={close}>
+              <GitPullRequestClosed />
+              Close
+            </Button>
+          )}
         </div>
+      )}
+      {p.state === 'closed' && admin && (
+        <Button variant="outline" className="self-start" disabled={busy} onClick={reopen}>
+          <RotateCcw />
+          Reopen
+        </Button>
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
 
