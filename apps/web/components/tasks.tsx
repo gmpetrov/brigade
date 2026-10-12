@@ -7,10 +7,10 @@ import {
   ExternalLink,
   GitPullRequest,
   Pencil,
-  Play,
   RotateCcw,
   SquareKanban,
   Trash2,
+  Undo2,
   UserRoundCog,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -47,13 +47,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import {
   api,
-  computerName,
   harnessLabel,
   pullHref,
-  usableComputers,
   useApi,
   type Account,
-  type ComputersResponse,
   type Task,
   type TaskColumn,
   type TaskDetail,
@@ -63,7 +60,12 @@ import {
 import { useLive } from '@/lib/use-live'
 
 export const COLUMNS: { id: TaskColumn; label: string; tone: StatusTone; empty: string }[] = [
-  { id: 'backlog', label: 'Backlog', tone: 'neutral', empty: 'Nothing waiting to start.' },
+  {
+    id: 'backlog',
+    label: 'Backlog',
+    tone: 'neutral',
+    empty: 'Nothing waiting. Assign a task to a teammate and it starts.',
+  },
   {
     id: 'needs_you',
     label: 'Needs you',
@@ -113,7 +115,7 @@ function NeedsYouNote({
               ? `Pull request #${pull.number} is waiting for review. Merging it marks the task done.`
               : task.pullRequests.some((p) => p.state === 'merged')
                 ? 'Its pull request is merged. Mark it done, or say in the thread what is left.'
-                : `${task.teammate.name} stopped at a pull request that was closed without merging.`}{' '}
+                : `${task.teammate?.name ?? 'Its teammate'} stopped at a pull request that was closed without merging.`}{' '}
       {!waiting && pull && open.length === 1 ? (
         <Link href={pullHref(pull.repository, pull.number)} className="font-semibold underline">
           Review it
@@ -159,11 +161,15 @@ function PrioritySelect({
   )
 }
 
+/** TeammateSelect's value for no teammate. */
+const NOBODY = 'nobody'
+
 function TeammateSelect({
   teammates,
   value,
   onChange,
   unavailable,
+  nobody,
   id,
 }: {
   teammates: Pick<Teammate, 'id' | 'name' | 'harness'>[]
@@ -171,6 +177,8 @@ function TeammateSelect({
   onChange: (id: string) => void
   /** Why a teammate cannot take it, if it cannot. */
   unavailable?: (t: Pick<Teammate, 'id' | 'name' | 'harness'>) => string | undefined
+  /** Offer "Nobody yet" (the value NOBODY): the task waits in Backlog. */
+  nobody?: boolean
   id?: string
 }) {
   return (
@@ -179,6 +187,12 @@ function TeammateSelect({
         <SelectValue placeholder="Choose a teammate" />
       </SelectTrigger>
       <SelectContent>
+        {nobody && (
+          <SelectItem value={NOBODY}>
+            Nobody yet
+            <span className="text-xs text-muted-foreground">Backlog</span>
+          </SelectItem>
+        )}
         {teammates.map((t) => {
           const why = unavailable?.(t)
           return (
@@ -213,9 +227,22 @@ function Field({
   )
 }
 
+const LAST_CHOICE = 'brigade.tasks.new'
+
+/** The assignee and priority of the last task made by hand, remembered per browser. */
+function lastChoice(): { teammateId?: string; priority?: TaskPriority } {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_CHOICE) ?? '{}') as unknown
+    return saved && typeof saved === 'object' ? saved : {}
+  } catch {
+    return {}
+  }
+}
+
 /**
- * A new task: into Backlog by hand, or from a thread, which becomes the task's
- * thread (its teammate is whoever answered it last).
+ * A new task: with a teammate, its thread starts at once; with nobody, it
+ * waits in Backlog. Or from a thread, which becomes the task's thread (its
+ * teammate is whoever answered it last).
  */
 export function NewTaskDialog({
   open,
@@ -232,19 +259,23 @@ export function NewTaskDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('medium')
-  const [teammateId, setTeammateId] = useState<string>()
+  const [teammateId, setTeammateId] = useState<string>(NOBODY)
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
+  // By hand, the last task's assignee and priority again; from a thread, the defaults.
   useEffect(() => {
     if (!open) return
+    const last = from ? {} : lastChoice()
     setTitle(from?.title ?? '')
     setDescription('')
-    setPriority('medium')
+    setPriority(PRIORITIES.some((p) => p.id === last.priority) ? last.priority! : 'medium')
+    setTeammateId(last.teammateId ?? NOBODY)
     setError(undefined)
   }, [open, from?.title])
 
-  const teammate = teammateId ?? teammates[0]?.id
+  const assignee =
+    teammateId !== NOBODY && teammates.some((t) => t.id === teammateId) ? teammateId : undefined
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -257,9 +288,16 @@ export function NewTaskDialog({
           title,
           description,
           priority,
-          ...(from ? { sessionId: from.sessionId } : { teammateId: teammate }),
+          ...(from ? { sessionId: from.sessionId } : assignee ? { teammateId: assignee } : {}),
         },
       })
+      if (!from)
+        try {
+          localStorage.setItem(
+            LAST_CHOICE,
+            JSON.stringify({ teammateId: assignee ?? NOBODY, priority }),
+          )
+        } catch {}
       onOpenChange(false)
       onCreated(task)
     } catch (e) {
@@ -278,7 +316,9 @@ export function NewTaskDialog({
             <DialogDescription>
               {from
                 ? 'It goes on the Tasks board, and this thread becomes its thread.'
-                : 'It goes into the backlog. Start it when you want a teammate on it.'}
+                : assignee
+                  ? 'The teammate starts on it right away, with the title and description as the first message of its thread.'
+                  : 'It waits in Backlog. Assign it to a teammate when you want it started.'}
             </DialogDescription>
           </DialogHeader>
           <Field label="Title" htmlFor="task-title">
@@ -306,139 +346,27 @@ export function NewTaskDialog({
               <PrioritySelect id="task-priority" value={priority} onChange={setPriority} />
             </Field>
             {!from && (
-              <Field label="Teammate" htmlFor="task-teammate">
+              <Field label="Assignee" htmlFor="task-teammate">
                 <TeammateSelect
                   id="task-teammate"
                   teammates={teammates}
-                  value={teammate}
+                  value={assignee ?? NOBODY}
                   onChange={setTeammateId}
+                  nobody
                 />
               </Field>
             )}
           </div>
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           <DialogFooter>
-            <Button type="submit" disabled={busy || !title.trim() || (!from && !teammate)}>
-              {busy ? 'Creating…' : from ? 'Make it a task' : 'Create task'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-/** A backlog task's thread starts on a computer, with its brief as the first message. */
-export function StartTaskDialog({
-  task,
-  open,
-  onOpenChange,
-}: {
-  task: Task
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const router = useRouter()
-  const computers = useApi<ComputersResponse>(open ? '/computers' : null)
-  const accounts = useApi<Account[]>(open ? '/accounts' : null)
-  const [computerId, setComputerId] = useState<string>()
-  const [accountId, setAccountId] = useState<string>()
-  const [error, setError] = useState<string>()
-  const [busy, setBusy] = useState(false)
-
-  const online = usableComputers(computers.data)
-  const computer = online.find((c) => c.id === computerId) ?? online[0]
-  const usable = (accounts.data ?? []).filter(
-    (a) =>
-      a.computer.id === computer?.id &&
-      a.provider === task.teammate.harness &&
-      (a.status === 'ready' || a.status === 'unverified') &&
-      !(a.exhaustedUntil && new Date(a.exhaustedUntil) > new Date()),
-  )
-  const account =
-    usable.find((a) => a.id === accountId) ?? usable.find((a) => a.isDefault) ?? usable[0]
-  const loaded = computers.data && accounts.data
-
-  async function start(e: FormEvent) {
-    e.preventDefault()
-    if (busy || !computer || !account) return
-    setBusy(true)
-    setError(undefined)
-    try {
-      const started = await api<TaskDetail>(`/tasks/${task.id}/start`, {
-        body: { computerId: computer.id, accountId: account.id },
-      })
-      onOpenChange(false)
-      if (started.thread) router.push(`/app/threads/${started.thread.id}`)
-    } catch (e) {
-      setError((e as Error).message)
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={(e) => void start(e)} className="flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle>Start “{task.title}”</DialogTitle>
-            <DialogDescription>
-              {task.teammate.name} gets the title and description as the first message of the
-              task&apos;s thread.
-            </DialogDescription>
-          </DialogHeader>
-          <Field label="Run on" htmlFor="start-computer">
-            <Select value={computer?.id} onValueChange={setComputerId} disabled={!online.length}>
-              <SelectTrigger id="start-computer" className="w-full">
-                <SelectValue placeholder={loaded ? 'No computer is online' : 'Loading…'} />
-              </SelectTrigger>
-              <SelectContent>
-                {online.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {computerName(c)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label={`${harnessLabel(task.teammate.harness)} account`} htmlFor="start-account">
-            <Select
-              key={computer?.id}
-              value={account?.id}
-              onValueChange={setAccountId}
-              disabled={!usable.length}
-            >
-              <SelectTrigger id="start-account" className="w-full">
-                <SelectValue
-                  placeholder={
-                    loaded ? `No ${harnessLabel(task.teammate.harness)} account here` : 'Loading…'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {usable.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.label}
-                    {a.email ? ` (${a.email})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {loaded && computer && !account && (
-            <p className="text-sm text-muted-foreground">
-              Add a {harnessLabel(task.teammate.harness)} account on {computerName(computer)} under{' '}
-              <Link href="/app/accounts" className="font-medium text-primary hover:underline">
-                Accounts
-              </Link>
-              .
-            </p>
-          )}
-          {error && <p className="text-sm text-destructive-text">{error}</p>}
-          <DialogFooter>
-            <Button type="submit" disabled={busy || !computer || !account}>
-              {busy ? 'Starting…' : 'Start'}
-              <ArrowRight aria-hidden />
+            <Button type="submit" disabled={busy || !title.trim()}>
+              {busy
+                ? 'Creating…'
+                : from
+                  ? 'Make it a task'
+                  : assignee
+                    ? 'Create and start'
+                    : 'Add to Backlog'}
             </Button>
           </DialogFooter>
         </form>
@@ -448,10 +376,11 @@ export function StartTaskDialog({
 }
 
 /**
- * Another teammate takes the task. With a thread, it joins it and is told why
- * and where the work so far is; it does not see the previous one's files.
+ * A teammate takes the task. In Backlog, its thread starts right away. With a
+ * thread, the teammate joins it and is told why and where the work so far is;
+ * it does not see the previous one's files.
  */
-export function ReassignDialog({
+export function AssignDialog({
   task,
   open,
   onOpenChange,
@@ -480,7 +409,7 @@ export function ReassignDialog({
     setError(undefined)
   }, [open])
 
-  const others = teammates.filter((t) => t.id !== task.teammate.id)
+  const others = teammates.filter((t) => t.id !== task.teammate?.id)
   const unavailable = (t: Pick<Teammate, 'harness'>) => {
     if (!thread || !accounts.data) return undefined
     const ok = accounts.data.some(
@@ -499,7 +428,7 @@ export function ReassignDialog({
     setBusy(true)
     setError(undefined)
     try {
-      await api(`/tasks/${task.id}/reassign`, { body: { teammateId, reason } })
+      await api(`/tasks/${task.id}/assign`, { body: { teammateId, reason } })
       onOpenChange(false)
       onDone()
     } catch (e) {
@@ -514,11 +443,13 @@ export function ReassignDialog({
       <DialogContent>
         <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Reassign “{task.title}”</DialogTitle>
+            <DialogTitle>
+              {thread ? 'Reassign' : 'Assign'} “{task.title}”
+            </DialogTitle>
             <DialogDescription>
               {thread
-                ? `The new teammate joins the thread and picks up from ${task.teammate.name}: it reads the conversation, your reason, and what was pushed or attached. It does not see ${task.teammate.name}'s working folder.`
-                : `${task.teammate.name} has not started it yet.`}
+                ? `The new teammate joins the thread and picks up from ${task.teammate?.name ?? 'the previous one'}: it reads the conversation, your reason, and what was pushed or attached. It does not see the previous teammate's working folder.`
+                : 'The teammate starts on it right away, with the title and description as the first message of its thread, on the workspace computer or else your own.'}
             </DialogDescription>
           </DialogHeader>
           <Field label="Give it to" htmlFor="reassign-teammate">
@@ -545,7 +476,13 @@ export function ReassignDialog({
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={busy || !teammateId}>
-              {busy ? 'Reassigning…' : 'Reassign'}
+              {busy
+                ? thread
+                  ? 'Reassigning…'
+                  : 'Starting…'
+                : thread
+                  ? 'Reassign'
+                  : 'Assign and start'}
             </Button>
           </DialogFooter>
         </form>
@@ -569,7 +506,7 @@ export function TaskSheet({
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [dialog, setDialog] = useState<'start' | 'reassign'>()
+  const [assigning, setAssigning] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string>()
 
@@ -614,6 +551,9 @@ export function TaskSheet({
                 {task.archivedAt && (
                   <StatusBadge status="archived" tone="neutral" label="Archived" />
                 )}
+                {task.trashedAt && (
+                  <StatusBadge status="trashed" tone="neutral" label="In the Trash" />
+                )}
                 <PriorityBadge priority={task.priority} quiet />
               </div>
               {editing ? (
@@ -630,13 +570,19 @@ export function TaskSheet({
                 </SheetTitle>
               )}
               <SheetDescription className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                <TeammateAvatar teammate={task.teammate} className="size-5" />
-                <Link
-                  href={`/app/teammates/${task.teammate.id}`}
-                  className="font-semibold text-foreground hover:underline"
-                >
-                  {task.teammate.name}
-                </Link>
+                {task.teammate ? (
+                  <>
+                    <TeammateAvatar teammate={task.teammate} className="size-5" />
+                    <Link
+                      href={`/app/teammates/${task.teammate.id}`}
+                      className="font-semibold text-foreground hover:underline"
+                    >
+                      {task.teammate.name}
+                    </Link>
+                  </>
+                ) : (
+                  <span className="font-semibold text-foreground">Nobody yet</span>
+                )}
                 <span aria-hidden>·</span>
                 <span>
                   asked by {task.createdBy.user.name} {timeAgo(task.createdAt)}
@@ -646,7 +592,12 @@ export function TaskSheet({
 
             <div className="flex flex-col gap-6 p-4">
               <div className="flex flex-wrap gap-2">
-                {task.thread ? (
+                {task.trashedAt ? (
+                  <Button size="sm" onClick={() => void act('/restore')}>
+                    <Undo2 aria-hidden />
+                    Restore
+                  </Button>
+                ) : task.thread ? (
                   <Button asChild size="sm">
                     <Link href={`/app/threads/${task.thread.id}`}>
                       Open thread
@@ -654,42 +605,44 @@ export function TaskSheet({
                     </Link>
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => setDialog('start')}>
-                    <Play aria-hidden />
-                    Start
+                  <Button size="sm" onClick={() => setAssigning(true)}>
+                    <UserRoundCog aria-hidden />
+                    Assign
                   </Button>
                 )}
-                {task.thread && !task.completedAt && (
+                {!task.trashedAt && task.thread && !task.completedAt && (
                   <Button size="sm" variant="outline" onClick={() => void act('/complete')}>
                     <Check aria-hidden />
                     Mark done
                   </Button>
                 )}
-                {task.completedAt && (
+                {!task.trashedAt && task.completedAt && (
                   <Button size="sm" variant="outline" onClick={() => void act('/reopen')}>
                     <RotateCcw aria-hidden />
                     Reopen
                   </Button>
                 )}
-                {task.completedAt && !task.archivedAt && (
+                {!task.trashedAt && task.completedAt && !task.archivedAt && (
                   <Button size="sm" variant="outline" onClick={() => void act('/archive')}>
                     <Archive aria-hidden />
                     Archive
                   </Button>
                 )}
-                {task.archivedAt && (
+                {!task.trashedAt && task.archivedAt && (
                   <Button size="sm" variant="outline" onClick={() => void act('/unarchive')}>
                     <ArchiveRestore aria-hidden />
-                    Restore
+                    Unarchive
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => setDialog('reassign')}>
-                  <UserRoundCog aria-hidden />
-                  Reassign
-                </Button>
+                {!task.trashedAt && task.thread && (
+                  <Button size="sm" variant="outline" onClick={() => setAssigning(true)}>
+                    <UserRoundCog aria-hidden />
+                    Reassign
+                  </Button>
+                )}
               </div>
 
-              {task.thread && task.column === 'needs_you' && (
+              {!task.trashedAt && task.thread && task.column === 'needs_you' && (
                 <NeedsYouNote task={task} thread={task.thread} />
               )}
 
@@ -816,10 +769,20 @@ export function TaskSheet({
               {error && <p className="text-sm text-destructive-text">{error}</p>}
 
               <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-                {confirmDelete ? (
+                {!task.trashedAt ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-muted-foreground"
+                    onClick={() => void act('/trash').then((ok) => ok && onClose())}
+                  >
+                    <Trash2 aria-hidden />
+                    Move to Trash
+                  </Button>
+                ) : confirmDelete ? (
                   <>
                     <span className="text-sm text-muted-foreground">
-                      Delete this task?{task.thread ? ' Its thread stays.' : ''}
+                      Delete it for good?{task.thread ? ' Its thread stays.' : ''}
                     </span>
                     <Button
                       size="sm"
@@ -844,21 +807,16 @@ export function TaskSheet({
                     onClick={() => setConfirmDelete(true)}
                   >
                     <Trash2 aria-hidden />
-                    Delete task
+                    Delete for good
                   </Button>
                 )}
               </div>
             </div>
 
-            <StartTaskDialog
+            <AssignDialog
               task={task}
-              open={dialog === 'start'}
-              onOpenChange={(open) => setDialog(open ? 'start' : undefined)}
-            />
-            <ReassignDialog
-              task={task}
-              open={dialog === 'reassign'}
-              onOpenChange={(open) => setDialog(open ? 'reassign' : undefined)}
+              open={assigning}
+              onOpenChange={setAssigning}
               onDone={() => {
                 void detail.reload()
                 onChanged()
@@ -991,7 +949,7 @@ export function ThreadTaskBar({
           </>
         )}
       </div>
-      <ReassignDialog
+      <AssignDialog
         task={task}
         open={reassigning}
         onOpenChange={setReassigning}

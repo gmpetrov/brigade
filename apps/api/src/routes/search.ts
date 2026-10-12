@@ -69,7 +69,13 @@ export const search = new Hono<AppEnv>()
       }),
       db.task.findMany({
         where: matching(words, ['title', 'description']),
-        select: { id: true, title: true, completedAt: true, teammate: { select: { name: true } } },
+        select: {
+          id: true,
+          title: true,
+          completedAt: true,
+          trashedAt: true,
+          teammate: { select: { name: true } },
+        },
         orderBy: { updatedAt: 'desc' },
         take: EACH,
       }),
@@ -191,7 +197,13 @@ export const search = new Hono<AppEnv>()
           kind: 'task',
           id: t.id,
           title: t.title,
-          detail: t.completedAt ? `${t.teammate.name} · done` : t.teammate.name,
+          detail: [
+            t.teammate?.name ?? 'Backlog',
+            t.completedAt && 'done',
+            t.trashedAt && 'in the Trash',
+          ]
+            .filter(Boolean)
+            .join(' · '),
         }),
       ),
       ...pulls.map((p) =>

@@ -829,23 +829,30 @@ export type TaskCaller = (call: {
 }) => Promise<unknown>
 
 /**
- * Tasks on the board: turn this thread into one, or mark this thread's task
- * done. The API checks the thread (not a trigger's, not already a task).
+ * Tasks on the board: create, list, comment on, change, assign, move and
+ * complete them. The API checks every call. There is no tool to assign a
+ * person or move a task to Needs you: a ticket (ask) does that.
  */
 export function taskTools(call: TaskCaller): Record<string, Tool> {
+  const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
+    call({ operation, toolCallId, toolName, input })
+  const priority = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] } as const
+  const taskId = { type: 'string', description: 'The task id, from list_tasks' } as const
   return {
     create_task: tool({
       description:
-        "Track this thread's work as a task on the workspace's Tasks board, where the team follows it. " +
-        'Use it when the work has a deliverable someone will review (a pull request, document, email or report), ' +
-        'takes several steps, will wait on approval or someone else, or the person asks to track it. ' +
-        'Do not use it for questions, explanations, brainstorming or quick actions you finish in this reply, ' +
-        'or when this thread is already a task. Call it before starting the work, or as soon as a conversation ' +
-        'turns into work. Do not ask first; say in one line that you are tracking it.',
+        "Create a task on the workspace's Tasks board, where the team follows it. By default this thread becomes " +
+        'the task and you do it: use that when the work has a deliverable someone will review (a pull request, ' +
+        'document, email or report), takes several steps, will wait on approval or someone else, or the person ' +
+        'asks to track it; not for questions, explanations, brainstorming or quick actions you finish in this ' +
+        'reply. Call it before starting the work; do not ask first, say in one line that you are tracking it. ' +
+        'Set assignee to "none" to put a separate task in Backlog for later, or to another teammate (id or name) ' +
+        'to hand them a separate task: it starts at once in its own thread.',
       inputSchema: jsonSchema<{
         title: string
         description: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
+        assignee?: string
       }>({
         type: 'object',
         properties: {
@@ -854,59 +861,147 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
             description: 'Short and imperative, e.g. "Add CSV export to billing"',
           },
           description: { type: 'string', description: 'What done looks like, in a few lines' },
-          priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+          priority,
+          assignee: {
+            type: 'string',
+            description:
+              '"self" (default): this thread is the task. "none": Backlog. Else a teammate id or name, never a person.',
+          },
         },
         required: ['title', 'description'],
       }),
       execute: (input, { toolCallId }) =>
-        call({
-          operation: {
+        send(
+          'create_task',
+          {
             name: 'create',
             title: input.title,
             description: input.description,
             priority: input.priority ?? 'medium',
+            assignee: input.assignee || 'self',
           },
-          toolCallId,
-          toolName: 'create_task',
           input,
-        }),
+          toolCallId,
+        ),
+    }),
+    list_tasks: tool({
+      description:
+        "The tasks on the board (Backlog, Needs you, Doing, Done) with their ids, and the workspace's teammates " +
+        'you can assign them to.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) => send('list_tasks', { name: 'list' }, input, toolCallId),
+    }),
+    comment_on_task: tool({
+      description:
+        "Post a message to another task's thread; its teammate reads it and answers there. For a task that has " +
+        'started (not Backlog). To talk to a person, open a ticket instead.',
+      inputSchema: jsonSchema<{ taskId: string; text: string }>({
+        type: 'object',
+        properties: { taskId, text: { type: 'string', description: 'The comment, in Markdown' } },
+        required: ['taskId', 'text'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send('comment_on_task', { name: 'comment', ...input }, input, toolCallId),
+    }),
+    update_task: tool({
+      description: "Change a task's title, description or priority.",
+      inputSchema: jsonSchema<{
+        taskId: string
+        title?: string
+        description?: string
+        priority?: 'low' | 'medium' | 'high' | 'urgent'
+      }>({
+        type: 'object',
+        properties: {
+          taskId,
+          title: { type: 'string' },
+          description: { type: 'string' },
+          priority,
+        },
+        required: ['taskId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send('update_task', { name: 'update', ...input }, input, toolCallId),
+    }),
+    assign_task: tool({
+      description:
+        'Give a task to a teammate (never a person). A Backlog task starts at once in its own thread; a started ' +
+        'one changes hands: the teammate joins its thread and is told why.',
+      inputSchema: jsonSchema<{ taskId: string; teammate: string; reason?: string }>({
+        type: 'object',
+        properties: {
+          taskId,
+          teammate: { type: 'string', description: 'A teammate id or name, from list_tasks' },
+          reason: { type: 'string', description: 'Why, for the teammate taking it over' },
+        },
+        required: ['taskId', 'teammate'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          'assign_task',
+          {
+            name: 'assign',
+            taskId: input.taskId,
+            teammateId: input.teammate,
+            reason: input.reason ?? '',
+          },
+          input,
+          toolCallId,
+        ),
+    }),
+    move_task: tool({
+      description:
+        'Move a task: "doing" reopens a done, archived or trashed task; "archived" puts a done task away; ' +
+        '"trash" takes any task off the board (it can be restored). To mark one done, use complete_task. ' +
+        'Needs you is not a place you move tasks to: open a ticket when you need a person.',
+      inputSchema: jsonSchema<{ taskId: string; to: 'doing' | 'archived' | 'trash' }>({
+        type: 'object',
+        properties: { taskId, to: { type: 'string', enum: ['doing', 'archived', 'trash'] } },
+        required: ['taskId', 'to'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send('move_task', { name: 'move', ...input }, input, toolCallId),
     }),
     complete_task: tool({
       description:
-        "Mark this thread's task done once the work is finished and delivered. Give a short summary of what you did " +
-        'and links to what you produced (pull request, document, file) so a person or another teammate can find it. ' +
-        'Only for a thread that is a task.',
-      inputSchema: jsonSchema<{ summary: string; deliverables?: { label: string; url: string }[] }>(
-        {
-          type: 'object',
-          properties: {
-            summary: { type: 'string', description: 'What was done, in a few lines' },
-            deliverables: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  label: { type: 'string', description: 'e.g. "Pull request acme/web#42"' },
-                  url: { type: 'string', description: 'An https link' },
-                },
-                required: ['label', 'url'],
+        "Mark a task done once the work is finished and delivered: this thread's task by default, or another by " +
+        'its id. Give a short summary of what was done and links to what was produced (pull request, document, ' +
+        'file) so a person or another teammate can find it.',
+      inputSchema: jsonSchema<{
+        taskId?: string
+        summary: string
+        deliverables?: { label: string; url: string }[]
+      }>({
+        type: 'object',
+        properties: {
+          taskId: { type: 'string', description: "Unset: this thread's task" },
+          summary: { type: 'string', description: 'What was done, in a few lines' },
+          deliverables: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                label: { type: 'string', description: 'e.g. "Pull request acme/web#42"' },
+                url: { type: 'string', description: 'An https link' },
               },
+              required: ['label', 'url'],
             },
           },
-          required: ['summary'],
         },
-      ),
+        required: ['summary'],
+      }),
       execute: (input, { toolCallId }) =>
-        call({
-          operation: {
+        send(
+          'complete_task',
+          {
             name: 'complete',
+            ...(input.taskId ? { taskId: input.taskId } : {}),
             summary: input.summary,
             deliverables: input.deliverables ?? [],
           },
-          toolCallId,
-          toolName: 'complete_task',
           input,
-        }),
+          toolCallId,
+        ),
     }),
   }
 }

@@ -1,5 +1,5 @@
 'use client'
-import { Archive, ArrowLeft, Plus } from 'lucide-react'
+import { Archive, ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { COLUMNS, NewTaskDialog, PriorityBadge, priorityRank, TaskSheet } from '@/components/tasks'
@@ -22,6 +22,7 @@ function order(a: Task, b: Task) {
 
 /** What the card says about where the work is. */
 function progress(task: Task) {
+  if (task.trashedAt) return `Trashed ${timeAgo(task.trashedAt)}`
   if (task.archivedAt) return `Archived ${timeAgo(task.archivedAt)}`
   if (task.completedAt) return `Done ${timeAgo(task.completedAt)}`
   if (!task.thread) return `Added ${timeAgo(task.createdAt)}`
@@ -51,8 +52,14 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
             )}
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          <TeammateAvatar teammate={task.teammate} className="size-5" />
-          <span className="truncate font-medium text-foreground">{task.teammate.name}</span>
+          {task.teammate ? (
+            <>
+              <TeammateAvatar teammate={task.teammate} className="size-5" />
+              <span className="truncate font-medium text-foreground">{task.teammate.name}</span>
+            </>
+          ) : (
+            <span className="truncate">Unassigned</span>
+          )}
           <span className="ml-auto shrink-0">{progress(task)}</span>
         </span>
       </button>
@@ -120,10 +127,14 @@ function useArchive(on: boolean) {
   }
 }
 
-/** The Tasks board: Backlog, Needs you, Doing and Done; or the archived tasks. */
+type View = 'board' | 'archived' | 'trash'
+
+/** The Tasks board: Backlog, Needs you, Doing and Done; or the archived tasks, or the Trash. */
 export default function Tasks() {
-  const [archived, setArchived] = useState(false)
-  const tasks = useApi<Task[]>(archived ? null : '/tasks')
+  const [view, setView] = useState<View>('board')
+  const archived = view === 'archived'
+  const tasks = useApi<Task[]>(view === 'board' ? '/tasks' : null)
+  const trash = useApi<Task[]>(view === 'trash' ? '/tasks?trashed=true' : null)
   const archive = useArchive(archived)
   const [open, setOpen] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -131,18 +142,19 @@ export default function Tasks() {
   const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState<string>()
 
-  // /app/tasks?task=<id> opens that task, e.g. from its thread; ?view=archived the archive.
+  // /app/tasks?task=<id> opens that task, e.g. from its thread; ?view=archived the archive, ?view=trash the Trash.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const id = params.get('task')
     if (id) setOpen(id)
-    if (params.get('view') === 'archived') setArchived(true)
+    const v = params.get('view')
+    if (v === 'archived' || v === 'trash') setView(v)
   }, [])
-  const showArchived = useCallback((on: boolean) => {
-    setArchived(on)
+  const show = useCallback((v: View) => {
+    setView(v)
     setError(undefined)
     const url = new URL(window.location.href)
-    if (on) url.searchParams.set('view', 'archived')
+    if (v !== 'board') url.searchParams.set('view', v)
     else url.searchParams.delete('view')
     window.history.replaceState(null, '', url)
   }, [])
@@ -155,16 +167,17 @@ export default function Tasks() {
   }, [])
 
   const reload = useCallback(
-    () => (archived ? archive.reload() : tasks.reload()),
-    [archived, archive.reload, tasks.reload],
+    () =>
+      view === 'archived' ? archive.reload() : view === 'trash' ? trash.reload() : tasks.reload(),
+    [view, archive.reload, trash.reload, tasks.reload],
   )
   useLive((message) => {
     if (message.type === 'task.updated' || message.type === 'thread.updated') void reload()
   })
 
   // Right after leaving the archive, the board loaded before is still shown.
-  const board = tasks.data?.filter((t) => !t.archivedAt)
-  const list = archive.tasks
+  const board = tasks.data?.filter((t) => !t.archivedAt && !t.trashedAt)
+  const list = view === 'trash' ? trash.data : archive.tasks
   const byColumn = (column: Task['column']) =>
     (board ?? []).filter((t) => t.column === column).sort(order)
 
@@ -185,27 +198,34 @@ export default function Tasks() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
+        {/* Shrinks before the buttons wrap: they stay at the end of its line. */}
+        <div className="flex min-w-0 flex-1 basis-80 flex-col gap-1">
           <h1 className="text-3xl font-extrabold tracking-tight">
-            {archived ? 'Archived tasks' : 'Tasks'}
+            {archived ? 'Archived tasks' : view === 'trash' ? 'Trash' : 'Tasks'}
           </h1>
           <p className="max-w-prose text-muted-foreground">
             {archived
-              ? 'Done tasks put away, most recently archived first. Restore or reopen one to bring it back to the board.'
-              : 'Bigger work your teammates are on. Ask in a thread and they track it here, or add one yourself.'}
+              ? 'Done tasks put away, most recently archived first. Unarchive or reopen one to bring it back to the board.'
+              : view === 'trash'
+                ? 'Tasks taken off the board, most recently trashed first. Restore one to bring it back.'
+                : 'Bigger work your teammates are on. Assign a task and its teammate starts on it; leave it unassigned and it waits in Backlog.'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {archived ? (
-            <Button variant="outline" onClick={() => showArchived(false)}>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {view !== 'board' ? (
+            <Button variant="outline" onClick={() => show('board')}>
               <ArrowLeft aria-hidden />
               Back to the board
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => showArchived(true)}>
+              <Button variant="outline" onClick={() => show('archived')}>
                 <Archive aria-hidden />
                 Archived
+              </Button>
+              <Button variant="outline" onClick={() => show('trash')}>
+                <Trash2 aria-hidden />
+                Trash
               </Button>
               <Button onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
@@ -216,12 +236,14 @@ export default function Tasks() {
         </div>
       </header>
 
-      {archived ? (
+      {view !== 'board' ? (
         !list ? (
           <Skeleton className="h-20 w-full" />
         ) : list.length === 0 ? (
           <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-            No archived tasks. Archive done tasks to keep the board short.
+            {archived
+              ? 'No archived tasks. Archive done tasks to keep the board short.'
+              : 'The Trash is empty.'}
           </p>
         ) : (
           <div className="flex flex-col items-center gap-3">
@@ -230,7 +252,7 @@ export default function Tasks() {
                 <TaskCard key={t.id} task={t} onOpen={() => openTask(t.id)} />
               ))}
             </ul>
-            {archive.more && (
+            {archived && archive.more && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -311,9 +333,10 @@ export default function Tasks() {
           })}
         </div>
       )}
-      {(error ?? (archived ? archive.error : tasks.error)) && (
+      {(error ?? (archived ? archive.error : view === 'trash' ? trash.error : tasks.error)) && (
         <p className="text-sm text-destructive-text">
-          {error ?? (archived ? archive.error : tasks.error)?.message}
+          {error ??
+            (archived ? archive.error : view === 'trash' ? trash.error : tasks.error)?.message}
         </p>
       )}
 
@@ -322,6 +345,8 @@ export default function Tasks() {
         onOpenChange={setCreating}
         onCreated={(task) => {
           void reload()
+          if (task.startError)
+            setError(`“${task.title}” is in Backlog: it could not start. ${task.startError}`)
           openTask(task.id)
         }}
       />

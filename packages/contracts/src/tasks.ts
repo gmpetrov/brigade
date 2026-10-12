@@ -23,12 +23,15 @@ export type TaskDeliverable = z.infer<typeof TaskDeliverable>
 const Title = z.string().trim().min(1).max(200)
 const Description = z.string().trim().max(20_000)
 
-/** By hand into Backlog, or from a thread (it becomes the task's thread). */
+/**
+ * By hand, or from a thread (it becomes the task's thread). With a teammate,
+ * its thread starts at once; without one, it waits in Backlog.
+ */
 export const CreateTask = z.object({
   title: Title,
   description: Description.default(''),
   priority: TaskPriority.default('medium'),
-  /** Unset with a thread: the teammate who answered it last. */
+  /** Unset with a thread: the teammate who answered it last. Unset without: Backlog. */
   teammateId: z.string().optional(),
   sessionId: z.string().optional(),
 })
@@ -39,13 +42,11 @@ export const UpdateTask = z.object({
   priority: TaskPriority.optional(),
 })
 
-/** Start a backlog task's thread on a computer, with its brief as the first message. */
-export const StartTask = z.object({
-  computerId: z.string(),
-  accountId: z.string().optional(),
-})
-
-export const ReassignTask = z.object({
+/**
+ * A teammate takes the task. In Backlog its thread starts, with the brief as
+ * the first message; with a thread, the teammate joins it and takes over.
+ */
+export const AssignTask = z.object({
   teammateId: z.string(),
   /** Why, for the new teammate: what was wrong with the work so far. */
   reason: z.string().trim().max(5000).default(''),
@@ -53,17 +54,50 @@ export const ReassignTask = z.object({
 
 export const CompleteTask = z.object({ summary: z.string().trim().max(5000).optional() })
 
-/** A teammate's task tools, sent by the runner and checked by the API. */
+const Summary = z.string().trim().min(1).max(5000)
+
+/**
+ * A teammate's task tools, sent by the runner and checked by the API. A
+ * teammate never assigns a task to a person nor moves it to Needs you: it
+ * opens a ticket, and the task moves there.
+ */
 export const TaskOperation = z.discriminatedUnion('name', [
   z.object({
     name: z.literal('create'),
     title: Title,
     description: Description.default(''),
     priority: TaskPriority.default('medium'),
+    /**
+     * self: this thread becomes the task. none: into Backlog. A teammate id:
+     * a new task, its thread started for that teammate.
+     */
+    assignee: z.string().default('self'),
+  }),
+  z.object({ name: z.literal('list') }),
+  z.object({ name: z.literal('comment'), taskId: z.string(), text: Description.min(1) }),
+  z.object({
+    name: z.literal('update'),
+    taskId: z.string(),
+    title: Title.optional(),
+    description: Description.optional(),
+    priority: TaskPriority.optional(),
+  }),
+  z.object({
+    name: z.literal('assign'),
+    taskId: z.string(),
+    teammateId: z.string(),
+    reason: z.string().trim().max(5000).default(''),
+  }),
+  z.object({
+    name: z.literal('move'),
+    taskId: z.string(),
+    to: z.enum(['doing', 'archived', 'trash']),
   }),
   z.object({
     name: z.literal('complete'),
-    summary: z.string().trim().min(1).max(5000),
+    /** Unset: this thread's task. */
+    taskId: z.string().optional(),
+    summary: Summary,
     deliverables: z.array(TaskDeliverable).max(20).default([]),
   }),
 ])

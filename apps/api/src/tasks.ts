@@ -1,7 +1,8 @@
 // Tasks: work to see finished, on the Tasks board. A task has at most one
 // thread, which is its comments and progress; its column comes from that
-// thread. Members create, start, reassign and close tasks here; teammates
-// create and complete them through their task tools.
+// thread. Assigning a teammate starts the thread: until then the task waits in
+// Backlog with nobody on it. Members act here; teammates through their task
+// tools, which never assign a person nor move a task to Needs you (a ticket does).
 import { randomUUID } from 'node:crypto'
 import {
   formatMention,
@@ -14,7 +15,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
-import { broadcastTask, dispatch } from './hub.js'
+import { broadcastTask, dispatch, isOnline } from './hub.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, currentTeammate, loadThread, requireMayPrompt } from './thread-spec.js'
@@ -91,9 +92,16 @@ const view = ({ session, ...task }: BoardRow) => ({
     : null,
 })
 
-/** The board: every task not archived, most recently touched first. */
+/** The board: every task not archived nor in the Trash, most recently touched first. */
 export async function listTasks(db: ScopedDb) {
-  return (await boardRows(db, { archivedAt: null })).map(view)
+  return (await boardRows(db, { archivedAt: null, trashedAt: null })).map(view)
+}
+
+/** The Trash, most recently trashed first. */
+export async function listTrashedTasks(db: ScopedDb) {
+  return (
+    await boardRows(db, { trashedAt: { not: null } }, [{ trashedAt: 'desc' }, { id: 'desc' }])
+  ).map(view)
 }
 
 /** Archived tasks shown at a time. */
@@ -109,6 +117,7 @@ export async function listArchivedTasks(db: ScopedDb, before?: string) {
     db,
     {
       archivedAt: { not: null },
+      trashedAt: null,
       ...(after && {
         OR: [
           { archivedAt: { lt: after.archivedAt } },
@@ -189,11 +198,34 @@ async function changed(
 
 const member = (scope: WorkspaceScope): Actor => ({ type: 'member', id: scope.memberId })
 
-/** Who may change a task's thread: whoever may prompt it. Without one: any member. */
-async function requireMayAct(db: ScopedDb, scope: WorkspaceScope, task: { id: string }) {
-  const thread = await db.session.findFirst({ where: { taskId: task.id } })
-  if (thread) requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
+/**
+ * Who acts on a task: a member, or a teammate on behalf of its thread's
+ * starter, whose accounts any thread it starts runs on.
+ */
+export type By = { scope: Scope; memberId: string; actor: Actor }
+
+export const byMember = (scope: WorkspaceScope): By => ({
+  scope,
+  memberId: scope.memberId,
+  actor: member(scope),
+})
+
+/** What a message to a thread is from: the member, or nobody typing (a teammate's). */
+const typedBy = (by: By) => (by.actor.type === 'member' ? by.memberId : null)
+
+/** Who may change a task's thread: whoever may prompt it. Without one: anyone. */
+async function requireMayAct(db: ScopedDb, by: By, taskId: string) {
+  const thread = await db.session.findFirst({ where: { taskId } })
+  if (thread && thread.startedByMemberId !== by.memberId && !thread.othersMayPrompt)
+    throw new HTTPException(403, {
+      message: "This task's thread runs on another member's subscription.",
+    })
   return thread
+}
+
+/** A task in the Trash only comes back by being restored. */
+function requireNotTrashed(task: { trashedAt: Date | null }) {
+  if (task.trashedAt) throw new HTTPException(409, { message: 'Restore it from the Trash first' })
 }
 
 /**
@@ -219,15 +251,33 @@ export async function createTask(
     sessionId?: string | undefined
   },
 ) {
-  const thread = input.sessionId ? await loadThread(db, input.sessionId) : null
-  if (thread) {
-    requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
-    if (thread.origin === 'trigger')
-      throw new HTTPException(400, { message: 'A thread a trigger started cannot become a task' })
-    if (thread.taskId) throw new HTTPException(409, { message: 'This thread is already a task' })
+  const by = byMember(scope)
+  if (!input.sessionId) {
+    const task = await db.task.create({
+      data: {
+        title: input.title,
+        description: input.description,
+        priority: input.priority,
+        createdByMemberId: scope.memberId,
+      } as never,
+    })
+    await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })
+    if (!input.teammateId) return getTask(db, task.id)
+    // Its thread starts now; if it cannot, the task stays in Backlog and says why.
+    try {
+      return await assignTask(db, by, task.id, { teammateId: input.teammateId, reason: '' })
+    } catch (error) {
+      if (!(error instanceof HTTPException)) throw error
+      return { ...(await getTask(db, task.id)), startError: error.message }
+    }
   }
-  const teammateId = input.teammateId ?? (thread && currentTeammate(thread).id)
-  if (!teammateId) throw new HTTPException(400, { message: 'Who should do it?' })
+
+  const thread = await loadThread(db, input.sessionId)
+  requireMayPrompt(scope, { ...thread, controlledByMemberId: null })
+  if (thread.origin === 'trigger')
+    throw new HTTPException(400, { message: 'A thread a trigger started cannot become a task' })
+  if (thread.taskId) throw new HTTPException(409, { message: 'This thread is already a task' })
+  const teammateId = input.teammateId ?? currentTeammate(thread).id
   await activeTeammate(db, teammateId)
   const task = await db.task.create({
     data: {
@@ -238,19 +288,17 @@ export async function createTask(
       createdByMemberId: scope.memberId,
     } as never,
   })
-  if (thread && !(await link(db, thread.id, task.id))) {
+  if (!(await link(db, thread.id, task.id))) {
     await db.task.deleteMany({ where: { id: task.id } })
     throw new HTTPException(409, { message: 'This thread is already a task' })
   }
-  await changed(scope, member(scope), 'task.created', task.id, {
-    sessionId: thread?.id ?? null,
-  })
+  await changed(scope, by.actor, 'task.created', task.id, { sessionId: thread.id })
   return getTask(db, task.id)
 }
 
 export async function updateTask(
   db: ScopedDb,
-  scope: WorkspaceScope,
+  by: By,
   id: string,
   input: {
     title?: string | undefined
@@ -267,7 +315,7 @@ export async function updateTask(
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
     },
   })
-  await changed(scope, member(scope), 'task.updated', id)
+  await changed(by.scope, by.actor, 'task.updated', id)
   return getTask(db, id)
 }
 
@@ -275,40 +323,75 @@ export async function updateTask(
 const brief = (task: { title: string; description: string }) =>
   [`**${task.title}**`, task.description].filter(Boolean).join('\n\n')
 
-/** A backlog task gets its thread: started on a computer, with the brief as the first message. */
-export async function startTask(
-  db: ScopedDb,
-  scope: WorkspaceScope,
-  id: string,
-  input: { computerId: string; accountId?: string | undefined },
-) {
-  const task = await loadTask(db, id)
-  if (await db.session.findFirst({ where: { taskId: id } }))
-    throw new HTTPException(409, { message: 'This task has already started' })
-  const teammate = await activeTeammate(db, task.teammateId)
-  const computer = await db.computer.findFirst({ where: { id: input.computerId } })
-  if (!computer || (computer.kind === 'member_machine' && computer.memberId !== scope.memberId))
-    throw new HTTPException(404, { message: 'Computer not found' })
-  const { thread, outcome } = await startThread(db, scope, {
-    teammate,
-    computer,
-    memberId: scope.memberId,
-    accountId: input.accountId ?? null,
-    title: task.title,
-    text: brief(task),
-    taskId: task.id,
+/**
+ * Where a member's task runs: the workspace computer, else one of their own
+ * machines that is online; the first where they have an account with usage
+ * left for the teammate's harness.
+ */
+async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code' | 'codex') {
+  const candidates = [
+    ...(await db.computer.findMany({
+      where: { kind: 'cloud', status: { in: ['running', 'stopped', 'starting'] } },
+    })),
+    ...(
+      await db.computer.findMany({
+        where: { kind: 'member_machine', memberId },
+        orderBy: { updatedAt: 'desc' },
+      })
+    ).filter((c) => isOnline(c.id)),
+  ]
+  for (const computer of candidates)
+    if ((await usableAccounts(db, { memberId, computerId: computer.id, provider: harness })).length)
+      return computer
+  const name = harness === 'codex' ? 'Codex' : 'Claude'
+  throw new HTTPException(409, {
+    message: candidates.length
+      ? `No ${name} account with usage left on the computers it could run on. Add one under Accounts, or wait for a reset.`
+      : 'No computer is online to run it. Start your runner, or set up the workspace computer.',
   })
-  if (outcome === 'offline') {
-    // The task stays in the backlog; the failed thread is left as a plain one.
-    await db.session.updateMany({ where: { id: thread.id }, data: { taskId: null } })
-    throw new HTTPException(409, {
-      message: 'That computer is offline. Start its runner and try again.',
+}
+
+/**
+ * A backlog task gets its teammate and its thread, with the brief as the
+ * first message. Taking the teammate is the claim: two assigns never start
+ * two threads. If the thread cannot start, the task goes back to Backlog.
+ */
+async function startTask(
+  db: ScopedDb,
+  by: By,
+  task: { id: string; title: string; description: string },
+  teammate: { id: string; name: string; harness: 'claude_code' | 'codex' },
+  computer?: { id: string; kind: string },
+) {
+  const { count } = await db.task.updateMany({
+    where: { id: task.id, session: { is: null } },
+    data: { teammateId: teammate.id, completedAt: null, archivedAt: null },
+  })
+  if (!count) throw new HTTPException(409, { message: 'This task has already started' })
+  try {
+    const { thread, outcome } = await startThread(db, by.scope, {
+      teammate,
+      computer: computer ?? (await computerFor(db, by.memberId, teammate.harness)),
+      memberId: by.memberId,
+      title: task.title,
+      text: brief(task),
+      taskId: task.id,
     })
+    if (outcome === 'offline') {
+      // The failed thread is left as a plain one.
+      await db.session.updateMany({ where: { id: thread.id }, data: { taskId: null } })
+      throw new HTTPException(409, {
+        message: 'That computer is offline. Start its runner and try again.',
+      })
+    }
+    return { threadId: thread.id, outcome }
+  } catch (error) {
+    await db.task.updateMany({
+      where: { id: task.id, teammateId: teammate.id, session: { is: null } },
+      data: { teammateId: null },
+    })
+    throw error
   }
-  if (task.completedAt)
-    await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
-  await changed(scope, member(scope), 'task.started', id, { sessionId: thread.id })
-  return { ...(await getTask(db, id)), paused: outcome === 'paused' }
 }
 
 /**
@@ -349,60 +432,70 @@ async function handover(
 }
 
 /**
- * Another teammate takes the task. With a thread, it joins it and is told the
- * brief, the reason and the work so far; a running turn stops first and a
+ * A teammate takes the task. In Backlog, its thread starts (on `computer`, or
+ * where computerFor says). With a thread, the teammate joins it and is told
+ * the brief, the reason and the work so far; a running turn stops first and a
  * done task reopens.
  */
-export async function reassignTask(
+export async function assignTask(
   db: ScopedDb,
-  scope: WorkspaceScope,
+  by: By,
   id: string,
   input: { teammateId: string; reason: string },
+  computer?: { id: string; kind: string },
 ) {
   const task = await loadTask(db, id)
+  requireNotTrashed(task)
   if (task.teammateId === input.teammateId)
-    throw new HTTPException(400, { message: `${task.teammate.name} already has this task` })
+    throw new HTTPException(400, { message: `${task.teammate?.name} already has this task` })
   const teammate = await activeTeammate(db, input.teammateId)
   const session = await db.session.findFirst({ where: { taskId: id } })
 
-  if (session) {
-    const thread = await loadThread(db, session.id)
-    requireMayPrompt(scope, thread)
-    if (thread.status === 'waiting')
-      throw new HTTPException(409, { message: 'Answer the open ticket on its thread first' })
-    const [account] = await usableAccounts(db, {
-      memberId: thread.startedByMemberId,
-      computerId: thread.computerId,
-      provider: teammate.harness,
+  if (!session) {
+    const { threadId, outcome } = await startTask(db, by, task, teammate, computer)
+    await changed(by.scope, by.actor, 'task.assigned', id, {
+      to: teammate.id,
+      sessionId: threadId,
     })
-    if (!account)
-      throw new HTTPException(409, {
-        message: `${teammate.name} runs on ${teammate.harness === 'codex' ? 'Codex' : 'Claude'}, and the thread's starter has no account for it with usage left on its computer.`,
-      })
-    if (thread.status === 'running' || thread.status === 'starting')
-      await dispatch(thread.computer, {
-        type: 'thread.interrupt',
-        commandId: randomUUID(),
-        sessionId: thread.id,
-      } satisfies ApiToRunner)
-    await joinThread(db, thread.id, [teammate.id])
-    const text = await handover(db, task, thread, task.teammate, teammate, input.reason)
-    const outcome = await promptThread(db, scope, await loadThread(db, thread.id), {
-      text,
-      memberId: scope.memberId,
-      teammateIds: [teammate.id],
-    })
-    if (outcome === 'offline')
-      throw new HTTPException(409, {
-        message: "The thread's computer is offline. Start its runner and try again.",
-      })
+    return { ...(await getTask(db, id)), paused: outcome === 'paused' }
   }
+
+  const thread = await loadThread(db, session.id)
+  await requireMayAct(db, by, id)
+  if (thread.controlledByMemberId)
+    throw new HTTPException(409, {
+      message: 'A person has control of this thread. It continues when they hand it back.',
+    })
+  if (thread.status === 'waiting')
+    throw new HTTPException(409, { message: 'Answer the open ticket on its thread first' })
+  const [account] = await usableAccounts(db, {
+    memberId: thread.startedByMemberId,
+    computerId: thread.computerId,
+    provider: teammate.harness,
+  })
+  if (!account)
+    throw new HTTPException(409, {
+      message: `${teammate.name} runs on ${teammate.harness === 'codex' ? 'Codex' : 'Claude'}, and the thread's starter has no account for it with usage left on its computer.`,
+    })
+  if (thread.status === 'running' || thread.status === 'starting') await interrupt(thread)
+  await joinThread(db, thread.id, [teammate.id])
+  const from = task.teammate ?? { name: 'the previous teammate' }
+  const text = await handover(db, task, thread, from, teammate, input.reason)
+  const outcome = await promptThread(db, by.scope, await loadThread(db, thread.id), {
+    text,
+    memberId: typedBy(by),
+    teammateIds: [teammate.id],
+  })
+  if (outcome === 'offline')
+    throw new HTTPException(409, {
+      message: "The thread's computer is offline. Start its runner and try again.",
+    })
 
   await db.task.updateMany({
     where: { id },
     data: { teammateId: teammate.id, completedAt: null, archivedAt: null },
   })
-  await changed(scope, member(scope), 'task.reassigned', id, {
+  await changed(by.scope, by.actor, 'task.reassigned', id, {
     from: task.teammateId,
     to: teammate.id,
     reason: input.reason || null,
@@ -410,27 +503,42 @@ export async function reassignTask(
   return getTask(db, id)
 }
 
+/** Stop a thread's running turn. */
+const interrupt = (thread: { id: string; computer: { id: string; kind: string } }) =>
+  dispatch(thread.computer, {
+    type: 'thread.interrupt',
+    commandId: randomUUID(),
+    sessionId: thread.id,
+  } satisfies ApiToRunner)
+
 export async function completeTask(
   db: ScopedDb,
-  scope: WorkspaceScope,
+  by: By,
   id: string,
-  input: { summary?: string | undefined },
+  input: { summary?: string | undefined; deliverables?: TaskDeliverable[] },
 ) {
   const task = await loadTask(db, id)
-  await requireMayAct(db, scope, task)
+  requireNotTrashed(task)
+  await requireMayAct(db, by, id)
   await db.task.updateMany({
     where: { id },
-    data: { completedAt: new Date(), ...(input.summary ? { summary: input.summary } : {}) },
+    data: {
+      completedAt: new Date(),
+      ...(input.summary ? { summary: input.summary } : {}),
+      ...(input.deliverables ? { deliverables: input.deliverables } : {}),
+    },
   })
-  await changed(scope, member(scope), 'task.completed', id)
+  await changed(by.scope, by.actor, 'task.completed', id)
   return getTask(db, id)
 }
 
-export async function reopenTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
+/** A done task back on the board: Doing, or Backlog without a thread. */
+export async function reopenTask(db: ScopedDb, by: By, id: string) {
   const task = await loadTask(db, id)
-  await requireMayAct(db, scope, task)
+  requireNotTrashed(task)
+  await requireMayAct(db, by, id)
   await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
-  await changed(scope, member(scope), 'task.reopened', id)
+  await changed(by.scope, by.actor, 'task.reopened', id)
   return getTask(db, id)
 }
 
@@ -451,33 +559,64 @@ export async function reopenOnMessage(
  * A done task goes off the board. Its thread stays as it is. The write checks
  * the task is still done: a reopen racing it wins and the task stays put.
  */
-export async function archiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
+export async function archiveTask(db: ScopedDb, by: By, id: string) {
   const task = await loadTask(db, id)
+  requireNotTrashed(task)
   if (!task.completedAt)
     throw new HTTPException(409, { message: 'Only a done task can be archived' })
   const { count } = await db.task.updateMany({
     where: { id, completedAt: { not: null }, archivedAt: null },
     data: { archivedAt: new Date() },
   })
-  if (count) await changed(scope, member(scope), 'task.archived', id)
+  if (count) await changed(by.scope, by.actor, 'task.archived', id)
   return getTask(db, id)
 }
 
 /** An archived task back in Done. */
-export async function unarchiveTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
+export async function unarchiveTask(db: ScopedDb, by: By, id: string) {
   await loadTask(db, id)
   const { count } = await db.task.updateMany({
     where: { id, archivedAt: { not: null } },
     data: { archivedAt: null },
   })
-  if (count) await changed(scope, member(scope), 'task.unarchived', id)
+  if (count) await changed(by.scope, by.actor, 'task.unarchived', id)
+  return getTask(db, id)
+}
+
+/**
+ * Into the Trash, from any column: off the board, its running turn stopped.
+ * Its thread stays. Restoring puts it back where its thread says.
+ */
+export async function trashTask(db: ScopedDb, by: By, id: string) {
+  await loadTask(db, id)
+  const session = await requireMayAct(db, by, id)
+  const { count } = await db.task.updateMany({
+    where: { id, trashedAt: null },
+    data: { trashedAt: new Date() },
+  })
+  if (!count) return getTask(db, id)
+  if (session && (session.status === 'running' || session.status === 'starting')) {
+    const computer = await db.computer.findFirst({ where: { id: session.computerId } })
+    if (computer) await interrupt({ id: session.id, computer })
+  }
+  await changed(by.scope, by.actor, 'task.trashed', id)
+  return getTask(db, id)
+}
+
+export async function restoreTask(db: ScopedDb, by: By, id: string) {
+  await loadTask(db, id)
+  const { count } = await db.task.updateMany({
+    where: { id, trashedAt: { not: null } },
+    data: { trashedAt: null },
+  })
+  if (count) await changed(by.scope, by.actor, 'task.restored', id)
   return getTask(db, id)
 }
 
 /** Clear the Done column: every done task goes off the board at once. */
 export async function archiveDoneTasks(db: ScopedDb, scope: WorkspaceScope) {
   const done = await db.task.findMany({
-    where: { completedAt: { not: null }, archivedAt: null },
+    where: { completedAt: { not: null }, archivedAt: null, trashedAt: null },
     select: { id: true },
   })
   if (!done.length) return { archived: 0 }
@@ -518,7 +657,10 @@ export async function settleOnMerge(scope: Scope, sessionId: string) {
   if (count) await changed(scope, { type: 'system', id: 'brigade' }, 'task.completed', task.id)
 }
 
-/** The task goes; its thread stays, as a plain thread. Also undoes a teammate's create_task. */
+/**
+ * The task goes for good; its thread stays, as a plain thread. Also undoes a
+ * teammate's create_task ("Not a task").
+ */
 export async function deleteTask(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const task = await loadTask(db, id)
   const thread = await db.session.findFirst({ where: { taskId: id } })
@@ -535,7 +677,18 @@ export async function deleteTask(db: ScopedDb, scope: WorkspaceScope, id: string
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
-/** A teammate's create_task or complete_task, from its thread on this runner's computer. */
+/** A task's line for a teammate's list_tasks. */
+const listed = (task: ReturnType<typeof view>) => ({
+  id: task.id,
+  title: task.title,
+  column: task.column,
+  priority: task.priority,
+  teammate: task.teammate && { id: task.teammate.id, name: task.teammate.name },
+  description:
+    task.description.length > 300 ? `${task.description.slice(0, 300)}…` : task.description,
+})
+
+/** A teammate's task tool call, from its thread on this runner's computer. */
 export async function handleTaskCall(
   runner: Runner,
   call: Extract<RunnerToApi, { type: 'task.call' }>,
@@ -550,48 +703,180 @@ export async function handleTaskCall(
 
   const session = await db.session.findFirst({
     where: { id: call.sessionId, computerId: runner.computerId },
-    include: { task: true },
+    include: { task: true, computer: true },
   })
   if (!session) return fail('Unknown thread')
   const teammate = await actingTeammate(db, session, call.teammateId)
   if (!teammate) return fail('That teammate is not in this thread')
-  const actor: Actor = { type: 'teammate', id: teammate.id }
+  // It acts for whoever started its thread: any thread it starts runs on their accounts.
+  const by: By = {
+    scope,
+    memberId: session.startedByMemberId,
+    actor: { type: 'teammate', id: teammate.id },
+  }
   const op = call.operation
 
-  if (op.name === 'create') {
-    if (session.origin === 'trigger')
-      return fail('A thread a trigger started cannot become a task. Just do the work here.')
-    if (session.task)
-      return fail(`This thread is already the task "${session.task.title}". Carry on with it.`)
-    const task = await db.task.create({
-      data: {
-        title: op.title,
-        description: op.description,
-        priority: op.priority,
-        teammateId: teammate.id,
-        createdByMemberId: session.startedByMemberId,
-      } as never,
-    })
-    if (!(await link(db, session.id, task.id))) {
-      await db.task.deleteMany({ where: { id: task.id } })
-      return fail('This thread is already a task. Carry on with it.')
-    }
-    await changed(scope, actor, 'task.created', task.id, { sessionId: session.id })
-    return done({
-      taskId: task.id,
-      title: task.title,
-      note: 'This thread is now a task on the Tasks board. Tell the person in one line, then do the work. Call complete_task when it is finished.',
-    })
-  }
+  /** A teammate by id or name, so "Ada" works as well as its id. */
+  const findTeammate = async (ref: string) =>
+    (await db.teammate.findFirst({ where: { id: ref, archivedAt: null } })) ??
+    (await db.teammate.findFirst({
+      where: { name: { equals: ref.trim(), mode: 'insensitive' }, archivedAt: null },
+    }))
 
-  if (!session.task)
-    return fail('This thread is not a task, so there is nothing to complete. Just reply.')
-  if (session.task.teammateId !== teammate.id)
-    return fail('This task was reassigned to another teammate; only they can complete it.')
-  await db.task.updateMany({
-    where: { id: session.task.id },
-    data: { completedAt: new Date(), summary: op.summary, deliverables: op.deliverables },
-  })
-  await changed(scope, actor, 'task.completed', session.task.id)
-  return done({ ok: true, note: 'The task is marked done. Tell the person what you delivered.' })
+  try {
+    if (op.name === 'list') {
+      const [tasks, teammates] = await Promise.all([
+        listTasks(db),
+        db.teammate.findMany({
+          where: { archivedAt: null },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        }),
+      ])
+      return done({
+        thisThreadTask: session.task?.id ?? null,
+        tasks: tasks.map(listed),
+        teammates: teammates.map((t) => ({ ...t, you: t.id === teammate.id })),
+      })
+    }
+
+    if (op.name === 'create') {
+      if (op.assignee === 'self') {
+        if (session.origin === 'trigger')
+          return fail('A thread a trigger started cannot become a task. Just do the work here.')
+        if (session.task)
+          return fail(
+            `This thread is already the task "${session.task.title}". Carry on with it, or create a separate task with assignee "none" or another teammate.`,
+          )
+        const task = await db.task.create({
+          data: {
+            title: op.title,
+            description: op.description,
+            priority: op.priority,
+            teammateId: teammate.id,
+            createdByMemberId: session.startedByMemberId,
+          } as never,
+        })
+        if (!(await link(db, session.id, task.id))) {
+          await db.task.deleteMany({ where: { id: task.id } })
+          return fail('This thread is already a task. Carry on with it.')
+        }
+        await changed(scope, by.actor, 'task.created', task.id, { sessionId: session.id })
+        return done({
+          taskId: task.id,
+          title: task.title,
+          note: 'This thread is now a task on the Tasks board. Tell the person in one line, then do the work. Call complete_task when it is finished.',
+        })
+      }
+
+      const assignee = op.assignee === 'none' ? null : await findTeammate(op.assignee)
+      if (op.assignee !== 'none' && !assignee)
+        return fail('No teammate has that id or name; list_tasks shows them')
+      const task = await db.task.create({
+        data: {
+          title: op.title,
+          description: op.description,
+          priority: op.priority,
+          createdByMemberId: session.startedByMemberId,
+        } as never,
+      })
+      await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })
+      if (!assignee)
+        return done({ taskId: task.id, column: 'backlog', note: 'In Backlog, assigned to nobody.' })
+      try {
+        await assignTask(db, by, task.id, { teammateId: assignee.id, reason: '' }, session.computer)
+        return done({
+          taskId: task.id,
+          column: 'doing',
+          note: `${assignee.name} started on it in its own thread.`,
+        })
+      } catch (error) {
+        if (!(error instanceof HTTPException)) throw error
+        return done({
+          taskId: task.id,
+          column: 'backlog',
+          note: `Created, but ${assignee.name} could not start, so it waits in Backlog: ${error.message}`,
+        })
+      }
+    }
+
+    if (op.name === 'complete' && !op.taskId) {
+      if (!session.task)
+        return fail(
+          'This thread is not a task. Pass the taskId of the task to complete, or just reply.',
+        )
+      if (session.task.teammateId !== teammate.id)
+        return fail('This task was reassigned to another teammate; only they can complete it.')
+    }
+    const taskId = (op.name === 'complete' ? op.taskId : op.taskId) ?? session.task!.id
+    const task = await db.task.findFirst({ where: { id: taskId } })
+    if (!task) return fail('No task has that id; list_tasks shows them')
+
+    switch (op.name) {
+      case 'complete':
+        await completeTask(db, by, taskId, {
+          summary: op.summary,
+          deliverables: op.deliverables,
+        })
+        return done({
+          ok: true,
+          note: 'The task is marked done. Tell the person what you delivered.',
+        })
+
+      case 'update': {
+        const { name: _, taskId: __, ...changes } = op
+        await updateTask(db, by, taskId, changes)
+        return done({ ok: true })
+      }
+
+      case 'assign': {
+        const to = await findTeammate(op.teammateId)
+        if (!to) return fail('No teammate has that id or name; list_tasks shows them')
+        await assignTask(db, by, taskId, { teammateId: to.id, reason: op.reason }, session.computer)
+        return done({ ok: true, note: `${to.name} has the task now and is working on it.` })
+      }
+
+      case 'move':
+        if (op.to === 'trash') await trashTask(db, by, taskId)
+        else if (op.to === 'archived') await archiveTask(db, by, taskId)
+        else {
+          if (task.trashedAt) await restoreTask(db, by, taskId)
+          if (task.completedAt) await reopenTask(db, by, taskId)
+          else if (task.archivedAt) await unarchiveTask(db, by, taskId)
+          const moved = await getTask(db, taskId)
+          if (moved.column === 'backlog')
+            return fail('It is in Backlog: assign it to a teammate with assign_task to start it.')
+          return done({ ok: true, column: moved.column })
+        }
+        return done({ ok: true })
+
+      case 'comment': {
+        if (task.trashedAt) return fail('That task is in the Trash')
+        const thread = await db.session.findFirst({ where: { taskId } })
+        if (!thread)
+          return fail(
+            'That task is in Backlog with no thread yet. Assign it, or update its description.',
+          )
+        if (thread.id === session.id) return fail('That is this thread: just reply here.')
+        const target = await loadThread(db, thread.id)
+        await requireMayAct(db, by, taskId)
+        if (target.controlledByMemberId)
+          return fail('A person has control of that thread right now. Try again later.')
+        const outcome = await promptThread(db, scope, target, {
+          text: `**${teammate.name}** commented from the thread “${session.title}”:\n\n${op.text}`,
+          memberId: null,
+          ...(task.teammateId && target.teammates.some((t) => t.teammateId === task.teammateId)
+            ? { teammateIds: [task.teammateId] }
+            : {}),
+        })
+        if (outcome === 'offline') return fail("That task's computer is offline.")
+        await reopenOnMessage(scope, { task })
+        await changed(scope, by.actor, 'task.commented', taskId)
+        return done({ ok: true, note: 'Posted to its thread; its teammate will read it.' })
+      }
+    }
+  } catch (error) {
+    if (error instanceof HTTPException) return fail(error.message)
+    throw error
+  }
 }

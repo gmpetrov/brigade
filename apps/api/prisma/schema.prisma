@@ -364,6 +364,7 @@ enum TaskPriority {
 
 /// Work to see finished, on the Tasks board. Its thread is its comments and
 /// progress; the column comes from the thread (none: backlog) and completedAt.
+/// Assigning a teammate starts the thread, so a task has a teammate once it has one.
 model Task {
   id                String       @id @default(cuid())
   organizationId    String
@@ -372,9 +373,9 @@ model Task {
   title             String
   description       String       @default("")
   priority          TaskPriority @default(medium)
-  /// The teammate doing it.
-  teammateId        String
-  teammate          Teammate     @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// The teammate doing it. Unset in the backlog: nobody is on it yet.
+  teammateId        String?
+  teammate          Teammate?    @relation(fields: [teammateId], references: [id], onDelete: SetNull)
   /// Who asked: the member, or the thread's starter when a teammate created it.
   createdByMemberId String
   createdBy         Member       @relation(fields: [createdByMemberId], references: [id], onDelete: Cascade)
@@ -385,12 +386,15 @@ model Task {
   completedAt       DateTime?
   /// Off the board: a done task put away. Reopening it brings it back.
   archivedAt        DateTime?
+  /// In the Trash: off the board, from any column. Restoring it brings it back.
+  trashedAt         DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   session           Session?
 
   @@index([workspaceId, completedAt])
   @@index([workspaceId, archivedAt])
+  @@index([workspaceId, trashedAt])
   @@index([teammateId])
 }
 

@@ -179,6 +179,12 @@ function designs(spec: ThreadSpec, libraryDir: string) {
   ].join('\n\n')
 }
 
+/** The rest of the board, which any teammate may manage. */
+const BOARD_TOOLS =
+  'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
+  '`comment_on_task`, `update_task`, `assign_task` (teammates only, never a person), `move_task` and ' +
+  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
+
 /** The Tasks board: this thread's task, or when to make one. */
 const tasks = (spec: ThreadSpec) =>
   spec.task
@@ -190,6 +196,7 @@ const tasks = (spec: ThreadSpec) =>
           'to the thread, or save them to the library. Another teammate may take the task over, and it does not ' +
           'see your working folder. When the work is finished and delivered, call `complete_task` with a short ' +
           'summary and links to what you produced.',
+        BOARD_TOOLS,
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -197,7 +204,8 @@ const tasks = (spec: ThreadSpec) =>
       "The workspace tracks bigger work as tasks on its Tasks board. Call `create_task` when this thread's work " +
       'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
       'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
-      'Do not ask first: create it, say so in one line, and do the work.'
+      'Do not ask first: create it, say so in one line, and do the work.\n\n' +
+      BOARD_TOOLS
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

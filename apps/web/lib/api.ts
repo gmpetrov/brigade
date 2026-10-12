@@ -282,7 +282,8 @@ export type Task = {
   description: string
   priority: TaskPriority
   column: TaskColumn
-  teammate: { id: string; name: string; harness: Teammate['harness'] }
+  /** Unset in the backlog: assigning a teammate starts its thread. */
+  teammate: { id: string; name: string; harness: Teammate['harness'] } | null
   createdBy: { id: string; user: { name: string } }
   createdByMemberId: string
   summary: string | null
@@ -290,6 +291,8 @@ export type Task = {
   completedAt: string | null
   /** Put away off the board; reopening brings it back. */
   archivedAt: string | null
+  /** In the Trash: off the board; restoring brings it back. */
+  trashedAt: string | null
   createdAt: string
   updatedAt: string
   thread: {
@@ -305,6 +308,8 @@ export type Task = {
 }
 
 export type TaskDetail = Task & {
+  /** On create with a teammate: why its thread could not start, so it waits in Backlog. */
+  startError?: string
   pullRequests: {
     id: string
     repository: string

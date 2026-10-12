@@ -666,10 +666,12 @@ export type TeammateCreateNestedOneWithoutTasksInput = {
   connect?: Prisma.TeammateWhereUniqueInput
 }
 
-export type TeammateUpdateOneRequiredWithoutTasksNestedInput = {
+export type TeammateUpdateOneWithoutTasksNestedInput = {
   create?: Prisma.XOR<Prisma.TeammateCreateWithoutTasksInput, Prisma.TeammateUncheckedCreateWithoutTasksInput>
   connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutTasksInput
   upsert?: Prisma.TeammateUpsertWithoutTasksInput
+  disconnect?: Prisma.TeammateWhereInput | boolean
+  delete?: Prisma.TeammateWhereInput | boolean
   connect?: Prisma.TeammateWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutTasksInput, Prisma.TeammateUpdateWithoutTasksInput>, Prisma.TeammateUncheckedUpdateWithoutTasksInput>
 }

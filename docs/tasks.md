@@ -1,8 +1,8 @@
 # Tasks
 
 Every message starts a **thread**: a conversation with a teammate. Bigger work
-becomes a **task**: something you want to see finished, with a teammate, a
-priority, a description and a place on the Tasks board.
+becomes a **task**: something you want to see finished, with a priority, a
+description, a place on the Tasks board and, once someone is on it, a teammate.
 
 ## Decisions
 
@@ -10,11 +10,21 @@ priority, a description and a place on the Tasks board.
   trail; there is no separate comment or event system. The link lives on the
   thread (`Session.taskId @unique`), so several threads per task later only
   means dropping `@unique`.
-- **One teammate per task**, reassignable.
-- **The agent may mark a task done.** A message to a done task's thread
-  reopens it.
+- **One teammate per task**, reassignable. Teammates only: a task is never
+  assigned to a person.
+- **Assigning starts it.** A task created with nobody assigned waits in
+  Backlog. Assigning a teammate starts its thread at once, with the brief as
+  the first message; there is no Start button. So a task has a teammate exactly
+  when it has a thread (the task's own column says Backlog otherwise).
+- **Agents manage the board.** They create, comment on, update, assign, move
+  (Doing, Archive, Trash) and complete tasks. They never assign a person and
+  never move a task to Needs you: when an agent needs someone, it opens a
+  ticket, and the task moves to Needs you.
+- **A message to a done task's thread reopens it.**
 - **No tasks from triggers.** A thread a trigger started cannot become a task.
-- **Passive backlog.** Nothing picks up Backlog work by itself; a person starts it.
+- **Trash, not delete.** Moving a task to the Trash takes it off the board from
+  any column and stops its running turn; restoring brings it back. Deleting
+  for good stays (from the Trash, or "Not a task" on its thread).
 
 ## Columns
 
@@ -22,10 +32,12 @@ The column is derived, never stored:
 
 | Column    | Rule                                                       |
 | --------- | ---------------------------------------------------------- |
-| Backlog   | no thread yet                                              |
+| Backlog   | no thread yet (nobody assigned)                            |
 | Needs you | has a thread with an open ticket, or the thread is waiting |
 | Doing     | has a thread and is not done                               |
 | Done      | `completedAt` is set                                       |
+
+Archived (`archivedAt`) and trashed (`trashedAt`) tasks are off the board.
 
 ## Data
 
@@ -39,23 +51,37 @@ model Task {
   title             String
   description       String       @default("")
   priority          TaskPriority @default(medium)
-  teammateId        String       // who does it
+  teammateId        String?      // who does it; unset in Backlog
   createdByMemberId String       // who asked; a thread's starter when the agent creates it
   summary           String?      // what was done, from complete_task
   deliverables      Json         @default("[]") // [{ label, url }]
   completedAt       DateTime?
+  archivedAt        DateTime?
+  trashedAt         DateTime?
   session           Session?     // Session.taskId @unique
 }
 ```
 
 ## Agent tools
 
-Both harnesses get two tools; the API checks every call.
+Both harnesses get these tools; the API checks every call. A teammate acts for
+its thread's starter: a thread it starts runs on that member's accounts, on its
+own thread's computer.
 
-- `create_task { title, description, priority? }`: the current thread becomes
-  the task's thread. Refused in a trigger's thread or one that is already a task.
-- `complete_task { summary, deliverables? }`: marks the thread's task done, with
-  what was done and links to it (PR, document).
+- `create_task { title, description, priority?, assignee? }`: `assignee` is
+  `self` (default: the current thread becomes the task's thread; refused in a
+  trigger's thread or one that is already a task), `none` (Backlog), or a
+  teammate id or name (a new task, its thread started for that teammate).
+- `list_tasks`: the board's tasks with ids, and the teammates.
+- `comment_on_task { taskId, text }`: a message in that task's thread, headed
+  with who wrote it; its teammate answers there. Not for Backlog tasks.
+- `update_task { taskId, title?, description?, priority? }`.
+- `assign_task { taskId, teammate, reason? }`: teammates only. Backlog: starts
+  it. Started: a reassign (below).
+- `move_task { taskId, to: doing | archived | trash }`: `doing` reopens a done,
+  archived or trashed task.
+- `complete_task { taskId?, summary, deliverables? }`: this thread's task by
+  default.
 
 When to create a task is in the tool description and the session instructions:
 when the work has a deliverable someone will review, takes several steps, will
@@ -71,23 +97,28 @@ with `connector.result`, like `library.call`.
 
 ## API
 
-| Route                      | What                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `GET /tasks`               | the board: every task with its column, teammate, thread status, open ticket count   |
-| `GET /tasks/:id`           | one task, with its thread's pull requests                                           |
-| `POST /tasks`              | create by hand (Backlog), or from a thread with `sessionId` ("Make this a task")    |
-| `PATCH /tasks/:id`         | title, description, priority                                                        |
-| `POST /tasks/:id/start`    | `{ computerId, accountId? }`: starts its thread with the brief as the first message |
-| `POST /tasks/:id/reassign` | `{ teammateId, reason }`                                                            |
-| `POST /tasks/:id/complete` | a person marks it done                                                              |
-| `POST /tasks/:id/reopen`   | back to Doing (or Backlog without a thread)                                         |
-| `DELETE /tasks/:id`        | the task goes; its thread stays a plain thread (also the "undo" of `create_task`)   |
+| Route                      | What                                                                              |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `GET /tasks`               | the board: every task with its column, teammate, thread status, open ticket count |
+| `GET /tasks?archived=true` | archived tasks, a page at a time; `?trashed=true`: the Trash                      |
+| `GET /tasks/:id`           | one task, with its thread's pull requests                                         |
+| `POST /tasks`              | create: Backlog, or started with `teammateId`; or from a thread with `sessionId`  |
+| `PATCH /tasks/:id`         | title, description, priority                                                      |
+| `POST /tasks/:id/assign`   | `{ teammateId, reason }`: Backlog starts its thread; started: reassign            |
+| `POST /tasks/:id/complete` | a person marks it done                                                            |
+| `POST /tasks/:id/reopen`   | back to Doing (or Backlog without a thread)                                       |
+| `POST /tasks/:id/trash`    | into the Trash; `/restore` brings it back                                         |
+| `DELETE /tasks/:id`        | the task goes; its thread stays a plain thread (also the "undo" of `create_task`) |
 
 Changes broadcast `task.updated` to dashboards.
 
-### Reassign
+### Assign
 
-- No thread yet: only the teammate changes.
+- Backlog: the thread starts on the workspace computer, else the assigner's own
+  online machine, the first where they have an account with usage left for the
+  teammate's harness (an agent's: its own thread's computer). If it cannot
+  start, the task stays in Backlog with nobody assigned, and the caller is told
+  why (`startError` on create).
 - With a thread: the new teammate needs a usable account for the thread
   starter's harness on that computer (else 409, and the picker greys it out).
   A running turn is interrupted. The new teammate joins the thread and is
@@ -104,9 +135,12 @@ instructions say so.
 
 - **Tasks** in the sidebar, with the Needs-you count as its badge.
 - `/app/tasks`: the board, four columns. A card shows title, priority,
-  teammate and thread status. Clicking it opens a side sheet: details, edit,
-  Start (backlog), Reassign, Mark done / Reopen, Delete, Open thread.
-- **New task** dialog: title, description, priority, teammate.
+  teammate (or Unassigned) and thread status. Clicking it opens a side sheet:
+  details, edit, Assign (backlog), Reassign, Mark done / Reopen, Archive, Move
+  to Trash, Open thread. Archived and Trash views beside the board; a trashed
+  task offers Restore and Delete for good.
+- **New task** dialog: title, description, priority, assignee (Nobody yet:
+  Backlog).
 - Thread page: a task bar when the thread is a task (title, column, Reassign,
   Mark done, Not a task); **Make this a task** otherwise.
 
@@ -123,6 +157,7 @@ instructions say so.
 
 - Several threads per task ("Start over" in a fresh thread).
 - Several teammates per task.
-- A backlog teammates pick work from, ordered by priority.
+- A backlog teammates pick work from by themselves, ordered by priority.
+- Emptying the Trash after a while.
 - Tasks from triggers.
 - Measuring `create_task` undo and "Make this a task" rates to tune when agents create tasks.

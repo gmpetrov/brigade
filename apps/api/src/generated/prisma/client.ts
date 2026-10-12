@@ -105,6 +105,7 @@ export type Session = Prisma.SessionModel
  * Model Task
  * Work to see finished, on the Tasks board. Its thread is its comments and
  * progress; the column comes from the thread (none: backlog) and completedAt.
+ * Assigning a teammate starts the thread, so a task has a teammate once it has one.
  */
 export type Task = Prisma.TaskModel
 /**
