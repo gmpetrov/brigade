@@ -240,7 +240,7 @@ export class Previews {
     const from = preview.written
     const input = JSON.stringify({
       url,
-      paths: paths.length ? paths : ['/'],
+      paths: paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/'],
       out: join(seat.workDir, '.preview-checks'),
     })
     const args = [CHECKER, input]
