@@ -58,9 +58,11 @@ export default function TeammatePage() {
             <Button variant="outline" onClick={() => setEditing(!editing)}>
               {editing ? 'Close' : 'Edit'}
             </Button>
-            <Button variant="danger" onClick={archive}>
-              Archive
-            </Button>
+            {teammate.kind !== 'chief' && (
+              <Button variant="danger" onClick={archive}>
+                Archive
+              </Button>
+            )}
           </div>
         )}
       </header>

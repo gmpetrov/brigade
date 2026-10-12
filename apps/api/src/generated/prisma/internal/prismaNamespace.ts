@@ -3602,6 +3602,7 @@ export const TeammateScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   name: 'name',
+  kind: 'kind',
   instructions: 'instructions',
   harness: 'harness',
   model: 'model',
@@ -4283,6 +4284,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'TeammateKind'
+ */
+export type EnumTeammateKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TeammateKind'>
+    
+
+
+/**
+ * Reference to a field of type 'TeammateKind[]'
+ */
+export type ListEnumTeammateKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TeammateKind[]'>
     
 
 

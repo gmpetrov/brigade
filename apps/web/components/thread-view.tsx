@@ -10,6 +10,8 @@ import {
   mentionsToText,
   OFFER_CHOICES_TOOL,
   PREVIEW_REPLACED,
+  PROPOSE_TEAM_TOOL,
+  TeamProposal,
   type LibraryFile,
   type AgentEvent,
   type Ask,
@@ -51,6 +53,7 @@ import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
 import { StatusBadge } from '@/components/status-badge'
+import { TeamProposalCard } from '@/components/team-proposal'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -423,6 +426,13 @@ function openedPull(item: { toolName: string; input: unknown; output?: unknown }
   }
 }
 
+/** The team a propose_team call put up, once it went through. */
+function proposedTeam(item: Extract<Item, { kind: 'tool' }>) {
+  if (item.toolName.replace(/^mcp__.+?__/, '') !== PROPOSE_TEAM_TOOL) return null
+  if (!item.finished || item.isError) return null
+  return TeamProposal.safeParse(item.input).data ?? null
+}
+
 /** The alternatives an offer_choices call put up, once it went through. */
 function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
   if (item.toolName.replace(/^mcp__.+?__/, '') !== OFFER_CHOICES_TOOL) return null
@@ -494,6 +504,7 @@ const isActivity = (item: Item): item is ActivityItem =>
   item.kind === 'file' ||
   (item.kind === 'tool' &&
     !offeredChoices(item) &&
+    !proposedTeam(item) &&
     !(item.finished && !item.isError && openedPull(item)))
 
 /** What a long turn's "Worked for" line folds away: its steps and the messages between them. */
@@ -510,7 +521,7 @@ type Node =
 /**
  * How the thread reads: steps in a row fold together, and a long turn that ended
  * folds everything before its last message under how long it worked. What a person
- * must see (asks, pull requests, pictures, choices, errors) stays out of the fold.
+ * must see (asks, pull requests, pictures, choices, team proposals, errors) stays out of the fold.
  * `running` is when the turn still running began.
  */
 function layoutThread(items: Item[], working: boolean) {
@@ -1003,6 +1014,21 @@ export function ThreadItems({
           </Collapsible>
         )
       case 'tool': {
+        const team = proposedTeam(item)
+        if (team) {
+          // Answered by the next message anyone sent: "Created the team: …" or their own words.
+          const reply = items
+            .slice(i + 1)
+            .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
+          return (
+            <TeamProposalCard
+              key={item.key}
+              proposal={team}
+              reply={reply?.text}
+              onSend={onChoose && ((text) => onChoose(text))}
+            />
+          )
+        }
         const choices = offeredChoices(item)
         if (choices) {
           // Answered by the next message anyone sent, a click or their own words.

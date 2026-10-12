@@ -260,6 +260,13 @@ export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedIntNullableFilter<$PrismaModel>
 }
 
+export type EnumTeammateKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeammateKind | Prisma.EnumTeammateKindFieldRefInput<$PrismaModel>
+  in?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel> | $Enums.TeammateKind
+}
+
 export type EnumHarnessFilter<$PrismaModel = never> = {
   equals?: $Enums.Harness | Prisma.EnumHarnessFieldRefInput<$PrismaModel>
   in?: $Enums.Harness[] | Prisma.ListEnumHarnessFieldRefInput<$PrismaModel>
@@ -296,6 +303,16 @@ export type EnumLibraryAccessFilter<$PrismaModel = never> = {
   in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
   notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel> | $Enums.LibraryAccess
+}
+
+export type EnumTeammateKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeammateKind | Prisma.EnumTeammateKindFieldRefInput<$PrismaModel>
+  in?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeammateKindWithAggregatesFilter<$PrismaModel> | $Enums.TeammateKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel>
 }
 
 export type EnumHarnessWithAggregatesFilter<$PrismaModel = never> = {
@@ -1022,6 +1039,13 @@ export type NestedFloatNullableFilter<$PrismaModel = never> = {
   not?: Prisma.NestedFloatNullableFilter<$PrismaModel> | number | null
 }
 
+export type NestedEnumTeammateKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeammateKind | Prisma.EnumTeammateKindFieldRefInput<$PrismaModel>
+  in?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel> | $Enums.TeammateKind
+}
+
 export type NestedEnumHarnessFilter<$PrismaModel = never> = {
   equals?: $Enums.Harness | Prisma.EnumHarnessFieldRefInput<$PrismaModel>
   in?: $Enums.Harness[] | Prisma.ListEnumHarnessFieldRefInput<$PrismaModel>
@@ -1034,6 +1058,16 @@ export type NestedEnumLibraryAccessFilter<$PrismaModel = never> = {
   in?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
   notIn?: $Enums.LibraryAccess[] | Prisma.ListEnumLibraryAccessFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumLibraryAccessFilter<$PrismaModel> | $Enums.LibraryAccess
+}
+
+export type NestedEnumTeammateKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeammateKind | Prisma.EnumTeammateKindFieldRefInput<$PrismaModel>
+  in?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeammateKind[] | Prisma.ListEnumTeammateKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeammateKindWithAggregatesFilter<$PrismaModel> | $Enums.TeammateKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTeammateKindFilter<$PrismaModel>
 }
 
 export type NestedEnumHarnessWithAggregatesFilter<$PrismaModel = never> = {

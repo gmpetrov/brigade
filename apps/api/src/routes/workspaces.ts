@@ -2,6 +2,7 @@ import { CreateWorkspace, SwitchWorkspace } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
 import { parseBody, requireUser, resolveScope, type AppEnv } from '../scope.js'
@@ -44,8 +45,23 @@ export const workspaces = new Hono<AppEnv>()
         activeWorkspaceId: workspaceId,
       })
     }
+    // Nothing runs without an AI account: onboarding asks for one first.
+    const aiReady = scope
+      ? (await prisma.account.count({
+          where: {
+            workspaceId: scope.workspaceId,
+            memberId: scope.memberId,
+            // Signed in once is enough: a login that expires later opens a ticket instead.
+            OR: [
+              { status: { in: ['ready', 'exhausted', 'unverified'] } },
+              { sessions: { some: {} } },
+            ],
+          },
+        })) > 0
+      : false
     return c.json({
       user,
+      aiReady,
       organizations: memberships.map((m) => ({
         id: m.organization.id,
         name: m.organization.name,
@@ -85,6 +101,7 @@ export const workspaces = new Hono<AppEnv>()
       target: { type: 'workspace', id: workspace.id },
       data: { name },
     })
+    await ensureChief(workspace)
     // Every workspace gets its own cloud computer (when a provider is configured).
     await createWorkspaceComputer(workspace)
     return c.json({ id: workspace.id, name: workspace.name }, 201)

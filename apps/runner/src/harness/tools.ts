@@ -2,6 +2,8 @@
 // which checks the grant, asks for approval if needed, and makes the request.
 import { jsonSchema, tool, type Tool } from 'ai'
 import {
+  CHIEF_NAME,
+  isChiefName,
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
   DESIGN_MANIFEST,
@@ -15,6 +17,7 @@ import {
   designFolderOf,
   designOptionsOf,
   Choices,
+  TeamProposal,
   type ConnectorGrant,
   type TeammateDesignSystem,
   type ScheduleOperation,
@@ -327,6 +330,74 @@ export const offerChoicesTool = tool({
     return {
       shown: parsed.data.options.length,
       next: 'End your reply: the pick arrives as their next message.',
+    }
+  },
+})
+
+/** The chief's proposal of teammates, shown as a card a person edits and accepts. */
+export const proposeTeamTool = tool({
+  description:
+    'Show the person the teammates you suggest as a card they can edit, then create with one click. Call it ' +
+    'last, after your reply describes the team. Their answer arrives as their next message: "Created the team: …" ' +
+    'naming the new teammates, or their own words to change it.',
+  inputSchema: jsonSchema<TeamProposal>({
+    type: 'object',
+    properties: {
+      teammates: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 5,
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: `A short first name, e.g. "Riley"; never "${CHIEF_NAME}"`,
+            },
+            role: {
+              type: 'string',
+              description:
+                'One line: what it does, e.g. "Ships features and fixes bugs in acme/web"',
+            },
+            instructions: {
+              type: 'string',
+              description:
+                'Written to the teammate as "you": the role, what it owns, how it works, what it asks a person first',
+            },
+            connections: {
+              type: 'array',
+              maxItems: 4,
+              items: {
+                type: 'object',
+                properties: {
+                  kind: { type: 'string', enum: ['gmail', 'google_calendar', 'stripe', 'github'] },
+                  scope: {
+                    type: 'string',
+                    enum: ['read', 'read_write'],
+                    description:
+                      'read_write only when the role must send or change something there',
+                  },
+                  why: { type: 'string', description: 'A few words, e.g. "to answer customers"' },
+                },
+                required: ['kind', 'scope'],
+              },
+            },
+          },
+          required: ['name', 'role', 'instructions'],
+        },
+      },
+    },
+    required: ['teammates'],
+  }),
+  execute: async (input) => {
+    const parsed = TeamProposal.safeParse(input)
+    if (!parsed.success) throw new Error(`Invalid proposal: ${parsed.error.message}`)
+    const names = parsed.data.teammates.map((t) => t.name.toLowerCase())
+    if (names.some(isChiefName)) throw new Error(`"${CHIEF_NAME}" is your name; pick another`)
+    if (new Set(names).size !== names.length) throw new Error('Give each teammate its own name')
+    return {
+      shown: parsed.data.teammates.length,
+      next: 'End your reply: the person edits the card and creates the team, or answers in their own words.',
     }
   },
 })

@@ -14,6 +14,7 @@ import {
 } from './previews.js'
 import { ScheduleOperation } from './schedules.js'
 import { TaskOperation } from './tasks.js'
+import { TeammateKind } from './chief.js'
 
 /** Longest clipboard text carried between a person's browser and a desktop. */
 export const CLIPBOARD_MAX = 1_000_000
@@ -76,6 +77,7 @@ export const ThreadSpec = z.object({
     instructions: z.string(),
     harness: HarnessId,
     model: z.string().nullable(),
+    kind: TeammateKind.default('teammate'),
   }),
   /** allow-reads: ask before writes and commands. allow-all: never ask. */
   permissionMode: z.enum(['allow-reads', 'allow-edits', 'allow-all']),
@@ -91,6 +93,11 @@ export const ThreadSpec = z.object({
   starter: z.boolean().default(true),
   /** Everyone in the thread, so each teammate knows who else is in it. */
   teammates: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
+  /**
+   * For the chief: every teammate of the workspace, with its role (the first
+   * line of its instructions). Mentioning one brings it into the thread.
+   */
+  roster: z.array(z.object({ id: z.string(), name: z.string(), role: z.string() })).default([]),
   /** The teammate's grant on the workspace library: read it and search, or also save to it. */
   library: LibraryAccess.default('read'),
   /**
@@ -323,6 +330,7 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   /**
    * A teammate's reply mentioned others in the thread: they answer next, in
    * order. The API checks they are in the thread, the caps and the chain limit.
+   * The chief may also mention teammates not in it yet: they join it first.
    */
   z.object({
     type: z.literal('thread.handoff'),

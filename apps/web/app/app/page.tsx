@@ -3,6 +3,7 @@ import { ArrowRight, GitPullRequest, Inbox, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { ActivityFeed } from '@/components/activity-feed'
 import { isAdmin, StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { GettingStarted } from '@/components/getting-started'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -198,6 +199,8 @@ export default function Home() {
           )}
         </section>
       )}
+
+      <GettingStarted threads={threads.data} />
 
       {tickets.data && pulls.data && <NeedsYou tickets={waiting} pulls={pulls.data.count} />}
 

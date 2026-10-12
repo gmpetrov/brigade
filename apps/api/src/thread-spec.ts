@@ -1,6 +1,7 @@
 import { folderExceptions, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { threadAttachments } from './attachments.js'
+import { chiefRoster } from './chief.js'
 import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
@@ -124,10 +125,12 @@ export async function specFor(
       instructions: teammate.instructions,
       harness: teammate.harness,
       model: teammate.model,
+      kind: teammate.kind,
     },
     permissionMode: permissionMode(thread.computer.kind),
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
+    roster: teammate.kind === 'chief' ? await chiefRoster(db) : [],
     library: teammate.libraryAccess,
     libraryFolders: folderExceptions(
       { id: teammate.id, library: teammate.libraryAccess },

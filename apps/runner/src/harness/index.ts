@@ -13,6 +13,7 @@ import {
   type AccountRef,
   type AgentEvent,
   OFFER_CHOICES_TOOL,
+  PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
   type ThreadSpec,
   type TicketAnswer,
@@ -48,6 +49,7 @@ import {
   OPEN_TICKET_TOOL,
   openTicketTool,
   previewTools,
+  proposeTeamTool,
   repoTools,
   scheduleTools,
   taskTools,
@@ -154,6 +156,7 @@ function createAgent(
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
     [OFFER_CHOICES_TOOL]: offerChoicesTool,
+    ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
   }
   return new HarnessAgent({
     harness,

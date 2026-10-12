@@ -38,6 +38,14 @@ export const Harness = {
 export type Harness = (typeof Harness)[keyof typeof Harness]
 
 
+export const TeammateKind = {
+  teammate: 'teammate',
+  chief: 'chief'
+} as const
+
+export type TeammateKind = (typeof TeammateKind)[keyof typeof TeammateKind]
+
+
 export const LibraryAccess = {
   read: 'read',
   read_write: 'read_write'

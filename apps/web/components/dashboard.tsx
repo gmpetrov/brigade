@@ -141,10 +141,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (me.error?.status === 401) router.replace('/sign-in')
-    else if (me.data && !me.data.activeWorkspaceId) router.replace('/onboarding')
+    // No workspace yet, or no AI account to run anything: onboarding first.
+    else if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady))
+      router.replace('/onboarding')
   }, [me.data, me.error, router])
 
-  if (!me.data?.activeWorkspaceId)
+  if (!me.data?.activeWorkspaceId || !me.data.aiReady)
     return (
       <div className="flex min-h-svh items-center justify-center">
         <Skeleton className="h-6 w-40" />

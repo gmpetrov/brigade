@@ -122,6 +122,14 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   kept is still named to the teammate, with why. Connector calls can bring files in (`gmail_read_attachment`) and send
   them (`gmail_send`'s `attachments`: paths the runner uploads first). Runners need protocol 7.
 - **Approvals are answered inline** in the thread; ticket rows and the ticket queue come with steps 6–7.
+- **The chief.** Every workspace has one teammate of kind `chief`, named `Chief` (people mention it as @Chief, or @chief); it
+  can't be renamed or archived. Its role lives in the runner (`instructions.ts`), not in the database. It interviews a
+  new workspace's owner and proposes a team with `propose_team`, shown as a card a person edits and creates
+  (`POST /api/teammates/team`): those teammates run on the chief's agent, start with connector writes on `ask`, and
+  get the connections they need that the workspace has. The chief answers what one reply settles; a teammate it
+  @mentions joins the thread and answers next (only the chief can bring in teammates not yet in a thread, protocol
+  18), and bigger work becomes a task. Onboarding names the project (organization and first workspace), then asks
+  for an AI account: the dashboard stays closed until the member has one that has worked in that workspace.
 - **Sign-in is email and password** for now. Invitations by email come with step 10.
 - **The runner ships its own pinned pnpm** (10.x), because the Claude Code adapter installs its bridge with
   `pnpm install --frozen-lockfile` and older global pnpm versions reject its lockfile.

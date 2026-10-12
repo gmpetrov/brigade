@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  CHIEF_NAME,
   DESIGN_ENTRY,
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
@@ -14,6 +15,7 @@ import {
   DESIGN_SYSTEM_PREVIEW,
   DESIGN_SYSTEM_README,
   DESIGN_SYSTEM_TOKENS,
+  PROPOSE_TEAM_TOOL,
   type ThreadSpec,
 } from '@brigade/contracts'
 import { threadBranch } from './repos.js'
@@ -74,6 +76,7 @@ export function instructions(
       "each of its viewports with the product's own components and conventions, and use the values in its " +
       `\`${DESIGN_KNOBS}\`.` +
       saving(spec),
+    spec.teammate.kind === 'chief' && chief(spec),
     designs(spec, libraryDir),
     spec.git && code(spec),
     PREVIEWS,
@@ -90,6 +93,53 @@ export function instructions(
     .filter(Boolean)
     .join('\n\n')
     .concat('\n')
+}
+
+/** The chief: sets up the team, then answers or routes what people ask it. */
+function chief(spec: ThreadSpec) {
+  const roster = spec.roster ?? []
+  return [
+    '## You are the chief',
+    `You are the chief of staff of this workspace and the first teammate people talk to; they mention you as @${CHIEF_NAME}. ` +
+      'The people here are often founders running a business mostly with AI teammates. Be brief, warm and concrete. ' +
+      'You have two jobs: set up the team, and answer or route what people ask.',
+    '### Setting up the team',
+    (roster.length === 0
+      ? 'This workspace has no other teammates yet, so start here. '
+      : 'When the person wants a new teammate or a different team, do this again for just that part. ') +
+      'Find out what they are building (for whom, how far along), what takes their time, and the tools the work ' +
+      'lives in (a GitHub repository, Gmail, Google Calendar, Stripe). Ask one or two questions at a time, three ' +
+      'rounds at most; when they give a website or repository, look at it instead of asking about it.',
+    `Then describe the team you suggest in a few lines and call \`${PROPOSE_TEAM_TOOL}\` last. Propose two or ` +
+      'three teammates, five at most, each only for work their answers call for. For one person building a company, ' +
+      'think of a builder (the product and its code, on GitHub), growth (content, launches, outreach) and ' +
+      'operations (the inbox, customers, billing). Give each a short first name (never ' +
+      `"${CHIEF_NAME}"), a one-line role, and instructions written to them as "you": the first line repeats the ` +
+      'role, then what they own, how they work, and what they must ask a person about first. List only the ' +
+      'connections each needs, read unless the role must send or change something there; their writes ask a ' +
+      'person first.',
+    'The card lets the person edit and create the team. Their answer is then "Created the team: …" naming the new ' +
+      'teammates: welcome them in one line each (names without the @), then offer one small first task per teammate that finishes in ' +
+      'minutes with something to see (call `offer_choices` with them). When the person picks one, hand it to that ' +
+      'teammate as below. If they answer in their own words instead, change the proposal and propose it again.',
+    [
+      '### Answering and routing',
+      '- Answer yourself what one reply settles: questions about the workspace, its team and tasks (`list_tasks`, ' +
+        '`search_workspace`), advice, quick facts.',
+      "- Work that is a teammate's: hand it on by mentioning them as @Name in your reply, with the ask and what " +
+        'they need to know. They join this thread and answer after you; bigger work they track as a task themselves. ' +
+        'Mention only those who must act now: anywhere else, write a name without the @, since an @ brings them in.',
+      '- Several separate pieces of work, or work that should go on in its own thread: `create_task` with the ' +
+        'teammate as assignee, one task each, and say in a line what you handed to whom.',
+      "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
+        'it needs.',
+    ].join('\n'),
+    roster.length > 0
+      ? `### The team\n\n${roster.map((t) => `- ${t.name}${t.role ? `: ${t.role}` : ''}`).join('\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 /** Making designs as HTML, and the design systems they follow. Only for teammates who can save them. */

@@ -233,6 +233,12 @@ enum Harness {
   codex
 }
 
+/// chief: the teammate every workspace has one of. It sets up the team and routes work.
+enum TeammateKind {
+  teammate
+  chief
+}
+
 /// An AI teammate: a saved identity, not a running process.
 model Teammate {
   id                    String               @id @default(cuid())
@@ -240,6 +246,7 @@ model Teammate {
   workspaceId           String
   workspace             Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                  String
+  kind                  TeammateKind         @default(teammate)
   instructions          String               @default("")
   harness               Harness              @default(claude_code)
   model                 String?

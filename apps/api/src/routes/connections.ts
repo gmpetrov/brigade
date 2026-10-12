@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
 import { connectors } from '../connectors/index.js'
-import { ConnectGoogle, ConnectStripe, ConnectWebhookApp } from '@brigade/contracts'
+import { ConnectGitHub, ConnectGoogle, ConnectStripe, ConnectWebhookApp } from '@brigade/contracts'
 import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
@@ -49,6 +49,14 @@ type OAuthState = {
   kind: 'gmail' | 'google_calendar' | 'github'
   /** github: the installation GitHub named, still to be checked against the person. */
   installationId?: number
+  /** The dashboard page to send the person back to; default the Connections page. */
+  returnTo?: string
+}
+
+/** Back to the dashboard after a connect attempt, with its result in the query. */
+const backTo = (returnTo: string | undefined, query: string) => {
+  const path = returnTo ?? '/app/connections'
+  return `${env.WEB_URL[0]}${path}${path.includes('?') ? '&' : '?'}${query}`
 }
 
 /**
@@ -116,10 +124,11 @@ export const connections = new Hono<AppEnv>()
    * signed-in member and workspace; tokens go straight into the vault.
    */
   .get('/oauth/google/callback', async (c) => {
-    const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
+    let back = (query: string) => c.redirect(backTo(undefined, query))
     const taken = await takeState(stateIdentifier(c.req.query('state') ?? ''), c.var.userId)
     if (typeof taken === 'string') return back(`error=${taken}`)
     const { grant, scope } = taken
+    back = (query: string) => c.redirect(backTo(grant.returnTo, query))
     if (grant.kind === 'github') return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
@@ -146,7 +155,7 @@ export const connections = new Hono<AppEnv>()
    * next, and the callback checks that they reach that installation.
    */
   .get('/oauth/github/setup', async (c) => {
-    const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
+    const back = (query: string) => c.redirect(backTo(undefined, query))
     // A member of an organization asked its owners to install the app; nothing is installed yet.
     if (c.req.query('setup_action') === 'request') return back('error=github_requested')
     const installationId = Number(c.req.query('installation_id'))
@@ -160,10 +169,11 @@ export const connections = new Hono<AppEnv>()
 
   /** GitHub's redirect back after the member signs in. The vault keeps only the installation id. */
   .get('/oauth/github/callback', async (c) => {
-    const back = (query: string) => c.redirect(`${env.WEB_URL[0]}/app/connections?${query}`)
+    let back = (query: string) => c.redirect(backTo(undefined, query))
     const taken = await takeState(stateIdentifier(c.req.query('state') ?? ''), c.var.userId)
     if (typeof taken === 'string') return back(`error=${taken}`)
     const { grant, scope } = taken
+    back = (query: string) => c.redirect(backTo(grant.returnTo, query))
     if (grant.kind !== 'github' || !grant.installationId) return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
@@ -230,9 +240,9 @@ export const connections = new Hono<AppEnv>()
     requireRole(c.var.scope, 'owner', 'admin')
     if (!googleConfigured())
       throw new HTTPException(409, { message: 'Google is not configured on this Brigade server' })
-    const { kind } = await parseBody(c.req.raw, ConnectGoogle)
+    const { kind, returnTo } = await parseBody(c.req.raw, ConnectGoogle)
     const state = randomBytes(24).toString('base64url')
-    await saveState(stateIdentifier(state), { ...c.var.scope, kind })
+    await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo })
     return c.json({ url: googleAuthUrl(kind, state) })
   })
 
@@ -244,9 +254,13 @@ export const connections = new Hono<AppEnv>()
     requireRole(c.var.scope, 'owner', 'admin')
     if (!githubConfigured())
       throw new HTTPException(409, { message: 'GitHub is not configured on this Brigade server' })
+    // The body is optional: the Connections page sends none.
+    const body = ConnectGitHub.safeParse(await c.req.json().catch(() => ({})))
+    if (!body.success) throw new HTTPException(400, { message: 'Not a dashboard path' })
+    const { returnTo } = body.data
     const identifier = githubPending(c.var.scope.userId)
     await prisma.verification.deleteMany({ where: { identifier } })
-    await saveState(identifier, { ...c.var.scope, kind: 'github' })
+    await saveState(identifier, { ...c.var.scope, kind: 'github', returnTo })
     return c.json({ url: githubInstallUrl() })
   })
 

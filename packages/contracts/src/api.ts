@@ -56,7 +56,16 @@ export const SetGrant = z.object({
   connectionId: z.string(),
   scope: z.enum(['none', 'read', 'read_write']),
 })
-export const ConnectGoogle = z.object({ kind: z.enum(['gmail', 'google_calendar']) })
+/** A dashboard page to come back to after the provider's consent, e.g. the thread a Connect button was in. */
+export const ReturnTo = z
+  .string()
+  .max(300)
+  .regex(/^\/app\/[\w\-/?=&.%]*$/, 'A dashboard path')
+export const ConnectGoogle = z.object({
+  kind: z.enum(['gmail', 'google_calendar']),
+  returnTo: ReturnTo.optional(),
+})
+export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
 /** A Stripe secret or restricted key, entered once in the dashboard and kept in the vault. */
 export const ConnectStripe = z.object({
   apiKey: z

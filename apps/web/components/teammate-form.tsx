@@ -87,6 +87,8 @@ export function TeammateForm({
               defaultValue={initial?.name}
               placeholder="Riley"
               required
+              // The chief keeps its name, so @chief always reaches it.
+              readOnly={initial?.kind === 'chief'}
             />
           </div>
           <div className="flex flex-col gap-2">

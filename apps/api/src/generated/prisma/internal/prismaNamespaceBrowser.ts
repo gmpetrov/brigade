@@ -256,6 +256,7 @@ export const TeammateScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
   name: 'name',
+  kind: 'kind',
   instructions: 'instructions',
   harness: 'harness',
   model: 'model',

@@ -1,6 +1,7 @@
 // Zod schemas shared by api, runner and web. The single source of types.
 export * from './api.js'
 export * from './attachments.js'
+export * from './chief.js'
 export * from './credentials.js'
 export * from './design.js'
 export * from './events.js'
@@ -27,8 +28,9 @@ export * from './thread-history.js'
  * 15: preview checks (addresses with their token) and saved preview recipes.
  * 16: welcome resumes lost turns and queues lost messages again.
  * 17: people start previews without a turn (preview.start); previews report their steps and checks.
+ * 18: the chief: its kind and roster in the spec, handoffs to teammates not yet in the thread.
  */
-export const PROTOCOL_VERSION = 17
+export const PROTOCOL_VERSION = 18
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /** Runners from this version on keep restricted folders from teammates without access. */

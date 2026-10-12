@@ -1090,10 +1090,18 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  * is not read as "@Cody".
  */
 export function mentionedTeammates(text: string, spec: ThreadSpec) {
+  // The chief may also bring in any teammate of the workspace.
+  const reachable =
+    spec.teammate.kind === 'chief'
+      ? [
+          ...spec.teammates,
+          ...(spec.roster ?? []).filter((r) => !spec.teammates.some((t) => t.id === r.id)),
+        ]
+      : spec.teammates
   const found: { id: string; at: number }[] = []
   for (const id of mentionedIds(text, 'teammate'))
-    if (spec.teammates.some((t) => t.id === id)) found.push({ id, at: text.indexOf(id) })
-  const names = [...spec.teammates].sort((a, b) => b.name.length - a.name.length)
+    if (reachable.some((t) => t.id === id)) found.push({ id, at: text.indexOf(id) })
+  const names = [...reachable].sort((a, b) => b.name.length - a.name.length)
   let rest = text
   for (const t of names) {
     const pattern = new RegExp(`(^|[^\\w@])@${escape(t.name)}(?![\\w])`, 'gi')

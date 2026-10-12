@@ -188,9 +188,29 @@ export async function handoffThread(
     where: { id: message.sessionId, computerId: runner.computerId },
   })
   if (!session || session.status === 'paused' || session.status === 'failed') return
-  const thread = await loadThread(db, session.id)
+  let thread = await loadThread(db, session.id)
   const inThread = new Set(thread.teammates.map((t) => t.teammateId))
-  if (!inThread.has(message.fromTeammateId)) return
+  const from = thread.teammates.find((t) => t.teammateId === message.fromTeammateId)
+  if (!from) return
+  // The chief routes work: a teammate it mentions joins the thread to answer.
+  if (from.teammate.kind === 'chief') {
+    const joining = await db.teammate.findMany({
+      where: {
+        id: { in: message.teammateIds.filter((id) => !inThread.has(id)) },
+        archivedAt: null,
+      },
+      select: { id: true },
+    })
+    if (joining.length > 0) {
+      await joinThread(
+        db,
+        session.id,
+        joining.map((t) => t.id),
+      )
+      thread = await loadThread(db, session.id)
+      for (const t of joining) inThread.add(t.id)
+    }
+  }
   const ids = [...new Set(message.teammateIds)].filter(
     (id) => id !== message.fromTeammateId && inThread.has(id),
   )

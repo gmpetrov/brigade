@@ -184,11 +184,15 @@ export type Me = {
   workspaces: { id: string; name: string }[]
   activeWorkspaceId: string | null
   memberId: string | null
+  /** The member has an AI account here that has worked: nothing runs without one. */
+  aiReady: boolean
 }
 
 export type Teammate = {
   id: string
   name: string
+  /** chief: the teammate every workspace has, which sets up the team and routes work. */
+  kind: 'teammate' | 'chief'
   instructions: string
   harness: 'claude_code' | 'codex'
   model: string | null

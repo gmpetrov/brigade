@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  CreateTeam,
   CreateTeammate,
   isHarnessModel,
   OpenBrowser,
@@ -10,6 +11,7 @@ import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { refuseChiefName } from '../chief.js'
 import { deleteTriggers, resync } from './triggers.js'
 import { usageToday } from '../caps.js'
 import { teammateTimeline } from '../timeline.js'
@@ -19,9 +21,10 @@ export const teammates = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
   .get('/', async (c) => {
+    // The chief first: it is where new work starts.
     const rows = await c.var.db.teammate.findMany({
       where: { archivedAt: null },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ kind: 'desc' }, { createdAt: 'asc' }],
     })
     return c.json(rows)
   })
@@ -87,6 +90,7 @@ export const teammates = new Hono<AppEnv>()
   .post('/', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, CreateTeammate)
+    refuseChiefName(input.name)
     const row = await c.var.db.teammate.create({ data: input as never })
     await audit({
       ...c.var.scope,
@@ -98,9 +102,70 @@ export const teammates = new Hono<AppEnv>()
     return c.json(row, 201)
   })
 
+  /**
+   * The team a person accepted from the chief's proposal, as they edited it.
+   * Each teammate gets the connections it needs that the workspace has, and
+   * starts out asking before every write; the rest it gets once connected.
+   */
+  .post('/team', async (c) => {
+    requireRole(c.var.scope, 'owner', 'admin')
+    const { db, scope } = c.var
+    const { teammates: proposed } = await parseBody(c.req.raw, CreateTeam)
+    for (const t of proposed) refuseChiefName(t.name)
+    const connections = await db.connection.findMany({
+      where: { status: { not: 'removed' }, kind: { not: 'webhook' } },
+      orderBy: { createdAt: 'asc' },
+    })
+    // They run on the same agent as the chief, which runs on the member's account.
+    const chief = await db.teammate.findFirst({ where: { kind: 'chief' } })
+    const created = []
+    for (const t of proposed) {
+      const row = await db.teammate.create({
+        data: {
+          name: t.name,
+          instructions: t.instructions,
+          harness: chief?.harness ?? 'claude_code',
+          permissionPolicy: { connectorWrites: 'ask' },
+        } as never,
+      })
+      for (const need of t.connections) {
+        const connection = connections.find((x) => x.kind === need.kind)
+        if (!connection) continue
+        await db.grant.create({
+          data: { teammateId: row.id, connectionId: connection.id, scope: need.scope } as never,
+        })
+      }
+      await audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'teammate.created',
+        target: { type: 'teammate', id: row.id },
+        data: {
+          name: row.name,
+          harness: row.harness,
+          from: 'chief',
+          connections: t.connections.map((x) => `${x.kind}:${x.scope}`),
+        },
+      })
+      created.push({ id: row.id, name: row.name })
+    }
+    return c.json({ teammates: created }, 201)
+  })
+
   .patch('/:id', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, UpdateTeammate)
+    if (input.name !== undefined) {
+      const chief = await c.var.db.teammate.findFirst({
+        where: { id: c.req.param('id'), kind: 'chief' },
+        select: { name: true },
+      })
+      // The chief keeps its name, so @chief always reaches it.
+      if (chief) {
+        if (input.name !== chief.name)
+          throw new HTTPException(400, { message: "The chief's name can't change" })
+      } else refuseChiefName(input.name)
+    }
     if (input.harness !== undefined || input.model !== undefined) {
       const current = await c.var.db.teammate.findFirst({
         where: { id: c.req.param('id'), archivedAt: null },
@@ -178,8 +243,11 @@ export const teammates = new Hono<AppEnv>()
 
   .delete('/:id', async (c) => {
     requireRole(c.var.scope, 'owner', 'admin')
+    if (await c.var.db.teammate.count({ where: { id: c.req.param('id'), kind: 'chief' } }))
+      throw new HTTPException(400, { message: 'Every workspace keeps its chief' })
     const { count } = await c.var.db.teammate.updateMany({
-      where: { id: c.req.param('id'), archivedAt: null },
+      // Every workspace keeps its chief.
+      where: { id: c.req.param('id'), archivedAt: null, kind: 'teammate' },
       data: { archivedAt: new Date() },
     })
     if (count === 0) throw new HTTPException(404, { message: 'Teammate not found' })
