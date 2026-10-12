@@ -1,6 +1,7 @@
 'use client'
 import {
   CalendarClock,
+  FlaskConical,
   ChevronsUpDown,
   GitPullRequest,
   House,
@@ -91,6 +92,7 @@ export const NAV = [
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },
   { href: '/app/threads', label: 'Threads', icon: MessagesSquare },
   { href: '/app/computers', label: 'Computers', icon: Monitor },
+  { href: '/app/test-42', label: 'Test 42', icon: FlaskConical },
 ]
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
