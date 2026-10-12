@@ -1087,13 +1087,14 @@ export function previewTools(
     start_preview: tool({
       description:
         'Run the app you are working on as a live preview people open from this thread, e.g. its dev server, ' +
-        'to try what you built. It keeps running after your turn ends; the thread has one preview, and starting ' +
-        'another replaces it. Waits until the port answers, then opens `paths` (default "/") with Chrome as a ' +
+        'to try what you built: when the person asks for it. It keeps running after your turn ends; the thread ' +
+        'has one preview, and starting another replaces it. Waits until the port answers, then opens `paths` (default "/") with Chrome as a ' +
         'person would and reports what is wrong with each: its status, a blank page, script errors, server errors, ' +
         'with screenshots. Fix those before telling anyone it is ready. ' +
         'For a repository with a saved preview, pass only `repository` (owner/name): it starts as it was saved, ' +
         'setup included. Try that first in a checkout; save yours with save_preview once its check passes. ' +
         'The app must listen on 0.0.0.0 (or all interfaces), not only localhost, on `port`: PORT and HOST are set. ' +
+        'Write the command with $PORT (e.g. "pnpm dev --port $PORT"): when another preview has `port`, it gets a free one. ' +
         'People reach it through a proxy at one public address, in BRIGADE_PREVIEW_URL; the other `ports` are paths on it ' +
         "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
         'where ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} become the addresses (e.g. NEXTAUTH_URL, ' +
@@ -1113,7 +1114,7 @@ export function previewTools(
           command: {
             type: 'string',
             description:
-              'Starts the app and keeps running, e.g. "pnpm dev --port 5173 --host 0.0.0.0"',
+              'Starts the app and keeps running, e.g. "pnpm dev --port $PORT --host 0.0.0.0"',
           },
           cwd: {
             type: 'string',

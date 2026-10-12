@@ -6,6 +6,11 @@ import { RepositoryName } from './repositories.js'
 
 /** Runners from this protocol version on run previews. */
 export const PREVIEW_PROTOCOL = 14
+/** Runners from this version on start a saved preview for a person, without a turn (preview.start). */
+export const PREVIEW_START_PROTOCOL = 17
+
+/** Why a preview stopped when another took its place: said by its events, not shown in the thread. */
+export const PREVIEW_REPLACED = 'Replaced by a new preview'
 
 /** Ports a preview may listen on: unprivileged, and not the runner's own. */
 export const PreviewPort = z.number().int().min(1024).max(65535)
@@ -22,6 +27,17 @@ export const PREVIEW_LOG_LINES = 400
  */
 export const PreviewStatus = z.enum(['starting', 'running', 'failed', 'stopped'])
 export type PreviewStatus = z.infer<typeof PreviewStatus>
+
+/**
+ * The last check of a preview's pages (opened with Chrome as a person would):
+ * running, or whether they passed and which did not.
+ */
+export const PreviewCheckState = z.object({
+  status: z.enum(['checking', 'passed', 'failed']),
+  /** Pages that failed. */
+  failed: z.array(z.string().max(500)).max(10).optional(),
+})
+export type PreviewCheckState = z.infer<typeof PreviewCheckState>
 
 /** What a preview is, as its events say. */
 export const PreviewInfo = z.object({
@@ -42,8 +58,42 @@ export const PreviewInfo = z.object({
   publicPort: PreviewPort.optional(),
   /** Why it failed or stopped, for a person. */
   reason: z.string().optional(),
+  /** While it starts: running its setup (install, migrate, seed), or starting the app. */
+  step: z.enum(['setup', 'app']).optional(),
+  /** Its pages' last check; unset until one ran. Ready once it passed. */
+  check: PreviewCheckState.optional(),
+  /** owner/name of the checkout it runs from, and the commit checked out when it started. */
+  repository: z.string().optional(),
+  commit: z.string().optional(),
+  /** When this run started, from runners that report checks (older ones say running when the port answers). */
+  startedAt: z.string().optional(),
 })
 export type PreviewInfo = z.infer<typeof PreviewInfo>
+
+/** Whether a preview is ready for people: it answers and its pages passed their check. */
+export const previewReady = (p: Pick<PreviewInfo, 'status' | 'check' | 'startedAt'>) =>
+  p.status === 'running' && (p.check?.status === 'passed' || !p.startedAt)
+
+/**
+ * What came of a person starting a thread's preview from the dashboard.
+ * started: the runner starts it (again, or from its repository's saved
+ * setup); running: it already runs. setup: nothing saved to start from, so
+ * the teammate sets it up (the repositories checked out, if any). teammate:
+ * it needs the teammate, e.g. to release its credentials from the vault.
+ */
+export const PreviewStartOutcome = z.discriminatedUnion('outcome', [
+  z.object({ outcome: z.literal('started') }),
+  z.object({ outcome: z.literal('running') }),
+  z.object({ outcome: z.literal('setup'), repositories: z.array(z.string()).max(20) }),
+  z.object({ outcome: z.literal('teammate'), repository: z.string(), reason: z.string() }),
+])
+export type PreviewStartOutcome = z.infer<typeof PreviewStartOutcome>
+
+/** A person starts a thread's preview: optionally of one repository it has checked out. */
+export const StartPreview = z.object({
+  repository: z.string().max(200).optional(),
+})
+export type StartPreview = z.infer<typeof StartPreview>
 
 /** A person's action on a thread's preview, from the dashboard. */
 export const PreviewAction = z.enum(['restart', 'stop'])
@@ -101,3 +151,24 @@ export const PreviewOperation = z.discriminatedUnion('name', [
   z.object({ name: z.literal('save'), repository: RepositoryName, recipe: PreviewRecipe }),
 ])
 export type PreviewOperation = z.infer<typeof PreviewOperation>
+
+/** A repository's saved preview, as the dashboard lists it. */
+export const SavedPreviewRecipe = z.object({
+  repository: z.string(),
+  recipe: PreviewRecipe,
+  savedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
+  savedFromSessionId: z.string().nullable(),
+  updatedAt: z.string(),
+})
+export type SavedPreviewRecipe = z.infer<typeof SavedPreviewRecipe>
+
+/** A thread's preview for a page other than the thread's (a pull request's). */
+export const ThreadPreviewState = z.object({
+  preview: PreviewInfo.extend({ teammateId: z.string().optional() }).nullable(),
+  teammateName: z.string(),
+  computerName: z.string(),
+  /** It runs on the workspace computer, not a member's own machine. */
+  cloud: z.boolean(),
+  mayControl: z.boolean(),
+})
+export type ThreadPreviewState = z.infer<typeof ThreadPreviewState>

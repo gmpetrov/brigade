@@ -11,19 +11,28 @@
 //
 // It expires a while after anyone last used it (a teammate's preview tool, a
 // person viewing it), so a forgotten dev server does not keep the computer up.
+//
+// A person starts one too, from the dashboard, without a turn: again as it last
+// started (remembered across restarts of the runner), or from the saved setup
+// of a repository checked out in the thread. Then the runner checks its pages
+// itself, as a teammate's start_preview does.
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { createConnection } from 'node:net'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import {
   PREVIEW_LOG_LINES,
+  PREVIEW_REPLACED,
   type AgentEvent,
   type PreviewInfo,
   type PreviewOperation,
   type PreviewRecipe,
+  type PreviewStartOutcome,
 } from '@brigade/contracts'
+import { HOME } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import type { CheckResult } from './preview-check.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
@@ -60,6 +69,12 @@ const ERROR_LINE =
   /\b(error|exception|failed|fatal|unhandled|ECONNREFUSED|ENOTFOUND)\b|⨯| 5\d\d in /i
 /** Longest line kept in the log. */
 const LINE_MAX = 2000
+/** What the wrapper prints between the setup and the app. */
+const APP_STARTS = '[preview] Starting the app'
+/** A command that takes its port from $PORT runs on another one when its own is taken. */
+const PORT_VARIABLE = /\$\{?PORT\b/
+/** Threads whose last start is remembered, newest kept. */
+const REMEMBERED_MAX = 200
 
 export type PreviewStart = {
   command: string
@@ -111,7 +126,10 @@ export type PreviewResult = {
   logs?: string
 }
 
-type Seat = { sessionId: string; teammateId: string; workDir: string; runAs?: string }
+export type Seat = { sessionId: string; teammateId: string; workDir: string; runAs?: string }
+
+/** How a thread's preview last started, to start it again for a person. Credentials are not kept. */
+type LastStart = { seat: Seat; input: Omit<PreviewStart, 'envFiles'>; repository?: string }
 
 type Preview = {
   info: PreviewInfo
@@ -128,6 +146,10 @@ type Preview = {
   dir: string
   /** The process group to stop. */
   group?: number
+  /** Its credentials' env files, copied for as long as it runs (a turn's own go when it parks). */
+  envFiles: string[]
+  /** Where those copies are, removed when it ends. */
+  keptDir?: string
   /** The last check of its pages: whether they all passed. */
   checked?: boolean
   lines: string[]
@@ -180,11 +202,23 @@ export class Previews {
         teammateId: string,
         operation: PreviewOperation,
       ) => Promise<unknown>
+      /** A teammate's seat in a thread: its working directory, and its user on a cloud computer. */
+      seat: (sessionId: string, teammateId: string) => Seat
+      /** Where how each thread's preview last started is kept. */
+      stateFile: string
     },
   ) {
     this.timer = setInterval(() => this.expire(), 60_000)
     this.timer.unref()
+    try {
+      const saved = JSON.parse(readFileSync(options.stateFile, 'utf8')) as [string, LastStart][]
+      this.lastStarts = new Map(saved)
+    } catch {
+      // None yet.
+    }
   }
+
+  private lastStarts = new Map<string, LastStart>()
 
   /** Previews running or starting. */
   get count() {
@@ -233,6 +267,36 @@ export class Previews {
     if (!preview || preview.info.status !== 'running')
       throw new Error('The preview is not running: start it with start_preview first')
     preview.lastUsed = Date.now()
+    const current = () => this.previews.get(seat.sessionId) === preview
+    const before = preview.info.check
+    preview.info = { ...preview.info, check: { status: 'checking' } }
+    this.report(preview)
+    try {
+      const result = await this.checkPages(seat, preview, paths)
+      if (current()) {
+        const failed = result.pages.filter((p) => !p.ok).map((p) => p.path)
+        preview.checked = result.ok
+        preview.info = {
+          ...preview.info,
+          check: result.ok
+            ? { status: 'passed' }
+            : { status: 'failed', failed: failed.slice(0, 10) },
+        }
+        this.report(preview)
+      }
+      return result
+    } catch (error) {
+      // Not checked: as it was before.
+      if (current()) {
+        const { check: _check, ...info } = preview.info
+        preview.info = before ? { ...info, check: before } : info
+        this.report(preview)
+      }
+      throw error
+    }
+  }
+
+  private async checkPages(seat: Seat, preview: Preview, paths: string[]): Promise<PreviewCheck> {
     const port = preview.info.publicPort ?? preview.info.port
     const url = this.options.viewUrl
       ? await this.options.viewUrl(seat.sessionId, port)
@@ -258,7 +322,6 @@ export class Previews {
     const fresh = Math.min(preview.written - from, preview.lines.length)
     const logged = fresh > 0 ? preview.lines.slice(-fresh) : []
     const serverErrors = logged.filter((line) => ERROR_LINE.test(line)).slice(-20)
-    if (this.previews.get(seat.sessionId) === preview) preview.checked = result.ok
     return { ...result, serverErrors }
   }
 
@@ -305,12 +368,11 @@ export class Previews {
   /** A repository's saved recipe, and the directory it is checked out in here. */
   async saved(seat: Seat, name: string): Promise<SavedPreview | null> {
     const repository = name.toLowerCase()
-    const { recipe } = (await this.options.recipes(seat.sessionId, seat.teammateId, {
-      name: 'get',
-      repository,
-    })) as { recipe: PreviewRecipe | null }
+    const recipe = await this.recipe(seat, repository)
     if (!recipe) return null
-    const checkout = await findCheckout(seat.workDir, repository, seat.runAs)
+    const checkout = (await checkouts(seat.workDir, seat.runAs)).find(
+      (c) => c.repository === repository,
+    )?.name
     if (!checkout)
       throw new Error(
         `${repository} has a saved preview, but it is not checked out here: check it out with checkout_repository first`,
@@ -322,7 +384,7 @@ export class Previews {
   async restart(sessionId: string) {
     const preview = this.previews.get(sessionId)
     if (!preview) throw new Error('This thread has no preview running')
-    await this.start(preview.seat, preview.input)
+    await this.startInBackground(preview.seat, { ...preview.input, envFiles: preview.envFiles })
   }
 
   /** Stop a thread's preview, reported as stopped or failed. Returns whether one was running. */
@@ -346,23 +408,129 @@ export class Previews {
   }
 
   private async start(seat: Seat, input: PreviewStart, signal?: AbortSignal) {
+    const { preview, origins } = await this.begin(seat, input)
+    await this.untilReady(preview, waitFor(preview.input), signal)
+
+    const result: PreviewResult = { status: preview.info.status, origins }
+    if (preview.info.reason) result.reason = preview.info.reason
+    if (preview.info.status !== 'running') result.logs = this.tail(preview, 60)
+    return result
+  }
+
+  /**
+   * A person starts the thread's preview from the dashboard, without a turn:
+   * again as it last started, or from the saved setup of a repository one of
+   * these teammates has checked out in the thread. Says what came of it once
+   * it is starting; its events tell the rest, its check included.
+   */
+  async startFor(
+    sessionId: string,
+    teammateIds: string[],
+    repository?: string,
+  ): Promise<PreviewStartOutcome> {
+    if (this.previews.has(sessionId)) return { outcome: 'running' }
+    const wanted = repository?.toLowerCase()
+    const needsTeammate = (name: string): PreviewStartOutcome => ({
+      outcome: 'teammate',
+      repository: name,
+      reason: 'It uses credentials from the vault, which only its teammate can release',
+    })
+
+    const last = this.lastStarts.get(sessionId)
+    if (last && (!wanted || last.repository === wanted)) {
+      if (last.input.credentials?.length) return needsTeammate(last.repository ?? '')
+      await this.startInBackground(last.seat, last.input)
+      return { outcome: 'started' }
+    }
+
+    const found: string[] = []
+    for (const teammateId of teammateIds) {
+      const seat = this.options.seat(sessionId, teammateId)
+      for (const checkout of await checkouts(seat.workDir, seat.runAs)) {
+        if (wanted && checkout.repository !== wanted) continue
+        if (!found.includes(checkout.repository)) found.push(checkout.repository)
+        const recipe = await this.recipe(seat, checkout.repository)
+        if (!recipe) continue
+        if (recipe.credentials.length) return needsTeammate(checkout.repository)
+        await this.startInBackground(seat, fromRecipe(recipe, checkout.name, checkout.repository))
+        return { outcome: 'started' }
+      }
+    }
+    return { outcome: 'setup', repositories: found }
+  }
+
+  /** Start it, then wait for it and check its pages without anyone waiting on the result. */
+  private async startInBackground(seat: Seat, input: PreviewStart) {
+    const { preview } = await this.begin(seat, input)
+    void (async () => {
+      await this.untilReady(preview, waitFor(preview.input))
+      if (this.previews.get(seat.sessionId) !== preview || preview.info.status !== 'running') return
+      await this.check(seat, []).catch((error: unknown) => {
+        this.append(preview, `[preview] Its pages could not be checked: ${String(error)}\n`)
+      })
+    })().catch((error: unknown) => console.warn(`preview start failed: ${String(error)}`))
+  }
+
+  /** A repository's saved recipe, or null. */
+  private async recipe(seat: Seat, repository: string) {
+    const { recipe } = (await this.options.recipes(seat.sessionId, seat.teammateId, {
+      name: 'get',
+      repository,
+    })) as { recipe: PreviewRecipe | null }
+    return recipe
+  }
+
+  /** Start the app and its proxy; resolves once it is starting, with the addresses of its ports. */
+  private async begin(seat: Seat, input: PreviewStart) {
     const command = input.command.trim()
     if (!command) throw new Error('Give the command that starts the app')
     const dir = resolve(seat.workDir, input.cwd ?? '.')
     const cwd = relative(seat.workDir, dir)
     if (cwd === '..' || cwd.startsWith(`..${sep}`))
       throw new Error('cwd must be inside your working directory')
-    const ports = [...new Set((input.ports ?? []).filter((p) => p !== input.port))]
-    const all = [input.port, ...ports]
+    // Before the preview it replaces ends: a restart copies that one's copies.
+    const kept = await keepEnvFiles(seat, input.envFiles ?? [])
+    try {
+      return await this.launchNew(seat, input, command, dir, cwd, kept)
+    } catch (error) {
+      if (kept.dir) void dropEnvFiles(seat, kept.dir)
+      throw error
+    }
+  }
 
+  private async launchNew(
+    seat: Seat,
+    input: PreviewStart,
+    command: string,
+    dir: string,
+    cwd: string,
+    kept: { dir?: string; files: string[] },
+  ) {
     // One preview per thread: a new one replaces it, which frees its ports.
-    await this.stop(seat.sessionId, 'Replaced by a new preview')
+    await this.stop(seat.sessionId, PREVIEW_REPLACED)
+    const others = (input.ports ?? []).filter((p) => p !== input.port)
+    // Taken (another thread's preview of the same app): a command reading $PORT gets a free one.
+    if (PORT_VARIABLE.test(command) && (await answers(input.port))) {
+      for (let port = input.port + 1; port < input.port + 100 && port <= 65535; port++) {
+        if (others.includes(port) || (await answers(port))) continue
+        input = { ...input, port }
+        break
+      }
+    }
+    const ports = [...new Set(others.filter((p) => p !== input.port))]
+    const all = [input.port, ...ports]
     for (const port of all) {
-      if (await answers(port))
-        throw new Error(
-          `Port ${port} is already in use on this computer, by another thread's preview or a ` +
-            'process you started. Stop that process, or run the app on another port.',
-        )
+      if (!(await answers(port))) continue
+      const owner = [...this.previews.values()].find((p) =>
+        [p.info.port, ...p.info.ports].includes(port),
+      )
+      throw new Error(
+        owner
+          ? `Port ${port} is in use by another thread's preview${owner.info.repository ? ` of ${owner.info.repository}` : ''}. ` +
+              'Stop that preview, or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.'
+          : `Port ${port} is already in use on this computer, by a process you started. Stop that process, ` +
+              'or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.',
+      )
     }
 
     // The proxy is what people reach: its port is the one hosted, the app's other ports are paths on it.
@@ -383,8 +551,9 @@ export class Previews {
     const proxy = new PreviewProxy(proxyOptions)
     let origin: string
     let publicPort: number
+    const checkout = await repositoryOf(dir, seat.runAs)
+    const repository = input.repository?.toLowerCase() ?? checkout?.repository
     try {
-      const repository = input.repository ?? (await repositoryOf(dir, seat.runAs))?.repository
       const from = repository
         ? REPOSITORY_PROXY_BASE +
           (createHash('sha256').update(repository).digest().readUInt32BE() % 10_000)
@@ -434,6 +603,7 @@ export class Previews {
         throw error
       }
     }
+    const commit = checkout ? await commitOf(dir, seat.runAs) : null
 
     preview = {
       info: {
@@ -444,12 +614,18 @@ export class Previews {
         port: input.port,
         ports,
         publicPort,
+        step: input.setup?.trim() ? 'setup' : 'app',
+        ...(repository ? { repository } : {}),
+        ...(commit ? { commit } : {}),
+        startedAt: new Date().toISOString(),
       },
       seat,
       input,
       env,
       dir,
       proxy,
+      envFiles: kept.files,
+      ...(kept.dir ? { keptDir: kept.dir } : {}),
       restarts: [],
       lines: [],
       written: 0,
@@ -458,19 +634,31 @@ export class Previews {
       exited: Promise.resolve(null),
     }
     this.previews.set(seat.sessionId, preview)
+    this.remember(seat, input, repository)
     this.report(preview)
     this.launch(preview, true)
+    return { preview, origins }
+  }
 
-    const waitMs = Math.min(
-      input.timeoutMs ?? (input.setup ? SETUP_START_MS : PREVIEW_START_MS),
-      PREVIEW_START_MAX_MS,
-    )
-    await this.untilReady(preview, waitMs, signal)
-
-    const result: PreviewResult = { status: preview.info.status, origins }
-    if (preview.info.reason) result.reason = preview.info.reason
-    if (preview.info.status !== 'running') result.logs = this.tail(preview, 60)
-    return result
+  /** Keep how the thread's preview started, so a person can start it again after it stopped. */
+  private remember(seat: Seat, input: PreviewStart, repository: string | undefined) {
+    const { envFiles: _envFiles, ...kept } = input
+    this.lastStarts.delete(seat.sessionId)
+    this.lastStarts.set(seat.sessionId, {
+      seat,
+      input: kept,
+      ...(repository ? { repository } : {}),
+    })
+    while (this.lastStarts.size > REMEMBERED_MAX)
+      this.lastStarts.delete(this.lastStarts.keys().next().value!)
+    try {
+      mkdirSync(dirname(this.options.stateFile), { recursive: true })
+      const temp = `${this.options.stateFile}.tmp`
+      writeFileSync(temp, JSON.stringify([...this.lastStarts]), { mode: 0o600 })
+      renameSync(temp, this.options.stateFile)
+    } catch (error) {
+      console.warn(`could not save previews: ${String(error)}`)
+    }
   }
 
   /** Run the preview's command (again), as the teammate; its setup first unless it restarts. */
@@ -478,7 +666,8 @@ export class Previews {
     // The wrapper prints its pid first, to find its group.
     const script = 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1"'
     const { runAs } = preview.seat
-    const { setup, envFiles = [] } = preview.input
+    const { setup } = preview.input
+    const { envFiles } = preview
     const command = [
       // Credentials' variables, from the private files the vault released them as.
       ...envFiles.map((file) => `set -a; . ${quote(file)}; set +a`),
@@ -487,7 +676,7 @@ export class Previews {
             'echo "[preview] Running the setup"',
             // Its own shell: set -e has no effect in a list followed by ||.
             `sh -ec ${quote(setup)} || { echo "[preview] The setup failed" >&2; exit 1; }`,
-            'echo "[preview] Starting the app"',
+            `echo ${quote(APP_STARTS)}`,
           ]
         : []),
       preview.info.command,
@@ -568,7 +757,7 @@ export class Previews {
     while (this.previews.get(sessionId) === preview && preview.info.status === 'starting') {
       if (await answers(preview.input.port)) {
         preview.restarting = false
-        const { reason: _reason, ...info } = preview.info
+        const { reason: _reason, step: _step, ...info } = preview.info
         preview.info = { ...info, status: 'running' }
         this.report(preview)
         return
@@ -634,6 +823,10 @@ export class Previews {
     const lines = (preview.partial + text.replace(ANSI, '')).split('\n')
     preview.partial = lines.pop() ?? ''
     for (const line of lines) preview.lines.push(line.slice(0, LINE_MAX))
+    if (preview.info.step === 'setup' && lines.some((line) => line.startsWith(APP_STARTS))) {
+      preview.info = { ...preview.info, step: 'app' }
+      this.report(preview)
+    }
     preview.written += lines.length
     if (preview.lines.length > PREVIEW_LOG_LINES)
       preview.lines.splice(0, preview.lines.length - PREVIEW_LOG_LINES)
@@ -647,8 +840,16 @@ export class Previews {
   private ended(preview: Preview, status: 'failed' | 'stopped', reason: string) {
     this.previews.delete(preview.seat.sessionId)
     preview.proxy.close()
-    preview.info = { ...preview.info, status, reason }
+    // A check it was in the middle of says nothing now.
+    const { step: _step, check, ...info } = preview.info
+    preview.info = {
+      ...info,
+      ...(check?.status === 'checking' ? {} : check ? { check } : {}),
+      status,
+      reason,
+    }
     this.report(preview)
+    if (preview.keptDir) void dropEnvFiles(preview.seat, preview.keptDir)
   }
 
   private report(preview: Preview) {
@@ -666,7 +867,7 @@ export class Previews {
       if (now - preview.lastUsed >= TTL_MS)
         void this.stop(
           sessionId,
-          `Stopped after ${Math.round(TTL_MS / 60_000)} minutes without use. Ask to start it again.`,
+          `Stopped after ${Math.round(TTL_MS / 60_000)} minutes without use`,
         )
     }
   }
@@ -764,8 +965,8 @@ async function repositoryOf(dir: string, runAs: string | undefined) {
   }
 }
 
-/** The directory in the teammate's working directory where a repository is checked out, relative to it. */
-async function findCheckout(workDir: string, repository: string, runAs: string | undefined) {
+/** The repositories checked out in the teammate's working directory: each one's directory, relative to it. */
+async function checkouts(workDir: string, runAs: string | undefined) {
   const listing = await runAsUser(
     [
       'sh',
@@ -776,9 +977,77 @@ async function findCheckout(workDir: string, repository: string, runAs: string |
     ],
     runAs,
   ).catch(() => '')
+  const found: { name: string; repository: string }[] = []
   for (const line of listing.split('\n')) {
     const [name, remote = ''] = line.split('\t')
-    if (name && repositoryFromRemote(remote) === repository.toLowerCase()) return name
+    const repository = repositoryFromRemote(remote)
+    if (name && repository) found.push({ name, repository })
   }
-  return null
+  return found
+}
+
+/** The commit a checkout has checked out, or null. */
+async function commitOf(dir: string, runAs: string | undefined) {
+  return (
+    (await runAsUser(['git', '-C', dir, 'rev-parse', 'HEAD'], runAs).catch(() => '')).trim() || null
+  )
+}
+
+/** How long to wait for the app's port: longer when a setup runs first. */
+const waitFor = (input: PreviewStart) =>
+  Math.min(
+    input.timeoutMs ?? (input.setup ? SETUP_START_MS : PREVIEW_START_MS),
+    PREVIEW_START_MAX_MS,
+  )
+
+/** A saved recipe as a start, in the checkout (relative to the working directory) it runs in. */
+function fromRecipe(recipe: PreviewRecipe, checkout: string, repository: string): PreviewStart {
+  return {
+    command: recipe.command,
+    cwd: recipe.cwd ? `${checkout}/${recipe.cwd}` : checkout,
+    port: recipe.port,
+    ...(recipe.ports.length ? { ports: recipe.ports } : {}),
+    ...(recipe.timeoutSeconds ? { timeoutMs: recipe.timeoutSeconds * 1000 } : {}),
+    ...(recipe.setup?.trim() ? { setup: recipe.setup } : {}),
+    ...(Object.keys(recipe.env).length ? { env: recipe.env } : {}),
+    ...(recipe.envFile ? { envFile: recipe.envFile } : {}),
+    paths: recipe.paths,
+    repository,
+  }
+}
+
+/**
+ * Copy a turn's released env files for one run of a preview, beside the
+ * turn's (which go when its harness parks): a restart after a crash, or by a
+ * person, still has them while it runs. Removed when it ends.
+ */
+async function keepEnvFiles(
+  seat: Seat,
+  files: string[],
+): Promise<{ dir?: string; files: string[] }> {
+  if (!files.length) return { files: [] }
+  const dir = seat.runAs
+    ? `${teammateHome(seat.runAs)}/.credentials/preview-${seat.sessionId}-${randomUUID()}`
+    : join(HOME, 'credentials', `preview-${seat.sessionId}-${randomUUID()}`)
+  const copies = files.map((file, i) => join(dir, `${i}-${file.split('/').pop()}`))
+  await runAsUser(
+    [
+      'sh',
+      '-c',
+      'umask 077 && mkdir -p -- "$1" && shift && while [ "$#" -gt 1 ]; do cp -- "$1" "$2" && shift 2; done',
+      'sh',
+      dir,
+      ...files.flatMap((file, i) => [file, copies[i]!]),
+    ],
+    seat.runAs,
+  ).catch((error: unknown) => {
+    throw new Error(
+      `Its credentials are no longer here (${String(error)}): start it again with start_preview`,
+    )
+  })
+  return { dir, files: copies }
+}
+
+async function dropEnvFiles(seat: Seat, dir: string) {
+  await runAsUser(['rm', '-rf', '--', dir], seat.runAs).catch(() => undefined)
 }

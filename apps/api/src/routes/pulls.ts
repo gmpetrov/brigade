@@ -1,6 +1,11 @@
 // Pull requests: any member reads them and asks a teammate to review one;
 // owners and admins merge, close or reopen one, or arm a review to merge once approved.
-import { MergePullRequest, RepositoryName, RequestReview } from '@brigade/contracts'
+import {
+  MergePullRequest,
+  PreviewPullRequest,
+  RepositoryName,
+  RequestReview,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import {
@@ -8,6 +13,7 @@ import {
   mergeNow,
   needsAttention,
   openCount,
+  previewPull,
   pullDetail,
   requestReview,
   setPullState,
@@ -46,6 +52,13 @@ export const pulls = new Hono<AppEnv>()
     const { repo, number } = target(c.req.param())
     const input = await parseBody(c.req.raw, RequestReview)
     return c.json(await requestReview(c.var.scope, repo, number, input))
+  })
+
+  /** Preview one without a thread: a teammate checks out its branch in a new thread and starts it. */
+  .post('/:owner/:name/:number/preview', async (c) => {
+    const { repo, number } = target(c.req.param())
+    const input = await parseBody(c.req.raw, PreviewPullRequest)
+    return c.json(await previewPull(c.var.scope, repo, number, input.teammateId))
   })
 
   .post('/:owner/:name/:number/stop', async (c) => {

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { ConnectGitHub, useGitHub } from '@/components/connect-github'
 import { timeAgo } from '@/components/dashboard'
 import { PullStatus } from '@/components/pull-status'
+import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -137,6 +138,12 @@ export default function PullRequests() {
                       {timeAgo(p.updatedAt)}
                     </span>
                   </div>
+                  {p.tracking?.preview && (
+                    <StatusBadge
+                      status={`Preview ${p.tracking.preview}`}
+                      tone={p.tracking.preview === 'starting' ? 'progress' : 'success'}
+                    />
+                  )}
                   <PullStatus pull={p} />
                 </Link>
               </li>

@@ -63,6 +63,36 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   only once its check passed. `start_preview({ repository })` starts it again
   in any later thread with that repository checked out. Secrets stay in the
   vault: a recipe holds credential ids, never values.
+- **Started when a person asks.** A teammate starts a preview when the person
+  asks to try the app, or asked for something to try in a browser; otherwise it
+  offers one in a line. Setting one up takes minutes and keeps the computer busy,
+  so it is not done for every change. People start one with Preview at the top of
+  a thread or on a pull request (`POST /threads/:id/preview/start`): the runner
+  starts it without a turn (`preview.start`, protocol 17) again as it last
+  started, or from the saved setup of a repository checked out in the thread,
+  then checks its pages itself. With nothing saved, the dashboard explains what
+  setting one up involves (the first time only, unless kept) and asks the teammate.
+- **Ready means checked.** Previews report their step while starting (`setup`,
+  then `app` once the wrapper prints `[preview] Starting the app`) and their
+  check (`checking`, `passed`, `failed` with the pages). The thread says "ready"
+  once the check passed, not when the port answered; a failed check says which
+  pages and offers to ask the teammate to fix them. Runners before this send no
+  `startedAt`, and their `running` still reads as running.
+- **Its last start is remembered** per thread, in the runner's state
+  (`previews.json`), so Start again works after it expired, failed or the runner
+  restarted. Not its credentials: a preview that uses vault credentials is
+  started again by its teammate, who releases them. While one runs, its
+  credentials' env files are copied beside the turn's (removed when it ends), so
+  a restart after a crash, or by a person, still has them after the turn parked.
+- **$PORT for a free port.** A command that reads `$PORT` gets another port when
+  its own is taken (two threads previewing the same repository); a fixed port
+  fails with the thread whose preview has it.
+- **Pull requests.** A pull request a teammate opened previews in its thread,
+  beside the pull request page, which says when the preview runs another commit
+  than the pull request's head. One opened outside Brigade gets a thread where a
+  teammate checks out its branch and starts it. A merged or closed pull request
+  stops its thread's preview. Saved setups are listed on the Computers page,
+  where an owner or admin forgets one.
 - **A stable address per repository.** A repository's preview gets its proxy
   port from its name (30000 + a hash), so its address stays the same on that
   computer: an OAuth callback registered once keeps working. Across computers

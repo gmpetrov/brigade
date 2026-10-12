@@ -19,7 +19,14 @@ import { useDesktopPreview } from '@/components/desktop-preview'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
-import { PreviewPanel, previewLive, useThreadPreview } from '@/components/preview-panel'
+import {
+  PHASE,
+  PreviewPanel,
+  previewLive,
+  previewPhase,
+  useThreadPreview,
+} from '@/components/preview-panel'
+import { usePreviewStart } from '@/components/preview-start'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
@@ -73,6 +80,47 @@ export default function ThreadPage() {
       setPreviewing(false)
     }
   }, [documents.current])
+  // A preview a person started, or asked the teammate for: its panel opens once it starts.
+  const [awaitingPreview, setAwaitingPreview] = useState(false)
+  const live = previewLive(preview)
+  useEffect(() => {
+    if (!awaitingPreview || !live) return
+    setAwaitingPreview(false)
+    openPreview()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingPreview, live])
+  const previewTeammate =
+    thread.data?.teammates.find((p) => p.teammate.id === preview?.teammateId)?.teammate ??
+    thread.data?.teammate
+  const previewStart = usePreviewStart({
+    threadId: thread.data?.id,
+    teammateName: previewTeammate?.name ?? 'The teammate',
+    ...(thread.data
+      ? {
+          computer: {
+            name: thread.data.computer.name,
+            cloud: thread.data.computer.kind === 'cloud',
+          },
+        }
+      : {}),
+    ask: (text) => deliver(text),
+    onStarting: () => (live ? openPreview() : setAwaitingPreview(true)),
+    onAsked: () => setAwaitingPreview(true),
+  })
+  useEffect(() => {
+    if (previewStart.error) setError(previewStart.error)
+  }, [previewStart.error])
+  /** A message for the teammate, in the composer for the person to send. */
+  const askInComposer = (message: string) => {
+    setText(message)
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(
+          '[data-composer-frame] [contenteditable="true"], [data-composer-frame] textarea',
+        )
+        ?.focus(),
+    )
+  }
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
   const [outgoing, setOutgoing] = useState<Outgoing[]>([])
   const pendingOut = useMemo(() => {
@@ -308,22 +356,41 @@ export default function ThreadPage() {
               aria-label={connected ? 'Live' : 'Reconnecting'}
             />
             <StatusBadge status={current} />
-            {(previewLive(preview) || (previewing && preview)) && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-pressed={previewing}
-                onClick={() => (previewing ? setPreviewing(false) : openPreview())}
-                title={previewing ? 'Hide preview' : `Try the app ${answering.name} runs`}
-              >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={previewing}
+              disabled={previewStart.busy}
+              onClick={() => {
+                if (previewing) return setPreviewing(false)
+                if (live) return openPreview()
+                // Stopped: the panel says what happens while it starts again.
+                if (preview) openPreview()
+                void previewStart.start()
+              }}
+              title={
+                previewing
+                  ? 'Hide preview'
+                  : live
+                    ? `Try the app ${previewTeammate?.name ?? answering.name} runs`
+                    : 'Run the app to try it here'
+              }
+            >
+              {previewStart.busy ? (
+                <LoaderCircle aria-hidden className="animate-spin" />
+              ) : (
                 <AppWindow aria-hidden />
-                Preview
-                {preview?.status === 'starting' && (
-                  <span className="size-1.5 animate-pulse rounded-full bg-warning" aria-hidden />
-                )}
-              </Button>
-            )}
+              )}
+              Preview
+              {preview && live && (
+                <span
+                  className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}
+                  aria-label={PHASE[previewPhase(preview)].label}
+                  role="img"
+                />
+              )}
+            </Button>
             {t.computer.kind === 'cloud' && (
               <>
                 <Button
@@ -481,8 +548,12 @@ export default function ThreadPage() {
           computerName={t.computer.name}
           mayControl={t.mayPrompt}
           onClose={() => setPreviewing(false)}
+          onStart={() => void previewStart.start()}
+          starting={previewStart.busy}
+          onAsk={t.mayPrompt ? askInComposer : undefined}
         />
       )}
+      {previewStart.dialog}
 
       {!file && !documents.current && !previewing && watching && t.computer.kind === 'cloud' && (
         <ComputerPanel

@@ -987,15 +987,9 @@ export class Threads {
     const teammateId = spec.teammate.id
     let seat = thread.harnesses.get(teammateId)
     if (!seat) {
-      // On a cloud computer each teammate runs as its own Linux user, in its own home.
-      const user = CLOUD ? teammateUser(teammateId) : undefined
-      const folder: Folder = {
-        key: `${spec.sessionId}-${teammateId}`,
-        workDir: user
-          ? `${teammateHome(user)}/threads/${spec.sessionId}`
-          : paths.threadDir(teammateId, spec.sessionId),
-        ...(user ? { runAs: user } : {}),
-      }
+      const where = threadFolder(teammateId, spec.sessionId)
+      const user = where.runAs
+      const folder: Folder = { key: `${spec.sessionId}-${teammateId}`, ...where }
       const harness = new HarnessThread(
         spec,
         folder.workDir,
@@ -1054,6 +1048,14 @@ export class Threads {
     if (next) next()
     else this.running--
   }
+}
+
+/** Where a teammate works in a thread: on a cloud computer as its own Linux user, in its own home. */
+export function threadFolder(teammateId: string, sessionId: string) {
+  const user = CLOUD ? teammateUser(teammateId) : undefined
+  return user
+    ? { workDir: `${teammateHome(user)}/threads/${sessionId}`, runAs: user }
+    : { workDir: paths.threadDir(teammateId, sessionId) }
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

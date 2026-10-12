@@ -16,6 +16,7 @@ import type {
   TeammateReview,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
@@ -115,7 +116,20 @@ function tracking(row: Row | undefined): PullRequestTracking | null {
     sessionId: row.sessionId,
     author: row.authorTeammate,
     reviewer: row.reviewerTeammate,
+    preview: null,
   }
+}
+
+/** Fill in where each pull request's thread's preview stands. */
+async function withPreviews<T extends { tracking: PullRequestTracking | null }>(
+  db: ScopedDb,
+  pulls: T[],
+) {
+  const ids = pulls.flatMap((p) => (p.tracking?.sessionId ? [p.tracking.sessionId] : []))
+  const states = await previewStates(db, ids)
+  for (const p of pulls)
+    if (p.tracking?.sessionId) p.tracking.preview = states.get(p.tracking.sessionId) ?? null
+  return pulls
 }
 
 function summary(repo: string, p: GhPull, row: Row | undefined): PullRequestSummary {
@@ -161,7 +175,10 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
       ...(closed ? { autoMerge: false } : {}),
     },
   })
-  if (closed && row.state !== state && row.sessionId) await settleOnMerge(scope, row.sessionId)
+  if (closed && row.state !== state && row.sessionId) {
+    await settleOnMerge(scope, row.sessionId)
+    await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
+  }
 }
 
 /**
@@ -274,7 +291,7 @@ export async function listPulls(
     }),
   )
   pulls.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-  return { pulls, repositories, errors }
+  return { pulls: await withPreviews(db, pulls), repositories, errors }
 }
 
 /** Pull requests waiting on a person: approved but not set to merge, or stopped. */
@@ -380,8 +397,9 @@ export async function pullDetail(
         orderBy: { createdAt: 'asc' },
       })
     : []
+  const [base] = await withPreviews(db, [summary(repo, p, row ?? undefined)])
   return {
-    ...summary(repo, p, row ?? undefined),
+    ...base!,
     body: p.body ?? null,
     headSha: p.head.sha,
     mergeable: p.mergeable ?? null,
@@ -598,7 +616,9 @@ function reviewPrompt(
     'Read it with `github_get_pull_request`, and whatever else you need to judge it: the files at the ' +
       'branch with `github_read_file`, or a checkout of the branch to run its tests. Look for bugs, ' +
       'missing tests, security problems and anything that does not do what the description says. ' +
-      'Leave out style a formatter would fix.',
+      'Leave out style a formatter would fix. When it changes pages people see and the repository has a ' +
+      'saved preview, you may run it on the branch (`start_preview({ repository })` in your checkout) and ' +
+      'check the pages it touches with `check_preview`; say in your review what you saw.',
     '',
     'Then call `github_review_pull_request` once, with verdict "approve" or "request_changes", a ' +
       'summary, and line comments for specific problems. ' +
@@ -759,6 +779,81 @@ export async function requestReview(
   })
   row = (await db.pullRequest.findFirst({ where: { id: row.id } }))!
   return { sessionId: row.sessionId }
+}
+
+function previewPrompt(repo: string, p: GhPull, teammate: string) {
+  return [
+    `${teammate}, please start a preview of pull request #${p.number} "${p.title}" in ${repo} ` +
+      `(branch \`${p.head.ref}\`), so I can try it: ${p.html_url}`,
+    '',
+    `Check out ${repo} and switch to \`${p.head.ref}\`. Then start it with \`start_preview({ repository: ` +
+      `"${repo}" })\` if it has a saved preview; else set one up, check its pages and save it. ` +
+      'Do not change the code: if it does not run, say what fails.',
+  ].join('\n')
+}
+
+/**
+ * A member previews a pull request that has no thread (opened outside
+ * Brigade): a teammate checks out its branch in a new thread and starts its
+ * preview there. That thread becomes the pull request's, as a review's does.
+ * A pull request with a thread starts its preview there (threads' preview/start).
+ */
+export async function previewPull(
+  scope: WorkspaceScope,
+  repo: string,
+  number: number,
+  teammateId: string,
+) {
+  const db = scoped(scope)
+  const gh = await github(db, scope, repo)
+  const p = await pullOf(gh, repo, number)
+  if (stateOf(p) !== 'open')
+    throw new HTTPException(409, { message: 'This pull request is closed' })
+  const teammate = await db.teammate.findFirst({ where: { id: teammateId, archivedAt: null } })
+  if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+  if (!(await teammateGitHub(db, scope, teammate.id, repo)))
+    throw new HTTPException(409, {
+      message: `${teammate.name} has no GitHub connection that reaches ${repo}. Grant it one on its page.`,
+    })
+  const row =
+    (await db.pullRequest.findFirst({ where: { repository: repo, number } })) ??
+    (await db.pullRequest.create({
+      data: {
+        repository: repo,
+        number,
+        title: p.title,
+        headRef: p.head.ref,
+        baseRef: p.base.ref,
+      } as never,
+    }))
+  if (row.sessionId)
+    throw new HTTPException(409, { message: 'This pull request has a thread: preview it there' })
+  const computer =
+    (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
+    (await db.computer.findFirst({
+      where: { kind: 'member_machine', memberId: scope.memberId },
+      orderBy: { updatedAt: 'desc' },
+    }))
+  if (!computer) throw new HTTPException(409, { message: 'The workspace has no computer' })
+  const { thread } = await startThread(db, scope, {
+    teammate,
+    computer,
+    memberId: scope.memberId,
+    title: `Preview ${repo}#${number}: ${p.title}`,
+    text: previewPrompt(repo, p, teammate.name),
+  })
+  await db.pullRequest.updateMany({
+    where: { id: row.id, sessionId: null },
+    data: { sessionId: thread.id },
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'pull_request.preview_requested',
+    target: { type: 'pull_request', id: row.id },
+    data: { repository: repo, number, teammateId: teammate.id, sessionId: thread.id },
+  })
+  return { sessionId: thread.id }
 }
 
 /** Stop the loop where it is. The thread's teammates finish the turn they are in. */
@@ -1002,7 +1097,10 @@ async function recordMerge(
     target: { type: 'pull_request', id: row.id },
     data: { repository: row.repository, number: row.number, method, ...data } as never,
   })
-  if (row.sessionId) await settleOnMerge(scope, row.sessionId)
+  if (row.sessionId) {
+    await settleOnMerge(scope, row.sessionId)
+    await stopThreadPreview(db, row.sessionId, 'Stopped: the pull request was merged')
+  }
 }
 
 /** An owner or admin merges now. */

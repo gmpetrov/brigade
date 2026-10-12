@@ -26,8 +26,9 @@ export * from './thread-history.js'
  * 14: live previews (an app a teammate runs, for people to open).
  * 15: preview checks (addresses with their token) and saved preview recipes.
  * 16: welcome resumes lost turns and queues lost messages again.
+ * 17: people start previews without a turn (preview.start); previews report their steps and checks.
  */
-export const PROTOCOL_VERSION = 16
+export const PROTOCOL_VERSION = 17
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /** Runners from this version on keep restricted folders from teammates without access. */

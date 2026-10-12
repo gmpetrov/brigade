@@ -6,6 +6,7 @@ import {
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
+  PREVIEW_REPLACED,
   type LibraryFile,
   type AgentEvent,
   type Ask,
@@ -42,6 +43,7 @@ import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
 import { Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
+import { endedText } from '@/components/preview-panel'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -116,8 +118,11 @@ type Item =
   | {
       kind: 'preview'
       key: string
-      status: 'running' | 'failed' | 'stopped'
-      port: number
+      previewId: string
+      /** ready: its pages passed their check; attention: some failed; running: not checked (older runners). */
+      status: 'ready' | 'attention' | 'running' | 'failed' | 'stopped'
+      repository?: string
+      failed?: string[]
       reason?: string
     }
 
@@ -149,6 +154,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     const queued = new Map<string, QueuedMessage>()
     const seen = new Set<string>()
     let turnTeammate: string | undefined
+    let lastPreview: { previewId: string; status: string } | undefined
     let shown = true
     const add = (item: Item) => {
       if (shown || ASKS.has(item.kind)) items.push(item)
@@ -314,17 +320,40 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
         case 'terminal.command':
           add({ kind: 'note', key: `n${seq}`, text: `$ ${e.command}` })
           break
-        case 'preview.changed':
-          // Starting shows as the teammate's tool call; what came of it shows here.
-          if (e.status !== 'starting')
-            add({
-              kind: 'preview',
-              key: `v${seq}`,
-              status: e.status,
-              port: e.port,
-              ...(e.reason ? { reason: e.reason } : {}),
-            })
+        case 'preview.changed': {
+          // Starting and checking show in the panel and the teammate's tool calls; what came of them here.
+          const status =
+            e.status === 'starting'
+              ? undefined
+              : e.status !== 'running'
+                ? e.status
+                : !e.startedAt
+                  ? 'running'
+                  : e.check?.status === 'passed'
+                    ? 'ready'
+                    : e.check?.status === 'failed'
+                      ? 'attention'
+                      : undefined
+          // Once per outcome of a run: a restart after a crash, or a check again with the same result, says nothing new.
+          if (
+            !status ||
+            (lastPreview?.previewId === e.previewId && lastPreview.status === status) ||
+            // A restart: the new one says what came of it.
+            e.reason === PREVIEW_REPLACED
+          )
+            break
+          lastPreview = { previewId: e.previewId, status }
+          add({
+            kind: 'preview',
+            key: `v${seq}`,
+            previewId: e.previewId,
+            status,
+            ...(e.repository ? { repository: e.repository } : {}),
+            ...(e.check?.failed?.length ? { failed: e.check.failed } : {}),
+            ...(e.reason ? { reason: e.reason } : {}),
+          })
           break
+        }
         case 'control.changed':
           add({
             kind: 'note',
@@ -748,13 +777,17 @@ export function ThreadItems({
               >
                 <AppWindow aria-hidden className="size-4 shrink-0" />
                 <span>
-                  {item.status === 'running'
-                    ? `Preview running on port ${item.port}`
-                    : item.status === 'failed'
-                      ? `Preview failed${item.reason ? `: ${item.reason}` : ''}`
-                      : `Preview stopped${item.reason ? `: ${item.reason}` : ''}`}
+                  {item.status === 'ready'
+                    ? `Preview ready${item.repository ? ` · ${item.repository}` : ''}`
+                    : item.status === 'attention'
+                      ? `The preview's check found problems${item.failed ? ` on ${item.failed.join(', ')}` : ''}`
+                      : item.status === 'running'
+                        ? 'Preview running'
+                        : endedText(item.status, item.reason)}
                 </span>
-                {item.status === 'running' &&
+                {(item.status === 'ready' ||
+                  item.status === 'attention' ||
+                  item.status === 'running') &&
                   onOpenPreview &&
                   // Only the latest run opens: an earlier one has been replaced.
                   !items.slice(i + 1).some((later) => later.kind === 'preview') && (

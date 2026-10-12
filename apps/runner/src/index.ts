@@ -5,6 +5,7 @@
 //   brigade-runner [start] [--concurrency <n>]
 import { readFile } from 'node:fs/promises'
 import { hostname } from 'node:os'
+import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/contracts'
 import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js'
@@ -19,7 +20,7 @@ import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Previews } from './previews.js'
-import { Threads } from './threads.js'
+import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
 
@@ -166,6 +167,12 @@ async function start() {
     viewUrl: CLOUD ? (sessionId, port) => connection.previewUrl(sessionId, port) : null,
     recipes: (sessionId, teammateId, operation) =>
       connection.callPreview({ sessionId, teammateId, operation }),
+    seat: (sessionId, teammateId) => ({
+      sessionId,
+      teammateId,
+      ...threadFolder(teammateId, sessionId),
+    }),
+    stateFile: join(paths.state, 'previews.json'),
   })
   const threads = new Threads({
     concurrency: Number(values.concurrency),
@@ -314,10 +321,27 @@ async function start() {
       case 'preview.control':
         if (message.action === 'touch') return previews.touch(message.sessionId)
         if (message.action === 'stop')
-          return void previews.stop(message.sessionId, 'Stopped by a person')
+          return void previews.stop(message.sessionId, message.reason ?? 'Stopped by a person')
         return previews
           .restart(message.sessionId)
           .catch((error) => console.warn(`preview restart failed: ${String(error)}`))
+      case 'preview.start':
+        return previews.startFor(message.sessionId, message.teammateIds, message.repository).then(
+          (result) =>
+            connection.send({
+              type: 'preview.start.result',
+              requestId: message.requestId,
+              ok: true,
+              result,
+            }),
+          (error: unknown) =>
+            connection.send({
+              type: 'preview.start.result',
+              requestId: message.requestId,
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+        )
       case 'preview.logs':
         try {
           return connection.send({

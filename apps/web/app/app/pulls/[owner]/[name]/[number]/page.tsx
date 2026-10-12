@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { isAdmin, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { DiffView, type LineComment } from '@/components/diff-view'
 import { Markdown } from '@/components/markdown'
+import { PullPreview } from '@/components/pull-preview'
 import { PullStatus } from '@/components/pull-status'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -223,6 +224,7 @@ export default function PullRequestPage() {
               </Select>
             </div>
           )}
+          <PullPreview pull={p} path={path} onReload={reload} />
           {t?.sessionId && (
             <Button asChild variant="ghost">
               <Link href={`/app/threads/${t.sessionId}`}>Open the thread</Link>

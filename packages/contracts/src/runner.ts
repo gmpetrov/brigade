@@ -5,7 +5,13 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { PREVIEW_PORTS_MAX, PreviewAction, PreviewOperation, PreviewPort } from './previews.js'
+import {
+  PREVIEW_PORTS_MAX,
+  PreviewAction,
+  PreviewOperation,
+  PreviewPort,
+  PreviewStartOutcome,
+} from './previews.js'
 import { ScheduleOperation } from './schedules.js'
 import { TaskOperation } from './tasks.js'
 
@@ -284,6 +290,14 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     teammateId: z.string().optional(),
     operation: PreviewOperation,
   }),
+  /** What came of preview.start, or why it could not. */
+  z.object({
+    type: z.literal('preview.start.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    result: PreviewStartOutcome.optional(),
+  }),
   /** A preview's recent output, for preview.logs, or why not. */
   z.object({
     type: z.literal('preview.logs.result'),
@@ -394,6 +408,21 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     type: z.literal('preview.control'),
     sessionId: z.string(),
     action: z.union([PreviewAction, z.literal('touch')]),
+    /** Why it stops, for a person (a pull request merged); else "Stopped by a person". */
+    reason: z.string().max(200).optional(),
+  }),
+  /**
+   * A person starts a thread's preview without a turn: again as it last
+   * started, or from the saved setup of a repository one of these teammates
+   * (first the one to try first) has checked out in it. Answered with
+   * preview.start.result once it is starting; its events tell the rest.
+   */
+  z.object({
+    type: z.literal('preview.start'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateIds: z.array(z.string()).min(1).max(10),
+    repository: z.string().max(200).optional(),
   }),
   /** A thread's preview output, for a person viewing it. */
   z.object({ type: z.literal('preview.logs'), requestId: z.string(), sessionId: z.string() }),

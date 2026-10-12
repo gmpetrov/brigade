@@ -22,6 +22,10 @@ export const RequestReview = z.object({
 })
 export type RequestReview = z.infer<typeof RequestReview>
 
+/** Preview a pull request without a thread: a teammate checks out its branch in a new one and starts it. */
+export const PreviewPullRequest = z.object({ teammateId: z.string().min(1) })
+export type PreviewPullRequest = z.infer<typeof PreviewPullRequest>
+
 export const MergePullRequest = z.object({ method: MergeMethod.default('squash') })
 export type MergePullRequest = z.infer<typeof MergePullRequest>
 
@@ -35,6 +39,8 @@ export type PullRequestTracking = {
   sessionId: string | null
   author: { id: string; name: string } | null
   reviewer: { id: string; name: string } | null
+  /** Its thread's preview, while one starts or runs: ready once its pages passed their check. */
+  preview: 'starting' | 'running' | 'ready' | null
 }
 
 export type PullRequestSummary = {

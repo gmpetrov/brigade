@@ -5,9 +5,12 @@
 import { randomUUID } from 'node:crypto'
 import {
   PREVIEW_PROTOCOL,
+  PREVIEW_START_PROTOCOL,
   PreviewInfo,
   PreviewRecipe,
+  previewReady,
   type ApiToRunner,
+  type PreviewStartOutcome,
   type RunnerToApi,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -16,19 +19,125 @@ import { hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, sendToRunner } from './hub.js'
-import { actingTeammate } from './thread-spec.js'
+import { actingTeammate, currentTeammate, type LoadedThread } from './thread-spec.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
-/** A thread's preview as its latest event says, or null when it never had one. */
+/** A thread's preview as its latest event says (with the teammate running it), or null when it never had one. */
 export async function latestPreview(db: ScopedDb, sessionId: string) {
   const row = await db.sessionEvent.findFirst({
     where: { sessionId, type: 'preview.changed' },
     orderBy: { seq: 'desc' },
     select: { data: true },
   })
-  const parsed = row ? PreviewInfo.safeParse(row.data) : null
-  return parsed?.success ? parsed.data : null
+  return row ? previewOf(row.data) : null
+}
+
+function previewOf(data: unknown): (PreviewInfo & { teammateId?: string }) | null {
+  const parsed = PreviewInfo.safeParse(data)
+  if (!parsed.success) return null
+  const teammateId = (data as { teammateId?: unknown }).teammateId
+  return typeof teammateId === 'string' ? { ...parsed.data, teammateId } : parsed.data
+}
+
+/** Where each of these threads' previews stands, for lists: starting, running or ready; null when none runs. */
+export async function previewStates(db: ScopedDb, sessionIds: string[]) {
+  const states = new Map<string, 'starting' | 'running' | 'ready' | null>()
+  if (!sessionIds.length) return states
+  const rows = await db.sessionEvent.findMany({
+    where: { sessionId: { in: sessionIds }, type: 'preview.changed' },
+    orderBy: { seq: 'desc' },
+    distinct: ['sessionId'],
+    select: { sessionId: true, data: true },
+  })
+  for (const row of rows) {
+    const preview = previewOf(row.data)
+    states.set(
+      row.sessionId,
+      !preview || (preview.status !== 'starting' && preview.status !== 'running')
+        ? null
+        : previewReady(preview)
+          ? 'ready'
+          : preview.status,
+    )
+  }
+  return states
+}
+
+/** Stop a thread's preview if one runs, saying why (its pull request merged). */
+export async function stopThreadPreview(db: ScopedDb, sessionId: string, reason: string) {
+  const preview = await latestPreview(db, sessionId)
+  if (!preview || (preview.status !== 'starting' && preview.status !== 'running')) return
+  const session = await db.session.findFirst({
+    where: { id: sessionId },
+    select: { computerId: true },
+  })
+  if (session)
+    sendToRunner(session.computerId, { type: 'preview.control', sessionId, action: 'stop', reason })
+}
+
+type StartResult = Extract<RunnerToApi, { type: 'preview.start.result' }>
+const starts = new Map<string, { computerId: string; settle: (result: StartResult) => void }>()
+
+/**
+ * A person starts a thread's preview without a turn. The runner starts it
+ * again as it last ran, or from a saved setup of a repository the thread has
+ * checked out; or says the teammate has to set it up. A runner from before
+ * that always needs the teammate.
+ */
+export async function startPreview(
+  db: ScopedDb,
+  thread: LoadedThread,
+  repository?: string,
+): Promise<PreviewStartOutcome> {
+  const protocol = runnerProtocol(thread.computer.id)
+  if (protocol === undefined)
+    throw new HTTPException(409, {
+      message:
+        thread.computer.kind === 'cloud'
+          ? 'The workspace computer is not running. It starts with the next message.'
+          : `${thread.computer.name} is offline. Start its runner and try again.`,
+    })
+  if (protocol < PREVIEW_START_PROTOCOL) return { outcome: 'setup', repositories: [] }
+  // Whoever ran it last first, then whom the thread asked last, then the rest.
+  const last = await latestPreview(db, thread.id)
+  const teammateIds = [
+    ...new Set([
+      ...(last?.teammateId ? [last.teammateId] : []),
+      currentTeammate(thread).id,
+      thread.teammateId,
+      ...thread.teammates.map((t) => t.teammateId),
+    ]),
+  ].slice(0, 10)
+  const result = await new Promise<StartResult>((resolve) => {
+    const requestId = randomUUID()
+    const settle = (r: StartResult) => {
+      clearTimeout(timer)
+      starts.delete(requestId)
+      resolve(r)
+    }
+    const fail = (error: string) =>
+      settle({ type: 'preview.start.result', requestId, ok: false, error })
+    const timer = setTimeout(() => fail('The computer did not answer'), 60_000)
+    starts.set(requestId, { computerId: thread.computer.id, settle })
+    const sent = sendToRunner(thread.computer.id, {
+      type: 'preview.start',
+      requestId,
+      sessionId: thread.id,
+      teammateIds,
+      ...(repository ? { repository: repository.toLowerCase() } : {}),
+    })
+    if (!sent) fail('The computer is offline')
+  })
+  if (!result.ok || !result.result)
+    throw new HTTPException(409, { message: result.error ?? 'The preview could not start' })
+  return result.result
+}
+
+/** A runner's answer to startPreview; only the computer asked may answer. */
+export function settlePreviewStart(computerId: string, result: StartResult) {
+  const start = starts.get(result.requestId)
+  if (start?.computerId === computerId) start.settle(result)
 }
 
 /** The preview a person acts on: one that is starting or running, on a runner that runs previews. */

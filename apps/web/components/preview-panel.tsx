@@ -1,16 +1,26 @@
 'use client'
 // The thread's live preview beside it: the app its teammate runs, in a frame,
 // as the person's own browser renders it (not a picture of the computer's
-// screen). Its state comes from the thread's preview.changed events; its
-// address from the API, which hosts the port and hands out its token. While
-// the panel is open it tells the API so, which keeps the preview running.
-import type { PreviewInfo, PreviewView, SequencedEvent } from '@brigade/contracts'
+// screen). Its state comes from the thread's preview.changed events (or, on a
+// pull request, its thread's preview state); its address from the API, which
+// hosts the port and hands out its token. While the panel is open it tells the
+// API so, which keeps the preview running. Starting, it says what it is doing
+// and the app's latest output; running, whether its pages passed their check.
+import {
+  previewReady,
+  type PreviewInfo,
+  type PreviewView,
+  type SequencedEvent,
+} from '@brigade/contracts'
 import {
   AppWindow,
   Check,
+  CircleAlert,
   Copy,
   ExternalLink,
+  GitCommitHorizontal,
   LoaderCircle,
+  Play,
   Power,
   RotateCw,
   ScrollText,
@@ -27,6 +37,8 @@ export type ThreadPreview = PreviewInfo & { teammateId?: string }
 
 /** How often an open panel says it is still open. Previews stop after 30 minutes unused. */
 const TOUCH_MS = 2 * 60_000
+/** How often a starting preview's latest output is read. */
+const TAIL_MS = 2000
 
 /** The thread's preview, as its latest preview event says; undefined when it never had one. */
 export function useThreadPreview(events: SequencedEvent[]): ThreadPreview | undefined {
@@ -41,11 +53,56 @@ export function useThreadPreview(events: SequencedEvent[]): ThreadPreview | unde
 export const previewLive = (preview: ThreadPreview | undefined) =>
   preview?.status === 'starting' || preview?.status === 'running'
 
-const STATUS: Record<PreviewInfo['status'], { label: string; dot: string }> = {
+/**
+ * Where a preview stands, for people: running its setup, starting, checking
+ * its pages, ready, or running with pages that failed their check.
+ * `running` is one nobody checked (from an older runner, or a check that could not run).
+ */
+export type PreviewPhase =
+  'setup' | 'starting' | 'checking' | 'ready' | 'attention' | 'running' | 'failed' | 'stopped'
+
+export function previewPhase(preview: ThreadPreview): PreviewPhase {
+  if (preview.status === 'starting') return preview.step === 'setup' ? 'setup' : 'starting'
+  if (preview.status !== 'running') return preview.status
+  if (preview.check?.status === 'checking') return 'checking'
+  if (preview.check?.status === 'failed') return 'attention'
+  return previewReady(preview) ? 'ready' : 'running'
+}
+
+export const PHASE: Record<PreviewPhase, { label: string; dot: string }> = {
+  setup: { label: 'Setting up', dot: 'bg-warning animate-pulse' },
   starting: { label: 'Starting', dot: 'bg-warning animate-pulse' },
+  checking: { label: 'Checking', dot: 'bg-warning animate-pulse' },
+  ready: { label: 'Ready', dot: 'bg-success' },
+  attention: { label: 'Needs a fix', dot: 'bg-destructive' },
   running: { label: 'Running', dot: 'bg-success' },
   failed: { label: 'Failed', dot: 'bg-destructive' },
   stopped: { label: 'Stopped', dot: 'bg-muted-foreground' },
+}
+
+/** 12m 05s since it started. */
+function useElapsed(since: string | undefined, live: boolean) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!since || !live) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [since, live])
+  if (!since) return undefined
+  const seconds = Math.max(0, Math.round((now - Date.parse(since)) / 1000))
+  const m = Math.floor(seconds / 60)
+  return m ? `${m}m ${String(seconds % 60).padStart(2, '0')}s` : `${seconds}s`
+}
+
+const short = (commit: string) => commit.slice(0, 7)
+
+/** "Preview stopped by a person", "Preview failed: …": reasons that start with "Stopped" read on. */
+export function endedText(status: 'failed' | 'stopped', reason?: string) {
+  if (status === 'stopped' && reason?.startsWith('Stopped '))
+    return `Preview ${reason[0]!.toLowerCase()}${reason.slice(1)}`
+  if (status === 'stopped' && reason?.startsWith('Stopped: '))
+    return `Preview stopped${reason.slice(7)}`
+  return `Preview ${status}${reason ? `: ${reason}` : ''}`
 }
 
 export function PreviewPanel({
@@ -55,6 +112,10 @@ export function PreviewPanel({
   computerName,
   mayControl,
   onClose,
+  onStart,
+  starting,
+  onAsk,
+  expectedCommit,
 }: {
   threadId: string
   preview: ThreadPreview
@@ -63,6 +124,14 @@ export function PreviewPanel({
   computerName: string
   mayControl: boolean
   onClose: () => void
+  /** Start it again once it stopped or failed. */
+  onStart?: () => void
+  /** That start is under way. */
+  starting?: boolean
+  /** Put a message to the teammate in the composer (or send it, off the thread). */
+  onAsk?: (text: string) => void
+  /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
+  expectedCommit?: string
 }) {
   const [view, setView] = useState<PreviewView>()
   const [error, setError] = useState<string>()
@@ -71,7 +140,9 @@ export function PreviewPanel({
   const [busy, setBusy] = useState(false)
   const [logs, setLogs] = useState<string>()
   const [showLogs, setShowLogs] = useState(false)
+  const [lastLine, setLastLine] = useState<string>()
   const running = preview.status === 'running'
+  const phase = previewPhase(preview)
 
   // The address, once per run of the preview.
   useEffect(() => {
@@ -111,6 +182,31 @@ export function PreviewPanel({
     if (showLogs && live) void loadLogs()
   }, [showLogs, live, preview.status, loadLogs])
 
+  // While it starts, its latest line of output: what the setup or the app is doing.
+  const waiting = preview.status === 'starting'
+  useEffect(() => {
+    if (!waiting) return setLastLine(undefined)
+    let live = true
+    const read = () =>
+      api<{ text: string }>(`/threads/${threadId}/preview/logs`).then(
+        ({ text }) => {
+          const line = text
+            .split('\n')
+            .map((l) => l.trim())
+            .findLast(Boolean)
+          if (live) setLastLine(line)
+        },
+        () => undefined,
+      )
+    void read()
+    const timer = setInterval(() => void read(), TAIL_MS)
+    return () => {
+      live = false
+      clearInterval(timer)
+    }
+  }, [threadId, waiting, preview.previewId])
+  const elapsed = useElapsed(preview.startedAt, waiting)
+
   async function control(action: 'restart' | 'stop') {
     setBusy(true)
     setError(undefined)
@@ -123,26 +219,32 @@ export function PreviewPanel({
     }
   }
 
-  const status = STATUS[preview.status]
-  const address = view && !view.local ? new URL(view.url).host : `localhost:${preview.port}`
+  const status = PHASE[phase]
+  // What the frame opens: the proxy in front of the app.
+  const address = view ? new URL(view.url).host : `localhost:${preview.publicPort ?? preview.port}`
+  const otherCommit =
+    expectedCommit &&
+    preview.commit &&
+    !expectedCommit.startsWith(preview.commit) &&
+    !preview.commit.startsWith(expectedCommit)
+  const failedPages = preview.check?.failed ?? []
 
   return (
     <SidePanel aria-label="Preview" onClose={onClose}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <AppWindow aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <strong className="flex items-center gap-1.5 text-sm font-semibold">
+          <strong className="flex min-w-0 items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
             <span className={cn('size-2 shrink-0 rounded-full', status.dot)} aria-hidden />
             Preview
-            <span className="font-normal text-muted-foreground">
-              · {status.label} · :{preview.port}
-            </span>
+            <span className="truncate font-normal text-muted-foreground">· {status.label}</span>
           </strong>
           <span
-            className="truncate font-mono text-xs text-muted-foreground"
-            title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command}`}
+            className="truncate text-xs text-muted-foreground"
+            title={`${preview.cwd ? `${preview.cwd}$ ` : ''}${preview.command} (port ${preview.port})`}
           >
-            {preview.command}
+            {preview.repository ?? preview.command}
+            {preview.commit && <span className="font-mono"> · {short(preview.commit)}</span>}
           </span>
         </div>
         {view && (
@@ -213,6 +315,49 @@ export function PreviewPanel({
       <div className="flex min-h-0 flex-1 flex-col">
         {running && view ? (
           <>
+            {otherCommit && (
+              <Notice icon={<GitCommitHorizontal aria-hidden className="size-4 shrink-0" />}>
+                It runs <span className="font-mono">{short(preview.commit!)}</span>; the pull
+                request is at <span className="font-mono">{short(expectedCommit)}</span>.
+                {onAsk && (
+                  <NoticeAction
+                    onClick={() =>
+                      onAsk(
+                        `Please update your checkout to the latest commit of the pull request (${short(expectedCommit)}) and start its preview again.`,
+                      )
+                    }
+                  >
+                    Ask {teammateName} to update it
+                  </NoticeAction>
+                )}
+              </Notice>
+            )}
+            {phase === 'checking' && (
+              <Notice icon={<LoaderCircle aria-hidden className="size-4 shrink-0 animate-spin" />}>
+                Checking its pages as a person would open them…
+              </Notice>
+            )}
+            {phase === 'attention' && (
+              <Notice
+                tone="destructive"
+                icon={<CircleAlert aria-hidden className="size-4 shrink-0" />}
+              >
+                {failedPages.length
+                  ? `The check found problems on ${failedPages.join(', ')}.`
+                  : 'The check found problems.'}
+                {onAsk && (
+                  <NoticeAction
+                    onClick={() =>
+                      onAsk(
+                        `The preview's check found problems${failedPages.length ? ` on ${failedPages.join(', ')}` : ''}. Please fix them and check it again.`,
+                      )
+                    }
+                  >
+                    Ask {teammateName} to fix it
+                  </NoticeAction>
+                )}
+              </Notice>
+            )}
             {view.local && (
               <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
                 The app runs on {computerName}, so it opens there only, at{' '}
@@ -246,22 +391,67 @@ export function PreviewPanel({
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
-            {preview.status === 'starting' || (running && !view && !error) ? (
+            {preview.status === 'starting' ? (
               <>
                 <LoaderCircle aria-hidden className="size-5 animate-spin" />
-                <p>
-                  {running
-                    ? 'Opening the preview…'
-                    : (preview.reason ?? `Starting the app on port ${preview.port}…`)}
+                <p className="font-medium text-foreground">
+                  {preview.reason ?? (phase === 'setup' ? 'Running its setup' : 'Starting the app')}
+                  {elapsed && (
+                    <span className="font-normal text-muted-foreground"> · {elapsed}</span>
+                  )}
                 </p>
+                {phase === 'setup' && (
+                  <p className="max-w-xs">
+                    Installing, starting its services and adding sample data. The first start can
+                    take a few minutes; later ones are quicker.
+                  </p>
+                )}
+                {lastLine && (
+                  <p
+                    className="max-w-full truncate rounded bg-muted px-2 py-1 font-mono text-xs"
+                    title={lastLine}
+                  >
+                    {lastLine}
+                  </p>
+                )}
+              </>
+            ) : running && !view && !error ? (
+              <>
+                <LoaderCircle aria-hidden className="size-5 animate-spin" />
+                <p>Opening the preview…</p>
               </>
             ) : running ? null : (
               <>
-                <p className="font-medium text-foreground">
-                  {preview.status === 'failed' ? 'The preview failed' : 'The preview stopped'}
+                <p className="max-w-sm font-medium text-foreground">
+                  {endedText(preview.status as 'failed' | 'stopped', preview.reason)}
                 </p>
-                {preview.reason && <p>{preview.reason}</p>}
-                <p>Ask {teammateName} to start it again.</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {mayControl && onStart ? (
+                    <Button size="sm" disabled={starting} onClick={onStart}>
+                      {starting ? (
+                        <LoaderCircle aria-hidden className="animate-spin" />
+                      ) : (
+                        <Play aria-hidden />
+                      )}
+                      Start again
+                    </Button>
+                  ) : (
+                    !mayControl && <p>Ask {teammateName} to start it again.</p>
+                  )}
+                  {preview.status === 'failed' && onAsk && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        onAsk(
+                          `The preview failed${preview.reason ? `: ${preview.reason}` : ''}. Please fix it and start it again.`,
+                        )
+                      }
+                    >
+                      Ask {teammateName} to fix it
+                    </Button>
+                  )}
+                </div>
               </>
             )}
             {error && <p className="text-destructive-text">{error}</p>}
@@ -317,5 +507,43 @@ export function PreviewPanel({
         )}
       </div>
     </SidePanel>
+  )
+}
+
+/** A line above the frame: what the check found, or that it runs another commit. */
+function Notice({
+  icon,
+  tone,
+  children,
+}: {
+  icon: React.ReactNode
+  tone?: 'destructive'
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      role="status"
+      className={cn(
+        'flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-3 py-1.5 text-xs',
+        tone === 'destructive'
+          ? 'bg-destructive/10 text-destructive-text'
+          : 'text-muted-foreground',
+      )}
+    >
+      {icon}
+      <span className="min-w-0 flex-1">{children}</span>
+    </div>
+  )
+}
+
+function NoticeAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ml-1 font-medium text-foreground underline-offset-4 hover:underline"
+    >
+      {children}
+    </button>
   )
 }

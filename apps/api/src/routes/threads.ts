@@ -9,6 +9,7 @@ import {
   InterruptThread,
   mentionsToText,
   PreviewAction,
+  StartPreview,
   QueuedMessageAction,
   TakeOver,
   ResolveApproval,
@@ -18,13 +19,20 @@ import {
   type ThreadSpec,
   type ApiToRunner,
   type PreviewView,
+  type ThreadPreviewState,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { readAttachment, toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
-import { livePreview, previewLogs, touchPreview } from '../app-previews.js'
+import {
+  latestPreview,
+  livePreview,
+  previewLogs,
+  startPreview,
+  touchPreview,
+} from '../app-previews.js'
 import { desktopUrl, ensureRunning, hostedPort } from '../cloud.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
@@ -84,6 +92,15 @@ async function deliver(computer: { id: string; kind: string }, message: ApiToRun
       message: 'That computer is offline. Start its runner and try again.',
     })
   }
+}
+
+/** Starting, restarting and stopping a thread's preview is for people who may write in it. */
+function mayPrompt(
+  thread: { startedByMemberId: string | null; othersMayPrompt: boolean },
+  memberId: string,
+) {
+  if (thread.startedByMemberId !== memberId && !thread.othersMayPrompt)
+    throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
 }
 
 export const threads = new Hono<AppEnv>()
@@ -564,7 +581,7 @@ export const threads = new Hono<AppEnv>()
     const live = await previewLogs(thread.computer.id, thread.id)
     if (!live.ok)
       throw new HTTPException(409, {
-        message: `The preview is no longer running. Ask ${thread.teammate.name} to start it again.`,
+        message: 'The preview is no longer running. Start it again from the preview panel.',
       })
     touchPreview(thread.computer.id, thread.id)
     // The runner's proxy in front of the app; the app itself from runners before it.
@@ -582,12 +599,48 @@ export const threads = new Hono<AppEnv>()
     return c.json({ url } satisfies PreviewView)
   })
 
+  /**
+   * Start the thread's preview without a turn: again as it last ran, or from
+   * a saved setup of a repository the thread has checked out. When there is
+   * none, says so, and the dashboard asks the teammate to set it up.
+   */
+  .post('/:id/preview/start', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayPrompt(thread, scope.memberId)
+    const { repository } = await parseBody(c.req.raw, StartPreview)
+    const result = await startPreview(db, thread, repository)
+    if (result.outcome === 'started')
+      await audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'preview.started',
+        target: { type: 'thread', id: thread.id },
+        ...(repository ? { data: { repository } } : {}),
+      })
+    return c.json(result)
+  })
+
+  /** The thread's preview, for a page other than the thread's own (a pull request's). */
+  .get('/:id/preview/state', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    const preview = await latestPreview(db, thread.id)
+    const teammate = thread.teammates.find((t) => t.teammateId === preview?.teammateId)?.teammate
+    return c.json({
+      preview,
+      teammateName: (teammate ?? thread.teammate).name,
+      computerName: thread.computer.name,
+      cloud: thread.computer.kind === 'cloud',
+      mayControl: thread.startedByMemberId === scope.memberId || thread.othersMayPrompt,
+    } satisfies ThreadPreviewState)
+  })
+
   /** Restart or stop the thread's preview. For people who may prompt the thread. */
   .post('/:id/preview/control', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt)
-      throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+    mayPrompt(thread, scope.memberId)
     const { action } = await parseBody(c.req.raw, z.object({ action: PreviewAction }))
     await livePreview(db, thread)
     if (
