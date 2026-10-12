@@ -1005,8 +1005,11 @@ export function previewTools(previews: PreviewTools): Record<string, Tool> {
         'to try what you built. It keeps running after your turn ends; the thread has one preview, and starting ' +
         'another replaces it. Waits until the port answers and returns its address. ' +
         'The app must listen on 0.0.0.0 (or all interfaces), not only localhost, on `port`: PORT and HOST are set. ' +
-        "Its public address is in BRIGADE_PREVIEW_URL, and each port's in BRIGADE_PREVIEW_URL_<port>: pass them where " +
-        'the app needs its own URL (e.g. `NEXT_PUBLIC_API_URL=$BRIGADE_PREVIEW_URL_3001`, auth callback URLs, allowed origins). ' +
+        'People reach it through a proxy at one public address, in BRIGADE_PREVIEW_URL; the other `ports` are paths on it ' +
+        "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>: pass them where the app needs its own URL " +
+        '(e.g. `NEXT_PUBLIC_API_URL=$BRIGADE_PREVIEW_URL_3001`, auth callback URLs, allowed origins). The proxy makes ' +
+        "the app's cookies work in the dashboard's frame, shows a waiting page while the app starts, and starts it " +
+        'again if it stops. ' +
         'Dev servers that check the Host header need the preview host allowed (Vite: server.allowedHosts; ' +
         'Next.js: allowedDevOrigins). Use this instead of starting a server in the background yourself: those stop when your turn ends.',
       inputSchema: jsonSchema<{
@@ -1033,7 +1036,7 @@ export function previewTools(previews: PreviewTools): Record<string, Tool> {
             items: { type: 'number' },
             maxItems: 3,
             description:
-              "Other ports the app's pages call from the browser, e.g. its API's: they get public addresses too",
+              "Other ports the app's pages call from the browser, e.g. its API's: served under /__ports/<port>/ on the preview's address",
           },
           timeoutSeconds: {
             type: 'number',
