@@ -197,14 +197,20 @@ const tasks = (spec: ThreadSpec) =>
 const PREVIEWS =
   '## Previews\n\n' +
   'When you build or change an app people can use in a browser, run it with `start_preview` once it works, so ' +
-  'the person tries it from this thread instead of reading the diff. Install dependencies and do one-off setup ' +
-  '(env files, database, migrations, seed data) with your shell first; start_preview runs only the long-running ' +
-  'command. It keeps running between your turns, and reloads as you edit when it is a dev server. Check it ' +
-  'yourself (in your browser if you have one, else with curl) before saying it is ready. If it fails, read `preview_logs`. ' +
+  'the person tries it from this thread instead of reading the diff. In a checkout, first try ' +
+  '`start_preview({ repository })`: a repository set up before starts as it was saved. Otherwise set it up in ' +
+  'start_preview itself, not in your shell, so it can be saved: `setup` (install; `docker compose up -d` for its ' +
+  'database, cache or mail: you have your own Docker; migrate; seed sample data so pages show something), `env` ' +
+  '(${BRIGADE_PREVIEW_URL} for its own address in auth, callback and API URLs; random values for secrets it only ' +
+  'needs locally; the always-pass test keys CAPTCHA providers publish), `credentials` for real keys from the vault ' +
+  '(open a ticket for one it lacks), and `paths`: the home page, sign-in and the pages you changed. ' +
+  'start_preview opens those pages as a person would: fix what it finds and run `check_preview` until they pass ' +
+  'before saying it is ready, then `save_preview`. It keeps running between your turns, and reloads as you edit ' +
+  'when it is a dev server. If it fails, read `preview_logs`. ' +
   'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
   "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
   'and Safari, need it opened in a new tab (a button on the pane). ' +
-  'In your reply, say how you started it (command, ports, setup) so it is remembered for next time.'
+  'In your reply, say how it started, what its check found, and that it is saved.'
 
 const SCHEDULES =
   '## Schedules\n\n' +
