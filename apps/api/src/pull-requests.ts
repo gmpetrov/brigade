@@ -1021,6 +1021,57 @@ export async function mergeNow(
   await recordMerge(db, scope, row, { type: 'member', id: scope.memberId }, method)
 }
 
+/**
+ * An owner or admin closes a pull request without merging it, or reopens it.
+ * Closing ends its review loop, as closing it on GitHub does.
+ */
+export async function setPullState(
+  scope: WorkspaceScope,
+  repo: string,
+  number: number,
+  state: 'open' | 'closed',
+) {
+  const db = scoped(scope)
+  if (scope.role !== 'owner' && scope.role !== 'admin')
+    throw new HTTPException(403, {
+      message: `Only an owner or admin can ${state === 'closed' ? 'close' : 'reopen'} a pull request`,
+    })
+  const gh = await github(db, scope, repo)
+  const before = await pullOf(gh, repo, number)
+  if (before.merged_at) throw new HTTPException(409, { message: 'This pull request is merged' })
+  if (before.state === state)
+    throw new HTTPException(409, { message: `This pull request is already ${state}` })
+  const response = await gh.fetch(`${repoPath(repo)}/pulls/${number}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ state }),
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string }
+    throw new HTTPException(409, {
+      message: `GitHub refused: ${body.message ?? `status ${response.status}`}`,
+    })
+  }
+  const p = (await response.json()) as GhPull
+  const row = await findRow(db, repo, number)
+  if (!row) return
+  await sync(db, scope, row, p)
+  if (state === 'closed') {
+    // sync leaves an approved loop be; closing by hand ends it too.
+    await db.pullRequest.updateMany({
+      where: { id: row.id },
+      data: { reviewStatus: 'none', autoMerge: false, note: null },
+    })
+    await closeTickets(db, row.id)
+  }
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: state === 'closed' ? 'pull_request.closed' : 'pull_request.reopened',
+    target: { type: 'pull_request', id: row.id },
+    data: { repository: repo, number },
+  })
+}
+
 let watching = false
 
 /** Every minute: merge approved pull requests that are armed to, once GitHub allows it. */
