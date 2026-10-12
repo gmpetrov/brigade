@@ -112,7 +112,7 @@ export const PreviewView = z.object({
 export type PreviewView = z.infer<typeof PreviewView>
 
 /** An environment variable's name. */
-const EnvName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'An environment variable name')
+export const EnvName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'An environment variable name')
 
 /**
  * How a repository's preview starts, saved by a teammate once it passed its
@@ -145,22 +145,85 @@ export const PreviewRecipe = z.object({
 })
 export type PreviewRecipe = z.infer<typeof PreviewRecipe>
 
-/** A teammate reads or saves a repository's preview recipe. */
+/**
+ * A variable people give a repository's preview, beside its saved setup: a
+ * setting (its value shown), a secret (written once, never shown again), or a
+ * secret Brigade generated. Each start of the preview puts them in the app's
+ * environment, over the setup's own settings; the teammate gets their names
+ * only, and a secret's value is hidden in the preview's log.
+ */
+export const PreviewVariableKind = z.enum(['setting', 'secret', 'generated'])
+export type PreviewVariableKind = z.infer<typeof PreviewVariableKind>
+
+/** Set by the preview or the computer itself: no person sets these. */
+const RESERVED_VARIABLES = new Set(['PORT', 'HOST', 'PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL'])
+export const reservedPreviewVariable = (name: string) =>
+  RESERVED_VARIABLES.has(name) || name.startsWith('BRIGADE_')
+
+export const PreviewVariableName = EnvName.max(100).refine(
+  (name) => !reservedPreviewVariable(name),
+  'The preview sets this variable itself',
+)
+
+export const PreviewVariable = z.object({
+  name: z.string(),
+  kind: PreviewVariableKind,
+  /** A setting's value. Never a secret's. */
+  value: z.string().optional(),
+  /** What the app uses it for, as the teammate that asked for it said. */
+  description: z.string().optional(),
+  updatedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
+  updatedAt: z.string(),
+})
+export type PreviewVariable = z.infer<typeof PreviewVariable>
+
+const variableFields = {
+  name: PreviewVariableName,
+  description: z.string().trim().max(500).optional(),
+}
+
+/** A person sets some of a repository's preview variables: added, or replacing those of the same name. */
+export const SetPreviewVariables = z.object({
+  variables: z
+    .array(
+      z.discriminatedUnion('kind', [
+        z.object({ ...variableFields, kind: z.literal('setting'), value: z.string().max(4000) }),
+        z.object({
+          ...variableFields,
+          kind: z.literal('secret'),
+          value: z.string().min(1).max(10_000),
+        }),
+        /** Brigade makes the value: a random one, for a session or signing secret. */
+        z.object({ ...variableFields, kind: z.literal('generated') }),
+      ]),
+    )
+    .min(1)
+    .max(50),
+})
+export type SetPreviewVariables = z.infer<typeof SetPreviewVariables>
+
+/**
+ * A teammate reads or saves a repository's preview recipe. The runner also
+ * reads its variables' values, for the app only, each time it starts it.
+ */
 export const PreviewOperation = z.discriminatedUnion('name', [
   z.object({ name: z.literal('get'), repository: RepositoryName }),
   z.object({ name: z.literal('save'), repository: RepositoryName, recipe: PreviewRecipe }),
+  z.object({ name: z.literal('variables'), repository: RepositoryName }),
 ])
 export type PreviewOperation = z.infer<typeof PreviewOperation>
 
-/** A repository's saved preview, as the dashboard lists it. */
-export const SavedPreviewRecipe = z.object({
+/** A repository's preview, as the dashboard lists it: its saved setup, if any, and its variables. */
+export const SavedPreview = z.object({
   repository: z.string(),
-  recipe: PreviewRecipe,
+  /** Null while it has variables but no saved setup yet. */
+  recipe: PreviewRecipe.nullable(),
   savedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
   savedFromSessionId: z.string().nullable(),
-  updatedAt: z.string(),
+  updatedAt: z.string().nullable(),
+  variables: z.array(PreviewVariable),
 })
-export type SavedPreviewRecipe = z.infer<typeof SavedPreviewRecipe>
+export type SavedPreview = z.infer<typeof SavedPreview>
 
 /** A thread's preview for a page other than the thread's (a pull request's). */
 export const ThreadPreviewState = z.object({

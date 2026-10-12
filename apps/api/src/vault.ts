@@ -1,6 +1,7 @@
 // The vault: customer secrets, encrypted at rest with a key per organization.
 // Secrets are decrypted only inside this process, for the call that needs them,
-// and are never sent to a computer or written to an event, a log or a thread.
+// and are never written to an event, a log or a thread. They reach a thread's
+// computer only as a credential released to it, or a preview's variables.
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto'
 import { env } from './config.js'
 import type { ScopedDb, Scope } from './db.js'

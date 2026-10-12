@@ -89,7 +89,8 @@ export const ModelName = {
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
-  PreviewRecipe: 'PreviewRecipe'
+  PreviewRecipe: 'PreviewRecipe',
+  PreviewVariable: 'PreviewVariable'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -773,6 +774,24 @@ export const PreviewRecipeScalarFieldEnum = {
 } as const
 
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
+export const PreviewVariableScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  repository: 'repository',
+  name: 'name',
+  kind: 'kind',
+  value: 'value',
+  vaultSecretId: 'vaultSecretId',
+  description: 'description',
+  updatedByMemberId: 'updatedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewVariableScalarFieldEnum = (typeof PreviewVariableScalarFieldEnum)[keyof typeof PreviewVariableScalarFieldEnum]
 
 
 export const SortOrder = {

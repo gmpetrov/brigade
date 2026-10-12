@@ -63,6 +63,23 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   only once its check passed. `start_preview({ repository })` starts it again
   in any later thread with that repository checked out. Secrets stay in the
   vault: a recipe holds credential ids, never values.
+- **Preview variables, beside the recipe.** Values only a person has (a
+  third-party API key) are a repository's `PreviewVariable`s: a setting (value
+  kept as is), a secret (sealed in a `VaultSecret`, never read back by the
+  dashboard) or a generated secret. They are not vault credentials and do not
+  show on the Vault page. A teammate asks for them with a `variables` ask in
+  `open_ticket`; the person saves them from the ticket (or on Saved previews)
+  before answering, and the reply carries names only. Each start of the
+  preview, by a teammate or by a person without a turn, reads them through the
+  `variables` preview operation (audited when it holds secrets) and puts them
+  in the app's environment over `env`, and in its `envFile` (then added to the
+  checkout's `.git/info/exclude`). The teammate sees their names in
+  start_preview's result; a secret's value is hidden in the preview's log. The
+  app runs as the teammate's user, so a teammate that went looking (its
+  process's environment, its env file) could read one: what this keeps them out
+  of is the model's context by default, the dashboard and the logs. Any member
+  sets or replaces one; whoever set it last, an owner or an admin removes it.
+  Credentials in a recipe still need its teammate to start it.
 - **Started when a person asks.** A teammate starts a preview when the person
   asks to try the app, or asked for something to try in a browser; otherwise it
   offers one in a line. Setting one up takes minutes and keeps the computer busy,
@@ -121,8 +138,8 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   teammate's home: a project that publishes port 80, or many large images, needs
   changing. Not tested on a workspace computer yet (see below).
 - **Seeds that call third-party APIs** (a Stripe product list) fail without a
-  key: the teammate adds a test-mode credential, or seeds what it can and says
-  what is empty.
+  key: the teammate asks for a test-mode key as a preview variable, or seeds
+  what it can and says what is empty.
 
 ## Before customers use it
 

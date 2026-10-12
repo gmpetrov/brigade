@@ -435,7 +435,8 @@ export const ModelName = {
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
-  PreviewRecipe: 'PreviewRecipe'
+  PreviewRecipe: 'PreviewRecipe',
+  PreviewVariable: 'PreviewVariable'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -451,7 +452,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe" | "previewVariable"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3341,6 +3342,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PreviewVariable: {
+      payload: Prisma.$PreviewVariablePayload<ExtArgs>
+      fields: Prisma.PreviewVariableFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreviewVariableFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreviewVariableFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        findFirst: {
+          args: Prisma.PreviewVariableFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreviewVariableFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        findMany: {
+          args: Prisma.PreviewVariableFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>[]
+        }
+        create: {
+          args: Prisma.PreviewVariableCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        createMany: {
+          args: Prisma.PreviewVariableCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreviewVariableCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>[]
+        }
+        delete: {
+          args: Prisma.PreviewVariableDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        update: {
+          args: Prisma.PreviewVariableUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        deleteMany: {
+          args: Prisma.PreviewVariableDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreviewVariableUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreviewVariableUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>[]
+        }
+        upsert: {
+          args: Prisma.PreviewVariableUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewVariablePayload>
+        }
+        aggregate: {
+          args: Prisma.PreviewVariableAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreviewVariable>
+        }
+        groupBy: {
+          args: Prisma.PreviewVariableGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewVariableGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreviewVariableCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewVariableCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -4047,6 +4122,24 @@ export const PreviewRecipeScalarFieldEnum = {
 export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
 
 
+export const PreviewVariableScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  repository: 'repository',
+  name: 'name',
+  kind: 'kind',
+  value: 'value',
+  vaultSecretId: 'vaultSecretId',
+  description: 'description',
+  updatedByMemberId: 'updatedByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewVariableScalarFieldEnum = (typeof PreviewVariableScalarFieldEnum)[keyof typeof PreviewVariableScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -4529,6 +4622,20 @@ export type ListEnumAttachmentSourceFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'PreviewVariableKind'
+ */
+export type EnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewVariableKind'>
+    
+
+
+/**
+ * Reference to a field of type 'PreviewVariableKind[]'
+ */
+export type ListEnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PreviewVariableKind[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -4731,6 +4838,7 @@ export type GlobalOmitConfig = {
   threadAttachment?: Prisma.ThreadAttachmentOmit
   designSystem?: Prisma.DesignSystemOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
+  previewVariable?: Prisma.PreviewVariableOmit
 }
 
 /* Types for Logging */

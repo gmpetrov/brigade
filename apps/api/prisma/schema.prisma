@@ -165,6 +165,7 @@ model Workspace {
   auditEntries        AuditEntry[]
   designSystems       DesignSystem[]
   previewRecipes      PreviewRecipe[]
+  previewVariables    PreviewVariable[]
 
   @@index([organizationId])
 }
@@ -664,19 +665,20 @@ model Connection {
 
 /// One encrypted secret. Decrypted only inside the API process.
 model VaultSecret {
-  id             String      @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  ciphertext     Bytes
-  iv             Bytes
-  authTag        Bytes
-  keyVersion     Int         @default(1)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  connection     Connection?
-  credential     Credential?
-  previousOf     Credential? @relation("CredentialPrevious")
+  id              String           @id @default(cuid())
+  organizationId  String
+  workspaceId     String
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ciphertext      Bytes
+  iv              Bytes
+  authTag         Bytes
+  keyVersion      Int              @default(1)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  connection      Connection?
+  credential      Credential?
+  previousOf      Credential?      @relation("CredentialPrevious")
+  previewVariable PreviewVariable?
 
   @@index([workspaceId])
 }
@@ -1196,5 +1198,37 @@ model PreviewRecipe {
   updatedAt          DateTime  @updatedAt
 
   @@unique([workspaceId, repository])
+  @@index([workspaceId])
+}
+
+enum PreviewVariableKind {
+  setting
+  secret
+  generated
+}
+
+/// A variable people give a repository's preview: each start puts it in the
+/// app's environment. A secret's value is sealed in the vault, never shown again.
+model PreviewVariable {
+  id                String              @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// owner/name, lowercase.
+  repository        String
+  name              String
+  kind              PreviewVariableKind
+  /// A setting's value. Never a secret's.
+  value             String?
+  /// A secret's (or a generated one's) value.
+  vaultSecretId     String?             @unique
+  vaultSecret       VaultSecret?        @relation(fields: [vaultSecretId], references: [id], onDelete: Cascade)
+  /// What the app uses it for, as the teammate that asked for it said.
+  description       String?
+  updatedByMemberId String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([workspaceId, repository, name])
   @@index([workspaceId])
 }

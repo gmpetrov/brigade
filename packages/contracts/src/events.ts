@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { MessageAttachment } from './attachments.js'
 import { CredentialKind } from './credentials.js'
-import { PreviewInfo } from './previews.js'
+import { EnvName, PreviewInfo } from './previews.js'
 
 const base = {
   /** ISO time the event happened on the computer. */
@@ -138,6 +138,27 @@ export const Ask = z.discriminatedUnion('type', [
     question: z.string(),
     secret: z.boolean().optional(),
   }),
+  /**
+   * Values a repository's preview needs that only a person has, such as a
+   * third-party API key. The person sets them as the preview's variables;
+   * the teammate learns which were set, never their values.
+   */
+  z.object({
+    id: z.string(),
+    type: z.literal('variables'),
+    repository: z.string().max(200),
+    variables: z
+      .array(
+        z.object({
+          name: EnvName.max(100),
+          description: z.string().max(500).optional(),
+          /** Unset: a secret. false: a setting, its value shown. */
+          secret: z.boolean().optional(),
+        }),
+      )
+      .min(1)
+      .max(20),
+  }),
 ])
 export type Ask = z.infer<typeof Ask>
 
@@ -165,6 +186,12 @@ export const AskReply = z.discriminatedUnion('type', [
     note: z.string().max(20_000).optional(),
   }),
   z.object({ type: z.literal('input'), text: z.string().max(20_000) }),
+  /** The variables set (their values saved for the preview first), and those skipped. Names only. */
+  z.object({
+    type: z.literal('variables'),
+    set: z.array(z.string().max(100)).max(20),
+    skipped: z.array(z.string().max(100)).max(20),
+  }),
 ])
 export type AskReply = z.infer<typeof AskReply>
 

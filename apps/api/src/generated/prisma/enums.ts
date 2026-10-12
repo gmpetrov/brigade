@@ -237,3 +237,12 @@ export const AttachmentStatus = {
 } as const
 
 export type AttachmentStatus = (typeof AttachmentStatus)[keyof typeof AttachmentStatus]
+
+
+export const PreviewVariableKind = {
+  setting: 'setting',
+  secret: 'secret',
+  generated: 'generated'
+} as const
+
+export type PreviewVariableKind = (typeof PreviewVariableKind)[keyof typeof PreviewVariableKind]

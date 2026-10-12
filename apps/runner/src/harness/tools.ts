@@ -37,20 +37,35 @@ const slug = (text: string) =>
     .replace(/^_|_$/g, '')
     .slice(0, 24)
 
+/**
+ * Marks a tool's input schema so the Codex bridge (patched) sends it as a
+ * deferred tool in this namespace: the model finds it through tool search
+ * instead of getting every schema each turn. Claude Code defers MCP tools on its own.
+ */
+const NAMESPACE = 'x-codex-namespace'
+
 export function connectorTools(
   grants: ConnectorGrant[],
   call: ConnectorCaller,
+  options: { defer?: boolean } = {},
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {}
   for (const grant of grants) {
     // Several connections of one kind get distinct tool names.
     const several = grants.filter((g) => g.kind === grant.kind).length > 1
     const account = grant.externalAccount ?? grant.label
+    const namespace = {
+      name: several ? `${grant.kind}_${slug(account)}` : grant.kind,
+      description: `${grant.label}: ${account}`,
+    }
     for (const operation of grant.operations) {
       const name = several ? `${operation.name}_${slug(account)}`.slice(0, 64) : operation.name
       tools[name] = tool({
         description: `${operation.description} [${grant.label}: ${account}${operation.write ? '; makes a change, a person may need to approve it' : ''}]`,
-        inputSchema: jsonSchema(operation.inputSchema as Parameters<typeof jsonSchema>[0]),
+        inputSchema: jsonSchema({
+          ...(operation.inputSchema as Parameters<typeof jsonSchema>[0] & object),
+          ...(options.defer ? { [NAMESPACE]: namespace } : {}),
+        }),
         execute: (input, { toolCallId }) =>
           call({
             connectionId: grant.connectionId,
@@ -134,7 +149,9 @@ export const openTicketTool = tool({
     'opening several. When a website stops you with a human check (a CAPTCHA, a "verify you are human" box, a ' +
     'bot or firewall block page), use an action ask with browser: true and leave the page open: the person takes ' +
     'over your browser from the ticket, clears it and hands back. Never ask for a password, key or other secret ' +
-    'in words. For a login or key the vault lacks, ' +
+    'in words. For values a preview needs that only a person has (a third-party API key), use a variables ask: the ' +
+    "person sets them for the repository's preview, and each start_preview gives them to the app; you learn which " +
+    'were set, never their values. For a login or key the vault lacks, ' +
     'use an access ask of kind credential and fill in `credential` with what you know: the person saves it to the ' +
     'vault right in the ticket, and its mention comes back for you to use at once.',
   inputSchema: jsonSchema<{ title: string; asks: unknown[] }>({
@@ -149,7 +166,10 @@ export const openTicketTool = tool({
           type: 'object',
           properties: {
             id: { type: 'string', description: 'Short id, unique among these asks' },
-            type: { type: 'string', enum: ['approval', 'decision', 'access', 'action', 'input'] },
+            type: {
+              type: 'string',
+              enum: ['approval', 'decision', 'access', 'action', 'input', 'variables'],
+            },
             title: {
               type: 'string',
               description: 'approval and action: what to sign off on or to do',
@@ -214,6 +234,32 @@ export const openTicketTool = tool({
             secret: {
               type: 'boolean',
               description: 'input: the answer is a credential; they pick one from the vault',
+            },
+            repository: {
+              type: 'string',
+              description: 'variables: the repository (owner/name) whose preview needs them',
+            },
+            variables: {
+              type: 'array',
+              maxItems: 20,
+              description:
+                'variables: what the app needs, by environment variable name. Only values you cannot make up or run locally',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'e.g. "STRIPE_SECRET_KEY"' },
+                  description: {
+                    type: 'string',
+                    description:
+                      'What the app uses it for and where to get one, e.g. "Payments on /checkout: a test-mode key from the Stripe dashboard"',
+                  },
+                  secret: {
+                    type: 'boolean',
+                    description: 'false for a setting that is not secret (default true)',
+                  },
+                },
+                required: ['name'],
+              },
             },
           },
           required: ['id', 'type'],
@@ -1018,6 +1064,7 @@ export type PreviewTools = {
     origins: Record<number, string>
     reason?: string
     logs?: string
+    variables?: string[]
   }>
   check(paths: string[]): Promise<{
     ok: boolean
@@ -1070,7 +1117,7 @@ type PreviewInput = {
 const NOT_READY =
   'Not ready yet: fix what the check found (read the screenshots, preview_logs and serverErrors), then call ' +
   'check_preview. Do not tell the person it is ready while a page fails. If a page needs a setting or a ' +
-  'service the app does not have here, give it one (env, setup, a credential) or say exactly what is missing.'
+  'service the app does not have here, give it one (env, setup) or ask for its preview variables in a ticket.'
 
 /** Check the preview's pages; a check that cannot run is reported, not thrown. */
 async function checked(previews: PreviewTools, paths: string[]) {
@@ -1112,6 +1159,8 @@ export function previewTools(
         "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
         'where ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} become the addresses (e.g. NEXTAUTH_URL, ' +
         'NEXT_PUBLIC_API_URL, auth callback URLs, allowed origins), and `envFile` if the app reads only its file. ' +
+        "The repository's preview variables, which people set (ask with a variables ask in open_ticket), come on " +
+        'top of `env`; the result lists their names. ' +
         "The proxy makes the app's cookies work in the dashboard's frame, shows a waiting page while the app starts, " +
         'and starts it again if it stops. Dev servers that check the Host header need the preview host allowed ' +
         '(Vite: server.allowedHosts; Next.js: allowedDevOrigins). Use this instead of starting a server in the ' +
@@ -1163,7 +1212,7 @@ export function previewTools(
             items: { type: 'string' },
             maxItems: 10,
             description:
-              'Vault credentials (by id) whose variables the app gets: its API keys, a test-mode payment key',
+              'Vault credentials (by id) whose variables the app gets. Prefer preview variables: a preview with credentials needs you to start it',
           },
           paths: {
             type: 'array',
@@ -1251,7 +1300,8 @@ export function previewTools(
         "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check) as its " +
         "repository's preview, so a later thread starts it in one step with start_preview({ repository }). " +
         'Only once its check passes, unless what it found is expected: then look at the screenshots and give the ' +
-        '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets go in credentials, never in env.',
+        '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets go in the repository\'s ' +
+        'preview variables (a variables ask in open_ticket), never in env: they are kept beside it, not in it.',
       inputSchema: jsonSchema<{ reason?: string }>({
         type: 'object',
         properties: {

@@ -773,6 +773,23 @@ export type EnumAttachmentSourceWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumAttachmentSourceFilter<$PrismaModel>
 }
 
+export type EnumPreviewVariableKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.PreviewVariableKind | Prisma.EnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  in?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel> | $Enums.PreviewVariableKind
+}
+
+export type EnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PreviewVariableKind | Prisma.EnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  in?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPreviewVariableKindWithAggregatesFilter<$PrismaModel> | $Enums.PreviewVariableKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1489,6 +1506,23 @@ export type NestedEnumAttachmentSourceWithAggregatesFilter<$PrismaModel = never>
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumAttachmentSourceFilter<$PrismaModel>
   _max?: Prisma.NestedEnumAttachmentSourceFilter<$PrismaModel>
+}
+
+export type NestedEnumPreviewVariableKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.PreviewVariableKind | Prisma.EnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  in?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel> | $Enums.PreviewVariableKind
+}
+
+export type NestedEnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PreviewVariableKind | Prisma.EnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  in?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PreviewVariableKind[] | Prisma.ListEnumPreviewVariableKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPreviewVariableKindWithAggregatesFilter<$PrismaModel> | $Enums.PreviewVariableKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
 }
 
 

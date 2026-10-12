@@ -16,6 +16,10 @@
 // started (remembered across restarts of the runner), or from the saved setup
 // of a repository checked out in the thread. Then the runner checks its pages
 // itself, as a teammate's start_preview does.
+//
+// Each start reads the repository's preview variables, which people set, from
+// the API: they go into the app's environment over the start's own settings,
+// never into what the teammate reads; a secret's value is hidden in the log.
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
@@ -75,6 +79,9 @@ const APP_STARTS = '[preview] Starting the app'
 const PORT_VARIABLE = /\$\{?PORT\b/
 /** Threads whose last start is remembered, newest kept. */
 const REMEMBERED_MAX = 200
+/** A secret this short is not hidden in the log: it would hide ordinary words. */
+const HIDDEN_MIN = 6
+const HIDDEN = '••••••'
 
 export type PreviewStart = {
   command: string
@@ -124,6 +131,8 @@ export type PreviewResult = {
   origins: Record<number, string>
   reason?: string
   logs?: string
+  /** The names of the repository's preview variables the app got. */
+  variables?: string[]
 }
 
 export type Seat = { sessionId: string; teammateId: string; workDir: string; runAs?: string }
@@ -152,6 +161,9 @@ type Preview = {
   keptDir?: string
   /** The last check of its pages: whether they all passed. */
   checked?: boolean
+  /** The names of the preview variables it got, and the secrets' values, hidden in its log. */
+  variables: string[]
+  hidden: string[]
   lines: string[]
   /** Lines appended since it started, including those the log no longer keeps. */
   written: number
@@ -418,6 +430,7 @@ export class Previews {
 
     const result: PreviewResult = { status: preview.info.status, origins }
     if (preview.info.reason) result.reason = preview.info.reason
+    if (preview.variables.length) result.variables = preview.variables
     if (preview.info.status !== 'running') result.logs = this.tail(preview, 60)
     return result
   }
@@ -485,6 +498,20 @@ export class Previews {
     return recipe
   }
 
+  /** A repository's preview variables, with their values: for the app's environment only. */
+  private async variables(seat: Seat, repository: string) {
+    try {
+      return (await this.options.recipes(seat.sessionId, seat.teammateId, {
+        name: 'variables',
+        repository,
+      })) as { env: Record<string, string>; secrets: string[] }
+    } catch (error) {
+      throw new Error(
+        `Could not read the preview variables of ${repository}: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+  }
+
   /** Start the app and its proxy; resolves once it is starting, with the addresses of its ports. */
   private async begin(seat: Seat, input: PreviewStart) {
     const command = input.command.trim()
@@ -538,6 +565,10 @@ export class Previews {
       )
     }
 
+    const checkout = await repositoryOf(dir, seat.runAs)
+    const repository = input.repository?.toLowerCase() ?? checkout?.repository
+    const variables = repository ? await this.variables(seat, repository) : { env: {}, secrets: [] }
+
     // The proxy is what people reach: its port is the one hosted, the app's other ports are paths on it.
     let preview: Preview | undefined
     const proxyOptions = {
@@ -556,8 +587,6 @@ export class Previews {
     const proxy = new PreviewProxy(proxyOptions)
     let origin: string
     let publicPort: number
-    const checkout = await repositoryOf(dir, seat.runAs)
-    const repository = input.repository?.toLowerCase() ?? checkout?.repository
     try {
       const from = repository
         ? REPOSITORY_PROXY_BASE +
@@ -593,16 +622,19 @@ export class Previews {
       HOST: '0.0.0.0',
       BRIGADE_PREVIEW_URL: origins[input.port]!,
       ...Object.fromEntries(all.map((p) => [`BRIGADE_PREVIEW_URL_${p}`, origins[p]!])),
-      ...withAddresses(input.env ?? {}, origins[input.port]!, origins),
+      // People's variables over the start's own settings.
+      ...withAddresses({ ...input.env, ...variables.env }, origin, origins),
     })
     if (input.envFile) {
       try {
         await writeEnvFile(
           dir,
           input.envFile,
-          withAddresses(input.env ?? {}, origin, origins),
+          withAddresses({ ...input.env, ...variables.env }, origin, origins),
           seat.runAs,
         )
+        // Secrets in a file in the checkout: never committed.
+        if (variables.secrets.length) await keepOutOfGit(dir, input.envFile, seat.runAs)
       } catch (error) {
         proxy.close()
         throw error
@@ -631,6 +663,10 @@ export class Previews {
       proxy,
       envFiles: kept.files,
       ...(kept.dir ? { keptDir: kept.dir } : {}),
+      variables: Object.keys(variables.env),
+      hidden: variables.secrets
+        .map((name) => variables.env[name] ?? '')
+        .filter((value) => value.length >= HIDDEN_MIN),
       restarts: [],
       lines: [],
       written: 0,
@@ -827,7 +863,7 @@ export class Previews {
   private append(preview: Preview, text: string) {
     const lines = (preview.partial + text.replace(ANSI, '')).split('\n')
     preview.partial = lines.pop() ?? ''
-    for (const line of lines) preview.lines.push(line.slice(0, LINE_MAX))
+    for (const line of lines) preview.lines.push(hide(preview, line).slice(0, LINE_MAX))
     if (preview.info.step === 'setup' && lines.some((line) => line.startsWith(APP_STARTS))) {
       preview.info = { ...preview.info, step: 'app' }
       this.report(preview)
@@ -838,7 +874,7 @@ export class Previews {
   }
 
   private tail(preview: Preview, lines = PREVIEW_LOG_LINES) {
-    const all = preview.partial ? [...preview.lines, preview.partial] : preview.lines
+    const all = preview.partial ? [...preview.lines, hide(preview, preview.partial)] : preview.lines
     return all.slice(-lines).join('\n')
   }
 
@@ -879,6 +915,10 @@ export class Previews {
 }
 
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
+
+/** A line of the app's output with its secrets' values hidden. */
+const hide = (preview: Preview, line: string) =>
+  preview.hidden.reduce((text, value) => text.split(value).join(HIDDEN), line)
 
 /** A recipe's env with the preview's addresses in place of its placeholders. */
 function withAddresses(
@@ -950,6 +990,23 @@ async function writeEnvFile(
     runAs,
     `${lines.join('\n')}\n`,
   )
+}
+
+/** Add a file to its checkout's local excludes, unless git already ignores it. */
+async function keepOutOfGit(dir: string, file: string, runAs: string | undefined) {
+  await runAsUser(
+    [
+      'sh',
+      '-c',
+      'cd -- "$1" || exit 0; git check-ignore -q -- "$2" 2>/dev/null && exit 0; ' +
+        'ex=$(git rev-parse --git-path info/exclude 2>/dev/null) || exit 0; ' +
+        'mkdir -p "$(dirname "$ex")" && printf "/%s%s\\n" "$(git rev-parse --show-prefix)" "$2" >> "$ex"',
+      'sh',
+      dir,
+      file.replace(/^\.\//, ''),
+    ],
+    runAs,
+  ).catch(() => undefined)
 }
 
 /** owner/name from a remote URL: GitHub's, or the API's git proxy, which ends the same way. */

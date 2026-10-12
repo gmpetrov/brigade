@@ -19,6 +19,7 @@ import { hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, sendToRunner } from './hub.js'
+import { variableNames, variableValues } from './preview-variables.js'
 import { actingTeammate, currentTeammate, type LoadedThread } from './thread-spec.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
@@ -245,7 +246,26 @@ export async function handlePreviewCall(
   if (op.name === 'get') {
     const row = await db.previewRecipe.findFirst({ where: { repository } })
     const parsed = row ? PreviewRecipe.safeParse(row.recipe) : null
-    return done({ recipe: parsed?.success ? parsed.data : null, updatedAt: row?.updatedAt })
+    return done({
+      recipe: parsed?.success ? parsed.data : null,
+      updatedAt: row?.updatedAt,
+      // Names only: their values go to the app, never to the teammate.
+      variables: await variableNames(db, repository),
+    })
+  }
+
+  if (op.name === 'variables') {
+    // The runner starts the preview with them; it never hands them to the teammate.
+    const { env, secrets } = await variableValues(db, scope, repository)
+    if (secrets.length)
+      await audit({
+        ...scope,
+        actor: { type: 'teammate', id: teammate.id },
+        action: 'preview.secrets_used',
+        target: { type: 'repository', id: repository },
+        data: { sessionId: session.id, names: secrets },
+      })
+    return done({ env, secrets })
   }
 
   const recipe = op.recipe as Prisma.InputJsonValue

@@ -213,8 +213,11 @@ const PREVIEWS =
   'migrate; seed sample data so pages show something), a `command` that takes its port from $PORT (e.g. ' +
   '"pnpm dev --port $PORT"), so it gets a free one when another preview has it, `env` ' +
   '(${BRIGADE_PREVIEW_URL} for its own address in auth, callback and API URLs; random values for secrets it only ' +
-  'needs locally; the always-pass test keys CAPTCHA providers publish), `credentials` for real keys from the vault ' +
-  '(open a ticket for one it lacks), and `paths`: the home page, sign-in and the pages you changed. ' +
+  'needs locally; the always-pass test keys CAPTCHA providers publish), and `paths`: the home page, sign-in and ' +
+  'the pages you changed. Run its database and other services yourself rather than asking for one. Values only a ' +
+  "person has, such as a third-party API key, are the repository's preview variables: ask for them in one ticket " +
+  '(a `variables` ask; read .env.example for what the app needs), never in words. Each start gives them to the ' +
+  'app, over `env`; you see their names, never their values, and people start it without you. ' +
   'start_preview opens those pages as a person would: fix what it finds and run `check_preview` until they pass ' +
   'before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
   'without you. If it fails, read `preview_logs`. ' +

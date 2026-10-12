@@ -47,6 +47,7 @@ import { contentUrl } from '@/components/library-browser'
 import { Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
+import { VariablesAsk } from '@/components/preview-variables'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -1330,6 +1331,10 @@ function replyLabel(ask: Ask, reply: AskReply, teammates: { id: string; name: st
       return reply.done ? 'Done' : 'Not done'
     case 'input':
       return 'Answered'
+    case 'variables':
+      return reply.skipped.length
+        ? `Set ${reply.set.length}, skipped ${reply.skipped.length}`
+        : `Set ${reply.set.length === 1 ? reply.set[0] : `${reply.set.length} variables`}`
   }
 }
 
@@ -1364,13 +1369,16 @@ function AskView({
       ? ask.title
       : ask.type === 'access'
         ? `Access to ${ask.what}`
-        : ask.question
+        : ask.type === 'variables'
+          ? `Values for the preview of ${ask.repository}`
+          : ask.question
   const kind = {
     approval: 'Approval',
     decision: 'Decision',
     access: 'Access',
     action: 'Action',
     input: 'Input',
+    variables: 'Preview variables',
   }[ask.type]
 
   return (
@@ -1438,7 +1446,8 @@ function AskView({
                 !('options' in ask && ask.options) &&
                 reply.optionId === 'decline') ||
               (reply.type === 'access' && !reply.granted) ||
-              (reply.type === 'action' && !reply.done)
+              (reply.type === 'action' && !reply.done) ||
+              (reply.type === 'variables' && reply.set.length === 0)
                 ? 'warning'
                 : 'success'
             }
@@ -1538,6 +1547,8 @@ function AskView({
             </>
           )}
         </div>
+      ) : ask.type === 'variables' ? (
+        <VariablesAsk ask={ask} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' && ask.kind === 'credential' ? (
         <CredentialAccess ask={ask} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' ? (

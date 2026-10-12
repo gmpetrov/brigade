@@ -159,6 +159,17 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
         ]
       if (ask.type === 'input' && reply.type === 'input')
         return [{ ask: ask.question, answer: reply.text }]
+      if (ask.type === 'variables' && reply.type === 'variables')
+        return [
+          {
+            ask: `Preview variables of ${ask.repository}`,
+            set: reply.set,
+            skipped: reply.skipped,
+            note:
+              'Those set are kept for its preview: each start_preview gives them to the app (start it again to use ' +
+              'them). You never see their values. Carry on without those skipped, or say what does not work without them.',
+          },
+        ]
       return []
     }),
   }

@@ -135,6 +135,22 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
             message: 'Pick a saved secret: Brigade never passes a secret in a message',
           })
       }
+      if (ask.type === 'variables' && reply.type === 'variables') {
+        // Names only: the values were saved for the preview before the ticket was answered.
+        const asked = ask.variables.map((v) => v.name)
+        const named = [...reply.set, ...reply.skipped]
+        if (
+          named.length !== asked.length ||
+          new Set(named).size !== named.length ||
+          !asked.every((n) => named.includes(n))
+        )
+          throw new HTTPException(400, { message: 'Set or skip each variable' })
+        const saved = await db.previewVariable.count({
+          where: { repository: ask.repository.toLowerCase(), name: { in: reply.set } },
+        })
+        if (saved !== reply.set.length)
+          throw new HTTPException(400, { message: 'Save the variables before answering' })
+      }
       if (ask.type === 'access' && reply.type === 'access' && reply.credential) {
         // A credential the person picked or just saved: one of this workspace's vault.
         const ids = mentionedIds(reply.credential, 'credential')

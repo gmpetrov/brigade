@@ -255,3 +255,9 @@ export type DesignSystem = Prisma.DesignSystemModel
  * teammate once it passed its check; later threads start it in one step.
  */
 export type PreviewRecipe = Prisma.PreviewRecipeModel
+/**
+ * Model PreviewVariable
+ * A variable people give a repository's preview: each start puts it in the
+ * app's environment. A secret's value is sealed in the vault, never shown again.
+ */
+export type PreviewVariable = Prisma.PreviewVariableModel
