@@ -16,7 +16,6 @@ import {
   SendMessage,
   StartThread,
   type ThreadFile,
-  type ThreadSpec,
   type ApiToRunner,
   type PreviewView,
   type ThreadPreviewState,
@@ -58,13 +57,7 @@ import {
 import { reopenOnMessage } from '../tasks.js'
 import { runLog } from '../timeline.js'
 import { pageEvents, pageStart } from '../thread-history.js'
-import {
-  parseBody,
-  requireUser,
-  requireWorkspace,
-  type AppEnv,
-  type WorkspaceScope,
-} from '../scope.js'
+import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** The ids of a thread's teammates, the one asked for first (whose folder is tried first). */
 function teammatesFirst(
