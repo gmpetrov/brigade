@@ -165,11 +165,15 @@ export type RunnerLinkResult = z.infer<typeof RunnerLinkResult>
 
 // Browser <-> API WebSocket
 export const BrowserToApi = z.discriminatedUnion('type', [
-  /** Follow a thread. The API replays stored events after `afterSeq`, then streams live ones. */
+  /**
+   * Follow a thread. The API replays stored events after `afterSeq`, then streams live ones.
+   * With `tail` and `afterSeq` 0, it replays only the latest page, after a `history` message.
+   */
   z.object({
     type: z.literal('subscribe'),
     sessionId: z.string(),
     afterSeq: z.number().int().min(0),
+    tail: z.boolean().optional(),
   }),
   z.object({ type: z.literal('unsubscribe'), sessionId: z.string() }),
   /** Takeover terminal on a thread's computer. Only while the member holds control of the thread. */
@@ -191,6 +195,17 @@ export type BrowserToApi = z.infer<typeof BrowserToApi>
 
 export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('events'), events: z.array(SequencedEvent) }),
+  /**
+   * A thread followed by its tail: events before `firstSeq` are not replayed
+   * (GET /threads/:id/events?before= pages them in). `context` holds the few of
+   * them the whole thread needs: what it made, its preview, usage, open asks.
+   */
+  z.object({
+    type: z.literal('history'),
+    sessionId: z.string(),
+    firstSeq: z.number().int().positive(),
+    context: z.array(SequencedEvent),
+  }),
   z.object({
     type: z.literal('thread.updated'),
     sessionId: z.string(),

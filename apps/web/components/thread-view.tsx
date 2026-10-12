@@ -132,8 +132,15 @@ export type QueuedMessage = {
   note?: string
 }
 
-/** Fold the event log into what a person reads: messages, tool calls, approvals. */
-export function useThreadItems(events: SequencedEvent[]) {
+/** Asks that wait on a person: shown even from before the page loaded, while open. */
+const ASKS = new Set<Item['kind']>(['approval', 'question', 'ticket'])
+
+/**
+ * Fold the event log into what a person reads: messages, tool calls, approvals.
+ * Events before `firstSeq` (the context of a thread opened by its latest page)
+ * count for its state but do not show, but for asks still open.
+ */
+export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
   return useMemo(() => {
     const items: Item[] = []
     const byKey = new Map<string, Item>()
@@ -142,11 +149,13 @@ export function useThreadItems(events: SequencedEvent[]) {
     const queued = new Map<string, QueuedMessage>()
     const seen = new Set<string>()
     let turnTeammate: string | undefined
+    let shown = true
     const add = (item: Item) => {
-      items.push(item)
+      if (shown || ASKS.has(item.kind)) items.push(item)
       byKey.set(item.key, item)
     }
     for (const { seq, event: e } of events) {
+      shown = seq >= firstSeq
       switch (e.type) {
         case 'message.user':
           if (e.messageId) {
@@ -331,7 +340,7 @@ export function useThreadItems(events: SequencedEvent[]) {
     )?.event
     const turnId = lastTurn?.type === 'turn.started' ? lastTurn.turnId : undefined
     return { items, limits, queued: [...queued.values()], seen, turnId }
-  }, [events])
+  }, [events, firstSeq])
 }
 
 const clipText = (text: string, max: number) =>
