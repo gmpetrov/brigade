@@ -201,6 +201,9 @@ const PREVIEWS =
   '(env files, database, migrations, seed data) with your shell first; start_preview runs only the long-running ' +
   'command. It keeps running between your turns, and reloads as you edit when it is a dev server. Check it ' +
   'yourself (in your browser if you have one, else with curl) before saying it is ready. If it fails, read `preview_logs`. ' +
+  'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
+  "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
+  'and Safari, need it opened in a new tab (a button on the pane). ' +
   'In your reply, say how you started it (command, ports, setup) so it is remembered for next time.'
 
 const SCHEDULES =
