@@ -8,6 +8,7 @@
     "dev": "next dev --port 3000",
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings=ExperimentalWarning --test \"lib/**/*.test.ts\"",
     "clean": "rm -rf .next .turbo",
     "theme": "node scripts/theme.mjs"
   },
