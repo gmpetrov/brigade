@@ -1,0 +1,138 @@
+// Teammates' containers on a cloud computer, by thread. Each teammate runs its
+// own rootless Docker, shared by its threads; a container belongs to the
+// thread whose Compose project it is in (composeProject), whose folder its
+// Compose file is in, or whose folder it mounts. Containers of a thread gone
+// quiet are stopped; those of a thread whose folder is archived are removed,
+// volumes too; when the disk fills up, what no container uses is pruned.
+import { run } from './repos.js'
+import { composeProject, teammateHome } from './teammates.js'
+
+type Container = {
+  id: string
+  running: boolean
+  /** Its thread, if any: the thread's id (its folder's name), or its Compose project. */
+  thread?: string
+  volumes: string[]
+}
+
+export type Inspected = {
+  Id: string
+  State?: { Running?: boolean }
+  Config?: { Labels?: Record<string, string> | null }
+  Mounts?: { Type?: string; Source?: string; Name?: string }[] | null
+}
+
+/** The teammate's Docker, when it is running: never started just to look. */
+async function docker(user: string) {
+  const uid = (await run('id', ['-u', user]).catch(() => Buffer.alloc(0))).toString().trim()
+  if (!/^\d+$/.test(uid)) return null
+  const socket = `/run/user/${uid}/docker.sock`
+  const up = await run('test', ['-S', socket], { runAs: user }).then(
+    () => true,
+    () => false,
+  )
+  if (!up) return null
+  const env = { XDG_RUNTIME_DIR: `/run/user/${uid}`, DOCKER_HOST: `unix://${socket}` }
+  return (...args: string[]) =>
+    run('docker', args, { runAs: user, env, timeout: 5 * 60_000 }).then((out) =>
+      out.toString().trim(),
+    )
+}
+
+/** The teammate's containers (running ones only, unless `all`), each with its thread. */
+async function containers(
+  dockerCli: NonNullable<Awaited<ReturnType<typeof docker>>>,
+  user: string,
+  all: boolean,
+): Promise<Container[]> {
+  const ids = (await dockerCli('ps', '-q', '--no-trunc', ...(all ? ['-a'] : [])))
+    .split('\n')
+    .filter(Boolean)
+  if (ids.length === 0) return []
+  const inspected = JSON.parse(await dockerCli('inspect', ...ids)) as Inspected[]
+  return inspected.map((c) => describe(c, `${teammateHome(user)}/threads/`))
+}
+
+/** A container as `docker inspect` gives it, with its thread when it has one under `root`. */
+export function describe(c: Inspected, root: string): Container {
+  const labels = c.Config?.Labels ?? {}
+  const mounts = c.Mounts ?? []
+  const inThread = (path: string | undefined) =>
+    path?.startsWith(root) ? path.slice(root.length).split('/')[0] : undefined
+  const project = labels['com.docker.compose.project']
+  // Where its Compose file is, what it mounts, then its project: one named with -p is not the thread's.
+  const thread =
+    inThread(labels['com.docker.compose.project.working_dir']) ??
+    mounts.map((m) => (m.Type === 'bind' ? inThread(m.Source) : undefined)).find(Boolean) ??
+    (project && /^t[a-z0-9]+$/.test(project) ? project : undefined)
+  return {
+    id: c.Id,
+    running: Boolean(c.State?.Running),
+    ...(thread ? { thread } : {}),
+    volumes: mounts.filter((m) => m.Type === 'volume' && m.Name).map((m) => m.Name!),
+  }
+}
+
+/** Whether a container's thread is this one: its Compose project, or its folder's name. */
+const ofThread = (container: Container, sessionId: string) =>
+  container.thread === sessionId || container.thread === composeProject(sessionId)
+
+/**
+ * Stop the running containers of the threads `quiet` says may lose them.
+ * Resolves to those threads, by the id `quiet` was asked about.
+ */
+export async function stopQuiet(
+  user: string,
+  sessionIds: string[],
+  quiet: (sessionId: string) => boolean,
+): Promise<string[]> {
+  const dockerCli = await docker(user)
+  if (!dockerCli) return []
+  const running = await containers(dockerCli, user, false)
+  const stopped: string[] = []
+  for (const sessionId of sessionIds) {
+    if (!quiet(sessionId)) continue
+    const ids = running.filter((c) => ofThread(c, sessionId)).map((c) => c.id)
+    if (ids.length === 0) continue
+    await dockerCli('stop', ...ids)
+    stopped.push(sessionId)
+    console.log(`stopped ${ids.length} container(s) of quiet thread ${sessionId} for ${user}`)
+  }
+  return stopped
+}
+
+/**
+ * Remove a thread's containers and their volumes (its databases among them):
+ * its folder is archived, and the teammate sets them up again when it is back.
+ */
+export async function removeFor(user: string, sessionId: string) {
+  const dockerCli = await docker(user)
+  if (!dockerCli) return
+  const mine = (await containers(dockerCli, user, true)).filter((c) => ofThread(c, sessionId))
+  if (mine.length > 0) await dockerCli('rm', '--force', '--volumes', ...mine.map((c) => c.id))
+  const project = await dockerCli(
+    'volume',
+    'ls',
+    '-q',
+    '--filter',
+    `label=com.docker.compose.project=${composeProject(sessionId)}`,
+  )
+  const volumes = new Set([...mine.flatMap((c) => c.volumes), ...project.split('\n')])
+  // A volume another container still uses (one shared before threads had their own projects) stays.
+  for (const volume of [...volumes].filter(Boolean))
+    await dockerCli('volume', 'rm', volume).catch(() => undefined)
+  if (mine.length > 0)
+    console.log(`removed ${mine.length} container(s) of archived thread ${sessionId} for ${user}`)
+}
+
+/**
+ * Free disk in the teammate's Docker: images, networks, volumes and build
+ * cache no container uses. Stopped containers keep theirs.
+ */
+export async function prune(user: string) {
+  const dockerCli = await docker(user)
+  if (!dockerCli) return
+  const report = await dockerCli('system', 'prune', '--all', '--force', '--volumes')
+  const freed = report.match(/Total reclaimed space: (.+)$/m)?.[1]
+  if (freed) console.log(`pruned ${user}'s Docker: ${freed}`)
+}

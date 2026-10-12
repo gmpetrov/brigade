@@ -54,7 +54,7 @@ export class Terminals {
     ])
     const history = `${teammateHome(user)}/.brigade-history/${terminalId}`
     const env = harnessEnv({
-      ...(await containerEnv(user)),
+      ...(await containerEnv(user, spec.sessionId)),
       HOME: teammateHome(user),
       USER: user,
       LOGNAME: user,

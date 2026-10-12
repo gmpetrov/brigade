@@ -31,12 +31,29 @@ export const ensureUser = (user: string) => helper('ensure-user', user)
 const containers = new Map<string, Promise<Record<string, string>>>()
 
 /**
+ * Docker Compose names a project after its folder, so every thread's checkout
+ * of a repository would share one: its containers and its database volume.
+ * One project per thread instead.
+ */
+export const composeProject = (sessionId: string) =>
+  `t${sessionId.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+
+/**
+ * The environment a teammate's processes in a thread get: its own Docker
+ * (see dockerEnv), with the thread's Compose project.
+ */
+export async function containerEnv(user: string, sessionId: string) {
+  const env = await dockerEnv(user)
+  return env.DOCKER_HOST ? { ...env, COMPOSE_PROJECT_NAME: composeProject(sessionId) } : env
+}
+
+/**
  * Where the teammate's own rootless Docker answers (the helper starts it once
  * under the teammate's user session), as the environment its processes get:
  * `docker` and `docker compose` then work for it alone. {} where the
  * computer has none; tried again on the next call after a failure.
  */
-export function containerEnv(user: string): Promise<Record<string, string>> {
+export function dockerEnv(user: string): Promise<Record<string, string>> {
   let env = containers.get(user)
   if (!env) {
     env = run('sudo', ['-n', HELPER, 'containers', user], { cwd: '/', timeout: 120_000 }).then(

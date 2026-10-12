@@ -647,7 +647,10 @@ export class HarnessThread {
   private async attach(): Promise<Live> {
     if (this.live) return this.live
     const account = this.spec.account
-    const env = { ...(await prepare(this.workDir, account, this.runAs)), ...gitEnv(this.spec.git) }
+    const env = {
+      ...(await prepare(this.workDir, account, this.spec.sessionId, this.runAs)),
+      ...gitEnv(this.spec.git),
+    }
     // On a cloud computer the teammate has its own browser, signed in where a person signed it in.
     // Why it did not start goes to the teammate too, which tells the person.
     let browserError: string | undefined
@@ -822,7 +825,7 @@ export class HarnessThread {
  * The working directory and harness environment for an account: on a cloud
  * computer the teammate's own Linux user, home and private config directory.
  */
-async function prepare(workDir: string, account: AccountRef, runAs?: string) {
+async function prepare(workDir: string, account: AccountRef, sessionId: string, runAs?: string) {
   if (!runAs) {
     await mkdir(workDir, { recursive: true })
     return harnessEnv(accountEnv(account))
@@ -833,7 +836,7 @@ async function prepare(workDir: string, account: AccountRef, runAs?: string) {
   return harnessEnv({
     ...(await linkAccount(runAs, account)),
     ...accountToken(account),
-    ...(await containerEnv(runAs)),
+    ...(await containerEnv(runAs, sessionId)),
     HOME: home,
     USER: runAs,
     LOGNAME: runAs,
@@ -931,7 +934,7 @@ export async function runOnce(input: {
   signal: AbortSignal
 }): Promise<string> {
   const { spec, workDir, runAs } = input
-  const env = await prepare(workDir, spec.account, runAs)
+  const env = await prepare(workDir, spec.account, spec.sessionId, runAs)
   const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
   const agent = new HarnessAgent({

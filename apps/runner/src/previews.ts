@@ -582,7 +582,7 @@ export class Previews {
     const env = harnessEnv({
       ...(seat.runAs
         ? {
-            ...(await containerEnv(seat.runAs)),
+            ...(await containerEnv(seat.runAs, seat.sessionId)),
             HOME: teammateHome(seat.runAs),
             USER: seat.runAs,
             LOGNAME: seat.runAs,

@@ -443,6 +443,14 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   archive; the teammate's next turn fetches the caches its checkouts borrow from if they were swept, and is told to
   reinstall dependencies. A folder that cannot be put back stops the turn rather than start over in an empty one.
   Disk then grows with the threads active at once, not with all threads.
+- **Containers by thread** (`apps/runner/src/containers.ts`, cloud computers). Each teammate's rootless Docker is shared
+  by its threads, so each thread gets its own Compose project (`COMPOSE_PROJECT_NAME=t<thread id>`, for the harness,
+  previews and takeover terminals): two threads on one repository no longer share containers or a database volume. A
+  container belongs to the thread whose folder holds its Compose file or is mounted into it, or whose project it is.
+  On the same 5-minute check, the running containers of threads quiet for an hour (and not in use) are stopped, data
+  kept, and the teammate's next turn is told to start them again. Archiving a thread's folder first removes its
+  containers and their volumes. When the disk is full, each teammate's Docker is pruned (`docker system prune --all
+--volumes`: what no container uses) before any folder is archived.
 - **Root setup on cloud computers.** The helper and the library folder are one versioned setup script
   (`setupScript` in `cloud-bootstrap.ts`). A cloud runner reports the setup it has on connect; the API reapplies the
   current one through the provider when they differ. This replaces reinstalling the helper by hand.

@@ -14,6 +14,7 @@ import { finished } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
 import type { GitAccess } from '@brigade/contracts'
 import { CLOUD } from './config.js'
+import { prune, removeFor, stopQuiet } from './containers.js'
 import { owners, repairCaches, run } from './repos.js'
 import { teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
@@ -32,10 +33,14 @@ const TOO_LARGE_RETRY_MS = 24 * 60 * 60_000
 const FAILED_RETRY_MS = 60 * 60_000
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
 
-const NOTE =
+const RESTORED =
   "Note from Brigade: this thread's folder was archived to free disk on this computer and has just been put back. " +
   'Your files, checkouts and uncommitted work are as you left them, but folders git ignores (dependencies, ' +
-  'build output, local databases) and node_modules folders are gone: reinstall or rebuild what you need before running anything.'
+  'build output, local databases) and node_modules folders are gone, and so are the containers and Docker volumes ' +
+  'this thread had: reinstall, rebuild or start again what you need before running anything.'
+const STOPPED =
+  'Note from Brigade: the containers this thread started were stopped while it was quiet, to free the computer. ' +
+  'Their data is kept: start them again (docker compose up -d, say) if you need them.'
 
 export type FolderName = { sessionId: string; teammateId: string }
 
@@ -53,6 +58,8 @@ type State = {
   active: Record<string, number>
   /** Folders put back whose teammate has not been told yet, nor its caches fetched again. */
   restored: string[]
+  /** Folders whose thread's containers were stopped, whose teammate has not been told yet. */
+  stopped: string[]
   /** Folders that could not be archived, and when to try again. */
   retryAt: Record<string, number>
 }
@@ -60,7 +67,7 @@ type State = {
 const z = (output: Buffer) => output.toString().split('\0').filter(Boolean)
 
 export class Folders {
-  private state: State = { active: {}, restored: [], retryAt: {} }
+  private state: State = { active: {}, restored: [], stopped: [], retryAt: {} }
   private loaded: Promise<void>
   /** Work on a folder (archiving it, putting it back), one at a time per folder. */
   private locks = new Map<string, Promise<unknown>>()
@@ -84,6 +91,7 @@ export class Folders {
         this.state = {
           active: { ...saved.active, ...this.state.active },
           restored: saved.restored ?? [],
+          stopped: saved.stopped ?? [],
           retryAt: saved.retryAt ?? {},
         }
       },
@@ -140,31 +148,65 @@ export class Folders {
   }
 
   /**
-   * For a teammate's turn in a folder just put back: fetch the caches its
-   * checkouts borrow from again, and what to tell it. Once.
+   * For a teammate's turn: what to tell it about its folder put back or its
+   * containers stopped, once. A folder put back gets the caches its checkouts
+   * borrow from fetched again.
    */
   async takeNote(name: FolderName, git: GitAccess | undefined) {
     if (!CLOUD) return undefined
     await this.loaded
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
-    if (!this.state.restored.includes(workDir)) return undefined
-    if (git) await repairCaches(workDir, git, runAs)
+    const restored = this.state.restored.includes(workDir)
+    const stopped = this.state.stopped.includes(workDir)
+    if (!restored && !stopped) return undefined
+    if (restored && git) await repairCaches(workDir, git, runAs)
     this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
+    this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
     this.save()
-    return NOTE
+    return restored ? RESTORED : STOPPED
   }
 
-  /** The disk is full: archive the folders of the threads quiet longest until it is not. */
+  /**
+   * Stop the containers of threads gone quiet. When the disk is full, prune
+   * what Docker keeps for nothing, then archive the folders of the threads
+   * quiet longest until it is not.
+   */
   async check() {
-    if (this.checking || (await usage()) < FULL) return
+    if (this.checking) return
     this.checking = true
     try {
       await this.loaded
       const now = Date.now()
-      for (const candidate of await this.candidates()) {
+      const candidates = await this.candidates()
+      const quiet = (c: (typeof candidates)[number]) =>
+        now - c.active >= MIN_QUIET_MS && !this.options.inUse(c.name.sessionId)
+      for (const runAs of new Set(candidates.map((c) => c.runAs))) {
+        const mine = candidates.filter((c) => c.runAs === runAs)
+        const stopped = await stopQuiet(
+          runAs,
+          mine.map((c) => c.name.sessionId),
+          (sessionId) => mine.some((c) => c.name.sessionId === sessionId && quiet(c)),
+        ).catch((error) => {
+          console.warn(`could not stop quiet containers for ${runAs}: ${String(error)}`)
+          return []
+        })
+        for (const sessionId of stopped) {
+          const workDir = mine.find((c) => c.name.sessionId === sessionId)!.workDir
+          if (!this.state.stopped.includes(workDir)) this.state.stopped.push(workDir)
+          this.save()
+        }
+      }
+
+      if ((await usage()) < FULL) return
+      for (const runAs of await owners())
+        if (runAs)
+          await prune(runAs).catch((error) =>
+            console.warn(`could not prune ${runAs}'s Docker: ${String(error)}`),
+          )
+      for (const candidate of candidates) {
         if ((await usage()) < ENOUGH) break
         if (now - candidate.active < MIN_QUIET_MS) break
-        if (this.options.inUse(candidate.name.sessionId)) continue
+        if (!quiet(candidate)) continue
         if (now < (this.state.retryAt[candidate.workDir] ?? 0)) continue
         await this.archive(candidate).catch((error) => {
           this.retry(candidate.workDir, FAILED_RETRY_MS)
@@ -219,6 +261,8 @@ export class Folders {
         this.options.inUse(name.sessionId) ||
         Date.now() - (this.state.active[workDir] ?? 0) < MIN_QUIET_MS
       if (used() || !(await exists(workDir, runAs))) return
+      // Its containers first: one writing into the folder would change it while it is packed.
+      await removeFor(runAs, name.sessionId)
       const file = await this.tempFile()
       try {
         const size = await pack(workDir, file, runAs)
@@ -235,6 +279,7 @@ export class Folders {
         await run('rm', ['-rf', '--', workDir], { runAs })
         delete this.state.active[workDir]
         delete this.state.retryAt[workDir]
+        this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
         this.save()
         console.log(`archived ${workDir} (${size} bytes) to free disk`)
       } finally {
