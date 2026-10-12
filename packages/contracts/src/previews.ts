@@ -2,6 +2,7 @@
 // person opens from the dashboard to try what the teammate built. The runner
 // keeps the process; the API hands out the address people open it at.
 import { z } from 'zod'
+import { RepositoryName } from './repositories.js'
 
 /** Runners from this protocol version on run previews. */
 export const PREVIEW_PROTOCOL = 14
@@ -62,11 +63,6 @@ export type PreviewView = z.infer<typeof PreviewView>
 
 /** An environment variable's name. */
 const EnvName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'An environment variable name')
-
-/** owner/name of a GitHub repository. */
-export const RepositoryName = z
-  .string()
-  .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, 'A repository as owner/name')
 
 /**
  * How a repository's preview starts, saved by a teammate once it passed its
