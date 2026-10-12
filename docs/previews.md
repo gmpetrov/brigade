@@ -45,10 +45,13 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   query failed. Once the app answers, `start_preview` opens its `paths` (default
   `/`) with the computer's Chrome, at the address people open with its token
   (`preview.expose` with `token`), as the teammate (`preview-check.ts`). Per
-  page: its status, blank (under 20 characters of text and nothing drawn),
+  page: its status, blank (no text and nothing drawn), an empty body inside its
+  header and menu (nothing below the top 12% or right of the left 10% while
+  something is there; it looks again for 8 seconds, for a CAPTCHA or slow data),
   script errors, the page's own 5xx requests, a screenshot; plus the lines the
   app logged meanwhile that look like errors. Console errors (hydration
-  warnings) are warnings, not failures. `check_preview` runs it again.
+  warnings) are warnings, not failures. `check_preview` runs it again. A page meant to look
+  empty is saved with `save_preview({ reason })` after the teammate looked at it.
 - **Set up in `start_preview`, saved per repository.** What a preview needs goes
   in the tool, not the teammate's shell, so it can be kept: `setup` (install,
   `docker compose up -d`, migrate, seed; its own `sh -e`, run on each start but

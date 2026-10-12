@@ -95,8 +95,8 @@ export type PreviewControl = {
   start(input: PreviewStart, signal?: AbortSignal): Promise<PreviewResult>
   /** Open these paths as a person would and say what is wrong with them. */
   check(paths: string[]): Promise<PreviewCheck>
-  /** Save the running preview, whose check passed, as its repository's recipe. */
-  save(): Promise<{ repository: string; recipe: PreviewRecipe }>
+  /** Save the running preview as its repository's recipe: once its check passed, or with why what it found is expected. */
+  save(reason?: string): Promise<{ repository: string; recipe: PreviewRecipe }>
   /** A repository's saved recipe, and its checkout here; null when none is saved. */
   saved(repository: string): Promise<SavedPreview | null>
   stop(): Promise<{ stopped: boolean }>
@@ -196,7 +196,7 @@ export class Previews {
     return {
       start: (input, signal) => this.start(seat, input, signal),
       check: (paths) => this.check(seat, paths),
-      save: () => this.save(seat),
+      save: (reason) => this.save(seat, reason),
       saved: (repository) => this.saved(seat, repository),
       stop: async () => ({
         stopped: await this.stop(seat.sessionId, 'Stopped by the teammate'),
@@ -269,13 +269,14 @@ export class Previews {
   }
 
   /** The running preview as its repository's recipe, saved through the API. Only once its check passed. */
-  async save(seat: Seat) {
+  async save(seat: Seat, reason?: string) {
     const preview = this.previews.get(seat.sessionId)
     if (!preview || preview.info.status !== 'running')
       throw new Error('No preview is running: start it with start_preview first')
-    if (!preview.checked)
+    if (!preview.checked && !reason?.trim())
       throw new Error(
-        'Its last check did not pass, or it was not checked: fix what check_preview finds, then save it',
+        'Its last check did not pass, or it was not checked: fix what check_preview finds, then save it ' +
+          '(or, if a page is meant to look that way, save it with the reason)',
       )
     const found = await repositoryOf(preview.dir, seat.runAs)
     if (!found)

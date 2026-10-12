@@ -1020,7 +1020,7 @@ export type PreviewTools = {
     }[]
     serverErrors: string[]
   }>
-  save(): Promise<{ repository: string; recipe: unknown }>
+  save(reason?: string): Promise<{ repository: string; recipe: unknown }>
   saved(repository: string): Promise<{
     recipe: {
       setup?: string
@@ -1236,10 +1236,19 @@ export function previewTools(
       description:
         "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check) as its " +
         "repository's preview, so a later thread starts it in one step with start_preview({ repository }). " +
-        'Only once its check passes. Saving again replaces it. Secrets go in credentials, never in env.',
-      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
-      execute: async () => {
-        const { repository } = await previews.save()
+        'Only once its check passes, unless what it found is expected: then look at the screenshots and give the ' +
+        '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets go in credentials, never in env.',
+      inputSchema: jsonSchema<{ reason?: string }>({
+        type: 'object',
+        properties: {
+          reason: {
+            type: 'string',
+            description: 'Why what the last check found is expected, when it did not pass',
+          },
+        },
+      }),
+      execute: async (input) => {
+        const { repository } = await previews.save(input.reason)
         return {
           saved: true,
           repository,
