@@ -248,8 +248,8 @@ importers:
         specifier: 3.27.0
         version: 3.27.0
       diff:
-        specifier: 8.0.2
-        version: 8.0.2
+        specifier: 9.0.0
+        version: 9.0.0
       lucide-react:
         specifier: 0.545.0
         version: 0.545.0(react@19.3.0)
@@ -4435,8 +4435,8 @@ packages:
       dequal: 2.0.3
     dev: false
 
-  /diff@8.0.2:
-    resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
+  /diff@9.0.0:
+    resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
     engines: {node: '>=0.3.1'}
     dev: false
 
