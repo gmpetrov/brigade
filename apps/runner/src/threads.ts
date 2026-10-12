@@ -18,6 +18,7 @@ import {
   type ThreadSpec,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
+import type { Folders } from './folders.js'
 import type { Previews } from './previews.js'
 import { memoryPrompt, parseMemory } from './memory.js'
 import { CLOUD, paths } from './config.js'
@@ -169,6 +170,8 @@ export class Threads {
       context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule' | 'preview'>
       /** Apps teammates run for people to try, one per thread. */
       previews: Previews
+      /** Thread folders archived to free disk: put back before a turn. */
+      folders: Pick<Folders, 'ready' | 'takeNote' | 'touch'>
       callLibrary: (
         sessionId: string,
         teammateId: string,
@@ -545,10 +548,30 @@ export class Threads {
         const controller = new AbortController()
         thread.controller = controller
         thread.running = { teammateId: me, turnId }
+        const name = { sessionId: spec.sessionId, teammateId: me }
+        try {
+          await this.options.folders.ready(name)
+        } catch (error) {
+          this.options.emit(spec.sessionId, {
+            at: new Date().toISOString(),
+            type: 'raw',
+            source: 'runner',
+            value: `Could not put ${spec.teammate.name}'s files for this thread back on this computer, so its turn did not start (${String(error)}). Send a message to try again.`,
+          })
+          return
+        }
         await this.placeFiles(spec, seat.folder)
         const turn =
           input === 'prompt'
-            ? { kind: 'prompt' as const, text: await this.catchUp(spec, upTo) }
+            ? {
+                kind: 'prompt' as const,
+                text: [
+                  await this.options.folders.takeNote(name, spec.git),
+                  await this.catchUp(spec, upTo),
+                ]
+                  .filter(Boolean)
+                  .join('\n\n'),
+              }
             : input.kind === 'lost'
               ? await this.pickUp(spec, seat, input)
               : input
@@ -591,6 +614,7 @@ export class Threads {
         console.error(`thread ${spec.sessionId}: turn failed`, error)
       } finally {
         started()
+        this.options.folders.touch({ sessionId: spec.sessionId, teammateId: me })
         if (thread.running?.turnId === turnId) {
           thread.running = undefined
           thread.controller = undefined

@@ -3,7 +3,11 @@
 //
 //   brigade-runner link <code> [--api <url>] [--name <name>]
 //   brigade-runner [start] [--concurrency <n>]
+import { createReadStream, createWriteStream } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -13,6 +17,7 @@ import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
 import { readThreadFile } from './files.js'
+import { Folders, type FolderName } from './folders.js'
 import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
@@ -129,6 +134,83 @@ async function start() {
       return Buffer.from(await response.arrayBuffer())
     },
   }
+  // Thread folders archived to free disk, in the API's bucket until their thread comes back.
+  // The bytes go straight to and from R2 through signed URLs.
+  const folderRequest = async (f: FolderName, path: string, init: RequestInit = {}) => {
+    const url = new URL(
+      `/runner/folders/${encodeURIComponent(f.sessionId)}/${encodeURIComponent(f.teammateId)}${path}`,
+      config.apiUrl,
+    )
+    return fetch(url, {
+      ...init,
+      // A signed URL it redirects to is followed without the runner's token.
+      redirect: 'manual',
+      headers: { authorization: `Bearer ${config.token}`, ...init.headers },
+    })
+  }
+  const refused = (what: string, response: Response) =>
+    new Error(`the ${what} refused the folder archive (${response.status})`)
+  const sizeBody = (size: number): RequestInit => ({
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ size }),
+  })
+  const fileBody = (file: string) =>
+    ({
+      body: Readable.toWeb(createReadStream(file)) as ReadableStream,
+      duplex: 'half',
+    }) as RequestInit
+  const folders = new Folders({
+    archives: {
+      put: async (f, file, size) => {
+        const ticket = await folderRequest(f, '/upload', sizeBody(size))
+        if (!ticket.ok) throw refused('API', ticket)
+        const { url, headers } = (await ticket.json()) as {
+          url: string | null
+          headers?: Record<string, string>
+        }
+        const length = { 'content-length': String(size) }
+        const upload = url
+          ? await fetch(url, {
+              method: 'PUT',
+              ...fileBody(file),
+              headers: { ...headers, ...length },
+            })
+          : await folderRequest(f, '', {
+              method: 'PUT',
+              ...fileBody(file),
+              headers: { 'content-type': 'application/gzip', ...length },
+            })
+        if (!upload.ok) throw refused(url ? 'bucket' : 'API', upload)
+        // The API checks the bucket has all of it before the folder is removed.
+        const done = await folderRequest(f, '/done', sizeBody(size))
+        if (!done.ok) throw refused('API', done)
+      },
+      get: async (f, file) => {
+        let response = await folderRequest(f, '')
+        const location = response.headers.get('location')
+        if (response.status >= 300 && response.status < 400 && location)
+          response = await fetch(location)
+        if (response.status === 404) return false
+        if (!response.ok || !response.body) throw refused('API', response)
+        await pipeline(
+          Readable.fromWeb(response.body as NodeReadableStream),
+          createWriteStream(file, { mode: 0o600 }),
+        )
+        return true
+      },
+      delete: async (f) => {
+        const response = await folderRequest(f, '', { method: 'DELETE' })
+        if (!response.ok) throw refused('API', response)
+      },
+    },
+    inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
+    stateFile: join(paths.state, 'folders.json'),
+    tempDir: join(paths.state, 'folder-archives'),
+  })
+  // Before a thread's folder is used outside a turn: put back when it was archived.
+  const folderReady = (sessionId: string, teammateIds: string[]) =>
+    Promise.all(teammateIds.map((teammateId) => folders.ready({ sessionId, teammateId })))
   let connection: Connection
   // A call waiting for a person shows as an approval in its thread, then as the decision.
   const approvalHooks = (
@@ -177,6 +259,7 @@ async function start() {
   const threads = new Threads({
     concurrency: Number(values.concurrency),
     previews,
+    folders,
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     // Connector calls go to the API. A write waiting for a person shows as an approval in the thread.
     callConnector: (sessionId, teammateId, call) =>
@@ -262,14 +345,26 @@ async function start() {
         }
         return
       case 'thread.takeover':
-        return threads.takeover(message.thread, message.memberId, message.interrupt)
+        return folderReady(message.thread.sessionId, [message.thread.teammate.id])
+          .catch((error) =>
+            console.warn(`could not put the thread's folder back: ${String(error)}`),
+          )
+          .then(() => threads.takeover(message.thread, message.memberId, message.interrupt))
       case 'thread.handback':
         return threads.handback(message.thread, message.memberId, message.note, (since) =>
           changedFilesSince(message.thread, since),
         )
       case 'terminal.open':
-        return terminals
-          .start(message.terminalId, message.thread, message.memberId, message.cols, message.rows)
+        return folderReady(message.thread.sessionId, [message.thread.teammate.id])
+          .then(() =>
+            terminals.start(
+              message.terminalId,
+              message.thread,
+              message.memberId,
+              message.cols,
+              message.rows,
+            ),
+          )
           .catch((error) => {
             connection.send({
               type: 'terminal.output',
@@ -326,22 +421,24 @@ async function start() {
           .restart(message.sessionId)
           .catch((error) => console.warn(`preview restart failed: ${String(error)}`))
       case 'preview.start':
-        return previews.startFor(message.sessionId, message.teammateIds, message.repository).then(
-          (result) =>
-            connection.send({
-              type: 'preview.start.result',
-              requestId: message.requestId,
-              ok: true,
-              result,
-            }),
-          (error: unknown) =>
-            connection.send({
-              type: 'preview.start.result',
-              requestId: message.requestId,
-              ok: false,
-              error: error instanceof Error ? error.message : String(error),
-            }),
-        )
+        return folderReady(message.sessionId, message.teammateIds)
+          .then(() => previews.startFor(message.sessionId, message.teammateIds, message.repository))
+          .then(
+            (result) =>
+              connection.send({
+                type: 'preview.start.result',
+                requestId: message.requestId,
+                ok: true,
+                result,
+              }),
+            (error: unknown) =>
+              connection.send({
+                type: 'preview.start.result',
+                requestId: message.requestId,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+          )
       case 'preview.logs':
         try {
           return connection.send({
@@ -363,16 +460,18 @@ async function start() {
       case 'library.changed':
         return library.sync()
       case 'thread.file.read':
-        return readThreadFile(message).then(
-          (result) => connection.send(result),
-          (error) =>
-            connection.send({
-              type: 'thread.file.result',
-              requestId: message.requestId,
-              ok: false,
-              error: String(error),
-            }),
-        )
+        return folderReady(message.sessionId, message.teammateIds)
+          .then(() => readThreadFile(message))
+          .then(
+            (result) => connection.send(result),
+            (error) =>
+              connection.send({
+                type: 'thread.file.result',
+                requestId: message.requestId,
+                ok: false,
+                error: String(error),
+              }),
+          )
       case 'browser.open':
         if (!CLOUD) return
         return ensureBrowser(
@@ -427,6 +526,8 @@ async function start() {
     )
   setTimeout(sweepRepos, 10 * 60_000).unref()
   setInterval(sweepRepos, 6 * 60 * 60_000).unref()
+  // On a cloud computer, archive the folders of the threads quiet longest when the disk fills up.
+  folders.start()
 
   const shutdown = async () => {
     console.log('stopping: saving thread state')

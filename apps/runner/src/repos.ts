@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process'
 import { readdir } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import type { Readable, Writable } from 'node:stream'
 import type { GitAccess, ThreadSpec } from '@brigade/contracts'
 import { CLOUD, HOME } from './config.js'
 import { harnessEnv } from './harness/env.js'
@@ -69,6 +70,10 @@ type Run = {
   runAs?: string | undefined
   env?: Record<string, string>
   input?: Buffer
+  /** Fed to stdin instead of `input`, e.g. a file too large to hold in memory. */
+  stdin?: Readable
+  /** Where stdout goes instead of the result, e.g. a file. Ended with it. */
+  stdout?: Writable
   timeout?: number
 }
 
@@ -76,7 +81,7 @@ type Run = {
  * Run a command as the teammate's user (sudo -E: the environment, and the token
  * in it, stay off the command line). Resolves to its stdout; rejects with its stderr.
  */
-function run(file: string, args: string[], options: Run = {}): Promise<Buffer> {
+export function run(file: string, args: string[], options: Run = {}): Promise<Buffer> {
   const { runAs } = options
   const env = harnessEnv({
     ...options.env,
@@ -91,7 +96,8 @@ function run(file: string, args: string[], options: Run = {}): Promise<Buffer> {
     const out: Buffer[] = []
     let err = ''
     const timer = setTimeout(() => child.kill('SIGTERM'), options.timeout ?? GIT_TIMEOUT_MS)
-    child.stdout.on('data', (d: Buffer) => out.push(d))
+    if (options.stdout) child.stdout.pipe(options.stdout)
+    else child.stdout.on('data', (d: Buffer) => out.push(d))
     child.stderr.on('data', (d: Buffer) => (err = (err + d.toString()).slice(-20_000)))
     child.on('error', reject)
     child.on('close', (code) => {
@@ -103,7 +109,10 @@ function run(file: string, args: string[], options: Run = {}): Promise<Buffer> {
       )
       reject(Object.assign(new Error(message), { code, stdout: Buffer.concat(out) }))
     })
-    child.stdin.end(options.input)
+    // A command that stops reading early is no failure of the writer's.
+    child.stdin.on('error', () => undefined)
+    if (options.stdin) options.stdin.pipe(child.stdin)
+    else child.stdin.end(options.input)
   })
 }
 
@@ -449,8 +458,52 @@ export async function prefetch(
   }
 }
 
+/**
+ * A thread folder put back from its archive: its checkouts borrow objects from
+ * the teammate's caches, which may have been swept meanwhile. Fetch those again.
+ */
+export async function repairCaches(workDir: string, access: GitAccess, runAs?: string) {
+  const markers = await findAs(runAs, [
+    workDir,
+    '-maxdepth',
+    '4',
+    '-name',
+    'node_modules',
+    '-prune',
+    '-o',
+    '-name',
+    '.git',
+    '-type',
+    'd',
+    '-print',
+  ])
+  for (const marker of markers) {
+    const alternates = (
+      await run('cat', [`${marker}/objects/info/alternates`], { runAs }).catch(() =>
+        Buffer.alloc(0),
+      )
+    )
+      .toString()
+      .split('\n')
+      .map((line) => line.trim().replace(/\/objects\/?$/, ''))
+      .filter(Boolean)
+    for (const cache of alternates) {
+      if (await succeeds(run('test', ['-d', cache], { runAs }))) continue
+      try {
+        const url = await git(['-C', marker, 'ls-remote', '--get-url', 'origin'], access, runAs)
+        if (!url.startsWith(access.url)) continue
+        const repository = url.slice(access.url.length).replace(/\.git$/, '')
+        if (!REPO.test(repository) || cachePath(repository.toLowerCase(), runAs) !== cache) continue
+        await refreshCache(cache, `${access.url}${repository}.git`, access, runAs)
+      } catch (error) {
+        console.warn(`could not fetch ${cache} again for ${marker}: ${message(error)}`)
+      }
+    }
+  }
+}
+
 /** The teammate users on this cloud computer, or one entry for this machine's own user. */
-async function owners(): Promise<(string | undefined)[]> {
+export async function owners(): Promise<(string | undefined)[]> {
   if (!CLOUD) return [undefined]
   const names = await readdir('/home').catch(() => [] as string[])
   return names.filter((n) => /^bt-[a-z0-9]{1,28}$/.test(n))

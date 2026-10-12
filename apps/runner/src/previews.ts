@@ -225,6 +225,11 @@ export class Previews {
     return this.previews.size
   }
 
+  /** The thread's preview is running or starting. */
+  has(sessionId: string) {
+    return this.previews.has(sessionId)
+  }
+
   /** A seat's preview tools: its thread's preview, as its teammate. */
   forSeat(seat: Seat): PreviewControl {
     return {

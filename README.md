@@ -431,6 +431,18 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   lacks: no changes or untracked files (`git --no-optional-locks status`, so looking does not refresh the index), no
   stash, no commit outside the remote branches. Then caches no remaining checkout borrows from, untouched for 30 days.
   A thread that comes back checks its repository out again and continues its branch or backup.
+- **Thread folders as a cache** (`apps/runner/src/folders.ts`, cloud computers, every 5 minutes). Threads never end,
+  so a computer cannot wait for them to: once `/home` is 80% full (space or inodes), the runner archives the folders
+  of the threads quiet longest (none active in the last hour, in use, or with a preview) until it is down to 65%. The
+  archive keeps each git repository's `.git` and every file but those in folders git ignores (`.env` stays;
+  `node_modules`, `dist`, `.venv`, `target` go), and everything outside repositories but `node_modules`. It is written
+  to a file and streamed to R2 through a signed URL (`POST /runner/folders/<thread>/<teammate>/upload`, up to 4 GB;
+  through the API up to 200 MB without R2), and the folder is removed only once `…/done` finds all of it in the
+  bucket. Going back, `GET` redirects to a signed URL and the runner streams it to a file. Whatever next needs it (a turn, a
+  preview started from the dashboard, a takeover, a terminal, a file read) puts it back first and deletes the
+  archive; the teammate's next turn fetches the caches its checkouts borrow from if they were swept, and is told to
+  reinstall dependencies. A folder that cannot be put back stops the turn rather than start over in an empty one.
+  Disk then grows with the threads active at once, not with all threads.
 - **Root setup on cloud computers.** The helper and the library folder are one versioned setup script
   (`setupScript` in `cloud-bootstrap.ts`). A cloud runner reports the setup it has on connect; the API reapplies the
   current one through the provider when they differ. This replaces reinstalling the helper by hand.

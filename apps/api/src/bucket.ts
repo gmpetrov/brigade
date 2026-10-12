@@ -74,6 +74,13 @@ export function repoBackupKey(
   return `${scope.organizationId}/${scope.workspaceId}/repos/${owner}/${name}/${backup.sessionId}/${backup.teammateId}/${backup.folder}.bundle`
 }
 
+/** The bucket key of a thread folder a computer cleared to free disk, kept until the thread comes back. */
+export function folderArchiveKey(scope: Scope, folder: { sessionId: string; teammateId: string }) {
+  for (const part of [scope.organizationId, scope.workspaceId, folder.sessionId, folder.teammateId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/folders/${folder.sessionId}/${folder.teammateId}.tar.gz`
+}
+
 const url = (key: string) => `${r2!.base}/${key.split('/').map(encodeURIComponent).join('/')}`
 
 /** Browsers can upload straight to the bucket: only with R2, not the local stand-in. */
