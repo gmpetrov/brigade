@@ -3,6 +3,9 @@ import {
   Choices,
   choiceMessage,
   DESIGN_THUMBNAIL,
+  designOptionsOf,
+  pickedChoice,
+  pickedDesignPath,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -483,8 +486,8 @@ export function ThreadItems({
   onApproval: (approvalId: string, approved: boolean, always?: boolean) => void
   onAnswer: (questionId: string, answer: QuestionAnswer) => Promise<void>
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
-  /** Sends a choice someone clicked as their message. Unset when they cannot send one now. */
-  onChoose?: (text: string) => Promise<void>
+  /** Sends a choice someone clicked as their message, with the option's design it picks. Unset when they cannot send one now. */
+  onChoose?: (text: string, pick?: string) => Promise<void>
   canApprove: boolean
   /** Unset when this member cannot take over the computer (a member's own machine, another in control). */
   takeover?: TicketTakeover
@@ -1627,14 +1630,14 @@ function ChoicesCard({
   choices: Choices
   /** The next message in the thread, if there is one. */
   reply?: string
-  onChoose?: (text: string) => Promise<void>
+  onChoose?: (text: string, pick?: string) => Promise<void>
 }) {
   const links = useFileLinks()
   const designs = choices.options.some((o) => o.design)
   const library = useApi<LibraryFile[]>(designs ? '/library' : null)
   const [sending, setSending] = useState<string>()
   const [error, setError] = useState<string>()
-  const picked = choices.options.find((o) => reply === choiceMessage(o))
+  const picked = reply === undefined ? undefined : pickedChoice(choices.options, reply)
   const open = reply === undefined && !!onChoose && !sending
 
   async function choose(option: Choices['options'][number]) {
@@ -1642,7 +1645,11 @@ function ChoicesCard({
     setSending(option.id)
     setError(undefined)
     try {
-      await onChoose(choiceMessage(option))
+      // A design from an options folder becomes the design: the message says where.
+      const design = option.design?.replace(/\/+$/, '')
+      const options = design && designOptionsOf(design)
+      if (options) await onChoose(choiceMessage(option, pickedDesignPath(options)), design)
+      else await onChoose(choiceMessage(option))
     } catch (e) {
       setError((e as Error).message)
       setSending(undefined)
@@ -1669,10 +1676,14 @@ function ChoicesCard({
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {choices.options.map((o) => {
-          const design = o.design?.replace(/\/+$/, '')
+          const offered = o.design?.replace(/\/+$/, '')
+          const chosen = picked?.id === o.id || sending === o.id
+          // Once picked, an option from an options folder is the design; the rest are in the trash.
+          const options = offered && designOptionsOf(offered)
+          const design = options && picked?.id === o.id ? pickedDesignPath(options) : offered
           const thumbnail =
             design && library.data?.find((f) => f.path === `${design}/${DESIGN_THUMBNAIL}`)
-          const chosen = picked?.id === o.id || sending === o.id
+          const trashed = !!options && !!picked && picked.id !== o.id
           return (
             <li
               key={o.id}
@@ -1682,7 +1693,12 @@ function ChoicesCard({
                 picked && !chosen && 'opacity-60',
               )}
             >
-              {design && (
+              {design && trashed && (
+                <span className="flex aspect-[16/10] items-center justify-center border-b bg-muted/50 text-xs text-muted-foreground">
+                  In the trash
+                </span>
+              )}
+              {design && !trashed && (
                 <button
                   type="button"
                   className="group relative flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted/50"

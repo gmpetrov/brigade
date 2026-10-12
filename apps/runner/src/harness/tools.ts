@@ -5,6 +5,7 @@ import {
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
   DESIGN_MANIFEST,
+  DESIGN_OPTIONS_SUFFIX,
   DESIGN_SUFFIX,
   DESIGN_SYSTEM_FILES_MAX,
   DESIGN_SYSTEM_PREVIEW,
@@ -12,6 +13,7 @@ import {
   DESIGN_SYSTEM_TOKENS,
   DESIGN_THUMBNAIL,
   designFolderOf,
+  designOptionsOf,
   Choices,
   type ConnectorGrant,
   type TeammateDesignSystem,
@@ -248,7 +250,7 @@ export const offerChoicesTool = tool({
             description: { type: 'string', description: 'One sentence: what sets it apart' },
             design: {
               type: 'string',
-              description: `Its design's library path, ending in "${DESIGN_SUFFIX}", saved with save_design: its picture shows on the card`,
+              description: `Its design's library path, saved with save_design in the options folder all the offered designs share ("<name>${DESIGN_OPTIONS_SUFFIX}/<option>${DESIGN_SUFFIX}"): its picture shows on the card`,
             },
           },
           required: ['id', 'label'],
@@ -260,11 +262,22 @@ export const offerChoicesTool = tool({
   execute: async (input) => {
     const parsed = Choices.safeParse(input)
     if (!parsed.success) throw new Error(`Invalid choices: ${parsed.error.message}`)
-    for (const o of parsed.data.options)
-      if (o.design !== undefined && designFolderOf(o.design) !== o.design.replace(/\/+$/, ''))
+    const folders = new Set<string | undefined>()
+    for (const o of parsed.data.options) {
+      if (o.design === undefined) continue
+      const design = o.design.replace(/\/+$/, '')
+      if (designFolderOf(design) !== design)
         throw new Error(
           `"${o.design}" is not a design's library path (one ending in "${DESIGN_SUFFIX}")`,
         )
+      folders.add(designOptionsOf(design))
+    }
+    if (folders.has(undefined) || folders.size > 1)
+      throw new Error(
+        `Save the designs you offer together in one options folder, ` +
+          `"<name>${DESIGN_OPTIONS_SUFFIX}/<option>${DESIGN_SUFFIX}" (e.g. "acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}"): ` +
+          `the pick becomes "acme/pricing${DESIGN_SUFFIX}" and the rest go to the trash`,
+      )
     return {
       shown: parsed.data.options.length,
       next: 'End your reply: the pick arrives as their next message.',

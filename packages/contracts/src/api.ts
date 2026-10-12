@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { AttachmentIds } from './attachments.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
-import { LibraryAccess } from './library.js'
+import { LibraryAccess, LibraryPath } from './library.js'
 import { isHarnessModel } from './models.js'
 import { CLIPBOARD_MAX, HarnessId } from './runner.js'
 
@@ -130,6 +130,11 @@ export const SendMessage = z
       .optional(),
     /** Give it to the teammate during its running turn instead of queuing it. */
     steer: z.boolean().optional(),
+    /**
+     * A design the thread offered in an options folder, picked by this message:
+     * it becomes the design and the other options go to the trash.
+     */
+    pick: LibraryPath.optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 /** Cancel a queued message, change its text, or steer it into the running turn. */

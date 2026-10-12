@@ -48,8 +48,18 @@ export const Choices = z.object({
     .max(6),
 })
 export type Choices = z.infer<typeof Choices>
-/** The message a click on a choice sends. */
-export const choiceMessage = (option: { label: string }) => `Go with ${option.label}`
+/**
+ * The message a click on a choice sends. A design picked from an options
+ * folder has been moved to `picked` by then, and the message says where.
+ */
+export const choiceMessage = (option: { label: string }, picked?: string) =>
+  `Go with ${option.label}` +
+  (picked ? `. It is now @[${picked}](design:${picked}); the other options went to the trash.` : '')
+/** The option a message picked, if it is a click on one. */
+export const pickedChoice = <O extends { label: string }>(options: O[], message: string) =>
+  options.find(
+    (o) => message === choiceMessage(o) || message.startsWith(`${choiceMessage(o)}. It is now @[`),
+  )
 
 export const QuestionAnswer = z.discriminatedUnion('action', [
   z.object({

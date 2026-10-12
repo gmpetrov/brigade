@@ -39,6 +39,27 @@ export function designFolderOf(path: string): string | undefined {
 export const designName = (folder: string) =>
   folder.split('/').pop()!.slice(0, -DESIGN_SUFFIX.length)
 
+/**
+ * Alternatives offered for one design sit together in a folder ending with
+ * this: `acme/pricing.options/a-bold.design`. Picking one makes it the design
+ * (`acme/pricing.design`) and sends the rest to the trash.
+ */
+export const DESIGN_OPTIONS_SUFFIX = '.options'
+
+/** The options folder a design is one of (`a/x.options` for `a/x.options/b.design`), if it is one. */
+export function designOptionsOf(folder: string): string | undefined {
+  const slash = folder.lastIndexOf('/')
+  const parent = slash < 0 ? '' : folder.slice(0, slash)
+  const name = parent.split('/').pop()!
+  return name.endsWith(DESIGN_OPTIONS_SUFFIX) && name.length > DESIGN_OPTIONS_SUFFIX.length
+    ? parent
+    : undefined
+}
+
+/** Where the pick from an options folder goes: `a/x.design` for `a/x.options`. */
+export const pickedDesignPath = (options: string) =>
+  `${options.slice(0, -DESIGN_OPTIONS_SUFFIX.length)}${DESIGN_SUFFIX}`
+
 export const DesignViewport = z.enum(['desktop', 'tablet', 'mobile'])
 export type DesignViewport = z.infer<typeof DesignViewport>
 

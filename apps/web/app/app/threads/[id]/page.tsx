@@ -241,7 +241,7 @@ export default function ThreadPage() {
   }
 
   /** Send a message to the thread: the composer's, or a choice someone clicked. Throws when it is not sent. */
-  async function deliver(sending: string, attachmentIds: string[] = []) {
+  async function deliver(sending: string, attachmentIds: string[] = [], pick?: string) {
     const message: Outgoing = {
       messageId: newMessageId(),
       text: sending,
@@ -256,7 +256,7 @@ export default function ThreadPage() {
     setOutgoing((list) => [...list, message])
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
-        body: { text: message.text, attachmentIds, messageId: message.messageId },
+        body: { text: message.text, attachmentIds, messageId: message.messageId, pick },
       })
       setError(undefined)
       const starting = sent.delivery === 'starting'
@@ -596,7 +596,11 @@ export default function ThreadPage() {
           onAnswer={(questionId, answer) =>
             api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(() => undefined)
           }
-          onChoose={t.mayPrompt && current !== 'waiting' ? (text) => deliver(text) : undefined}
+          onChoose={
+            t.mayPrompt && current !== 'waiting'
+              ? (text, pick) => deliver(text, [], pick)
+              : undefined
+          }
           onTicket={(requestId, answer) =>
             // Answering may hand control back: show the composer again.
             api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(

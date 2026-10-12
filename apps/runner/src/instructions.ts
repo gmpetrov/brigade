@@ -9,6 +9,7 @@ import {
   DESIGN_ENTRY,
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
+  DESIGN_OPTIONS_SUFFIX,
   DESIGN_SUFFIX,
   DESIGN_SYSTEM_PREVIEW,
   DESIGN_SYSTEM_README,
@@ -129,9 +130,14 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       'what is off or any error it reports. Then save it with `save_design` to a library path ending in ' +
       `\`${DESIGN_SUFFIX}\`, next to the work it belongs to, and mention it in your reply as ` +
       '`@[path](design:path)`: it opens beside the thread. Saving again replaces it; the library keeps earlier versions.',
-    'When you offer alternatives (several directions to choose from), make each its own design folder, check and ' +
-      'save each one, and describe them in your reply. Then call `offer_choices` last, with one option per design ' +
-      'and its library path in `design`: the person picks one by its picture. Their pick arrives as their next message.',
+    'When you offer alternatives (several directions to choose from), make each its own design folder, check it ' +
+      `and save it into one options folder for the design they are for: \`acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}\`, ` +
+      `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Describe them in your reply, then call \`offer_choices\` last, ` +
+      'with one option per design and its library path in `design`: the person picks one by its picture. Their pick ' +
+      `arrives as their next message, and by then it has become the design (\`acme/pricing${DESIGN_SUFFIX}\`, replacing ` +
+      'any design there) and the other options are in the trash: go on from that path. When they answer in their own ' +
+      `words instead (mix two, change one), save new options into the same folder and offer them again, or save the ` +
+      `result as the design itself (\`acme/pricing${DESIGN_SUFFIX}\`) once they settle.`,
     'People comment on a design from its viewer: such a message starts with "Comment on the design" and names the ' +
       'element by its `data-id` (or a CSS path) and the viewport. Change the design, check it and save it again.',
     [

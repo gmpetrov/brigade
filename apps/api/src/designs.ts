@@ -8,12 +8,16 @@ import {
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
   DESIGN_SYSTEM_README,
+  Choices,
   designFolderOf,
   DesignKnobs,
+  designOptionsOf,
   DesignManifest,
   designName,
   addToHead,
   knobsStyle,
+  OFFER_CHOICES_TOOL,
+  pickedDesignPath,
   type DesignSystem,
   type DesignView,
   type SaveKnobs,
@@ -29,6 +33,7 @@ import { audit, type Actor } from './audit.js'
 import { env } from './config.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { BRIDGE_SCRIPT } from './design-bridge.js'
+import { moveFolder, trashFolder } from './library-folders.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
 
 type Row = Awaited<ReturnType<ScopedDb['designSystem']['findFirstOrThrow']>>
@@ -448,3 +453,65 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
     'cache-control': 'private, max-age=60',
   })
 })
+
+/**
+ * A design a thread offered as one of the options in an options folder
+ * (`a/x.options/b.design`), checked before the message that picks it is sent:
+ * where it goes, and whether a design is there to replace.
+ */
+export async function checkPick(db: ScopedDb, threadId: string, path: string) {
+  const folder = path.replace(/\/+$/, '')
+  const options = designOptionsOf(folder)
+  if (designFolderOf(folder) !== folder || !options)
+    throw new HTTPException(400, { message: `"${folder}" is not one of a design's options` })
+  const offers = await db.sessionEvent.findMany({
+    where: {
+      sessionId: threadId,
+      type: 'tool.started',
+      data: { path: ['toolName'], string_ends_with: OFFER_CHOICES_TOOL },
+    },
+    select: { data: true },
+  })
+  const offered = offers.some((e) =>
+    Choices.safeParse((e.data as { input?: unknown }).input).data?.options.some(
+      (o) => o.design?.replace(/\/+$/, '') === folder,
+    ),
+  )
+  if (!offered) throw new HTTPException(400, { message: 'This thread did not offer that design' })
+  const live = { kind: 'library' as const, deletedAt: null }
+  if (!(await db.document.findFirst({ where: { ...live, path: `${folder}/${DESIGN_ENTRY}` } })))
+    throw new HTTPException(409, { message: 'That option is no longer in the library' })
+  const to = pickedDesignPath(options)
+  if (await db.document.findFirst({ where: { ...live, path: to } }))
+    throw new HTTPException(409, { message: `A file is already at ${to}` })
+  const replaces = !!(await db.document.findFirst({
+    where: { ...live, path: { startsWith: `${to}/` } },
+  }))
+  return { folder, options, to, replaces }
+}
+
+/**
+ * Make the picked option the design: the design it replaces, if any, and the
+ * other options go to the trash, where they stay restorable for a while.
+ */
+export async function applyPick(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  pick: Awaited<ReturnType<typeof checkPick>>,
+) {
+  if (pick.replaces) await trashFolder(db, scope, actor, pick.to)
+  await moveFolder(db, scope, actor, pick.folder, pick.to)
+  const rest = await db.document.findFirst({
+    where: { kind: 'library', deletedAt: null, path: { startsWith: `${pick.options}/` } },
+  })
+  const folderRow = await db.libraryFolder.findFirst({ where: { path: pick.options } })
+  if (rest || folderRow) await trashFolder(db, scope, actor, pick.options)
+  await audit({
+    ...scope,
+    actor,
+    action: 'design.picked',
+    target: { type: 'library_folder', id: pick.to },
+    data: { from: pick.folder, to: pick.to, replaced: pick.replaces },
+  })
+}

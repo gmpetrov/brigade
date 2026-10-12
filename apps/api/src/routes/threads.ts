@@ -34,6 +34,7 @@ import {
   touchPreview,
 } from '../app-previews.js'
 import { desktopUrl, ensureRunning, hostedPort } from '../cloud.js'
+import { applyPick, checkPick } from '../designs.js'
 import { openView } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
@@ -347,7 +348,9 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
-    const { text, attachmentIds, messageId, steer } = await parseBody(c.req.raw, SendMessage)
+    const { text, attachmentIds, messageId, steer, pick } = await parseBody(c.req.raw, SendMessage)
+    // A design picked from the thread's options: checked first, moved once the message is sent.
+    const picking = pick ? await checkPick(db, thread.id, pick) : undefined
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
     const mentioned = await mentionedTeammates(db, text)
     const joined = mentioned.filter((id) => !thread.teammates.some((t) => t.teammateId === id))
@@ -370,6 +373,7 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'That computer is offline. Start its runner and try again.',
       })
+    if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

@@ -778,6 +778,8 @@ export function DesignPanel({
   threadId,
   onClose,
   libraryLink = true,
+  options,
+  onOption,
 }: {
   folder: string
   version?: string
@@ -786,10 +788,19 @@ export function DesignPanel({
   onClose: () => void
   /** A button to the design in the library (not when already there). */
   libraryLink?: boolean
+  /** The options offered with this one, it included: a switch between them. */
+  options?: string[]
+  onOption?: (folder: string) => void
 }) {
   const [info, setInfo] = useState<DesignViewInfo>()
   const [expanded, setExpanded] = useState(false)
   const [start, setStart] = useState<Starting>()
+  // Another design (another option): its title, not the last one's, until it loads.
+  const [shown, setShown] = useState(folder)
+  if (shown !== folder) {
+    setShown(folder)
+    setInfo(undefined)
+  }
   const slash = folder.lastIndexOf('/')
   const parent = slash >= 0 ? folder.slice(0, slash) : ''
   const title = info?.manifest?.title || designName(folder)
@@ -853,6 +864,19 @@ export function DesignPanel({
           <X aria-hidden />
         </Button>
       </div>
+      {options && options.length > 1 && onOption && (
+        <div className="overflow-x-auto border-b px-3 py-2">
+          <Tabs value={folder} onValueChange={onOption}>
+            <TabsList aria-label="Options">
+              {options.map((o) => (
+                <TabsTrigger key={o} value={o}>
+                  {designName(o)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
       {info?.manifest?.description && (
         <p className="border-b px-3 py-2 text-xs text-muted-foreground">
           {info.manifest.description}
