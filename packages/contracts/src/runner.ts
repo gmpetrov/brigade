@@ -5,7 +5,7 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { PREVIEW_PORTS_MAX, PreviewAction, PreviewPort } from './previews.js'
+import { PREVIEW_PORTS_MAX, PreviewAction, PreviewOperation, PreviewPort } from './previews.js'
 import { ScheduleOperation } from './schedules.js'
 import { TaskOperation } from './tasks.js'
 
@@ -261,13 +261,28 @@ export const RunnerToApi = z.discriminatedUnion('type', [
    * A teammate starts a preview on a cloud computer: the public addresses of
    * its ports, to give the app before it starts (an app calling its own API
    * needs that API's address). Answered like a connector call, with
-   * { origins: { [port]: origin } }; origins carry no token.
+   * { origins: { [port]: origin } }; origins carry no token. With `token`,
+   * also { urls: { [port]: url } }: what a person opens, for the runner to
+   * check the preview as one before anyone is told it is ready. Never logged.
    */
   z.object({
     type: z.literal('preview.expose'),
     callId: z.string(),
     sessionId: z.string(),
     ports: z.array(PreviewPort).min(1).max(PREVIEW_PORTS_MAX),
+    token: z.boolean().optional(),
+  }),
+  /**
+   * A teammate reads the saved preview recipe of a repository, or saves the
+   * one its thread's preview runs. Answered like a connector call: get with
+   * { recipe } (null when none), save with { saved: true }.
+   */
+  z.object({
+    type: z.literal('preview.call'),
+    callId: z.string(),
+    sessionId: z.string(),
+    teammateId: z.string().optional(),
+    operation: PreviewOperation,
   }),
   /** A preview's recent output, for preview.logs, or why not. */
   z.object({

@@ -434,7 +434,8 @@ export const ModelName = {
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
-  DesignSystem: 'DesignSystem'
+  DesignSystem: 'DesignSystem',
+  PreviewRecipe: 'PreviewRecipe'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -450,7 +451,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3266,6 +3267,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PreviewRecipe: {
+      payload: Prisma.$PreviewRecipePayload<ExtArgs>
+      fields: Prisma.PreviewRecipeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreviewRecipeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreviewRecipeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        findFirst: {
+          args: Prisma.PreviewRecipeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreviewRecipeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        findMany: {
+          args: Prisma.PreviewRecipeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>[]
+        }
+        create: {
+          args: Prisma.PreviewRecipeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        createMany: {
+          args: Prisma.PreviewRecipeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreviewRecipeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>[]
+        }
+        delete: {
+          args: Prisma.PreviewRecipeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        update: {
+          args: Prisma.PreviewRecipeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        deleteMany: {
+          args: Prisma.PreviewRecipeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreviewRecipeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreviewRecipeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>[]
+        }
+        upsert: {
+          args: Prisma.PreviewRecipeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreviewRecipePayload>
+        }
+        aggregate: {
+          args: Prisma.PreviewRecipeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreviewRecipe>
+        }
+        groupBy: {
+          args: Prisma.PreviewRecipeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewRecipeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreviewRecipeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreviewRecipeCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3957,6 +4032,21 @@ export const DesignSystemScalarFieldEnum = {
 export type DesignSystemScalarFieldEnum = (typeof DesignSystemScalarFieldEnum)[keyof typeof DesignSystemScalarFieldEnum]
 
 
+export const PreviewRecipeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  repository: 'repository',
+  recipe: 'recipe',
+  savedByTeammateId: 'savedByTeammateId',
+  savedFromSessionId: 'savedFromSessionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -4640,6 +4730,7 @@ export type GlobalOmitConfig = {
   attachment?: Prisma.AttachmentOmit
   threadAttachment?: Prisma.ThreadAttachmentOmit
   designSystem?: Prisma.DesignSystemOmit
+  previewRecipe?: Prisma.PreviewRecipeOmit
 }
 
 /* Types for Logging */

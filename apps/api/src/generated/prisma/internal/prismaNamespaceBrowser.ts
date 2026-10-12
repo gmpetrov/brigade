@@ -88,7 +88,8 @@ export const ModelName = {
   AuditEntry: 'AuditEntry',
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
-  DesignSystem: 'DesignSystem'
+  DesignSystem: 'DesignSystem',
+  PreviewRecipe: 'PreviewRecipe'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -757,6 +758,21 @@ export const DesignSystemScalarFieldEnum = {
 } as const
 
 export type DesignSystemScalarFieldEnum = (typeof DesignSystemScalarFieldEnum)[keyof typeof DesignSystemScalarFieldEnum]
+
+
+export const PreviewRecipeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  repository: 'repository',
+  recipe: 'recipe',
+  savedByTeammateId: 'savedByTeammateId',
+  savedFromSessionId: 'savedFromSessionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreviewRecipeScalarFieldEnum = (typeof PreviewRecipeScalarFieldEnum)[keyof typeof PreviewRecipeScalarFieldEnum]
 
 
 export const SortOrder = {

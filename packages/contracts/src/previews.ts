@@ -59,3 +59,49 @@ export const PreviewView = z.object({
   local: z.boolean().optional(),
 })
 export type PreviewView = z.infer<typeof PreviewView>
+
+/** An environment variable's name. */
+const EnvName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'An environment variable name')
+
+/** owner/name of a GitHub repository. */
+export const RepositoryName = z
+  .string()
+  .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, 'A repository as owner/name')
+
+/**
+ * How a repository's preview starts, saved by a teammate once it passed its
+ * check, so a later thread starts it in one step: start_preview's input, with
+ * the working directory relative to the repository's root.
+ */
+export const PreviewRecipe = z.object({
+  /** Run before `command` on each start, in `cwd`, stopping at the first failure: install, migrate, seed. */
+  setup: z.string().max(4000).optional(),
+  command: z.string().trim().min(1).max(2000),
+  /** Relative to the repository's root; '' for the root. */
+  cwd: z.string().max(500).default(''),
+  port: PreviewPort,
+  ports: z
+    .array(PreviewPort)
+    .max(PREVIEW_PORTS_MAX - 1)
+    .default([]),
+  /**
+   * Settings for setup and command, not secrets. ${BRIGADE_PREVIEW_URL} and
+   * ${BRIGADE_PREVIEW_URL_<port>} in a value become the preview's addresses.
+   */
+  env: z.record(EnvName, z.string().max(4000)).default({}),
+  /** Also write `env` to this file, relative to `cwd`, for apps that read only their env file. */
+  envFile: z.string().max(200).optional(),
+  /** Vault credentials whose variables the app gets (its API keys, a database), by id. */
+  credentials: z.array(z.string().min(1).max(64)).max(10).default([]),
+  /** Pages the check opens, e.g. ["/", "/signin"]. */
+  paths: z.array(z.string().startsWith('/').max(500)).min(1).max(10).default(['/']),
+  timeoutSeconds: z.number().int().min(10).max(600).optional(),
+})
+export type PreviewRecipe = z.infer<typeof PreviewRecipe>
+
+/** A teammate reads or saves a repository's preview recipe. */
+export const PreviewOperation = z.discriminatedUnion('name', [
+  z.object({ name: z.literal('get'), repository: RepositoryName }),
+  z.object({ name: z.literal('save'), repository: RepositoryName, recipe: PreviewRecipe }),
+])
+export type PreviewOperation = z.infer<typeof PreviewOperation>

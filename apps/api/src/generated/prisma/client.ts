@@ -249,3 +249,9 @@ export type ThreadAttachment = Prisma.ThreadAttachmentModel
  * the design goes in, the repository the thread works in, the teammate, the default.
  */
 export type DesignSystem = Prisma.DesignSystemModel
+/**
+ * Model PreviewRecipe
+ * How a repository's preview starts (PreviewRecipe in contracts), saved by a
+ * teammate once it passed its check; later threads start it in one step.
+ */
+export type PreviewRecipe = Prisma.PreviewRecipeModel
