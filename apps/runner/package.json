@@ -20,10 +20,10 @@
     "@ai-sdk/harness-claude-code": "1.0.153",
     "@ai-sdk/harness-codex": "1.0.151",
     "@brigade/contracts": "workspace:*",
-    "@playwright/mcp": "0.0.82",
+    "@playwright/mcp": "0.0.83",
     "@xterm/headless": "6.0.0",
     "ai": "7.0.138",
-    "playwright-core": "1.64.0-alpha-1789764292000",
+    "playwright-core": "1.64.0",
     "pnpm": "10.34.6",
     "ws": "8.22.0",
     "zod": "4.6.5"
