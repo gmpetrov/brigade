@@ -47,8 +47,8 @@ const CHROMES = [
 const LOAD_MS = 90_000
 /** The proxy's page while the app starts or restarts. */
 const WAITING = /reloads by itself/
-/** Less visible text than this, and nothing drawn, is a blank page. */
-const MIN_TEXT = 20
+/** No visible text and nothing drawn: a blank page. (Sparse pages with a frame are judged on their body.) */
+const MIN_TEXT = 1
 
 const slug = (path: string) =>
   path
@@ -56,15 +56,51 @@ const slug = (path: string) =>
     .replace(/[^A-Za-z0-9._-]+/g, '-')
     .slice(0, 60) || 'home'
 
-/** What the page shows: its visible text and whether anything is drawn (images, canvas, video, svg). */
+/**
+ * What the page shows: its visible text, whether anything is drawn (images,
+ * canvas, video, svg), and how much content lies below the header band and
+ * right of a sidebar strip (text, pictures, controls). A page whose header and
+ * menu render around an empty body (a form hidden until a check passes) has
+ * text, but none there. Only a page with such a frame is judged on its body:
+ * a bare page with a heading at the top is fine.
+ */
 const VISIBLE = `(() => {
   const text = (document.body && document.body.innerText || '').trim()
+  const shown = (el) => {
+    const s = getComputedStyle(el)
+    return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > 0.05
+  }
   const drawn = [...document.querySelectorAll('img, canvas, video, svg, iframe')].some((el) => {
     const r = el.getBoundingClientRect()
-    return r.width >= 32 && r.height >= 32 && getComputedStyle(el).visibility !== 'hidden'
+    return r.width >= 32 && r.height >= 32 && shown(el)
   })
-  return { text: text.length, drawn }
+  const top = innerHeight * 0.12, left = innerWidth * 0.1
+  const inBody = (r) => r.width > 0 && r.height > 0 && r.bottom > top && r.right > left && r.top < innerHeight && r.left < innerWidth
+  const inStrip = (r) => r.width > 0 && r.height > 0 && r.bottom > top && r.right <= left
+  let body = 0, strip = 0
+  const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT)
+  for (let n = walker.nextNode(); n && body < 50; n = walker.nextNode()) {
+    if (!n.textContent.trim() || !n.parentElement || !shown(n.parentElement)) continue
+    const range = document.createRange()
+    range.selectNodeContents(n)
+    const rects = [...range.getClientRects()]
+    if (rects.some(inBody)) body++
+    else if (rects.some(inStrip)) strip++
+  }
+  for (const el of document.querySelectorAll('img, canvas, video, svg, iframe, input, textarea, select, button')) {
+    const r = el.getBoundingClientRect()
+    if (r.width < 16 || r.height < 16 || !shown(el)) continue
+    if (inBody(r)) body++
+    else if (inStrip(r)) strip++
+  }
+  // A frame around the body: a sidebar strip with content, or a header or navigation with text.
+  const framed = strip > 0 || [...document.querySelectorAll('header, nav, [role=banner], [role=navigation]')]
+    .some((el) => shown(el) && el.innerText.trim())
+  return { text: text.length, drawn, body, framed }
 })()`
+
+/** A page that draws after its data (or a CAPTCHA check) arrives: look again for this long. */
+const SETTLE_MS = 8_000
 
 async function checkPage(page: Page, base: URL, path: string, out: string): Promise<PageCheck> {
   const problems: string[] = []
@@ -111,14 +147,28 @@ async function checkPage(page: Page, base: URL, path: string, out: string): Prom
   await page.waitForTimeout(1_500)
 
   if (status >= 400) problems.push(`the page answered ${status}`)
-  const visible = (await page.evaluate(VISIBLE).catch(() => ({ text: 0, drawn: false }))) as {
-    text: number
-    drawn: boolean
+  type Visible = { text: number; drawn: boolean; body: number; framed: boolean }
+  const look = () =>
+    page
+      .evaluate(VISIBLE)
+      .catch(() => ({ text: 0, drawn: false, body: 0, framed: false })) as Promise<Visible>
+  let visible = await look()
+  // An empty body in its frame: give it the time a slow render or a CAPTCHA check takes.
+  for (
+    const until = Date.now() + SETTLE_MS;
+    visible.framed && !visible.body && Date.now() < until;
+  ) {
+    await page.waitForTimeout(1_000)
+    visible = await look()
   }
+  const why =
+    '(a form hidden until a check passes, a render that needs data or settings it does not have, a script that failed)'
   if (status > 0 && status < 400 && visible.text < MIN_TEXT && !visible.drawn)
+    problems.push(`the page is blank: no text or images after it loaded ${why}`)
+  else if (status > 0 && status < 400 && visible.framed && visible.body === 0)
     problems.push(
-      'the page is blank: no text or images after it loaded (a form hidden until a check passes, ' +
-        'a render that needs data or settings it does not have, a script that failed)',
+      `the page's body is empty: its header or menu shows, but nothing below or beside it ${why}. ` +
+        'If it is meant to look like this, look at its screenshot and save anyway with a reason',
     )
 
   const screenshot = join(out, `${slug(path)}.png`)
