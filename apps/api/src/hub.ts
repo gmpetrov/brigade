@@ -20,7 +20,7 @@ import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
 import { handleScheduleCall } from './schedules.js'
 import { handleTaskCall } from './tasks.js'
-import { handlePreviewExpose, settlePreviewLogs } from './app-previews.js'
+import { handlePreviewCall, handlePreviewExpose, settlePreviewLogs } from './app-previews.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
@@ -511,6 +511,18 @@ export function runnerSocket(runner: {
           callId: message.callId,
           ok: false,
           error: String(error),
+        }),
+      )
+      return
+    }
+
+    if (message.type === 'preview.call') {
+      void handlePreviewCall(runner, message, (reply) => send(ws, reply)).catch((error) =>
+        send(ws, {
+          type: 'connector.result',
+          callId: message.callId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
         }),
       )
       return

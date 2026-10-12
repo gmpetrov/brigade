@@ -6,14 +6,17 @@ import { randomUUID } from 'node:crypto'
 import {
   PREVIEW_PROTOCOL,
   PreviewInfo,
+  PreviewRecipe,
   type ApiToRunner,
   type RunnerToApi,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { audit } from './audit.js'
 import { hostedPort } from './cloud.js'
-import { prisma } from './db.js'
+import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, sendToRunner } from './hub.js'
+import { actingTeammate } from './thread-spec.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
@@ -63,8 +66,18 @@ export async function handlePreviewExpose(
   if (!session) return fail('Unknown thread')
   if (session.computer.kind !== 'cloud') return fail('Only the workspace computer hosts previews')
   const origins: Record<number, string> = {}
-  for (const port of call.ports) origins[port] = (await hostedPort(session.computer, port)).origin
-  reply({ type: 'connector.result', callId: call.callId, ok: true, output: { origins } })
+  const urls: Record<number, string> = {}
+  for (const port of call.ports) {
+    const hosted = await hostedPort(session.computer, port)
+    origins[port] = hosted.origin
+    if (call.token) urls[port] = hosted.url
+  }
+  reply({
+    type: 'connector.result',
+    callId: call.callId,
+    ok: true,
+    output: call.token ? { origins, urls } : { origins },
+  })
 }
 
 type LogsResult = Extract<RunnerToApi, { type: 'preview.logs.result' }>
@@ -92,4 +105,57 @@ export function previewLogs(computerId: string, sessionId: string) {
 export function settlePreviewLogs(computerId: string, result: LogsResult) {
   const read = logReads.get(result.requestId)
   if (read?.computerId === computerId) read.settle(result)
+}
+
+/**
+ * A teammate reads a repository's saved preview recipe, or saves the one its
+ * thread's preview runs (the runner saves only one whose check passed). One
+ * per repository and workspace; saving again replaces it.
+ */
+export async function handlePreviewCall(
+  runner: Runner,
+  call: Extract<RunnerToApi, { type: 'preview.call' }>,
+  reply: (message: ApiToRunner) => void,
+) {
+  const scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
+  const db = scoped(scope)
+  const done = (output: unknown) =>
+    reply({ type: 'connector.result', callId: call.callId, ok: true, output })
+  const fail = (error: string) =>
+    reply({ type: 'connector.result', callId: call.callId, ok: false, error })
+
+  const session = await db.session.findFirst({
+    where: { id: call.sessionId, computerId: runner.computerId },
+  })
+  if (!session) return fail('Unknown thread')
+  const teammate = await actingTeammate(db, session, call.teammateId)
+  if (!teammate) return fail('That teammate is not in this thread')
+  const op = call.operation
+  const repository = op.repository.toLowerCase()
+
+  if (op.name === 'get') {
+    const row = await db.previewRecipe.findFirst({ where: { repository } })
+    const parsed = row ? PreviewRecipe.safeParse(row.recipe) : null
+    return done({ recipe: parsed?.success ? parsed.data : null, updatedAt: row?.updatedAt })
+  }
+
+  const recipe = op.recipe as Prisma.InputJsonValue
+  const saved = await db.previewRecipe.upsert({
+    where: { workspaceId_repository: { workspaceId: scope.workspaceId, repository } },
+    create: {
+      repository,
+      recipe,
+      savedByTeammateId: teammate.id,
+      savedFromSessionId: session.id,
+    } as never,
+    update: { recipe, savedByTeammateId: teammate.id, savedFromSessionId: session.id },
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'teammate', id: teammate.id },
+    action: 'preview.recipe_saved',
+    target: { type: 'repository', id: repository },
+    data: { sessionId: session.id, recipeId: saved.id },
+  })
+  return done({ saved: true })
 }
