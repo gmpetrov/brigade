@@ -7,7 +7,7 @@ import { GettingStarted } from '@/components/getting-started'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { harnessLabel, useApi, waitsOn, type ThreadSummary, type Ticket } from '@/lib/api'
+import { teammateModelLabel, useApi, waitsOn, type ThreadSummary, type Ticket } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -132,7 +132,7 @@ function Team({ threads }: { threads: ThreadSummary[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{t.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {on ? on.title : `Idle · ${harnessLabel(t.harness)}`}
+                    {on ? on.title : `Idle · ${teammateModelLabel(t)}`}
                   </p>
                 </div>
                 {on && <StatusBadge status={on.status} />}
