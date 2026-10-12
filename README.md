@@ -34,6 +34,17 @@ Open http://localhost:3000, create an account, an organization and a workspace, 
 
 Without Docker, or for a preview in a Brigade thread: `scripts/preview/setup.sh`, then `scripts/preview/start.sh` (see AGENTS.md).
 
+### Running tests
+
+There is no unit test suite yet: the checks are the type check and formatting. Run them from the repository root:
+
+```bash
+pnpm install
+cp apps/api/.env.example apps/api/.env   # if not done yet: prisma generate needs DATABASE_URL (no database is started)
+pnpm typecheck                           # builds the shared packages, then type-checks every package
+pnpm format:check                        # prettier
+```
+
 ### Run threads on your machine
 
 In the dashboard, open **Computers → Get a link code**, then in a shell where `claude` is signed in:
