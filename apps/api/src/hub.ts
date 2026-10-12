@@ -6,6 +6,7 @@ import {
   ApiToRunner,
   BrowserToApi,
   MIN_PROTOCOL_VERSION,
+  RESUME_PROTOCOL,
   RunnerToApi,
   type AgentEvent,
   type SequencedEvent,
@@ -26,6 +27,7 @@ import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
+import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
 
@@ -351,19 +353,36 @@ export function runnerSocket(runner: {
           error: 'The computer restarted during sign-in. Sign in again.',
         })
       }
-      // The runner closes any of these it no longer runs (it restarted mid-turn).
-      const runningThreads = await prisma.session.findMany({
-        where: { computerId: runner.computerId, status: 'running' },
-        select: { id: true },
+      // Turns and queued messages a restart may have cut off: the runner continues those it
+      // lost (an older one closes and cancels them). Waiting threads too: a turn waiting on
+      // a connector call's approval was still running there.
+      const inProgress = await prisma.session.findMany({
+        where: { computerId: runner.computerId, status: { in: ['running', 'waiting'] } },
+        select: { id: true, status: true },
       })
+      const runningThreads = inProgress.filter((s) => s.status === 'running').map((s) => s.id)
+      const queuedMessages = await queuedMessagesOn(runner.computerId)
+      const resumes = message.protocolVersion >= RESUME_PROTOCOL
       // A runner installed from another bundle updates itself once it is idle.
       send(ws, {
         type: 'welcome',
         runnerId: runner.id,
         computerId: runner.computerId,
         ...(bundle ? { bundle } : {}),
-        runningThreads: runningThreads.map((s) => s.id),
-        queuedMessages: await queuedMessagesOn(runner.computerId),
+        runningThreads,
+        queuedMessages: queuedMessages.map(({ sessionId, messageId }) => ({
+          sessionId,
+          messageId,
+        })),
+        ...(resumes
+          ? {
+              resume: await turnsToResume(
+                runner,
+                inProgress.map((s) => s.id),
+              ),
+              requeue: await messagesToRequeue(runner, queuedMessages),
+            }
+          : {}),
       })
       if (message.bundle && bundle && message.bundle !== bundle)
         console.log(
@@ -621,10 +640,11 @@ export function runnerSocket(runner: {
 const QUEUED_FOR_MS = 7 * 24 * 60 * 60_000
 
 /**
- * The messages shown as queued on a computer's threads: queued, and neither
- * read (message.user) nor cancelled since. The runner says which it lost.
+ * The messages shown as queued on a computer's threads, in the order they
+ * came, with their latest text: queued, and neither read (message.user) nor
+ * cancelled since. The runner says which it lost.
  */
-async function queuedMessagesOn(computerId: string) {
+async function queuedMessagesOn(computerId: string): Promise<QueuedMessage[]> {
   const queued = await prisma.sessionEvent.findMany({
     where: {
       type: 'message.queued',
@@ -643,13 +663,14 @@ async function queuedMessagesOn(computerId: string) {
     orderBy: { seq: 'asc' },
     select: { sessionId: true, data: true },
   })
-  const open = new Map<string, { sessionId: string; messageId: string }>()
+  const open = new Map<string, QueuedMessage>()
   for (const { sessionId, data } of rows) {
     const event = data as unknown as AgentEvent
     const messageId = 'messageId' in event ? event.messageId : undefined
     if (!messageId) continue
     const key = `${sessionId}:${messageId}`
-    if (event.type === 'message.queued') open.set(key, { sessionId, messageId })
+    // Queued again (edited, or held for a person): it keeps its place, with the latest text.
+    if (event.type === 'message.queued') open.set(key, { sessionId, messageId, queued: event })
     else open.delete(key)
   }
   return [...open.values()]

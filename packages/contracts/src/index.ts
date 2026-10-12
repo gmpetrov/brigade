@@ -25,8 +25,11 @@ export * from './thread-history.js'
  * 13: a library mirror per teammate, of only the folders it may read.
  * 14: live previews (an app a teammate runs, for people to open).
  * 15: preview checks (addresses with their token) and saved preview recipes.
+ * 16: welcome resumes lost turns and queues lost messages again.
  */
-export const PROTOCOL_VERSION = 15
+export const PROTOCOL_VERSION = 16
+/** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
+export const RESUME_PROTOCOL = 16
 /** Runners from this version on keep restricted folders from teammates without access. */
 export const LIBRARY_VIEWS_PROTOCOL = 13
 /** The API rejects runners below this protocol version. */

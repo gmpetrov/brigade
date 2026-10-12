@@ -1,7 +1,8 @@
 // The harness layer. This directory is the only place in Brigade that imports
 // the experimental AI SDK harness packages (spec: "keep every import inside
 // one module of the runner package").
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
@@ -94,6 +95,8 @@ const execFileAsync = promisify(execFile)
 
 export type ThreadInput =
   | { kind: 'prompt'; text: string }
+  /** The computer stopped during a turn: continue it. `text`: what was said since, if anything. */
+  | { kind: 'resume'; text: string }
   | { kind: 'approval'; approvalId: string; approved: boolean; reason?: string }
   | { kind: 'answer'; questionId: string; answer: QuestionAnswer }
   | { kind: 'ticket'; requestId: string; answer: TicketAnswer }
@@ -107,9 +110,19 @@ type SavedState = {
   resume?: unknown
   /** Recent conversation, for the handoff when the thread moves to another account. */
   transcript: { role: 'user' | 'assistant'; text: string }[]
+  /** A turn was running when this was written: found on start, the process stopped without parking. */
+  inTurn?: boolean
+  /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
+  recoveries?: number
 }
 
 const TRANSCRIPT_CHARS = 40_000
+/** A turn cut off by this many restarts in a row is not continued again: it may be what stops the computer. */
+const MAX_RECOVERIES = 3
+/** What a teammate is told when the computer stopped without warning during its turn. */
+const RESTARTED =
+  "Brigade's computer restarted while you were working on this thread, so your last turn stopped partway. " +
+  'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
 
 function createAgent(
   spec: ThreadSpec,
@@ -177,6 +190,23 @@ function frozenMidRun(resume: unknown) {
   return !pending('pendingToolApprovals') && !pending('pendingToolResults')
 }
 
+/**
+ * After a stop without warning: the harness state that resumes the thread's
+ * conversation, without any turn it was in. Claude Code continues the newest
+ * conversation in the working directory (the thread's own, the turn that was
+ * cut off included; a new one when there is none). Codex needs its thread id.
+ */
+function resumable(harness: ThreadSpec['teammate']['harness'], resume: unknown): unknown {
+  const base = { type: 'resume-session', specificationVersion: 'harness-v1' }
+  if (harness !== 'codex') return { ...base, harnessId: 'claude-code', data: {} }
+  const state = resume as
+    { data?: { threadId?: unknown }; continueFrom?: { data?: { threadId?: unknown } } } | undefined
+  const threadId = state?.continueFrom?.data?.threadId ?? state?.data?.threadId
+  return typeof threadId === 'string' && threadId
+    ? { ...base, harnessId: 'codex', data: { threadId } }
+    : undefined
+}
+
 /** One thread: one harness session in its own working directory. */
 export class HarnessThread {
   private live: Live | undefined
@@ -191,6 +221,8 @@ export class HarnessThread {
    * starting teammate (as before threads had several); thread and teammate for the others.
    */
   private readonly key: string
+  /** Writes of the state file, in order. */
+  private saving: Promise<void> = Promise.resolve()
 
   constructor(
     private spec: ThreadSpec,
@@ -213,33 +245,106 @@ export class HarnessThread {
     this.spec = spec
     await this.load()
     let handoff: string | undefined
+    if (input.kind === 'resume') {
+      const resumed = await this.recover(input.text, spec)
+      if (!resumed) return { status: 'idle' }
+      ;({ input, handoff } = resumed)
+    }
     // A new prompt runs on the account the API chose; an approval stays on the live session.
-    if (input.kind === 'prompt' && this.saved && this.saved.accountId !== spec.account.id) {
+    else if (input.kind === 'prompt' && this.saved && this.saved.accountId !== spec.account.id) {
       handoff = await this.switchTo(spec.account, 'unavailable', null)
     }
     if (input.kind === 'prompt') this.remember('user', input.text)
+    this.saved ??= { accountId: spec.account.id, transcript: [] }
+    // Someone asked for this turn: restarts that cut off earlier ones no longer count.
+    if (input.kind !== 'resume') this.saved.recoveries = 0
+    // Found on disk after a stop without warning, this says the turn did not finish.
+    this.saved.inTurn = true
+    await this.persist()
 
     const fallbacks = [...spec.fallbacks]
-    for (;;) {
-      const outcome = await this.turn(handoff ? { kind: 'prompt', text: handoff } : input, signal)
-      if (outcome.kind !== 'exhausted') return outcome.result
-      // Out of usage: continue on the member's next account, or pause.
-      const next = fallbacks.shift()
-      const from = this.current.id
-      if (!next) {
-        this.emit({
-          type: 'account.switched',
-          fromAccountId: from,
-          toAccountId: null,
-          reason: 'usage_limit',
-          resetsAt: outcome.resetsAt,
-        })
-        await this.park()
-        return { status: 'paused' }
+    let result: TurnOutcome | undefined
+    try {
+      for (;;) {
+        const outcome = await this.turn(handoff ? { kind: 'prompt', text: handoff } : input, signal)
+        if (outcome.kind !== 'exhausted') return (result = outcome.result)
+        // Out of usage: continue on the member's next account, or pause.
+        const next = fallbacks.shift()
+        const from = this.current.id
+        if (!next) {
+          this.emit({
+            type: 'account.switched',
+            fromAccountId: from,
+            toAccountId: null,
+            reason: 'usage_limit',
+            resetsAt: outcome.resetsAt,
+          })
+          await this.park()
+          return (result = { status: 'paused' })
+        }
+        handoff = await this.switchTo(next, 'usage_limit', outcome.resetsAt)
+        input = { kind: 'prompt', text: handoff }
       }
-      handoff = await this.switchTo(next, 'usage_limit', outcome.resetsAt)
-      input = { kind: 'prompt', text: handoff }
+    } finally {
+      if (this.saved) {
+        this.saved.inTurn = false
+        if (result?.status === 'idle') this.saved.recoveries = 0
+        await this.persist().catch((error) =>
+          console.warn(`could not save thread state: ${errorMessage(error)}`),
+        )
+      }
     }
+  }
+
+  /**
+   * The computer stopped during this teammate's turn. One frozen on the way
+   * down (a stop or update) goes on where it stopped. After a stop without
+   * warning, the conversation resumes from what the harness kept, told what
+   * happened; with nothing to resume, a new session is told the thread so far.
+   * Null when restarts kept cutting the turn off: it is closed instead.
+   */
+  private async recover(
+    unseen: string,
+    spec: ThreadSpec,
+  ): Promise<{ input: ThreadInput; handoff?: string } | null> {
+    this.saved ??= { accountId: spec.account.id, transcript: [] }
+    const saved = this.saved
+    const recoveries = (saved.recoveries ?? 0) + 1
+    if (recoveries > MAX_RECOVERIES) {
+      saved.recoveries = 0
+      saved.inTurn = false
+      await this.persist()
+      this.emit({
+        type: 'raw',
+        source: 'runner',
+        value: `${spec.teammate.name}'s turn was cut off by ${MAX_RECOVERIES} restarts in a row, so it was not continued again. Send a message to continue.`,
+      })
+      this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
+      return null
+    }
+    saved.recoveries = recoveries
+    this.emit({
+      type: 'raw',
+      source: 'runner',
+      value: `The computer restarted during this turn. ${spec.teammate.name} carries on.`,
+    })
+    const told = [RESTARTED, unseen].filter(Boolean).join('\n\n')
+    if (saved.accountId !== spec.account.id) {
+      const handoff = await this.switchTo(spec.account, 'unavailable', null)
+      return { input: { kind: 'resume', text: '' }, handoff: `${handoff}\n\n${told}` }
+    }
+    if (!saved.inTurn && frozenMidRun(saved.resume))
+      return { input: { kind: 'resume', text: unseen } }
+    const resume = resumable(spec.teammate.harness, saved.resume)
+    if (resume) {
+      saved.resume = resume
+      return { input: { kind: 'resume', text: told } }
+    }
+    const handoff = this.handoff(
+      'This conversation continues in a new session because the computer it ran on restarted and the previous session could not be resumed.',
+    )
+    saved.resume = undefined
+    return { input: { kind: 'resume', text: '' }, handoff: `${handoff}\n\n${told}` }
   }
 
   /**
@@ -272,6 +377,16 @@ export class HarnessThread {
   }
 
   /**
+   * A turn of this teammate's was running here when the runner last stopped:
+   * frozen on the way down, or cut off without warning (it never finished).
+   */
+  async cutOff() {
+    if (this.live) return false
+    await this.load()
+    return !!this.saved && (!!this.saved.inTurn || frozenMidRun(this.saved.resume))
+  }
+
+  /**
    * Give a message to the running turn, which reads it at its next step; what
    * it does about it stays in this turn. Throws when no turn runs, or the
    * harness cannot take one mid-turn.
@@ -290,7 +405,8 @@ export class HarnessThread {
     this.live = undefined
     try {
       const resume = await live.session.stop()
-      this.saved = { ...this.saved!, accountId: live.account.id, resume }
+      // Parked, a turn that was running is frozen in `resume`: it goes on from there.
+      this.saved = { ...this.saved!, accountId: live.account.id, resume, inTurn: false }
       await this.persist()
     } finally {
       await live.sandbox.destroy()
@@ -308,12 +424,17 @@ export class HarnessThread {
   ): Promise<
     { kind: 'done'; result: TurnOutcome } | { kind: 'exhausted'; resetsAt: string | null }
   > {
+    let attached: Live | undefined
+    // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
+    // How its stream ends then is no failure of the teammate's.
+    const frozenUnder = () => attached !== undefined && this.live !== attached
     const mapper = new EventMapper((event) => {
+      if (frozenUnder()) return
       if (event.type === 'message.done') this.remember('assistant', event.text)
       this.emitEvent(event)
     }, this.toolCalls)
     try {
-      const live = await this.attach()
+      const live = (attached = await this.attach())
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
           mapper.map(part)
@@ -321,7 +442,10 @@ export class HarnessThread {
           if (image) await this.keepImage(image)
         }
       }
-      if (input.kind === 'prompt' && live.session.hasUnfinishedTurn()) {
+      let text = input.kind === 'prompt' || input.kind === 'resume' ? input.text : undefined
+      // Nothing frozen came back after all: the teammate is told what happened instead.
+      if (input.kind === 'resume' && !text && !live.session.hasUnfinishedTurn()) text = RESTARTED
+      if (text !== undefined && live.session.hasUnfinishedTurn()) {
         if (!this.frozen) {
           return {
             kind: 'done',
@@ -341,38 +465,39 @@ export class HarnessThread {
       }
       // The frozen turn stopped again (an approval, a question, no usage left): the message waits.
       const held =
-        input.kind === 'prompt' &&
+        text !== undefined &&
         (live.session.hasUnfinishedTurn() || signal.aborted || !!mapper.exhausted || !!mapper.error)
-      let result = held
-        ? undefined
-        : input.kind === 'prompt'
-          ? await live.agent.stream({
-              session: live.session,
-              prompt: input.text,
-              abortSignal: signal,
-            })
-          : input.kind === 'answer' || input.kind === 'ticket'
-            ? await live.agent.continueStream({
+      let result =
+        held || text === ''
+          ? undefined
+          : input.kind === 'prompt' || input.kind === 'resume'
+            ? await live.agent.stream({
                 session: live.session,
+                prompt: text!,
                 abortSignal: signal,
-                toolResultContinuations: [
-                  input.kind === 'answer'
-                    ? this.answerResult(input.questionId, input.answer)
-                    : this.ticketResult(input.requestId, input.answer),
-                ],
               })
-            : await live.agent.continueStream({
-                session: live.session,
-                abortSignal: signal,
-                toolApprovalContinuations: [
-                  {
-                    type: 'tool-approval-response',
-                    approvalId: input.approvalId,
-                    approved: input.approved,
-                    ...(input.reason ? { reason: input.reason } : {}),
-                  },
-                ],
-              })
+            : input.kind === 'answer' || input.kind === 'ticket'
+              ? await live.agent.continueStream({
+                  session: live.session,
+                  abortSignal: signal,
+                  toolResultContinuations: [
+                    input.kind === 'answer'
+                      ? this.answerResult(input.questionId, input.answer)
+                      : this.ticketResult(input.requestId, input.answer),
+                  ],
+                })
+              : await live.agent.continueStream({
+                  session: live.session,
+                  abortSignal: signal,
+                  toolApprovalContinuations: [
+                    {
+                      type: 'tool-approval-response',
+                      approvalId: input.approvalId,
+                      approved: input.approved,
+                      ...(input.reason ? { reason: input.reason } : {}),
+                    },
+                  ],
+                })
       if (result) await consume(result.fullStream)
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
@@ -389,6 +514,7 @@ export class HarnessThread {
         })
         await consume(result.fullStream)
       }
+      if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       // A login from before tokens, refreshed during the turn, goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
       if (mapper.exhausted) return { kind: 'exhausted', resetsAt: mapper.exhausted.resetsAt }
@@ -403,6 +529,7 @@ export class HarnessThread {
       await this.persist()
       return { kind: 'done', result: { status: 'idle' } }
     } catch (error) {
+      if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       if (signal.aborted) {
         this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
         return { kind: 'done', result: { status: 'idle' } }
@@ -489,14 +616,26 @@ export class HarnessThread {
       reason,
       resetsAt,
     })
-    this.saved = { accountId: account.id, transcript: this.saved?.transcript ?? [] }
+    this.saved = {
+      ...(this.saved?.recoveries ? { recoveries: this.saved.recoveries } : {}),
+      accountId: account.id,
+      transcript: this.saved?.transcript ?? [],
+    }
     await this.persist()
-    const lines = this.saved.transcript
+    return this.handoff(
+      'This conversation continues in a new session because the previous one could not go on (its account ran out of usage).',
+    )
+  }
+
+  /** The first message of a new session that carries on the conversation: what was said so far. */
+  private handoff(why: string) {
+    const transcript = this.saved?.transcript ?? []
+    const lines = transcript
       .map((t) => `${t.role === 'user' ? 'User' : 'You'}: ${t.text}`)
       .join('\n\n')
-    const last = this.saved.transcript.findLast((t) => t.role === 'user')
+    const last = transcript.findLast((t) => t.role === 'user')
     return [
-      'This conversation continues in a new session because the previous one could not go on (its account ran out of usage).',
+      why,
       'The working directory is exactly as the previous session left it.',
       lines && `Conversation so far:\n\n${lines}`,
       last && `Continue with the latest request if it is not finished yet.`,
@@ -648,10 +787,22 @@ export class HarnessThread {
     )
   }
 
-  private async persist() {
-    if (!this.saved) return
-    await mkdir(dirname(this.stateFile), { recursive: true, mode: 0o700 })
-    await writeFile(this.stateFile, JSON.stringify(this.saved), { mode: 0o600 })
+  /**
+   * Save the state as it is now. Writes go in order, each whole: a stop
+   * without warning leaves the previous state or this one, never half of each.
+   */
+  private persist() {
+    if (!this.saved) return Promise.resolve()
+    const text = JSON.stringify(this.saved)
+    const write = async () => {
+      await mkdir(dirname(this.stateFile), { recursive: true, mode: 0o700 })
+      const temp = `${this.stateFile}.${randomUUID()}.tmp`
+      await writeFile(temp, text, { mode: 0o600 })
+      await rename(temp, this.stateFile)
+    }
+    const saved = this.saving.then(write, write)
+    this.saving = saved.catch(() => undefined)
+    return saved
   }
 
   private remember(role: 'user' | 'assistant', text: string) {

@@ -221,11 +221,23 @@ async function start() {
   })
   const onCommand = async (message: ApiToRunner) => {
     switch (message.type) {
-      case 'welcome':
-        threads.dropLost(message.queuedMessages ?? [])
-        return threads.closeLost(message.runningThreads ?? [], (sessionId) =>
-          outbox.lastUnacknowledged(sessionId),
+      case 'welcome': {
+        // Turns and messages a restart cut off go on, in order; what the API could not say how to continue is closed.
+        const last = (sessionId: string) => outbox.lastUnacknowledged(sessionId)
+        const unacknowledged = (sessionId: string) => outbox.unacknowledgedFor(sessionId)
+        threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
+        threads.requeueLost(message.requeue ?? [], unacknowledged)
+        const requeued = new Set(
+          (message.requeue ?? []).map((p) => `${p.thread.sessionId}:${p.messageId}`),
         )
+        threads.dropLost(
+          (message.queuedMessages ?? []).filter(
+            (q) => !requeued.has(`${q.sessionId}:${q.messageId}`),
+          ),
+          unacknowledged,
+        )
+        return threads.closeLost(message.runningThreads ?? [], last)
+      }
       case 'thread.prompt':
       case 'thread.approval':
       case 'thread.answer':

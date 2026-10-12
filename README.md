@@ -170,6 +170,21 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **Idle stop.** Every minute the API stops cloud computers with no running thread and no activity for
   `IDLE_STOP_MINUTES` (default 30). Commands for a stopped computer start it and wait in memory (10 minutes) until its
   runner reconnects. boat trial accounts also impose a 2-hour auto-stop (`BOAT_AUTO_STOP_SECONDS`).
+- **Restarts.** A turn cut off when its computer or runner stops goes on by itself once the runner is back (protocol
+  16). The welcome names, for each thread the API has as running or waiting there, the teammate whose turn it is
+  (with its spec), and each message shown as queued (with its text and teammates). The runner continues each turn its
+  saved harness state says was cut off (one waiting on a connector call's approval included), answers a message read
+  but not yet answered, and closes a running thread with neither; then it queues those messages again in order. What
+  its outbox still holds (a turn that ended, a message read or cancelled) is not redone. A stop the runner sees (`systemctl stop`, a reboot, an update) freezes the turn, which goes
+  on where it stopped; on a cloud computer systemd signals the runner alone (`KillMode=mixed`) and waits up to a minute.
+  After a stop without warning (power, out of memory, a crash) the harness resumes the conversation (Claude Code: the
+  newest in the thread's directory, the cut-off turn included; Codex: its saved thread, else a new session told the
+  thread so far) and the teammate is told to check what is already done before carrying on. A turn cut off by three
+  restarts in a row is closed instead. A cloud computer its provider stopped while a thread ran is started again.
+  The runner's state files are replaced whole, and an outbox line cut short is dropped, so a crash cannot keep it from
+  starting. Not continued: a harness approval or question pending when the runner died without warning (as before,
+  answering it fails), the later teammates of a message several were asked, a turn whose start never reached the API
+  before the runner died, and commands the API held for a starting computer when the API itself restarted.
 - **Vault.** AES-256-GCM, with each organization's key derived (HKDF) from `VAULT_KEY`; the workspace id is bound
   in as authenticated data, so a secret cannot be moved to another workspace. Decrypted only inside the API, per call.
 - **Connector calls** (`apps/api/src/connector-calls.ts`). The runner passes granted operations to `HarnessAgent` as

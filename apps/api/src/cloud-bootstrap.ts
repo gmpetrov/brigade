@@ -162,6 +162,15 @@ fi
 # helper, holding only what that teammate may read. Teammates pass through, never list it.
 sudo install -d -o brigade -g brigade-teammates -m 2710 /var/lib/brigade/library
 sudo chmod 2710 /var/lib/brigade/library
+# A stop or reboot signals the runner alone: it freezes running turns and stops their harnesses
+# itself, so they go on after the restart. Whatever is left after a minute is killed.
+sudo install -d /etc/systemd/system/brigade-runner.service.d
+sudo tee /etc/systemd/system/brigade-runner.service.d/stop.conf >/dev/null <<'UNIT'
+[Service]
+KillMode=mixed
+TimeoutStopSec=60
+UNIT
+sudo systemctl daemon-reload
 `
 
 /** Identifies the current setup; the runner reports the one last applied. */

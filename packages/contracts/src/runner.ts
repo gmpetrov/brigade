@@ -320,6 +320,27 @@ export const RunnerToApi = z.discriminatedUnion('type', [
 export type RunnerToApi = z.infer<typeof RunnerToApi>
 
 // API -> runner
+/** A message for a thread, or a teammate handing it on. */
+export const ThreadPrompt = z.object({
+  type: z.literal('thread.prompt'),
+  commandId: z.string(),
+  /** The teammate that answers first. */
+  thread: ThreadSpec,
+  text: z.string(),
+  memberId: z.string().nullable(),
+  /** Teammates that answer after it, in order, each told what was said before its turn. */
+  then: z.array(ThreadSpec).default([]),
+  /** Set when a teammate handed the thread on: nobody wrote `text`, so it is not shown as a message. */
+  handoff: z.boolean().optional(),
+  /** The files that came with this message (all the thread's are in each spec). */
+  attachments: z.array(ThreadAttachmentRef).default([]),
+  /** The sender's id for the message: it names it while queued, and in message.user. */
+  messageId: z.string().max(64).optional(),
+  /** Give it to the first teammate during its running turn, if it is running one; else queue it. */
+  steer: z.boolean().optional(),
+})
+export type ThreadPrompt = z.infer<typeof ThreadPrompt>
+
 export const ApiToRunner = z.discriminatedUnion('type', [
   /** bundle: the SHA-256 of the runner bundle the API serves; a runner with another one updates. */
   z.object({
@@ -331,6 +352,14 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     runningThreads: z.array(z.string()).optional(),
     /** Messages the API has as queued here. One the runner does not hold was lost to a restart. */
     queuedMessages: z.array(z.object({ sessionId: z.string(), messageId: z.string() })).optional(),
+    /**
+     * Protocol 16: threads in progress here (running, or waiting on a person),
+     * each as the teammate whose turn it is, to continue a turn the runner lost.
+     * Running ones left out are closed as before.
+     */
+    resume: z.array(ThreadSpec).optional(),
+    /** Protocol 16: of the queued messages, those to queue again when lost, in order. The others are cancelled. */
+    requeue: z.array(ThreadPrompt).optional(),
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
@@ -377,24 +406,7 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** Highest contiguous seq stored per thread. The runner drops buffered events up to it. */
   z.object({ type: z.literal('ack'), sessionId: z.string(), seq: z.number().int() }),
-  z.object({
-    type: z.literal('thread.prompt'),
-    commandId: z.string(),
-    /** The teammate that answers first. */
-    thread: ThreadSpec,
-    text: z.string(),
-    memberId: z.string().nullable(),
-    /** Teammates that answer after it, in order, each told what was said before its turn. */
-    then: z.array(ThreadSpec).default([]),
-    /** Set when a teammate handed the thread on: nobody wrote `text`, so it is not shown as a message. */
-    handoff: z.boolean().optional(),
-    /** The files that came with this message (all the thread's are in each spec). */
-    attachments: z.array(ThreadAttachmentRef).default([]),
-    /** The sender's id for the message: it names it while queued, and in message.user. */
-    messageId: z.string().max(64).optional(),
-    /** Give it to the first teammate during its running turn, if it is running one; else queue it. */
-    steer: z.boolean().optional(),
-  }),
+  ThreadPrompt,
   z.object({
     type: z.literal('thread.approval'),
     commandId: z.string(),

@@ -4,7 +4,7 @@
 // comes in while the thread is busy waits in its queue, shown as queued, until
 // its turn starts; meanwhile it can be cancelled, edited or steered into the running turn.
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   attachmentLines,
@@ -14,6 +14,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ThreadAttachmentRef,
+  type ThreadPrompt,
   type ThreadSpec,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
@@ -52,6 +53,16 @@ const OUT_OF_TURN = new Set<AgentEvent['type']>([
   'control.changed',
   'account.switched',
 ])
+
+/** Events that end a turn: one still on its way to the API says the turn was over. */
+const TURN_ENDED = new Set<AgentEvent['type']>(['turn.completed', 'error'])
+
+/**
+ * A thread the API had in progress here when this runner connected. running:
+ * the API had it running, else waiting on a person. ended: events on their way
+ * to the API say its turn was over.
+ */
+type Lost = { kind: 'lost'; running: boolean; ended: boolean }
 
 type Command = Extract<
   ApiToRunner,
@@ -275,9 +286,82 @@ export class Threads {
   }
 
   /**
-   * The API has these threads running here. One with no turn here, and none
-   * ended in events still on their way, was lost when this computer stopped or
-   * the runner restarted: close it as interrupted, so it does not look busy forever.
+   * The API has these threads in progress here (running, or waiting on a
+   * person), each with the teammate whose turn it is. One this runner holds no
+   * turn of may have lost it when the computer stopped or the runner restarted:
+   * whether it did, and what then, is worked out in its place in the queue (see
+   * pickUp), before any message queued after it.
+   */
+  resumeLost(
+    specs: ThreadSpec[],
+    running: string[],
+    lastUnacknowledged: (sessionId: string) => AgentEvent | undefined,
+  ) {
+    for (const spec of specs) {
+      if (!SAFE_ID.test(spec.sessionId) || !SAFE_ID.test(spec.teammate.id)) continue
+      if (this.inUse(spec.sessionId)) continue
+      const last = lastUnacknowledged(spec.sessionId)
+      this.enqueue(spec, {
+        kind: 'lost',
+        running: running.includes(spec.sessionId),
+        ended: !!last && TURN_ENDED.has(last.type),
+      })
+    }
+  }
+
+  /**
+   * What becomes of a thread the API had in progress here. A turn cut off here
+   * goes on, told what was said since. A message read but not yet answered is
+   * answered. One waiting on a person stays so. A running one with nothing to
+   * go on is closed as interrupted. Null: no turn now.
+   */
+  private async pickUp(spec: ThreadSpec, seat: Seat, lost: Lost): Promise<ThreadInput | null> {
+    if (lost.ended) return null
+    if (await seat.harness.cutOff())
+      return { kind: 'resume', text: await this.catchUp(spec, undefined, true) }
+    if (!lost.running) return null
+    const unseen = await this.catchUp(spec, undefined, true)
+    if (unseen) return { kind: 'prompt', text: unseen }
+    this.closeInterrupted(spec.sessionId)
+    return null
+  }
+
+  /**
+   * The API has these messages as queued here. One this runner does not hold,
+   * and that was neither read nor cancelled in events still on their way, was
+   * lost when the computer stopped or the runner restarted: it is queued again.
+   */
+  requeueLost(prompts: ThreadPrompt[], unacknowledged: (sessionId: string) => AgentEvent[]) {
+    for (const prompt of prompts) {
+      const { sessionId } = prompt.thread
+      if (!prompt.messageId || this.held(sessionId, prompt.messageId, unacknowledged)) continue
+      try {
+        this.handle(prompt)
+      } catch (error) {
+        console.warn(`thread ${sessionId}: could not queue a message again: ${String(error)}`)
+      }
+    }
+  }
+
+  /** The runner holds this message, or what became of it is still on its way to the API. */
+  private held(
+    sessionId: string,
+    messageId: string,
+    unacknowledged: (sessionId: string) => AgentEvent[],
+  ) {
+    if (!SAFE_ID.test(sessionId)) return true
+    if (this.threads.get(sessionId)?.messages.has(messageId)) return true
+    return unacknowledged(sessionId).some(
+      (e) =>
+        (e.type === 'message.user' || e.type === 'message.cancelled') && e.messageId === messageId,
+    )
+  }
+
+  /**
+   * The API has these threads running here and could not say whose turn it
+   * was. One with no turn here, and none ended in events still on their way,
+   * was lost when this computer stopped or the runner restarted: close it as
+   * interrupted, so it does not look busy forever.
    */
   closeLost(
     sessionIds: string[],
@@ -287,16 +371,20 @@ export class Threads {
       if (!SAFE_ID.test(sessionId) || this.inUse(sessionId)) continue
       const last = lastUnacknowledged(sessionId)
       if (last && OUT_OF_TURN.has(last.type)) continue
-      const at = new Date().toISOString()
-      this.options.emit(sessionId, {
-        at,
-        type: 'raw',
-        source: 'runner',
-        value:
-          'The computer stopped during this turn, so it was interrupted. Send a message to continue.',
-      })
-      this.options.emit(sessionId, { at, type: 'turn.completed', finishReason: 'interrupted' })
+      this.closeInterrupted(sessionId)
     }
+  }
+
+  private closeInterrupted(sessionId: string) {
+    const at = new Date().toISOString()
+    this.options.emit(sessionId, {
+      at,
+      type: 'raw',
+      source: 'runner',
+      value:
+        'The computer stopped during this turn, so it was interrupted. Send a message to continue.',
+    })
+    this.options.emit(sessionId, { at, type: 'turn.completed', finishReason: 'interrupted' })
   }
 
   /** A person takes control: the teammate stops now, or after its current turn. */
@@ -367,9 +455,12 @@ export class Threads {
    * was lost when the computer stopped or the runner restarted: say so, so it
    * does not look queued forever.
    */
-  dropLost(queued: { sessionId: string; messageId: string }[]) {
+  dropLost(
+    queued: { sessionId: string; messageId: string }[],
+    unacknowledged: (sessionId: string) => AgentEvent[],
+  ) {
     for (const { sessionId, messageId } of queued) {
-      if (!SAFE_ID.test(sessionId) || this.threads.get(sessionId)?.messages.has(messageId)) continue
+      if (this.held(sessionId, messageId, unacknowledged)) continue
       this.options.emit(sessionId, {
         at: new Date().toISOString(),
         type: 'message.cancelled',
@@ -418,12 +509,13 @@ export class Threads {
   /**
    * Queue a turn. 'prompt': the teammate is told what it has not seen yet,
    * worked out when its turn comes, so it sees the replies of those before it.
+   * Lost: a thread the API had in progress when this runner connected (see pickUp).
    * `prepare` runs when the turn is about to start: it gives the log's end to
    * tell up to, or null when the turn no longer happens.
    */
   private enqueue(
     spec: ThreadSpec,
-    input: ThreadInput | 'prompt',
+    input: ThreadInput | 'prompt' | Lost,
     prepare?: () => Promise<number | undefined | null>,
   ) {
     const thread = this.thread(spec.sessionId)
@@ -457,7 +549,10 @@ export class Threads {
         const turn =
           input === 'prompt'
             ? { kind: 'prompt' as const, text: await this.catchUp(spec, upTo) }
-            : input
+            : input.kind === 'lost'
+              ? await this.pickUp(spec, seat, input)
+              : input
+        if (!turn) return
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
           type: 'turn.started',
@@ -490,7 +585,8 @@ export class Threads {
           if (!controller.signal.aborted && !thread.takeover) this.handOn(thread, spec, seat.reply)
         }
         // A person answered: the messages that waited on them go now.
-        if (input !== 'prompt') await this.releaseHeld(thread, spec, seat)
+        if (turn.kind !== 'prompt' && turn.kind !== 'resume')
+          await this.releaseHeld(thread, spec, seat)
       } catch (error) {
         console.error(`thread ${spec.sessionId}: turn failed`, error)
       } finally {
@@ -792,8 +888,9 @@ export class Threads {
    * The prompt for a teammate's turn: what was said since its last one, up to
    * `upTo` when given. A lone member message to a teammate that already knows
    * the thread goes as is, so a thread with one teammate reads as before.
+   * `onlyNew`: nothing at all when it has seen everything.
    */
-  private async catchUp(spec: ThreadSpec, upTo?: number) {
+  private async catchUp(spec: ThreadSpec, upTo?: number, onlyNew = false) {
     const thread = this.thread(spec.sessionId)
     const log = await thread.log
     const me = spec.teammate.id
@@ -805,6 +902,7 @@ export class Threads {
       .filter((e) => e.by !== me)
     log.seen[me] = Math.max(log.seen[me] ?? 0, end)
     void this.saveLog(spec.sessionId)
+    if (onlyNew && unseen.length === 0) return ''
     const others = spec.teammates.filter((t) => t.id !== me).map((t) => t.name)
     const last = unseen.at(-1)
     if ((known || others.length === 0) && unseen.length === 1 && last?.by === null) return last.text
@@ -856,9 +954,11 @@ export class Threads {
   private async saveLog(sessionId: string) {
     const log = await this.thread(sessionId).log
     await mkdir(paths.state, { recursive: true, mode: 0o700 })
-    await writeFile(this.logFile(sessionId), JSON.stringify(log), { mode: 0o600 }).catch((error) =>
-      console.warn(`could not save thread log: ${String(error)}`),
-    )
+    // Whole or not at all: a stop without warning keeps the previous log.
+    const temp = `${this.logFile(sessionId)}.${randomUUID()}.tmp`
+    await writeFile(temp, JSON.stringify(log), { mode: 0o600 })
+      .then(() => rename(temp, this.logFile(sessionId)))
+      .catch((error) => console.warn(`could not save thread log: ${String(error)}`))
   }
 
   private thread(sessionId: string): Thread {

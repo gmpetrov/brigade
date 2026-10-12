@@ -260,7 +260,8 @@ async function keepAlive(computer: { id: string; providerRef: unknown }) {
  * Stop cloud computers that have had no running thread for the idle period,
  * keep the others alive, and reinstall old runners on them while they are idle.
  * A computer whose runner is gone and that its provider stopped is marked
- * stopped, so the next message resumes it.
+ * stopped, so the next message resumes it; with a thread running, it starts
+ * again now, and its runner continues the turn.
  */
 async function stopIdle() {
   const idleMs = env.IDLE_STOP_MINUTES * 60_000
@@ -273,6 +274,10 @@ async function stopIdle() {
         console.log(`computer ${computer.id} was stopped outside Brigade`)
         keptAlive.delete(computer.id)
         await setStatus(computer, 'stopped')
+        const cutOff = await prisma.session.count({
+          where: { computerId: computer.id, status: 'running' },
+        })
+        if (cutOff > 0) await ensureRunning(computer.id)
         continue
       }
     }

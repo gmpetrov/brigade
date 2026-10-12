@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -26,12 +27,20 @@ export class Outbox {
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.jsonl'))) {
       const sessionId = file.slice(0, -'.jsonl'.length)
       const stream = this.stream(sessionId)
+      let torn = false
       for (const line of readFileSync(join(dir, file), 'utf8').split('\n')) {
-        if (!line) continue
-        const event = JSON.parse(line) as SequencedEvent
+        // A line cut short when the computer lost power: that event never left.
+        const event = parseLine(line)
+        if (!event) {
+          torn ||= line.length > 0
+          continue
+        }
         stream.lastSeq = Math.max(stream.lastSeq, event.seq)
         if (event.seq > stream.acked) stream.pending.push(event)
       }
+      // Rewritten without it, or the next event appended would join that line and be lost too.
+      if (torn)
+        writeAtomic(join(dir, file), stream.pending.map((e) => JSON.stringify(e) + '\n').join(''))
     }
   }
 
@@ -51,12 +60,11 @@ export class Outbox {
     stream.pending = stream.pending.filter((e) => e.seq > seq)
     if (stream.pending.length === 0) rmSync(this.file(sessionId), { force: true })
     else
-      writeFileSync(
+      writeAtomic(
         this.file(sessionId),
         stream.pending.map((e) => JSON.stringify(e) + '\n').join(''),
-        { mode: 0o600 },
       )
-    writeFileSync(
+    writeAtomic(
       this.metaFile,
       JSON.stringify(Object.fromEntries([...this.streams].map(([id, s]) => [id, s.acked]))),
     )
@@ -65,6 +73,11 @@ export class Outbox {
   /** The latest event of a thread the API has not acknowledged yet. */
   lastUnacknowledged(sessionId: string): AgentEvent | undefined {
     return this.streams.get(sessionId)?.pending.at(-1)?.event
+  }
+
+  /** A thread's events the API has not acknowledged yet, in order. */
+  unacknowledgedFor(sessionId: string): AgentEvent[] {
+    return this.streams.get(sessionId)?.pending.map((e) => e.event) ?? []
   }
 
   /** Every event the API has not acknowledged yet, in order per thread. */
@@ -89,4 +102,20 @@ export class Outbox {
       return null
     }
   }
+}
+
+function parseLine(line: string): SequencedEvent | null {
+  if (!line) return null
+  try {
+    return JSON.parse(line) as SequencedEvent
+  } catch {
+    return null
+  }
+}
+
+/** Replace a file whole: a crash leaves the old one or the new one, never half of each. */
+function writeAtomic(file: string, text: string) {
+  const temp = `${file}.tmp`
+  writeFileSync(temp, text, { mode: 0o600 })
+  renameSync(temp, file)
 }
