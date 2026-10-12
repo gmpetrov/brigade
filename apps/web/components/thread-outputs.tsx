@@ -2,7 +2,13 @@
 // What a thread made, beside it: files its teammates wrote or named, library
 // documents, images, pull requests, emails and schedules. Read from the event
 // log, newest first; a file made again keeps one row.
-import { designName, type SequencedEvent } from '@brigade/contracts'
+import {
+  bareToolName as bare,
+  designName,
+  DELIVERABLE_FILE as DELIVERABLE,
+  EMAIL_TOOL,
+  type SequencedEvent,
+} from '@brigade/contracts'
 import {
   CalendarClock,
   FileText,
@@ -31,24 +37,18 @@ export type ThreadOutput = {
 /** Rows shown before "Show all". */
 const SHOWN = 6
 
-/**
- * Files a message names that are something made to hand over, not code it
- * read: a script can write a PDF without a write tool the runner sees.
- */
-const DELIVERABLE =
-  /\.(?:pdf|docx?|xlsx?|pptx?|odt|ods|odp|csv|zip|png|jpe?g|gif|webp|svg|mp3|mp4|wav)$/i
-
 /** Code a teammate wrote to make something (a script that renders a PDF), not the thing itself. */
 const CODE =
   /\.(?:py|ipynb|[cm]?[jt]sx?|sh|bash|zsh|rb|go|rs|java|kt|swift|php|c|cc|cpp|h|hpp|cs|sql|css|scss|lock)$/i
 
 const json = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value ?? ''))
 
-/** The bare tool name, without an MCP server's `mcp__server__` prefix. */
-const bare = (toolName: string) => toolName.replace(/^mcp__.+?__/, '')
-
 const name = (path: string) => path.split('/').pop() ?? path
 
+/**
+ * Files a message names that are something made to hand over, not code it
+ * read: a script can write a PDF without a write tool the runner sees.
+ */
 function namedFiles(text: string) {
   const found = new Set<string>()
   for (const [, code] of text.matchAll(/`([^`\n]+)`/g)) found.add(code!.trim())
@@ -187,7 +187,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               href: pullHref(repository, number),
             })
-          } else if (/^(?:gmail_)?(?:send|send_message|create_draft|reply|forward)$/.test(tool)) {
+          } else if (EMAIL_TOOL.test(tool)) {
             if (!/gmail|mail/i.test(call.toolName)) break
             const to = Array.isArray(input.to) ? input.to.join(', ') : input.to
             const subject = typeof input.subject === 'string' ? input.subject : undefined

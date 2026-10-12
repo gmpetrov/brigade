@@ -25,6 +25,7 @@ import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread } from './work.js'
+import { historyContext, pageStart } from './thread-history.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
 
@@ -1018,6 +1019,13 @@ export function browserSocket(scope: WorkspaceScope) {
       conn.sessions.add(session.id)
       // Replay from storage; live events may interleave, and the client dedupes by seq.
       let afterSeq = message.afterSeq
+      // Opened afresh: only the latest page, and what the whole thread needs from before it.
+      if (message.tail && afterSeq === 0) {
+        const firstSeq = await pageStart(session.id, session.lastSeq + 1)
+        const context = await historyContext(session.id, firstSeq)
+        send(ws, { type: 'history', sessionId: session.id, firstSeq, context })
+        afterSeq = firstSeq - 1
+      }
       for (;;) {
         const rows = await prisma.sessionEvent.findMany({
           where: { sessionId: session.id, seq: { gt: afterSeq, lte: session.lastSeq } },

@@ -1,8 +1,16 @@
 'use client'
-import { AppWindow, ArrowRight, ListOrdered, Lock, Monitor, SquareTerminal } from 'lucide-react'
+import {
+  AppWindow,
+  ArrowRight,
+  ListOrdered,
+  LoaderCircle,
+  Lock,
+  Monitor,
+  SquareTerminal,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -30,8 +38,8 @@ export default function ThreadPage() {
   const { me } = useDashboard()
   const thread = useApi<Thread>(`/threads/${id}`)
   const [status, setStatus] = useState<string>()
-  const { events, connected } = useThreadEvents(id, setStatus)
-  const { items, limits, queued, seen, turnId } = useThreadItems(events)
+  const { events, connected, firstSeq, loadOlder, loadingOlder } = useThreadEvents(id, setStatus)
+  const { items, limits, queued, seen, turnId } = useThreadItems(events, firstSeq)
   const outputs = useThreadOutputs(events)
   const preview = useThreadPreview(events)
   const [error, setError] = useState<string>()
@@ -81,9 +89,23 @@ export default function ThreadPage() {
   const pendingRef = useRef(pendingOut)
   pendingRef.current = pendingOut
 
+  // Something new at the end: show it. An older page above does not move the view.
+  const lastKey = items.at(-1)?.key
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest' })
-  }, [items.length])
+  }, [lastKey])
+  // An older page goes in above what is on screen: keep that where it was.
+  const anchor = useRef<number>(undefined)
+  const loadEarlier = () =>
+    loadOlder(() => {
+      anchor.current = bottom.current?.getBoundingClientRect().top
+    })
+  useLayoutEffect(() => {
+    const before = anchor.current
+    anchor.current = undefined
+    const after = bottom.current?.getBoundingClientRect().top
+    if (before !== undefined && after !== undefined) window.scrollBy(0, after - before)
+  }, [firstSeq])
   useEffect(() => {
     if (thread.data) setStatus(thread.data.status)
   }, [thread.data])
@@ -482,6 +504,10 @@ export default function ThreadPage() {
       )}
 
       <FileLinksProvider value={{ open: openFile }}>
+        {/* Once its page is in and shown at its end, not before: it would load one at once. */}
+        {firstSeq > 1 && (events.at(-1)?.seq ?? 0) >= firstSeq && (
+          <EarlierMessages key={firstSeq} loading={loadingOlder} onLoad={loadEarlier} />
+        )}
         <ThreadItems
           threadId={t.id}
           items={items}
@@ -634,6 +660,50 @@ export default function ThreadPage() {
 }
 
 /** crypto.randomUUID needs a secure context; a dashboard on a plain-http address has none. */
+/**
+ * Above the messages of a thread opened by its latest page: loads the page
+ * before as it comes near the screen, or on a click.
+ */
+function EarlierMessages({ loading, onLoad }: { loading: boolean; onLoad: () => Promise<void> }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [failed, setFailed] = useState(false)
+  const load = useRef(onLoad)
+  load.current = onLoad
+  // Keyed by the page: a new observer per page, which loads the next one if this is still near.
+  useEffect(() => {
+    const node = ref.current
+    if (!node || failed) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) void load.current().catch(() => setFailed(true))
+      },
+      { rootMargin: '800px 0px 0px 0px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [failed])
+  return (
+    <div ref={ref} className="mb-4 flex justify-center text-sm text-muted-foreground">
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <LoaderCircle aria-hidden className="size-4 animate-spin" /> Loading earlier messages…
+        </span>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setFailed(false)
+            void onLoad().catch(() => setFailed(true))
+          }}
+        >
+          {failed ? 'Could not load earlier messages. Try again' : 'Show earlier messages'}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 const newMessageId = () =>
   typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
