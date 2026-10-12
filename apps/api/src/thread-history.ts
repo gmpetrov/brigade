@@ -63,8 +63,9 @@ const ASKS = {
 /**
  * Of the events before `firstSeq`, those the whole thread needs: files and
  * images made, messages that name deliverables, calls to tools whose results
- * are outputs (with their results), the latest preview, usage limits and turn,
- * and approvals, questions, tickets and queued messages still open.
+ * are outputs (with their results), the latest preview, usage limits, the latest
+ * turn's start and end, and approvals, questions, tickets and queued messages
+ * still open.
  */
 export async function historyContext(sessionId: string, firstSeq: number) {
   if (firstSeq <= 1) return []
@@ -82,6 +83,7 @@ export async function historyContext(sessionId: string, firstSeq: number) {
             'preview.changed',
             'usage.updated',
             'turn.started',
+            'turn.completed',
             'message.cancelled',
             ...Object.keys(ASKS),
             ...Object.values(ASKS).map(([answer]) => answer),
@@ -137,7 +139,9 @@ export async function historyContext(sessionId: string, firstSeq: number) {
     }),
     last('preview.changed'),
     last('usage.updated', (r) => !!(field(r, 'limits') as unknown[] | undefined)?.length),
+    // With its end, if it ended: a turn on this page started after it, not with it.
     last('turn.started'),
+    last('turn.completed'),
     ...started,
     ...finished,
   ].filter((r) => r !== undefined)

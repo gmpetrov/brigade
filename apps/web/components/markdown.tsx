@@ -45,7 +45,10 @@ function CodeBlock({ children, ...props }: ComponentProps<'pre'>) {
   return (
     <div className="group/code relative my-3 first:mt-0 last:mb-0">
       {language && (
-        <span className="absolute top-2 left-3 font-mono text-[0.6875rem] text-muted-foreground uppercase">
+        <span
+          data-code-language
+          className="absolute top-2 left-3 font-mono text-[0.6875rem] text-muted-foreground uppercase"
+        >
           {language}
         </span>
       )}
@@ -290,8 +293,16 @@ function asJson(text: string) {
   }
 }
 
-/** One code block, through the same renderer as a teammate's. */
-function CodeSnippet({ code, language }: { code: string; language: string }) {
+/** One code block, through the same renderer as a teammate's. `bare`: without its language over it. */
+export function CodeSnippet({
+  code,
+  language,
+  bare,
+}: {
+  code: string
+  language: string
+  bare?: boolean
+}) {
   const json = (!language || language === 'json') && asJson(code)
   if (json) [code, language] = [json, 'json']
   // A fence longer than any run of backticks inside, so the code cannot close it.
@@ -300,7 +311,10 @@ function CodeSnippet({ code, language }: { code: string; language: string }) {
   return (
     <Markdown
       text={`${fence}${language}\n${code}\n${fence}`}
-      className="text-foreground [&_pre]:bg-background"
+      className={cn(
+        'text-foreground [&_pre]:bg-background',
+        bare && '[&_[data-code-language]]:hidden [&_pre]:pt-3',
+      )}
     />
   )
 }

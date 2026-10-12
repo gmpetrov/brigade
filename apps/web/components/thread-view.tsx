@@ -22,6 +22,7 @@ import {
 } from '@brigade/contracts'
 import {
   AppWindow,
+  ChevronDown,
   ChevronRight,
   Circle,
   CircleCheck,
@@ -32,19 +33,20 @@ import {
   Hand,
   LayoutTemplate,
   ListChecks,
+  LoaderCircle,
   Monitor,
   Plus,
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
-import { Markdown, MessageWithCode } from '@/components/markdown'
+import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
@@ -116,7 +118,9 @@ type Item =
   | { kind: 'plan'; key: string; items: Extract<AgentEvent, { type: 'plan.updated' }>['items'] }
   | { kind: 'file'; key: string; path: string }
   | { kind: 'image'; key: string; path: string; teammateId?: string; prompt?: string }
-  | { kind: 'turn'; key: string; finishReason: string }
+  /** Where a teammate's turn begins: what it did until its turn ends folds under one line. */
+  | { kind: 'start'; key: string; at: number }
+  | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
   | { kind: 'note'; key: string; text: string }
   | {
@@ -158,6 +162,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     const queued = new Map<string, QueuedMessage>()
     const seen = new Set<string>()
     let turnTeammate: string | undefined
+    let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
     let shown = true
     const add = (item: Item) => {
@@ -172,6 +177,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             seen.add(e.messageId)
             queued.delete(e.messageId)
           }
+          // Not steered into a turn: one still open never ended.
+          if (!e.steered) turnStartedAt = undefined
           add({
             kind: 'user',
             key: `u${seq}`,
@@ -205,6 +212,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
         }
         case 'turn.started':
           turnTeammate = e.teammateId
+          // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
+          turnStartedAt ??= Date.parse(e.at)
+          add({ kind: 'start', key: `s${seq}`, at: turnStartedAt })
           break
         // Ids come from each teammate's own harness: keyed by teammate too.
         case 'message.delta': {
@@ -299,7 +309,14 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           if (e.limits?.length) limits = e.limits
           break
         case 'turn.completed':
-          add({ kind: 'turn', key: `c${seq}`, finishReason: e.finishReason })
+          add({
+            kind: 'turn',
+            key: `c${seq}`,
+            finishReason: e.finishReason,
+            ...(turnStartedAt !== undefined ? { startedAt: turnStartedAt } : {}),
+            at: Date.parse(e.at),
+          })
+          turnStartedAt = undefined
           break
         case 'error':
           add({ kind: 'error', key: `e${seq}`, message: e.message })
@@ -469,6 +486,416 @@ function ThreadImage({
   )
 }
 
+type ActivityItem = Extract<Item, { kind: 'thinking' | 'tool' | 'file' }>
+
+/** A step on a teammate's way to its answer: steps in a row fold under one line saying what they were. */
+const isActivity = (item: Item): item is ActivityItem =>
+  item.kind === 'thinking' ||
+  item.kind === 'file' ||
+  (item.kind === 'tool' &&
+    !offeredChoices(item) &&
+    !(item.finished && !item.isError && openedPull(item)))
+
+/** What a long turn's "Worked for" line folds away: its steps and the messages between them. */
+const FOLDS = new Set<Item['kind']>(['thinking', 'tool', 'file', 'assistant', 'plan', 'note'])
+
+/** A turn quicker than this just answers: its steps fold, without a "Worked for" line. */
+const QUICK_TURN_MS = 30_000
+
+type Node =
+  | { type: 'item'; i: number }
+  | { type: 'activity'; is: number[]; live: boolean }
+  | { type: 'worked'; key: string; ms: number; inner: Node[] }
+
+/**
+ * How the thread reads: steps in a row fold together, and a long turn that ended
+ * folds everything before its last message under how long it worked. What a person
+ * must see (asks, pull requests, pictures, choices, errors) stays out of the fold.
+ * `running` is when the turn still running began.
+ */
+function layoutThread(items: Item[], working: boolean) {
+  const group = (is: number[]): Node[] => {
+    const nodes: Node[] = []
+    for (const i of is) {
+      const last = nodes.at(-1)
+      if (!isActivity(items[i]!)) nodes.push({ type: 'item', i })
+      else if (last?.type === 'activity') last.is.push(i)
+      else nodes.push({ type: 'activity', is: [i], live: false })
+    }
+    // A single step needs no line over it.
+    return nodes.map((n) =>
+      n.type === 'activity' && n.is.length === 1 ? { type: 'item', i: n.is[0]! } : n,
+    )
+  }
+  const fold = (turn: number[], end: Extract<Item, { kind: 'turn' }>): Node[] => {
+    const ms = end.startedAt === undefined ? 0 : end.at - end.startedAt
+    if (ms < QUICK_TURN_MS) return group(turn)
+    const final = turn.findLast((i) => items[i]!.kind === 'assistant')
+    const folded = turn.filter((i) => {
+      const item = items[i]!
+      return (
+        (final === undefined || i < final) &&
+        (FOLDS.has(item.kind) ||
+          // A preview's earlier outcomes: the last one says where it stands.
+          (item.kind === 'preview' && turn.some((j) => j > i && items[j]!.kind === 'preview'))) &&
+        (item.kind !== 'tool' || isActivity(item))
+      )
+    })
+    if (!folded.some((i) => isActivity(items[i]!))) return group(turn)
+    const first = folded[0]!
+    const kept = turn.filter((i) => !folded.includes(i))
+    return [
+      ...group(kept.filter((i) => i < first)),
+      // Keyed by its end: an older page loading above does not close it.
+      { type: 'worked', key: `w${end.key}`, ms, inner: group(folded) },
+      ...group(kept.filter((i) => i > first)),
+    ]
+  }
+  const nodes: Node[] = []
+  let running: number | undefined
+  // Since the last turn began or ended.
+  let since: number[] = []
+  items.forEach((item, i) => {
+    // A turn starting again before it ended (resumed) goes on.
+    if (item.kind === 'start' && running === undefined) {
+      nodes.push(...group(since))
+      since = [i]
+      running = item.at
+      return
+    }
+    // A message not steered into it: the turn before never ended.
+    if (item.kind === 'user' && !item.steeredTo && running !== undefined) {
+      nodes.push(...group(since))
+      since = []
+      running = undefined
+    }
+    since.push(i)
+    if (item.kind === 'turn') {
+      nodes.push(...fold(since, item))
+      since = []
+      running = undefined
+    }
+  })
+  nodes.push(...group(since))
+  const last = nodes.at(-1)
+  if (working && last?.type === 'activity') last.live = true
+  return Object.assign(nodes, { running })
+}
+
+/** "45s", "1m 52s", "2h 5m". */
+function duration(ms: number) {
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return s % 60 ? `${m}m ${s % 60}s` : `${m}m`
+  return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${Math.floor(m / 60)}h`
+}
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : `${n} ${many}`)
+
+/** What kind of step a tool call is, by its name in any harness. */
+function toolKind(toolName: string) {
+  if (/^mcp__(browser|playwright|chrome|claude-in-chrome)/i.test(toolName)) return 'browser'
+  const name = toolName.replace(/^mcp__.+?__/, '').toLowerCase()
+  if (/^(bash|shell|exec_command|local_shell|commandexecution|run_command|terminal)$/.test(name))
+    return 'command'
+  if (/^(read|view|read_file|notebookread)$/.test(name)) return 'read'
+  if (
+    /^(edit|write|multiedit|apply_patch|filechange|notebookedit|write_file|create_file)$/.test(name)
+  )
+    return 'edit'
+  if (/^(grep|glob|ls|list_files|search_workspace|codebase_search)$/.test(name)) return 'search'
+  if (/^(websearch|web_search|webfetch|web_fetch)$/.test(name)) return 'web'
+  if (name.startsWith('browser_')) return 'browser'
+  return 'other'
+}
+
+/** "Ran 3 commands, read 2 files, used the browser": what a run of steps did. */
+function activityLabel(group: ActivityItem[]) {
+  const count = { command: 0, read: 0, search: 0, web: 0, browser: 0, other: 0 }
+  const edited = new Set<string>()
+  let edits = 0
+  for (const item of group) {
+    if (item.kind === 'file') edited.add(item.path)
+    if (item.kind !== 'tool') continue
+    const kind = toolKind(item.toolName)
+    if (kind !== 'edit') count[kind]++
+    else {
+      const i = (item.input ?? {}) as Record<string, unknown>
+      const path = i.file_path ?? i.path
+      if (typeof path === 'string') edited.add(path)
+      else edits++
+    }
+  }
+  edits = Math.max(edits, edited.size)
+  const parts = [
+    count.command && `ran ${plural(count.command, 'a command', 'commands')}`,
+    count.read && `read ${plural(count.read, 'a file', 'files')}`,
+    edits && `edited ${plural(edits, 'a file', 'files')}`,
+    count.search && `searched ${plural(count.search, 'once', 'times')}`,
+    count.web && 'searched the web',
+    count.browser && 'used the browser',
+    count.other && `used ${plural(count.other, 'a tool', 'tools')}`,
+  ].filter(Boolean) as string[]
+  const text = parts.length ? parts.join(', ') : 'thought'
+  return text[0]!.toUpperCase() + text.slice(1)
+}
+
+/** The step happening now, under a live group's line. */
+function stepText(item: ActivityItem) {
+  if (item.kind === 'thinking') return 'Thinking'
+  if (item.kind === 'file') return `Changed ${item.path}`
+  return `${item.toolName} ${toolSummary(item.toolName, item.input)}`.trim()
+}
+
+const VERBS: Partial<Record<ReturnType<typeof toolKind>, string>> = {
+  command: 'Ran',
+  read: 'Read',
+  edit: 'Edited',
+  search: 'Searched',
+  web: 'Searched the web',
+}
+
+/** A tool call's line: "Ran npm test", "Read src/app.ts", else its name and what it was given. */
+function ToolLine({ toolName, input }: { toolName: string; input: unknown }) {
+  const verb = VERBS[toolKind(toolName)]
+  const summary = toolSummary(toolName, input)
+  return (
+    <>
+      {verb ? (
+        <span className="flex-none">{verb}</span>
+      ) : (
+        <code className="flex-none font-mono text-xs font-medium text-foreground/80">
+          {toolName}
+        </code>
+      )}
+      <span className={cn('min-w-0 truncate', verb && 'font-mono text-xs text-foreground/80')}>
+        {summary}
+      </span>
+    </>
+  )
+}
+
+const LANGUAGES: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  py: 'python',
+  rb: 'ruby',
+  rs: 'rust',
+  go: 'go',
+  java: 'java',
+  kt: 'kotlin',
+  swift: 'swift',
+  php: 'php',
+  json: 'json',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'ini',
+  css: 'css',
+  scss: 'scss',
+  html: 'xml',
+  xml: 'xml',
+  svg: 'xml',
+  md: 'markdown',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+  sql: 'sql',
+  prisma: 'graphql',
+}
+
+const languageOf = (path: unknown) =>
+  (typeof path === 'string' && LANGUAGES[path.split('.').pop()!.toLowerCase()]) || 'text'
+
+/** Long output is cut: highlighting a whole log would stall the page. */
+const MAX_SHOWN = 20_000
+const clipShown = (text: string) =>
+  text.length > MAX_SHOWN
+    ? `${text.slice(0, MAX_SHOWN)}\n… ${text.length - MAX_SHOWN} more characters`
+    : text
+
+/** What a shell command printed, from any harness's wrapping. */
+function commandOutput(output: unknown) {
+  if (typeof output === 'string') return { out: output, err: '' }
+  const o = (output ?? {}) as Record<string, unknown>
+  const text = (v: unknown) => (typeof v === 'string' ? v : '')
+  const out =
+    text(o.stdout) || text(o.aggregated_output) || text(o.output) || text(o.formatted_output)
+  if (!out && !o.stderr) return undefined
+  return { out, err: text(o.stderr) }
+}
+
+/** Old and new text as a diff: removed lines, then added ones. */
+const editDiff = (before: string, after: string) =>
+  [
+    ...(before ? before.split('\n').map((line) => `-${line}`) : []),
+    ...after.split('\n').map((line) => `+${line}`),
+  ].join('\n')
+
+const outputClass =
+  'max-h-80 overflow-auto px-4 font-mono text-xs whitespace-pre-wrap wrap-anywhere text-muted-foreground'
+
+/** Code in a tool call, colored, scrolling past a screenful. */
+const ToolCode = ({ code, language }: { code: string; language: string }) => (
+  <div className="max-h-80 overflow-auto rounded-lg text-xs [&_pre]:border [&_pre]:text-xs [&_pre]:wrap-anywhere [&_pre]:whitespace-pre-wrap">
+    <CodeSnippet code={clipShown(code)} language={language} bare />
+  </div>
+)
+
+/** A tool call opened: a command and what it printed, an edit as a diff, else its input and output. */
+function ToolDetail({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
+  const kind = toolKind(item.toolName)
+  const input = (item.input ?? {}) as Record<string, unknown>
+  const path = input.file_path ?? input.path
+  if (kind === 'command' && typeof input.command === 'string') {
+    const printed = item.output === undefined ? undefined : commandOutput(item.output)
+    return (
+      <>
+        <ToolCode code={`$ ${input.command}`} language="bash" />
+        {printed
+          ? (printed.out || printed.err) && (
+              <pre className={outputClass}>
+                {clipShown(printed.out)}
+                {printed.err && (
+                  <span className="text-destructive-text">
+                    {printed.out && '\n'}
+                    {clipShown(printed.err)}
+                  </span>
+                )}
+              </pre>
+            )
+          : item.output !== undefined && (
+              <pre className={outputClass}>{clipShown(json(item.output))}</pre>
+            )}
+      </>
+    )
+  }
+  if (kind === 'edit') {
+    const patch =
+      typeof item.input === 'string'
+        ? item.input
+        : typeof input.patch === 'string'
+          ? input.patch
+          : typeof input.input === 'string'
+            ? input.input
+            : undefined
+    const code =
+      patch ??
+      (typeof input.new_string === 'string'
+        ? editDiff(typeof input.old_string === 'string' ? input.old_string : '', input.new_string)
+        : typeof input.content === 'string'
+          ? input.content
+          : undefined)
+    if (code !== undefined)
+      return (
+        <>
+          <ToolCode
+            code={code}
+            language={patch !== undefined || 'new_string' in input ? 'diff' : languageOf(path)}
+          />
+          {item.isError && <pre className={outputClass}>{clipShown(json(item.output))}</pre>}
+        </>
+      )
+  }
+  if (kind === 'read' && !item.isError) {
+    const file = ((item.output ?? {}) as { file?: { content?: unknown; type?: unknown } }).file
+    const content =
+      typeof file?.content === 'string'
+        ? file.content
+        : typeof item.output === 'string'
+          ? item.output
+          : undefined
+    if (content !== undefined) return <ToolCode code={content} language={languageOf(path)} />
+    if (typeof file?.type === 'string' && file.type.startsWith('image/'))
+      return <p className="text-xs text-muted-foreground">An image ({file.type})</p>
+  }
+  return (
+    <>
+      <ToolCode code={json(item.input)} language="json" />
+      {item.output !== undefined &&
+        (typeof item.output === 'string' && !/^\s*[[{]/.test(item.output) ? (
+          <pre className={outputClass}>{clipShown(item.output)}</pre>
+        ) : (
+          <ToolCode code={json(item.output)} language="json" />
+        ))}
+    </>
+  )
+}
+
+/** Steps in a row, as one line that opens to each of them. */
+function ActivityGroup({
+  group,
+  live,
+  children,
+}: {
+  group: ActivityItem[]
+  live: boolean
+  children: React.ReactNode
+}) {
+  const failed = group.filter((item) => item.kind === 'tool' && item.isError).length
+  return (
+    <Collapsible className="flex min-w-0 flex-col">
+      <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-sm text-muted-foreground hover:text-foreground">
+        <span className="flex-none">{activityLabel(group)}</span>
+        <ChevronRight
+          className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+          aria-hidden
+        />
+        {failed > 0 && (
+          <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
+        )}
+        {live && (
+          <span className="min-w-0 truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
+            {stepText(group.at(-1)!)}
+          </span>
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 flex flex-col gap-2 border-l pl-3">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+/** A long turn's work before its answer, folded under how long it took. */
+function WorkedFor({ ms, children }: { ms: number; children: React.ReactNode }) {
+  return (
+    <Collapsible className="flex flex-col gap-4">
+      <CollapsibleTrigger className="group flex items-center gap-1.5 border-b pb-2 text-left text-sm text-muted-foreground hover:text-foreground">
+        Worked for {duration(ms)}
+        <ChevronDown
+          className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+          aria-hidden
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-4">{children}</CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+/** How long the running turn has worked, counting up. Not for the first seconds of a quick reply. */
+function WorkingFor({ since }: { since: number }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  const ms = now - since
+  if (ms < 5_000) return null
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+      Working for {duration(ms)}
+    </div>
+  )
+}
+
 export function ThreadItems({
   threadId,
   items,
@@ -481,6 +908,7 @@ export function ThreadItems({
   teammate,
   teammates = [],
   onOpenPreview,
+  working = false,
 }: {
   threadId: string
   items: Item[]
@@ -498,311 +926,327 @@ export function ThreadItems({
   teammates?: { id: string; name: string; harness: string }[]
   /** Opens the thread's preview beside it; set while one runs. */
   onOpenPreview?: () => void
+  /** A teammate's turn runs now: its latest steps show live, with how long it has worked. */
+  working?: boolean
 }) {
   // A teammate carries its harness as a plain string; the avatar only tells codex apart.
   const avatarOf = (t: { name: string; harness: string } | undefined) =>
     t && { name: t.name, harness: t.harness as Teammate['harness'] }
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
+  const render = (item: Item, i: number): React.ReactNode => {
+    switch (item.kind) {
+      case 'user':
+        return (
+          <div key={item.key} className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
+            {item.text && (
+              <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
+                <MessageWithCode text={item.text} />
+              </div>
+            )}
+            {item.attachments.length > 0 && (
+              <MessageAttachments attachments={item.attachments} className="justify-end" />
+            )}
+            {item.steeredTo && (
+              <span className="text-xs text-muted-foreground">
+                Steered into{' '}
+                {(byId.get(item.steeredTo) ?? teammate)?.name
+                  ? `${(byId.get(item.steeredTo) ?? teammate)!.name}’s`
+                  : 'the'}{' '}
+                running turn
+              </span>
+            )}
+          </div>
+        )
+      case 'assistant': {
+        const author = (item.teammateId && byId.get(item.teammateId)) || teammate
+        const avatar = avatarOf(author)
+        // With several teammates, name the author where the speaker changes.
+        const previous = items
+          .slice(0, i)
+          .findLast((it): it is Extract<Item, { kind: 'assistant' }> => it.kind === 'assistant')
+        const named =
+          several &&
+          author &&
+          (!previous ||
+            previous.teammateId !== item.teammateId ||
+            items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
+        return (
+          <div key={item.key} className="flex items-start gap-3">
+            {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
+              {named && <span className="text-sm font-semibold">{author.name}</span>}
+              {/* A file it names opens from its own working folder first. */}
+              <FileLinksProvider value={{ teammateId: item.teammateId }}>
+                <Markdown text={item.text} />
+              </FileLinksProvider>
+            </div>
+          </div>
+        )
+      }
+      case 'thinking':
+        return (
+          <Collapsible key={item.key} className="self-start">
+            <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              Thinking
+              <ChevronRight
+                className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+                aria-hidden
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <Markdown
+                text={item.text}
+                className="mt-2 max-h-80 overflow-auto rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        )
+      case 'tool': {
+        const choices = offeredChoices(item)
+        if (choices) {
+          // Answered by the next message anyone sent, a click or their own words.
+          const reply = items
+            .slice(i + 1)
+            .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
+          return (
+            <ChoicesCard key={item.key} choices={choices} reply={reply?.text} onChoose={onChoose} />
+          )
+        }
+        const opened = item.finished && !item.isError ? openedPull(item) : null
+        if (opened)
+          return (
+            <Link
+              key={item.key}
+              href={pullHref(opened.repository, opened.number)}
+              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50"
+            >
+              <GitPullRequest className="size-5 flex-none text-success" aria-hidden />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-semibold">
+                  Opened pull request #{opened.number}
+                  {opened.title && `: ${opened.title}`}
+                </span>
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {opened.repository}
+                </span>
+              </span>
+              <span className="flex-none font-medium text-primary">See the changes</span>
+            </Link>
+          )
+        return (
+          <Collapsible key={item.key} className="min-w-0 text-sm">
+            <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground hover:text-foreground">
+              <ToolLine toolName={item.toolName} input={item.input} />
+              <ChevronRight
+                className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+                aria-hidden
+              />
+              {!item.finished ? (
+                <StatusBadge status="running" />
+              ) : item.isError ? (
+                <StatusBadge status="failed" />
+              ) : null}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 flex flex-col gap-2">
+              <ToolDetail item={item} />
+            </CollapsibleContent>
+          </Collapsible>
+        )
+      }
+      case 'approval':
+        return (
+          <Card key={item.key} className="gap-3 border-warning/50 px-5 py-4">
+            <CardLabel className="text-warning">
+              <ShieldAlert aria-hidden />
+              Approval needed
+            </CardLabel>
+            <div className="font-medium">
+              Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
+              {toolSummary(item.toolName, item.input)}?
+            </div>
+            {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
+            <pre className={cn(preClass, 'max-h-60')}>{json(item.input)}</pre>
+            {item.resolved ? (
+              <StatusBadge
+                status={item.resolved.approved ? 'approved' : 'denied'}
+                label={item.resolved.approved ? 'Approved' : 'Denied'}
+              />
+            ) : canApprove ? (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
+                  {item.always ? 'Allow in this thread' : 'Approve'}
+                </Button>
+                {item.always && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    title="Let this teammate use it from now on, in any thread, without asking"
+                    onClick={() => onApproval(item.approvalId, true, true)}
+                  >
+                    Always allow
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onApproval(item.approvalId, false)}
+                >
+                  Deny
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Only the member who started this thread can answer.
+              </p>
+            )}
+          </Card>
+        )
+      case 'question':
+        return (
+          <QuestionCard
+            key={item.key}
+            item={item}
+            canAnswer={canApprove}
+            onAnswer={(answer) => onAnswer(item.questionId, answer)}
+          />
+        )
+      case 'ticket':
+        return (
+          <TicketCard
+            key={item.key}
+            item={item}
+            canAnswer={canApprove}
+            takeover={takeover}
+            teammates={teammates}
+            askerId={item.teammateId}
+            askerName={
+              (item.teammateId && byId.get(item.teammateId)?.name) ||
+              teammate?.name ||
+              'the teammate'
+            }
+            onAnswer={(answer) => onTicket(item.requestId, answer)}
+          />
+        )
+      case 'plan':
+        return (
+          <Card key={item.key} className="gap-2 px-5 py-4">
+            <CardLabel className="text-muted-foreground">
+              <ListChecks aria-hidden />
+              Plan
+            </CardLabel>
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {item.items.map((p, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  {p.status === 'completed' ? (
+                    <CircleCheck
+                      className="mt-0.5 size-4 flex-none text-success"
+                      aria-label="Done"
+                    />
+                  ) : p.status === 'in_progress' ? (
+                    <CircleDot
+                      className="mt-0.5 size-4 flex-none text-primary"
+                      aria-label="In progress"
+                    />
+                  ) : (
+                    <Circle
+                      className="mt-0.5 size-4 flex-none text-muted-foreground"
+                      aria-label="To do"
+                    />
+                  )}
+                  <span className={cn(p.status === 'completed' && 'text-muted-foreground')}>
+                    {p.content}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )
+      case 'file':
+        return (
+          <div key={item.key} className="text-sm text-muted-foreground">
+            Changed <code className="font-mono text-xs text-foreground">{item.path}</code>
+          </div>
+        )
+      case 'image':
+        return <ThreadImage key={item.key} threadId={threadId} item={item} />
+      case 'turn':
+        return item.finishReason === 'interrupted' ? (
+          <div key={item.key} className="text-sm text-muted-foreground">
+            Interrupted
+          </div>
+        ) : null
+      case 'error':
+        return (
+          <div
+            key={item.key}
+            role="alert"
+            className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm wrap-anywhere whitespace-pre-wrap text-destructive-text"
+          >
+            {item.message}
+          </div>
+        )
+      case 'note':
+        return (
+          <div key={item.key} className="text-sm text-muted-foreground">
+            {item.text}
+          </div>
+        )
+      case 'preview':
+        return (
+          <div
+            key={item.key}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+          >
+            <AppWindow aria-hidden className="size-4 shrink-0" />
+            <span>
+              {item.status === 'ready'
+                ? `Preview ready${item.repository ? ` · ${item.repository}` : ''}`
+                : item.status === 'attention'
+                  ? `The preview's check found problems${item.failed ? ` on ${item.failed.join(', ')}` : ''}`
+                  : item.status === 'running'
+                    ? 'Preview running'
+                    : endedText(item.status, item.reason)}
+            </span>
+            {(item.status === 'ready' ||
+              item.status === 'attention' ||
+              item.status === 'running') &&
+              onOpenPreview &&
+              // Only the latest run opens: an earlier one has been replaced.
+              !items.slice(i + 1).some((later) => later.kind === 'preview') && (
+                <Button type="button" size="sm" variant="outline" onClick={onOpenPreview}>
+                  Open preview
+                </Button>
+              )}
+          </div>
+        )
+      case 'start':
+        return null
+    }
+  }
+  const nodes = layoutThread(items, working)
+  const show = (list: Node[]): React.ReactNode[] =>
+    list.map((node) =>
+      node.type === 'item' ? (
+        render(items[node.i]!, node.i)
+      ) : node.type === 'activity' ? (
+        <ActivityGroup
+          key={items[node.is[0]!]!.key}
+          group={node.is.map((i) => items[i]!) as ActivityItem[]}
+          live={node.live}
+        >
+          {node.is.map((i) => render(items[i]!, i))}
+        </ActivityGroup>
+      ) : (
+        <WorkedFor key={node.key} ms={node.ms}>
+          {show(node.inner)}
+        </WorkedFor>
+      ),
+    )
   return (
     <div className="flex flex-col gap-4">
-      {items.map((item, i) => {
-        switch (item.kind) {
-          case 'user':
-            return (
-              <div key={item.key} className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
-                {item.text && (
-                  <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
-                    <MessageWithCode text={item.text} />
-                  </div>
-                )}
-                {item.attachments.length > 0 && (
-                  <MessageAttachments attachments={item.attachments} className="justify-end" />
-                )}
-                {item.steeredTo && (
-                  <span className="text-xs text-muted-foreground">
-                    Steered into{' '}
-                    {(byId.get(item.steeredTo) ?? teammate)?.name
-                      ? `${(byId.get(item.steeredTo) ?? teammate)!.name}’s`
-                      : 'the'}{' '}
-                    running turn
-                  </span>
-                )}
-              </div>
-            )
-          case 'assistant': {
-            const author = (item.teammateId && byId.get(item.teammateId)) || teammate
-            const avatar = avatarOf(author)
-            // With several teammates, name the author where the speaker changes.
-            const previous = items
-              .slice(0, i)
-              .findLast((it): it is Extract<Item, { kind: 'assistant' }> => it.kind === 'assistant')
-            const named =
-              several &&
-              author &&
-              (!previous ||
-                previous.teammateId !== item.teammateId ||
-                items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
-            return (
-              <div key={item.key} className="flex items-start gap-3">
-                {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
-                  {named && <span className="text-sm font-semibold">{author.name}</span>}
-                  {/* A file it names opens from its own working folder first. */}
-                  <FileLinksProvider value={{ teammateId: item.teammateId }}>
-                    <Markdown text={item.text} />
-                  </FileLinksProvider>
-                </div>
-              </div>
-            )
-          }
-          case 'thinking':
-            return (
-              <Collapsible key={item.key} className="self-start">
-                <CollapsibleTrigger className="group flex items-center gap-1.5 rounded-full border border-dashed px-3 py-1 text-sm text-muted-foreground hover:border-solid hover:text-foreground">
-                  <ChevronRight
-                    className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
-                    aria-hidden
-                  />
-                  Thinking
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Markdown
-                    text={item.text}
-                    className="mt-2 max-h-80 overflow-auto rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground"
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            )
-          case 'tool': {
-            const choices = offeredChoices(item)
-            if (choices) {
-              // Answered by the next message anyone sent, a click or their own words.
-              const reply = items
-                .slice(i + 1)
-                .find((it): it is Extract<Item, { kind: 'user' }> => it.kind === 'user')
-              return (
-                <ChoicesCard
-                  key={item.key}
-                  choices={choices}
-                  reply={reply?.text}
-                  onChoose={onChoose}
-                />
-              )
-            }
-            const opened = item.finished && !item.isError ? openedPull(item) : null
-            if (opened)
-              return (
-                <Link
-                  key={item.key}
-                  href={pullHref(opened.repository, opened.number)}
-                  className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50"
-                >
-                  <GitPullRequest className="size-5 flex-none text-success" aria-hidden />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-semibold">
-                      Opened pull request #{opened.number}
-                      {opened.title && `: ${opened.title}`}
-                    </span>
-                    <span className="truncate font-mono text-xs text-muted-foreground">
-                      {opened.repository}
-                    </span>
-                  </span>
-                  <span className="flex-none font-medium text-primary">See the changes</span>
-                </Link>
-              )
-            return (
-              <Collapsible key={item.key} className="rounded-lg border border-dashed text-sm">
-                <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 px-3 py-1.5 text-left">
-                  <ChevronRight
-                    className="size-3.5 flex-none text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
-                    aria-hidden
-                  />
-                  <code className="flex-none font-mono text-xs font-medium">{item.toolName}</code>
-                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                    {toolSummary(item.toolName, item.input)}
-                  </span>
-                  {!item.finished ? (
-                    <StatusBadge status="running" />
-                  ) : item.isError ? (
-                    <StatusBadge status="failed" />
-                  ) : null}
-                </CollapsibleTrigger>
-                <CollapsibleContent className="flex flex-col gap-2 border-t border-dashed p-2">
-                  <pre className={preClass}>{json(item.input)}</pre>
-                  {item.output !== undefined && <pre className={preClass}>{json(item.output)}</pre>}
-                </CollapsibleContent>
-              </Collapsible>
-            )
-          }
-          case 'approval':
-            return (
-              <Card key={item.key} className="gap-3 border-warning/50 px-5 py-4">
-                <CardLabel className="text-warning">
-                  <ShieldAlert aria-hidden />
-                  Approval needed
-                </CardLabel>
-                <div className="font-medium">
-                  Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
-                  {toolSummary(item.toolName, item.input)}?
-                </div>
-                {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
-                <pre className={cn(preClass, 'max-h-60')}>{json(item.input)}</pre>
-                {item.resolved ? (
-                  <StatusBadge
-                    status={item.resolved.approved ? 'approved' : 'denied'}
-                    label={item.resolved.approved ? 'Approved' : 'Denied'}
-                  />
-                ) : canApprove ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
-                      {item.always ? 'Allow in this thread' : 'Approve'}
-                    </Button>
-                    {item.always && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        title="Let this teammate use it from now on, in any thread, without asking"
-                        onClick={() => onApproval(item.approvalId, true, true)}
-                      >
-                        Always allow
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onApproval(item.approvalId, false)}
-                    >
-                      Deny
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Only the member who started this thread can answer.
-                  </p>
-                )}
-              </Card>
-            )
-          case 'question':
-            return (
-              <QuestionCard
-                key={item.key}
-                item={item}
-                canAnswer={canApprove}
-                onAnswer={(answer) => onAnswer(item.questionId, answer)}
-              />
-            )
-          case 'ticket':
-            return (
-              <TicketCard
-                key={item.key}
-                item={item}
-                canAnswer={canApprove}
-                takeover={takeover}
-                teammates={teammates}
-                askerId={item.teammateId}
-                askerName={
-                  (item.teammateId && byId.get(item.teammateId)?.name) ||
-                  teammate?.name ||
-                  'the teammate'
-                }
-                onAnswer={(answer) => onTicket(item.requestId, answer)}
-              />
-            )
-          case 'plan':
-            return (
-              <Card key={item.key} className="gap-2 px-5 py-4">
-                <CardLabel className="text-muted-foreground">
-                  <ListChecks aria-hidden />
-                  Plan
-                </CardLabel>
-                <ul className="flex flex-col gap-1.5 text-sm">
-                  {item.items.map((p, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      {p.status === 'completed' ? (
-                        <CircleCheck
-                          className="mt-0.5 size-4 flex-none text-success"
-                          aria-label="Done"
-                        />
-                      ) : p.status === 'in_progress' ? (
-                        <CircleDot
-                          className="mt-0.5 size-4 flex-none text-primary"
-                          aria-label="In progress"
-                        />
-                      ) : (
-                        <Circle
-                          className="mt-0.5 size-4 flex-none text-muted-foreground"
-                          aria-label="To do"
-                        />
-                      )}
-                      <span className={cn(p.status === 'completed' && 'text-muted-foreground')}>
-                        {p.content}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )
-          case 'file':
-            return (
-              <div key={item.key} className="text-sm text-muted-foreground">
-                Changed <code className="font-mono text-xs text-foreground">{item.path}</code>
-              </div>
-            )
-          case 'image':
-            return <ThreadImage key={item.key} threadId={threadId} item={item} />
-          case 'turn':
-            return item.finishReason === 'interrupted' ? (
-              <div key={item.key} className="text-sm text-muted-foreground">
-                Interrupted
-              </div>
-            ) : null
-          case 'error':
-            return (
-              <div
-                key={item.key}
-                role="alert"
-                className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm wrap-anywhere whitespace-pre-wrap text-destructive-text"
-              >
-                {item.message}
-              </div>
-            )
-          case 'note':
-            return (
-              <div key={item.key} className="text-sm text-muted-foreground">
-                {item.text}
-              </div>
-            )
-          case 'preview':
-            return (
-              <div
-                key={item.key}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
-              >
-                <AppWindow aria-hidden className="size-4 shrink-0" />
-                <span>
-                  {item.status === 'ready'
-                    ? `Preview ready${item.repository ? ` · ${item.repository}` : ''}`
-                    : item.status === 'attention'
-                      ? `The preview's check found problems${item.failed ? ` on ${item.failed.join(', ')}` : ''}`
-                      : item.status === 'running'
-                        ? 'Preview running'
-                        : endedText(item.status, item.reason)}
-                </span>
-                {(item.status === 'ready' ||
-                  item.status === 'attention' ||
-                  item.status === 'running') &&
-                  onOpenPreview &&
-                  // Only the latest run opens: an earlier one has been replaced.
-                  !items.slice(i + 1).some((later) => later.kind === 'preview') && (
-                    <Button type="button" size="sm" variant="outline" onClick={onOpenPreview}>
-                      Open preview
-                    </Button>
-                  )}
-              </div>
-            )
-        }
-      })}
+      {show(nodes)}
+      {working && nodes.running !== undefined && <WorkingFor since={nodes.running} />}
     </div>
   )
 }

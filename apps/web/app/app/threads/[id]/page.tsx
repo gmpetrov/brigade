@@ -1,6 +1,7 @@
 'use client'
 import {
   AppWindow,
+  ArrowDown,
   ArrowRight,
   ListOrdered,
   LoaderCircle,
@@ -137,11 +138,35 @@ export default function ThreadPage() {
   const pendingRef = useRef(pendingOut)
   pendingRef.current = pendingOut
 
-  // Something new at the end: show it. An older page above does not move the view.
-  const lastKey = items.at(-1)?.key
+  // At the end, the thread follows what comes in, streamed words included. Scrolled up to
+  // read, nothing moves: a button goes back down. An older page above does not move the view.
+  const following = useRef(true)
+  const [atEnd, setAtEnd] = useState(true)
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest' })
-  }, [lastKey])
+    const measure = () => {
+      const end =
+        document.documentElement.scrollHeight - window.innerHeight - window.scrollY < END_SLACK
+      following.current = end
+      setAtEnd(end)
+    }
+    // Opening or closing a fold moves the end too, without a scroll.
+    const afterClick = () => requestAnimationFrame(measure)
+    window.addEventListener('scroll', measure, { passive: true })
+    document.addEventListener('click', afterClick)
+    return () => {
+      window.removeEventListener('scroll', measure)
+      document.removeEventListener('click', afterClick)
+    }
+  }, [])
+  const toEnd = (behavior: ScrollBehavior = 'instant') => {
+    following.current = true
+    bottom.current?.scrollIntoView({ block: 'end', inline: 'nearest', behavior })
+  }
+  const lastKey = items.at(-1)?.key
+  const lastSeq = events.at(-1)?.seq
+  useEffect(() => {
+    if (following.current) toEnd()
+  }, [lastKey, lastSeq, pendingOut.length])
   // An older page goes in above what is on screen: keep that where it was.
   const anchor = useRef<number>(undefined)
   const loadEarlier = () =>
@@ -254,6 +279,8 @@ export default function ThreadPage() {
         list.map((o) => (o.messageId === message.messageId ? { ...o, state } : o)),
       )
     setOutgoing((list) => [...list, message])
+    // Sending goes back to the end, to see the answer come.
+    following.current = true
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
         body: { text: message.text, attachmentIds, messageId: message.messageId, pick },
@@ -585,6 +612,7 @@ export default function ThreadPage() {
           teammate={t.teammate}
           teammates={people}
           canApprove={t.mayPrompt}
+          working={busy}
           onOpenPreview={previewLive(preview) ? openPreview : undefined}
           onApproval={(approvalId, approved, always) =>
             void call('/approvals', {
@@ -629,6 +657,7 @@ export default function ThreadPage() {
 
       {t.controlledByMemberId ? (
         <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">
+          {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
           <Takeover
             thread={t}
             memberId={me.memberId ?? ''}
@@ -643,6 +672,7 @@ export default function ThreadPage() {
         // Sticks to the bottom of the content column while the thread scrolls under it; the
         // negative margin takes up the column's bottom padding so it never jumps at the end.
         <div className="sticky bottom-0 z-10 mt-6 -mb-16 bg-linear-to-t from-background from-75% to-transparent pt-6 pb-4 md:pb-6">
+          {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
           <QueuedMessages
             queued={queued}
             outgoing={pendingOut}
@@ -724,7 +754,8 @@ export default function ThreadPage() {
           </form>
         </div>
       ) : (
-        <p className="mt-6 text-sm text-muted-foreground">
+        <p className="relative mt-6 text-sm text-muted-foreground">
+          {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
           This thread runs on {t.startedBy.user.name}&apos;s subscription. You can watch it live.
         </p>
       )}
@@ -739,6 +770,26 @@ export default function ThreadPage() {
  * Above the messages of a thread opened by its latest page: loads the page
  * before as it comes near the screen, or on a click.
  */
+/** How near the end still counts as there: a reader this close keeps following. */
+const END_SLACK = 48
+
+/** Back down to the latest, while reading higher up. */
+function JumpToEnd({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      aria-label="Scroll to the latest"
+      title="Scroll to the latest"
+      className="absolute -top-6 left-1/2 z-10 size-8 -translate-x-1/2 rounded-full bg-background shadow-md"
+    >
+      <ArrowDown aria-hidden />
+    </Button>
+  )
+}
+
 function EarlierMessages({ loading, onLoad }: { loading: boolean; onLoad: () => Promise<void> }) {
   const ref = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
