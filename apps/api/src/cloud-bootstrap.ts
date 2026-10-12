@@ -80,6 +80,28 @@ case "\${1:-}" in
       --password-store=basic --class="brigade-$2" --window-name="$4" \${URL:+"$URL"} \\
       >/dev/null 2>&1 </dev/null
     ;;
+  containers) # <user>: the teammate's own rootless Docker, under its user session; prints its uid
+    user_ok "$2"
+    U=$(id -u "$2") || fail "no such user"
+    # No rootless Docker on this computer: nothing to start, and no uid printed.
+    command -v dockerd-rootless-setuptool.sh >/dev/null && command -v newuidmap >/dev/null || exit 0
+    grep -q "^$2:" /etc/subuid || fail "no subordinate ids for $2"
+    # A user manager that outlives any login: it runs the daemon.
+    loginctl enable-linger "$2"
+    I=0
+    while [ ! -S "/run/user/$U/bus" ] && [ $I -lt 60 ]; do sleep 0.25; I=$((I + 1)); done
+    [ -S "/run/user/$U/bus" ] || fail "no user session for $2"
+    cd /
+    runuser -u "$2" -- env -i HOME="/home/$2" USER="$2" LOGNAME="$2" PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
+      XDG_RUNTIME_DIR="/run/user/$U" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$U/bus" \\
+      sh -c 'systemctl --user is-active --quiet docker.service ||
+        dockerd-rootless-setuptool.sh install --force >"$HOME/.docker-setup.log" 2>&1' ||
+      fail "rootless Docker did not start for $2 (see its ~/.docker-setup.log)"
+    I=0
+    while [ ! -S "/run/user/$U/docker.sock" ] && [ $I -lt 120 ]; do sleep 0.25; I=$((I + 1)); done
+    [ -S "/run/user/$U/docker.sock" ] || fail "no Docker socket for $2"
+    echo "$U"
+    ;;
   clipboard) # get|set: the desktop's clipboard as UTF-8, on stdout or from stdin
     AUTH=$(ps -o args= -C Xorg | sed -n 's/.* -auth \\([^ ]*\\).*/\\1/p' | head -1)
     [ -n "$AUTH" ] || fail "no desktop"
@@ -112,6 +134,30 @@ getent group brigade-teammates >/dev/null || sudo groupadd brigade-teammates
 sudo tee /usr/local/sbin/brigade-teammate >/dev/null <<'HELPER'
 ${TEAMMATE_HELPER}HELPER
 sudo chmod 755 /usr/local/sbin/brigade-teammate
+# Containers for teammates: each runs its own rootless Docker (the helper's \`containers\`),
+# never the root daemon, whose socket would make it root. Where Docker is installed.
+if command -v dockerd-rootless-setuptool.sh >/dev/null; then
+  NEED=""
+  for P in uidmap slirp4netns dbus-user-session; do dpkg -s "$P" >/dev/null 2>&1 || NEED="$NEED $P"; done
+  if [ -n "$NEED" ]; then
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $NEED >/dev/null
+  fi
+  # Ubuntu 24.04 may restrict user namespaces to profiled programs: allow rootlesskit's.
+  if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ] &&
+    [ ! -f /etc/apparmor.d/brigade-rootlesskit ]; then
+    sudo tee /etc/apparmor.d/brigade-rootlesskit >/dev/null <<'APPARMOR'
+abi <abi/4.0>,
+include <tunables/global>
+
+/usr/bin/rootlesskit flags=(unconfined) {
+  userns,
+  include if exists <local/brigade-rootlesskit>
+}
+APPARMOR
+    sudo apparmor_parser -r /etc/apparmor.d/brigade-rootlesskit
+  fi
+fi
 # The workspace library, mirrored by the runner: one folder per teammate user, made by the
 # helper, holding only what that teammate may read. Teammates pass through, never list it.
 sudo install -d -o brigade -g brigade-teammates -m 2710 /var/lib/brigade/library

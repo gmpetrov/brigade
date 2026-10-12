@@ -24,7 +24,7 @@ import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { instructions, writeInstructions } from '../instructions.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
-import { ensureUser, linkAccount, teammateHome } from '../teammates.js'
+import { containerEnv, ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
 import {
   askUserQuestions,
@@ -682,6 +682,7 @@ async function prepare(workDir: string, account: AccountRef, runAs?: string) {
   return harnessEnv({
     ...(await linkAccount(runAs, account)),
     ...accountToken(account),
+    ...(await containerEnv(runAs)),
     HOME: home,
     USER: runAs,
     LOGNAME: runAs,

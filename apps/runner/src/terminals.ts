@@ -8,7 +8,7 @@ import type { AgentEvent, ThreadSpec } from '@brigade/contracts'
 import { CLOUD } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import { gitEnv } from './repos.js'
-import { ensureUser, teammateHome, teammateUser } from './teammates.js'
+import { containerEnv, ensureUser, teammateHome, teammateUser } from './teammates.js'
 
 const execFileAsync = promisify(execFile)
 /** Commands as a teammate run from /, since the runner's own directory is not theirs to enter. */
@@ -54,6 +54,7 @@ export class Terminals {
     ])
     const history = `${teammateHome(user)}/.brigade-history/${terminalId}`
     const env = harnessEnv({
+      ...(await containerEnv(user)),
       HOME: teammateHome(user),
       USER: user,
       LOGNAME: user,

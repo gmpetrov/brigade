@@ -27,6 +27,39 @@ async function helper(...args: string[]) {
 }
 
 export const ensureUser = (user: string) => helper('ensure-user', user)
+
+const containers = new Map<string, Promise<Record<string, string>>>()
+
+/**
+ * Where the teammate's own rootless Docker answers (the helper starts it once
+ * under the teammate's user session), as the environment its processes get:
+ * `docker` and `docker compose` then work for it alone. {} where the
+ * computer has none; tried again on the next call after a failure.
+ */
+export function containerEnv(user: string): Promise<Record<string, string>> {
+  let env = containers.get(user)
+  if (!env) {
+    env = run('sudo', ['-n', HELPER, 'containers', user], { cwd: '/', timeout: 120_000 }).then(
+      ({ stdout }): Record<string, string> => {
+        const uid = stdout.trim()
+        return /^\d+$/.test(uid)
+          ? {
+              XDG_RUNTIME_DIR: `/run/user/${uid}`,
+              DOCKER_HOST: `unix:///run/user/${uid}/docker.sock`,
+            }
+          : {}
+      },
+      (error: { stderr?: string } & Error): Record<string, string> => {
+        console.warn(`no Docker for ${user}: ${(error.stderr || error.message).trim()}`)
+        containers.delete(user)
+        return {}
+      },
+    )
+    containers.set(user, env)
+  }
+  return env
+}
+
 export const shareAccount = (accountId: string) => helper('share-account', accountId)
 
 /**
