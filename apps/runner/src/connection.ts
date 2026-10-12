@@ -180,6 +180,17 @@ export class Connection {
     return result.output
   }
 
+  /** Read or save a repository's preview recipe. The API checks the thread. */
+  async callPreview(
+    request: Omit<Extract<RunnerToApi, { type: 'preview.call' }>, 'type' | 'callId'>,
+  ): Promise<unknown> {
+    const result = await this.call(
+      { type: 'preview.call', ...request },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+    return result.output
+  }
+
   /** The public origins of a thread's preview ports, by port. Cloud computers only. */
   async exposePreview(sessionId: string, ports: number[]): Promise<Record<number, string>> {
     const result = await this.call(
@@ -187,6 +198,17 @@ export class Connection {
       { onPending: () => undefined, onDecision: () => undefined },
     )
     return (result.output as { origins: Record<number, string> }).origins
+  }
+
+  /** What a person opens for a preview port: its address with the token. Never logged. */
+  async previewUrl(sessionId: string, port: number): Promise<string> {
+    const result = await this.call(
+      { type: 'preview.expose', sessionId, ports: [port], token: true },
+      { onPending: () => undefined, onDecision: () => undefined },
+    )
+    const url = (result.output as { urls?: Record<number, string> }).urls?.[port]
+    if (!url) throw new Error('The API gave no address for the preview')
+    return url
   }
 
   private call(
@@ -201,6 +223,7 @@ export class Connection {
             | 'task.call'
             | 'schedule.call'
             | 'preview.expose'
+            | 'preview.call'
         }
       >,
       'callId'

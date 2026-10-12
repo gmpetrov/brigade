@@ -135,7 +135,7 @@ function createAgent(
     ...(spec.git ? repoTools(checkoutRepo) : {}),
     ...taskTools(callTask),
     ...scheduleTools(callSchedule),
-    ...previewTools(preview),
+    ...previewTools(preview, credentials),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,

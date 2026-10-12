@@ -163,6 +163,9 @@ async function start() {
   const previews = new Previews({
     emit: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
     expose: CLOUD ? (sessionId, ports) => connection.exposePreview(sessionId, ports) : null,
+    viewUrl: CLOUD ? (sessionId, port) => connection.previewUrl(sessionId, port) : null,
+    recipes: (sessionId, teammateId, operation) =>
+      connection.callPreview({ sessionId, teammateId, operation }),
   })
   const threads = new Threads({
     concurrency: Number(values.concurrency),
