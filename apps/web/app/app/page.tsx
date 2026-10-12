@@ -154,6 +154,7 @@ export default function Home() {
   const teammate = teammates.find((t) => t.id === chosen) ?? teammates[0]
 
   useLive((message) => {
+    if (message.type === 'tickets.updated') void tickets.reload()
     if (message.type !== 'thread.updated') return
     void threads.reload()
     void tickets.reload()

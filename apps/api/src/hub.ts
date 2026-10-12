@@ -13,7 +13,7 @@ import {
 } from '@brigade/contracts'
 import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
-import { prisma, scoped, type Prisma } from './db.js'
+import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureRunning, ensureSetup, touch } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
@@ -238,6 +238,30 @@ export function broadcastTask(workspaceId: string, taskId: string) {
   broadcast(workspaceId, { type: 'task.updated', taskId })
 }
 
+const listTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+/**
+ * Tell dashboards tickets or pull requests changed, so lists and sidebar badges
+ * refetch. Coalesced: a burst of writes is one message, sent once they settle.
+ */
+export function notifyList(workspaceId: string, type: 'tickets.updated' | 'pulls.updated') {
+  const key = `${workspaceId}:${type}`
+  if (listTimers.has(key)) return
+  listTimers.set(
+    key,
+    setTimeout(() => {
+      listTimers.delete(key)
+      broadcast(workspaceId, { type })
+    }, 300),
+  )
+}
+
+onScopedWrite((model, scope) => {
+  if (model === 'Ticket') notifyList(scope.workspaceId, 'tickets.updated')
+  else if (model === 'PullRequest' || model === 'PullRequestReview')
+    notifyList(scope.workspaceId, 'pulls.updated')
+})
+
 /** A schedule was created, changed, fired or removed. */
 export function broadcastSchedule(workspaceId: string, scheduleId: string) {
   broadcast(workspaceId, { type: 'schedule.updated', scheduleId })
@@ -427,14 +451,16 @@ export function runnerSocket(runner: {
       }
       endLogin(login.loginId)
       if (message.ok) {
-        await prisma.ticket.updateMany({
+        const resolved = await prisma.ticket.updateManyAndReturn({
           where: {
             type: 'sign_in',
             status: 'open',
             payload: { path: ['accountId'], equals: login.accountId },
           },
           data: { status: 'resolved', resolvedByMemberId: login.memberId, resolvedAt: new Date() },
+          select: { workspaceId: true },
         })
+        for (const t of resolved) notifyList(t.workspaceId, 'tickets.updated')
       }
       await prisma.account.update({
         where: { id: login.accountId },
@@ -748,6 +774,7 @@ async function noteAccountSwitches(
   session: { id: string; organizationId: string; workspaceId: string },
   events: SequencedEvent[],
 ) {
+  const db = scoped(session)
   for (const { event } of events) {
     if (event.type !== 'account.switched') continue
     if (event.reason === 'usage_limit') {
@@ -763,7 +790,7 @@ async function noteAccountSwitches(
         data: { accountId: event.toAccountId },
       })
     } else {
-      await prisma.ticket.create({
+      await db.ticket.create({
         data: {
           organizationId: session.organizationId,
           workspaceId: session.workspaceId,
@@ -856,7 +883,7 @@ async function noteOneAccount(
   if (!before) return
   if (authFailed && before.status !== 'needs_sign_in') {
     // An expired login is a ticket for the member who owns the account.
-    await prisma.ticket.create({
+    await scoped(session).ticket.create({
       data: {
         organizationId: session.organizationId,
         workspaceId: session.workspaceId,
@@ -887,14 +914,15 @@ async function noteTickets(
   session: { id: string; organizationId: string; workspaceId: string; teammateId: string },
   events: SequencedEvent[],
 ) {
+  const db = scoped(session)
   for (const { event } of events) {
     if (event.type === 'approval.requested') {
       // Connector writes already have their ticket; its id is the approval id.
-      const exists = await prisma.ticket.count({ where: { id: event.approvalId } })
+      const exists = await db.ticket.count({ where: { id: event.approvalId } })
       if (exists) continue
       const teammate = await eventTeammate(session, event)
       const input = JSON.stringify(event.input ?? null)
-      await prisma.ticket.create({
+      await db.ticket.create({
         data: {
           organizationId: session.organizationId,
           workspaceId: session.workspaceId,
@@ -912,7 +940,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'approval.resolved') {
-      await prisma.ticket.updateMany({
+      await db.ticket.updateMany({
         where: {
           sessionId: session.id,
           status: 'open',
@@ -927,7 +955,7 @@ async function noteTickets(
     } else if (event.type === 'question.asked') {
       const teammate = await eventTeammate(session, event)
       const first = event.questions[0]?.question ?? 'a question'
-      await prisma.ticket.create({
+      await db.ticket.create({
         data: {
           organizationId: session.organizationId,
           workspaceId: session.workspaceId,
@@ -945,7 +973,7 @@ async function noteTickets(
     } else if (event.type === 'ticket.opened') {
       const teammate = await eventTeammate(session, event)
       const title = event.title.length > 160 ? `${event.title.slice(0, 157)}...` : event.title
-      await prisma.ticket.create({
+      await db.ticket.create({
         data: {
           organizationId: session.organizationId,
           workspaceId: session.workspaceId,
@@ -961,7 +989,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'ticket.answered') {
-      await prisma.ticket.updateMany({
+      await db.ticket.updateMany({
         where: {
           sessionId: session.id,
           status: 'open',
@@ -974,7 +1002,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'question.answered') {
-      await prisma.ticket.updateMany({
+      await db.ticket.updateMany({
         where: {
           sessionId: session.id,
           status: 'open',
@@ -987,7 +1015,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'message.user') {
-      await prisma.ticket.updateMany({
+      await db.ticket.updateMany({
         where: { sessionId: session.id, status: 'open', type: 'usage_limit' },
         data: {
           status: 'resolved',

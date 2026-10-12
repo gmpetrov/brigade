@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { api, useApi, type Ticket } from '@/lib/api'
+import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 const TYPES: { value: Ticket['type'] | ''; label: string }[] = [
@@ -27,6 +28,9 @@ export default function Tickets() {
   const [all, setAll] = useState(false)
   const [type, setType] = useState<Ticket['type'] | ''>('')
   const tickets = useApi<Ticket[]>(`/tickets${all ? '?status=all' : ''}`)
+  useLive((message) => {
+    if (message.type === 'tickets.updated') void tickets.reload()
+  })
   const [error, setError] = useState<string>()
 
   async function resolve(id: string, approved: boolean, always?: boolean) {

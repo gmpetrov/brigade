@@ -32,6 +32,24 @@ const READS_AND_BULK = new Set([
   'deleteMany',
 ])
 const CREATES = new Set(['create', 'createMany', 'createManyAndReturn'])
+const READS = new Set([
+  'findUnique',
+  'findUniqueOrThrow',
+  'findFirst',
+  'findFirstOrThrow',
+  'findMany',
+  'count',
+  'aggregate',
+  'groupBy',
+])
+
+type WriteListener = (model: string, scope: Scope) => void
+const writeListeners: WriteListener[] = []
+
+/** Called after every write through a scoped client, e.g. to tell dashboards. */
+export function onScopedWrite(listener: WriteListener) {
+  writeListeners.push(listener)
+}
 
 /**
  * A client whose every query is filtered by the session's organization and
@@ -62,7 +80,12 @@ export function scoped(scope: Scope) {
           } else {
             throw new Error(`scoped(): unsupported operation ${model}.${operation}`)
           }
-          return query(a)
+          const result = await query(a)
+          // A bulk write that matched nothing changed nothing.
+          const none = (result as { count?: number } | null)?.count === 0
+          if (!READS.has(operation) && !none)
+            for (const listener of writeListeners) listener(model, scope)
+          return result
         },
       },
     },

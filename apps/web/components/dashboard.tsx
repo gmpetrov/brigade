@@ -63,6 +63,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 export { StatusBadge } from '@/components/status-badge'
@@ -138,6 +139,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     void reloadTickets()
     void reloadTasks()
   }, [pathname, reloadPulls, reloadTickets, reloadTasks])
+  // And live: a task's column follows its thread's status and open tickets.
+  useLive((message) => {
+    if (message.type === 'pulls.updated') void reloadPulls()
+    if (message.type === 'tickets.updated') void reloadTickets()
+    if (
+      message.type === 'task.updated' ||
+      message.type === 'thread.updated' ||
+      message.type === 'tickets.updated'
+    )
+      void reloadTasks()
+  })
 
   useEffect(() => {
     if (me.error?.status === 401) router.replace('/sign-in')
