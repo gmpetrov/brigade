@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { api, harnessLabel, type Schedule } from '@/lib/api'
+import { api, teammateModelLabel, type Schedule } from '@/lib/api'
 
 /** The browser's timezone: a new schedule's default. */
 export const localTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -208,9 +208,7 @@ export function ScheduleDialog({
                     <SelectItem key={t.id} value={t.id}>
                       <TeammateAvatar teammate={t} className="size-5" />
                       {t.name}
-                      <span className="text-xs text-muted-foreground">
-                        {harnessLabel(t.harness)}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{teammateModelLabel(t)}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>

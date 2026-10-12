@@ -37,7 +37,7 @@ import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { api, harnessLabel, useApi, type Teammate, type Thread } from '@/lib/api'
+import { api, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
 import { useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -347,7 +347,7 @@ export default function ThreadPage() {
               ))}
               <span aria-hidden>·</span>
               <span>
-                {people.length === 1 && `${harnessLabel(people[0]!.harness)} `}on{' '}
+                {people.length === 1 && `${teammateModelLabel(people[0]!)} `}on{' '}
                 {t.computer.kind === 'cloud' ? 'the workspace computer' : t.computer.name}
               </span>
               <span aria-hidden>·</span>

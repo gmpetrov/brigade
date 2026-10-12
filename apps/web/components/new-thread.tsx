@@ -1,5 +1,4 @@
 'use client'
-import { modelLabel } from '@brigade/contracts'
 import { ArrowRight, Check, ChevronDown, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -27,6 +26,7 @@ import {
   api,
   computerName,
   harnessLabel,
+  teammateModelLabel,
   usableComputers,
   useApi,
   type Account,
@@ -71,7 +71,7 @@ function TeammatePicker({
             <span className="grid min-w-0 flex-1 leading-tight">
               <span className="truncate font-semibold">{t.name}</span>
               <span className="truncate text-xs text-muted-foreground">
-                {harnessLabel(t.harness)} · {modelLabel(t.harness, t.model)}
+                {teammateModelLabel(t)}
               </span>
             </span>
             {t.id === value.id && <Check className="text-primary" aria-hidden />}

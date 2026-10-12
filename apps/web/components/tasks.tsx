@@ -48,6 +48,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   api,
   harnessLabel,
+  teammateModelLabel,
   pullHref,
   useApi,
   type Account,
@@ -172,11 +173,11 @@ function TeammateSelect({
   nobody,
   id,
 }: {
-  teammates: Pick<Teammate, 'id' | 'name' | 'harness'>[]
+  teammates: Pick<Teammate, 'id' | 'name' | 'harness' | 'model'>[]
   value: string | undefined
   onChange: (id: string) => void
   /** Why a teammate cannot take it, if it cannot. */
-  unavailable?: (t: Pick<Teammate, 'id' | 'name' | 'harness'>) => string | undefined
+  unavailable?: (t: Pick<Teammate, 'id' | 'name' | 'harness' | 'model'>) => string | undefined
   /** Offer "Nobody yet" (the value NOBODY): the task waits in Backlog. */
   nobody?: boolean
   id?: string
@@ -199,9 +200,7 @@ function TeammateSelect({
             <SelectItem key={t.id} value={t.id} disabled={Boolean(why)}>
               <TeammateAvatar teammate={t} className="size-5" />
               {t.name}
-              <span className="text-xs text-muted-foreground">
-                {why ?? harnessLabel(t.harness)}
-              </span>
+              <span className="text-xs text-muted-foreground">{why ?? teammateModelLabel(t)}</span>
             </SelectItem>
           )
         })}

@@ -1,5 +1,5 @@
 'use client'
-import type { FolderRule } from '@brigade/contracts'
+import { HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
 import type {
   AssetTicket,
   AttachmentInfo,
@@ -602,6 +602,15 @@ export function waitsOn(t: Ticket, me: Me) {
 }
 
 export const harnessLabel = (harness: string) => (harness === 'codex' ? 'Codex' : 'Claude')
+
+/**
+ * What a teammate runs on, as people name it: its model ("Opus 5.5"), else the
+ * harness ("Claude"), since the default model depends on the account.
+ */
+export const teammateModelLabel = (t: { harness: string; model: string | null }) => {
+  const harness = HarnessId.safeParse(t.harness)
+  return t.model && harness.success ? modelLabel(harness.data, t.model) : harnessLabel(t.harness)
+}
 
 /**
  * Show the workspace computer's desktop in a new tab, optionally with a window
