@@ -250,7 +250,9 @@ export function PreviewPanel({
               <>
                 <LoaderCircle aria-hidden className="size-5 animate-spin" />
                 <p>
-                  {running ? 'Opening the preview…' : `Starting the app on port ${preview.port}…`}
+                  {running
+                    ? 'Opening the preview…'
+                    : (preview.reason ?? `Starting the app on port ${preview.port}…`)}
                 </p>
               </>
             ) : running ? null : (
