@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test 'src/**/*.test.ts'",
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
