@@ -164,32 +164,40 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
   if (closed && row.state !== state && row.sessionId) await settleOnMerge(scope, row.sessionId)
 }
 
-/** GitHub's pull_request event, for the workspaces tracking that pull request. */
+/**
+ * GitHub's pull_request event, for the workspaces tracking that pull request,
+ * and for those listing its repository when it is a new open one.
+ */
 export async function pullRequestEvent(scope: Scope, repo: string, p: GhPull) {
   const db = scoped(scope)
-  const row = await findRow(db, repo.toLowerCase(), p.number)
-  if (row) await sync(db, scope, row, p)
+  repo = repo.toLowerCase()
+  const row = await findRow(db, repo, p.number)
+  if (row) return sync(db, scope, row, p)
+  if (await db.pullRequest.findFirst({ where: { repository: repo }, select: { id: true } }))
+    await adopt(db, repo, p)
 }
 
 /**
- * A teammate's pull request opened before Brigade tracked them: its branch is
- * in the call log of the thread that opened it.
+ * A pull request Brigade has not seen yet. A teammate's, opened before Brigade
+ * tracked them, has its branch in the call log of the thread that opened it.
+ * Another open one gets a row of its own, so the sidebar counts what the list shows.
  */
 async function adopt(db: ScopedDb, repo: string, p: GhPull): Promise<Row | undefined> {
-  if (!p.head.ref.startsWith('brigade/')) return undefined
-  const opened = await db.connectionCall.findFirst({
-    where: {
-      operation: 'github_create_pull_request',
-      result: 'ok',
-      target: {
-        startsWith: `pull request ${p.head.ref} → `,
-        endsWith: ` in ${repo}`,
-        mode: 'insensitive',
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (!opened) return undefined
+  const opened = p.head.ref.startsWith('brigade/')
+    ? await db.connectionCall.findFirst({
+        where: {
+          operation: 'github_create_pull_request',
+          result: 'ok',
+          target: {
+            startsWith: `pull request ${p.head.ref} → `,
+            endsWith: ` in ${repo}`,
+            mode: 'insensitive',
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null
+  if (!opened && stateOf(p) !== 'open') return undefined
   await db.pullRequest
     .create({
       data: {
@@ -199,8 +207,7 @@ async function adopt(db: ScopedDb, repo: string, p: GhPull): Promise<Row | undef
         headRef: p.head.ref,
         baseRef: p.base.ref,
         state: stateOf(p),
-        sessionId: opened.sessionId,
-        authorTeammateId: opened.teammateId,
+        ...(opened ? { sessionId: opened.sessionId, authorTeammateId: opened.teammateId } : {}),
       } as never,
     })
     .catch(() => undefined) // Another request adopted it first.
@@ -437,7 +444,15 @@ export async function notePullRequestCall(
     const existing = await db.pullRequest.findFirst({
       where: { repository: repo, number: out.number },
     })
-    if (existing) return
+    // GitHub's webhook may have recorded it first, without its thread.
+    if (existing) {
+      if (!existing.sessionId && !existing.authorTeammateId)
+        await db.pullRequest.updateMany({
+          where: { id: existing.id },
+          data: { sessionId: call.sessionId, authorTeammateId: call.teammateId },
+        })
+      return
+    }
     await db.pullRequest.create({
       data: {
         repository: repo,
