@@ -18,6 +18,7 @@ import {
   type ScheduleOperation,
   type TaskOperation,
 } from '@brigade/contracts'
+import { errorMessage } from './events.js'
 
 export type ConnectorCaller = (call: {
   connectionId: string
@@ -984,7 +985,20 @@ export function repoTools(
 /** A teammate's thread preview: what previewTools reach (see previews.ts). */
 export type PreviewTools = {
   start(
-    input: { command: string; cwd?: string; port: number; ports?: number[]; timeoutMs?: number },
+    input: {
+      command: string
+      cwd?: string
+      port: number
+      ports?: number[]
+      timeoutMs?: number
+      setup?: string
+      env?: Record<string, string>
+      envFile?: string
+      credentials?: string[]
+      envFiles?: string[]
+      paths?: string[]
+      repository?: string
+    },
     signal?: AbortSignal,
   ): Promise<{
     status: string
@@ -992,39 +1006,114 @@ export type PreviewTools = {
     reason?: string
     logs?: string
   }>
+  check(paths: string[]): Promise<{
+    ok: boolean
+    pages: {
+      path: string
+      status: number
+      finalPath: string
+      title: string
+      ok: boolean
+      problems: string[]
+      warnings: string[]
+      screenshot: string
+    }[]
+    serverErrors: string[]
+  }>
+  save(): Promise<{ repository: string; recipe: unknown }>
+  saved(repository: string): Promise<{
+    recipe: {
+      setup?: string
+      command: string
+      cwd: string
+      port: number
+      ports: number[]
+      env: Record<string, string>
+      envFile?: string
+      credentials: string[]
+      paths: string[]
+      timeoutSeconds?: number
+    }
+    checkout: string
+  } | null>
   stop(): Promise<{ stopped: boolean }>
   logs(lines?: number): { status: string; logs: string }
 }
 
-/** Run the app being built so people can try it from the thread, and read its output. */
-export function previewTools(previews: PreviewTools): Record<string, Tool> {
+type PreviewInput = {
+  command?: string
+  cwd?: string
+  port?: number
+  ports?: number[]
+  timeoutSeconds?: number
+  setup?: string
+  env?: Record<string, string>
+  envFile?: string
+  credentials?: string[]
+  paths?: string[]
+  repository?: string
+}
+
+const NOT_READY =
+  'Not ready yet: fix what the check found (read the screenshots, preview_logs and serverErrors), then call ' +
+  'check_preview. Do not tell the person it is ready while a page fails. If a page needs a setting or a ' +
+  'service the app does not have here, give it one (env, setup, a credential) or say exactly what is missing.'
+
+/** Check the preview's pages; a check that cannot run is reported, not thrown. */
+async function checked(previews: PreviewTools, paths: string[]) {
+  try {
+    const result = await previews.check(paths)
+    return {
+      ...result,
+      note: result.ok
+        ? 'Its pages passed the check. Save it with save_preview (unless it is saved and unchanged), then tell the person it is ready: they open it with Preview at the top of the thread.'
+        : NOT_READY,
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error),
+      note: 'The check could not run: look at the pages yourself (your browser, or curl) before saying it is ready.',
+    }
+  }
+}
+
+/** Run the app being built so people can try it from the thread, check it, save how it starts. */
+export function previewTools(
+  previews: PreviewTools,
+  credentials: Pick<Credentials, 'env'>,
+): Record<string, Tool> {
   return {
     start_preview: tool({
       description:
         'Run the app you are working on as a live preview people open from this thread, e.g. its dev server, ' +
         'to try what you built. It keeps running after your turn ends; the thread has one preview, and starting ' +
-        'another replaces it. Waits until the port answers and returns its address. ' +
+        'another replaces it. Waits until the port answers, then opens `paths` (default "/") with Chrome as a ' +
+        'person would and reports what is wrong with each: its status, a blank page, script errors, server errors, ' +
+        'with screenshots. Fix those before telling anyone it is ready. ' +
+        'For a repository with a saved preview, pass only `repository` (owner/name): it starts as it was saved, ' +
+        'setup included. Try that first in a checkout; save yours with save_preview once its check passes. ' +
         'The app must listen on 0.0.0.0 (or all interfaces), not only localhost, on `port`: PORT and HOST are set. ' +
         'People reach it through a proxy at one public address, in BRIGADE_PREVIEW_URL; the other `ports` are paths on it ' +
-        "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>: pass them where the app needs its own URL " +
-        '(e.g. `NEXT_PUBLIC_API_URL=$BRIGADE_PREVIEW_URL_3001`, auth callback URLs, allowed origins). The proxy makes ' +
-        "the app's cookies work in the dashboard's frame, shows a waiting page while the app starts, and starts it " +
-        'again if it stops. ' +
-        'Dev servers that check the Host header need the preview host allowed (Vite: server.allowedHosts; ' +
-        'Next.js: allowedDevOrigins). Use this instead of starting a server in the background yourself: those stop when your turn ends.',
-      inputSchema: jsonSchema<{
-        command: string
-        cwd?: string
-        port: number
-        ports?: number[]
-        timeoutSeconds?: number
-      }>({
+        "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
+        'where ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} become the addresses (e.g. NEXTAUTH_URL, ' +
+        'NEXT_PUBLIC_API_URL, auth callback URLs, allowed origins), and `envFile` if the app reads only its file. ' +
+        "The proxy makes the app's cookies work in the dashboard's frame, shows a waiting page while the app starts, " +
+        'and starts it again if it stops. Dev servers that check the Host header need the preview host allowed ' +
+        '(Vite: server.allowedHosts; Next.js: allowedDevOrigins). Use this instead of starting a server in the ' +
+        'background yourself: those stop when your turn ends.',
+      inputSchema: jsonSchema<PreviewInput>({
         type: 'object',
         properties: {
+          repository: {
+            type: 'string',
+            description:
+              'owner/name: start its saved preview (nothing else needed), or, with the other fields, keep its address',
+          },
           command: {
             type: 'string',
             description:
-              'Starts the app and keeps running, e.g. "pnpm dev --port 5173 --host 0.0.0.0". Install dependencies and run one-off setup first, with your shell',
+              'Starts the app and keeps running, e.g. "pnpm dev --port 5173 --host 0.0.0.0"',
           },
           cwd: {
             type: 'string',
@@ -1038,14 +1127,73 @@ export function previewTools(previews: PreviewTools): Record<string, Tool> {
             description:
               "Other ports the app's pages call from the browser, e.g. its API's: served under /__ports/<port>/ on the preview's address",
           },
+          setup: {
+            type: 'string',
+            description:
+              'Shell commands run first, in cwd, stopping at a failure: install dependencies, start its services ' +
+              '(e.g. docker compose up -d), migrate, seed. Safe to run again: they run on each start',
+          },
+          env: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description:
+              'Settings for setup and the app, not secrets: e.g. {"NEXTAUTH_URL": "${BRIGADE_PREVIEW_URL}", "DATABASE_URL": "postgres://…localhost…"}',
+          },
+          envFile: {
+            type: 'string',
+            description:
+              'Also write env into this file, relative to cwd (e.g. ".env.local"), keeping its other lines',
+          },
+          credentials: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 10,
+            description:
+              'Vault credentials (by id) whose variables the app gets: its API keys, a test-mode payment key',
+          },
+          paths: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 10,
+            description:
+              'Pages to check, e.g. ["/", "/signin", "/the-page-you-changed"]: the home page, sign-in, and what you built',
+          },
           timeoutSeconds: {
             type: 'number',
-            description: 'How long to wait for the port to answer (default 120, up to 600)',
+            description:
+              'How long to wait for the port to answer (default 120, 600 with setup; up to 600)',
           },
         },
-        required: ['command', 'port'],
       }),
-      execute: async (input, { abortSignal }) => {
+      execute: async (args, { abortSignal, toolCallId }) => {
+        let input = args
+        if (args.repository && !args.command) {
+          const saved = await previews.saved(args.repository)
+          if (!saved)
+            return {
+              status: 'none',
+              note: `${args.repository} has no saved preview. Set it up (setup, env, command), start it, and once its check passes, save it with save_preview.`,
+            }
+          const { recipe, checkout } = saved
+          input = {
+            ...recipe,
+            cwd: recipe.cwd ? `${checkout}/${recipe.cwd}` : checkout,
+            repository: args.repository,
+            ...(args.paths?.length ? { paths: args.paths } : {}),
+          }
+        }
+        if (!input.command || !input.port)
+          throw new Error('Give the command and port, or a repository with a saved preview')
+        const envFiles: string[] = []
+        for (const credentialId of input.credentials ?? []) {
+          const released = await credentials.env(credentialId, {
+            toolCallId,
+            toolName: 'start_preview',
+            input: { credentialId },
+          })
+          envFiles.push(released.file)
+        }
+        const paths = input.paths?.length ? input.paths : ['/']
         const result = await previews.start(
           {
             command: input.command,
@@ -1053,17 +1201,50 @@ export function previewTools(previews: PreviewTools): Record<string, Tool> {
             port: input.port,
             ...(input.ports?.length ? { ports: input.ports } : {}),
             ...(input.timeoutSeconds ? { timeoutMs: input.timeoutSeconds * 1000 } : {}),
+            ...(input.setup?.trim() ? { setup: input.setup } : {}),
+            ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}),
+            ...(input.envFile ? { envFile: input.envFile } : {}),
+            ...(input.credentials?.length ? { credentials: input.credentials, envFiles } : {}),
+            paths,
+            ...(input.repository ? { repository: input.repository } : {}),
           },
           abortSignal,
         )
-        return result.status === 'running'
-          ? {
-              ...result,
-              note:
-                'It runs. Check it yourself (your browser, or curl) at http://localhost:' +
-                `${input.port}, then tell the person it is ready: they open it with Preview at the top of the thread.`,
-            }
-          : result
+        if (result.status !== 'running') return result
+        return { ...result, check: await checked(previews, paths) }
+      },
+    }),
+    check_preview: tool({
+      description:
+        "Open the running preview's pages with Chrome as a person would, again: after you fixed what its last " +
+        "check found, or for other pages. Reports each one's status, whether it is blank, script and server " +
+        'errors, with screenshots to read.',
+      inputSchema: jsonSchema<{ paths?: string[] }>({
+        type: 'object',
+        properties: {
+          paths: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 10,
+            description: 'Pages to check (default: those it started with)',
+          },
+        },
+      }),
+      execute: (input) => checked(previews, input.paths ?? []),
+    }),
+    save_preview: tool({
+      description:
+        "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check) as its " +
+        "repository's preview, so a later thread starts it in one step with start_preview({ repository }). " +
+        'Only once its check passes. Saving again replaces it. Secrets go in credentials, never in env.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: async () => {
+        const { repository } = await previews.save()
+        return {
+          saved: true,
+          repository,
+          note: `Later threads start it with start_preview({ repository: "${repository}" }). Mention in your reply that it is saved.`,
+        }
       },
     }),
     stop_preview: tool({

@@ -12,12 +12,20 @@
 // It expires a while after anyone last used it (a teammate's preview tool, a
 // person viewing it), so a forgotten dev server does not keep the computer up.
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { createConnection } from 'node:net'
-import { relative, resolve, sep } from 'node:path'
+import { dirname, extname, join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { PREVIEW_LOG_LINES, type AgentEvent, type PreviewInfo } from '@brigade/contracts'
+import {
+  PREVIEW_LOG_LINES,
+  type AgentEvent,
+  type PreviewInfo,
+  type PreviewOperation,
+  type PreviewRecipe,
+} from '@brigade/contracts'
 import { harnessEnv } from './harness/env.js'
+import type { CheckResult } from './preview-check.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
 import { teammateHome } from './teammates.js'
 
@@ -31,8 +39,25 @@ export const PREVIEW_START_MAX_MS = 600_000
 /** Waits before starting a stopped app again; past these, within RESTART_WINDOW_MS, it has failed. */
 const RESTART_DELAYS_MS = [1000, 3000, 10_000]
 const RESTART_WINDOW_MS = 10 * 60_000
-/** Where the proxy's port is looked for: from PROXY_BASE + the app's port modulo 10000. */
+/**
+ * Where the proxy's port is looked for. A repository's preview gets one from
+ * its name, so its address stays the same on this computer (an OAuth callback
+ * registered once keeps working); else one from the app's port.
+ */
 const PROXY_BASE = 20_000
+const REPOSITORY_PROXY_BASE = 30_000
+/** Setup (install, migrate) comes before the app answers: wait longer for it. */
+const SETUP_START_MS = 600_000
+/** ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} in a recipe's env. */
+const PLACEHOLDER = /\$\{BRIGADE_PREVIEW_URL(?:_(\d+))?\}/g
+/** The page checker, beside this file (preview-check.ts). */
+const CHECKER = join(
+  dirname(fileURLToPath(import.meta.url)),
+  `preview-check${extname(fileURLToPath(import.meta.url))}`,
+)
+/** Lines of the app's output that look like errors (a stack, a failed query, a 500). */
+const ERROR_LINE =
+  /\b(error|exception|failed|fatal|unhandled|ECONNREFUSED|ENOTFOUND)\b|⨯| 5\d\d in /i
 /** Longest line kept in the log. */
 const LINE_MAX = 2000
 
@@ -44,11 +69,36 @@ export type PreviewStart = {
   /** Other ports the app's pages call (its API), hosted too. */
   ports?: number[]
   timeoutMs?: number
+  /** Run before the command when it starts (not when it restarts after a crash), stopping at a failure. */
+  setup?: string
+  /** Settings for setup and command; ${BRIGADE_PREVIEW_URL[_<port>]} in a value becomes the address. */
+  env?: Record<string, string>
+  /** Also write env to this file, relative to cwd. */
+  envFile?: string
+  /** Vault credentials by id, and the private env files they were released as. */
+  credentials?: string[]
+  envFiles?: string[]
+  /** Pages its check opens. */
+  paths?: string[]
+  /** owner/name: its address stays the same for it on this computer. */
+  repository?: string
 }
+
+/** A saved recipe, and where its repository is checked out in the teammate's directory. */
+export type SavedPreview = { recipe: PreviewRecipe; checkout: string }
+
+/** A check of the preview's pages, and what the app logged meanwhile that looks like an error. */
+export type PreviewCheck = CheckResult & { serverErrors: string[] }
 
 /** What a teammate's preview tools reach: its thread's preview. */
 export type PreviewControl = {
   start(input: PreviewStart, signal?: AbortSignal): Promise<PreviewResult>
+  /** Open these paths as a person would and say what is wrong with them. */
+  check(paths: string[]): Promise<PreviewCheck>
+  /** Save the running preview, whose check passed, as its repository's recipe. */
+  save(): Promise<{ repository: string; recipe: PreviewRecipe }>
+  /** A repository's saved recipe, and its checkout here; null when none is saved. */
+  saved(repository: string): Promise<SavedPreview | null>
   stop(): Promise<{ stopped: boolean }>
   logs(lines?: number): { status: PreviewInfo['status'] | 'none'; logs: string }
 }
@@ -78,7 +128,11 @@ type Preview = {
   dir: string
   /** The process group to stop. */
   group?: number
+  /** The last check of its pages: whether they all passed. */
+  checked?: boolean
   lines: string[]
+  /** Lines appended since it started, including those the log no longer keeps. */
+  written: number
   partial: string
   lastUsed: number
   /** Set when a stop was asked for: how its exit is reported. */
@@ -118,6 +172,14 @@ export class Previews {
        * public address (a member's own machine).
        */
       expose: ((sessionId: string, ports: number[]) => Promise<Record<number, string>>) | null
+      /** What a person opens for a hosted port, with its token: to check it as they would. */
+      viewUrl: ((sessionId: string, port: number) => Promise<string>) | null
+      /** Read or save a repository's recipe, through the API. */
+      recipes: (
+        sessionId: string,
+        teammateId: string,
+        operation: PreviewOperation,
+      ) => Promise<unknown>
     },
   ) {
     this.timer = setInterval(() => this.expire(), 60_000)
@@ -133,6 +195,9 @@ export class Previews {
   forSeat(seat: Seat): PreviewControl {
     return {
       start: (input, signal) => this.start(seat, input, signal),
+      check: (paths) => this.check(seat, paths),
+      save: () => this.save(seat),
+      saved: (repository) => this.saved(seat, repository),
       stop: async () => ({
         stopped: await this.stop(seat.sessionId, 'Stopped by the teammate'),
       }),
@@ -157,6 +222,99 @@ export class Previews {
     const preview = this.previews.get(sessionId)
     if (!preview) throw new Error('This thread has no preview running')
     return this.tail(preview)
+  }
+
+  /**
+   * Open the preview's pages with the computer's Chrome, at the address people
+   * open, as the teammate; screenshots go in .preview-checks in its directory.
+   */
+  async check(seat: Seat, paths: string[]): Promise<PreviewCheck> {
+    const preview = this.previews.get(seat.sessionId)
+    if (!preview || preview.info.status !== 'running')
+      throw new Error('The preview is not running: start it with start_preview first')
+    preview.lastUsed = Date.now()
+    const port = preview.info.publicPort ?? preview.info.port
+    const url = this.options.viewUrl
+      ? await this.options.viewUrl(seat.sessionId, port)
+      : `http://localhost:${port}`
+    const from = preview.written
+    const input = JSON.stringify({
+      url,
+      paths: paths.length ? paths : ['/'],
+      out: join(seat.workDir, '.preview-checks'),
+    })
+    const args = [CHECKER, input]
+    const { stdout } = await run(
+      seat.runAs ? 'sudo' : process.execPath,
+      seat.runAs ? ['-n', '-u', seat.runAs, process.execPath, ...args] : args,
+      { cwd: '/', timeout: 60_000 + paths.length * 120_000, maxBuffer: 1024 * 1024 },
+    ).catch((error: { stderr?: string } & Error) => {
+      throw new Error(
+        `Could not check the preview: ${(error.stderr || error.message).trim().slice(0, 1000)}`,
+      )
+    })
+    const result = JSON.parse(stdout) as CheckResult
+    // What the app logged while its pages loaded (of the lines the log still keeps).
+    const fresh = Math.min(preview.written - from, preview.lines.length)
+    const logged = fresh > 0 ? preview.lines.slice(-fresh) : []
+    const serverErrors = logged.filter((line) => ERROR_LINE.test(line)).slice(-20)
+    if (this.previews.get(seat.sessionId) === preview) preview.checked = result.ok
+    return { ...result, serverErrors }
+  }
+
+  /** Whether the thread's preview runs and its last check passed. */
+  checked(sessionId: string) {
+    const preview = this.previews.get(sessionId)
+    return preview?.info.status === 'running' && preview.checked === true
+  }
+
+  /** The running preview as its repository's recipe, saved through the API. Only once its check passed. */
+  async save(seat: Seat) {
+    const preview = this.previews.get(seat.sessionId)
+    if (!preview || preview.info.status !== 'running')
+      throw new Error('No preview is running: start it with start_preview first')
+    if (!preview.checked)
+      throw new Error(
+        'Its last check did not pass, or it was not checked: fix what check_preview finds, then save it',
+      )
+    const found = await repositoryOf(preview.dir, seat.runAs)
+    if (!found)
+      throw new Error("The preview's directory is not in a checkout of a GitHub repository")
+    const { input } = preview
+    const recipe: PreviewRecipe = {
+      ...(input.setup?.trim() ? { setup: input.setup } : {}),
+      command: input.command,
+      cwd: relative(found.root, preview.dir),
+      port: input.port,
+      ports: preview.info.ports,
+      env: input.env ?? {},
+      ...(input.envFile ? { envFile: input.envFile } : {}),
+      credentials: input.credentials ?? [],
+      paths: input.paths?.length ? input.paths : ['/'],
+      ...(input.timeoutMs ? { timeoutSeconds: Math.round(input.timeoutMs / 1000) } : {}),
+    }
+    await this.options.recipes(seat.sessionId, seat.teammateId, {
+      name: 'save',
+      repository: found.repository,
+      recipe,
+    })
+    return { repository: found.repository, recipe }
+  }
+
+  /** A repository's saved recipe, and the directory it is checked out in here. */
+  async saved(seat: Seat, name: string): Promise<SavedPreview | null> {
+    const repository = name.toLowerCase()
+    const { recipe } = (await this.options.recipes(seat.sessionId, seat.teammateId, {
+      name: 'get',
+      repository,
+    })) as { recipe: PreviewRecipe | null }
+    if (!recipe) return null
+    const checkout = await findCheckout(seat.workDir, repository, seat.runAs)
+    if (!checkout)
+      throw new Error(
+        `${repository} has a saved preview, but it is not checked out here: check it out with checkout_repository first`,
+      )
+    return { recipe, checkout }
   }
 
   /** Start the preview again, as it was started. */
@@ -225,7 +383,12 @@ export class Previews {
     let origin: string
     let publicPort: number
     try {
-      publicPort = await proxy.listen(PROXY_BASE + (input.port % 10_000), all)
+      const repository = input.repository ?? (await repositoryOf(dir, seat.runAs))?.repository
+      const from = repository
+        ? REPOSITORY_PROXY_BASE +
+          (createHash('sha256').update(repository).digest().readUInt32BE() % 10_000)
+        : PROXY_BASE + (input.port % 10_000)
+      publicPort = await proxy.listen(from, all)
       origin = this.options.expose
         ? (await this.options.expose(seat.sessionId, [publicPort]))[publicPort]!
         : `http://localhost:${publicPort}`
@@ -254,7 +417,21 @@ export class Previews {
       HOST: '0.0.0.0',
       BRIGADE_PREVIEW_URL: origins[input.port]!,
       ...Object.fromEntries(all.map((p) => [`BRIGADE_PREVIEW_URL_${p}`, origins[p]!])),
+      ...withAddresses(input.env ?? {}, origins[input.port]!, origins),
     })
+    if (input.envFile) {
+      try {
+        await writeEnvFile(
+          dir,
+          input.envFile,
+          withAddresses(input.env ?? {}, origin, origins),
+          seat.runAs,
+        )
+      } catch (error) {
+        proxy.close()
+        throw error
+      }
+    }
 
     preview = {
       info: {
@@ -273,15 +450,19 @@ export class Previews {
       proxy,
       restarts: [],
       lines: [],
+      written: 0,
       partial: '',
       lastUsed: Date.now(),
       exited: Promise.resolve(null),
     }
     this.previews.set(seat.sessionId, preview)
     this.report(preview)
-    this.launch(preview)
+    this.launch(preview, true)
 
-    const waitMs = Math.min(input.timeoutMs ?? PREVIEW_START_MS, PREVIEW_START_MAX_MS)
+    const waitMs = Math.min(
+      input.timeoutMs ?? (input.setup ? SETUP_START_MS : PREVIEW_START_MS),
+      PREVIEW_START_MAX_MS,
+    )
     await this.untilReady(preview, waitMs, signal)
 
     const result: PreviewResult = { status: preview.info.status, origins }
@@ -290,12 +471,25 @@ export class Previews {
     return result
   }
 
-  /** Run the preview's command (again), as the teammate on a cloud computer. */
-  private launch(preview: Preview) {
+  /** Run the preview's command (again), as the teammate; its setup first unless it restarts. */
+  private launch(preview: Preview, withSetup: boolean) {
     // The wrapper prints its pid first, to find its group.
     const script = 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1"'
     const { runAs } = preview.seat
-    const command = preview.info.command
+    const { setup, envFiles = [] } = preview.input
+    const command = [
+      // Credentials' variables, from the private files the vault released them as.
+      ...envFiles.map((file) => `set -a; . ${quote(file)}; set +a`),
+      ...(withSetup && setup?.trim()
+        ? [
+            'echo "[preview] Running the setup"',
+            // Its own shell: set -e has no effect in a list followed by ||.
+            `sh -ec ${quote(setup)} || { echo "[preview] The setup failed" >&2; exit 1; }`,
+            'echo "[preview] Starting the app"',
+          ]
+        : []),
+      preview.info.command,
+    ].join('\n')
     const options = {
       cwd: '/',
       env: preview.env,
@@ -359,7 +553,7 @@ export class Previews {
     this.kill(preview, 'KILL')
     setTimeout(() => {
       if (this.previews.get(preview.seat.sessionId) !== preview || preview.stopping) return
-      this.launch(preview)
+      this.launch(preview, false)
       void this.untilReady(preview, PREVIEW_START_MAX_MS)
     }, delay)
     return true
@@ -438,6 +632,7 @@ export class Previews {
     const lines = (preview.partial + text.replace(ANSI, '')).split('\n')
     preview.partial = lines.pop() ?? ''
     for (const line of lines) preview.lines.push(line.slice(0, LINE_MAX))
+    preview.written += lines.length
     if (preview.lines.length > PREVIEW_LOG_LINES)
       preview.lines.splice(0, preview.lines.length - PREVIEW_LOG_LINES)
   }
@@ -473,4 +668,115 @@ export class Previews {
         )
     }
   }
+}
+
+const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`
+
+/** A recipe's env with the preview's addresses in place of its placeholders. */
+function withAddresses(
+  env: Record<string, string>,
+  origin: string,
+  origins: Record<number, string>,
+) {
+  return Object.fromEntries(
+    Object.entries(env).map(([key, value]) => [
+      key,
+      value.replace(PLACEHOLDER, (whole, port?: string) =>
+        port ? (origins[Number(port)] ?? whole) : origin,
+      ),
+    ]),
+  )
+}
+
+/** Run a command as the teammate (or the runner's user), with text on its stdin. */
+function runAsUser(args: string[], runAs: string | undefined, input = '') {
+  return new Promise<string>((done, fail) => {
+    const child = runAs
+      ? spawn('sudo', ['-n', '-u', runAs, '--', ...args], { cwd: '/' })
+      : spawn(args[0]!, args.slice(1), { cwd: '/' })
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (d: Buffer) => (out += d.toString('utf8')))
+    child.stderr.on('data', (d: Buffer) => (err += d.toString('utf8')))
+    child.on('error', fail)
+    child.on('close', (code) =>
+      code === 0 ? done(out) : fail(new Error(err.trim() || `${args[0]} exited with ${code}`)),
+    )
+    // A command that exits without reading its input closes the pipe: not an error.
+    child.stdin.on('error', () => undefined)
+    child.stdin.end(input)
+  })
+}
+
+/** A dotenv line: quoted when the value needs it. */
+const dotenvLine = (key: string, value: string) =>
+  /^[A-Za-z0-9_./:@,+=-]*$/.test(value)
+    ? `${key}=${value}`
+    : `${key}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
+
+/**
+ * Write a recipe's settings into the app's env file, as the teammate: its
+ * variables replaced or added, the file's other lines kept.
+ */
+async function writeEnvFile(
+  dir: string,
+  file: string,
+  env: Record<string, string>,
+  runAs: string | undefined,
+) {
+  const path = resolve(dir, file)
+  const rel = relative(dir, path)
+  if (rel === '' || rel === '..' || rel.startsWith(`..${sep}`))
+    throw new Error("envFile must be a file inside the preview's directory")
+  const before = await runAsUser(['cat', '--', path], runAs).catch(() => '')
+  const keys = new Set(Object.keys(env))
+  const kept = before
+    .split('\n')
+    .filter(
+      (line) => !keys.has(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line)?.[1] ?? ''),
+    )
+  while (kept.length && kept.at(-1) === '') kept.pop()
+  const lines = [...kept, ...Object.entries(env).map(([k, v]) => dotenvLine(k, v))]
+  await runAsUser(
+    ['sh', '-c', 'umask 077 && cat > "$1"', 'sh', path],
+    runAs,
+    `${lines.join('\n')}\n`,
+  )
+}
+
+/** owner/name from a remote URL: GitHub's, or the API's git proxy, which ends the same way. */
+export function repositoryFromRemote(url: string) {
+  const match = /[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(url.trim())
+  return match ? `${match[1]}/${match[2]}`.toLowerCase() : null
+}
+
+/** The checkout a directory is in: its root and its repository (from origin). */
+async function repositoryOf(dir: string, runAs: string | undefined) {
+  try {
+    const root = (await runAsUser(['git', '-C', dir, 'rev-parse', '--show-toplevel'], runAs)).trim()
+    const remote = await runAsUser(['git', '-C', root, 'remote', 'get-url', 'origin'], runAs)
+    const repository = repositoryFromRemote(remote)
+    return root && repository ? { root, repository } : null
+  } catch {
+    return null
+  }
+}
+
+/** The directory in the teammate's working directory where a repository is checked out, relative to it. */
+async function findCheckout(workDir: string, repository: string, runAs: string | undefined) {
+  const listing = await runAsUser(
+    [
+      'sh',
+      '-c',
+      'cd -- "$1" && for d in */; do printf "%s\\t" "${d%/}"; git -C "$d" remote get-url origin 2>/dev/null || echo; done',
+      'sh',
+      workDir,
+    ],
+    runAs,
+  ).catch(() => '')
+  for (const line of listing.split('\n')) {
+    const [name, remote = ''] = line.split('\t')
+    if (name && repositoryFromRemote(remote) === repository.toLowerCase()) return name
+  }
+  return null
 }
