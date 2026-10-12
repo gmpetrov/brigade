@@ -1,0 +1,187 @@
+// The proxy in front of a preview: what a person's browser reaches, at one
+// address, whatever the app is doing.
+//
+// - The app's other ports (its API) are served under /__ports/<port>/ on the
+//   same address: one origin, one token from the provider, no CORS.
+// - The dashboard shows the preview in a frame on another site, where a
+//   browser drops SameSite=Lax cookies: over HTTPS, the app's cookies become
+//   SameSite=None; Secure; Partitioned (kept for that frame only) with no
+//   Domain, so signing in works in the frame without changing the app.
+// - While the app starts, restarts or is down, a page that says so and reloads
+//   itself, instead of a blank frame.
+import http from 'node:http'
+import net from 'node:net'
+
+/** Where an app's other ports are served on the preview's address. */
+export const PORTS_PREFIX = '/__ports/'
+
+export type ProxyState = 'starting' | 'restarting' | 'running' | 'down'
+
+export type PreviewProxyOptions = {
+  /** The app's port: everything not under PORTS_PREFIX. */
+  port: number
+  /** Its other ports, served under PORTS_PREFIX. */
+  ports: number[]
+  /** Rewrite cookies for a cross-site frame: the address people open is HTTPS. */
+  crossSiteCookies: boolean
+  /** What the app is doing, for the page shown while it does not answer. */
+  state: () => ProxyState
+  /** Someone used the preview. */
+  onUse: () => void
+}
+
+/** A Set-Cookie value a browser keeps in a cross-site frame: Secure, SameSite=None, partitioned, host-only. */
+export function crossSiteCookie(cookie: string) {
+  const [pair = '', ...attributes] = cookie.split(';')
+  const kept = attributes
+    .map((a) => a.trim())
+    .filter((a) => a && !/^(samesite|domain|secure|partitioned)\s*(=|$)/i.test(a))
+  return [pair.trim(), ...kept, 'Secure', 'SameSite=None', 'Partitioned'].join('; ')
+}
+
+/** The port a request goes to and the path the app sees; null for an unknown /__ports/ port. */
+export function route(url: string, options: Pick<PreviewProxyOptions, 'port' | 'ports'>) {
+  if (!url.startsWith(PORTS_PREFIX)) return { port: options.port, path: url, prefix: '' }
+  const match = /^\/__ports\/(\d+)(\/.*|\?.*)?$/.exec(url)
+  const port = Number(match?.[1])
+  if (!match || !options.ports.includes(port)) return null
+  const rest = match[2] ?? '/'
+  return { port, path: rest.startsWith('?') ? `/${rest}` : rest, prefix: `${PORTS_PREFIX}${port}` }
+}
+
+const PAGES: Record<Exclude<ProxyState, 'running'>, [title: string, text: string]> = {
+  starting: ['Starting…', 'The app is starting. This page reloads by itself.'],
+  restarting: [
+    'Restarting…',
+    'The app stopped and is starting again. This page reloads by itself.',
+  ],
+  down: ['Not answering', 'The app does not answer. This page reloads by itself.'],
+}
+
+function waitingPage(state: ProxyState) {
+  const [title, text] = PAGES[state === 'running' ? 'down' : state]
+  return (
+    '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="light dark">' +
+    `<meta http-equiv="refresh" content="2"><title>${title}</title>` +
+    '<body style="margin:0;display:grid;place-items:center;min-height:100vh;font:15px system-ui,sans-serif;color:GrayText">' +
+    `<p>${text}</p></body></html>`
+  )
+}
+
+/** Headers about one connection, which the proxy's own connections replace. */
+function withoutHopHeaders(headers: http.IncomingHttpHeaders) {
+  const { connection: _c, 'keep-alive': _k, ...rest } = headers
+  return rest
+}
+
+/** A browser loading a page, as opposed to a script fetching data. */
+const isNavigation = (req: http.IncomingMessage) =>
+  req.headers['sec-fetch-mode'] === 'navigate' ||
+  (req.method === 'GET' && (req.headers.accept ?? '').includes('text/html'))
+
+export class PreviewProxy {
+  private readonly server: http.Server
+  private readonly agent = new http.Agent({ keepAlive: true })
+  private readonly sockets = new Set<net.Socket>()
+  private lastUse = 0
+
+  constructor(private readonly options: PreviewProxyOptions) {
+    this.server = http.createServer((req, res) => this.request(req, res))
+    this.server.on('upgrade', (req, socket, head) => this.upgrade(req, socket as net.Socket, head))
+    this.server.on('connection', (socket) => {
+      this.sockets.add(socket)
+      socket.once('close', () => this.sockets.delete(socket))
+    })
+  }
+
+  /** Listen on the first free port from `from`, skipping `avoid`; resolves to the port. */
+  async listen(from: number, avoid: number[]) {
+    for (let port = from; port < from + 100 && port <= 65535; port++) {
+      if (avoid.includes(port)) continue
+      const ok = await new Promise<boolean>((done) => {
+        const fail = () => done(false)
+        this.server.once('error', fail)
+        this.server.listen(port, '0.0.0.0', () => {
+          this.server.off('error', fail)
+          done(true)
+        })
+      })
+      if (ok) return port
+    }
+    throw new Error(`No free port for the preview's proxy from ${from}`)
+  }
+
+  close() {
+    this.server.close()
+    for (const socket of this.sockets) socket.destroy()
+    this.agent.destroy()
+  }
+
+  private used() {
+    // Requests come in bursts: once a second is enough.
+    const now = Date.now()
+    if (now - this.lastUse < 1000) return
+    this.lastUse = now
+    this.options.onUse()
+  }
+
+  private request(req: http.IncomingMessage, res: http.ServerResponse) {
+    this.used()
+    const target = route(req.url ?? '/', this.options)
+    if (!target)
+      return void res.writeHead(404, { 'content-type': 'text/plain' }).end('No such port')
+    const upstream = http.request(
+      {
+        host: '127.0.0.1',
+        port: target.port,
+        path: target.path,
+        method: req.method,
+        headers: {
+          ...withoutHopHeaders(req.headers),
+          ...(target.prefix && { 'x-forwarded-prefix': target.prefix }),
+        },
+        agent: this.agent,
+      },
+      (response) => {
+        const headers = withoutHopHeaders(response.headers)
+        if (this.options.crossSiteCookies && headers['set-cookie'])
+          headers['set-cookie'] = headers['set-cookie'].map(crossSiteCookie)
+        // A redirect to the app's own path stays under its prefix.
+        const location = headers.location
+        if (target.prefix && location?.startsWith('/') && !location.startsWith('//'))
+          headers.location = target.prefix + location
+        res.writeHead(response.statusCode ?? 502, headers)
+        response.pipe(res)
+      },
+    )
+    upstream.on('error', () => {
+      if (res.headersSent) return void res.destroy()
+      if (isNavigation(req))
+        res
+          .writeHead(503, {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'no-store',
+          })
+          .end(waitingPage(this.options.state()))
+      else res.writeHead(502, { 'content-type': 'text/plain' }).end('The app does not answer')
+    })
+    req.pipe(upstream)
+  }
+
+  /** WebSockets (hot reload, live data): the handshake as sent, then bytes both ways. */
+  private upgrade(req: http.IncomingMessage, socket: net.Socket, head: Buffer) {
+    this.used()
+    const target = route(req.url ?? '/', this.options)
+    if (!target) return void socket.destroy()
+    const upstream = net.connect(target.port, '127.0.0.1', () => {
+      const lines = [`${req.method} ${target.path} HTTP/${req.httpVersion}`]
+      for (let i = 0; i < req.rawHeaders.length; i += 2)
+        lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`)
+      upstream.write(`${lines.join('\r\n')}\r\n\r\n`)
+      if (head.length) upstream.write(head)
+      upstream.pipe(socket).pipe(upstream)
+    })
+    upstream.on('error', () => socket.destroy())
+    socket.on('error', () => upstream.destroy())
+  }
+}

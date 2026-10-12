@@ -33,6 +33,12 @@ export const PreviewInfo = z.object({
   port: PreviewPort,
   /** Other ports the app's pages call, e.g. its API, exposed too. */
   ports: z.array(PreviewPort).max(PREVIEW_PORTS_MAX - 1),
+  /**
+   * The port people's browsers reach: the runner's proxy in front of the app,
+   * which serves the other ports under /__ports/<port>/. Unset from runners
+   * before it, where people reach `port` itself.
+   */
+  publicPort: PreviewPort.optional(),
   /** Why it failed or stopped, for a person. */
   reason: z.string().optional(),
 })

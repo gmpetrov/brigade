@@ -552,9 +552,11 @@ export const threads = new Hono<AppEnv>()
         message: `The preview is no longer running. Ask ${thread.teammate.name} to start it again.`,
       })
     touchPreview(thread.computer.id, thread.id)
+    // The runner's proxy in front of the app; the app itself from runners before it.
+    const port = preview.publicPort ?? preview.port
     if (thread.computer.kind !== 'cloud')
-      return c.json({ url: `http://localhost:${preview.port}`, local: true } satisfies PreviewView)
-    const { url } = await hostedPort(thread.computer, preview.port)
+      return c.json({ url: `http://localhost:${port}`, local: true } satisfies PreviewView)
+    const { url } = await hostedPort(thread.computer, port)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
