@@ -218,8 +218,8 @@ function LibraryView() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList>
             <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="designs">Designs</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
+            <TabsTrigger value="designs">Designs</TabsTrigger>
             <TabsTrigger value="design-systems">Design systems</TabsTrigger>
             <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>

@@ -142,7 +142,8 @@ function createAgent(
   const codex = spec.teammate.harness === 'codex'
   const harness = codex ? createCodex(settings) : createClaudeCode(settings)
   const tools = {
-    ...connectorTools(spec.connectors, callConnector),
+    // Connector tools grow with each account connected; Codex loads them on demand.
+    ...connectorTools(spec.connectors, callConnector, { defer: codex }),
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),

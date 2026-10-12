@@ -1,0 +1,109 @@
+diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
+index 9f9501baebce9b609e72a99a6c9c1f8e9328fabf..9d75ad489554ad2483e3a41c668707e5ceeeb6ac 100644
+--- a/dist/bridge/index.mjs
++++ b/dist/bridge/index.mjs
+@@ -810,6 +810,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+ 	const textByItem = /* @__PURE__ */ new Map();
+ 	const reasoningByItem = /* @__PURE__ */ new Map();
+ 	const nativeToolCalls = /* @__PURE__ */ new Map();
++	const startedImages = /* @__PURE__ */ new Set();
+ 	let resolveCompletion = () => {};
+ 	const completion = new Promise((resolve) => {
+ 		resolveCompletion = resolve;
+@@ -835,6 +836,39 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+ 			if (call?.name === "apply_patch" && item.type === "fileChange") call.successConfirmed = item.status === "completed";
+ 			else if (call?.name === "view_image" && item.type === "imageView") call.successConfirmed = true;
+ 		}
++		if (item.type === "imageGeneration" && typeof item.id === "string") {
++			if (!startedImages.has(item.id)) {
++				startedImages.add(item.id);
++				emitStreamEvent({
++					type: "item.started",
++					item: {
++						type: "native_tool",
++						id: item.id,
++						tool: "image_gen",
++						input: JSON.stringify({ prompt: typeof item.revisedPrompt === "string" ? item.revisedPrompt : "" })
++					}
++				});
++			}
++			if (eventType === "item.completed") {
++				const failed = item.status === "failed" || item.failure != null || typeof item.savedPath !== "string";
++				emitStreamEvent({
++					type: "item.completed",
++					item: {
++						type: "native_tool",
++						id: item.id,
++						tool: "image_gen",
++						result: {
++							status: item.status,
++							savedPath: typeof item.savedPath === "string" ? item.savedPath : null,
++							revisedPrompt: typeof item.revisedPrompt === "string" ? item.revisedPrompt : null,
++							...item.failure != null ? { failure: item.failure } : {}
++						},
++						...failed ? { isError: true } : {}
++					}
++				});
++			}
++			return;
++		}
+ 		const normalized = normalizeItem({
+ 			item,
+ 			textByItem,
+@@ -1583,24 +1617,39 @@ function createDynamicTools(tools) {
+ 	const validOriginalNames = new Set(tools.map((tool) => tool.name).filter(isValidDynamicToolName));
+ 	const usedAliases = /* @__PURE__ */ new Set();
+ 	const originalNameByAlias = /* @__PURE__ */ new Map();
++	// Brigade: a schema marked x-codex-namespace ({ name, description }) puts its tool in that
++	// namespace as a deferred tool, which the model finds through tool search.
++	const namespaces = /* @__PURE__ */ new Map();
++	const specs = tools.map((tool, index) => {
++		let alias = tool.name;
++		if (!isValidDynamicToolName(alias) || usedAliases.has(alias)) {
++			const base = `ai_sdk_tool_${createHash("sha256").update(tool.name).digest("hex").slice(0, 16)}`;
++			alias = base;
++			let suffix = index;
++			while (usedAliases.has(alias) || validOriginalNames.has(alias)) alias = `${base}_${suffix++}`;
++		}
++		usedAliases.add(alias);
++		originalNameByAlias.set(alias, tool.name);
++		const { "x-codex-namespace": namespace, ...inputSchema } = tool.inputSchema ?? {};
++		const spec = {
++			type: "function",
++			name: alias,
++			description: tool.description ?? "",
++			inputSchema
++		};
++		if (typeof namespace?.name !== "string" || !isValidDynamicToolName(namespace.name)) return spec;
++		const group = namespaces.get(namespace.name) ?? {
++			type: "namespace",
++			name: namespace.name,
++			description: typeof namespace.description === "string" ? namespace.description : namespace.name,
++			tools: []
++		};
++		group.tools.push({ ...spec, deferLoading: true });
++		namespaces.set(namespace.name, group);
++		return null;
++	});
+ 	return {
+-		specs: tools.map((tool, index) => {
+-			let alias = tool.name;
+-			if (!isValidDynamicToolName(alias) || usedAliases.has(alias)) {
+-				const base = `ai_sdk_tool_${createHash("sha256").update(tool.name).digest("hex").slice(0, 16)}`;
+-				alias = base;
+-				let suffix = index;
+-				while (usedAliases.has(alias) || validOriginalNames.has(alias)) alias = `${base}_${suffix++}`;
+-			}
+-			usedAliases.add(alias);
+-			originalNameByAlias.set(alias, tool.name);
+-			return {
+-				type: "function",
+-				name: alias,
+-				description: tool.description ?? "",
+-				inputSchema: tool.inputSchema ?? {}
+-			};
+-		}),
++		specs: [...specs.filter((spec) => spec != null), ...namespaces.values()],
+ 		originalNameByAlias
+ 	};
+ }

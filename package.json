@@ -21,7 +21,7 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@ai-sdk/harness-codex@1.0.149": "patches/@ai-sdk__harness-codex@1.0.149.patch"
+      "@ai-sdk/harness-codex@1.0.151": "patches/@ai-sdk__harness-codex@1.0.151.patch"
     }
   }
 }
