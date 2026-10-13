@@ -18,7 +18,7 @@ scripts/preview/setup.sh   # once, and again after pulling: Node 22, dependencie
 scripts/preview/start.sh   # PostgreSQL, the API and the dashboard at one address, port 3000
 ```
 
-In a thread, run `setup.sh` in your shell, then `start_preview` with the command `scripts/preview/start.sh` and port 3000, nothing else: the API answers at `/api` on the same address, so the preview needs one port and its session cookie works in the thread's preview pane. Sign in with the password `correct-horse-battery` as:
+In a thread, run `setup.sh` in your shell, then `start_preview` with the command `scripts/preview/start.sh` and port 3000, nothing else: the API answers at `/api` on the same address, so the preview needs one port and its session cookie works in the thread's preview pane. A browser's first visit is signed in as Ada and lands on `/app` (`proxy.mjs`, once per browser: after signing out, the sign-in page stays; `PREVIEW_SIGN_IN=other@example.com` picks another account, `PREVIEW_SIGN_IN=` turns it off). To switch, sign out and sign in with the password `correct-horse-battery` as:
 
 - `ada@example.com` (owner), `bob@example.com` (admin) or `carol@example.com` (member): straight into the sample Acme workspace, with teammates, projects, threads in each state, tasks in each column, open tickets, library files and memory, connections, credentials, schedules and a pull request (`apps/api/prisma/seed-workspace.ts`). Nothing in it reaches an outside service: its secrets are placeholders, and no runner answers, so a new message to a teammate does not run.
 - `dana@example.com`: no organization yet, to try onboarding.

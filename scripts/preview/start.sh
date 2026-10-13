@@ -27,7 +27,8 @@ start_db
   sleep 2
 done) &
 
-node "$HERE/proxy.mjs" &
+# The first page a browser opens is signed in as Ada; PREVIEW_SIGN_IN= turns it off.
+PREVIEW_URL=$URL PREVIEW_SIGN_IN=${PREVIEW_SIGN_IN-ada@example.com} node "$HERE/proxy.mjs" &
 
 # The proxy or the embedded database stopping ends the preview.
 wait -n
