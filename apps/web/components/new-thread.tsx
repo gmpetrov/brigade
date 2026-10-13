@@ -440,20 +440,23 @@ export function NewThread({
       onPicked={layout === 'dialog' ? focusMessage : undefined}
     />
   )
+  const chosenLabel = (
+    <span className="flex min-w-0 items-center gap-2">
+      {chosenProject ? (
+        <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
+      ) : (
+        <FolderKanban aria-hidden />
+      )}
+      <span className="truncate">{chosenProject?.name ?? 'No project'}</span>
+    </span>
+  )
   const projectPicker = pickable.length > 0 && (
     <Select value={projectId} onValueChange={setProjectId}>
       <SelectTrigger size="sm" aria-label="Project" className={cn(quietSelect, 'max-w-48')}>
-        {/* Written out: SelectValue misses a value set once the projects have loaded. */}
-        <SelectValue asChild>
-          <span className="flex min-w-0 items-center gap-2">
-            {chosenProject ? (
-              <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
-            ) : (
-              <FolderKanban aria-hidden />
-            )}
-            <span className="truncate">{chosenProject?.name ?? 'No project'}</span>
-          </span>
-        </SelectValue>
+        {/* Written out: SelectValue misses a value set once the projects have loaded. The same as
+            its placeholder, which Radix shows while it takes the value for empty (not asChild:
+            it would hand its props to the placeholder's Fragment). */}
+        <SelectValue placeholder={chosenLabel}>{chosenLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent
         onCloseAutoFocus={(e) => {
