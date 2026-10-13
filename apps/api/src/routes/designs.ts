@@ -1,15 +1,24 @@
 // Design systems, from the dashboard: any member sees them, owners and admins
 // change them (they shape what every teammate makes). And a design's address
 // on the sandbox origin, for the viewer.
-import { LibraryPath, OpenDesignView, SaveDesignSystem, SaveKnobs } from '@brigade/contracts'
+import {
+  DesignEdit,
+  LibraryPath,
+  OpenDesignView,
+  SaveDesignSystem,
+  SaveDesignThumbnail,
+  SaveKnobs,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import {
   deleteDesignSystem,
   designZip,
+  editDesign,
   listDesignSystems,
   openDesignView,
   saveDesignSystem,
+  saveDesignThumbnail,
   saveKnobs,
   toDesignSystem,
 } from '../designs.js'
@@ -66,6 +75,21 @@ export const designs = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, SaveKnobs)
     const knobs = await saveKnobs(db, scope, { type: 'member', id: scope.memberId }, input)
     return c.json({ knobs })
+  })
+
+  /** A person's changes to a page, made on the canvas: a new version of it. */
+  .patch('/edit', async (c) => {
+    const { scope, db } = c.var
+    const input = await parseBody(c.req.raw, DesignEdit)
+    return c.json(await editDesign(db, scope, { type: 'member', id: scope.memberId }, input))
+  })
+
+  /** The canvas's picture of the design after a person's edits, for the gallery. */
+  .put('/thumbnail', async (c) => {
+    const { scope, db } = c.var
+    const input = await parseBody(c.req.raw, SaveDesignThumbnail)
+    await saveDesignThumbnail(db, scope, { type: 'member', id: scope.memberId }, input)
+    return c.body(null, 204)
   })
 
   /** The design as a zip, to open without Brigade. `?path=` its folder. */

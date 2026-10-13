@@ -11,12 +11,16 @@ import type { AddressInfo } from 'node:net'
 import { basename, extname, join, resolve, sep } from 'node:path'
 import {
   addToHead,
+  BOARD_HEIGHT_MAX,
   DESIGN_ENTRY,
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
+  designBoards,
   DesignKnobs,
   DesignManifest,
   knobsStyle,
+  screenHeight,
+  VIEWPORT_SIZES,
   type DesignViewport,
 } from '@brigade/contracts'
 import { chromium } from 'playwright-core'
@@ -31,13 +35,9 @@ type Input = {
 }
 export type ShotResult = { screenshots: string[]; errors: string[]; thumbnail?: string }
 
-const SIZES: Record<DesignViewport, { width: number; height: number }> = {
-  desktop: { width: 1280, height: 800 },
-  tablet: { width: 820, height: 1180 },
-  mobile: { width: 390, height: 844 },
-}
+const SIZES = VIEWPORT_SIZES
 /** Longest full-page screenshot; a page taller than this is cut. */
-const MAX_HEIGHT = 8000
+const MAX_HEIGHT = BOARD_HEIGHT_MAX
 const MAX_SLIDES = 40
 
 const CHROMES = [
@@ -128,7 +128,11 @@ async function main(input: Input): Promise<ShotResult> {
   const name = basename(folder).replace(/\.design$/, '')
   const result: ShotResult = { screenshots: [], errors: [] }
   try {
-    const open = async (viewport: { width: number; height: number }, scale = 1) => {
+    const open = async (
+      viewport: { width: number; height: number },
+      scale = 1,
+      file: string = DESIGN_ENTRY,
+    ) => {
       const page = await browser.newPage({ viewport, deviceScaleFactor: scale })
       page.on('console', (m) => m.type() === 'error' && errors.add(`console: ${m.text()}`))
       page.on('pageerror', (e) => errors.add(`script error: ${e.message}`))
@@ -146,7 +150,11 @@ async function main(input: Input): Promise<ShotResult> {
               : `${r.status()} for ${r.url()}`,
           ),
       )
-      await page.goto(`${served.origin}/${DESIGN_ENTRY}`, { waitUntil: 'load', timeout: 30_000 })
+      if (!existsSync(join(folder, file))) throw new Error(`${folder} has no ${file}`)
+      await page.goto(`${served.origin}/${file.split('/').map(encodeURIComponent).join('/')}`, {
+        waitUntil: 'load',
+        timeout: 30_000,
+      })
       await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
       // Strings: this file has no DOM types; they run in the page.
       await page.evaluate('document.fonts && document.fonts.ready').catch(() => undefined)
@@ -165,6 +173,30 @@ async function main(input: Input): Promise<ShotResult> {
         result.screenshots.push(file)
       }
       await page.close()
+    } else if (manifest?.boards?.length && !input.viewports?.length) {
+      // One screenshot per board: its page at its width, whole unless it has a height.
+      for (const board of designBoards(manifest)) {
+        const height = board.height ?? screenHeight(board.width)
+        const page = await open({ width: board.width, height }, 1, board.file)
+        const full = (await page.evaluate('document.documentElement.scrollHeight')) as number
+        const file = join(
+          input.out,
+          `${name}-${board.file.replace(/\.html$/, '').replace(/\//g, '-')}-${board.width}.png`,
+        )
+        await page.screenshot({
+          path: file,
+          fullPage: !board.height && full <= MAX_HEIGHT,
+          ...(!board.height && full > MAX_HEIGHT
+            ? { clip: { x: 0, y: 0, width: board.width, height: MAX_HEIGHT } }
+            : {}),
+        })
+        if (!board.height && full > MAX_HEIGHT)
+          errors.add(
+            `${board.file}: the page is ${full}px tall; the screenshot stops at ${MAX_HEIGHT}px`,
+          )
+        result.screenshots.push(file)
+        await page.close()
+      }
     } else {
       const viewports = input.viewports?.length
         ? input.viewports
@@ -192,8 +224,13 @@ async function main(input: Input): Promise<ShotResult> {
     }
 
     if (input.thumbnail) {
-      // Half size: what the gallery shows.
-      const page = await open(SIZES.desktop, 0.5)
+      // Half size: what the gallery shows, of the first board.
+      const first = designBoards(manifest)[0]!
+      const page = await open(
+        { width: first.width, height: first.height ?? screenHeight(first.width) },
+        0.5,
+        first.file,
+      )
       const file = join(input.out, 'thumbnail.png')
       const slide = manifest?.kind === 'slides' ? await page.$('[data-slide]') : null
       if (slide) await slide.screenshot({ path: file })

@@ -63,6 +63,48 @@ export const pickedDesignPath = (options: string) =>
 export const DesignViewport = z.enum(['desktop', 'tablet', 'mobile'])
 export type DesignViewport = z.infer<typeof DesignViewport>
 
+/** A viewport's width, and the height of its screen. */
+export const VIEWPORT_SIZES: Record<DesignViewport, { width: number; height: number }> = {
+  desktop: { width: 1280, height: 800 },
+  tablet: { width: 820, height: 1180 },
+  mobile: { width: 390, height: 844 },
+}
+
+/** The height of a screen as wide as this: what `100vh` is while a board is measured. */
+export const screenHeight = (width: number) =>
+  width > 1000
+    ? VIEWPORT_SIZES.desktop.height
+    : width > 600
+      ? VIEWPORT_SIZES.tablet.height
+      : VIEWPORT_SIZES.mobile.height
+
+/** A page of a design, by its path in the folder: `index.html`, `screens/signin.html`. */
+export const DesignFile = z
+  .string()
+  .max(200)
+  .regex(/^[\w][\w.-]*(\/[\w][\w.-]*)*\.html$/, 'An .html file in the design folder')
+  .refine((p) => !p.split('/').some((part) => part === '..' || part.startsWith('.')))
+
+/** Longest page a board shows whole. */
+export const BOARD_HEIGHT_MAX = 8000
+
+/** One board on a design's canvas: a page of the design at a size. */
+export const DesignBoard = z.object({
+  file: DesignFile,
+  title: z.string().max(120).optional(),
+  /** Its width in px. Default 1280. */
+  width: z.number().int().min(200).max(4000).optional(),
+  /**
+   * Its height in px. Absent: the page's own height, or a screen's when the page
+   * is sized by the frame (`vh`), then scrolling inside.
+   */
+  height: z.number().int().min(200).max(BOARD_HEIGHT_MAX).optional(),
+  /** Where it sits on the canvas, in px. Absent: after the board before it. */
+  x: z.number().min(-200_000).max(200_000).optional(),
+  y: z.number().min(-200_000).max(200_000).optional(),
+})
+export type DesignBoard = z.infer<typeof DesignBoard>
+
 /** `design.json`, written by the teammate. Lenient: a design with a bad one still shows. */
 export const DesignManifest = z.object({
   title: z.string().max(200).optional(),
@@ -73,8 +115,140 @@ export const DesignManifest = z.object({
   viewports: z.array(DesignViewport).max(3).optional(),
   /** A deck: each slide is an element with `data-slide`, its speaker notes in `data-notes`. */
   kind: z.enum(['page', 'slides']).optional(),
+  /** Its pages on the canvas, in reading order. A bad entry is left out, not the manifest. */
+  boards: z
+    .array(DesignBoard.nullable().catch(null))
+    .max(60)
+    .transform((boards) => boards.filter((b) => b !== null))
+    .optional()
+    .catch(undefined),
 })
 export type DesignManifest = z.infer<typeof DesignManifest>
+
+/** Space between boards in a row. */
+export const BOARD_GAP = 80
+
+/** A board as the canvas draws it: every value filled in. `height` absent: measured. */
+export type PlacedBoard = DesignBoard & { width: number; x: number; y: number }
+
+/**
+ * The boards a design shows: its own, else its `index.html` once per viewport
+ * (desktop alone when it names none), a deck as one board. Each without a place
+ * goes after the one before it, in a row.
+ */
+export function designBoards(manifest: DesignManifest | null): PlacedBoard[] {
+  const listed: DesignBoard[] = manifest?.boards?.length
+    ? manifest.boards
+    : manifest?.kind === 'slides'
+      ? [{ file: DESIGN_ENTRY, width: VIEWPORT_SIZES.desktop.width }]
+      : (manifest?.viewports?.length ? manifest.viewports : (['desktop'] as const)).map((v) => ({
+          file: DESIGN_ENTRY,
+          title: `${v[0]!.toUpperCase()}${v.slice(1)}`,
+          width: VIEWPORT_SIZES[v].width,
+        }))
+  let x = 0
+  let y = 0
+  return listed.map((board) => {
+    const width = board.width ?? VIEWPORT_SIZES.desktop.width
+    const placed = { ...board, width, x: board.x ?? x, y: board.y ?? y }
+    x = placed.x + width + BOARD_GAP
+    y = placed.y
+    return placed
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Editing a design's pages by hand
+// ---------------------------------------------------------------------------
+
+/** Text that, once entities are decoded, is not a script address. */
+const decode = (value: string) =>
+  value
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+    .replace(/&(colon|tab|newline);?/gi, (_, name: string) =>
+      name.toLowerCase() === 'colon' ? ':' : ' ',
+    )
+
+/** An address a person may give a link or an image: relative, a page on the web, mail, a phone, an anchor. */
+export function isSafeAddress(value: string) {
+  const plain = decode(value)
+    .replace(/[\u0000- \u007f-\u009f]/g, '')
+    .toLowerCase()
+  const scheme = /^([a-z][a-z0-9+.-]*):/.exec(plain)
+  return !scheme || ['http', 'https', 'mailto', 'tel'].includes(scheme[1]!)
+}
+
+/** A CSS property: `padding`, `font-size`, `--brand`. */
+export const CssProperty = z.string().regex(/^(--)?-?[a-z][a-z0-9-]{0,60}$/, 'A CSS property')
+/** A CSS value written into a `style` attribute: nothing that could end it or run script. */
+export const CssValue = z
+  .string()
+  .max(300)
+  .refine((v) => {
+    const plain = decode(v).toLowerCase()
+    if (/[;{}<>\\]|\/\*|expression\s*\(|javascript:|@import/.test(plain)) return false
+    // Images only from the page's folder or the web.
+    for (const [, , url] of plain.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/g))
+      if (!isSafeAddress(url!) || /^(data|blob):/.test(url!.trim())) return false
+    return true
+  }, 'A plain CSS value')
+
+/** Attributes a person may change by hand. */
+export const EDITABLE_ATTRS = ['href', 'src', 'alt', 'title', 'placeholder', 'aria-label'] as const
+const ADDRESS_ATTRS = new Set(['href', 'src'])
+
+export const DesignEditOp = z.union([
+  z.object({
+    /** The element, as the page numbers it (`data-bid`). */
+    id: z.number().int().min(0),
+    /** Inline declarations to set, or remove with null. */
+    style: z.record(CssProperty, CssValue.nullable()),
+  }),
+  z.object({ id: z.number().int().min(0), text: z.string().max(10_000) }),
+  z.object({
+    id: z.number().int().min(0),
+    attrs: z
+      .partialRecord(z.enum(EDITABLE_ATTRS), z.string().max(2000).nullable())
+      .refine(
+        (attrs) =>
+          Object.entries(attrs).every(
+            ([name, value]) => value === null || !ADDRESS_ATTRS.has(name) || isSafeAddress(value),
+          ),
+        'Links and images go to a page of the design or the web',
+      ),
+  }),
+])
+export type DesignEditOp = z.infer<typeof DesignEditOp>
+
+/** Changes to one page of a design, made on the canvas. */
+export const DesignEdit = z.object({
+  /** The design's folder. */
+  path: LibraryPath,
+  file: DesignFile,
+  /** The page's sha256 the changes were made on: refused when it was saved since. */
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  ops: z.array(DesignEditOp).min(1).max(50),
+})
+export type DesignEdit = z.infer<typeof DesignEdit>
+export const DesignEditResult = z.object({ sha256: z.string(), updatedAt: z.string() })
+export type DesignEditResult = z.infer<typeof DesignEditResult>
+
+/** The canvas's picture of a design's first board, for the gallery, after a person's edits. */
+export const SaveDesignThumbnail = z.object({
+  path: LibraryPath,
+  /** PNG, base64 (no data: prefix). */
+  png: z.string().max(3_000_000),
+})
+
+/** Files of a design a person changed since a thread last saved them: `design_edits`. */
+export const DesignPersonEdit = z.object({
+  /** In the design folder. */
+  file: z.string(),
+  by: z.string(),
+  at: z.string(),
+})
+export type DesignPersonEdit = z.infer<typeof DesignPersonEdit>
 
 /** A CSS custom property a person can tune: `--brand`, `--radius`. */
 export const KnobVar = z
@@ -119,12 +293,21 @@ export function knobsStyle(knobs: DesignKnob[]) {
 
 /**
  * Add tags to a page where they run before its body and keep it in standards
- * mode: before `</head>`, else just after the doctype, else first.
+ * mode: before `</head>` (`first`: just after `<head>`, to run before the page's
+ * own scripts), else just after the doctype, else first.
  */
-export function addToHead(html: string, tags: string) {
+export function addToHead(html: string, tags: string, options: { first?: boolean } = {}) {
   if (!tags) return html
-  const head = html.search(/<\/head\s*>/i)
-  if (head >= 0) return html.slice(0, head) + tags + html.slice(head)
+  if (options.first) {
+    const open = /<head(?:\s[^>]*)?>/i.exec(html)
+    if (open)
+      return (
+        html.slice(0, open.index + open[0].length) + tags + html.slice(open.index + open[0].length)
+      )
+  } else {
+    const head = html.search(/<\/head\s*>/i)
+    if (head >= 0) return html.slice(0, head) + tags + html.slice(head)
+  }
   const doctype = html.match(/^\s*<!doctype[^>]*>/i)
   return doctype ? doctype[0] + tags + html.slice(doctype[0].length) : tags + html
 }
@@ -194,6 +377,8 @@ export const DesignView = z.object({
   knobs: z.array(DesignKnob),
   /** Its `index.html` in the library. */
   entryId: z.string(),
+  /** Its pages, by their path in the folder, to their sha256: what the canvas edits. */
+  files: z.record(z.string(), z.string()),
   /** The thread that saved it last, if it is still there; comments go to it. */
   thread: z
     .object({

@@ -15,6 +15,7 @@ import {
   DESIGN_SYSTEM_TOKENS,
   DESIGN_THUMBNAIL,
   designFolderOf,
+  DesignManifest,
   designOptionsOf,
   Choices,
   TeamProposal,
@@ -22,6 +23,7 @@ import {
   WIDGET_GUIDE_TOOL,
   WIDGET_HTML_MAX,
   type ConnectorGrant,
+  type DesignPersonEdit,
   type TeammateDesignSystem,
   type ScheduleOperation,
   type TaskOperation,
@@ -647,6 +649,7 @@ export type LibraryCaller = (call: {
     | { name: 'search'; query: string; limit: number }
     | { name: 'save'; path: string; content: string }
     | { name: 'design_system'; designSystem: TeammateDesignSystem }
+    | { name: 'design_edits'; path: string }
   toolCallId: string
   toolName: string
   input: unknown
@@ -779,8 +782,9 @@ export function libraryTools(options: {
       description:
         `Save a design (a page, screen, prototype, slide or one-pager) to the library, where people view and comment on it. ` +
         `Make it in a folder on this computer with ${DESIGN_ENTRY} and ${DESIGN_MANIFEST} at its top, then pass the folder. ` +
-        `Every file in it is saved; saving again replaces them.`,
-      inputSchema: jsonSchema<{ folder: string; path: string }>({
+        `Every file in it is saved; saving again replaces them. People edit saved designs by hand: a save over their ` +
+        `edits is refused once, saying what to do.`,
+      inputSchema: jsonSchema<{ folder: string; path: string; overwrite?: boolean }>({
         type: 'object',
         properties: {
           folder: {
@@ -791,6 +795,11 @@ export function libraryTools(options: {
           path: {
             type: 'string',
             description: `Where it goes in the library, ending in "${DESIGN_SUFFIX}", e.g. "acme/pricing-page${DESIGN_SUFFIX}"`,
+          },
+          overwrite: {
+            type: 'boolean',
+            description:
+              'Save even though a person edited the saved design since you last saved it: only when your files were made from the library copy that has their edits',
           },
         },
         required: ['folder', 'path'],
@@ -807,6 +816,34 @@ export function libraryTools(options: {
             `A design can have up to ${DESIGN_FILES_MAX} files; this folder has ${files.length}`,
           )
         const folder = input.folder.replace(/\/+$/, '')
+        const manifest = await options
+          .readFile(`${folder}/${DESIGN_MANIFEST}`)
+          .then((bytes) => DesignManifest.safeParse(JSON.parse(bytes.toString('utf8'))).data)
+          .catch(() => undefined)
+        const missing = (manifest?.boards ?? []).filter((b) => !files.includes(b.file))
+        if (missing.length)
+          throw new Error(
+            `${DESIGN_MANIFEST} lists boards whose page is not in the folder: ${missing.map((b) => b.file).join(', ')}`,
+          )
+        if (!input.overwrite) {
+          // Before saving anything: a person may have changed the saved design on its canvas.
+          const edited = (await options
+            .call({
+              operation: { name: 'design_edits', path },
+              toolCallId,
+              toolName: 'save_design',
+              input,
+            })
+            // An API from before canvases does not know the question: nobody edited by hand.
+            .catch(() => [])) as DesignPersonEdit[]
+          const overwritten = edited.filter((e) => files.includes(e.file))
+          if (overwritten.length)
+            throw new Error(
+              `${overwritten.map((e) => `${e.by} edited \`${e.file}\``).join(', ')} on the canvas after you last saved ` +
+                `${overwritten.length > 1 ? 'them' : 'it'}. Copy the library's copy (${options.libraryDir}/${path}/) into your ` +
+                'folder and make your change on it, then save. If your files were made from that copy, save again with overwrite: true. Nothing was saved.',
+            )
+        }
         const saved = await saveFolder(folder, path, files, [''], {
           toolCallId,
           toolName: 'save_design',

@@ -218,8 +218,21 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       'Link everything in it by relative paths; libraries and fonts from public CDNs are fine, but the page may ' +
       'not fetch data from other sites (it is shown in a sandbox), so put sample data in the page. ' +
       `\`${DESIGN_MANIFEST}\` holds \`{"title": "…", "description": "…", "designSystem": "<name>", "viewports": ["desktop", "mobile"]}\`.`,
+    'Boards: a design opens on a canvas, its pages side by side. When it has several screens, states or sizes ' +
+      '(sign in, home, settings; a phone and a desktop), make each its own HTML file and list them in ' +
+      `\`${DESIGN_MANIFEST}\` as \`"boards": [{"file": "index.html", "title": "Home", "width": 1440}, {"file": "signin.html", ` +
+      '"title": "Sign in", "width": 390, "height": 844}]`, in reading order, `index.html` first. A board is as tall ' +
+      'as its page unless it has a `height` (a phone or app screen); a page meant to be seen whole is not sized with ' +
+      '`vh`. Without `boards`, the canvas shows `index.html` once per viewport. Link boards to each other with ' +
+      '`<a href="signin.html">` for people to click through.',
+    'Markup first: people change text, sizes, spacing and colours by hand on the canvas, as inline styles saved ' +
+      'into your HTML, and they cannot change what a script builds. So write what the page shows as HTML ' +
+      '(repeat the cards, rows and items in the markup), and keep scripts for behaviour: menus, tabs, state.',
     'Give every element someone may talk about a stable `data-id` (`hero`, `plan-pro`, `signup-form`) and keep ' +
       'it when you change the design: people point at elements by it.',
+    'People edit saved designs by hand. Before you change one, copy its files from the library ' +
+      `(\`${libraryDir}/<path>/\`) over your working copy, so you keep their edits; \`save_design\` refuses once ` +
+      'when a person edited a file since you last saved it, and says what to do.',
     'Slides: set `"kind": "slides"` in the manifest and make each slide an element with `data-slide`, 1280×720 ' +
       '(16:9), its speaker notes in `data-notes`. Add print CSS (`@page { size: 1280px 720px; margin: 0 }`, a page ' +
       'break after each slide) so it exports to PDF one slide per page; it also exports to PowerPoint.',
@@ -229,7 +242,7 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       `[{label, value}], text). Use those CSS custom properties in the design; the viewer lets people try values ` +
       `and save them into \`${DESIGN_KNOBS}\`, whose values win over the design's own. Read it again before ` +
       'you change a design: people may have changed them.',
-    `Before you hand a design over, call \`check_design\` on its folder, open the screenshots it makes and fix ` +
+    `Before you hand a design over, call \`check_design\` on its folder (one screenshot per board), open the screenshots it makes and fix ` +
       'what is off or any error it reports. Then save it with `save_design` to a library path ending in ' +
       `\`${DESIGN_SUFFIX}\`, next to the work it belongs to, and mention it in your reply as ` +
       '`@[path](design:path)`: it opens beside the thread. Saving again replaces it; the library keeps earlier versions.',
@@ -242,8 +255,9 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       'any design there) and the other options are in the trash: go on from that path. When they answer in their own ' +
       `words instead (mix two, change one), save new options into the same folder and offer them again, or save the ` +
       `result as the design itself (\`acme/pricing${DESIGN_SUFFIX}\`) once they settle.`,
-    'People comment on a design from its viewer: such a message starts with "Comment on the design" and names the ' +
-      'element by its `data-id` (or a CSS path) and the viewport. Change the design, check it and save it again.',
+    'People comment on a design from its canvas: such a message starts with "Comment on the design" and names the ' +
+      'board (its file and width), the element by its `data-id` (or a CSS path) and its line in the file. Change the ' +
+      'design, check it and save it again.',
     [
       '### Making a design system',
       'When asked for a design system (from a repository, a site, an export or a brief), make it in a folder on ' +

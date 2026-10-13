@@ -160,7 +160,7 @@ export function DesignGallery({ tree }: { tree: LibraryTree | undefined }) {
           folder={open}
           version={(openSet || entries).find((d) => d.folder === open)?.latest.updatedAt}
           onClose={() => setOpen(undefined)}
-          {...(openSet ? { options: openSet.map((o) => o.folder), onOption: setOpen } : {})}
+          {...(openSet ? { options: openSet.map((o) => o.folder) } : {})}
         />
       )}
     </>

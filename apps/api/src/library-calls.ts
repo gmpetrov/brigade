@@ -5,7 +5,7 @@ import { LIBRARY_SAVE_MAX, type ApiToRunner, type RunnerToApi } from '@brigade/c
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { scoped, type Scope } from './db.js'
-import { saveTeammateDesignSystem } from './designs.js'
+import { personEdits, saveTeammateDesignSystem } from './designs.js'
 import { notifyLibraryChanged } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { editMemory, saveLibraryFile, saveSummary, search } from './library.js'
@@ -63,6 +63,10 @@ export async function handleLibraryCall(
   }
 
   const access = (await teammateLibraryAccess(db, teammate)).of(op.path)
+  if (op.name === 'design_edits')
+    return access === 'none'
+      ? fail(`${teammate.name} has no access to that folder of the library.`)
+      : done(await personEdits(db, session, op.path))
   if (access !== 'read_write')
     return fail(
       access === 'none'

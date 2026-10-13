@@ -8,6 +8,7 @@ import {
   DESIGN_KNOBS,
   DESIGN_MANIFEST,
   DESIGN_SYSTEM_README,
+  DESIGN_THUMBNAIL,
   Choices,
   designFolderOf,
   DesignKnobs,
@@ -18,8 +19,12 @@ import {
   knobsStyle,
   OFFER_CHOICES_TOOL,
   pickedDesignPath,
+  type DesignEdit,
+  type DesignEditResult,
+  type DesignPersonEdit,
   type DesignSystem,
   type DesignView,
+  type SaveDesignThumbnail,
   type SaveKnobs,
   type SaveDesignSystem,
   type TeammateDesignSystem,
@@ -32,8 +37,10 @@ import type { z } from 'zod'
 import { audit, type Actor } from './audit.js'
 import { env } from './config.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
-import { BRIDGE_SCRIPT } from './design-bridge.js'
+import { bridgeScript } from './design-bridge.js'
+import { annotate, applyEdits, EditError } from './design-source.js'
 import { moveFolder, trashFolder } from './library-folders.js'
+import { actorNames } from './library-history.js'
 import { readLibraryFile, saveLibraryFile } from './library.js'
 
 type Row = Awaited<ReturnType<ScopedDb['designSystem']['findFirstOrThrow']>>
@@ -293,6 +300,11 @@ export async function openDesignView(
     manifest,
     knobs: knobs?.knobs ?? [],
     entryId: entry.id,
+    files: Object.fromEntries(
+      rows
+        .filter((r) => r.contentType === 'text/html')
+        .map((r) => [r.path.slice(folder.length + 1), r.sha256]),
+    ),
     thread: session
       ? {
           id: session.id,
@@ -334,13 +346,17 @@ export async function saveKnobs(
   return next.knobs
 }
 
-/** The page as people see it: the knobs' values on top of the design's own. */
+/**
+ * The page as people see it: the knobs' values on top of the design's own. On
+ * the canvas (`page`), also its elements numbered and the bridge, first in its
+ * head so it sees the page before the page's own scripts run.
+ */
 async function withKnobs(
   scope: Scope,
   db: ScopedDb,
   folder: string,
   html: string,
-  bridge: boolean,
+  page?: { file: string; sha256: string },
 ) {
   const knobs = await readJson(
     scope,
@@ -349,10 +365,8 @@ async function withKnobs(
   )
   const style = knobs ? knobsStyle(knobs.knobs) : ''
   // The knobs' selector outranks the design's own :root wherever it stands.
-  return addToHead(
-    html,
-    (style ? `<style data-brigade-knobs>${style}</style>` : '') + (bridge ? BRIDGE_SCRIPT : ''),
-  )
+  const knobbed = addToHead(html, style ? `<style data-brigade-knobs>${style}</style>` : '')
+  return page ? addToHead(annotate(knobbed), bridgeScript(page), { first: true }) : knobbed
 }
 
 /** The design's folder as a zip, its page with the knobs' values: to open anywhere. */
@@ -370,7 +384,7 @@ export async function designZip(db: ScopedDb, scope: Scope, path: string) {
     let bytes = await readLibraryFile(scope, row.id)
     if (row.contentType === 'text/html')
       bytes = new TextEncoder().encode(
-        await withKnobs(scope, db, folder, new TextDecoder().decode(bytes), false),
+        await withKnobs(scope, db, folder, new TextDecoder().decode(bytes)),
       )
     files[`${name}/${row.path.slice(folder.length + 1)}`] = bytes
   }
@@ -445,9 +459,13 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
   const row = await libraryRow(db, [claim.p, ...rest].join('/'))
   if (!row) return c.text('Not found', 404)
   let bytes = await readLibraryFile(scope, row.id)
-  if (row.contentType === 'text/html')
+  const html = row.contentType === 'text/html'
+  if (html)
     bytes = new TextEncoder().encode(
-      await withKnobs(scope, db, claim.p, new TextDecoder().decode(bytes), true),
+      await withKnobs(scope, db, claim.p, new TextDecoder().decode(bytes), {
+        file: rest.join('/'),
+        sha256: row.sha256,
+      }),
     )
   return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
     'content-type': row.contentType.startsWith('text/')
@@ -459,9 +477,147 @@ export const designFiles = new Hono().get('/:token/*', async (c) => {
     'referrer-policy': 'no-referrer',
     // A sandboxed page's origin is opaque: its module scripts and fonts are cross-origin requests.
     'access-control-allow-origin': '*',
-    'cache-control': 'private, max-age=60',
+    // A page is numbered from its bytes of now: a cached one would number another version.
+    'cache-control': html ? 'no-store' : 'private, max-age=60',
   })
 })
+
+// ---------------------------------------------------------------------------
+// Editing a design on the canvas
+// ---------------------------------------------------------------------------
+
+/** One edit of a file at a time in this process: each checks the version the last one made. */
+const editing = new Map<string, Promise<unknown>>()
+async function oneAtATime<T>(key: string, work: () => Promise<T>) {
+  const before = editing.get(key) ?? Promise.resolve()
+  const run = before.then(work, work)
+  const settled = run.catch(() => undefined)
+  editing.set(key, settled)
+  try {
+    return await run
+  } finally {
+    if (editing.get(key) === settled) editing.delete(key)
+  }
+}
+
+/**
+ * A person's changes to a page of a design, made on the canvas: spliced into
+ * its HTML and saved as a new version by them. Refused when the page was saved
+ * since they loaded it, since its elements may be numbered differently now.
+ */
+export async function editDesign(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  input: DesignEdit,
+): Promise<DesignEditResult> {
+  const folder = input.path.replace(/\/+$/, '')
+  if (designFolderOf(folder) !== folder)
+    throw new HTTPException(400, { message: 'That is not a design folder' })
+  const path = `${folder}/${input.file}`
+  const first = await libraryRow(db, path)
+  if (!first || first.contentType !== 'text/html')
+    throw new HTTPException(404, { message: `The design has no page ${input.file}` })
+  return oneAtATime(first.id, async () => {
+    const row = await libraryRow(db, path)
+    if (!row) throw new HTTPException(404, { message: `The design has no page ${input.file}` })
+    if (row.sha256 !== input.sha256)
+      throw new HTTPException(409, {
+        message: `Someone saved ${input.file} meanwhile: it was reloaded, make the change again`,
+      })
+    const html = new TextDecoder().decode(await readLibraryFile(scope, row.id))
+    let next: string
+    try {
+      next = applyEdits(html, input.ops)
+    } catch (error) {
+      if (error instanceof EditError) throw new HTTPException(400, { message: error.message })
+      throw error
+    }
+    const saved = await saveLibraryFile(db, scope, actor, {
+      path,
+      bytes: new TextEncoder().encode(next),
+      contentType: 'text/html',
+    })
+    await audit({
+      ...scope,
+      actor,
+      action: 'design.edited',
+      target: { type: 'document', id: saved.id },
+      data: {
+        folder,
+        file: input.file,
+        ops: [
+          ...new Set(
+            input.ops.map((o) => ('style' in o ? 'style' : 'text' in o ? 'text' : 'attrs')),
+          ),
+        ],
+      },
+    })
+    return { sha256: saved.sha256, updatedAt: saved.updatedAt.toISOString() }
+  })
+}
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+/** Largest picture the canvas saves for the gallery. */
+const THUMBNAIL_MAX = 2 * 1024 * 1024
+
+/** The canvas's picture of a design's first board after a person's edits: the gallery's. */
+export async function saveDesignThumbnail(
+  db: ScopedDb,
+  scope: Scope,
+  actor: Actor,
+  input: z.output<typeof SaveDesignThumbnail>,
+) {
+  const folder = input.path.replace(/\/+$/, '')
+  if (designFolderOf(folder) !== folder || !(await libraryRow(db, `${folder}/${DESIGN_ENTRY}`)))
+    throw new HTTPException(400, { message: 'That is not a design folder' })
+  const bytes = Buffer.from(input.png, 'base64')
+  if (bytes.byteLength > THUMBNAIL_MAX || !PNG_SIGNATURE.every((b, i) => bytes[i] === b))
+    throw new HTTPException(400, { message: 'A PNG picture up to 2 MB' })
+  await saveLibraryFile(db, scope, actor, {
+    path: `${folder}/${DESIGN_THUMBNAIL}`,
+    bytes,
+    contentType: 'image/png',
+  })
+}
+
+/**
+ * Files of a design a person changed since this thread last saved them (or,
+ * never having saved them, since it started): a teammate asks before saving the
+ * design, so it does not save over their edits unawares. The picture is the
+ * canvas's to keep up to date, not an edit.
+ */
+export async function personEdits(
+  db: ScopedDb,
+  session: { id: string; createdAt: Date },
+  path: string,
+): Promise<DesignPersonEdit[]> {
+  const folder = path.replace(/\/+$/, '')
+  if (designFolderOf(folder) !== folder) return []
+  const rows = (await designRows(db, folder)).filter(
+    (r) => r.updatedByType === 'member' && r.path !== `${folder}/${DESIGN_THUMBNAIL}`,
+  )
+  if (rows.length === 0) return []
+  const ours = await db.documentVersion.findMany({
+    where: { documentId: { in: rows.map((r) => r.id) }, sessionId: session.id },
+    select: { documentId: true, createdAt: true },
+  })
+  const lastSaved = (id: string) =>
+    Math.max(
+      session.createdAt.getTime(),
+      ...ours.filter((v) => v.documentId === id).map((v) => v.createdAt.getTime()),
+    )
+  const edited = rows.filter((r) => r.updatedAt.getTime() > lastSaved(r.id))
+  const name = await actorNames(
+    db,
+    edited.map((r) => ({ type: 'member', id: r.updatedById! })),
+  )
+  return edited.map((r) => ({
+    file: r.path.slice(folder.length + 1),
+    by: name('member', r.updatedById)?.name ?? 'A person',
+    at: r.updatedAt.toISOString(),
+  }))
+}
 
 /**
  * A design a thread offered as one of the options in an options folder

@@ -251,6 +251,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       }),
       /** Register a design system whose folder is saved, or change one. */
       z.object({ name: z.literal('design_system'), designSystem: TeammateDesignSystem }),
+      /** Files of a design a person changed since this thread last saved them: asked before saving it. */
+      z.object({ name: z.literal('design_edits'), path: LibraryPath }),
     ]),
   }),
   /**

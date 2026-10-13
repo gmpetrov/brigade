@@ -360,22 +360,38 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   wins (`libraryAccessFor` in `@brigade/contracts`). Search, `save_to_library` and the mirror all follow it, and
   the teammate's instructions name the folders where its access differs. Members see the whole library.
 - **Designs** (`apps/api/src/designs.ts`, `@brigade/contracts` `design.ts`). A design is a library folder named
-  `<name>.design` with `index.html` and `design.json` (title, description, design system, viewports; a deck sets
-  `kind: "slides"` and marks slides with `data-slide` and `data-notes`) at its top, and optionally `knobs.json`.
+  `<name>.design` with `index.html` and `design.json` (title, description, design system, viewports, `boards`; a
+  deck sets `kind: "slides"` and marks slides with `data-slide` and `data-notes`) at its top, and optionally
+  `knobs.json`. `boards` lists its pages for the canvas (file, title, width, an optional height and place); without
+  it, `designBoards` shows `index.html` once per viewport.
   Teammates make them as plain HTML in any harness. `check_design` renders the folder with the computer's Chrome
   (`apps/runner/src/design-shot.ts`, run as the teammate, the folder served on a private port) and returns
-  screenshots per viewport or slide and the page's errors; `save_design` saves the folder (one `save` call per
-  file, no protocol change) with a rendered `thumbnail.png` when Chrome is there. The library shows each design
-  folder as one item and in a Designs gallery (without design systems' previews, which their cards open), and
-  opens it in a viewer beside the page or the thread (`components/design-view.tsx`). Its page runs the
+  screenshots per board (else per viewport) or slide and the page's errors; `save_design` saves the folder (one
+  `save` call per file) with a rendered `thumbnail.png` when Chrome is there. It first asks the API which files a
+  person edited since this thread last saved them (`library.call` `design_edits`) and refuses, saving nothing,
+  unless `overwrite: true`; an API that does not know the question answers an error, read as none. The library
+  shows each design folder as one item and in a Designs gallery (without design systems' previews, which their
+  cards open), and opens it on a canvas beside the page or the thread (`components/design-view.tsx`,
+  `design-canvas.tsx`): its boards pan and zoom, one frame per board, mounted near the view; an options set shows
+  one row per option. Its page runs the
   teammate's script, so it is served only from `DESIGN_URL`, another host pointing at the API
   (`designs.localhost:<port>` in development), under a signed four-hour address (`POST /api/designs/view`, then
   `/v/<token>/...`), with a `sandbox` CSP that makes its origin opaque,
   `connect-src` limited to itself and public CDNs, and no form submissions. On that host nothing else of the API
-  answers. Use a separate domain in production. The host adds a bridge script to its pages
-  (`apps/api/src/design-bridge.ts`), which the viewer talks to by `postMessage`: pick an element to comment on
-  (by `data-id`), try knob values live, print to PDF, capture PNGs with html-to-image (html2canvas cannot run in
-  an opaque-origin sandbox). A comment is a message to the thread that saved the design last (the files'
+  answers. Use a separate domain in production. The host numbers the elements a page's `<body>` was written with
+  (`apps/api/src/design-source.ts`, parse5 source locations) and marks each `data-bid="<n>:<line>:<text
+fingerprint>"`, sending the page `no-store`, and adds a bridge script first in its head
+  (`apps/api/src/design-bridge.ts`), which the canvas talks to by `postMessage`. In Select a clear layer over each
+  board takes the pointer and asks the page what is under it; the bridge describes an element (computed and
+  inline styles, attributes, whether a person can change it: an element a script made, cloned or retyped is
+  "made by the page's script"), reports the page's height (a page sized by `vh` keeps a screen's height and
+  scrolls), forwards the wheel, shows changes before they are saved, retypes a text in place, tries knob values
+  live, prints to PDF, and captures PNGs with html-to-image (html2canvas cannot run in an opaque-origin
+  sandbox). A person's changes (inline styles, text, links and images) go to `PATCH /api/designs/edit` with the
+  sha256 of the page they were made on: one at a time per file, refused with 409 when it was saved since,
+  spliced into the original text and saved as a new version by the member (`design.edited` audit); the canvas
+  undoes by sending the reverse change, and saves a new `thumbnail.png` (`PUT /api/designs/thumbnail`) after
+  the first board's page changes. A comment is a message to the thread that saved the design last (the files'
   `updatedInSessionId`, when the member may prompt it), else a new thread to the same teammate. Knobs are saved
   into `knobs.json` (`PUT /api/designs/knobs`) and applied to the page as `:root:root` custom properties.
   Export: the folder as a zip (`GET /api/designs/zip`), PDF, PNG, and for decks PowerPoint (one picture per

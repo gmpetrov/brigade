@@ -1,37 +1,56 @@
 'use client'
-// A design a teammate made: its page from the sandbox origin (another site
-// than the dashboard, no cookies, a sandboxed document), at a viewport's
-// width and scaled down to fit. Beside a thread or the library, or expanded
-// over the page. Around it: comments on an element, sent to the thread that
-// made it; knobs to try values and save them; export; hand-off to a thread
-// that builds it. The page and the viewer talk through the bridge the sandbox
-// host adds to it (apps/api/src/design-bridge.ts), by postMessage only.
+// A design a teammate made, on its canvas: its pages from the sandbox origin
+// (another site than the dashboard, no cookies, sandboxed documents) as boards
+// that pan and zoom, an options set as one row per option. Beside a thread or
+// the library, or expanded over the page. Around it: select an element and
+// change its text, size, spacing and look by hand (saved into the page as a
+// new version, by this member); ask the thread that made it about an element;
+// knobs to try values and save them; export; hand-off to a thread that builds
+// it. The pages and the canvas talk through the bridge the sandbox host adds to
+// them (apps/api/src/design-bridge.ts), by postMessage only.
 import {
+  DESIGN_ENTRY,
+  designBoards,
   designName,
   formatMention,
+  screenHeight,
+  type DesignEditOp,
   type DesignKnob,
   type DesignView as DesignViewInfo,
-  type DesignViewport,
 } from '@brigade/contracts'
 import {
   Download,
   ExternalLink,
   Hammer,
   Library,
+  Maximize,
   Maximize2,
   MessageSquarePlus,
   Minimize2,
-  Monitor,
+  MousePointer2,
   Palette,
+  Pencil,
+  Play,
+  Redo2,
   RotateCw,
   SlidersHorizontal,
-  Smartphone,
-  Tablet,
+  Undo2,
   X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
+import {
+  DesignCanvas,
+  type CanvasBoard,
+  type CanvasGroup,
+  type CanvasHandle,
+  type Inspected,
+  type PageMessage,
+  type Selected,
+} from '@/components/design-canvas'
+import { DesignEdits, type DesignChange } from '@/components/design-edits'
+import { DesignProperties } from '@/components/design-properties'
 import { NewThread, useLastTeammate, useThreadDraft } from '@/components/new-thread'
 import { SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
@@ -49,51 +68,44 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { api } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
-const WIDTH: Record<DesignViewport, number> = { desktop: 1280, tablet: 820, mobile: 390 }
-const ICON = { desktop: Monitor, tablet: Tablet, mobile: Smartphone } satisfies Record<
-  DesignViewport,
-  unknown
->
-const ALL: DesignViewport[] = ['desktop', 'tablet', 'mobile']
-
-/** What the bridge in the page sends. */
-type Picked = { dataId: string | null; selector: string; text: string; html: string }
-type Captured = { data: string; width: number; height: number; notes: string }
-type FromPage =
-  | { type: 'ready'; slides: number }
-  | ({ type: 'picked' } & Picked)
-  | { type: 'cancel' }
-  | { type: 'captured'; id: string; images?: Captured[]; error?: string }
+/** What a comment is about: an element on a board, else the whole design. */
+type Target = {
+  board: CanvasBoard
+  element: Pick<Inspected, 'dataId' | 'path' | 'label' | 'line' | 'tag'> | null
+}
 
 /** A new thread to start, with its first message written. */
 type Starting = { title: string; description: string; text: string; teammateId?: string }
 
+/** Wide enough for the properties beside the canvas. */
+const WIDE = 900
+
 const mention = (folder: string) => formatMention({ kind: 'design', id: folder, label: folder })
 
-function commentText(input: {
-  folder: string
-  viewport: DesignViewport
-  picked: Picked | null
-  body: string
-}) {
-  const where = `at ${input.viewport} (${WIDTH[input.viewport]}px)`
-  const on = input.picked
-    ? input.picked.dataId
-      ? `, on \`${input.picked.dataId}\``
-      : `, on the element \`${input.picked.selector}\``
+function commentText(input: { folder: string; target: Target | null; body: string }) {
+  const t = input.target
+  const board = t
+    ? ` on the board ${t.board.title ? `“${t.board.title}” (\`${t.board.file}\`, ` : `\`${t.board.file}\` (`}${t.board.width}px wide)`
     : ''
-  const snippet = input.picked ? `\n\n> ${input.picked.html.replace(/`/g, "'")}` : ''
-  return `Comment on the design ${mention(input.folder)} ${where}${on}:${snippet}\n\n${input.body.trim()}`
+  const on = t?.element
+    ? t.element.dataId
+      ? `, on \`${t.element.dataId}\``
+      : `, on the element \`${t.element.path}\``
+    : ''
+  const line = t?.element?.line ? ` at line ${t.element.line} of \`${t.board.file}\`` : ''
+  const quote = t?.element?.label
+    ? `\n\n> <${t.element.tag}> ${t.element.label.replace(/`/g, "'")}`
+    : ''
+  return `Comment on the design ${mention(input.folder)}${board}${on}${line}:${quote}\n\n${input.body.trim()}`
 }
 
 const handoffText = (folder: string) =>
-  `Build the design ${mention(folder)} in the product. Match it at each of its viewports, with the ` +
+  `Build the design ${mention(folder)} in the product. Match each of its boards, with the ` +
   "product's own components and conventions and the values in its knobs.json, then open a pull request."
 
 function download(href: string, name: string) {
@@ -103,131 +115,295 @@ function download(href: string, name: string) {
   a.click()
 }
 
-/** The design's page and everything around it. `version` changes when its files do, to load it again. */
+/** A page of the design on the sandbox origin: the entry's address with its file in place. */
+const pageUrl = (view: DesignViewInfo, file: string) =>
+  view.url.slice(0, -DESIGN_ENTRY.length) + file.split('/').map(encodeURIComponent).join('/')
+
+/** The undo of an op: what the element had before it, from what the page said about it. */
+function undoOf(op: DesignEditOp, before: Inspected | undefined): DesignEditOp {
+  if ('style' in op)
+    return {
+      id: op.id,
+      style: Object.fromEntries(Object.keys(op.style).map((p) => [p, before?.inline[p] ?? null])),
+    }
+  if ('text' in op) return { id: op.id, text: before?.text ?? '' }
+  return {
+    id: op.id,
+    attrs: Object.fromEntries(Object.keys(op.attrs).map((a) => [a, before?.attrs[a] ?? null])),
+  }
+}
+
+/** An op as a message to the pages, to show it before it is saved. */
+function live(op: DesignEditOp): Record<string, unknown> {
+  if ('style' in op) return { type: 'brigade:style', bid: op.id, style: op.style }
+  if ('text' in op) return { type: 'brigade:text', bid: op.id, text: op.text }
+  return { type: 'brigade:attrs', bid: op.id, attrs: op.attrs }
+}
+
+/** The design's canvas and everything around it. `version` changes when its files do. */
 function DesignFrame({
   folder,
   version,
+  options,
   threadId,
+  expanded,
+  onExpand,
   onInfo,
   onStart,
 }: {
   /** The design's library folder ("acme/pricing.design"). */
   folder: string
   version?: string
+  /** The options offered with it, it included: one row each. */
+  options?: string[]
   /** Shown beside this thread: comments go to it. */
   threadId?: string
+  expanded: boolean
+  onExpand?: () => void
   onInfo?: (info: DesignViewInfo) => void
   onStart: (start: Starting) => void
 }) {
-  const [view, setView] = useState<DesignViewInfo>()
+  const folders = useMemo(
+    () => (options && options.length > 1 && options.includes(folder) ? options : [folder]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- by their names
+    [folder, options?.join('\n')],
+  )
+  const [views, setViews] = useState<Record<string, DesignViewInfo>>({})
   const [error, setError] = useState<string>()
-  const [viewport, setViewport] = useState<DesignViewport>()
-  const [reloads, setReloads] = useState(0)
-  const box = useRef<HTMLDivElement>(null)
-  const frame = useRef<HTMLIFrameElement>(null)
-  const [size, setSize] = useState({ width: 0, height: 0 })
-  const [ready, setReady] = useState<{ slides: number }>()
-  const [mode, setMode] = useState<'comment' | 'knobs' | null>(null)
-  const [picking, setPicking] = useState(false)
-  const [picked, setPicked] = useState<Picked | null>(null)
+  const [reloadAll, setReloadAll] = useState(0)
+  const root = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  const canvas = useRef<CanvasHandle>(null)
+  const [mode, setMode] = useState<'select' | 'play'>('select')
+  const [selection, setSelection] = useState<Selected[]>([])
+  const [inspected, setInspected] = useState<Record<string, Inspected>>({})
+  const [tab, setTab] = useState<'properties' | 'ask' | 'knobs' | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<{ text: string; href?: string; error?: boolean }>()
   const [busy, setBusy] = useState<string>()
-  const captures = useRef(new Map<string, (m: Extract<FromPage, { type: 'captured' }>) => void>())
+  const [slides, setSlides] = useState(0)
+  const [, rerender] = useState(0)
+  /** The version of the page each board shows. */
+  const shown = useRef(new Map<string, string>())
+  /** Each board's address: kept while its page is the one it shows, so a new view does not reload it. */
+  const [srcs, setSrcs] = useState<Record<string, string>>({})
+  const thumbnail = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const view = views[folder]
+
+  const edits = useRef<DesignEdits>(null)
+  edits.current ??= new DesignEdits({
+    onSaved: (f, file) => {
+      setNotice({ text: 'Saved.' })
+      // The gallery's picture is the first board's.
+      const first = canvasBoards().find((b) => b.folder === f)
+      if (first?.file !== file) return
+      clearTimeout(thumbnail.current)
+      thumbnail.current = setTimeout(() => {
+        canvas.current
+          ?.capture(first.key, { ratio: 0.5, maxHeight: first.height ?? screenHeight(first.width) })
+          .then(([image]) =>
+            image
+              ? api('/designs/thumbnail', {
+                  method: 'PUT',
+                  body: { path: f, png: image.data.slice(image.data.indexOf(',') + 1) },
+                })
+              : undefined,
+          )
+          .catch(() => undefined)
+      }, 3000)
+    },
+    onLost: (f, file, message) => {
+      setNotice({ text: message, error: true })
+      canvas.current?.reload(f, file)
+    },
+    onChange: () => rerender((n) => n + 1),
+  })
+  const canvasBoards = () => canvas.current?.boards() ?? []
 
   useEffect(() => {
     let live = true
     setError(undefined)
-    api<DesignViewInfo>('/designs/view', { body: { path: folder } }).then(
-      (v) => {
+    Promise.all(
+      folders.map((f) =>
+        api<DesignViewInfo>('/designs/view', { body: { path: f } }).then((v) => [f, v] as const),
+      ),
+    ).then(
+      (loaded) => {
         if (!live) return
-        setView(v)
-        setValues(Object.fromEntries(v.knobs.map((k) => [k.var, k.value])))
-        onInfo?.(v)
+        const next = Object.fromEntries(loaded)
+        setViews(next)
+        setSrcs((before) => {
+          const after: Record<string, string> = {}
+          for (const [f, v] of loaded)
+            designBoards(v.manifest).forEach((b, i) => {
+              const key = `${f}#${i}`
+              const sha = v.files[b.file]
+              const was = shown.current.get(key)
+              const keep =
+                reloadAll === 0 &&
+                before[key] &&
+                sha &&
+                (was === sha || edits.current!.own.has(sha))
+              after[key] = keep ? before[key]! : pageUrl(v, b.file)
+            })
+          return after
+        })
+        for (const [f, v] of loaded)
+          for (const [file, sha] of Object.entries(v.files)) edits.current!.seen(f, file, sha)
+        const primary = next[folder]
+        if (primary) {
+          setValues(Object.fromEntries(primary.knobs.map((k) => [k.var, k.value])))
+          onInfo?.(primary)
+        }
       },
       (e: Error) => live && setError(e.message),
     )
     return () => {
       live = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per design and version
-  }, [folder, version])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per design, version and reload
+  }, [folders, version, reloadAll])
 
   useEffect(() => {
-    const element = box.current
+    const element = root.current
     if (!element) return
-    const observer = new ResizeObserver(([entry]) =>
-      setSize({ width: entry!.contentRect.width, height: entry!.contentRect.height }),
-    )
+    const observer = new ResizeObserver(([entry]) => setWidth(entry!.contentRect.width))
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
 
-  const post = useCallback((message: Record<string, unknown>) => {
-    // The page's origin is opaque: '*' is the only target; what is sent is not secret.
-    frame.current?.contentWindow?.postMessage(message, '*')
-  }, [])
+  // What waits is saved when the canvas goes.
+  useEffect(() => () => edits.current?.flushAll(), [])
 
-  // The page's messages. Its own script could send these too: they only ever fill the viewer.
-  const state = useRef({ picking, values })
-  state.current = { picking, values }
-  useEffect(() => {
-    const onMessage = (e: MessageEvent) => {
-      if (!frame.current || e.source !== frame.current.contentWindow) return
-      const m = e.data as FromPage & { source?: string }
-      if (m?.source !== 'brigade-design') return
+  const groups: CanvasGroup[] = useMemo(
+    () =>
+      folders.flatMap((f) => {
+        const v = views[f]
+        if (!v) return []
+        return [
+          {
+            key: f,
+            title: v.manifest?.title || designName(f),
+            boards: designBoards(v.manifest).map((b, i) => ({
+              ...b,
+              key: `${f}#${i}`,
+              folder: f,
+              src: srcs[`${f}#${i}`] ?? pageUrl(v, b.file),
+            })),
+          },
+        ]
+      }),
+    [folders, views, srcs],
+  )
+  const boardByKey = (key: string) => groups.flatMap((g) => g.boards).find((b) => b.key === key)
+
+  const wide = width >= WIDE
+  const last = selection.at(-1)
+  const lastInspected = last ? inspected[`${last.board}:${last.h}`] : undefined
+  const lastBoard = last ? boardByKey(last.board) : undefined
+  // The thread that made the design takes comments: this one, else the one that made it, if this member may write to it.
+  const commentThread = threadId ?? (view?.thread?.mayPrompt ? view.thread.id : undefined)
+  const panel = wide ? (tab ?? 'properties') : tab === 'properties' ? null : tab
+
+  const onMessage = useCallback(
+    (board: CanvasBoard, m: PageMessage) => {
       if (m.type === 'ready') {
-        setReady({ slides: Number(m.slides) || 0 })
-        // A reloaded page gets the viewer's state again.
-        post({ type: 'brigade:vars', vars: state.current.values })
-        post({ type: 'brigade:pick', on: state.current.picking })
-      } else if (m.type === 'picked') {
-        setPicked({
-          dataId: typeof m.dataId === 'string' ? m.dataId.slice(0, 100) : null,
-          selector: String(m.selector).slice(0, 300),
-          text: String(m.text).slice(0, 200),
-          html: String(m.html).slice(0, 500),
-        })
-        setPicking(false)
-        post({ type: 'brigade:pick', on: false })
-      } else if (m.type === 'cancel') {
-        setPicking(false)
-        post({ type: 'brigade:pick', on: false })
-      } else if (m.type === 'captured') {
-        captures.current.get(String(m.id))?.(m)
-        captures.current.delete(String(m.id))
+        shown.current.set(board.key, String(m.sha))
+        edits.current!.seen(board.folder, board.file, String(m.sha))
+        if (board.folder === folder && board.key.endsWith('#0')) setSlides(Number(m.slides) || 0)
+      } else if (m.type === 'inspected') {
+        const element = m.element
+        const key = `${board.key}:${element.h}`
+        setInspected((all) => ({ ...all, [key]: element }))
+        // A selection made by Escape (its parent) learns its number here.
+        setSelection((all) =>
+          all.map((s) =>
+            s.board === board.key && s.h === element.h && s.bid !== element.bid
+              ? { ...s, bid: element.bid }
+              : s,
+          ),
+        )
+      } else if (m.type === 'typed' && m.text !== null) {
+        const element = inspected[`${board.key}:${m.h}`]
+        change(board, [{ id: m.bid, text: m.text }], element)
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- reads the latest through state setters
+    },
+    [folder, inspected],
+  )
+
+  /** A person's change to one page: shown on every board of it at once, saved shortly, undoable. */
+  function change(board: CanvasBoard, ops: DesignEditOp[], before?: Inspected, coalesce?: string) {
+    const entry: DesignChange = {
+      folder: board.folder,
+      file: board.file,
+      ops,
+      undo: ops.map((op) => undoOf(op, before)),
+      ...(coalesce
+        ? { coalesce: `${board.key}:${ops.map((o) => o.id).join(',')}:${coalesce}` }
+        : {}),
     }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [post])
+    for (const op of ops) canvas.current?.postToFile(board.folder, board.file, live(op))
+    edits.current!.push(entry)
+    refreshInspected()
+  }
 
-  const offered = view?.manifest?.viewports?.length ? view.manifest.viewports : ALL
-  const shown = viewport && offered.includes(viewport) ? viewport : offered[0]!
-  const width = WIDTH[shown]
-  const scale = size.width ? Math.min(1, size.width / width) : 1
+  /** The panel shows what the pages say after a change. */
+  function refreshInspected() {
+    for (const s of selection) canvas.current?.post(s.board, { type: 'brigade:inspect', h: s.h })
+  }
+
+  function applyUndo(entry: DesignChange | null) {
+    if (!entry) return
+    for (const op of entry.ops) canvas.current?.postToFile(entry.folder, entry.file, live(op))
+    refreshInspected()
+  }
+
+  /** A style for every selected element written in its page. */
+  function onStyle(style: Record<string, string | null>, coalesce?: string) {
+    for (const s of selection) {
+      const board = boardByKey(s.board)
+      const element = inspected[`${s.board}:${s.h}`]
+      if (!board || s.bid === null || !element?.editable.style) continue
+      change(board, [{ id: s.bid, style }], element, coalesce)
+    }
+  }
+
+  function onAttrs(attrs: Extract<DesignEditOp, { attrs: unknown }>['attrs']) {
+    if (!last || !lastBoard || last.bid === null || !lastInspected?.editable.attrs) return
+    change(lastBoard, [{ id: last.bid, attrs }], lastInspected)
+  }
+
+  function onText(text: string) {
+    if (!last || !lastBoard || last.bid === null || !lastInspected?.editable.text) return
+    change(lastBoard, [{ id: last.bid, text }], lastInspected)
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const mod = e.metaKey || e.ctrlKey
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault()
+      applyUndo(e.shiftKey ? edits.current!.redo() : edits.current!.undo())
+    } else if (e.key === 'Escape') {
+      if (selection.length === 0) return
+      e.preventDefault()
+      const parent = lastInspected?.parent
+      setSelection(
+        parent !== null && parent !== undefined && last
+          ? [{ board: last.board, h: parent, bid: null }]
+          : [],
+      )
+    } else if ((e.key === 'Enter' || e.key === 'F2') && last && lastInspected?.editable.text) {
+      e.preventDefault()
+      canvas.current?.retype(last)
+    }
+  }
+
+  // -- Export -----------------------------------------------------------------
+
   const name = designName(folder)
-
-  function pick(on: boolean) {
-    setPicking(on)
-    post({ type: 'brigade:pick', on })
-  }
-
-  function capture(slides: boolean) {
-    const id = Math.random().toString(36).slice(2)
-    return new Promise<Captured[]>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        captures.current.delete(id)
-        reject(new Error('The page did not answer. Reload it and try again.'))
-      }, 60_000)
-      captures.current.set(id, (m) => {
-        clearTimeout(timer)
-        if (m.error || !m.images) reject(new Error(m.error ?? 'Nothing was captured'))
-        else resolve(m.images)
-      })
-      post({ type: 'brigade:capture', id, slides })
-    })
-  }
+  const exportBoard = () =>
+    lastBoard ?? canvasBoards().find((b) => b.folder === folder) ?? groups[0]?.boards[0]
 
   async function exporting(label: string, work: () => Promise<void>) {
     setBusy(label)
@@ -242,13 +418,17 @@ function DesignFrame({
 
   const exportPng = () =>
     exporting('Capturing…', async () => {
-      const [image] = await capture(false)
-      if (image) download(image.data, `${name}-${shown}.png`)
+      const board = exportBoard()
+      if (!board) return
+      const [image] = await canvas.current!.capture(board.key)
+      if (image) download(image.data, `${name}-${board.file.replace(/\.html$/, '')}.png`)
     })
 
   const exportPptx = () =>
     exporting('Making the deck…', async () => {
-      const images = await capture(true)
+      const board = groups.find((g) => g.key === folder)?.boards[0]
+      if (!board) return
+      const images = await canvas.current!.capture(board.key, { slides: true })
       const { default: PptxGenJS } = await import('pptxgenjs')
       const deck = new PptxGenJS()
       const first = images[0]!
@@ -264,11 +444,15 @@ function DesignFrame({
       await deck.writeFile({ fileName: `${name}.pptx` })
     })
 
-  // Where a comment goes: this thread, else the one that made the design if this member may write to it.
-  const commentThread = threadId ?? (view?.thread?.mayPrompt ? view.thread.id : undefined)
+  // -- Comments ----------------------------------------------------------------
+
+  const target: Target | null = lastBoard
+    ? { board: lastBoard, element: lastInspected ?? null }
+    : null
+  const commentFolder = lastBoard?.folder ?? folder
 
   async function sendComment(body: string) {
-    const text = commentText({ folder, viewport: shown, picked, body })
+    const text = commentText({ folder: commentFolder, target, body })
     if (!commentThread) {
       onStart({
         title: 'Send the comment in a new thread',
@@ -282,7 +466,6 @@ function DesignFrame({
     }
     try {
       await api(`/threads/${commentThread}/messages`, { body: { text } })
-      setPicked(null)
       setNotice(
         commentThread === threadId
           ? { text: 'Sent to this thread.' }
@@ -298,12 +481,13 @@ function DesignFrame({
     }
   }
 
-  function setKnob(knob: DesignKnob, value: string) {
-    const next = { ...values, [knob.var]: value }
-    setValues(next)
-    post({ type: 'brigade:vars', vars: { [knob.var]: value } })
-  }
+  // -- Knobs -------------------------------------------------------------------
 
+  function setKnob(knob: DesignKnob, value: string) {
+    setValues({ ...values, [knob.var]: value })
+    for (const b of groups.find((g) => g.key === folder)?.boards ?? [])
+      canvas.current?.post(b.key, { type: 'brigade:vars', vars: { [knob.var]: value } })
+  }
   const changed = view ? view.knobs.filter((k) => values[k.var] !== k.value) : []
 
   async function saveKnobs() {
@@ -318,7 +502,7 @@ function DesignFrame({
           values: Object.fromEntries(changed.map((k) => [k.var, values[k.var]])),
         },
       })
-      setView({ ...view, knobs })
+      setViews((all) => ({ ...all, [folder]: { ...view, knobs } }))
       setNotice({ text: 'Saved to knobs.json.' })
     } catch (e) {
       setNotice({ text: (e as Error).message, error: true })
@@ -330,64 +514,157 @@ function DesignFrame({
     if (!view) return
     const saved = Object.fromEntries(view.knobs.map((k) => [k.var, k.value]))
     setValues(saved)
-    post({ type: 'brigade:vars', vars: saved })
+    for (const b of groups.find((g) => g.key === folder)?.boards ?? [])
+      canvas.current?.post(b.key, { type: 'brigade:vars', vars: saved })
   }
 
-  const slides = (ready?.slides ?? 0) > 0
+  // A page that loads again gets the knob values being tried.
+  const tried = useRef(values)
+  tried.current = values
+  const onPage = useCallback(
+    (board: CanvasBoard, m: PageMessage) => {
+      if (m.type === 'ready' && board.folder === folder && changed.length)
+        canvas.current?.post(board.key, { type: 'brigade:vars', vars: tried.current })
+      onMessage(board, m)
+    },
+    [folder, changed.length, onMessage],
+  )
+
+  const shared =
+    !!lastBoard &&
+    groups
+      .flatMap((g) => g.boards)
+      .filter((b) => b.folder === lastBoard.folder && b.file === lastBoard.file).length > 1
+  const knobsPanel = view && view.knobs.length > 0 && (
+    <Knobs
+      knobs={view.knobs}
+      values={values}
+      onChange={setKnob}
+      changed={changed.length}
+      busy={Boolean(busy)}
+      onSave={() => void saveKnobs()}
+      onReset={resetKnobs}
+    />
+  )
+  const askBox = view && (
+    <CommentBox
+      target={target}
+      to={
+        commentThread === threadId && threadId
+          ? 'this thread'
+          : commentThread
+            ? `“${view.thread?.title}”`
+            : 'a new thread'
+      }
+      onClear={() => setSelection([])}
+      onSend={sendComment}
+    />
+  )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-1.5">
-        <Tabs value={shown} onValueChange={(v) => setViewport(v as DesignViewport)}>
-          <TabsList aria-label="Viewport">
-            {offered.map((v) => {
-              const Icon = ICON[v]
-              return (
-                <TabsTrigger
-                  key={v}
-                  value={v}
-                  title={`${v[0]!.toUpperCase()}${v.slice(1)}, ${WIDTH[v]}px`}
-                >
-                  <Icon aria-hidden />
-                  <span className="sr-only">{v}</span>
-                </TabsTrigger>
-              )
-            })}
-          </TabsList>
-        </Tabs>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {width}px{scale < 1 && ` · ${Math.round(scale * 100)}%`}
-        </span>
-        <span className="flex-1" />
+    <div ref={root} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-wrap items-center gap-1 border-b px-3 py-1.5">
+        <div role="radiogroup" aria-label="Mode" className="flex rounded-md bg-muted p-0.5">
+          {(
+            [
+              ['select', MousePointer2, 'Select: pick elements to change or ask about'],
+              ['play', Play, 'Play: use the pages'],
+            ] as const
+          ).map(([m, Icon, title]) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              title={title}
+              onClick={() => {
+                setMode(m)
+                if (m === 'play') setSelection([])
+              }}
+              className={cn(
+                'flex size-7 items-center justify-center rounded',
+                mode === m
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Icon aria-hidden className="size-3.5" />
+              <span className="sr-only">{m}</span>
+            </button>
+          ))}
+        </div>
         <Button
           type="button"
-          variant={mode === 'comment' ? 'secondary' : 'ghost'}
-          size="sm"
-          aria-pressed={mode === 'comment'}
-          disabled={!view}
-          onClick={() => {
-            const on = mode !== 'comment'
-            setMode(on ? 'comment' : null)
-            pick(on && !picked)
-          }}
+          variant="ghost"
+          size="icon-sm"
+          title="Fit everything (⇧1)"
+          aria-label="Fit everything"
+          onClick={() => canvas.current?.fit()}
         >
-          <MessageSquarePlus aria-hidden />
-          Comment
+          <Maximize aria-hidden />
         </Button>
-        {view && view.knobs.length > 0 && (
-          <Button
-            type="button"
-            variant={mode === 'knobs' ? 'secondary' : 'ghost'}
-            size="sm"
-            aria-pressed={mode === 'knobs'}
-            onClick={() => {
-              setMode(mode === 'knobs' ? null : 'knobs')
-              pick(false)
-            }}
-          >
-            <SlidersHorizontal aria-hidden />
-            Knobs
-          </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          title="Undo (⌘Z)"
+          aria-label="Undo"
+          disabled={!edits.current.canUndo}
+          onClick={() => applyUndo(edits.current!.undo())}
+        >
+          <Undo2 aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          title="Redo (⇧⌘Z)"
+          aria-label="Redo"
+          disabled={!edits.current.canRedo}
+          onClick={() => applyUndo(edits.current!.redo())}
+        >
+          <Redo2 aria-hidden />
+        </Button>
+        <span className="text-xs text-muted-foreground">{edits.current.busy ? 'Saving…' : ''}</span>
+        <span className="flex-1" />
+        {!wide && (
+          <>
+            <Button
+              type="button"
+              variant={tab === 'ask' ? 'secondary' : 'ghost'}
+              size="sm"
+              aria-pressed={tab === 'ask'}
+              disabled={!view}
+              onClick={() => setTab(tab === 'ask' ? null : 'ask')}
+            >
+              <MessageSquarePlus aria-hidden />
+              Comment
+            </Button>
+            {view && view.knobs.length > 0 && (
+              <Button
+                type="button"
+                variant={tab === 'knobs' ? 'secondary' : 'ghost'}
+                size="sm"
+                aria-pressed={tab === 'knobs'}
+                onClick={() => setTab(tab === 'knobs' ? null : 'knobs')}
+              >
+                <SlidersHorizontal aria-hidden />
+                Knobs
+              </Button>
+            )}
+            {onExpand && !expanded && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title="Edit by hand: expand the design"
+                onClick={onExpand}
+              >
+                <Pencil aria-hidden />
+                Edit
+              </Button>
+            )}
+          </>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -408,13 +685,19 @@ function DesignFrame({
                 HTML (.zip)
               </a>
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={!ready} onSelect={() => post({ type: 'brigade:print' })}>
+            <DropdownMenuItem
+              disabled={!view}
+              onSelect={() => {
+                const board = exportBoard()
+                if (board) canvas.current?.post(board.key, { type: 'brigade:print' })
+              }}
+            >
               PDF (print)
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={!ready} onSelect={() => void exportPng()}>
-              Image (.png), {shown}
+            <DropdownMenuItem disabled={!view} onSelect={() => void exportPng()}>
+              Image (.png), {lastBoard ? 'the selected board' : 'the first board'}
             </DropdownMenuItem>
-            {slides && (
+            {slides > 0 && (
               <DropdownMenuItem onSelect={() => void exportPptx()}>
                 PowerPoint (.pptx)
               </DropdownMenuItem>
@@ -445,14 +728,18 @@ function DesignFrame({
           size="icon-sm"
           title="Reload"
           aria-label="Reload"
-          onClick={() => (setReady(undefined), setReloads((n) => n + 1))}
+          onClick={() => {
+            setSelection([])
+            shown.current.clear()
+            setReloadAll((n) => n + 1)
+          }}
         >
           <RotateCw aria-hidden />
         </Button>
         {view && (
           <Button asChild variant="ghost" size="icon-sm" title="Open in a new tab">
             <a
-              href={view.url}
+              href={lastBoard ? (srcs[lastBoard.key] ?? view.url) : view.url}
               target="_blank"
               rel="noreferrer noopener"
               aria-label="Open in a new tab"
@@ -483,81 +770,94 @@ function DesignFrame({
         </p>
       )}
 
-      {mode === 'knobs' && view && (
-        <Knobs
-          knobs={view.knobs}
-          values={values}
-          onChange={setKnob}
-          changed={changed.length}
-          busy={Boolean(busy)}
-          onSave={() => void saveKnobs()}
-          onReset={resetKnobs}
-        />
-      )}
+      {!wide && tab === 'knobs' && knobsPanel}
 
-      <div ref={box} className="relative min-h-0 flex-1 overflow-hidden bg-muted/40">
+      <div className="flex min-h-0 flex-1">
         {error ? (
           <p className="p-4 text-sm text-destructive-text">{error}</p>
-        ) : !view ? (
+        ) : groups.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">Loading…</p>
         ) : (
-          size.width > 0 && (
-            <iframe
-              ref={frame}
-              key={`${view.url}#${reloads}`}
-              title={view.manifest?.title ?? name}
-              src={view.url}
-              // Its own site already; the sandbox keeps it from the top window and from forms that navigate it.
-              sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads"
-              referrerPolicy="no-referrer"
-              className={cn(
-                'absolute top-0 border-0 bg-white',
-                picking && 'outline-2 outline-primary outline-dashed',
-              )}
-              style={{
-                width,
-                height: size.height / scale,
-                left: Math.max(0, (size.width - width * scale) / 2),
-                transform: `scale(${scale})`,
-                transformOrigin: 'top left',
-              }}
-            />
-          )
+          <DesignCanvas
+            handle={canvas}
+            groups={groups}
+            mode={mode}
+            selection={selection}
+            onSelect={setSelection}
+            onMessage={onPage}
+            onKeyDown={onKeyDown}
+            onDoubleClick={(s) => {
+              if (inspected[`${s.board}:${s.h}`]?.editable.text) canvas.current?.retype(s)
+            }}
+          />
+        )}
+
+        {wide && view && (
+          <aside aria-label="Properties" className="flex w-[300px] shrink-0 flex-col border-l">
+            <div role="tablist" className="flex gap-1 border-b px-2 py-1.5">
+              {(
+                [
+                  ['properties', 'Properties'],
+                  ['ask', 'Ask'],
+                  ...(view.knobs.length ? ([['knobs', 'Knobs']] as const) : []),
+                ] as const
+              ).map(([t, label]) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={panel === t}
+                  onClick={() => setTab(t)}
+                  className={cn(
+                    'rounded-md px-2 py-1 text-xs',
+                    panel === t
+                      ? 'bg-secondary font-medium'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {panel === 'knobs' ? (
+              knobsPanel
+            ) : panel === 'ask' ? (
+              askBox
+            ) : lastInspected ? (
+              <DesignProperties
+                element={lastInspected}
+                count={selection.length}
+                shared={shared}
+                {...(view.teammate ? { teammate: view.teammate.name } : {})}
+                onStyle={onStyle}
+                onAttrs={onAttrs}
+                onText={onText}
+                onAsk={() => setTab('ask')}
+              />
+            ) : (
+              <p className="p-3 text-xs text-muted-foreground">
+                {mode === 'play'
+                  ? 'Play: the pages work as they would in a browser. Switch to Select to change them.'
+                  : 'Select an element on a board to change its text, size, spacing and look. Space + drag or the trackpad pans, pinch or ⌘ + scroll zooms, ⇧1 fits everything.'}
+              </p>
+            )}
+          </aside>
         )}
       </div>
 
-      {mode === 'comment' && view && (
-        <CommentBox
-          picked={picked}
-          picking={picking}
-          target={
-            commentThread === threadId && threadId
-              ? 'this thread'
-              : commentThread
-                ? `“${view.thread?.title}”`
-                : 'a new thread'
-          }
-          onPick={() => pick(!picking)}
-          onClear={() => setPicked(null)}
-          onSend={sendComment}
-        />
-      )}
+      {!wide && tab === 'ask' && askBox}
     </div>
   )
 }
 
 function CommentBox({
-  picked,
-  picking,
   target,
-  onPick,
+  to,
   onClear,
   onSend,
 }: {
-  picked: Picked | null
-  picking: boolean
-  target: string
-  onPick: () => void
+  target: Target | null
+  to: string
   onClear: () => void
   onSend: (body: string) => Promise<boolean>
 }) {
@@ -574,14 +874,21 @@ function CommentBox({
   return (
     <div className="flex flex-col gap-2 border-t px-3 py-2.5">
       <div className="flex min-w-0 items-center gap-2 text-xs">
-        {picked ? (
+        {target ? (
           <>
             <span className="text-muted-foreground">On</span>
-            <code className="min-w-0 truncate rounded bg-muted px-1.5 py-0.5" title={picked.html}>
-              {picked.dataId ?? picked.selector}
+            <code
+              className="min-w-0 truncate rounded bg-muted px-1.5 py-0.5"
+              title={target.element?.path}
+            >
+              {target.element
+                ? (target.element.dataId ?? target.element.tag)
+                : (target.board.title ?? target.board.file)}
             </code>
-            {picked.text && (
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">“{picked.text}”</span>
+            {target.element?.label && (
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                “{target.element.label}”
+              </span>
             )}
             <button
               type="button"
@@ -593,21 +900,14 @@ function CommentBox({
           </>
         ) : (
           <span className="flex-1 text-muted-foreground">
-            {picking ? 'Click an element in the design. Escape to stop.' : 'On the whole design.'}
+            On the whole design. Select an element to point at it.
           </span>
         )}
-        <button
-          type="button"
-          className="shrink-0 font-medium text-primary hover:underline"
-          onClick={onPick}
-        >
-          {picking ? 'Stop picking' : 'Pick an element'}
-        </button>
       </div>
       <Textarea
         aria-label="Comment"
         value={body}
-        rows={2}
+        rows={3}
         placeholder="What should change?"
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
@@ -619,7 +919,7 @@ function CommentBox({
         className="bg-card text-sm"
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs text-muted-foreground">To {target}</span>
+        <span className="truncate text-xs text-muted-foreground">To {to}</span>
         <Button size="sm" disabled={!body.trim() || sending} onClick={() => void send()}>
           Send
         </Button>
@@ -649,7 +949,7 @@ function Knobs({
   onReset: () => void
 }) {
   return (
-    <div className="flex max-h-[40%] flex-col gap-3 overflow-y-auto border-b px-3 py-3">
+    <div className="flex max-h-[40%] flex-col gap-3 overflow-y-auto border-b px-3 py-3 data-[wide]:max-h-none">
       {knobs.map((k) => {
         const value = values[k.var] ?? k.value
         const id = `knob-${k.var}`
@@ -779,7 +1079,6 @@ export function DesignPanel({
   onClose,
   libraryLink = true,
   options,
-  onOption,
 }: {
   folder: string
   version?: string
@@ -788,14 +1087,13 @@ export function DesignPanel({
   onClose: () => void
   /** A button to the design in the library (not when already there). */
   libraryLink?: boolean
-  /** The options offered with this one, it included: a switch between them. */
+  /** The options offered with this one, it included: shown side by side, a row each. */
   options?: string[]
-  onOption?: (folder: string) => void
 }) {
   const [info, setInfo] = useState<DesignViewInfo>()
   const [expanded, setExpanded] = useState(false)
   const [start, setStart] = useState<Starting>()
-  // Another design (another option): its title, not the last one's, until it loads.
+  // Another design: its title, not the last one's, until it loads.
   const [shown, setShown] = useState(folder)
   if (shown !== folder) {
     setShown(folder)
@@ -804,13 +1102,19 @@ export function DesignPanel({
   const slash = folder.lastIndexOf('/')
   const parent = slash >= 0 ? folder.slice(0, slash) : ''
   const title = info?.manifest?.title || designName(folder)
+  const set = options && options.length > 1
 
   useEffect(() => {
     if (!expanded) return
-    const onKey = (e: KeyboardEvent) =>
-      e.key === 'Escape' && !start && (e.stopPropagation(), setExpanded(false))
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      // The canvas takes Escape while something is selected on it.
+      if (e.key !== 'Escape' || start || e.defaultPrevented) return
+      e.stopPropagation()
+      setExpanded(false)
+    }
+    // As the key comes back up: after the canvas had it.
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [expanded, start])
 
   return (
@@ -827,7 +1131,11 @@ export function DesignPanel({
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <Palette aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <strong className="truncate text-sm font-semibold">{title}</strong>
+          <strong className="truncate text-sm font-semibold">
+            {set
+              ? `${options.length} options for ${designName(parent.replace(/\.options$/, '.design'))}`
+              : title}
+          </strong>
           <span className="truncate text-xs text-muted-foreground">
             Design
             {info?.manifest?.designSystem && ` · ${info.manifest.designSystem}`}
@@ -865,20 +1173,7 @@ export function DesignPanel({
           <X aria-hidden />
         </Button>
       </div>
-      {options && options.length > 1 && onOption && (
-        <div className="overflow-x-auto border-b px-3 py-2">
-          <Tabs value={folder} onValueChange={onOption}>
-            <TabsList aria-label="Options">
-              {options.map((o) => (
-                <TabsTrigger key={o} value={o}>
-                  {designName(o)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
-      {info?.manifest?.description && (
+      {!set && info?.manifest?.description && (
         <p className="border-b px-3 py-2 text-xs text-muted-foreground">
           {info.manifest.description}
         </p>
@@ -886,7 +1181,10 @@ export function DesignPanel({
       <DesignFrame
         folder={folder}
         version={version}
+        {...(set ? { options } : {})}
         threadId={threadId}
+        expanded={expanded}
+        onExpand={() => setExpanded(true)}
         onInfo={setInfo}
         onStart={setStart}
       />
