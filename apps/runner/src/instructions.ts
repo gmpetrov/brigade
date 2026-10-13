@@ -16,7 +16,9 @@ import {
   DESIGN_SYSTEM_README,
   DESIGN_SYSTEM_TOKENS,
   PROPOSE_TEAM_TOOL,
+  SHOW_WIDGET_TOOL,
   type ThreadSpec,
+  WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { threadBranch } from './repos.js'
 
@@ -79,6 +81,7 @@ export function instructions(
     spec.project && project(spec.project, libraryDir),
     projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
+    VISUALS,
     designs(spec, libraryDir),
     spec.git && code(spec),
     PREVIEWS,
@@ -230,7 +233,8 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       'what is off or any error it reports. Then save it with `save_design` to a library path ending in ' +
       `\`${DESIGN_SUFFIX}\`, next to the work it belongs to, and mention it in your reply as ` +
       '`@[path](design:path)`: it opens beside the thread. Saving again replaces it; the library keeps earlier versions.',
-    'When you offer alternatives (several directions to choose from), make each its own design folder, check it ' +
+    'Variants of a small detail (a button, a label, an icon) to pick from are a widget, not designs. ' +
+      'When you offer alternatives (several directions to choose from), make each its own design folder, check it ' +
       `and save it into one options folder for the design they are for: \`acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}\`, ` +
       `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Describe them in your reply, then call \`offer_choices\` last, ` +
       'with one option per design and its library path in `design`: the person picks one by its picture. Their pick ' +
@@ -308,6 +312,14 @@ const tasks = (spec: ThreadSpec) =>
       BOARD_TOOLS
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
+/** Widgets: visuals drawn in the thread, for every teammate. */
+const VISUALS =
+  '## Visuals\n\n' +
+  `When seeing beats reading (variants of a small UI change, a flow, numbers that make a shape), draw it in your reply with \`${SHOW_WIDGET_TOOL}\`. ` +
+  `Read \`${WIDGET_GUIDE_TOOL}\` before your first one in a thread. A widget is not kept: what someone will keep, comment on or build from is a design. ` +
+  'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
+  'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own.'
+
 const PREVIEWS =
   '## Previews\n\n' +
   'Start a preview only when the person asks to try the app, or asks you to build something for them to try ' +

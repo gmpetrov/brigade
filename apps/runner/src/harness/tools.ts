@@ -18,12 +18,16 @@ import {
   designOptionsOf,
   Choices,
   TeamProposal,
+  Widget,
+  WIDGET_GUIDE_TOOL,
+  WIDGET_HTML_MAX,
   type ConnectorGrant,
   type TeammateDesignSystem,
   type ScheduleOperation,
   type TaskOperation,
 } from '@brigade/contracts'
 import { errorMessage } from './events.js'
+import { WIDGET_GUIDE } from './widget-guide.js'
 
 export type ConnectorCaller = (call: {
   connectionId: string
@@ -332,6 +336,49 @@ export const offerChoicesTool = tool({
       next: 'End your reply: the pick arrives as their next message.',
     }
   },
+})
+
+/**
+ * A visual drawn in the thread: throwaway HTML the dashboard shows in a
+ * sandboxed frame. Like offer_choices it does not pause the turn.
+ */
+export const showWidgetTool = tool({
+  description:
+    'Draw a visual in the thread: options side by side, a diagram, a chart of data you have. For seeing ' +
+    `something now, not for keeping (that is a design). Call ${WIDGET_GUIDE_TOOL} once before your first widget ` +
+    'in a thread. To let the person pick among options it shows, call offer_choices after it.',
+  inputSchema: jsonSchema<Widget>({
+    type: 'object',
+    properties: {
+      title: {
+        type: 'string',
+        description: 'What it shows, a few words, e.g. "Six ways to show the shortcut"',
+      },
+      html: {
+        type: 'string',
+        maxLength: WIDGET_HTML_MAX,
+        description: `The body's HTML: inline <style>, <script> and SVG, following ${WIDGET_GUIDE_TOOL}`,
+      },
+    },
+    required: ['title', 'html'],
+  }),
+  execute: async (input) => {
+    const parsed = Widget.safeParse(input)
+    if (!parsed.success) throw new Error(`Invalid widget: ${parsed.error.message}`)
+    return {
+      shown: true,
+      next:
+        'If it shows options, call offer_choices last, labels numbered and named as in the widget ("3 · Small square caps"): ' +
+        'other teammates see the pick, never the widget.',
+    }
+  },
+})
+
+/** The rules for show_widget, read on demand so they cost nothing in turns without one. */
+export const widgetGuideTool = tool({
+  description: `How to draw a widget with show_widget: when, layout, theme, what is blocked, examples. Read it before your first widget in a thread.`,
+  inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+  execute: async () => WIDGET_GUIDE,
 })
 
 /** The chief's proposal of teammates, shown as a card a person edits and accepts. */

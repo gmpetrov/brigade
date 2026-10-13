@@ -15,8 +15,10 @@ import {
   OFFER_CHOICES_TOOL,
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
+  SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
+  WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -52,12 +54,14 @@ import {
   proposeTeamTool,
   repoTools,
   scheduleTools,
+  showWidgetTool,
   taskTools,
   type ConnectorCaller,
   type LibraryCaller,
   type PreviewTools,
   type ScheduleCaller,
   type TaskCaller,
+  widgetGuideTool,
 } from './tools.js'
 
 export type {
@@ -156,6 +160,8 @@ function createAgent(
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
     [OFFER_CHOICES_TOOL]: offerChoicesTool,
+    [SHOW_WIDGET_TOOL]: showWidgetTool,
+    [WIDGET_GUIDE_TOOL]: widgetGuideTool,
     ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
   }
   return new HarnessAgent({

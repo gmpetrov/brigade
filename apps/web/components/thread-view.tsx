@@ -6,12 +6,15 @@ import {
   designOptionsOf,
   pickedChoice,
   pickedDesignPath,
+  bareToolName,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
+  SHOW_WIDGET_TOOL,
   TeamProposal,
+  Widget,
   type LibraryFile,
   type AgentEvent,
   type Ask,
@@ -68,6 +71,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { WidgetFrame } from '@/components/widget-frame'
 import { pullHref, threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -442,6 +446,13 @@ function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
   return Choices.safeParse(item.input).data ?? null
 }
 
+/** The visual a show_widget call drew, once it went through. */
+function shownWidget(item: Extract<Item, { kind: 'tool' }>) {
+  if (bareToolName(item.toolName) !== SHOW_WIDGET_TOOL) return null
+  if (!item.finished || item.isError) return null
+  return Widget.safeParse(item.input).data ?? null
+}
+
 /** Raw JSON or text under a tool call, an approval or a thought. */
 const preClass =
   'max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere'
@@ -506,6 +517,7 @@ const isActivity = (item: Item): item is ActivityItem =>
   item.kind === 'file' ||
   (item.kind === 'tool' &&
     !offeredChoices(item) &&
+    !shownWidget(item) &&
     !proposedTeam(item) &&
     !(item.finished && !item.isError && openedPull(item)))
 
@@ -769,6 +781,29 @@ const ToolCode = ({ code, language }: { code: string; language: string }) => (
     <CodeSnippet code={clipShown(code)} language={language} bare />
   </div>
 )
+
+/** A visual a teammate drew, under its messages, with its HTML to read beneath. */
+function WidgetCard({ widget }: { widget: Widget }) {
+  return (
+    <div className="flex flex-col gap-2 pl-11">
+      <div className="rounded-xl border p-4">
+        <WidgetFrame html={widget.html} title={widget.title} />
+      </div>
+      <Collapsible className="flex min-w-0 flex-col">
+        <CollapsibleTrigger className="group flex items-center gap-1.5 self-start text-xs text-muted-foreground hover:text-foreground">
+          {widget.title}
+          <ChevronRight
+            className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
+            aria-hidden
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <ToolCode code={widget.html} language="html" />
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  )
+}
 
 /** A tool call opened: a command and what it printed, an edit as a diff, else its input and output. */
 function ToolDetail({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
@@ -1129,6 +1164,8 @@ export function ThreadItems({
             <ChoicesCard key={item.key} choices={choices} reply={reply?.text} onChoose={onChoose} />
           )
         }
+        const widget = shownWidget(item)
+        if (widget) return <WidgetCard key={item.key} widget={widget} />
         const opened = item.finished && !item.isError ? openedPull(item) : null
         if (opened)
           return (

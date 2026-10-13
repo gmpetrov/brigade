@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { AgentEvent } from '../dist/events.js'
+import { AgentEvent, Widget, WIDGET_HTML_MAX } from '../dist/events.js'
 
 const at = '2026-10-13T08:00:00.000Z'
 
@@ -24,6 +24,17 @@ test('refuses a repositories report without its list, or with too many', () => {
   const many = Array.from({ length: 51 }, (_, i) => `acme/repo-${i}`)
   assert.equal(
     AgentEvent.safeParse({ at, type: 'repositories.changed', repositories: many }).success,
+    false,
+  )
+})
+
+test('reads a widget, and refuses one without HTML or with too much', () => {
+  const widget = { title: 'Six ways to show the shortcut', html: '<div>1 · Plain text</div>' }
+  assert.deepEqual(Widget.parse(widget), widget)
+  assert.equal(Widget.safeParse({ ...widget, html: '' }).success, false)
+  assert.equal(Widget.safeParse({ ...widget, title: '' }).success, false)
+  assert.equal(
+    Widget.safeParse({ ...widget, html: 'x'.repeat(WIDGET_HTML_MAX + 1) }).success,
     false,
   )
 })

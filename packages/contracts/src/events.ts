@@ -61,6 +61,48 @@ export const pickedChoice = <O extends { label: string }>(options: O[], message:
     (o) => message === choiceMessage(o) || message.startsWith(`${choiceMessage(o)}. It is now @[`),
   )
 
+/**
+ * A visual a teammate draws in the thread (its show_widget tool): options side
+ * by side, a diagram, a chart. Throwaway HTML kept in the thread's history, not
+ * the library; picking among options it shows goes through offer_choices.
+ */
+export const SHOW_WIDGET_TOOL = 'show_widget'
+/** The rules a teammate reads before its first widget in a thread. */
+export const WIDGET_GUIDE_TOOL = 'widget_guide'
+/** Written in one tool call and shown only once it is made, so it stays small. */
+export const WIDGET_HTML_MAX = 30_000
+export const Widget = z.object({
+  title: z.string().min(1).max(120),
+  html: z.string().min(1).max(WIDGET_HTML_MAX),
+})
+export type Widget = z.infer<typeof Widget>
+/** The dashboard's theme variables a widget may use; the dashboard passes their values in. */
+export const WIDGET_THEME_VARS = [
+  '--background',
+  '--foreground',
+  '--card',
+  '--card-foreground',
+  '--muted',
+  '--muted-foreground',
+  '--primary',
+  '--primary-foreground',
+  '--secondary',
+  '--accent',
+  '--accent-foreground',
+  '--border',
+  '--destructive-text',
+  '--success',
+  '--warning',
+  '--chart-1',
+  '--chart-2',
+  '--chart-3',
+  '--chart-4',
+  '--chart-5',
+  '--radius',
+  '--font-sans',
+  '--font-mono',
+] as const
+
 export const QuestionAnswer = z.discriminatedUnion('action', [
   z.object({
     action: z.enum(['answered', 'partially-answered']),
