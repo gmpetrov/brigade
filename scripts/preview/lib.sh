@@ -47,12 +47,14 @@ wait_for_db() {
 }
 
 # Starts PostgreSQL unless something already answers on its port. Embedded, it runs in the
-# background until this script exits.
+# background until this script exits. Also embedded when Docker answers but cannot start the
+# container (a rootless daemon whose overlay mounts fail, say).
 start_db() {
   db_answers && return
-  if use_docker; then
-    (cd "$REPO" && docker compose up -d postgres)
+  if use_docker && (cd "$REPO" && docker compose up -d postgres); then
+    :
   else
+    use_docker && say "Docker could not start PostgreSQL: using the embedded one"
     if [ ! -f "$CACHE/postgres/node_modules/embedded-postgres/package.json" ]; then
       say "Downloading PostgreSQL"
       npm install --silent --prefix "$CACHE/postgres" "embedded-postgres@$EMBEDDED_POSTGRES"
