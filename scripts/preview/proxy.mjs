@@ -10,27 +10,49 @@ const WEB_PORT = Number(process.env.WEB_PORT ?? 3002)
 
 const target = (url = '/') => (url === '/api' || url.startsWith('/api/') ? API_PORT : WEB_PORT)
 
-// A browser's first page is opened signed in as SIGN_IN (a dev account), so a preview
-// shows the sample workspace at once. Once only: a marker cookie remembers it, so
-// signing out leaves the sign-in page to try another account. Empty: off.
+// A page opened without a working session is opened signed in as SIGN_IN (a dev
+// account), so a preview shows the sample workspace at once, also after its session
+// expired or the database was reset. Signing out sets a marker cookie for the rest of
+// the browser session, so the sign-in page then stays to try another account. Empty: off.
 const SIGN_IN = process.env.PREVIEW_SIGN_IN ?? ''
 const PASSWORD = process.env.PREVIEW_SIGN_IN_PASSWORD ?? 'correct-horse-battery'
 const ORIGIN = process.env.PREVIEW_URL ?? `http://localhost:${PORT}`
-const MARKER = 'brigade_preview_signed_in'
+const MARKER = 'brigade_preview_signed_out'
 const SESSION = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/
 const MARKER_SET = new RegExp(`(?:^|;\\s*)${MARKER}=`)
 
-const firstVisit = (req) =>
-  SIGN_IN &&
+const isSignOut = (req) => req.method === 'POST' && (req.url ?? '').split('?')[0] === '/api/auth/sign-out'
+
+/** A page load to sign in for: no session the API still accepts, and no sign-out. */
+const needsSignIn = async (req) =>
+  Boolean(SIGN_IN) &&
   req.method === 'GET' &&
   target(req.url) === WEB_PORT &&
   !req.url.startsWith('/_next/') &&
   (req.headers.accept ?? '').includes('text/html') &&
-  !SESSION.test(req.headers.cookie ?? '') &&
-  !MARKER_SET.test(req.headers.cookie ?? '')
+  !MARKER_SET.test(req.headers.cookie ?? '') &&
+  !(await hasSession(req.headers.cookie ?? ''))
+
+/** Whether the API accepts the browser's session cookie (expired or reset: it does not). */
+function hasSession(cookie) {
+  if (!SESSION.test(cookie)) return Promise.resolve(false)
+  return new Promise((resolve) => {
+    const request = http.get(
+      { host: '127.0.0.1', port: API_PORT, path: '/api/auth/get-session', headers: { cookie, origin: ORIGIN } },
+      (response) => {
+        let body = ''
+        response.setEncoding('utf8')
+        response.on('data', (chunk) => (body += chunk))
+        response.on('end', () => resolve(response.statusCode === 200 && body.trim() !== 'null'))
+      },
+    )
+    // The API not up yet: leave the cookie be rather than replace a session that may work.
+    request.on('error', () => resolve(true))
+  })
+}
 
 const markerCookie = () =>
-  `${MARKER}=1; Path=/; Max-Age=31536000; HttpOnly` +
+  `${MARKER}=1; Path=/; HttpOnly` +
   (ORIGIN.startsWith('https://') ? '; Secure; SameSite=None; Partitioned' : '; SameSite=Lax')
 
 /**
@@ -79,7 +101,7 @@ const WAITING =
 
 const server = http.createServer(async (req, res) => {
   // Signed in for this request already, and for the next ones once the browser keeps the cookies.
-  const first = firstVisit(req)
+  const first = await needsSignIn(req)
   const signedIn = first ? await signIn() : null
   if (first && !signedIn) console.warn(`Could not sign in as ${SIGN_IN}: the page opens signed out`)
   // From the landing or sign-in page, straight to the dashboard. Its own request is passed
@@ -88,7 +110,7 @@ const server = http.createServer(async (req, res) => {
   if (signedIn && (path === '/' || path === '/sign-in')) {
     res.writeHead(302, {
       location: '/app',
-      'set-cookie': [...signedIn, markerCookie()],
+      'set-cookie': signedIn,
       'cache-control': 'no-store',
     })
     return res.end()
@@ -115,9 +137,10 @@ const server = http.createServer(async (req, res) => {
     (response) => {
       const raw = [...response.rawHeaders]
       if (signedIn) {
-        for (const cookie of [...signedIn, markerCookie()]) raw.push('Set-Cookie', cookie)
+        for (const cookie of signedIn) raw.push('Set-Cookie', cookie)
         raw.push('Cache-Control', 'no-store')
       }
+      if (isSignOut(req)) raw.push('Set-Cookie', markerCookie())
       res.writeHead(response.statusCode ?? 502, raw)
       response.pipe(res)
     },
