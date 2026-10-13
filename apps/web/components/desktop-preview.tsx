@@ -1,52 +1,54 @@
 'use client'
 import { Maximize2, Minimize2, RotateCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
+import { useRememberedFlag } from '@/lib/use-remembered'
 import { cn } from '@/lib/utils'
 import { DesktopView, type DesktopConnection } from './desktop-view'
 
-const KEY = 'brigade.desktopPreview'
-
 /** Whether the computer panel is open, remembered in this browser. */
-export function useDesktopPreview() {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    try {
-      setOpen(localStorage.getItem(KEY) === '1')
-    } catch {}
-  }, [])
-  const toggle = useCallback((next: boolean) => {
-    setOpen(next)
-    try {
-      localStorage.setItem(KEY, next ? '1' : '0')
-    } catch {}
-  }, [])
-  return [open, toggle] as const
-}
+export const useDesktopPreview = () => useRememberedFlag('brigade.desktopPreview', false)
 
 /** Reconnects in a row before giving up and showing the error. */
 const RETRIES = 5
 
 /**
- * The workspace computer's screen, a section of the computer panel. View only
- * while the teammate works; mouse and keyboard once this member has taken over.
- * Expanded, it fills the window.
+ * The workspace computer's screen. In the details panel a thumbnail, view only,
+ * that opens the computer on a click. Open, it fills its place: mouse and
+ * keyboard once this member has taken over, its controls in a toolbar floating
+ * over its foot.
  */
 export function DesktopScreen({
-  threadId,
+  source,
   teammateName,
   control,
-  expanded,
-  onExpand,
+  mode,
+  onOpen,
+  onCollapse,
+  toolbar,
 }: {
-  threadId: string
+  /**
+   * Whose view of the workspace computer: a thread's, which may take control, or
+   * a teammate's, to watch (the same screen).
+   */
+  source: { thread: string } | { teammate: string }
   teammateName: string
+  /** This member has taken over: the screen takes the mouse and keyboard (open only). */
   control: boolean
-  expanded: boolean
-  onExpand: (expanded: boolean) => void
+  mode: 'thumbnail' | 'open'
+  /** Thumbnail: a click opens the computer. */
+  onOpen?: () => void
+  /** Open: back to the thread, if there is one to go back to. */
+  onCollapse?: () => void
+  /** Open: what goes first in the toolbar, before Reconnect and Collapse (Take control, the shell). */
+  toolbar?: ReactNode
 }) {
+  const threadId = 'thread' in source ? source.thread : undefined
+  const base = threadId
+    ? `/threads/${threadId}`
+    : `/teammates/${'teammate' in source ? source.teammate : ''}`
   const [connection, setConnection] = useState<DesktopConnection>()
   const [error, setError] = useState<string>()
   const [attempt, setAttempt] = useState(0)
@@ -59,7 +61,7 @@ export function DesktopScreen({
     let retry: ReturnType<typeof setTimeout> | undefined
     setConnection(undefined)
     setError(undefined)
-    api<DesktopConnection>(`/threads/${threadId}/desktop`, { method: 'POST' })
+    api<DesktopConnection>(`${base}/desktop`, { method: 'POST' })
       .then((r) => {
         if (!live) return
         setWaiting(undefined)
@@ -80,7 +82,7 @@ export function DesktopScreen({
       live = false
       clearTimeout(retry)
     }
-  }, [threadId, attempt])
+  }, [base, attempt])
 
   const onLost = useCallback(
     (reason: string) => {
@@ -95,7 +97,9 @@ export function DesktopScreen({
     [retries],
   )
 
+  // Copy and paste come with control, which is a thread's.
   const clipboard = useMemo(() => {
+    if (!threadId) return undefined
     const path = `/threads/${threadId}/desktop/clipboard`
     return {
       set: (text: string) => api(path, { body: { text } }).then(() => undefined),
@@ -108,28 +112,64 @@ export function DesktopScreen({
     setAttempt((n) => n + 1)
   }
 
-  return (
-    <section
+  const screen = connection ? (
+    <DesktopView
+      connection={connection}
+      control={mode === 'open' && control}
+      focus={mode === 'open'}
+      clipboard={clipboard}
+      onConnect={() => setRetries(0)}
+      onLost={onLost}
+    />
+  ) : (
+    <p
       className={cn(
-        'flex flex-col gap-2',
-        expanded && 'fixed inset-0 z-50 bg-background/95 px-6 pb-6 backdrop-blur-sm',
+        'p-4 text-center text-sm',
+        error ? 'text-destructive-text' : 'text-muted-foreground',
       )}
-      aria-label={`${teammateName}'s screen`}
     >
-      <div className={cn('flex flex-nowrap items-center gap-2', expanded && 'py-2.5')}>
-        {expanded ? (
-          <strong className="min-w-0 truncate text-sm font-semibold">
-            {teammateName}&apos;s computer
-          </strong>
-        ) : (
-          <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            Computer
-          </h2>
-        )}
-        <Badge variant="secondary" className="text-muted-foreground">
+      {error ?? waiting ?? 'Connecting to the desktop…'}
+    </p>
+  )
+
+  if (mode === 'thumbnail')
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Open ${teammateName}'s computer`}
+        title="Open the computer"
+        className="group relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-black outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        {/* The screen shows, but the click is the button's: control is once it is open. */}
+        <span className="pointer-events-none flex size-full items-center justify-center">
+          {screen}
+        </span>
+        <Badge
+          variant="secondary"
+          className="absolute top-2 left-2 bg-background/85 text-muted-foreground"
+        >
           {control ? 'You have control' : 'View only'}
         </Badge>
-        <div className="flex-1" />
+        <span className="absolute inset-0 flex items-center justify-center gap-2 bg-background/60 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <Maximize2 aria-hidden className="size-4" />
+          Open computer
+        </span>
+      </button>
+    )
+
+  return (
+    <section
+      className="relative flex size-full min-h-0 items-center justify-center overflow-hidden bg-black"
+      aria-label={`${teammateName}'s screen`}
+    >
+      {screen}
+      <div
+        role="toolbar"
+        aria-label="Computer"
+        className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border bg-background/95 p-1.5 shadow-lg backdrop-blur"
+      >
+        {toolbar}
         <Button
           type="button"
           variant="ghost"
@@ -140,45 +180,19 @@ export function DesktopScreen({
         >
           <RotateCw aria-hidden />
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onExpand(!expanded)}
-          title={expanded ? 'Collapse' : 'Fill the window'}
-        >
-          {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-          {expanded ? 'Collapse' : 'Expand'}
-        </Button>
-      </div>
-      <div
-        className={cn(
-          'flex items-center justify-center overflow-hidden',
-          expanded ? 'min-h-0 flex-1' : 'aspect-video rounded-lg border bg-black',
-        )}
-      >
-        {connection ? (
-          <DesktopView
-            connection={connection}
-            control={control}
-            focus={expanded}
-            clipboard={clipboard}
-            onConnect={() => setRetries(0)}
-            onLost={onLost}
-          />
-        ) : (
-          <p
-            className={cn('p-4 text-sm', error ? 'text-destructive-text' : 'text-muted-foreground')}
+        {onCollapse && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onCollapse}
+            aria-label="Back to the thread"
+            title="Back to the thread (Esc)"
           >
-            {error ?? waiting ?? 'Connecting to the desktop…'}
-          </p>
+            <Minimize2 aria-hidden />
+          </Button>
         )}
       </div>
-      {!expanded && control && (
-        <p className="text-xs text-muted-foreground">
-          Click the screen to use it. Copy and paste work both ways.
-        </p>
-      )}
     </section>
   )
 }

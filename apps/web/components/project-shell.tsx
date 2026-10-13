@@ -27,7 +27,7 @@ export function useProject() {
   return value
 }
 
-const TABS = [
+export const PROJECT_TABS = [
   { path: '', label: 'Overview' },
   { path: '/threads', label: 'Threads' },
   { path: '/tasks', label: 'Tasks' },
@@ -137,7 +137,7 @@ export function ProjectShell({ children }: { children: ReactNode }) {
 
         <nav aria-label="Project" className="-mb-2 overflow-x-auto border-b">
           <ul className="flex gap-5 whitespace-nowrap">
-            {TABS.map((tab) => {
+            {PROJECT_TABS.map((tab) => {
               const href = `${base}${tab.path}`
               const active = tab.path ? pathname.startsWith(href) : pathname === base
               return (

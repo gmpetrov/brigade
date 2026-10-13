@@ -59,3 +59,24 @@ export function StatusBadge({
     </Badge>
   )
 }
+
+const DOTS: Record<StatusTone, string> = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  destructive: 'bg-destructive',
+  progress: 'bg-primary',
+  neutral: 'bg-muted-foreground',
+}
+
+/** The badge's dot alone, where there is no room for the word: it says it on hover. */
+export function StatusDot({ status, className }: { status: string; className?: string }) {
+  const label = LABELS[status] ?? status
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn('size-2 shrink-0 rounded-full', DOTS[TONES[status] ?? 'neutral'], className)}
+    />
+  )
+}

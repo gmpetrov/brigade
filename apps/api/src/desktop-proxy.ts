@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { upgradeWebSocket } from '@hono/node-server'
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 import WebSocket from 'ws'
+import { desktopUrl } from './cloud.js'
 import { env } from './config.js'
 
 /**
@@ -23,6 +25,28 @@ function live(id: string) {
   }
   view.expiresAt = Date.now() + TTL_MS
   return view
+}
+
+/**
+ * The workspace computer's desktop to watch, relayed through this API: a thread's,
+ * or a teammate's (the same screen; each teammate has its own browser on it).
+ * 409 while it is not up.
+ */
+export async function watchDesktop(computer: { status: string; providerRef: unknown }) {
+  if (computer.status !== 'running')
+    throw new HTTPException(409, {
+      message: 'The workspace computer is not running. It starts with the next message.',
+    })
+  const url = await desktopUrl(computer)
+  if (!url)
+    throw new HTTPException(409, {
+      message: 'The desktop is not available yet. Try again in a moment.',
+    })
+  return openView(url).catch((error: unknown) => {
+    throw new HTTPException(503, {
+      message: `The desktop did not answer: ${(error as Error).message}`,
+    })
+  })
 }
 
 /** Log in to the provider's desktop URL and return a socket on this API for its VNC server. */

@@ -252,7 +252,6 @@ export function ThreadProjectMenu({
 
   return (
     <>
-      <span aria-hidden>·</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button

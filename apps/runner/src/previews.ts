@@ -242,6 +242,31 @@ export class Previews {
     return this.previews.has(sessionId)
   }
 
+  /** The repositories each seat had checked out when last told, as reported: "a,b". */
+  private reported = new Map<string, string>()
+
+  /**
+   * After a turn: what the seat has checked out, reported when it changed (the
+   * dashboard offers a preview once there is one). None at first says nothing.
+   */
+  async reportCheckouts(seat: Seat) {
+    const repositories = [
+      ...new Set((await checkouts(seat.workDir, seat.runAs)).map((c) => c.repository)),
+    ]
+      .sort()
+      .slice(0, 50)
+    const key = `${seat.sessionId}:${seat.teammateId}`
+    const now = repositories.join(',')
+    if (now === (this.reported.get(key) ?? '')) return
+    this.reported.set(key, now)
+    this.options.emit(seat.sessionId, {
+      at: new Date().toISOString(),
+      type: 'repositories.changed',
+      teammateId: seat.teammateId,
+      repositories,
+    })
+  }
+
   /** A seat's preview tools: its thread's preview, as its teammate. */
   forSeat(seat: Seat): PreviewControl {
     return {

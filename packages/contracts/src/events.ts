@@ -382,6 +382,16 @@ export const AgentEvent = z.discriminatedUnion('type', [
   }),
   /** A thread's live preview started, answers, failed or stopped. The latest one is its state. */
   z.object({ ...base, type: z.literal('preview.changed'), ...PreviewInfo.shape }),
+  /**
+   * The repositories checked out in a teammate's folder of the thread ("owner/name"),
+   * after a turn that changed them. The latest one per teammate is what the thread
+   * has: something a preview can be made of.
+   */
+  z.object({
+    ...base,
+    type: z.literal('repositories.changed'),
+    repositories: z.array(z.string().max(200)).max(50),
+  }),
   z.object({ ...base, type: z.literal('error'), message: z.string() }),
   z.object({ ...base, type: z.literal('raw'), source: z.string(), value: z.unknown() }),
 ])

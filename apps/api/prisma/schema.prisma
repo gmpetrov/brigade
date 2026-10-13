@@ -483,6 +483,8 @@ model SessionEvent {
 
   @@id([sessionId, seq])
   @@index([workspaceId, at])
+  /// Thread lists count each thread's messages and answers by type.
+  @@index([sessionId, type])
 }
 
 // ---------------------------------------------------------------------------

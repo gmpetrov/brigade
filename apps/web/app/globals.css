@@ -180,6 +180,13 @@
     font-weight: 600;
   }
 
+  /* A scrolling list above a message box: its last lines fade out instead of
+   * being cut off at the box. Pad the end of what scrolls by the same 3rem, so
+   * the last item clears the fade once scrolled to the end. */
+  .scroll-fade {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+  }
+
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
   .composer-input p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
@@ -196,6 +203,18 @@
   [data-slot='sidebar-inset']:has([data-desktop-panel]) > div:last-child {
     max-width: none;
     padding-right: calc(var(--desktop-w) + 2.5rem);
+  }
+  [data-slot='sidebar-inset']:has([data-desktop-panel]) > div[data-bleed]:last-child {
+    padding-right: var(--desktop-w);
+  }
+  /* The top bar ends where the panel starts. */
+  [data-slot='sidebar-inset']:has([data-desktop-panel]) > [data-top-bar] {
+    padding-right: calc(var(--desktop-w) + 1.5rem);
+  }
+  /* The threads panel expanded is the page: a panel the thread opens (a file, the
+   * preview, the computer) or a document sits beside its conversation. */
+  [data-slot='sidebar-inset']:has([data-desktop-panel]) [data-thread-panel][data-expanded] {
+    padding-right: var(--desktop-w);
   }
 }
 

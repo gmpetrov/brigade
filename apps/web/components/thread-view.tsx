@@ -126,6 +126,8 @@ type Item =
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
   | { kind: 'note'; key: string; text: string }
+  /** A person at the computer: taking over, handing back, a command in the shell. */
+  | { kind: 'control'; key: string; change: 'took' | 'handed' | 'command'; command?: string }
   | {
       kind: 'preview'
       key: string
@@ -342,7 +344,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           })
           break
         case 'terminal.command':
-          add({ kind: 'note', key: `n${seq}`, text: `$ ${e.command}` })
+          add({ kind: 'control', key: `n${seq}`, change: 'command', command: e.command })
           break
         case 'preview.changed': {
           // Starting and checking show in the panel and the teammate's tool calls; what came of them here.
@@ -380,9 +382,9 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
         }
         case 'control.changed':
           add({
-            kind: 'note',
+            kind: 'control',
             key: `n${seq}`,
-            text: e.controller === 'human' ? 'A human took over' : 'Control handed back',
+            change: e.controller === 'human' ? 'took' : 'handed',
           })
           break
       }
@@ -516,6 +518,7 @@ const QUICK_TURN_MS = 30_000
 type Node =
   | { type: 'item'; i: number }
   | { type: 'activity'; is: number[]; live: boolean }
+  | { type: 'control'; is: number[] }
   | { type: 'worked'; key: string; ms: number; inner: Node[] }
 
 /**
@@ -529,13 +532,21 @@ function layoutThread(items: Item[], working: boolean) {
     const nodes: Node[] = []
     for (const i of is) {
       const last = nodes.at(-1)
-      if (!isActivity(items[i]!)) nodes.push({ type: 'item', i })
-      else if (last?.type === 'activity') last.is.push(i)
-      else nodes.push({ type: 'activity', is: [i], live: false })
+      // Taking over, handing back and shell commands in a row fold the same way.
+      const type = isActivity(items[i]!)
+        ? 'activity'
+        : items[i]!.kind === 'control'
+          ? 'control'
+          : undefined
+      if (!type) nodes.push({ type: 'item', i })
+      else if (last?.type === type) last.is.push(i)
+      else nodes.push(type === 'activity' ? { type, is: [i], live: false } : { type, is: [i] })
     }
     // A single step needs no line over it.
     return nodes.map((n) =>
-      n.type === 'activity' && n.is.length === 1 ? { type: 'item', i: n.is[0]! } : n,
+      n.type !== 'item' && n.type !== 'worked' && n.is.length === 1
+        ? { type: 'item', i: n.is[0]! }
+        : n,
     )
   }
   const fold = (turn: number[], end: Extract<Item, { kind: 'turn' }>): Node[] => {
@@ -839,6 +850,34 @@ function ToolDetail({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
   )
 }
 
+/** Lines in a row folded under one that says what they were; it opens to each of them. */
+function Fold({
+  label,
+  after,
+  children,
+}: {
+  label: string
+  /** After the chevron: a count of failures, the step happening now. */
+  after?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <Collapsible className="flex min-w-0 flex-col">
+      <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-sm text-muted-foreground hover:text-foreground">
+        <span className="flex-none">{label}</span>
+        <ChevronRight
+          className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
+          aria-hidden
+        />
+        {after}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 flex flex-col gap-2 border-l pl-3">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 /** Steps in a row, as one line that opens to each of them. */
 function ActivityGroup({
   group,
@@ -851,27 +890,39 @@ function ActivityGroup({
 }) {
   const failed = group.filter((item) => item.kind === 'tool' && item.isError).length
   return (
-    <Collapsible className="flex min-w-0 flex-col">
-      <CollapsibleTrigger className="group flex max-w-full min-w-0 items-center gap-1.5 self-start text-left text-sm text-muted-foreground hover:text-foreground">
-        <span className="flex-none">{activityLabel(group)}</span>
-        <ChevronRight
-          className="size-3.5 flex-none transition-transform group-data-[state=open]:rotate-90"
-          aria-hidden
-        />
-        {failed > 0 && (
-          <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
-        )}
-        {live && (
-          <span className="min-w-0 truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
-            {stepText(group.at(-1)!)}
-          </span>
-        )}
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-2 flex flex-col gap-2 border-l pl-3">
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
+    <Fold
+      label={activityLabel(group)}
+      after={
+        <>
+          {failed > 0 && (
+            <StatusBadge status="failed" label={failed === 1 ? '1 failed' : `${failed} failed`} />
+          )}
+          {live && (
+            <span className="min-w-0 truncate font-mono text-xs opacity-70 group-data-[state=open]:hidden">
+              {stepText(group.at(-1)!)}
+            </span>
+          )}
+        </>
+      }
+    >
+      {children}
+    </Fold>
   )
+}
+
+/** "Took over twice, ran 5 commands, handed back": what a run of control lines did. */
+function controlLabel(group: Extract<Item, { kind: 'control' }>[]) {
+  const took = group.filter((c) => c.change === 'took').length
+  const commands = group.filter((c) => c.change === 'command').length
+  const parts = [
+    took && `A person took over ${plural(took, 'once', 'times')}`,
+    commands && `ran ${plural(commands, 'a command', 'commands')}`,
+  ].filter(Boolean) as string[]
+  // Where it stands now: the last change of control.
+  const last = group.findLast((c) => c.change !== 'command')?.change
+  if (last) parts.push(last === 'took' ? 'has control' : 'handed back')
+  const text = parts.join(', ')
+  return text[0]!.toUpperCase() + text.slice(1)
 }
 
 /** A long turn's work before its answer, folded under how long it took. */
@@ -1218,6 +1269,19 @@ export function ThreadItems({
             {item.text}
           </div>
         )
+      case 'control':
+        return item.change === 'command' ? (
+          <div
+            key={item.key}
+            className="font-mono text-xs wrap-anywhere whitespace-pre-wrap text-muted-foreground"
+          >
+            $ {item.command}
+          </div>
+        ) : (
+          <div key={item.key} className="text-sm text-muted-foreground">
+            {item.change === 'took' ? 'A person took over' : 'Control handed back'}
+          </div>
+        )
       case 'preview':
         return (
           <div
@@ -1263,6 +1327,15 @@ export function ThreadItems({
         >
           {node.is.map((i) => render(items[i]!, i))}
         </ActivityGroup>
+      ) : node.type === 'control' ? (
+        <Fold
+          key={items[node.is[0]!]!.key}
+          label={controlLabel(
+            node.is.map((i) => items[i]!) as Extract<Item, { kind: 'control' }>[],
+          )}
+        >
+          {node.is.map((i) => render(items[i]!, i))}
+        </Fold>
       ) : (
         <WorkedFor key={node.key} ms={node.ms}>
           {show(node.inner)}

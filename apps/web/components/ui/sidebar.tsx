@@ -29,7 +29,9 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+// A menu button (8 steps) and the group's padding (2 each side) on this app's spacing
+// scale, plus the 1px border: centered whatever --spacing is.
+const SIDEBAR_WIDTH_ICON = "calc(var(--spacing) * 12 + 1px)"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -96,9 +98,18 @@ function SidebarProvider({
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Not over an editor's own ⌘B (bold), nor a key something already took.
+      const target = event.target as HTMLElement | null
+      const editing =
+        !!target &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA")
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
+        (event.metaKey || event.ctrlKey) &&
+        !event.defaultPrevented &&
+        !editing
       ) {
         event.preventDefault()
         toggleSidebar()

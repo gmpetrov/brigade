@@ -218,7 +218,7 @@ export default function Home() {
               href="/app/threads"
               className="text-sm font-medium text-muted-foreground hover:text-foreground"
             >
-              All threads
+              Threads
             </Link>
           </div>
           {threads.data && tickets.data && (

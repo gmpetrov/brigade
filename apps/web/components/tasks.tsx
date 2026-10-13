@@ -904,7 +904,6 @@ export function ThreadTaskBar({
 }) {
   const detail = useApi<TaskDetail>(`/tasks/${taskId}`)
   const [reassigning, setReassigning] = useState(false)
-  const [confirm, setConfirm] = useState(false)
   const [error, setError] = useState<string>()
   const reload = detail.reload
   useEffect(() => {
@@ -917,11 +916,11 @@ export function ThreadTaskBar({
   const task = detail.data
   if (!task) return null
 
-  async function act(path: string, init: { method?: string; body?: unknown } = {}) {
+  async function act(path: string) {
     setError(undefined)
     try {
-      await api(`/tasks/${taskId}${path}`, { method: 'POST', body: {}, ...init })
-      if (init.method !== 'DELETE') await reload()
+      await api(`/tasks/${taskId}${path}`, { method: 'POST', body: {} })
+      await reload()
       onChanged()
     } catch (e) {
       setError((e as Error).message)
@@ -942,49 +941,17 @@ export function ThreadTaskBar({
       <PriorityBadge priority={task.priority} quiet />
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {error && <span className="text-sm text-destructive-text">{error}</span>}
-        {confirm ? (
-          <>
-            <span className="text-sm text-muted-foreground">
-              Stop tracking it? The thread stays.
-            </span>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => void act('', { method: 'DELETE', body: undefined })}
-            >
-              Not a task
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setConfirm(false)}>
-              Keep it
-            </Button>
-          </>
-        ) : (
-          <>
-            {task.completedAt ? (
-              <Button size="sm" variant="outline" onClick={() => void act('/reopen')}>
-                <RotateCcw aria-hidden />
-                Reopen
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => void act('/complete')}>
-                <Check aria-hidden />
-                Mark done
-              </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={() => setReassigning(true)}>
-              <UserRoundCog aria-hidden />
-              Reassign
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-muted-foreground"
-              onClick={() => setConfirm(true)}
-            >
-              Not a task
-            </Button>
-          </>
+        {/* Reopening and untracking a task are on the tasks board. */}
+        {!task.completedAt && (
+          <Button size="sm" variant="outline" onClick={() => void act('/complete')}>
+            <Check aria-hidden />
+            Mark done
+          </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => setReassigning(true)}>
+          <UserRoundCog aria-hidden />
+          Reassign
+        </Button>
       </div>
       <AssignDialog
         task={task}

@@ -1,11 +1,12 @@
 'use client'
-import { ArrowRight, Check, ChevronDown, FolderKanban, Monitor } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
-import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -14,6 +15,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -34,21 +39,113 @@ import {
   type Account,
   type ComputersResponse,
   type Teammate,
+  type ThreadSummary,
 } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
   'h-8 border-transparent bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent/50'
 
-/** Who a new thread goes to: the lead teammate. Others join when the message @mentions them. */
-function TeammatePicker({
+/** What a teammate is doing, as a dot beside it: working, or waiting on a person. */
+export type TeammateActivity = 'busy' | 'waiting'
+
+const ACTIVITY: Record<TeammateActivity, { dot: string; label: string }> = {
+  busy: { dot: 'bg-primary', label: 'Working' },
+  waiting: { dot: 'bg-warning', label: 'Needs you' },
+}
+
+type RecentThreadActions = {
+  onOpen: (teammateId: string, threadId: string) => void
+  onAll: (teammateId: string) => void
+  onNew: (teammateId: string) => void
+}
+
+/** A teammate's five latest active threads, loaded as its submenu opens; then all, or a new one. */
+function RecentThreads({
+  teammate,
+  actions,
+}: {
+  teammate: Teammate
+  actions: RecentThreadActions
+}) {
+  const threads = useApi<ThreadSummary[]>(
+    `/threads?teammateId=${teammate.id}&limit=5&sort=activity`,
+  )
+  return (
+    <>
+      <DropdownMenuLabel className="text-xs text-muted-foreground">
+        {teammate.name}&apos;s latest threads
+      </DropdownMenuLabel>
+      {!threads.data ? (
+        <p className="px-2 py-1.5 text-sm text-muted-foreground">
+          {threads.error?.message ?? 'Loading…'}
+        </p>
+      ) : threads.data.length === 0 ? (
+        <p className="px-2 py-1.5 text-sm text-muted-foreground">No threads yet.</p>
+      ) : (
+        threads.data.map((t) => (
+          <DropdownMenuItem key={t.id} onSelect={() => actions.onOpen(teammate.id, t.id)}>
+            {/* What runs or waits shows its dot; the rest none. */}
+            {t.status === 'idle' ? (
+              <span className="size-2 shrink-0" />
+            ) : (
+              <StatusDot status={t.status} />
+            )}
+            <span className="min-w-0 flex-1 truncate">{t.title}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(t.updatedAt)}</span>
+          </DropdownMenuItem>
+        ))
+      )}
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => actions.onAll(teammate.id)}>
+        <List aria-hidden /> All threads
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => actions.onNew(teammate.id)}>
+        <Plus aria-hidden /> New thread
+      </DropdownMenuItem>
+    </>
+  )
+}
+
+function ActivityDot({ activity }: { activity?: TeammateActivity }) {
+  if (!activity) return null
+  return (
+    <span
+      role="img"
+      aria-label={ACTIVITY[activity].label}
+      title={ACTIVITY[activity].label}
+      className={cn('size-2 shrink-0 rounded-full', ACTIVITY[activity].dot)}
+    />
+  )
+}
+
+/**
+ * Pick a teammate: who a new thread goes to (the lead; others join when the message
+ * @mentions them), or whose threads the threads panel lists.
+ */
+export function TeammatePicker({
   teammates,
   value,
   onChange,
+  heading = 'Send to',
+  activity,
+  recent,
+  compact = false,
 }: {
   teammates: Teammate[]
   value: Teammate
   onChange: (id: string) => void
+  /** Above the list, and what the button says it changes. */
+  heading?: string
+  /** A dot beside each teammate that is working or waiting. */
+  activity?: Record<string, TeammateActivity>
+  /**
+   * Each teammate opens its latest threads beside it, to go straight to one (or all of
+   * them, or a new one) instead of only picking the teammate.
+   */
+  recent?: RecentThreadActions
+  /** The avatar alone on the button, where there is no room for the name. */
+  compact?: boolean
 }) {
   return (
     <DropdownMenu>
@@ -57,28 +154,44 @@ function TeammatePicker({
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-2 pl-1.5 font-semibold"
-          aria-label={`Send to ${value.name}. Change teammate`}
+          className="min-w-0 gap-2 pl-1.5 font-semibold"
+          aria-label={`${heading} ${value.name}. Change teammate`}
         >
           <TeammateAvatar teammate={value} className="size-5" />
-          <span className="max-w-40 truncate">{value.name}</span>
+          {!compact && <span className="max-w-40 truncate">{value.name}</span>}
+          <ActivityDot activity={activity?.[value.id]} />
           <ChevronDown className="opacity-60" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Send to</DropdownMenuLabel>
-        {teammates.map((t) => (
-          <DropdownMenuItem key={t.id} onSelect={() => onChange(t.id)} className="gap-2.5">
-            <TeammateAvatar teammate={t} className="size-7" />
-            <span className="grid min-w-0 flex-1 leading-tight">
-              <span className="truncate font-semibold">{t.name}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {teammateModelLabel(t)}
+        <DropdownMenuLabel className="text-xs text-muted-foreground">{heading}</DropdownMenuLabel>
+        {teammates.map((t) => {
+          const row = (
+            <>
+              <TeammateAvatar teammate={t} className="size-7" />
+              <span className="grid min-w-0 flex-1 leading-tight">
+                <span className="truncate font-semibold">{t.name}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {teammateModelLabel(t)}
+                </span>
               </span>
-            </span>
-            {t.id === value.id && <Check className="text-primary" aria-hidden />}
-          </DropdownMenuItem>
-        ))}
+              <ActivityDot activity={activity?.[t.id]} />
+              {t.id === value.id && <Check className="text-primary" aria-hidden />}
+            </>
+          )
+          return recent ? (
+            <DropdownMenuSub key={t.id}>
+              <DropdownMenuSubTrigger className="gap-2.5">{row}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-72">
+                <RecentThreads teammate={t} actions={recent} />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          ) : (
+            <DropdownMenuItem key={t.id} onSelect={() => onChange(t.id)} className="gap-2.5">
+              {row}
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -128,7 +241,7 @@ function useLastProject() {
 
 /**
  * What a new thread is being written with: its message, files, computer and account.
- * Held by whoever owns it, so it outlives the box (the quick thread dialog closing).
+ * Held by whoever owns it, so it outlives the box (the threads panel closing).
  */
 export function useThreadDraft() {
   const [text, setText] = useState('')

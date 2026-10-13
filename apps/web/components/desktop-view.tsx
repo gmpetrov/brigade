@@ -104,6 +104,8 @@ export function DesktopView({
     <div className="relative size-full">
       <div
         ref={screen}
+        // Its keys go to the remote desktop, Escape included: no panel closes on it.
+        data-keyboard
         className={cn(
           'size-full [&_canvas]:rounded-md',
           control &&

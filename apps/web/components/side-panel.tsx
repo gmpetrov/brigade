@@ -110,51 +110,73 @@ const editable = (el: Element) =>
 
 /**
  * Escape closes the panel, unless something open takes it (a menu in the
- * editor, a dialog) or the person is typing elsewhere on the page.
+ * editor, a dialog), the person is typing elsewhere on the page, or what has
+ * focus takes every key itself (`data-keyboard`: a remote desktop, a terminal).
  */
-function useEscapeToClose(panel: RefObject<HTMLElement | null>, onClose?: () => void) {
+export function useEscapeToClose(
+  panel: RefObject<HTMLElement | null>,
+  onClose?: () => void,
+  /**
+   * Last in line: only once no panel took it (they go first), and never while typing,
+   * in it or not. For a view whose Escape leaves it, not one that closes beside a page.
+   */
+  last = false,
+) {
   useEffect(() => {
     if (!onClose) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return
       if (document.querySelector(OPEN_LAYER)) return
       const focus = document.activeElement
-      if (focus && !panel.current?.contains(focus) && editable(focus)) return
+      if (focus && (last || !panel.current?.contains(focus)) && editable(focus)) return
+      if (focus?.closest('[data-keyboard]')) return
       // Before the editor's own Escape, which only takes focus out of it.
       e.preventDefault()
       e.stopPropagation()
       onClose()
     }
-    window.addEventListener('keydown', onKeyDown, true)
-    return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [panel, onClose])
+    // Panels listen as the key goes down to the page; the last one as it comes back up.
+    window.addEventListener('keydown', onKeyDown, !last)
+    return () => window.removeEventListener('keydown', onKeyDown, !last)
+  }, [panel, onClose, last])
 }
 
-/** A panel beside the page. Put a header row and a scrolling body inside. */
+/**
+ * A panel beside the page. Put a header row and a scrolling body inside.
+ * Expanded, the same panel takes the page's place instead: in the page's flow,
+ * its full width and the window's height, with nothing beside it to resize.
+ */
 export function SidePanel({
   className,
   children,
   onClose,
+  expanded = false,
   ...props
 }: ComponentProps<'aside'> & {
   children: ReactNode
   /** Escape calls it. */
   onClose?: () => void
+  expanded?: boolean
 }) {
   const panel = useRef<HTMLElement>(null)
   useEscapeToClose(panel, onClose)
   return (
     <aside
       ref={panel}
-      data-desktop-panel
+      data-desktop-panel={expanded ? undefined : ''}
+      data-expanded={expanded || undefined}
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
-        'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-10 xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
+        expanded
+          ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
+          : [
+              'fixed inset-x-0 bottom-0 z-40 flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
+              'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-10 xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
+            ],
         className,
       )}
       {...props}
     >
-      <PanelResizeHandle />
+      {!expanded && <PanelResizeHandle />}
       {children}
     </aside>
   )

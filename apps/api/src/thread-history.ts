@@ -63,7 +63,8 @@ const ASKS = {
 /**
  * Of the events before `firstSeq`, those the whole thread needs: files and
  * images made, messages that name deliverables, calls to tools whose results
- * are outputs (with their results), the latest preview, usage limits, the latest
+ * are outputs (with their results), the latest preview, the repositories
+ * checked out, usage limits, the latest
  * turn's start and end, and approvals, questions, tickets and queued messages
  * still open.
  */
@@ -81,6 +82,7 @@ export async function historyContext(sessionId: string, firstSeq: number) {
             'image.generated',
             'message.done',
             'preview.changed',
+            'repositories.changed',
             'usage.updated',
             'turn.started',
             'turn.completed',
@@ -130,6 +132,8 @@ export async function historyContext(sessionId: string, firstSeq: number) {
   const kept = [
     ...rows.filter((r) => {
       if (r.type === 'file.changed' || r.type === 'image.generated') return true
+      // Few, and each teammate's latest says what the thread has checked out.
+      if (r.type === 'repositories.changed') return true
       if (r.type === 'message.done') return NAMES_DELIVERABLE.test(String(field(r, 'text')))
       if (r.type in ASKS) {
         const [answer, id] = ASKS[r.type as keyof typeof ASKS]

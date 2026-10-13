@@ -1,5 +1,7 @@
 'use client'
 import { modelLabel } from '@brigade/contracts'
+import { Monitor } from 'lucide-react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -53,18 +55,26 @@ export default function TeammatePage() {
             </p>
           )}
         </div>
-        {isAdmin(me) && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setEditing(!editing)}>
-              {editing ? 'Close' : 'Edit'}
-            </Button>
-            {teammate.kind !== 'chief' && (
-              <Button variant="danger" onClick={archive}>
-                Archive
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/app/teammates/${id}/computer`}>
+              <Monitor aria-hidden />
+              Computer
+            </Link>
+          </Button>
+          {isAdmin(me) && (
+            <>
+              <Button variant="outline" onClick={() => setEditing(!editing)}>
+                {editing ? 'Close' : 'Edit'}
               </Button>
-            )}
-          </div>
-        )}
+              {teammate.kind !== 'chief' && (
+                <Button variant="danger" onClick={archive}>
+                  Archive
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </header>
       {editing && (
         <TeammateForm
@@ -108,7 +118,7 @@ export default function TeammatePage() {
           <TeammateStatus {...oversight} />
           <section className="flex flex-col gap-3">
             <h2 className="text-base font-bold">Threads</h2>
-            {threads.data && <ThreadList threads={threads.data} showTeammate={false} />}
+            {threads.data && <ThreadList threads={threads.data} />}
           </section>
         </div>
       </div>

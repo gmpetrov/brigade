@@ -3,7 +3,7 @@
 // ⇧? anywhere outside a field opens the shortcuts too.
 import { CircleHelp, Keyboard } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
-import { useIsMac } from '@/components/quick-thread'
+import { useIsMac } from '@/lib/platform'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

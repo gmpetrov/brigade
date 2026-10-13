@@ -229,9 +229,13 @@ export type ThreadSummary = {
   teammates: { teammate: { id: string; name: string } }[]
   startedBy: { id: string; user: { name: string } }
   projectId: string | null
+  createdAt: string
+  /** People's messages after the first, and the teammates' answers. */
+  replies: number
+  lastReplyAt: string | null
 }
 
-export type Thread = Omit<ThreadSummary, 'teammates'> & {
+export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {
   startedByMemberId: string
   othersMayPrompt: boolean
   /** Adds nothing to workspace memory; its summary is the starter's only. */

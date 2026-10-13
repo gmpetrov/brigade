@@ -11,6 +11,7 @@ import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
+import { watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
 import { deleteTriggers, resync } from './triggers.js'
 import { usageToday } from '../caps.js'
@@ -56,6 +57,32 @@ export const teammates = new Hono<AppEnv>()
    * Open a window of the teammate's browser on the workspace computer, e.g. to
    * sign it in to a site. The person then uses the computer's desktop.
    */
+  /**
+   * The workspace computer's desktop, from a teammate: the screen its threads run
+   * on, its own browser among them. To watch; taking control is a thread's.
+   */
+  .post('/:id/desktop', async (c) => {
+    const { scope, db } = c.var
+    const teammate = await db.teammate.findFirst({
+      where: { id: c.req.param('id'), archivedAt: null },
+    })
+    if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+    const computer = await db.computer.findFirst({
+      where: { kind: 'cloud', status: { notIn: ['destroyed', 'error'] } },
+    })
+    if (!computer)
+      throw new HTTPException(409, {
+        message: "This workspace has no workspace computer: its teammates run on members' machines",
+      })
+    const view = await watchDesktop(computer)
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'desktop.watched',
+      target: { type: 'teammate', id: teammate.id },
+    })
+    return c.json(view)
+  })
   .post('/:id/browser', async (c) => {
     const { scope, db } = c.var
     const teammate = await db.teammate.findFirst({

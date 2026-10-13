@@ -27,7 +27,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAdmin, NAV, useDashboard } from '@/components/dashboard'
-import { isMac, useIsMac } from '@/components/quick-thread'
+import { isMac, useIsMac } from '@/lib/platform'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { api, pullHref } from '@/lib/api'
 import { cn } from '@/lib/utils'

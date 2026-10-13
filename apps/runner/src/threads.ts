@@ -1025,6 +1025,16 @@ export class Threads {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.reply = event.text
           }
+          // What the turn checked out, for the dashboard's Preview.
+          if (event.type === 'turn.completed')
+            void this.options.previews
+              .reportCheckouts({
+                sessionId: spec.sessionId,
+                teammateId,
+                workDir: folder.workDir,
+                ...(user ? { runAs: user } : {}),
+              })
+              .catch(() => undefined)
         },
         // Files a call brings (an email's attachment) are in the folder before the teammate reads the result.
         async (call) => {

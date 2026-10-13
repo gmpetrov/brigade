@@ -34,9 +34,9 @@ import {
   startPreview,
   touchPreview,
 } from '../app-previews.js'
-import { desktopUrl, ensureRunning, hostedPort } from '../cloud.js'
+import { ensureRunning, hostedPort } from '../cloud.js'
 import { applyPick, checkPick } from '../designs.js'
-import { openView } from '../desktop-proxy.js'
+import { watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import {
@@ -112,14 +112,28 @@ export const threads = new Hono<AppEnv>()
   /** ?teammateId= for a teammate's threads; ?project=<id|none> for a project's, or those in none. */
   .get('/', async (c) => {
     const teammateId = c.req.query('teammateId')
+    // With a limit, a page in the order they were started, newest first (the threads
+    // panel reads them as a conversation): `before` is the oldest one already shown.
+    // `sort=activity` instead: the latest active first (the teammate menu's recent ones).
+    const asked = Math.trunc(Number(c.req.query('limit')))
+    const limit = asked > 0 ? Math.min(asked, 100) : undefined
+    const before = c.req.query('before')
     const rows = await c.var.db.session.findMany({
       where: {
         // A teammate's threads: those it started and those it joined.
         ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
         ...projectWhere(c.req.query('project')),
       },
-      orderBy: { updatedAt: 'desc' },
-      take: 100,
+      ...(limit
+        ? {
+            orderBy:
+              c.req.query('sort') === 'activity'
+                ? [{ updatedAt: 'desc' as const }, { id: 'desc' as const }]
+                : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+            take: limit,
+            ...(before ? { cursor: { id: before }, skip: 1 } : {}),
+          }
+        : { orderBy: { updatedAt: 'desc' as const }, take: 100 }),
       include: {
         teammate: { select: { id: true, name: true } },
         teammates: {
@@ -129,7 +143,35 @@ export const threads = new Hono<AppEnv>()
         startedBy: { select: { id: true, user: { select: { name: true } } } },
       },
     })
-    return c.json(rows)
+    // How much each one was answered, for the list's replies line: people's messages
+    // after the first, and the teammates' turns.
+    const counts = rows.length
+      ? await c.var.db.sessionEvent.groupBy({
+          by: ['sessionId', 'type'],
+          where: {
+            sessionId: { in: rows.map((r) => r.id) },
+            type: { in: ['message.user', 'turn.completed'] },
+          },
+          _count: { _all: true },
+          _max: { at: true },
+        })
+      : []
+    return c.json(
+      rows.map((row) => {
+        const of = (type: string) => counts.find((n) => n.sessionId === row.id && n.type === type)
+        const messages = of('message.user')
+        const turns = of('turn.completed')
+        const asked = Math.max(0, (messages?._count._all ?? 0) - 1)
+        const latest = [asked ? messages?._max.at : null, turns?._max.at]
+          .filter((at): at is Date => !!at)
+          .sort((x, y) => y.getTime() - x.getTime())[0]
+        return {
+          ...row,
+          replies: asked + (turns?._count._all ?? 0),
+          lastReplyAt: latest?.toISOString() ?? null,
+        }
+      }),
+    )
   })
 
   .get('/:id', async (c) => {
@@ -552,26 +594,16 @@ export const threads = new Hono<AppEnv>()
         message: 'The workspace computer is not running. It starts with the next message.',
       })
     }
-    const url = await desktopUrl(thread.computer)
-    if (!url)
-      throw new HTTPException(409, {
-        message: 'The desktop is not available yet. Try again in a moment.',
-      })
+    const view = await watchDesktop(thread.computer)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
       action: 'desktop.watched',
       target: { type: 'thread', id: thread.id },
     })
-    // Relayed through this API. View only until takeover is the viewer's own
-    // setting, not a boundary: any member may take over anyway.
-    return c.json(
-      await openView(url).catch((error: unknown) => {
-        throw new HTTPException(503, {
-          message: `The desktop did not answer: ${(error as Error).message}`,
-        })
-      }),
-    )
+    // View only until takeover is the viewer's own setting, not a boundary: any
+    // member may take over anyway.
+    return c.json(view)
   })
 
   /**

@@ -1,15 +1,29 @@
 'use client'
-import { Globe, ListOrdered, UserRound, X } from 'lucide-react'
+// Beside an expanded thread or teammate's thread list (the threads panel): the
+// details. Beside a thread, the thread's own (who is in it, who started it, its
+// project and task), then the computer it runs on (its screen, taking control,
+// Preview, a shell, the run log) and what it made. Beside the list, what the teammate is
+// on now. Both end with the teammate: routines, profile.
+import { ArrowRight, Globe, Hand, SquareTerminal, UserRound, X } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
+import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
-import { PanelResizeHandle } from '@/components/side-panel'
+import { PanelResizeHandle, useEscapeToClose } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
-import { api, harnessLabel, type Teammate, type Thread } from '@/lib/api'
+import {
+  api,
+  teammateModelLabel,
+  useApi,
+  type Schedule,
+  type Teammate,
+  type Thread,
+  type ThreadSummary,
+} from '@/lib/api'
 
 function Section({
   title,
@@ -33,40 +47,183 @@ function Section({
   )
 }
 
-/**
- * The workspace computer beside a thread: its screen, a shell once this member
- * has control, and the thread's status. Takeover starts here; hand back is in
- * the thread, where the composer was. Below, what the thread made.
- */
-export function ComputerPanel({
-  thread,
-  memberId,
-  status,
-  shell,
-  onShell,
-  expanded,
-  onExpand,
-  onChange,
+/** The panel itself: fixed to the right on wide screens, a card above the thread on narrow ones. */
+function Frame({
+  teammate,
+  subtitle,
   onClose,
-  outputs,
-  onOpenFile,
+  onEscape = onClose,
+  children,
 }: {
-  thread: Thread
-  memberId: string
-  status: string
-  shell: boolean
-  onShell: (open: boolean) => void
-  expanded: boolean
-  onExpand: (expanded: boolean) => void
-  onChange: () => void
+  teammate: Pick<Teammate, 'name' | 'harness'>
+  subtitle: string
   onClose: () => void
-  /** What the thread made, newest first. */
-  outputs: ThreadOutput[]
-  onOpenFile: OpenFile
+  /** What Escape does: closes it, as it does the other panels beside a page, unless told else. */
+  onEscape?: () => void
+  children: ReactNode
 }) {
+  const panel = useRef<HTMLElement>(null)
+  useEscapeToClose(panel, onEscape)
+  return (
+    <aside
+      ref={panel}
+      data-desktop-panel
+      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
+      aria-label={`About ${teammate.name}`}
+    >
+      <PanelResizeHandle />
+      <div className="flex h-12 shrink-0 flex-nowrap items-center gap-3 border-b px-4">
+        <TeammateAvatar teammate={teammate} className="size-7" />
+        <div className="min-w-0 flex-1 leading-tight">
+          <strong className="block truncate text-sm font-semibold">{teammate.name}</strong>
+          <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClose}
+          aria-label={`Close ${teammate.name}'s panel`}
+          title="Close"
+        >
+          <X aria-hidden />
+        </Button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">{children}</div>
+    </aside>
+  )
+}
+
+/** The teammate's routines (schedules): what it does on its own, and when. */
+function Routines({ teammate }: { teammate: Pick<Teammate, 'id'> }) {
+  const schedules = useApi<Schedule[]>('/schedules')
+  const mine = (schedules.data ?? []).filter((s) => s.teammateId === teammate.id)
+  return (
+    <Section
+      title="Routines"
+      action={
+        <Button asChild variant="outline" size="sm">
+          <Link href="/app/automations">All</Link>
+        </Button>
+      }
+    >
+      {!schedules.data ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : mine.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No routines yet.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {mine.map((s) => (
+            <li key={s.id} className="rounded-lg border bg-background px-3 py-2">
+              <p className="truncate text-sm font-semibold">{s.title}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {s.pausedAt ? 'Paused · ' : ''}
+                {describeCron(s.cron)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  )
+}
+
+/** What the teammate is told, and where to see or change more. */
+function About({ teammate, children }: { teammate: Teammate; children?: ReactNode }) {
+  return (
+    <Section title="About">
+      {teammate.instructions && (
+        <p className="line-clamp-4 text-sm whitespace-pre-wrap text-muted-foreground">
+          {teammate.instructions}
+        </p>
+      )}
+      <div className="flex flex-col gap-2">
+        <Button asChild variant="outline" className="justify-start">
+          <Link href={`/app/teammates/${teammate.id}`}>
+            <UserRound aria-hidden />
+            Profile
+          </Link>
+        </Button>
+        {children}
+      </div>
+    </Section>
+  )
+}
+
+const BUSY = new Set(['starting', 'running'])
+
+/**
+ * A teammate beside its thread list: what it is on now (its screen shows once a
+ * thread is open), its routines, and its profile.
+ */
+export function TeammatePanel({
+  teammate,
+  threads,
+  onOpenThread,
+  onOpenComputer,
+  onClose,
+}: {
+  teammate: Teammate
+  /** Its threads, newest first; undefined while they load. */
+  threads?: ThreadSummary[]
+  onOpenThread: (id: string) => void
+  /** The workspace computer open, beside the thread list. */
+  onOpenComputer: () => void
+  onClose: () => void
+}) {
+  const working = (threads ?? []).filter((t) => BUSY.has(t.status))
+  const waiting = (threads ?? []).filter((t) => t.status === 'waiting')
+  const on = waiting[0] ?? working[0]
+  return (
+    <Frame teammate={teammate} subtitle={teammateModelLabel(teammate)} onClose={onClose}>
+      <Section title="Computer">
+        <DesktopScreen
+          source={{ teammate: teammate.id }}
+          teammateName={teammate.name}
+          control={false}
+          mode="thumbnail"
+          onOpen={onOpenComputer}
+        />
+        {on && (
+          <button
+            type="button"
+            onClick={() => onOpenThread(on.id)}
+            className="flex min-w-0 items-center gap-1.5 text-left text-sm text-muted-foreground hover:text-foreground"
+          >
+            <span className="shrink-0">Working on</span>
+            <span className="truncate font-semibold text-foreground">{on.title}</span>
+            <ArrowRight aria-hidden className="size-3.5 shrink-0" />
+          </button>
+        )}
+      </Section>
+
+      <Section title="Status">
+        {!threads ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : working.length + waiting.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nothing running.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {working.length > 0 && (
+              <StatusBadge status="running" label={`${working.length} working`} />
+            )}
+            {waiting.length > 0 && (
+              <StatusBadge status="waiting" label={`${waiting.length} need you`} />
+            )}
+          </div>
+        )}
+      </Section>
+
+      <Routines teammate={teammate} />
+      <About teammate={teammate} />
+    </Frame>
+  )
+}
+
+/** Taking over the computer and handing it back, for the panel and the open computer. */
+function useControl(thread: Thread, memberId: string, status: string, onChange: () => void) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
-  const teammate = thread.teammate
   const mine = !!memberId && thread.controlledByMemberId === memberId
   const working = status === 'running' || status === 'starting'
 
@@ -83,154 +240,232 @@ export function ComputerPanel({
     }
   }
 
-  const takeOver = (interrupt: boolean) =>
-    void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt } }))
+  return {
+    busy,
+    error,
+    mine,
+    working,
+    takeOver: (interrupt: boolean) =>
+      void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt } })),
+    // No note from here: the thread's own hand back, below the conversation, takes one.
+    handBack: () => void act(() => api(`/threads/${thread.id}/handback`, { body: { note: '' } })),
+    openBrowser: () =>
+      void act(() => api(`/teammates/${thread.teammate.id}/browser`, { body: {} })),
+  }
+}
+
+/**
+ * Beside an expanded thread, everything that is not the conversation: its
+ * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
+ * log), the thread's details, and what it made.
+ */
+export function ComputerPanel({
+  thread,
+  memberId,
+  onOpenComputer,
+  onClose,
+  outputs,
+  onOpenFile,
+  details,
+  actions,
+}: {
+  thread: Thread
+  memberId: string
+  /** The computer open, in the conversation's place. */
+  onOpenComputer: () => void
+  onClose: () => void
+  /** What the thread made, newest first. */
+  outputs: ThreadOutput[]
+  onOpenFile: OpenFile
+  /** The thread's details, below its computer: who is in it, its project and task, who started it. */
+  details: ReactNode
+  /** Below the computer: Preview, the shell, the run log. */
+  actions: ReactNode
+}) {
+  const teammate = thread.teammate
+  const cloud = thread.computer.kind === 'cloud'
+  const mine = !!memberId && thread.controlledByMemberId === memberId
 
   return (
-    <aside
-      data-desktop-panel
-      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
-      aria-label={`${teammate.name}'s computer`}
+    <Frame
+      teammate={{ name: teammate.name, harness: teammate.harness as Teammate['harness'] }}
+      subtitle={`${teammateModelLabel(teammate)} on ${cloud ? 'the workspace computer' : thread.computer.name}`}
+      onClose={onClose}
     >
-      <PanelResizeHandle />
-      <div className="flex flex-nowrap items-center gap-3 border-b px-4 py-3">
-        <TeammateAvatar
-          teammate={{ name: teammate.name, harness: teammate.harness as Teammate['harness'] }}
-          className="size-8"
-        />
-        <div className="min-w-0 flex-1">
-          <strong className="block truncate text-sm font-semibold">{teammate.name}</strong>
-          <span className="block truncate text-xs text-muted-foreground">
-            {harnessLabel(teammate.harness)} on the workspace computer
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Close computer panel"
-          title="Close"
-        >
-          <X aria-hidden />
-        </Button>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">
-        <div className="flex flex-col gap-3">
-          <DesktopScreen
-            threadId={thread.id}
-            teammateName={teammate.name}
-            control={mine}
-            expanded={expanded}
-            onExpand={onExpand}
-          />
-          {thread.controlledByMemberId && !mine ? (
-            <p className="text-sm text-muted-foreground">
-              Another member has control. {teammate.name} continues when they hand it back.
-            </p>
-          ) : mine ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() =>
-                  void act(() => api(`/teammates/${teammate.id}/browser`, { body: {} }))
-                }
-              >
-                <Globe aria-hidden />
-                Open {teammate.name}&apos;s browser
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="min-w-0 flex-[1_1_14rem] text-sm text-muted-foreground">
-                Take control to use the mouse, keyboard and a shell. {teammate.name} waits until you
-                hand back.
+      <Section title="Computer">
+        {cloud ? (
+          <>
+            <DesktopScreen
+              source={{ thread: thread.id }}
+              teammateName={teammate.name}
+              control={mine}
+              mode="thumbnail"
+              onOpen={onOpenComputer}
+            />
+            {thread.controlledByMemberId && (
+              <p className="text-sm text-muted-foreground">
+                {mine
+                  ? `You have control. ${teammate.name} waits until you hand back.`
+                  : `Another member has control. ${teammate.name} continues when they hand it back.`}
               </p>
-              <Button size="sm" disabled={busy} onClick={() => takeOver(false)}>
-                Take control
-              </Button>
-              {working && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => takeOver(true)}
-                  title={`Stop ${teammate.name}'s current turn first`}
-                >
-                  Stop and take control
-                </Button>
-              )}
-            </div>
-          )}
-          {error && <p className="text-sm text-destructive-text">{error}</p>}
-        </div>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Runs on {thread.computer.name}, a member&apos;s machine: its screen is not shared here.
+          </p>
+        )}
+        {actions}
+      </Section>
 
-        {mine && shell && (
-          <Section
-            title="Shell"
-            action={
+      <Section title="Details">{details}</Section>
+
+      {outputs.length > 0 && (
+        <Section title={`Outputs · ${outputs.length}`}>
+          <ThreadOutputs outputs={outputs} onOpen={onOpenFile} />
+        </Section>
+      )}
+      {/* The teammate's routines and profile are beside its thread list, not each thread. */}
+    </Frame>
+  )
+}
+
+/**
+ * The computer's page, through a thread: its screen, and in a toolbar over its
+ * foot taking control (or handing back), the teammate's browser and a shell once
+ * this member has control. The shell opens below the screen.
+ */
+export function ComputerScreen({
+  thread,
+  memberId,
+  status,
+  shell,
+  onShell,
+  onChange,
+}: {
+  thread: Thread
+  memberId: string
+  status: string
+  shell: boolean
+  onShell: (open: boolean) => void
+  onChange: () => void
+}) {
+  const teammate = thread.teammate
+  const control = useControl(thread, memberId, status, onChange)
+  const { busy, mine } = control
+  // The shell needs control: handing back closes it.
+  const shellOpen = shell && mine
+  useEffect(() => {
+    if (shell && !mine) onShell(false)
+  }, [shell, mine, onShell])
+  const shellButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-pressed={shellOpen}
+      className="aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+      onClick={() => onShell(!shellOpen)}
+      aria-label={shellOpen ? 'Close the shell' : 'Shell'}
+      title={shellOpen ? 'Close the shell' : `A shell on the computer, as ${teammate.name}`}
+    >
+      <SquareTerminal aria-hidden />
+    </Button>
+  )
+  const toolbar = mine ? (
+    <>
+      <Button
+        size="sm"
+        disabled={busy}
+        onClick={control.handBack}
+        title={`Give the computer back to ${teammate.name}`}
+      >
+        <Hand aria-hidden />
+        Hand back
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={busy}
+        onClick={control.openBrowser}
+        aria-label={`Open ${teammate.name}'s browser`}
+        title={`Open ${teammate.name}'s browser`}
+      >
+        <Globe aria-hidden />
+      </Button>
+      {shellButton}
+    </>
+  ) : thread.controlledByMemberId ? (
+    <span className="px-2 text-sm text-muted-foreground">Another member has control</span>
+  ) : (
+    <>
+      <Button
+        size="sm"
+        disabled={busy}
+        onClick={() => control.takeOver(false)}
+        title={`Use the mouse and keyboard. ${teammate.name} waits until you hand back`}
+      >
+        Take control
+      </Button>
+      {control.working && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => control.takeOver(true)}
+          title={`Stop ${teammate.name}'s current turn first`}
+        >
+          Stop and take control
+        </Button>
+      )}
+    </>
+  )
+
+  return (
+    <div className="flex size-full min-h-0 flex-col">
+      <div className="relative min-h-0 flex-1">
+        <DesktopScreen
+          source={{ thread: thread.id }}
+          teammateName={teammate.name}
+          control={mine}
+          mode="open"
+          toolbar={toolbar}
+        />
+        {control.error && (
+          <p className="absolute top-3 left-1/2 -translate-x-1/2 rounded-lg border bg-background px-3 py-1.5 text-sm text-destructive-text shadow-md">
+            {control.error}
+          </p>
+        )}
+      </div>
+      {shellOpen && (
+        <section
+          aria-label="Shell"
+          className="flex max-h-[45%] shrink-0 flex-col gap-2 overflow-y-auto border-t bg-card p-3"
+        >
+          {/* Typing exit closes it too. */}
+          <Terminal
+            sessionId={thread.id}
+            onExit={() => onShell(false)}
+            actions={
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => onShell(false)}
-                aria-label="Close shell"
+                aria-label="Close the shell"
+                title="Close the shell"
               >
                 <X aria-hidden />
               </Button>
             }
-          >
-            <Terminal sessionId={thread.id} />
-            <p className="text-xs text-muted-foreground">
-              In the thread&apos;s directory, as {teammate.name}. Commands you run are recorded in
-              the run log.
-            </p>
-          </Section>
-        )}
-
-        <Section title="Status">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <StatusBadge status={status} />
-            {mine
-              ? `${teammate.name} waits for you to hand back.`
-              : working
-                ? `${teammate.name} is working.`
-                : null}
-          </div>
-          {thread.task && (
-            <p className="truncate text-sm">
-              <span className="text-muted-foreground">Task </span>
-              {thread.task.title}
-            </p>
-          )}
-        </Section>
-
-        {outputs.length > 0 && (
-          <Section title={`Outputs · ${outputs.length}`}>
-            <ThreadOutputs outputs={outputs} onOpen={onOpenFile} />
-          </Section>
-        )}
-
-        <Section title={`About ${teammate.name}`}>
-          <div className="flex flex-col gap-2">
-            <Button asChild variant="outline" className="justify-start">
-              <Link href={`/app/teammates/${teammate.id}`}>
-                <UserRound aria-hidden />
-                Profile
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="justify-start">
-              <Link href={`/app/threads/${thread.id}/log`}>
-                <ListOrdered aria-hidden />
-                Run log
-              </Link>
-            </Button>
-          </div>
-        </Section>
-      </div>
-    </aside>
+          />
+          <p className="text-xs text-muted-foreground">
+            In the thread&apos;s directory, as {teammate.name}. Commands you run are recorded in the
+            run log.
+          </p>
+        </section>
+      )}
+    </div>
   )
 }

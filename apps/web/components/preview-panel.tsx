@@ -50,6 +50,17 @@ export function useThreadPreview(events: SequencedEvent[]): ThreadPreview | unde
   }, [events])
 }
 
+/** The repositories the thread's teammates have checked out: each teammate's latest report. */
+export function useThreadRepositories(events: SequencedEvent[]): string[] {
+  return useMemo(() => {
+    const latest = new Map<string, string[]>()
+    for (const { event } of events)
+      if (event.type === 'repositories.changed')
+        latest.set(event.teammateId ?? '', event.repositories)
+    return [...new Set([...latest.values()].flat())].sort()
+  }, [events])
+}
+
 export const previewLive = (preview: ThreadPreview | undefined) =>
   preview?.status === 'starting' || preview?.status === 'running'
 
