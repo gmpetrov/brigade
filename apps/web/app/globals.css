@@ -187,6 +187,35 @@
     mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
   }
 
+  /* A status line a light passes over, while a teammate gets to a message
+   * (components/thread-view.tsx). Still for those who ask for less motion. */
+  .text-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--muted-foreground) 40%,
+        var(--foreground) 50%,
+        var(--muted-foreground) 60%
+      )
+      0 0 / 250% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: text-shimmer 2s linear infinite;
+  }
+  @keyframes text-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .text-shimmer {
+      animation: none;
+      color: var(--muted-foreground);
+    }
+  }
+
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
   .composer-input p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);

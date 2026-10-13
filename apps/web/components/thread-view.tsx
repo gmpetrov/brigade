@@ -122,7 +122,7 @@ type Item =
   | { kind: 'file'; key: string; path: string }
   | { kind: 'image'; key: string; path: string; teammateId?: string; prompt?: string }
   /** Where a teammate's turn begins: what it did until its turn ends folds under one line. */
-  | { kind: 'start'; key: string; at: number }
+  | { kind: 'start'; key: string; at: number; teammateId?: string }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
   | { kind: 'note'; key: string; text: string }
@@ -219,7 +219,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           turnTeammate = e.teammateId
           // A turn resumed (after a restart, say) starts again before it ends: still the same turn.
           turnStartedAt ??= Date.parse(e.at)
-          add({ kind: 'start', key: `s${seq}`, at: turnStartedAt })
+          add({ kind: 'start', key: `s${seq}`, at: turnStartedAt, teammateId: e.teammateId })
           break
         // Ids come from each teammate's own harness: keyed by teammate too.
         case 'message.delta': {
@@ -958,6 +958,42 @@ function WorkingFor({ since }: { since: number }) {
   )
 }
 
+/**
+ * Between a message and the first thing its teammate does: a line saying how far it got,
+ * where the answer will show. It counts up past the first seconds.
+ */
+function Answering({
+  teammate,
+  phase,
+  since,
+}: {
+  teammate: { name: string }
+  phase: 'starting' | 'reading' | 'thinking'
+  since?: number
+}) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (since === undefined) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [since])
+  const ms = since === undefined ? 0 : now - since
+  const doing = {
+    starting: 'is starting up',
+    reading: 'is reading your message',
+    thinking: 'is thinking',
+  }[phase]
+  return (
+    // Fading in is an animation too: on the line itself it would replace the shimmer.
+    <div role="status" className="animate-in self-start text-sm duration-300 fade-in">
+      <span className="text-shimmer">
+        {teammate.name} {doing}
+        {ms >= 5_000 && ` · ${duration(ms)}`}
+      </span>
+    </div>
+  )
+}
+
 export function ThreadItems({
   threadId,
   items,
@@ -971,6 +1007,7 @@ export function ThreadItems({
   teammates = [],
   onOpenPreview,
   working = false,
+  starting = false,
 }: {
   threadId: string
   items: Item[]
@@ -990,6 +1027,8 @@ export function ThreadItems({
   onOpenPreview?: () => void
   /** A teammate's turn runs now: its latest steps show live, with how long it has worked. */
   working?: boolean
+  /** The thread's computer is starting for that turn. */
+  starting?: boolean
 }) {
   // A teammate carries its harness as a plain string; the avatar only tells codex apart.
   const avatarOf = (t: { name: string; harness: string } | undefined) =>
@@ -1315,6 +1354,14 @@ export function ThreadItems({
     }
   }
   const nodes = layoutThread(items, working)
+  // Working, and nothing from the teammate since the last message (or only its turn starting).
+  const lastUser = items.findLastIndex((it) => it.kind === 'user' && !it.steeredTo)
+  const since = items.slice(lastUser + 1)
+  const waiting =
+    working && lastUser >= 0 && since.every((it) => it.kind === 'start')
+      ? (since.at(-1) as Extract<Item, { kind: 'start' }> | undefined)
+      : false
+  const waitingFor = waiting !== false && (byId.get(waiting?.teammateId ?? '') ?? teammate)
   const show = (list: Node[]): React.ReactNode[] =>
     list.map((node) =>
       node.type === 'item' ? (
@@ -1345,7 +1392,15 @@ export function ThreadItems({
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
-      {working && nodes.running !== undefined && <WorkingFor since={nodes.running} />}
+      {waitingFor ? (
+        <Answering
+          teammate={waitingFor}
+          phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}
+          {...(waiting ? { since: waiting.at } : {})}
+        />
+      ) : (
+        working && nodes.running !== undefined && <WorkingFor since={nodes.running} />
+      )}
     </div>
   )
 }

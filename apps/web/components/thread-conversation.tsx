@@ -649,6 +649,7 @@ export function ThreadConversation({
                 teammates={people}
                 canApprove={t.mayPrompt}
                 working={busy}
+                starting={current === 'starting'}
                 onOpenPreview={previewLive(preview) ? openPreview : undefined}
                 onApproval={(approvalId, approved, always) =>
                   void call('/approvals', {
