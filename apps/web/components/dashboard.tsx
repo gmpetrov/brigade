@@ -24,6 +24,7 @@ import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { HelpMenu } from '@/components/help-menu'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
@@ -64,7 +65,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   api,
   isAdmin,
@@ -201,11 +201,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [me.data, me.error, router])
 
   if (!me.data?.activeWorkspaceId || !me.data.aiReady)
-    return (
-      <div className="flex min-h-svh items-center justify-center">
-        <Skeleton className="h-6 w-40" />
-      </div>
-    )
+    return <AppLoader />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)

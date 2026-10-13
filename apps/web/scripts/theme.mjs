@@ -73,7 +73,7 @@ const families = [...new Set(
 const hrefs = []
 for (const family of families) {
   const base = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}`
-  const withWeights = `${base}:wght@400;500;600;700&display=swap`
+  const withWeights = `${base}:wght@400;500;600;700;800&display=swap`
   const ok = await fetch(withWeights).then((r) => r.ok, () => false)
   hrefs.push(ok ? withWeights : `${base}&display=swap`)
 }

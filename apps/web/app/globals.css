@@ -216,6 +216,37 @@
     }
   }
 
+  /* The app's loader: the wordmark, a light in the brand colour passing over it
+   * (components/app-loader.tsx). Plain for those who ask for less motion. */
+  .wordmark-shimmer {
+    background: linear-gradient(
+        100deg,
+        var(--muted-foreground) 35%,
+        var(--foreground) 48%,
+        var(--primary) 52%,
+        var(--muted-foreground) 65%
+      )
+      0 0 / 250% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: wordmark-shimmer 2.2s linear infinite;
+  }
+  @keyframes wordmark-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark-shimmer {
+      animation: none;
+      background: none;
+      color: var(--muted-foreground);
+    }
+  }
+
   /* A loading placeholder a faint light passes over (components/thread-skeleton.tsx).
    * Still for those who ask for less motion. */
   .skeleton-shimmer {
