@@ -1096,7 +1096,13 @@ export function browserSocket(scope: WorkspaceScope) {
       if (message.tail && afterSeq === 0) {
         const firstSeq = await pageStart(session.id, session.lastSeq + 1)
         const context = await historyContext(session.id, firstSeq)
-        send(ws, { type: 'history', sessionId: session.id, firstSeq, context })
+        send(ws, {
+          type: 'history',
+          sessionId: session.id,
+          firstSeq,
+          context,
+          lastSeq: session.lastSeq,
+        })
         afterSeq = firstSeq - 1
       }
       for (;;) {

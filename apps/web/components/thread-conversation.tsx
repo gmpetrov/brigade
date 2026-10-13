@@ -43,6 +43,7 @@ import { ThreadTaskBar } from '@/components/tasks'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { useThreadPanel } from '@/components/thread-panel'
+import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -94,8 +95,18 @@ export function ThreadConversation({
 }) {
   const { me, projects } = useDashboard()
   const thread = useApi<Thread>(`/threads/${id}`)
+  // Keyed by the thread: when it started loading, for its placeholder's delays.
+  const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
-  const { events, connected, firstSeq, loadOlder, loadingOlder } = useThreadEvents(id, setStatus)
+  const {
+    events,
+    connected,
+    firstSeq,
+    loadOlder,
+    loadingOlder,
+    loaded: eventsLoaded,
+    reconnect,
+  } = useThreadEvents(id, setStatus)
   const { items, queued, seen, turnId } = useThreadItems(events, firstSeq)
   const outputs = useThreadOutputs(events)
   const preview = useThreadPreview(events)
@@ -282,17 +293,18 @@ export function ThreadConversation({
 
   // The conversation's column: the page's width expanded, the panel's docked.
   const column = cn('mx-auto w-full', expanded ? 'max-w-5xl px-4 md:px-10' : 'px-4')
+  // Loading, the conversation's shape shows in the column its messages will fill; slow, it can try again.
+  const retry = () => {
+    reconnect()
+    void thread.reload()
+  }
   if (!thread.data)
-    return (
-      <p
-        className={cn(
-          column,
-          'pt-6 text-sm',
-          thread.error ? 'text-destructive-text' : 'text-muted-foreground',
-        )}
-      >
-        {thread.error?.message ?? 'Loading…'}
-      </p>
+    return thread.error ? (
+      <p className={cn(column, 'pt-6 text-sm text-destructive-text')}>{thread.error.message}</p>
+    ) : (
+      <div className={cn(column, expanded ? 'pt-6 md:pt-8' : 'pt-4')}>
+        <ThreadSkeleton since={openedAt} onRetry={retry} />
+      </div>
     )
   const t = thread.data
   const current = status ?? t.status
@@ -632,64 +644,71 @@ export function ThreadConversation({
 
             {previewStart.dialog}
 
-            <FileLinksProvider value={{ open: openFile }}>
-              {/* Once its page is in and shown at its end, not before: it would load one at once. */}
-              {firstSeq > 1 && (events.at(-1)?.seq ?? 0) >= firstSeq && (
-                <EarlierMessages
-                  key={firstSeq}
-                  root={scroller}
-                  loading={loadingOlder}
-                  onLoad={loadEarlier}
-                />
-              )}
-              <ThreadItems
-                threadId={t.id}
-                items={items}
-                teammate={t.teammate}
-                teammates={people}
-                canApprove={t.mayPrompt}
-                working={busy}
-                starting={current === 'starting'}
-                onOpenPreview={previewLive(preview) ? openPreview : undefined}
-                onApproval={(approvalId, approved, always) =>
-                  void call('/approvals', {
-                    approvalId,
-                    approved,
-                    ...(always ? { always: true } : {}),
-                  }).catch(() => undefined)
-                }
-                onAnswer={(questionId, answer) =>
-                  api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(
-                    () => undefined,
-                  )
-                }
-                onChoose={
-                  t.mayPrompt && current !== 'waiting'
-                    ? (text, pick) => deliver(text, [], pick)
-                    : undefined
-                }
-                onTicket={(requestId, answer) =>
-                  // Answering may hand control back: show the composer again.
-                  api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
-                    () => void thread.reload(),
-                  )
-                }
-                takeover={
-                  t.computer.kind === 'cloud' &&
-                  me.memberId &&
-                  (!t.controlledByMemberId || t.controlledByMemberId === me.memberId)
-                    ? {
-                        mine: t.controlledByMemberId === me.memberId,
-                        open: async () => {
-                          if (t.controlledByMemberId !== me.memberId)
-                            await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
-                          showComputer()
-                        },
-                      }
-                    : undefined
-                }
-              />
-            </FileLinksProvider>
+            {!eventsLoaded ? (
+              <ThreadSkeleton since={openedAt} onRetry={retry} />
+            ) : (
+              // In with a quick fade, in the column the placeholder held.
+              <div className="animate-in duration-200 fade-in motion-reduce:animate-none">
+                <FileLinksProvider value={{ open: openFile }}>
+                  {/* Once its page is in and shown at its end, not before: it would load one at once. */}
+                  {firstSeq > 1 && (events.at(-1)?.seq ?? 0) >= firstSeq && (
+                    <EarlierMessages
+                      key={firstSeq}
+                      root={scroller}
+                      loading={loadingOlder}
+                      onLoad={loadEarlier}
+                    />
+                  )}
+                  <ThreadItems
+                    threadId={t.id}
+                    items={items}
+                    teammate={t.teammate}
+                    teammates={people}
+                    canApprove={t.mayPrompt}
+                    working={busy}
+                    starting={current === 'starting'}
+                    onOpenPreview={previewLive(preview) ? openPreview : undefined}
+                    onApproval={(approvalId, approved, always) =>
+                      void call('/approvals', {
+                        approvalId,
+                        approved,
+                        ...(always ? { always: true } : {}),
+                      }).catch(() => undefined)
+                    }
+                    onAnswer={(questionId, answer) =>
+                      api(`/threads/${id}/answers`, { body: { questionId, answer } }).then(
+                        () => undefined,
+                      )
+                    }
+                    onChoose={
+                      t.mayPrompt && current !== 'waiting'
+                        ? (text, pick) => deliver(text, [], pick)
+                        : undefined
+                    }
+                    onTicket={(requestId, answer) =>
+                      // Answering may hand control back: show the composer again.
+                      api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
+                        () => void thread.reload(),
+                      )
+                    }
+                    takeover={
+                      t.computer.kind === 'cloud' &&
+                      me.memberId &&
+                      (!t.controlledByMemberId || t.controlledByMemberId === me.memberId)
+                        ? {
+                            mine: t.controlledByMemberId === me.memberId,
+                            open: async () => {
+                              if (t.controlledByMemberId !== me.memberId)
+                                await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
+                              showComputer()
+                            },
+                          }
+                        : undefined
+                    }
+                  />
+                </FileLinksProvider>
+              </div>
+            )}
           </div>
         </div>
 
