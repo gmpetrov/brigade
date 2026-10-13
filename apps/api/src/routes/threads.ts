@@ -8,6 +8,7 @@ import {
   HandBack,
   InterruptThread,
   mentionsToText,
+  messageCommand,
   PreviewAction,
   StartPreview,
   QueuedMessageAction,
@@ -368,7 +369,8 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(404, { message: 'Computer not found' })
     }
     // A thread runs on the starting member's accounts, never anyone else's.
-    const firstLine = mentionsToText(input.text).split('\n')[0]!
+    // The title is what the message is about, not the command it starts with.
+    const firstLine = mentionsToText(messageCommand(input.text)?.rest ?? input.text).split('\n')[0]!
     const projectId = await usableProject(db, input.projectId)
     const { thread, outcome } = await startThread(db, scope, {
       teammate,

@@ -24,6 +24,7 @@ import {
   type QuestionAnswer,
   type SequencedEvent,
   type TicketAnswer,
+  messageCommand,
 } from '@brigade/contracts'
 import {
   AppWindow,
@@ -51,6 +52,7 @@ import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
+import { CommandChip } from '@/components/composer'
 import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
@@ -1072,12 +1074,16 @@ export function ThreadItems({
   const several = teammates.length > 1
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
-      case 'user':
+      case 'user': {
+        // A command it starts with (/design) is a label above it: what was asked for.
+        const asked = messageCommand(item.text)
+        const text = asked ? asked.rest : item.text
         return (
           <div key={item.key} className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
-            {item.text && (
+            {asked && <CommandChip command={asked.command} />}
+            {text && (
               <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
-                <MessageWithCode text={item.text} />
+                <MessageWithCode text={text} />
               </div>
             )}
             {item.attachments.length > 0 && (
@@ -1094,6 +1100,7 @@ export function ThreadItems({
             )}
           </div>
         )
+      }
       case 'assistant': {
         const author = (item.teammateId && byId.get(item.teammateId)) || teammate
         const avatar = avatarOf(author)

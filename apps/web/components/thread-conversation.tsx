@@ -743,7 +743,7 @@ export function ThreadConversation({
                         ? `${answering.name} is working. Messages you send now are queued for after this turn`
                         : people.length > 1
                           ? `Reply to ${answering.name}, or @ a teammate to ask them`
-                          : 'Reply. @ a teammate to bring them in, or a connection, secret or thread'
+                          : 'Reply. @ a teammate to bring them in, or a connection, secret or thread; / for a visual or a design'
                     }
                   />
                   <div className="flex flex-wrap items-center gap-2">
@@ -758,6 +758,10 @@ export function ThreadConversation({
                           @
                         </kbd>
                         a teammate to bring them in, or a connection or thread
+                        <kbd className="ml-1.5 rounded-md bg-secondary px-1.5 font-mono text-foreground">
+                          /
+                        </kbd>
+                        a visual or a design
                       </span>
                     ) : (
                       // Docked there is no room for the hint; the placeholder says it.

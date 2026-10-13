@@ -875,7 +875,7 @@ function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; bes
             rows={2}
             draft={draft}
             autoFocus={focusKey > 0}
-            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret`}
+            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
             onStarted={(thread) => openThread(thread.id)}
           />
         )}

@@ -332,7 +332,8 @@ const VISUALS =
   `When seeing beats reading (variants of a small UI change, a flow, numbers that make a shape), draw it in your reply with \`${SHOW_WIDGET_TOOL}\`. ` +
   `Read \`${WIDGET_GUIDE_TOOL}\` before your first one in a thread. A widget is not kept: what someone will keep, comment on or build from is a design. ` +
   'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
-  'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own.'
+  'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
+  'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
 const PREVIEWS =
   '## Previews\n\n' +

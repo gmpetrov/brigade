@@ -2,6 +2,7 @@
 export * from './api.js'
 export * from './attachments.js'
 export * from './chief.js'
+export * from './commands.js'
 export * from './credentials.js'
 export * from './design.js'
 export * from './events.js'

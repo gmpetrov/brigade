@@ -8,6 +8,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   attachmentLines,
+  commandPrompt,
   mentionedIds,
   MessageAttachment,
   type AgentEvent,
@@ -692,9 +693,14 @@ export class Threads {
     return message.upTo
   }
 
-  /** What the teammate reads: the text, and where the files that came with it are. */
+  /**
+   * What the teammate reads: the text (a command it starts with, in words: a harness
+   * takes a leading `/` for its own), and where the files that came with it are.
+   */
   private promptText(message: Message) {
-    return [message.text, attachmentLines(message.attachments)].filter(Boolean).join('\n\n')
+    return [commandPrompt(message.text), attachmentLines(message.attachments)]
+      .filter(Boolean)
+      .join('\n\n')
   }
 
   private emitQueued(sessionId: string, message: Message, note?: string) {

@@ -2,12 +2,15 @@
 import {
   designFolderOf,
   formatMention,
+  MESSAGE_COMMANDS,
+  messageCommand,
   type DesignSystem,
   parseMentions,
   type Mention,
   type MentionKind,
+  type MessageCommand,
 } from '@brigade/contracts'
-import { Extension, type JSONContent } from '@tiptap/core'
+import { Extension, Node, type JSONContent } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import HardBreak from '@tiptap/extension-hard-break'
 import MentionNode from '@tiptap/extension-mention'
@@ -22,8 +25,10 @@ import {
   useEditor,
   type ReactNodeViewProps,
 } from '@tiptap/react'
-import type { SuggestionProps } from '@tiptap/suggestion'
-import { useEffect, useMemo, useRef } from 'react'
+import { PluginKey } from '@tiptap/pm/state'
+import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
+import { Palette, Shapes } from 'lucide-react'
+import { useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
 import {
@@ -163,11 +168,11 @@ export function searchMentions(options: Option[], query: string) {
   )
 }
 
-type MenuProps = {
-  items: Option[]
+type MenuProps<T = Option> = {
+  items: T[]
   selected: number
   query: string
-  onPick: (option: Option) => void
+  onPick: (option: T) => void
   onHover: (index: number) => void
 }
 
@@ -243,27 +248,30 @@ function MentionView({ node, selected }: ReactNodeViewProps) {
   )
 }
 
-/** The `@` menu: arrows move, Enter or Tab picks, Escape closes. */
-function renderMenu() {
-  let component: ReactRenderer<unknown, MenuProps> | undefined
+/** A suggestion menu (`@`, `/`): arrows move, Enter or Tab picks, Escape closes. */
+function renderMenu<T, P extends object>(
+  Menu: ComponentType<MenuProps<T>>,
+  pick: (props: SuggestionProps<T, P>, item: T) => void,
+) {
+  let component: ReactRenderer<unknown, MenuProps<T>> | undefined
   let unmount: (() => void) | undefined
-  let current: SuggestionProps<Option, Mention>
+  let current: SuggestionProps<T, P>
   let selected = 0
-  const menuProps = (): MenuProps => ({
+  const menuProps = (): MenuProps<T> => ({
     items: current.items,
     selected,
     query: current.query,
-    onPick: ({ kind, id, label }) => current.command({ kind, id, label }),
+    onPick: (item) => pick(current, item),
     onHover: (index) => {
       selected = index
       component?.updateProps(menuProps())
     },
   })
   return {
-    onStart(props: SuggestionProps<Option, Mention>) {
+    onStart(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
-      component = new ReactRenderer(MentionMenu, { props: menuProps(), editor: props.editor })
+      component = new ReactRenderer(Menu, { props: menuProps(), editor: props.editor })
       // Like a chat app's command menu: docked to the composer's frame, full width, above
       // it (below when there's no room above), rather than floating at the caret.
       const editorDom = props.editor.view.dom
@@ -277,7 +285,7 @@ function renderMenu() {
       frame.append(component.element)
       unmount = () => component?.element.remove()
     },
-    onUpdate(props: SuggestionProps<Option, Mention>) {
+    onUpdate(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
       component?.updateProps(menuProps())
@@ -304,26 +312,175 @@ function renderMenu() {
   }
 }
 
-/** Message text, one paragraph per line, mentions as nodes. */
+// -- Commands: `/design`, `/visual` at the start of a message ------------------
+
+const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>> = {
+  visual: Shapes,
+  design: Palette,
+}
+type CommandOption = { name: MessageCommand; label: string; description: string }
+const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([name, c]) => ({
+  name: name as MessageCommand,
+  label: c.label,
+  description: c.description,
+}))
+
+/** A command as the composer and the thread show it. */
+export function CommandChip({
+  command,
+  className,
+}: {
+  command: MessageCommand
+  className?: string
+}) {
+  const Icon = COMMAND_ICON[command]
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md bg-primary/12 px-1.5 py-0.5 align-baseline text-[0.8125rem] leading-none font-medium text-primary',
+        className,
+      )}
+    >
+      <Icon aria-hidden className="size-3.5" />
+      {MESSAGE_COMMANDS[command].label}
+    </span>
+  )
+}
+
+function CommandMenu({ items, selected, query, onPick, onHover }: MenuProps<CommandOption>) {
+  if (!items.length)
+    return (
+      <div className={menuClass}>
+        <p className="px-2 py-1.5 text-sm text-muted-foreground">No command “/{query}”</p>
+      </div>
+    )
+  return (
+    <div className={menuClass} role="listbox">
+      <div className="px-2 pt-2 pb-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        Make
+      </div>
+      {items.map((o, i) => {
+        const Icon = COMMAND_ICON[o.name]
+        return (
+          <button
+            key={o.name}
+            type="button"
+            role="option"
+            aria-selected={i === selected}
+            className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-primary/15 aria-selected:shadow-[inset_2px_0_0_var(--primary)]"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              onPick(o)
+            }}
+            onMouseMove={() => i !== selected && onHover(i)}
+          >
+            <Icon
+              aria-hidden
+              className="size-4 text-muted-foreground group-aria-selected:text-primary"
+            />
+            <span className="font-medium">/{o.name}</span>
+            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {o.description}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function CommandView({ node, selected }: ReactNodeViewProps) {
+  return (
+    <NodeViewWrapper as="span">
+      <CommandChip
+        command={node.attrs.name as MessageCommand}
+        className={selected ? 'outline-2 outline-offset-1 outline-primary' : undefined}
+      />
+    </NodeViewWrapper>
+  )
+}
+
+/** The command a message starts with, as one piece: it reads `/design` in the text. */
+const CommandNode = Node.create({
+  name: 'command',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes: () => ({ name: { default: 'design' } }),
+  parseHTML: () => [{ tag: 'span[data-command]' }],
+  renderHTML: ({ node }) => ['span', { 'data-command': node.attrs.name }, `/${node.attrs.name}`],
+  renderText: ({ node }) => `/${node.attrs.name}`,
+  addNodeView() {
+    return ReactNodeViewRenderer(CommandView, { as: 'span' })
+  },
+})
+
+/** `/` at the very start of a message opens the commands. */
+const Commands = Extension.create({
+  name: 'messageCommands',
+  addProseMirrorPlugins() {
+    return [
+      Suggestion<CommandOption, CommandOption>({
+        editor: this.editor,
+        pluginKey: new PluginKey('messageCommands'),
+        char: '/',
+        startOfLine: true,
+        // Only first in the message, and once.
+        allow: ({ state, range }) => {
+          if (range.from !== 1) return false
+          let has = false
+          state.doc.descendants((n) => {
+            if (n.type.name === 'command') has = true
+            return !has
+          })
+          return !has
+        },
+        items: ({ query }) => COMMAND_OPTIONS.filter((c) => c.name.startsWith(query.toLowerCase())),
+        command: ({ editor, range, props }) => {
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(range, [
+              { type: 'command', attrs: { name: props.name } },
+              { type: 'text', text: ' ' },
+            ])
+            .run()
+        },
+        render: () =>
+          renderMenu<CommandOption, CommandOption>(CommandMenu, (p, item) => p.command(item)),
+      }),
+    ]
+  },
+})
+
+/** Message text, one paragraph per line, mentions (and a command it starts with) as nodes. */
 function toDoc(text: string): JSONContent {
-  return {
-    type: 'doc',
-    content: text.split('\n').map((line) => ({
-      type: 'paragraph',
-      content: parseMentions(line)
-        .filter((part) => part !== '')
-        .map((part) =>
-          typeof part === 'string'
-            ? { type: 'text', text: part }
-            : { type: 'mention', attrs: { ...part, mentionSuggestionChar: '@' } },
-        ),
-    })),
-  }
+  const found = messageCommand(text)
+  const body = found ? found.rest : text
+  const lines = body.split('\n').map((line) => ({
+    type: 'paragraph',
+    content: parseMentions(line)
+      .filter((part) => part !== '')
+      .map((part): JSONContent =>
+        typeof part === 'string'
+          ? { type: 'text', text: part }
+          : { type: 'mention', attrs: { ...part, mentionSuggestionChar: '@' } },
+      ),
+  }))
+  if (found)
+    lines[0]!.content = [
+      { type: 'command', attrs: { name: found.command } },
+      { type: 'text', text: ' ' },
+      ...lines[0]!.content,
+    ]
+  return { type: 'doc', content: lines }
 }
 
 /**
  * A message box where `@` mentions teammates, connections, repositories, library files,
- * credentials, threads and computers. Its value is plain text; mentions are `@[Label](kind:id)` in it.
+ * credentials, threads and computers, and `/` first in it picks a command (what to make).
+ * Its value is plain text; mentions are `@[Label](kind:id)` in it, a command `/name` first.
  * Mentioning a credential lets the thread's teammate use it there.
  */
 export function Composer({
@@ -392,9 +549,14 @@ export function Composer({
         suggestion: {
           char: '@',
           items: ({ query }) => searchMentions(latest.current.options, query),
-          render: renderMenu,
+          render: () =>
+            renderMenu<Option, Mention>(MentionMenu, (p, { kind, id, label }) =>
+              p.command({ kind, id, label }),
+            ),
         },
       }),
+      CommandNode,
+      Commands,
       Extension.create({
         name: 'submit',
         addKeyboardShortcuts: () => ({
