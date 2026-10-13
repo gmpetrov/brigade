@@ -24,7 +24,7 @@ say "Building shared packages"
 
 say "Starting PostgreSQL"
 mkdir -p "$DATA"
-trap 'kill $(jobs -p) 2>/dev/null; wait' EXIT
+trap 'kill $(jobs -p) 2>/dev/null || true; wait' EXIT
 start_db
 
 say "Applying migrations"
