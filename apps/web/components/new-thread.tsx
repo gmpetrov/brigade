@@ -105,6 +105,27 @@ export function useLastTeammate() {
   ] as const
 }
 
+const LAST_PROJECT = 'brigade.home.project'
+
+/** The project new threads went in last ("none" for none), remembered per browser. */
+function useLastProject() {
+  const [id, setId] = useState<string>()
+  useEffect(() => {
+    try {
+      setId(localStorage.getItem(LAST_PROJECT) ?? undefined)
+    } catch {}
+  }, [])
+  return [
+    id,
+    (next: string) => {
+      setId(next)
+      try {
+        localStorage.setItem(LAST_PROJECT, next)
+      } catch {}
+    },
+  ] as const
+}
+
 /**
  * What a new thread is being written with: its message, files, computer and account.
  * Held by whoever owns it, so it outlives the box (the quick thread dialog closing).
@@ -147,9 +168,20 @@ export function NewThread({
 }) {
   const router = useRouter()
   const { projects } = useDashboard()
-  const [projectId, setProjectId] = useState(initialProject ?? 'none')
-  useEffect(() => setProjectId(initialProject ?? 'none'), [initialProject])
   const pickable = projects.filter((p) => !p.archivedAt)
+  // A project page's own project first; else the one picked last, while it is still pickable.
+  const [last, remember] = useLastProject()
+  const [picked, setPicked] = useState<string>()
+  useEffect(() => setPicked(undefined), [initialProject])
+  const projectId =
+    picked ?? initialProject ?? (last && pickable.some((p) => p.id === last) ? last : 'none')
+  const chosenProject = pickable.find((p) => p.id === projectId)
+  const setProjectId = (next: string) => {
+    // Radix Select sometimes reports "" on its own; that is no choice.
+    if (!next) return
+    setPicked(next)
+    remember(next)
+  }
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
   const own = useThreadDraft()
@@ -260,8 +292,17 @@ export function NewThread({
           {pickable.length > 0 && (
             <Select value={projectId} onValueChange={setProjectId}>
               <SelectTrigger size="sm" aria-label="Project" className={cn(quietSelect, 'max-w-48')}>
-                {projectId === 'none' && <FolderKanban aria-hidden />}
-                <SelectValue />
+                {/* Written out: SelectValue misses a value set once the projects have loaded. */}
+                <SelectValue asChild>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {chosenProject ? (
+                      <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
+                    ) : (
+                      <FolderKanban aria-hidden />
+                    )}
+                    <span className="truncate">{chosenProject?.name ?? 'No project'}</span>
+                  </span>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No project</SelectItem>
