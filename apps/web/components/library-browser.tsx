@@ -774,7 +774,7 @@ function LibraryFilePanel({
   // Markdown edits in the editor; other text files here.
   const editable = file.editable && file.contentType !== 'text/markdown'
   return (
-    <SidePanel aria-label={`File ${file.path}`} onClose={onClose}>
+    <SidePanel aria-label={`File ${file.path}`} onClose={onClose} raiseKey={file.id}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">

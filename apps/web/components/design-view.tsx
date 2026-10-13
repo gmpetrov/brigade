@@ -817,6 +817,7 @@ export function DesignPanel({
     <SidePanel
       aria-label={`Design ${title}`}
       onClose={onClose}
+      raiseKey={folder}
       // Expanded over the whole page; the same element, so the page keeps its state.
       className={cn(
         expanded &&

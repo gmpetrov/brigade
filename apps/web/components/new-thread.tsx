@@ -2,7 +2,7 @@
 import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -41,6 +42,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { useIsMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -131,6 +133,8 @@ export function TeammatePicker({
   activity,
   recent,
   compact = false,
+  numbered = false,
+  onPicked,
 }: {
   teammates: Teammate[]
   value: Teammate
@@ -146,9 +150,14 @@ export function TeammatePicker({
   recent?: RecentThreadActions
   /** The avatar alone on the button, where there is no room for the name. */
   compact?: boolean
+  /** 1–9 pick the first nine while the menu is open, shown beside each. */
+  numbered?: boolean
+  /** Where focus goes once the menu closes, instead of back to its button. */
+  onPicked?: () => void
 }) {
+  const [open, setOpen] = useState(false)
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
@@ -163,9 +172,25 @@ export function TeammatePicker({
           <ChevronDown className="opacity-60" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent
+        align="start"
+        className="w-64"
+        onCloseAutoFocus={(e) => {
+          if (!onPicked) return
+          e.preventDefault()
+          onPicked()
+        }}
+        onKeyDown={(e) => {
+          if (!numbered || recent || e.metaKey || e.ctrlKey || e.altKey) return
+          const picked = /^[1-9]$/.test(e.key) ? teammates[Number(e.key) - 1] : undefined
+          if (!picked) return
+          e.preventDefault()
+          onChange(picked.id)
+          setOpen(false)
+        }}
+      >
         <DropdownMenuLabel className="text-xs text-muted-foreground">{heading}</DropdownMenuLabel>
-        {teammates.map((t) => {
+        {teammates.map((t, i) => {
           const row = (
             <>
               <TeammateAvatar teammate={t} className="size-7" />
@@ -177,6 +202,11 @@ export function TeammatePicker({
               </span>
               <ActivityDot activity={activity?.[t.id]} />
               {t.id === value.id && <Check className="text-primary" aria-hidden />}
+              {numbered && !recent && i < 9 && (
+                <DropdownMenuShortcut className="ml-0 w-3 text-center">
+                  {i + 1}
+                </DropdownMenuShortcut>
+              )}
             </>
           )
           return recent ? (
@@ -267,19 +297,30 @@ export function NewThread({
   onStarted,
   autoFocus,
   projectId: initialProject,
+  layout = 'card',
 }: {
   /** The project the thread starts in unless changed, e.g. on a project page. */
   projectId?: string
   teammate: Teammate
-  picker?: { teammates: Teammate[]; onChange: (id: string) => void }
+  picker?: {
+    teammates: Teammate[]
+    onChange: (id: string) => void
+    /** A dot beside each teammate that is working or waiting. */
+    activity?: Record<string, TeammateActivity>
+    /** 1–9 pick a teammate while its menu is open. */
+    numbered?: boolean
+  }
   placeholder?: string
   rows?: number
   draft?: ThreadDraft
   onStarted?: (thread: { id: string }) => void
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
+  /** In a card (a page, the threads panel), or the whole of a dialog. */
+  layout?: 'card' | 'dialog'
 }) {
   const router = useRouter()
+  const mac = useIsMac()
   const { projects } = useDashboard()
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
@@ -369,6 +410,158 @@ export function NewThread({
       </>
     )
 
+  // In a dialog, picking who or where puts the cursor back in the message.
+  const form = useRef<HTMLFormElement>(null)
+  const focusMessage = () =>
+    form.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus()
+  const uploads = <UploadList uploads={files.uploads} onRemove={files.remove} />
+  const composer = (
+    <Composer
+      bare
+      rows={rows}
+      value={text}
+      onChange={setText}
+      onSubmit={() => void start()}
+      disabled={busy}
+      autoFocus={autoFocus}
+      placeholder={
+        placeholder ??
+        `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or secret`
+      }
+    />
+  )
+  const teammatePicker = picker && (
+    <TeammatePicker
+      teammates={picker.teammates}
+      value={teammate}
+      onChange={picker.onChange}
+      activity={picker.activity}
+      numbered={picker.numbered}
+      onPicked={layout === 'dialog' ? focusMessage : undefined}
+    />
+  )
+  const projectPicker = pickable.length > 0 && (
+    <Select value={projectId} onValueChange={setProjectId}>
+      <SelectTrigger size="sm" aria-label="Project" className={cn(quietSelect, 'max-w-48')}>
+        {/* Written out: SelectValue misses a value set once the projects have loaded. */}
+        <SelectValue asChild>
+          <span className="flex min-w-0 items-center gap-2">
+            {chosenProject ? (
+              <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
+            ) : (
+              <FolderKanban aria-hidden />
+            )}
+            <span className="truncate">{chosenProject?.name ?? 'No project'}</span>
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent
+        onCloseAutoFocus={(e) => {
+          if (layout !== 'dialog') return
+          e.preventDefault()
+          focusMessage()
+        }}
+      >
+        <SelectItem value="none">No project</SelectItem>
+        <SelectSeparator />
+        {pickable.map((p) => (
+          <SelectItem key={p.id} value={p.id}>
+            <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+            {p.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+  const where = (
+    <>
+      {online.length > 1 && (
+        <Select value={computer?.id} onValueChange={setComputerId}>
+          <SelectTrigger size="sm" aria-label="Run on" className={quietSelect}>
+            <Monitor aria-hidden />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {online.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {computerName(c)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {usable.length > 1 && (
+        <Select key={computer?.id} value={account?.id} onValueChange={setAccountId}>
+          <SelectTrigger size="sm" aria-label="Account" className={cn(quietSelect, 'max-w-60')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {usable.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.label}
+                {a.email ? ` (${a.email})` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </>
+  )
+  const send = (
+    <Button size="sm" className="ml-auto" disabled={busy || !ready}>
+      {busy ? 'Starting…' : 'Send'}
+      <ArrowRight aria-hidden />
+    </Button>
+  )
+  const message = (error || notice) && (
+    <p className={cn('px-1 text-sm', error ? 'text-destructive-text' : 'text-muted-foreground')}>
+      {error ?? notice}
+    </p>
+  )
+
+  // The dialog is the box: who and where read as a sentence above the message, the
+  // rest below it, with no card of its own inside the dialog's.
+  if (layout === 'dialog')
+    return (
+      <form
+        ref={form}
+        onSubmit={(e) => void start(e)}
+        // The mention menu docks to the whole box, above or below it.
+        data-composer-frame
+        className={cn(
+          'relative flex flex-col rounded-[inherit]',
+          drop.dragging && 'ring-[3px] ring-primary/30 ring-inset',
+        )}
+        {...drop.props}
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-1 px-3 py-2 text-sm text-muted-foreground">
+          <span className="pl-1">New thread for</span>
+          {teammatePicker ?? <span className="font-semibold text-foreground">{teammate.name}</span>}
+          {projectPicker && (
+            <>
+              <span>in</span>
+              {projectPicker}
+            </>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 border-t px-4 py-3">
+          {uploads}
+          {composer}
+        </div>
+        {message && <div className="px-3 pb-2">{message}</div>}
+        <div className="flex flex-wrap items-center gap-1 border-t px-3 py-2">
+          <AttachButton onFiles={files.add} />
+          {where}
+          <div className="ml-auto flex items-center gap-3">
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              esc to close · {mac ? '⌘' : 'Ctrl+'}↵ to send
+            </span>
+            {send}
+          </div>
+        </div>
+      </form>
+    )
+
   return (
     <form onSubmit={(e) => void start(e)} className="flex flex-col gap-2">
       <Card
@@ -379,99 +572,17 @@ export function NewThread({
         )}
         {...drop.props}
       >
-        <UploadList uploads={files.uploads} onRemove={files.remove} />
-        <Composer
-          bare
-          rows={rows}
-          value={text}
-          onChange={setText}
-          onSubmit={() => void start()}
-          disabled={busy}
-          autoFocus={autoFocus}
-          placeholder={
-            placeholder ??
-            `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or secret`
-          }
-        />
+        {uploads}
+        {composer}
         <div className="flex flex-wrap items-center gap-1">
-          {picker && (
-            <TeammatePicker
-              teammates={picker.teammates}
-              value={teammate}
-              onChange={picker.onChange}
-            />
-          )}
+          {teammatePicker}
           <AttachButton onFiles={files.add} />
-          {pickable.length > 0 && (
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger size="sm" aria-label="Project" className={cn(quietSelect, 'max-w-48')}>
-                {/* Written out: SelectValue misses a value set once the projects have loaded. */}
-                <SelectValue asChild>
-                  <span className="flex min-w-0 items-center gap-2">
-                    {chosenProject ? (
-                      <ProjectIcon project={chosenProject} className="size-4 text-[0.625rem]" />
-                    ) : (
-                      <FolderKanban aria-hidden />
-                    )}
-                    <span className="truncate">{chosenProject?.name ?? 'No project'}</span>
-                  </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No project</SelectItem>
-                <SelectSeparator />
-                {pickable.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {online.length > 1 && (
-            <Select value={computer?.id} onValueChange={setComputerId}>
-              <SelectTrigger size="sm" aria-label="Run on" className={quietSelect}>
-                <Monitor aria-hidden />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {online.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {computerName(c)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {usable.length > 1 && (
-            <Select key={computer?.id} value={account?.id} onValueChange={setAccountId}>
-              <SelectTrigger size="sm" aria-label="Account" className={cn(quietSelect, 'max-w-60')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {usable.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.label}
-                    {a.email ? ` (${a.email})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button size="sm" className="ml-auto" disabled={busy || !ready}>
-            {busy ? 'Starting…' : 'Send'}
-            <ArrowRight aria-hidden />
-          </Button>
+          {projectPicker}
+          {where}
+          {send}
         </div>
       </Card>
-      {(error || notice) && (
-        <p
-          className={cn('px-1 text-sm', error ? 'text-destructive-text' : 'text-muted-foreground')}
-        >
-          {error ?? notice}
-        </p>
-      )}
+      {message}
     </form>
   )
 }

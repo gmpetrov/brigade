@@ -31,6 +31,7 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
     items: [
       { label: 'Search', keys: [['mod', 'K']] },
       { label: 'New thread', keys: [['mod', 'shift', 'K']] },
+      { label: 'Show or hide threads', keys: [['mod', 'J']] },
       { label: 'Toggle the sidebar', keys: [['mod', 'B']] },
       { label: 'Keyboard shortcuts', keys: [['shift', '?']] },
       { label: 'Close a dialog', keys: [['Esc']] },

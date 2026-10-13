@@ -29,6 +29,7 @@ import { HelpMenu } from '@/components/help-menu'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchButton, SearchDialog } from '@/components/search'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { QuickThread } from '@/components/quick-thread'
 import { ThreadPanel, ThreadPanelProvider, useThreadPanel } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -655,6 +656,7 @@ function Inset({ children }: { children: ReactNode }) {
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />
+      <QuickThread />
       <DocumentPanel />
       {/* A computer's screen takes the whole page, edge to edge. */}
       <div

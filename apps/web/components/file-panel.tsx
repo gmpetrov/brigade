@@ -101,7 +101,7 @@ function ThreadFilePanel({
   const pdf = file?.contentType === 'application/pdf' ? own : undefined
 
   return (
-    <SidePanel aria-label={`File ${shown}`} onClose={onClose}>
+    <SidePanel aria-label={`File ${shown}`} onClose={onClose} raiseKey={shown}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">

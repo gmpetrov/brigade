@@ -3,8 +3,18 @@
 // computer. Fixed to the right on wide screens (the page makes room for it,
 // see globals.css), a sheet from the bottom on narrow ones. Its width is one
 // --desktop-w for all of them: drag the left edge to change it, double-click
-// to reset; remembered in this browser. Escape closes it.
-import { useEffect, useRef, type ComponentProps, type ReactNode, type RefObject } from 'react'
+// to reset; remembered in this browser. Escape closes it. Panels open together
+// share the right edge: the last one opened, or brought forward, is on top.
+import {
+  useEffect,
+  useId,
+  useRef,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { cn } from '@/lib/utils'
 
 const WIDTH_KEY = 'brigade:panel-width'
@@ -98,6 +108,62 @@ export function PanelResizeHandle() {
   )
 }
 
+/** The panels beside the page, bottom to top. */
+let stack: string[] = []
+const listeners = new Set<() => void>()
+function setStack(next: string[]) {
+  stack = next
+  for (const listener of listeners) listener()
+}
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => void listeners.delete(listener)
+}
+const readStack = () => stack
+const NO_PANELS: string[] = []
+
+/** Brings an open panel in front of the others; opening one already does. */
+export function raisePanel(name: string) {
+  if (stack.includes(name) && stack.at(-1) !== name)
+    setStack([...stack.filter((p) => p !== name), name])
+}
+
+/** Whether the panel is open and on top. */
+export function panelInFront(name: string) {
+  return stack.at(-1) === name
+}
+
+/** The same, kept up to date. */
+export function usePanelInFront(name: string) {
+  return useSyncExternalStore(subscribe, readStack, () => NO_PANELS).at(-1) === name
+}
+
+/**
+ * A panel's place in the stack while it is open (`stacked`): its z-index, from
+ * --panel-z beside the page and --sheet-z as a sheet on narrow screens, and
+ * whether it is on top. It comes in front as it opens, and each time `raiseKey`
+ * changes.
+ */
+export function usePanelStack(stacked = true, name?: string, raiseKey?: unknown) {
+  const generated = useId()
+  const id = name ?? generated
+  useEffect(() => {
+    if (!stacked) return
+    setStack([...stack.filter((p) => p !== id), id])
+    return () => setStack(stack.filter((p) => p !== id))
+  }, [stacked, id])
+  useEffect(() => {
+    if (stacked) raisePanel(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raiseKey])
+  const order = useSyncExternalStore(subscribe, readStack, () => NO_PANELS)
+  const rank = Math.min(Math.max(order.indexOf(id), 0), 8)
+  return {
+    front: stacked && order.at(-1) === id,
+    style: { '--panel-z': 10 + rank, '--sheet-z': 40 + rank } as CSSProperties,
+  }
+}
+
 /** Menus, popovers and dialogs that take Escape first: the editor's, the dashboard's. */
 const OPEN_LAYER =
   '.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-panel, .bn-menu-dropdown, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
@@ -151,15 +217,23 @@ export function SidePanel({
   children,
   onClose,
   expanded = false,
+  name,
+  raiseKey,
+  style,
   ...props
 }: ComponentProps<'aside'> & {
   children: ReactNode
-  /** Escape calls it. */
+  /** Escape calls it, while it is on top. */
   onClose?: () => void
   expanded?: boolean
+  /** For raisePanel. */
+  name?: string
+  /** Changes each time what it shows does: it comes in front again. */
+  raiseKey?: unknown
 }) {
   const panel = useRef<HTMLElement>(null)
-  useEscapeToClose(panel, onClose)
+  const stack = usePanelStack(!expanded, name, raiseKey)
+  useEscapeToClose(panel, stack.front ? onClose : undefined)
   return (
     <aside
       ref={panel}
@@ -169,11 +243,12 @@ export function SidePanel({
         expanded
           ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
           : [
-              'fixed inset-x-0 bottom-0 z-40 flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
-              'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-10 xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
+              'fixed inset-x-0 bottom-0 z-(--sheet-z) flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
+              'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-(--panel-z) xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
             ],
         className,
       )}
+      style={expanded ? style : { ...stack.style, ...style }}
       {...props}
     >
       {!expanded && <PanelResizeHandle />}

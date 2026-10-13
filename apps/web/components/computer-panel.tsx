@@ -13,7 +13,7 @@ import type { OpenFile } from '@/components/file-links'
 import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
-import { PanelResizeHandle, useEscapeToClose } from '@/components/side-panel'
+import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import {
   api,
@@ -63,12 +63,14 @@ function Frame({
   children: ReactNode
 }) {
   const panel = useRef<HTMLElement>(null)
-  useEscapeToClose(panel, onEscape)
+  const stack = usePanelStack()
+  useEscapeToClose(panel, stack.front ? onEscape : undefined)
   return (
     <aside
       ref={panel}
       data-desktop-panel
-      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-10 xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
+      style={stack.style}
+      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-(--panel-z) xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
       aria-label={`About ${teammate.name}`}
     >
       <PanelResizeHandle />

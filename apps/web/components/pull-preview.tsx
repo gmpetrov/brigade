@@ -10,8 +10,15 @@ import { AppWindow, LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { PHASE, PreviewPanel, previewLive, previewPhase } from '@/components/preview-panel'
+import {
+  PHASE,
+  PREVIEW_PANEL,
+  PreviewPanel,
+  previewLive,
+  previewPhase,
+} from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
+import { panelInFront, raisePanel, usePanelInFront } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -50,6 +57,8 @@ export function PullPreview({
   const sessionId = pull.tracking?.sessionId ?? undefined
   const [state, setState] = useState<ThreadPreviewState>()
   const [open, setOpen] = useState(false)
+  // Open behind the threads panel, it is not what shows.
+  const inFront = usePanelInFront(PREVIEW_PANEL)
   // Started or asked for: the panel opens once it starts.
   const [awaiting, setAwaiting] = useState(false)
   const [asked, setAsked] = useState<string>()
@@ -105,7 +114,7 @@ export function PullPreview({
 
   function onClick() {
     setError(undefined)
-    if (open) return setOpen(false)
+    if (open) return panelInFront(PREVIEW_PANEL) ? setOpen(false) : raisePanel(PREVIEW_PANEL)
     if (live) return setOpen(true)
     if (!sessionId) return setPicking(true)
     if (preview) setOpen(true)
@@ -117,7 +126,7 @@ export function PullPreview({
     <>
       <Button
         variant="outline"
-        aria-pressed={open}
+        aria-pressed={open && inFront}
         disabled={start.busy}
         onClick={onClick}
         title={live ? 'Try the change beside the pull request' : 'Run the change to try it here'}

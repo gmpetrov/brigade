@@ -6,7 +6,8 @@
 // a reload. Expanded, it takes the page's place: that is the thread's own
 // address (/app/threads/<id>, the list at /app/threads), so links to a thread
 // open it there; docking it again goes back to the page you were on.
-// ⌘⇧K (Ctrl+Shift+K) opens it on the list with the cursor in the box.
+// ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
+// ⌘⇧K starts a thread without it (components/quick-thread.tsx).
 import {
   ArrowLeft,
   List,
@@ -43,7 +44,13 @@ import {
   type TeammateActivity,
   type ThreadDraft,
 } from '@/components/new-thread'
-import { SidePanel, useEscapeToClose } from '@/components/side-panel'
+import {
+  panelInFront,
+  raisePanel,
+  SidePanel,
+  useEscapeToClose,
+  usePanelInFront,
+} from '@/components/side-panel'
 import {
   EarlierMessages,
   JumpToEnd,
@@ -111,6 +118,8 @@ type ThreadPanel = {
 
 const Context = createContext<ThreadPanel | null>(null)
 const OPEN_KEY = 'brigade:threads-panel'
+/** Its name among the panels beside a page. */
+const PANEL = 'threads'
 
 /** Whether the panel was open, and on which thread, when this browser last left it. */
 function readSaved(): { open: boolean; threadId: string | null } {
@@ -166,6 +175,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       if (!options.threadId) chooseTeammate(teammate)
       setDocked(options.threadId ?? null)
       setOpen(true)
+      raisePanel(PANEL)
       setShell(!!options.shell)
       router.push(`/app/teammates/${teammate}/computer`)
     },
@@ -203,6 +213,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const dock = useCallback(() => {
     setDocked(routed ?? null)
     setOpen(true)
+    raisePanel(PANEL)
     router.push(lastPage.current ?? '/app')
   }, [routed, router])
   const close = useCallback(() => {
@@ -218,6 +229,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       else {
         setDocked(id)
         setOpen(true)
+        raisePanel(PANEL)
       }
     },
     [expanded, router],
@@ -235,26 +247,34 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     } else {
       setDocked(null)
       setOpen(true)
+      // In front of a preview or a file the page opened.
+      raisePanel(PANEL)
     }
     setFocusKey((k) => k + 1)
   }, [expanded, routed, router])
-  const toggle = useCallback(() => setOpen((o) => !o), [])
+  // Open behind another panel, it comes in front instead of closing.
+  const toggle = useCallback(() => {
+    if (open && !expanded && !panelInFront(PANEL)) raisePanel(PANEL)
+    else setOpen((o) => !o)
+  }, [open, expanded])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Taken already: the terminal, the remote desktop.
       if (e.defaultPrevented || e.repeat) return
-      // ⌘K alone is search.
       const command = isMac() ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
-      const shortcut = command && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k'
+      const shortcut = command && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'j'
       // Not over a dialog.
       if (!shortcut || document.querySelector('[role=dialog][data-state=open]')) return
+      // Ctrl+J is the browser's downloads elsewhere.
       e.preventDefault()
-      startThread()
+      // Expanded, it hides back to the page it came from.
+      if (expanded) close()
+      else toggle()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [startThread])
+  }, [expanded, close, toggle])
 
   // Every thread, for what each teammate is doing and what waits; live.
   const threads = useApi<ThreadSummary[]>('/threads')
@@ -335,18 +355,23 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
 
 /** The top bar's button: opens and closes the panel; counts the threads waiting on a person. */
 export function ThreadsButton({ className }: { className?: string }) {
-  const { visible, toggle, waiting, activity } = useThreadPanel()
+  const { visible, expanded, toggle, waiting, activity } = useThreadPanel()
   const working = Object.values(activity).includes('busy')
-  const label = visible ? 'Hide threads' : 'Threads'
+  // Behind a preview or a file, it is not what shows.
+  const inFront = usePanelInFront(PANEL)
+  const shown = visible && (expanded || inFront)
+  const label = shown ? 'Hide threads' : 'Threads'
+  const mac = useIsMac()
   return (
     <Button
       type="button"
       variant="outline"
       size="icon"
-      aria-pressed={visible}
+      aria-pressed={shown}
       onClick={toggle}
       aria-label={waiting > 0 ? `${label}, ${waiting} waiting on a person` : label}
-      title={label}
+      aria-keyshortcuts={mac ? 'Meta+J' : 'Control+J'}
+      title={`${label} (${mac ? '⌘' : 'Ctrl+'}J)`}
       className={cn(
         'relative aria-pressed:bg-accent aria-pressed:text-accent-foreground',
         className,
@@ -409,6 +434,7 @@ export function ThreadPanel() {
   return (
     <SidePanel
       aria-label="Threads"
+      name={PANEL}
       data-thread-panel
       expanded={expanded}
       onClose={expanded ? undefined : panel.close}

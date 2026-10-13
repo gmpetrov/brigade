@@ -29,6 +29,9 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SidePanel } from '@/components/side-panel'
+
+/** The preview's name among the panels beside a page. */
+export const PREVIEW_PANEL = 'preview'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -241,7 +244,7 @@ export function PreviewPanel({
   const failedPages = preview.check?.failed ?? []
 
   return (
-    <SidePanel aria-label="Preview" onClose={onClose}>
+    <SidePanel aria-label="Preview" name={PREVIEW_PANEL} onClose={onClose}>
       <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
         <AppWindow aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col">
