@@ -216,34 +216,61 @@
     }
   }
 
-  /* The app's loader: the wordmark, a light in the brand colour passing over it
-   * (components/app-loader.tsx). Plain for those who ask for less motion. */
-  .wordmark-shimmer {
-    background: linear-gradient(
-        100deg,
-        var(--muted-foreground) 35%,
-        var(--foreground) 48%,
-        var(--primary) 52%,
-        var(--muted-foreground) 65%
-      )
-      0 0 / 250% 100%;
-    background-clip: text;
-    color: transparent;
-    animation: wordmark-shimmer 2.2s linear infinite;
+  /* The app's loader: the wordmark, its letters coming into focus one by one, left
+   * to right, then blurring out (components/app-loader.tsx). The spans must be
+   * inline-block for transform to apply. Still and muted for less motion. */
+  .loader-blur {
+    color: var(--foreground);
   }
-  @keyframes wordmark-shimmer {
-    from {
-      background-position: 100% 0;
+  .loader-blur span {
+    display: inline-block;
+    animation: blur-in 2.8s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  }
+  .loader-blur span:nth-child(2) {
+    animation-delay: 0.07s;
+  }
+  .loader-blur span:nth-child(3) {
+    animation-delay: 0.14s;
+  }
+  .loader-blur span:nth-child(4) {
+    animation-delay: 0.21s;
+  }
+  .loader-blur span:nth-child(5) {
+    animation-delay: 0.28s;
+  }
+  .loader-blur span:nth-child(6) {
+    animation-delay: 0.35s;
+  }
+  .loader-blur span:nth-child(7) {
+    animation-delay: 0.42s;
+  }
+  @keyframes blur-in {
+    0% {
+      opacity: 0;
+      filter: blur(8px);
+      transform: translateY(6px);
     }
-    to {
-      background-position: -50% 0;
+    25%,
+    70% {
+      opacity: 1;
+      filter: none;
+      transform: none;
+    }
+    90%,
+    100% {
+      opacity: 0;
+      filter: blur(6px);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .wordmark-shimmer {
-      animation: none;
-      background: none;
+    .loader-blur {
       color: var(--muted-foreground);
+    }
+    .loader-blur span {
+      animation: none;
+      opacity: 1;
+      filter: none;
+      transform: none;
     }
   }
 
