@@ -216,6 +216,37 @@
     }
   }
 
+  /* A loading placeholder a faint light passes over (components/thread-skeleton.tsx).
+   * Still for those who ask for less motion. */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--primary) 14%, transparent),
+      transparent
+    );
+    animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  }
+  @keyframes skeleton-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer::after {
+      animation: none;
+      display: none;
+    }
+  }
+
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
   .composer-input p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);

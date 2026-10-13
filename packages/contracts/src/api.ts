@@ -217,12 +217,14 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
    * A thread followed by its tail: events before `firstSeq` are not replayed
    * (GET /threads/:id/events?before= pages them in). `context` holds the few of
    * them the whole thread needs: what it made, its preview, usage, open asks.
+   * `lastSeq` is the last event replayed after it: once in, the thread has loaded.
    */
   z.object({
     type: z.literal('history'),
     sessionId: z.string(),
     firstSeq: z.number().int().positive(),
     context: z.array(SequencedEvent),
+    lastSeq: z.number().int().min(0).optional(),
   }),
   z.object({
     type: z.literal('thread.updated'),

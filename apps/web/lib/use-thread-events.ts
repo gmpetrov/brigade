@@ -24,12 +24,17 @@ function known(e: unknown): unknown {
  * after every reconnect from the last contiguous sequence number seen.
  * `firstSeq` is the oldest event loaded in order: `events` also holds a few
  * older ones the whole thread needs (its context); `loadOlder` pages in more.
+ * `loaded` turns true once its latest page is in; `reconnect` tries again at once.
  */
 export function useThreadEvents(sessionId: string, onStatus?: (status: string) => void) {
   const [events, setEvents] = useState<SequencedEvent[]>([])
   const [connected, setConnected] = useState(false)
   const [firstSeq, setFirstSeq] = useState(1)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  // The last event of the latest page, from its `history`: in, the thread has loaded.
+  const pageEnd = useRef<number>(undefined)
+  const reconnectRef = useRef<() => void>(() => undefined)
   const bySeq = useRef(new Map<number, SequencedEvent>())
   const first = useRef(1)
   const loading = useRef(false)
@@ -46,6 +51,7 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
       changed = true
     }
     if (changed) setEvents([...bySeq.current.values()].sort((a, b) => a.seq - b.seq))
+    if (pageEnd.current !== undefined && bySeq.current.has(pageEnd.current)) setLoaded(true)
   }, [])
   const begin = (seq: number) => {
     first.current = seq
@@ -55,7 +61,9 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
   useEffect(() => {
     thread.current = sessionId
     bySeq.current = new Map()
+    pageEnd.current = undefined
     setEvents([])
+    setLoaded(false)
     begin(1)
     let socket: WebSocket | undefined
     let retry: ReturnType<typeof setTimeout> | undefined
@@ -95,6 +103,10 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
         if (data.type === 'events') add(data.events)
         else if (data.type === 'history' && data.sessionId === sessionId) {
           begin(data.firstSeq)
+          // An empty thread, or an API too old to say where the page ends: loaded now.
+          const end = data.lastSeq ?? 0
+          pageEnd.current = end
+          if (end < data.firstSeq) setLoaded(true)
           add(data.context)
         } else if (data.type === 'thread.updated' && data.sessionId === sessionId) {
           statusRef.current?.(data.status)
@@ -108,6 +120,19 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
       }
     }
     connect()
+    // Tried again now, not after the backoff: a connection that hangs is dropped first.
+    reconnectRef.current = () => {
+      clearTimeout(retry)
+      delay = 500
+      const old = socket
+      if (old) {
+        old.onclose = null
+        old.onmessage = null
+        old.close()
+      }
+      setConnected(false)
+      connect()
+    }
     return () => {
       stopped = true
       clearTimeout(retry)
@@ -141,5 +166,7 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
     [sessionId, add],
   )
 
-  return { events, connected, firstSeq, loadOlder, loadingOlder }
+  const reconnect = useCallback(() => reconnectRef.current(), [])
+
+  return { events, connected, firstSeq, loadOlder, loadingOlder, loaded, reconnect }
 }
