@@ -80,10 +80,12 @@ export const previewReady = (p: Pick<PreviewInfo, 'status' | 'check' | 'startedA
  * setup); running: it already runs. setup: nothing saved to start from, so
  * the teammate sets it up (the repositories checked out, if any). teammate:
  * it needs the teammate, e.g. to release its credentials from the vault.
+ * waking: the workspace computer was stopped and starts first; ask again shortly.
  */
 export const PreviewStartOutcome = z.discriminatedUnion('outcome', [
   z.object({ outcome: z.literal('started') }),
   z.object({ outcome: z.literal('running') }),
+  z.object({ outcome: z.literal('waking') }),
   z.object({ outcome: z.literal('setup'), repositories: z.array(z.string()).max(20) }),
   z.object({ outcome: z.literal('teammate'), repository: z.string(), reason: z.string() }),
 ])
@@ -225,7 +227,11 @@ export const SavedPreview = z.object({
 })
 export type SavedPreview = z.infer<typeof SavedPreview>
 
-/** A thread's preview for a page other than the thread's (a pull request's). */
+/**
+ * A thread's preview for a page other than the thread's (a pull request's),
+ * or to check its events against: one they say runs, on a computer that is
+ * offline or stopped, is stopped.
+ */
 export const ThreadPreviewState = z.object({
   preview: PreviewInfo.extend({ teammateId: z.string().optional() }).nullable(),
   teammateName: z.string(),

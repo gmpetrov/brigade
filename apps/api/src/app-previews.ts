@@ -15,7 +15,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
-import { hostedPort } from './cloud.js'
+import { cloudAvailable, ensureRunning, hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
 import { runnerProtocol, sendToRunner } from './hub.js'
@@ -92,6 +92,11 @@ export async function startPreview(
   repository?: string,
 ): Promise<PreviewStartOutcome> {
   const protocol = runnerProtocol(thread.computer.id)
+  // A stopped workspace computer starts first; the dashboard asks again once it is up.
+  if (protocol === undefined && thread.computer.kind === 'cloud' && cloudAvailable()) {
+    await ensureRunning(thread.computer.id)
+    return { outcome: 'waking' }
+  }
   if (protocol === undefined)
     throw new HTTPException(409, {
       message:
@@ -141,14 +146,31 @@ export function settlePreviewStart(computerId: string, result: StartResult) {
   if (start?.computerId === computerId) start.settle(result)
 }
 
+type PreviewComputer = { id: string; kind: string; name: string }
+
+/**
+ * Why a thread's preview cannot be running, whatever its events say: its
+ * computer is offline (a stopped workspace computer lost its processes), or
+ * its runner runs no previews. Undefined when it may be running.
+ */
+export function previewOffline(computer: PreviewComputer) {
+  if ((runnerProtocol(computer.id) ?? 0) >= PREVIEW_PROTOCOL) return undefined
+  return computer.kind === 'cloud'
+    ? 'Stopped with the workspace computer'
+    : `Stopped: ${computer.name} is offline`
+}
+
 /** The preview a person acts on: one that is starting or running, on a runner that runs previews. */
-export async function livePreview(db: ScopedDb, thread: { id: string; computer: { id: string } }) {
+export async function livePreview(db: ScopedDb, thread: { id: string; computer: PreviewComputer }) {
   const preview = await latestPreview(db, thread.id)
   if (!preview || (preview.status !== 'starting' && preview.status !== 'running'))
     throw new HTTPException(409, { message: 'This thread has no preview running' })
-  if ((runnerProtocol(thread.computer.id) ?? 0) < PREVIEW_PROTOCOL)
+  if (previewOffline(thread.computer))
     throw new HTTPException(409, {
-      message: 'The computer is offline, so the preview is too. It starts again with the app.',
+      message:
+        thread.computer.kind === 'cloud'
+          ? 'The workspace computer stopped, so the preview did too. Start it again from the preview panel.'
+          : `${thread.computer.name} is offline, so the preview is too. Start its runner, then the preview.`,
     })
   return preview
 }

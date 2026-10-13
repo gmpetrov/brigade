@@ -3,10 +3,11 @@
 // thread and on a pull request. The runner starts it without a turn when it
 // can (again as it last ran, or from its repository's saved setup); else the
 // teammate sets it up, after a dialog that says what that involves. The dialog
-// shows the first time only, unless the person keeps it.
+// shows the first time only, unless the person keeps it. A stopped workspace
+// computer starts first: it asks again until the computer is up.
 import type { PreviewStartOutcome } from '@brigade/contracts'
 import { AppWindow, LoaderCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -19,6 +20,10 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
+
+/** While the workspace computer starts: how often to ask again, and for how long. */
+const WAKING_POLL_MS = 3000
+const WAKING_MAX_MS = 5 * 60_000
 
 /** Set once a person said not to explain setting a preview up again, in this browser. */
 const EXPLAINED_KEY = 'brigade:preview-setup-explained'
@@ -68,8 +73,17 @@ export function usePreviewStart({
   onAsked?: () => void
 }) {
   const [busy, setBusy] = useState(false)
+  const [waking, setWaking] = useState(false)
   const [error, setError] = useState<string>()
   const [asking, setAsking] = useState<Asking>()
+  // Gone from the page (or another thread): stop asking.
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [threadId])
 
   async function send(next: Asking) {
     setBusy(true)
@@ -90,16 +104,27 @@ export function usePreviewStart({
     setBusy(true)
     setError(undefined)
     let result: PreviewStartOutcome
+    const since = Date.now()
     try {
-      result = await api<PreviewStartOutcome>(`/threads/${threadId}/preview/start`, {
-        body: repository ? { repository } : {},
-      })
+      for (;;) {
+        result = await api<PreviewStartOutcome>(`/threads/${threadId}/preview/start`, {
+          body: repository ? { repository } : {},
+        })
+        if (result.outcome !== 'waking' || !mounted.current) break
+        if (Date.now() - since > WAKING_MAX_MS)
+          throw new Error('The workspace computer did not start. Try again in a minute.')
+        setWaking(true)
+        await new Promise((resolve) => setTimeout(resolve, WAKING_POLL_MS))
+      }
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
+      setWaking(false)
       return
     }
     setBusy(false)
+    setWaking(false)
+    if (result.outcome === 'waking') return
     if (result.outcome === 'started' || result.outcome === 'running') return onStarting()
     const next: Asking =
       result.outcome === 'teammate'
@@ -125,7 +150,7 @@ export function usePreviewStart({
     />
   )
 
-  return { start, busy, error: asking ? undefined : error, dialog }
+  return { start, busy, waking, error: asking ? undefined : error, dialog }
 }
 
 function PreviewSetupDialog({

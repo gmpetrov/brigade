@@ -32,6 +32,7 @@ import {
   latestPreview,
   livePreview,
   previewLogs,
+  previewOffline,
   startPreview,
   touchPreview,
 } from '../app-previews.js'
@@ -672,7 +673,13 @@ export const threads = new Hono<AppEnv>()
   .get('/:id/preview/state', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    const preview = await latestPreview(db, thread.id)
+    const latest = await latestPreview(db, thread.id)
+    const offline = previewOffline(thread.computer)
+    // Its events say it runs, but its computer is gone: it stopped with it.
+    const preview =
+      latest && offline && (latest.status === 'starting' || latest.status === 'running')
+        ? { ...latest, status: 'stopped' as const, reason: offline }
+        : latest
     const teammate = thread.teammates.find((t) => t.teammateId === preview?.teammateId)?.teammate
     return c.json({
       preview,

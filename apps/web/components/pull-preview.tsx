@@ -180,6 +180,7 @@ export function PullPreview({
           onClose={() => setOpen(false)}
           onStart={() => void start.start()}
           starting={start.busy}
+          waking={start.waking}
           onAsk={
             state.mayControl
               ? (text) => void ask(text).catch((e: Error) => setError(e.message))

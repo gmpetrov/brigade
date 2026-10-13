@@ -32,6 +32,7 @@ import {
   PreviewPanel,
   previewLive,
   previewPhase,
+  useCheckedPreview,
   useThreadPreview,
   useThreadRepositories,
 } from '@/components/preview-panel'
@@ -109,7 +110,7 @@ export function ThreadConversation({
   } = useThreadEvents(id, setStatus)
   const { items, queued, seen, turnId } = useThreadItems(events, firstSeq)
   const outputs = useThreadOutputs(events)
-  const preview = useThreadPreview(events)
+  const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
   const repositories = useThreadRepositories(events)
   const offersPreview = !!preview || repositories.length > 0
@@ -580,6 +581,7 @@ export function ThreadConversation({
           onClose={() => setPreviewing(false)}
           onStart={() => void previewStart.start()}
           starting={previewStart.busy}
+          waking={previewStart.waking}
           onAsk={t.mayPrompt ? askInComposer : undefined}
         />
       )}

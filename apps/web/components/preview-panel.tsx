@@ -11,6 +11,7 @@ import {
   type PreviewInfo,
   type PreviewView,
   type SequencedEvent,
+  type ThreadPreviewState,
 } from '@brigade/contracts'
 import {
   AppWindow,
@@ -51,6 +52,46 @@ export function useThreadPreview(events: SequencedEvent[]): ThreadPreview | unde
     const { at: _at, type: _type, ...preview } = event
     return preview
   }, [events])
+}
+
+/** How often a preview its events say runs is checked against its computer. */
+const CHECK_MS = 30_000
+
+/**
+ * The thread's preview as its events say, unless the API says it cannot be
+ * running: its computer stopped or went offline, which the events never say.
+ */
+export function useCheckedPreview(
+  threadId: string,
+  preview: ThreadPreview | undefined,
+): ThreadPreview | undefined {
+  const [ended, setEnded] = useState<{ key: string; preview: ThreadPreview }>()
+  const live = previewLive(preview)
+  const previewId = preview?.previewId
+  const key = preview ? `${preview.previewId}:${preview.status}` : ''
+  useEffect(() => {
+    if (!live) return
+    let current = true
+    const check = () =>
+      api<ThreadPreviewState>(`/threads/${threadId}/preview/state`).then(
+        ({ preview: checked }) => {
+          if (!current) return
+          setEnded(
+            checked && checked.previewId === previewId && !previewLive(checked)
+              ? { key, preview: checked }
+              : undefined,
+          )
+        },
+        () => undefined,
+      )
+    void check()
+    const timer = setInterval(() => void check(), CHECK_MS)
+    return () => {
+      current = false
+      clearInterval(timer)
+    }
+  }, [threadId, key, previewId, live])
+  return ended?.key === key ? ended.preview : preview
 }
 
 /** The repositories the thread's teammates have checked out: each teammate's latest report. */
@@ -128,6 +169,7 @@ export function PreviewPanel({
   onClose,
   onStart,
   starting,
+  waking,
   onAsk,
   expectedCommit,
 }: {
@@ -142,6 +184,8 @@ export function PreviewPanel({
   onStart?: () => void
   /** That start is under way. */
   starting?: boolean
+  /** It waits for the workspace computer to start first. */
+  waking?: boolean
   /** Put a message to the teammate in the composer (or send it, off the thread). */
   onAsk?: (text: string) => void
   /** The commit it should run (a pull request's head): when it runs another, the panel says so. */
@@ -439,6 +483,12 @@ export function PreviewPanel({
                 <p className="max-w-sm font-medium text-foreground">
                   {endedText(preview.status as 'failed' | 'stopped', preview.reason)}
                 </p>
+                {waking && (
+                  <p className="max-w-xs">
+                    Starting the workspace computer first. It takes a minute or so; the preview
+                    starts once it is up.
+                  </p>
+                )}
                 <div className="flex flex-wrap justify-center gap-2">
                   {mayControl && onStart ? (
                     <Button size="sm" disabled={starting} onClick={onStart}>
