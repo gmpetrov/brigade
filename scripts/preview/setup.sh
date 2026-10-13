@@ -30,7 +30,7 @@ start_db
 say "Applying migrations"
 "${PNPM[@]}" --filter @brigade/api exec prisma migrate deploy
 
-say "Adding the dev accounts"
+say "Adding the dev accounts and the sample workspace"
 "${PNPM[@]}" --filter @brigade/api db:seed
 
 say "Ready. Start it with scripts/preview/start.sh, then sign in as ada@example.com / correct-horse-battery"

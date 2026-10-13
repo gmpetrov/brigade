@@ -18,6 +18,11 @@ scripts/preview/setup.sh   # once, and again after pulling: Node 22, dependencie
 scripts/preview/start.sh   # PostgreSQL, the API and the dashboard at one address, port 3000
 ```
 
-In a thread, run `setup.sh` in your shell, then `start_preview` with the command `scripts/preview/start.sh` and port 3000, nothing else: the API answers at `/api` on the same address, so the preview needs one port and its session cookie works in the thread's preview pane. Sign in as `ada@example.com` (or `bob@`, `carol@`) with the password `correct-horse-battery`; each goes through onboarding first.
+In a thread, run `setup.sh` in your shell, then `start_preview` with the command `scripts/preview/start.sh` and port 3000, nothing else: the API answers at `/api` on the same address, so the preview needs one port and its session cookie works in the thread's preview pane. Sign in with the password `correct-horse-battery` as:
+
+- `ada@example.com` (owner), `bob@example.com` (admin) or `carol@example.com` (member): straight into the sample Acme workspace, with teammates, projects, threads in each state, tasks in each column, open tickets, library files and memory, connections, credentials, schedules and a pull request (`apps/api/prisma/seed-workspace.ts`). Nothing in it reaches an outside service: its secrets are placeholders, and no runner answers, so a new message to a teammate does not run.
+- `dana@example.com`: no organization yet, to try onboarding.
+
+The seed runs with each `setup.sh` and adds the sample only when the Acme organization is missing; to start over, delete `.preview/` (embedded PostgreSQL) or run `docker compose down -v` (Docker), then `setup.sh` again.
 
 PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `embedded-postgres` package (no Docker or root needed), with its data in `.preview/`; delete that folder to start over. Downloads (Node, PostgreSQL) are cached in `~/.cache/brigade-preview`. If the dashboard goes blank, Next crashed: `start.sh` starts it again, and the page reloads by itself.
