@@ -76,6 +76,8 @@ export function instructions(
       "each of its viewports with the product's own components and conventions, and use the values in its " +
       `\`${DESIGN_KNOBS}\`.` +
       saving(spec),
+    spec.project && project(spec.project, libraryDir),
+    projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
     designs(spec, libraryDir),
     spec.git && code(spec),
@@ -84,6 +86,9 @@ export function instructions(
     SCHEDULES,
     credentials(browser),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
+    spec.project &&
+      body(spec.project.memory) &&
+      `## Project memory: ${spec.project.name}\n\n${clip(body(spec.project.memory))}`,
     own && `## What you have learned\n\n${clip(own)}`,
     '## Memory',
     'When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
@@ -93,6 +98,50 @@ export function instructions(
     .filter(Boolean)
     .join('\n\n')
     .concat('\n')
+}
+
+/**
+ * The project this thread works in: what it is, where its files and code are,
+ * which connections to use. It focuses the teammate; it restricts nothing.
+ */
+function project(p: NonNullable<ThreadSpec['project']>, libraryDir: string) {
+  return [
+    `## Project: ${p.name}`,
+    `This thread is part of the project "${p.name}". The workspace has other projects; keep to this one unless asked.`,
+    p.brief && p.brief,
+    p.folder &&
+      `Its files are in the library folder ${p.folder}/ (at ${libraryDir}/${p.folder}). Save what you make for it there.`,
+    p.repositories.length > 0 &&
+      `Its code: ${p.repositories.join(', ')}. When the work needs code and the message names no repository, it is one of these.`,
+    p.connections.length > 0 &&
+      `When several connections could do something, use its own: ${p.connections.map((c) => c.label).join(', ')}.`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+/** The workspace's projects, so a mention of one (`@[name](project:id)`) can be followed. */
+function projects(spec: ThreadSpec) {
+  const list = spec.projects ?? []
+  if (list.length === 0) return ''
+  return [
+    '## Projects',
+    'The workspace groups its work in projects. A message mentions one as `@[name](project:id)`: ' +
+      'the project with that id below. Its threads, tasks and files are its own; you work across all of them.',
+    list
+      .map((p) => {
+        const about = [
+          p.brief.replace(/\s+/g, ' ').trim(),
+          p.folder && `Files in ${p.folder}/.`,
+          p.repositories.length > 0 && `Code: ${p.repositories.join(', ')}.`,
+        ]
+          .filter(Boolean)
+          .join(' ')
+        const current = spec.project?.id === p.id ? ' (this thread)' : ''
+        return `- **${p.name}** (\`${p.id}\`)${current}${about ? `: ${about}` : ''}`
+      })
+      .join('\n'),
+  ].join('\n\n')
 }
 
 /** The chief: sets up the team, then answers or routes what people ask it. */
@@ -153,6 +202,7 @@ function designs(spec: ThreadSpec, libraryDir: string) {
     [
       ...s.folders.map((f) => `designs in ${f}/`),
       ...s.repositories.map((r) => `work in ${r}`),
+      s.project && spec.project && `the project "${spec.project.name}"`,
       s.teammate && 'you',
       s.isDefault && 'the default',
     ]
@@ -211,7 +261,7 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       ? [
           '### Design systems',
           'A design follows exactly one design system: the one the person names or mentions; else one for the library ' +
-            'folder the design goes in; else one for the repository you are working in; else yours; else the ' +
+            "folder the design goes in; else one for the repository you are working in; else the project's; else yours; else the " +
             'default. When none applies and there are several, ask which one. Before designing, read its ' +
             `folder in ${libraryDir}: its README.md first, and what that points to. Use its tokens and ` +
             'components, copy the files the design needs (stylesheets, fonts, logos) into the design folder, ' +

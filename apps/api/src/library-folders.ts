@@ -119,6 +119,10 @@ export async function moveFolder(
   })
   if (folderClash)
     throw new HTTPException(409, { message: `A folder is already at ${folderClash.path}` })
+  const projects = await db.project.findMany({
+    where: { OR: [{ folder: from }, { folder: { startsWith: `${from}/` } }] },
+    select: { id: true, folder: true },
+  })
 
   await prisma.$transaction([
     ...files.map((f) =>
@@ -131,6 +135,13 @@ export async function moveFolder(
       prisma.libraryFolder.update({
         where: { id: f.id, workspaceId: scope.workspaceId },
         data: { path: moved(f.path, from, to) },
+      }),
+    ),
+    // A project's folder follows it.
+    ...projects.map((p) =>
+      prisma.project.update({
+        where: { id: p.id, workspaceId: scope.workspaceId },
+        data: { folder: moved(p.folder!, from, to) },
       }),
     ),
   ])

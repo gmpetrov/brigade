@@ -34,7 +34,7 @@ export const tasks = new Hono<AppEnv>()
         ? await listArchivedTasks(c.var.db, c.req.query('before'))
         : c.req.query('trashed') === 'true'
           ? await listTrashedTasks(c.var.db)
-          : await listTasks(c.var.db),
+          : await listTasks(c.var.db, c.req.query('project')),
     ),
   )
 

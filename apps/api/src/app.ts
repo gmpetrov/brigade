@@ -20,6 +20,7 @@ import { security } from './routes/security.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
+import { projects } from './routes/projects.js'
 import { pulls } from './routes/pulls.js'
 import { repositories } from './routes/repositories.js'
 import { runnerAttachments } from './routes/runner-attachments.js'
@@ -58,6 +59,7 @@ app.route('/api/security', security)
 app.route('/api/tickets', tickets)
 app.route('/api/tasks', tasks)
 app.route('/api/schedules', schedules)
+app.route('/api/projects', projects)
 // Before the library: its own routes would read /assets/<id> as a file id.
 app.route('/api/library/assets', documentAssets)
 app.route('/api/library', library)

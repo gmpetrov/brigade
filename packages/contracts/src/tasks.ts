@@ -34,12 +34,16 @@ export const CreateTask = z.object({
   /** Unset with a thread: the teammate who answered it last. Unset without: Backlog. */
   teammateId: z.string().optional(),
   sessionId: z.string().optional(),
+  /** Unset with a thread: the thread's project. */
+  projectId: z.string().nullish(),
 })
 
 export const UpdateTask = z.object({
   title: Title.optional(),
   description: Description.optional(),
   priority: TaskPriority.optional(),
+  /** Null: out of its project. Its thread follows. */
+  projectId: z.string().nullable().optional(),
 })
 
 /**

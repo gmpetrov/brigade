@@ -137,6 +137,7 @@ export async function deliver(
       text: event.text,
       origin: { kind: 'trigger', triggerId: trigger.id, conversationKey: event.conversationKey },
       attachmentIds: event.attachmentIds ?? [],
+      projectId: trigger.projectId,
     })
     if (outcome === 'offline') return failed('the computer is offline')
     await received(thread.id, outcome)

@@ -109,6 +109,22 @@ export async function handleMemoryUpdate(
   })
   if (!session.private)
     await editMemory(db, scope, actor, { kind: 'workspace_memory' }, update.workspace, session.id)
+  // Into the project the thread is in now, if it still is in one. A private thread leaves it alone.
+  const project = session.projectId
+    ? await db.project.findFirst({
+        where: { id: session.projectId },
+        select: { id: true, name: true },
+      })
+    : null
+  if (project && update.project && !session.private)
+    await editMemory(
+      db,
+      scope,
+      actor,
+      { kind: 'project_memory', projectId: project.id, name: project.name },
+      update.project,
+      session.id,
+    )
   for (const { teammateId, edit } of update.teammates) {
     // Only teammates of this thread learn from it.
     const seat = session.teammates.find((t) => t.teammateId === teammateId)
@@ -117,7 +133,7 @@ export async function handleMemoryUpdate(
       db,
       scope,
       { type: 'teammate', id: teammateId },
-      { kind: 'teammate_memory', teammateId, teammateName: seat.teammate.name },
+      { kind: 'teammate_memory', teammateId, name: seat.teammate.name },
       edit,
       session.id,
     )

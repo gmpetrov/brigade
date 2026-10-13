@@ -227,6 +227,11 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   a triggered teammate only what it needs, or set it to `ask`. When a thread cannot start, the
   trigger's creator gets a ticket and the event is offered again (Stripe retries; Gmail and Calendar keep their
   cursor).
+- **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
+  groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
+  and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,
+  memory (`projects/<id>.md`), folder, repositories and preferred connections in its spec; a quiet thread's
+  memory run writes project facts there, never for a private thread. Lists take `?project=<id|none>`.
 - **Schedules** (`apps/api/src/schedules.ts`, `routes/schedules.ts`, design in `docs/automations.md`). A teammate
   prompted with the same instructions on a cron schedule (five fields plus an IANA timezone, runs at least 5 minutes
   apart), each firing in a fresh thread on the accounts of the member who owns it. A minute tick moves `nextRunAt`

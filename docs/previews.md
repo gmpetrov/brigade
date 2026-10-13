@@ -108,8 +108,9 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   beside the pull request page, which says when the preview runs another commit
   than the pull request's head. One opened outside Brigade gets a thread where a
   teammate checks out its branch and starts it. A merged or closed pull request
-  stops its thread's preview. Saved setups are listed on the Computers page,
-  where an owner or admin forgets one.
+  stops its thread's preview. Saved setups are listed with their repository
+  (its page under Pull requests, and the Repos tab of each project that links
+  it), where an owner or admin forgets one.
 - **A stable address per repository.** A repository's preview gets its proxy
   port from its name (30000 + a hash), so its address stays the same on that
   computer: an OAuth callback registered once keeps working. Across computers

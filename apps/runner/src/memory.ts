@@ -29,17 +29,22 @@ export function memoryPrompt(input: {
   }
   const workspace = input.memory(spec.teammate.id).workspace.slice(0, MEMORY_CHARS)
   const teammateKeys = speakers.map((t) => JSON.stringify(t.name)).join(', ')
+  const project = spec.project
   return [
     'You keep the shared memory of a team that works with AI teammates. Below are the current memory files and a conversation from one thread.',
     'Reply with only one JSON object and nothing else, in this shape:',
-    `{"summary": "...", "workspace": {"add": [], "remove": []}, "teammates": {${speakers.map((t) => `${JSON.stringify(t.name)}: {"add": [], "remove": []}`).join(', ')}}}`,
+    `{"summary": "...", "workspace": {"add": [], "remove": []}, ${project ? '"project": {"add": [], "remove": []}, ' : ''}"teammates": {${speakers.map((t) => `${JSON.stringify(t.name)}: {"add": [], "remove": []}`).join(', ')}}}`,
     [
       '- summary: 2 to 6 sentences: what was asked in this thread and what was done or decided, as of now' +
         (input.summary ? ' (update the previous summary below with what happened since).' : '.'),
       spec.private
         ? '- workspace: leave both lists empty; this thread is private.'
-        : '- workspace: what any teammate should know before starting an unrelated thread next month, and could not find out on its own: how the team wants things done (rules, preferences, decisions as they stand), who is who on the team, where something is when that is not obvious, and pitfalls (such as a connector that reaches a test account, not the live one).',
-      `- teammates (${teammateKeys}): for each, a lesson that changes how it works next time: a member's correction or preference, a way that worked after one that failed, a pitfall. Not what it did, nor what goes in workspace memory.`,
+        : `- workspace: what any teammate should know before starting an unrelated thread next month, and could not find out on its own: how the team wants things done (rules, preferences, decisions as they stand), who is who on the team, where something is when that is not obvious, and pitfalls (such as a connector that reaches a test account, not the live one).${project ? ` Only what holds for all of the workspace's work: what is about the project "${project.name}" goes in project.` : ''}`,
+      project &&
+        (spec.private
+          ? '- project: leave both lists empty; this thread is private.'
+          : `- project: the same kind of line, but true only of the project "${project.name}" (its product, customers, stack, decisions, pitfalls). Every thread in that project loads it; threads in other projects never see it.`),
+      `- teammates (${teammateKeys}): for each, a lesson that changes how it works next time: a member's correction or preference, a way that worked after one that failed, a pitfall. Not what it did, nor what goes in workspace${project ? ' or project' : ''} memory.`,
       [
         '- Memory is loaded into every thread, so it is not a log. Never add:',
         '  - what was asked, done, found or offered in this thread, or the state of anything (pull requests, tasks, tickets, a login that fails, open questions): the summary keeps that;',
@@ -54,6 +59,8 @@ export function memoryPrompt(input: {
     ].join('\n'),
     input.summary && `Previous summary of this thread:\n${input.summary}`,
     `Workspace memory now:\n<<<\n${workspace.trim() || '(empty)'}\n>>>`,
+    project &&
+      `Memory of the project "${project.name}" now:\n<<<\n${project.memory.slice(0, MEMORY_CHARS).trim() || '(empty)'}\n>>>`,
     ...speakers.map(
       (t) =>
         `Memory of ${t.name} now:\n<<<\n${input.memory(t.id).teammate.slice(0, MEMORY_CHARS).trim() || '(empty)'}\n>>>`,
@@ -69,6 +76,7 @@ const Edit = z.object({ add: Lines, remove: Lines }).catch({ add: [], remove: []
 const Answer = z.object({
   summary: z.string().trim().min(1),
   workspace: Edit.default({ add: [], remove: [] }),
+  project: Edit.default({ add: [], remove: [] }),
   teammates: z.record(z.string(), Edit).catch({}).default({}),
 })
 
@@ -93,6 +101,7 @@ export function parseMemory(
   return {
     summary: answer.summary.slice(0, 4000),
     workspace: spec.private ? { add: [], remove: [] } : clamp(answer.workspace),
+    ...(spec.project && !spec.private ? { project: clamp(answer.project) } : {}),
     teammates: speakers.flatMap((t) => {
       const edit = answer.teammates[t.name]
       return edit ? [{ teammateId: t.id, edit: clamp(edit) }] : []

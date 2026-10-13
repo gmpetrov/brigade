@@ -44,6 +44,7 @@ type Option = MentionOption
 
 export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[] = [
   { kind: 'teammate', title: 'Teammates', max: 5 },
+  { kind: 'project', title: 'Projects', max: 5 },
   { kind: 'connection', title: 'Connections', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
   { kind: 'design-system', title: 'Design systems', max: 5 },
@@ -56,7 +57,7 @@ export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[]
 
 /** Everything in the workspace a message can mention. */
 export function useMentionOptions(threadId?: string): Option[] {
-  const { teammates } = useDashboard()
+  const { teammates, projects } = useDashboard()
   const connections = useApi<ConnectionsResponse>('/connections')
   const threads = useApi<ThreadSummary[]>('/threads')
   const computers = useApi<ComputersResponse>('/computers')
@@ -72,6 +73,9 @@ export function useMentionOptions(threadId?: string): Option[] {
         label: t.name,
         hint: 'AI teammate',
       })),
+      ...projects
+        .filter((p) => !p.archivedAt)
+        .map((p) => ({ kind: 'project' as const, id: p.id, label: p.name, hint: 'Project' })),
       ...(connections.data?.connections ?? [])
         // A custom app only sends events: there is nothing for a teammate to use.
         .filter((c) => c.status !== 'removed' && c.kind !== 'webhook')
@@ -131,6 +135,7 @@ export function useMentionOptions(threadId?: string): Option[] {
     ],
     [
       teammates,
+      projects,
       connections.data,
       repositories.data,
       library.data,

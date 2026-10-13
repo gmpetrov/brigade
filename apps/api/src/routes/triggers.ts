@@ -1,7 +1,7 @@
 // Triggers, as admins manage them: chosen from each connection's catalog, with
 // the vendor subscribed to the events they need (see subscriptions/).
 import { randomBytes } from 'node:crypto'
-import { CreateTrigger } from '@brigade/contracts'
+import { CreateTrigger, SetProject } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
@@ -9,6 +9,7 @@ import { env } from '../config.js'
 import { triggerCatalog, triggersOf } from '../connectors/index.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import type { Scope, ScopedDb } from '../db.js'
+import { projectWhere, usableProject } from '../projects.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 import { delivery, SubscribeError, syncConnection, unavailable } from '../subscriptions/index.js'
 import { deleteSecret, sealSecret } from '../vault.js'
@@ -41,9 +42,14 @@ export async function resync(scope: Scope, connectionIds: Iterable<string>) {
 export const triggers = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
+  /** ?project=<id|none>: a project's triggers, or those in none. */
   .get('/', async (c) => {
     const rows = await c.var.db.trigger.findMany({
-      include: { teammate: { select: { id: true, name: true } } },
+      where: projectWhere(c.req.query('project')),
+      include: {
+        teammate: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true, icon: true } },
+      },
       orderBy: { createdAt: 'asc' },
     })
     return c.json(
@@ -112,6 +118,7 @@ export const triggers = new Hono<AppEnv>()
         verification: custom ? input.verification : null,
         verificationSecretId: secret ? await sealSecret(db, scope, { secret }) : null,
         createdByMemberId: scope.memberId,
+        projectId: (await usableProject(db, input.projectId)) ?? null,
       } as never,
     })
 
@@ -141,6 +148,27 @@ export const triggers = new Hono<AppEnv>()
       },
       201,
     )
+  })
+
+  /** The project its threads start in. Admins, like the rest of a trigger. */
+  .put('/:id/project', async (c) => {
+    const { scope, db } = c.var
+    requireRole(scope, 'owner', 'admin')
+    const { projectId } = await parseBody(c.req.raw, SetProject)
+    const next = (await usableProject(db, projectId)) ?? null
+    const { count } = await db.trigger.updateMany({
+      where: { id: c.req.param('id') },
+      data: { projectId: next },
+    })
+    if (!count) throw new HTTPException(404, { message: 'Trigger not found' })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'trigger.updated',
+      target: { type: 'trigger', id: c.req.param('id') },
+      data: { projectId: next },
+    })
+    return c.json({ ok: true })
   })
 
   .delete('/:id', async (c) => {

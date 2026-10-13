@@ -391,6 +391,7 @@ const KIND_LABEL: Record<SearchHit['kind'], string> = {
   library: 'File',
   workspace_memory: 'Memory',
   teammate_memory: 'Memory',
+  project_memory: 'Memory',
   thread_summary: 'Thread',
 }
 

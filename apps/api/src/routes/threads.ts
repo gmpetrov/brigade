@@ -14,6 +14,7 @@ import {
   TakeOver,
   ResolveApproval,
   SendMessage,
+  SetProject,
   StartThread,
   type ThreadFile,
   type ThreadSpec,
@@ -47,6 +48,7 @@ import {
   sendToRunner,
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
+import { projectWhere, usableProject } from '../projects.js'
 import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
 import {
   handBack,
@@ -107,11 +109,15 @@ function mayPrompt(
 export const threads = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
+  /** ?teammateId= for a teammate's threads; ?project=<id|none> for a project's, or those in none. */
   .get('/', async (c) => {
     const teammateId = c.req.query('teammateId')
     const rows = await c.var.db.session.findMany({
-      // A teammate's threads: those it started and those it joined.
-      where: teammateId ? { teammates: { some: { teammateId } } } : {},
+      where: {
+        // A teammate's threads: those it started and those it joined.
+        ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
+        ...projectWhere(c.req.query('project')),
+      },
       orderBy: { updatedAt: 'desc' },
       take: 100,
       include: {
@@ -151,6 +157,7 @@ export const threads = new Hono<AppEnv>()
         },
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
         task: { select: { id: true, title: true, completedAt: true } },
+        project: { select: { id: true, name: true, icon: true, archivedAt: true } },
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -320,6 +327,7 @@ export const threads = new Hono<AppEnv>()
     }
     // A thread runs on the starting member's accounts, never anyone else's.
     const firstLine = mentionsToText(input.text).split('\n')[0]!
+    const projectId = await usableProject(db, input.projectId)
     const { thread, outcome } = await startThread(db, scope, {
       teammate,
       computer,
@@ -328,6 +336,7 @@ export const threads = new Hono<AppEnv>()
       title: firstLine || (await attachedTitle(db, input.attachmentIds)),
       text: input.text,
       attachmentIds: input.attachmentIds,
+      projectId,
     })
     if (outcome === 'offline') {
       throw new HTTPException(409, {
@@ -731,6 +740,33 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, { message: 'You do not have control of this thread' })
     const { note } = await parseBody(c.req.raw, HandBack)
     await handBack(db, scope, thread, note)
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Into a project or out of one: any member, as it only organizes. Its next
+   * turn gets the new project's context; its task follows.
+   */
+  .put('/:id/project', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    const { projectId } = await parseBody(c.req.raw, SetProject)
+    const next = (await usableProject(db, projectId)) ?? null
+    // Moving is not activity: the thread keeps its place in lists.
+    await db.session.updateMany({
+      where: { id: thread.id },
+      data: { projectId: next, updatedAt: thread.updatedAt },
+    })
+    if (thread.taskId)
+      await db.task.updateMany({ where: { id: thread.taskId }, data: { projectId: next } })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.moved',
+      target: { type: 'thread', id: thread.id },
+      data: { from: thread.projectId, to: next },
+    })
+    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
     return c.json({ ok: true })
   })
 

@@ -162,6 +162,8 @@ model Workspace {
   pullRequestReviews  PullRequestReview[]
   tasks               Task[]
   schedules           Schedule[]
+  projects            Project[]
+  projectRepositories ProjectRepository[]
   auditEntries        AuditEntry[]
   designSystems       DesignSystem[]
   previewRecipes      PreviewRecipe[]
@@ -352,8 +354,12 @@ model Session {
   /// The task this thread works on. One thread per task for now.
   taskId               String?            @unique
   task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  /// The project the thread works in: its brief, memory, folder and repositories come with each turn.
+  projectId            String?
+  project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
+  @@index([projectId, createdAt])
   @@index([teammateId])
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
@@ -395,6 +401,9 @@ model Task {
   archivedAt        DateTime?
   /// In the Trash: off the board, from any column. Restoring it brings it back.
   trashedAt         DateTime?
+  /// The project it belongs to; its thread starts there.
+  projectId         String?
+  project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   session           Session?
@@ -403,6 +412,7 @@ model Task {
   @@index([workspaceId, archivedAt])
   @@index([workspaceId, trashedAt])
   @@index([teammateId])
+  @@index([projectId])
 }
 
 /// A teammate prompted with the same instructions on a cron schedule; each
@@ -432,6 +442,9 @@ model Schedule {
   nextRunAt           DateTime?
   /// Why the last firing could not start; cleared by the next one that does.
   lastError           String?
+  /// Its runs start in this project.
+  projectId           String?
+  project             Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   sessions            Session[]
@@ -828,6 +841,9 @@ model Trigger {
   verificationSecretId String?
   /// Runs on this member's accounts.
   createdByMemberId    String
+  /// The threads it starts are in this project.
+  projectId            String?
+  project              Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt            DateTime             @default(now())
   sessions             Session[]
 
@@ -930,6 +946,7 @@ enum DocumentKind {
   workspace_memory
   teammate_memory
   thread_summary
+  project_memory
 }
 
 /// A library file (its bytes in the bucket, its text here), a memory file or a
@@ -940,8 +957,11 @@ model Document {
   workspaceId        String
   workspace          Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   kind               DocumentKind             @default(library)
-  /// Library: the file's path. Memory: workspace.md, teammates/<id>.md or threads/<id>.md.
+  /// Library: the file's path. Memory: workspace.md, teammates/<id>.md, projects/<id>.md or threads/<id>.md.
   path               String
+  /// Set for a project's memory.
+  projectId          String?
+  project            Project?                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
   /// Set for a teammate's memory and a thread summary.
   teammateId         String?
   teammate           Teammate?                @relation(fields: [teammateId], references: [id], onDelete: Cascade)
@@ -1185,6 +1205,8 @@ model DesignSystem {
   repositories   String[]
   /// Teammates who follow it by default. Archived ones are skipped.
   teammateIds    String[]
+  /// Projects whose threads follow it.
+  projectIds     String[]  @default([])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1242,4 +1264,53 @@ model PreviewVariable {
 
   @@unique([workspaceId, repository, name])
   @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+/// A line of work inside a workspace: its threads, tasks, library folder and
+/// repositories. Organizing and context only: every workspace resource stays shared.
+model Project {
+  id                     String              @id @default(cuid())
+  organizationId         String
+  workspaceId            String
+  workspace              Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                   String
+  /// One letter or an emoji, shown in the sidebar. Unset: the name's first letter.
+  icon                   String?
+  /// Given to every thread in the project: what it is, its stack, who it is for.
+  brief                  String              @default("")
+  /// Its library folder, e.g. "Projects/Acme web". Files belong to it by path.
+  folder                 String?
+  /// Connections its threads should use when several could do. A hint, not a grant.
+  preferredConnectionIds String[]            @default([])
+  archivedAt             DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  repositories           ProjectRepository[]
+  sessions               Session[]
+  tasks                  Task[]
+  schedules              Schedule[]
+  triggers               Trigger[]
+  documents              Document[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+/// A GitHub repository a project works on. A repository may be in several projects.
+model ProjectRepository {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// owner/name, lowercase, as PreviewRecipe and PullRequest store it.
+  repository     String
+  createdAt      DateTime  @default(now())
+
+  @@id([projectId, repository])
+  @@index([workspaceId, repository])
 }

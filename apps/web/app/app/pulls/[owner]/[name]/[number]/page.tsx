@@ -164,7 +164,9 @@ export default function PullRequestPage() {
           <PullStatus pull={p} />
         </div>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <span className="font-mono">{p.repository}</span>
+          <Link href={`/app/pulls/${p.repository}`} className="font-mono hover:underline">
+            {p.repository}
+          </Link>
           <span aria-hidden>·</span>
           <span>
             <code className="font-mono text-xs">{p.head}</code> into{' '}

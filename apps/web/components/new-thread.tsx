@@ -1,11 +1,12 @@
 'use client'
-import { ArrowRight, Check, ChevronDown, Monitor } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, FolderKanban, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
-import { TeammateAvatar } from '@/components/dashboard'
+import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { ProjectIcon } from '@/components/projects'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -19,6 +20,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -130,7 +132,10 @@ export function NewThread({
   draft,
   onStarted,
   autoFocus,
+  projectId: initialProject,
 }: {
+  /** The project the thread starts in unless changed, e.g. on a project page. */
+  projectId?: string
   teammate: Teammate
   picker?: { teammates: Teammate[]; onChange: (id: string) => void }
   placeholder?: string
@@ -141,6 +146,10 @@ export function NewThread({
   autoFocus?: boolean
 }) {
   const router = useRouter()
+  const { projects } = useDashboard()
+  const [projectId, setProjectId] = useState(initialProject ?? 'none')
+  useEffect(() => setProjectId(initialProject ?? 'none'), [initialProject])
+  const pickable = projects.filter((p) => !p.archivedAt)
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
   const own = useThreadDraft()
@@ -178,6 +187,7 @@ export function NewThread({
           accountId: account.id,
           text,
           attachmentIds: files.ids,
+          ...(projectId !== 'none' && { projectId }),
         },
       })
       files.clear()
@@ -247,6 +257,24 @@ export function NewThread({
             />
           )}
           <AttachButton onFiles={files.add} />
+          {pickable.length > 0 && (
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger size="sm" aria-label="Project" className={cn(quietSelect, 'max-w-48')}>
+                {projectId === 'none' && <FolderKanban aria-hidden />}
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No project</SelectItem>
+                <SelectSeparator />
+                {pickable.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {online.length > 1 && (
             <Select value={computer?.id} onValueChange={setComputerId}>
               <SelectTrigger size="sm" aria-label="Run on" className={quietSelect}>

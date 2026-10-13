@@ -3,6 +3,7 @@ import { cronProblem, nextRuns } from '@brigade/contracts'
 import cronstrue from 'cronstrue'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { ProjectSelect } from '@/components/projects'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -123,14 +124,18 @@ export function ScheduleDialog({
   onOpenChange,
   schedule,
   onSaved,
+  projectId: initialProject,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Unset: a new schedule. */
   schedule?: Schedule
   onSaved: (schedule: Schedule) => void
+  /** A new schedule's project, e.g. from a project page. */
+  projectId?: string
 }) {
-  const { teammates } = useDashboard()
+  const { teammates, projects } = useDashboard()
+  const [projectId, setProjectId] = useState('none')
   const [teammateId, setTeammateId] = useState<string>()
   const [title, setTitle] = useState('')
   const [instructions, setInstructions] = useState('')
@@ -147,8 +152,9 @@ export function ScheduleDialog({
     setInstructions(schedule?.instructions ?? '')
     setWhen(fromCron(schedule?.cron ?? '0 9 * * 1-5'))
     setTimezone(schedule?.timezone ?? localTimezone())
+    setProjectId(schedule ? (schedule.projectId ?? 'none') : (initialProject ?? 'none'))
     setError(undefined)
-  }, [open, schedule])
+  }, [open, schedule, initialProject])
 
   const teammate = teammateId ?? teammates[0]?.id
   const cron = toCron(when)
@@ -161,7 +167,14 @@ export function ScheduleDialog({
     setBusy(true)
     setError(undefined)
     try {
-      const body = { teammateId: teammate, title, instructions, cron, timezone }
+      const body = {
+        teammateId: teammate,
+        title,
+        instructions,
+        cron,
+        timezone,
+        projectId: projectId === 'none' ? null : projectId,
+      }
       const saved = schedule
         ? await api<Schedule>(`/schedules/${schedule.id}`, { method: 'PATCH', body })
         : await api<Schedule>('/schedules', { body })
@@ -215,6 +228,16 @@ export function ScheduleDialog({
               </Select>
             </Field>
           </div>
+          {(projects.some((p) => !p.archivedAt) || schedule?.projectId) && (
+            <Field label="Project" htmlFor="schedule-project">
+              <ProjectSelect
+                id="schedule-project"
+                value={projectId}
+                onChange={setProjectId}
+                className="sm:w-full"
+              />
+            </Field>
+          )}
           <Field
             label="Instructions"
             htmlFor="schedule-instructions"

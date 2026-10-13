@@ -87,6 +87,8 @@ export const CreateTrigger = z.object({
   options: z.record(z.string(), z.string().trim().max(500)).default({}),
   /** Custom apps only. hmac: X-Brigade-Signature with a secret Brigade generates. none: the URL alone. */
   verification: z.enum(['hmac', 'none']).optional(),
+  /** The threads it starts are in this project. */
+  projectId: z.string().nullish(),
 })
 export const ResolveTicket = z.object({
   approved: z.boolean(),
@@ -107,6 +109,8 @@ export const StartThread = z
     text: z.string().trim().max(100_000).default(''),
     /** Files uploaded with POST /attachments, given to the thread with this message. */
     attachmentIds: AttachmentIds,
+    /** The project the thread works in. */
+    projectId: z.string().nullish(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 
@@ -234,6 +238,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
   z.object({ type: z.literal('pulls.updated') }),
   /** A schedule was created, changed, fired or removed: refetch the list. */
   z.object({ type: z.literal('schedule.updated'), scheduleId: z.string() }),
+  /** A project was created, changed or removed: refetch the sidebar and project pages. */
+  z.object({ type: z.literal('projects.updated') }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({
     type: z.literal('terminal.exit'),

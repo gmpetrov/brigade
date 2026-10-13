@@ -262,6 +262,11 @@ onScopedWrite((model, scope) => {
     notifyList(scope.workspaceId, 'pulls.updated')
 })
 
+/** A project was created, changed or removed: the sidebar and project pages refetch. */
+export function broadcastProjects(workspaceId: string) {
+  broadcast(workspaceId, { type: 'projects.updated' })
+}
+
 /** A schedule was created, changed, fired or removed. */
 export function broadcastSchedule(workspaceId: string, scheduleId: string) {
   broadcast(workspaceId, { type: 'schedule.updated', scheduleId })

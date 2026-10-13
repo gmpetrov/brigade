@@ -16,6 +16,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastTask, dispatch, isOnline } from './hub.js'
+import { projectWhere, usableProject } from './projects.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, currentTeammate, loadThread, requireMayPrompt } from './thread-spec.js'
@@ -24,6 +25,7 @@ import { joinThread, promptThread, startThread } from './work.js'
 /** What the board shows of a task and its thread. */
 const BOARD = {
   teammate: { select: { id: true, name: true, harness: true } },
+  project: { select: { id: true, name: true, icon: true } },
   createdBy: { select: { id: true, user: { select: { name: true } } } },
   session: {
     select: {
@@ -92,9 +94,14 @@ const view = ({ session, ...task }: BoardRow) => ({
     : null,
 })
 
-/** The board: every task not archived nor in the Trash, most recently touched first. */
-export async function listTasks(db: ScopedDb) {
-  return (await boardRows(db, { archivedAt: null, trashedAt: null })).map(view)
+/**
+ * The board: every task not archived nor in the Trash, most recently touched
+ * first. `project`: a project's id, or "none".
+ */
+export async function listTasks(db: ScopedDb, project?: string) {
+  return (await boardRows(db, { archivedAt: null, trashedAt: null, ...projectWhere(project) })).map(
+    view,
+  )
 }
 
 /** The Trash, most recently trashed first. */
@@ -249,9 +256,11 @@ export async function createTask(
     priority: TaskPriority
     teammateId?: string | undefined
     sessionId?: string | undefined
+    projectId?: string | null | undefined
   },
 ) {
   const by = byMember(scope)
+  const projectId = await usableProject(db, input.projectId)
   if (!input.sessionId) {
     const task = await db.task.create({
       data: {
@@ -259,6 +268,7 @@ export async function createTask(
         description: input.description,
         priority: input.priority,
         createdByMemberId: scope.memberId,
+        projectId: projectId ?? null,
       } as never,
     })
     await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })
@@ -279,6 +289,8 @@ export async function createTask(
   if (thread.taskId) throw new HTTPException(409, { message: 'This thread is already a task' })
   const teammateId = input.teammateId ?? currentTeammate(thread).id
   await activeTeammate(db, teammateId)
+  // The thread's project unless another is given; the thread then moves with it.
+  const inProject = projectId === undefined ? thread.projectId : projectId
   const task = await db.task.create({
     data: {
       title: input.title,
@@ -286,12 +298,15 @@ export async function createTask(
       priority: input.priority,
       teammateId,
       createdByMemberId: scope.memberId,
+      projectId: inProject,
     } as never,
   })
   if (!(await link(db, thread.id, task.id))) {
     await db.task.deleteMany({ where: { id: task.id } })
     throw new HTTPException(409, { message: 'This thread is already a task' })
   }
+  if (inProject !== thread.projectId)
+    await db.session.updateMany({ where: { id: thread.id }, data: { projectId: inProject } })
   await changed(scope, by.actor, 'task.created', task.id, { sessionId: thread.id })
   return getTask(db, task.id)
 }
@@ -304,17 +319,32 @@ export async function updateTask(
     title?: string | undefined
     description?: string | undefined
     priority?: TaskPriority | undefined
+    projectId?: string | null | undefined
   },
 ) {
   await loadTask(db, id)
+  const projectId = await usableProject(db, input.projectId)
   await db.task.updateMany({
     where: { id },
     data: {
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
+      ...(projectId !== undefined ? { projectId } : {}),
     },
   })
+  // Its thread follows, so its next turn has the project's context.
+  if (projectId !== undefined) {
+    const thread = await db.session.findFirst({
+      where: { taskId: id },
+      select: { id: true, updatedAt: true },
+    })
+    if (thread)
+      await db.session.updateMany({
+        where: { id: thread.id },
+        data: { projectId, updatedAt: thread.updatedAt },
+      })
+  }
   await changed(by.scope, by.actor, 'task.updated', id)
   return getTask(db, id)
 }
@@ -359,7 +389,7 @@ async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code
 async function startTask(
   db: ScopedDb,
   by: By,
-  task: { id: string; title: string; description: string },
+  task: { id: string; title: string; description: string; projectId: string | null },
   teammate: { id: string; name: string; harness: 'claude_code' | 'codex' },
   computer?: { id: string; kind: string },
 ) {
@@ -376,6 +406,7 @@ async function startTask(
       title: task.title,
       text: brief(task),
       taskId: task.id,
+      projectId: task.projectId,
     })
     if (outcome === 'offline') {
       // The failed thread is left as a plain one.
@@ -755,6 +786,7 @@ export async function handleTaskCall(
             priority: op.priority,
             teammateId: teammate.id,
             createdByMemberId: session.startedByMemberId,
+            projectId: session.projectId,
           } as never,
         })
         if (!(await link(db, session.id, task.id))) {
@@ -778,6 +810,7 @@ export async function handleTaskCall(
           description: op.description,
           priority: op.priority,
           createdByMemberId: session.startedByMemberId,
+          projectId: session.projectId,
         } as never,
       })
       await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })

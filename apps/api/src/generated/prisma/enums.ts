@@ -213,7 +213,8 @@ export const DocumentKind = {
   library: 'library',
   workspace_memory: 'workspace_memory',
   teammate_memory: 'teammate_memory',
-  thread_summary: 'thread_summary'
+  thread_summary: 'thread_summary',
+  project_memory: 'project_memory'
 } as const
 
 export type DocumentKind = (typeof DocumentKind)[keyof typeof DocumentKind]

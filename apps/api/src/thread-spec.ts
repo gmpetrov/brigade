@@ -8,6 +8,7 @@ import { connectors, operationSpecs } from './connectors/index.js'
 import { threadDesignSystems } from './designs.js'
 import { gitAccess } from './git.js'
 import { folderRules } from './library-folders.js'
+import { projectCatalog, threadProject } from './projects.js'
 import { accountRef, usableAccounts } from './routes/accounts.js'
 
 /**
@@ -141,7 +142,9 @@ export async function specFor(
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
-    designSystems: await threadDesignSystems(db, teammate.id),
+    designSystems: await threadDesignSystems(db, teammate.id, thread.projectId),
+    project: await threadProject(db, thread.projectId),
+    projects: await projectCatalog(db),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {

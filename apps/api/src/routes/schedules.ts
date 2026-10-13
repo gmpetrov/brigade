@@ -14,7 +14,7 @@ import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.
 export const schedules = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
-  .get('/', async (c) => c.json(await listSchedules(c.var.db)))
+  .get('/', async (c) => c.json(await listSchedules(c.var.db, c.req.query('project'))))
 
   /** The creator is the owner: runs use their accounts. */
   .post('/', async (c) => {

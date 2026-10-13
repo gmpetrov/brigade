@@ -1,6 +1,7 @@
 'use client'
 import { HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
 import type {
+  ProjectSummary,
   AssetTicket,
   AttachmentInfo,
   CredentialGrant,
@@ -227,6 +228,7 @@ export type ThreadSummary = {
   /** Everyone in it, the starting teammate first. */
   teammates: { teammate: { id: string; name: string } }[]
   startedBy: { id: string; user: { name: string } }
+  projectId: string | null
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates'> & {
@@ -253,6 +255,8 @@ export type Thread = Omit<ThreadSummary, 'teammates'> & {
   attachments: AttachmentInfo[]
   /** The task this thread works on, if it is one. */
   task: { id: string; title: string; completedAt: string | null } | null
+  /** The project it works in: its brief, memory and folder come with each turn. */
+  project: ProjectSummary | null
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'
@@ -275,6 +279,8 @@ export type Schedule = {
   teammate: { id: string; name: string; harness: Teammate['harness']; archivedAt: string | null }
   owner: { id: string; user: { name: string } }
   createdByTeammate: { id: string; name: string } | null
+  projectId: string | null
+  project: ProjectRef | null
   /** Its latest thread. */
   lastRun: { id: string; status: string; createdAt: string } | null
 }
@@ -288,6 +294,8 @@ export type Task = {
   column: TaskColumn
   /** Unset in the backlog: assigning a teammate starts its thread. */
   teammate: { id: string; name: string; harness: Teammate['harness'] } | null
+  projectId: string | null
+  project: ProjectRef | null
   createdBy: { id: string; user: { name: string } }
   createdByMemberId: string
   summary: string | null
@@ -468,6 +476,8 @@ export type Trigger = {
   hasSecret: boolean
   createdAt: string
   teammate: { id: string; name: string }
+  projectId: string | null
+  project: ProjectRef | null
 }
 
 export type TriggerOption = {
@@ -576,6 +586,7 @@ export type Ticket = {
     title: string
     origin: 'member' | 'trigger' | 'schedule'
     startedByMemberId: string
+    projectId: string | null
     teammate: { id: string; name: string }
   } | null
 }
@@ -655,3 +666,28 @@ export type {
 export const pullHref = (repository: string, number: number) => `/app/pulls/${repository}/${number}`
 /** A repository the workspace's GitHub connections reach. */
 export type RepositoryOption = { repository: string; private: boolean; connection: string }
+
+export type { ProjectSummary }
+
+/** A project as rows that belong to one name it. */
+export type ProjectRef = { id: string; name: string; icon: string | null }
+
+/** A project page's data: its repositories with their saved previews, and its week. */
+export type ProjectDetail = ProjectSummary & {
+  brief: string
+  folder: string | null
+  preferredConnections: { id: string; label: string; kind: string }[]
+  repositories: {
+    repository: string
+    /** Null when GitHub could not be asked. */
+    reachable: boolean | null
+    preview: { command: string; cwd: string | null; port: number } | null
+  }[]
+  memory: { documentId: string; lines: number } | null
+  files: number
+  week: { threads: number; merged: number; workingHours: number }
+}
+
+/** `?project=` for a list: a project's id, "none", or nothing for all. */
+export const projectQuery = (project: string | undefined, join: '?' | '&' = '?') =>
+  project ? `${join}project=${encodeURIComponent(project)}` : ''

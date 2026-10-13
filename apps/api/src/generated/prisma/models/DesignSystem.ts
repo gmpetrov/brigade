@@ -61,6 +61,7 @@ export type DesignSystemCountAggregateOutputType = {
   folders: number
   repositories: number
   teammateIds: number
+  projectIds: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -102,6 +103,7 @@ export type DesignSystemCountAggregateInputType = {
   folders?: true
   repositories?: true
   teammateIds?: true
+  projectIds?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -190,6 +192,7 @@ export type DesignSystemGroupByOutputType = {
   folders: string[]
   repositories: string[]
   teammateIds: string[]
+  projectIds: string[]
   createdAt: Date
   updatedAt: Date
   _count: DesignSystemCountAggregateOutputType | null
@@ -226,6 +229,7 @@ export type DesignSystemWhereInput = {
   folders?: Prisma.StringNullableListFilter<"DesignSystem">
   repositories?: Prisma.StringNullableListFilter<"DesignSystem">
   teammateIds?: Prisma.StringNullableListFilter<"DesignSystem">
+  projectIds?: Prisma.StringNullableListFilter<"DesignSystem">
   createdAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -242,6 +246,7 @@ export type DesignSystemOrderByWithRelationInput = {
   folders?: Prisma.SortOrder
   repositories?: Prisma.SortOrder
   teammateIds?: Prisma.SortOrder
+  projectIds?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
@@ -262,6 +267,7 @@ export type DesignSystemWhereUniqueInput = Prisma.AtLeast<{
   folders?: Prisma.StringNullableListFilter<"DesignSystem">
   repositories?: Prisma.StringNullableListFilter<"DesignSystem">
   teammateIds?: Prisma.StringNullableListFilter<"DesignSystem">
+  projectIds?: Prisma.StringNullableListFilter<"DesignSystem">
   createdAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
@@ -278,6 +284,7 @@ export type DesignSystemOrderByWithAggregationInput = {
   folders?: Prisma.SortOrder
   repositories?: Prisma.SortOrder
   teammateIds?: Prisma.SortOrder
+  projectIds?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DesignSystemCountOrderByAggregateInput
@@ -299,6 +306,7 @@ export type DesignSystemScalarWhereWithAggregatesInput = {
   folders?: Prisma.StringNullableListFilter<"DesignSystem">
   repositories?: Prisma.StringNullableListFilter<"DesignSystem">
   teammateIds?: Prisma.StringNullableListFilter<"DesignSystem">
+  projectIds?: Prisma.StringNullableListFilter<"DesignSystem">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DesignSystem"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"DesignSystem"> | Date | string
 }
@@ -313,6 +321,7 @@ export type DesignSystemCreateInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutDesignSystemsInput
@@ -329,6 +338,7 @@ export type DesignSystemUncheckedCreateInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -343,6 +353,7 @@ export type DesignSystemUpdateInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutDesignSystemsNestedInput
@@ -359,6 +370,7 @@ export type DesignSystemUncheckedUpdateInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -374,6 +386,7 @@ export type DesignSystemCreateManyInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -388,6 +401,7 @@ export type DesignSystemUpdateManyMutationInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -403,6 +417,7 @@ export type DesignSystemUncheckedUpdateManyInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -433,6 +448,7 @@ export type DesignSystemCountOrderByAggregateInput = {
   folders?: Prisma.SortOrder
   repositories?: Prisma.SortOrder
   teammateIds?: Prisma.SortOrder
+  projectIds?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -515,6 +531,10 @@ export type DesignSystemCreateteammateIdsInput = {
   set: string[]
 }
 
+export type DesignSystemCreateprojectIdsInput = {
+  set: string[]
+}
+
 export type DesignSystemUpdatefoldersInput = {
   set?: string[]
   push?: string | string[]
@@ -530,6 +550,11 @@ export type DesignSystemUpdateteammateIdsInput = {
   push?: string | string[]
 }
 
+export type DesignSystemUpdateprojectIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
 export type DesignSystemCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -540,6 +565,7 @@ export type DesignSystemCreateWithoutWorkspaceInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -554,6 +580,7 @@ export type DesignSystemUncheckedCreateWithoutWorkspaceInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -598,6 +625,7 @@ export type DesignSystemScalarWhereInput = {
   folders?: Prisma.StringNullableListFilter<"DesignSystem">
   repositories?: Prisma.StringNullableListFilter<"DesignSystem">
   teammateIds?: Prisma.StringNullableListFilter<"DesignSystem">
+  projectIds?: Prisma.StringNullableListFilter<"DesignSystem">
   createdAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"DesignSystem"> | Date | string
 }
@@ -612,6 +640,7 @@ export type DesignSystemCreateManyWorkspaceInput = {
   folders?: Prisma.DesignSystemCreatefoldersInput | string[]
   repositories?: Prisma.DesignSystemCreaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemCreateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemCreateprojectIdsInput | string[]
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -626,6 +655,7 @@ export type DesignSystemUpdateWithoutWorkspaceInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -640,6 +670,7 @@ export type DesignSystemUncheckedUpdateWithoutWorkspaceInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -654,6 +685,7 @@ export type DesignSystemUncheckedUpdateManyWithoutWorkspaceInput = {
   folders?: Prisma.DesignSystemUpdatefoldersInput | string[]
   repositories?: Prisma.DesignSystemUpdaterepositoriesInput | string[]
   teammateIds?: Prisma.DesignSystemUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.DesignSystemUpdateprojectIdsInput | string[]
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -671,6 +703,7 @@ export type DesignSystemSelect<ExtArgs extends runtime.Types.Extensions.Internal
   folders?: boolean
   repositories?: boolean
   teammateIds?: boolean
+  projectIds?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -687,6 +720,7 @@ export type DesignSystemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   folders?: boolean
   repositories?: boolean
   teammateIds?: boolean
+  projectIds?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -703,6 +737,7 @@ export type DesignSystemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   folders?: boolean
   repositories?: boolean
   teammateIds?: boolean
+  projectIds?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -719,11 +754,12 @@ export type DesignSystemSelectScalar = {
   folders?: boolean
   repositories?: boolean
   teammateIds?: boolean
+  projectIds?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DesignSystemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "description" | "path" | "isDefault" | "folders" | "repositories" | "teammateIds" | "createdAt" | "updatedAt", ExtArgs["result"]["designSystem"]>
+export type DesignSystemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "description" | "path" | "isDefault" | "folders" | "repositories" | "teammateIds" | "projectIds" | "createdAt" | "updatedAt", ExtArgs["result"]["designSystem"]>
 export type DesignSystemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
 }
@@ -765,6 +801,10 @@ export type $DesignSystemPayload<ExtArgs extends runtime.Types.Extensions.Intern
      * Teammates who follow it by default. Archived ones are skipped.
      */
     teammateIds: string[]
+    /**
+     * Projects whose threads follow it.
+     */
+    projectIds: string[]
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["designSystem"]>
@@ -1201,6 +1241,7 @@ export interface DesignSystemFieldRefs {
   readonly folders: Prisma.FieldRef<"DesignSystem", 'String[]'>
   readonly repositories: Prisma.FieldRef<"DesignSystem", 'String[]'>
   readonly teammateIds: Prisma.FieldRef<"DesignSystem", 'String[]'>
+  readonly projectIds: Prisma.FieldRef<"DesignSystem", 'String[]'>
   readonly createdAt: Prisma.FieldRef<"DesignSystem", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"DesignSystem", 'DateTime'>
 }

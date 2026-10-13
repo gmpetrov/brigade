@@ -5,6 +5,7 @@ import {
   PreviewPullRequest,
   RepositoryName,
   RequestReview,
+  type PullRequestList,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
@@ -19,7 +20,29 @@ import {
   setPullState,
   stopLoop,
 } from '../pull-requests.js'
+import type { ScopedDb } from '../db.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+
+/** A pull request is a project's when its repository is, or a thread of the project opened it. */
+async function inProject(db: ScopedDb, list: PullRequestList, projectId: string) {
+  const [repositories, threads] = await Promise.all([
+    db.projectRepository.findMany({ where: { projectId }, select: { repository: true } }),
+    db.session.findMany({ where: { projectId, pullRequests: { some: {} } }, select: { id: true } }),
+  ])
+  const repos = new Set(repositories.map((r) => r.repository))
+  const ids = new Set(threads.map((t) => t.id))
+  const pulls = list.pulls.filter(
+    (p) => repos.has(p.repository) || (p.tracking?.sessionId && ids.has(p.tracking.sessionId)),
+  )
+  return {
+    ...list,
+    pulls,
+    repositories: list.repositories.filter(
+      (r) => repos.has(r) || pulls.some((p) => p.repository === r),
+    ),
+    errors: list.errors.filter((e) => repos.has(e.repository)),
+  }
+}
 
 function target(params: { owner: string; name: string; number: string }) {
   const repo = RepositoryName.safeParse(`${params.owner}/${params.name}`)
@@ -32,9 +55,12 @@ function target(params: { owner: string; name: string; number: string }) {
 export const pulls = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
+  /** ?project=<id>: those of its repositories or opened from its threads. */
   .get('/', async (c) => {
     const state = c.req.query('state') === 'closed' ? 'closed' : 'open'
-    return c.json(await listPulls(c.var.db, c.var.scope, state))
+    const list = await listPulls(c.var.db, c.var.scope, state)
+    const projectId = c.req.query('project')
+    return c.json(projectId ? await inProject(c.var.db, list, projectId) : list)
   })
 
   /** For the sidebar: how many are open and how many wait on a person. Database only, no GitHub call. */

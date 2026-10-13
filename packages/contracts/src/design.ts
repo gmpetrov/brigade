@@ -149,6 +149,8 @@ export const DesignSystem = z.object({
   repositories: z.array(z.string()),
   /** These teammates follow it by default. */
   teammateIds: z.array(z.string()),
+  /** Threads in these projects follow it. */
+  projectIds: z.array(z.string()),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -162,6 +164,7 @@ export const SaveDesignSystem = z.object({
   folders: z.array(LibraryPath).max(50).default([]),
   repositories: z.array(RepositoryName).max(50).default([]),
   teammateIds: z.array(z.string()).max(200).default([]),
+  projectIds: z.array(z.string()).max(200).default([]),
 })
 export type SaveDesignSystem = z.input<typeof SaveDesignSystem>
 
@@ -215,6 +218,8 @@ export const ThreadDesignSystem = z.object({
   repositories: z.array(z.string()),
   /** It applies to this teammate. */
   teammate: z.boolean(),
+  /** It applies to the thread's project. */
+  project: z.boolean().default(false),
   isDefault: z.boolean(),
 })
 export type ThreadDesignSystem = z.infer<typeof ThreadDesignSystem>

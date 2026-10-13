@@ -13,7 +13,7 @@ import {
   type SuggestionMenuProps,
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import type { Mention } from '@brigade/contracts'
+import { isLegacyProjectMention, type Mention } from '@brigade/contracts'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -38,7 +38,9 @@ function DocumentMention({ mention }: { mention: Mention }) {
     else if (mention.kind === 'teammate') router.push(`/app/teammates/${mention.id}`)
     else if (mention.kind === 'thread') router.push(`/app/threads/${mention.id}`)
     else if (mention.kind === 'connection') router.push('/app/connections')
-    else if (mention.kind === 'repository')
+    else if (mention.kind === 'project' && !isLegacyProjectMention(mention))
+      router.push(`/app/projects/${mention.id}`)
+    else if (mention.kind === 'repository' || mention.kind === 'project')
       window.open(`https://github.com/${mention.id}`, '_blank', 'noopener')
   }
   return (

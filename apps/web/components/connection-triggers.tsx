@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
+import { ProjectSelect, ProjectTag } from '@/components/projects'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,7 +51,8 @@ export function ConnectionTriggers({
   reload: () => Promise<unknown>
   editable: boolean
 }) {
-  const { teammates } = useDashboard()
+  const { teammates, projects } = useDashboard()
+  const [projectId, setProjectId] = useState('none')
   const kinds = catalog?.catalog[connection.kind] ?? []
   const info = catalog?.kinds[connection.kind]
   const custom = connection.kind === 'webhook'
@@ -70,6 +72,19 @@ export function ConnectionTriggers({
     setLabel(custom ? '' : (kinds[0]?.label ?? ''))
   }
 
+  async function moveTrigger(trigger: Trigger, value: string) {
+    setError(undefined)
+    try {
+      await api(`/triggers/${trigger.id}/project`, {
+        method: 'PUT',
+        body: { projectId: value === 'none' ? null : value },
+      })
+      await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function create(form: FormData) {
     if (!chosen) return
     setError(undefined)
@@ -86,6 +101,7 @@ export function ConnectionTriggers({
           event: chosen.event,
           options,
           ...(custom ? { verification: String(form.get('verification')) } : {}),
+          ...(projectId !== 'none' && { projectId }),
         },
       })
       setCreated(result.url ? { url: result.url, signingSecret: result.signingSecret } : undefined)
@@ -162,6 +178,11 @@ export function ConnectionTriggers({
                   <div className="text-sm">
                     <span className="font-semibold">{t.label}</span>{' '}
                     <span className="text-muted-foreground">→ {t.teammate.name}</span>
+                    {t.project && !editable && (
+                      <span className="ml-2 inline-flex text-xs">
+                        <ProjectTag project={t.project} />
+                      </span>
+                    )}
                   </div>
                   {custom ? (
                     <code className="font-mono text-xs break-all text-muted-foreground">
@@ -179,6 +200,13 @@ export function ConnectionTriggers({
                     status={t.verification ?? 'none'}
                     tone={t.verification === 'hmac' ? 'success' : 'warning'}
                     label={t.verification === 'hmac' ? 'signed' : 'unsigned'}
+                  />
+                )}
+                {editable && (projects.length > 0 || t.projectId) && (
+                  <ProjectSelect
+                    value={t.projectId ?? 'none'}
+                    onChange={(value) => void moveTrigger(t, value)}
+                    className="h-8 sm:w-44"
                   />
                 )}
                 {editable && (
@@ -254,6 +282,17 @@ export function ConnectionTriggers({
                 </SelectContent>
               </Select>
             </div>
+            {projects.some((p) => !p.archivedAt) && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={idFor('project')}>In project</Label>
+                <ProjectSelect
+                  id={idFor('project')}
+                  value={projectId}
+                  onChange={setProjectId}
+                  className="bg-card sm:w-full"
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               <Label htmlFor={idFor('label')}>Name</Label>
               <Input

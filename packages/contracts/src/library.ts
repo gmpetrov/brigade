@@ -37,6 +37,7 @@ export const DocumentKind = z.enum([
   'workspace_memory',
   'teammate_memory',
   'thread_summary',
+  'project_memory',
 ])
 export type DocumentKind = z.infer<typeof DocumentKind>
 
@@ -301,6 +302,7 @@ export const EditTarget = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('library'), id: z.string() }),
   z.object({ kind: z.literal('workspace_memory') }),
   z.object({ kind: z.literal('teammate_memory'), teammateId: z.string() }),
+  z.object({ kind: z.literal('project_memory'), projectId: z.string() }),
 ])
 export type EditTarget = z.infer<typeof EditTarget>
 

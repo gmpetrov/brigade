@@ -297,16 +297,33 @@ export async function moveLibraryFile(
 // Memory
 // ---------------------------------------------------------------------------
 
-type MemoryTarget = { kind: 'workspace_memory' } | { kind: 'teammate_memory'; teammateId: string }
+type MemoryTarget =
+  | { kind: 'workspace_memory' }
+  | { kind: 'teammate_memory'; teammateId: string }
+  | { kind: 'project_memory'; projectId: string }
 
 const memoryPath = (target: MemoryTarget) =>
-  target.kind === 'workspace_memory' ? 'workspace.md' : `teammates/${target.teammateId}.md`
+  target.kind === 'workspace_memory'
+    ? 'workspace.md'
+    : target.kind === 'teammate_memory'
+      ? `teammates/${target.teammateId}.md`
+      : `projects/${target.projectId}.md`
+
+/** The row's link to its teammate or project. */
+const memoryLinks = (target: MemoryTarget) =>
+  target.kind === 'teammate_memory'
+    ? { teammateId: target.teammateId }
+    : target.kind === 'project_memory'
+      ? { projectId: target.projectId }
+      : {}
 
 /** A new memory file: just its heading. The dashboard says what it is for. */
-export function memoryHeader(target: MemoryTarget, teammateName?: string) {
+export function memoryHeader(target: MemoryTarget, name?: string) {
   return target.kind === 'workspace_memory'
     ? '# Workspace memory\n'
-    : `# What ${teammateName ?? 'this teammate'} has learned\n`
+    : target.kind === 'teammate_memory'
+      ? `# What ${name ?? 'this teammate'} has learned\n`
+      : `# ${name ?? 'Project'} memory\n`
 }
 
 export async function readMemory(db: ScopedDb, target: MemoryTarget) {
@@ -318,21 +335,32 @@ export async function ensureMemory(
   db: ScopedDb,
   scope: Scope,
   target: MemoryTarget,
-  teammateName?: string,
+  name?: string,
 ) {
   return (
     (await readMemory(db, target)) ??
-    upsertText(db, scope, target.kind, memoryPath(target), memoryHeader(target, teammateName), {
-      ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
-    })
+    upsertText(
+      db,
+      scope,
+      target.kind,
+      memoryPath(target),
+      memoryHeader(target, name),
+      memoryLinks(target),
+    )
   )
 }
 
 /** Which memory file a document row is. */
-export function memoryTarget(row: { kind: string; teammateId: string | null }): MemoryTarget {
+export function memoryTarget(row: {
+  kind: string
+  teammateId: string | null
+  projectId?: string | null
+}): MemoryTarget {
   if (row.kind === 'workspace_memory') return { kind: 'workspace_memory' }
   if (row.kind === 'teammate_memory' && row.teammateId)
     return { kind: 'teammate_memory', teammateId: row.teammateId }
+  if (row.kind === 'project_memory' && row.projectId)
+    return { kind: 'project_memory', projectId: row.projectId }
   throw new HTTPException(400, { message: 'Not a memory file' })
 }
 
@@ -344,7 +372,14 @@ export async function saveDocumentText(
   db: ScopedDb,
   scope: Scope,
   actor: Actor,
-  row: { id: string; kind: string; path: string; contentType: string; teammateId: string | null },
+  row: {
+    id: string
+    kind: string
+    path: string
+    contentType: string
+    teammateId: string | null
+    projectId?: string | null
+  },
   text: string,
   options: { fromCollab?: boolean } = {},
 ) {
@@ -374,18 +409,20 @@ export async function writeMemory(
   /** Set when the collab server saves what people edited: its room already has it. */
   options: { fromCollab?: boolean } = {},
 ) {
-  const row = await upsertText(db, scope, target.kind, memoryPath(target), text, {
-    ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
-  })
+  const row = await upsertText(
+    db,
+    scope,
+    target.kind,
+    memoryPath(target),
+    text,
+    memoryLinks(target),
+  )
   await audit({
     ...scope,
     actor,
     action: 'memory.written',
     target: { type: 'document', id: row.id },
-    data: {
-      kind: target.kind,
-      ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
-    },
+    data: { kind: target.kind, ...memoryLinks(target) },
   })
   notifyLibraryChanged(scope.workspaceId)
   if (!options.fromCollab) notifyCollab(row.id)
@@ -430,7 +467,8 @@ export async function editMemory(
   db: ScopedDb,
   scope: Scope,
   actor: Actor,
-  target: MemoryTarget & { teammateName?: string },
+  /** name: the teammate's or the project's, for a new file's heading. */
+  target: MemoryTarget & { name?: string },
   edit: MemoryEdit,
   sessionId: string,
 ) {
@@ -442,7 +480,7 @@ export async function editMemory(
     const current = await tx.document.findFirst({
       where: { ...scope, kind: target.kind, path },
     })
-    const result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.teammateName), edit)
+    const result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.name), edit)
     if (result.added === 0 && result.removed === 0) return
     const fields = {
       text: result.text,
@@ -458,7 +496,7 @@ export async function editMemory(
             kind: target.kind,
             path,
             contentType: 'text/markdown',
-            ...(target.kind === 'teammate_memory' ? { teammateId: target.teammateId } : {}),
+            ...memoryLinks(target),
             ...fields,
           },
         })
@@ -503,10 +541,10 @@ export async function saveSummary(
 async function upsertText(
   db: ScopedDb,
   scope: Scope,
-  kind: 'workspace_memory' | 'teammate_memory' | 'thread_summary',
+  kind: 'workspace_memory' | 'teammate_memory' | 'project_memory' | 'thread_summary',
   path: string,
   text: string,
-  links: { teammateId?: string; sessionId?: string },
+  links: { teammateId?: string; sessionId?: string; projectId?: string },
 ) {
   const fields = {
     text,
@@ -558,6 +596,7 @@ export async function search(
       path: string
       sessionId: string | null
       teammateName: string | null
+      projectName: string | null
       title: string | null
       snippet: string
     }[]
@@ -565,13 +604,14 @@ export async function search(
     WITH q AS (
       SELECT websearch_to_tsquery('english', ${input.query}) || websearch_to_tsquery('simple', ${input.query}) AS query
     )
-    SELECT d.id, d.kind, d.path, d."sessionId", t.name AS "teammateName", s.title,
+    SELECT d.id, d.kind, d.path, d."sessionId", t.name AS "teammateName", p.name AS "projectName", s.title,
       ts_headline('english', left(d.text, 100000), q.query,
         'StartSel=«, StopSel=», MaxFragments=2, MaxWords=35, MinWords=12, FragmentDelimiter=" … "') AS snippet
     FROM "Document" d
     CROSS JOIN q
     LEFT JOIN "Session" s ON s.id = d."sessionId"
     LEFT JOIN "Teammate" t ON t.id = d."teammateId"
+    LEFT JOIN "Project" p ON p.id = d."projectId"
     WHERE d."organizationId" = ${scope.organizationId}
       AND d."workspaceId" = ${scope.workspaceId}
       AND d.search @@ q.query
@@ -595,7 +635,9 @@ export async function search(
             ? 'Workspace memory'
             : r.kind === 'teammate_memory'
               ? `${r.teammateName ?? 'A teammate'}'s memory`
-              : `Thread: ${r.title ?? r.sessionId}`,
+              : r.kind === 'project_memory'
+                ? `${r.projectName ?? 'A project'}'s memory`
+                : `Thread: ${r.title ?? r.sessionId}`,
       snippet: r.snippet,
     }))
 }

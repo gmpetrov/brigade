@@ -90,7 +90,9 @@ export const ModelName = {
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
   PreviewRecipe: 'PreviewRecipe',
-  PreviewVariable: 'PreviewVariable'
+  PreviewVariable: 'PreviewVariable',
+  Project: 'Project',
+  ProjectRepository: 'ProjectRepository'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -291,7 +293,8 @@ export const SessionScalarFieldEnum = {
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  taskId: 'taskId'
+  taskId: 'taskId',
+  projectId: 'projectId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -311,6 +314,7 @@ export const TaskScalarFieldEnum = {
   completedAt: 'completedAt',
   archivedAt: 'archivedAt',
   trashedAt: 'trashedAt',
+  projectId: 'projectId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -332,6 +336,7 @@ export const ScheduleScalarFieldEnum = {
   pausedAt: 'pausedAt',
   nextRunAt: 'nextRunAt',
   lastError: 'lastError',
+  projectId: 'projectId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -558,6 +563,7 @@ export const TriggerScalarFieldEnum = {
   verification: 'verification',
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
+  projectId: 'projectId',
   createdAt: 'createdAt'
 } as const
 
@@ -608,6 +614,7 @@ export const DocumentScalarFieldEnum = {
   workspaceId: 'workspaceId',
   kind: 'kind',
   path: 'path',
+  projectId: 'projectId',
   teammateId: 'teammateId',
   sessionId: 'sessionId',
   contentType: 'contentType',
@@ -756,6 +763,7 @@ export const DesignSystemScalarFieldEnum = {
   folders: 'folders',
   repositories: 'repositories',
   teammateIds: 'teammateIds',
+  projectIds: 'projectIds',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -794,6 +802,34 @@ export const PreviewVariableScalarFieldEnum = {
 } as const
 
 export type PreviewVariableScalarFieldEnum = (typeof PreviewVariableScalarFieldEnum)[keyof typeof PreviewVariableScalarFieldEnum]
+
+
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  icon: 'icon',
+  brief: 'brief',
+  folder: 'folder',
+  preferredConnectionIds: 'preferredConnectionIds',
+  archivedAt: 'archivedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const ProjectRepositoryScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  projectId: 'projectId',
+  repository: 'repository',
+  createdAt: 'createdAt'
+} as const
+
+export type ProjectRepositoryScalarFieldEnum = (typeof ProjectRepositoryScalarFieldEnum)[keyof typeof ProjectRepositoryScalarFieldEnum]
 
 
 export const SortOrder = {

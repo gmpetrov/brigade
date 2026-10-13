@@ -343,6 +343,10 @@ export const library = new Hono<AppEnv>()
         throw new HTTPException(400, { message: 'Only Markdown files open in the editor' })
     } else if (target.kind === 'workspace_memory') {
       row = await ensureMemory(db, scope, target)
+    } else if (target.kind === 'project_memory') {
+      const project = await db.project.findFirst({ where: { id: target.projectId } })
+      if (!project) throw new HTTPException(404, { message: 'Project not found' })
+      row = await ensureMemory(db, scope, target, project.name)
     } else {
       const teammate = await db.teammate.findFirst({
         where: { id: target.teammateId, archivedAt: null },

@@ -67,6 +67,8 @@ export const CreateSchedule = z
     instructions: Instructions,
     cron: CronExpression,
     timezone: Timezone,
+    /** Its runs start in this project. */
+    projectId: z.string().nullish(),
   })
   .superRefine(valid)
 
@@ -78,6 +80,7 @@ export const UpdateSchedule = z
     instructions: Instructions.optional(),
     cron: CronExpression.optional(),
     timezone: Timezone.optional(),
+    projectId: z.string().nullable().optional(),
   })
   .refine((v) => (v.cron === undefined) === (v.timezone === undefined), {
     message: 'Send cron and timezone together',

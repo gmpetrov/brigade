@@ -28,6 +28,7 @@ import {
   useThreadPreview,
 } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
+import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { MakeTaskButton, ThreadTaskBar } from '@/components/tasks'
@@ -370,6 +371,11 @@ export default function ThreadPage() {
                   `started by ${t.startedBy.user.name}`
                 )}
               </span>
+              <ThreadProjectMenu
+                threadId={t.id}
+                project={t.project}
+                onMoved={() => void thread.reload()}
+              />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -535,6 +541,7 @@ export default function ThreadPage() {
                     title: t.title,
                     origin: t.origin,
                     startedByMemberId: t.startedByMemberId,
+                    projectId: t.project?.id ?? null,
                     teammate: t.teammate,
                   },
                 }}

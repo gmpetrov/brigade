@@ -14,7 +14,8 @@ import { PreviewVariables } from '@/components/preview-variables'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { api, useApi } from '@/lib/api'
 
-export function SavedPreviews() {
+/** Every repository's saved preview; with `repositories`, only theirs (a project's or one repository's). */
+export function SavedPreviews({ repositories }: { repositories?: string[] } = {}) {
   const { me } = useDashboard()
   const saved = useApi<SavedPreview[]>('/repositories/previews')
   const [busy, setBusy] = useState(false)
@@ -39,7 +40,9 @@ export function SavedPreviews() {
     }
   }
 
-  const list = saved.data ?? []
+  const list = (saved.data ?? []).filter(
+    (p) => !repositories || repositories.includes(p.repository),
+  )
   return (
     <section aria-labelledby="saved-previews" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">

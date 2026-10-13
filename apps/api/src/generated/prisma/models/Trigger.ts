@@ -38,6 +38,7 @@ export type TriggerMinAggregateOutputType = {
   verification: $Enums.TriggerVerification | null
   verificationSecretId: string | null
   createdByMemberId: string | null
+  projectId: string | null
   createdAt: Date | null
 }
 
@@ -53,6 +54,7 @@ export type TriggerMaxAggregateOutputType = {
   verification: $Enums.TriggerVerification | null
   verificationSecretId: string | null
   createdByMemberId: string | null
+  projectId: string | null
   createdAt: Date | null
 }
 
@@ -69,6 +71,7 @@ export type TriggerCountAggregateOutputType = {
   verification: number
   verificationSecretId: number
   createdByMemberId: number
+  projectId: number
   createdAt: number
   _all: number
 }
@@ -86,6 +89,7 @@ export type TriggerMinAggregateInputType = {
   verification?: true
   verificationSecretId?: true
   createdByMemberId?: true
+  projectId?: true
   createdAt?: true
 }
 
@@ -101,6 +105,7 @@ export type TriggerMaxAggregateInputType = {
   verification?: true
   verificationSecretId?: true
   createdByMemberId?: true
+  projectId?: true
   createdAt?: true
 }
 
@@ -117,6 +122,7 @@ export type TriggerCountAggregateInputType = {
   verification?: true
   verificationSecretId?: true
   createdByMemberId?: true
+  projectId?: true
   createdAt?: true
   _all?: true
 }
@@ -206,6 +212,7 @@ export type TriggerGroupByOutputType = {
   verification: $Enums.TriggerVerification | null
   verificationSecretId: string | null
   createdByMemberId: string
+  projectId: string | null
   createdAt: Date
   _count: TriggerCountAggregateOutputType | null
   _min: TriggerMinAggregateOutputType | null
@@ -243,10 +250,12 @@ export type TriggerWhereInput = {
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
+  projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionScalarRelationFilter, Prisma.ConnectionWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
+  project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
 }
 
@@ -263,10 +272,12 @@ export type TriggerOrderByWithRelationInput = {
   verification?: Prisma.SortOrderInput | Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   connection?: Prisma.ConnectionOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
+  project?: Prisma.ProjectOrderByWithRelationInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
 }
 
@@ -286,10 +297,12 @@ export type TriggerWhereUniqueInput = Prisma.AtLeast<{
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
+  projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionScalarRelationFilter, Prisma.ConnectionWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
+  project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
 }, "id" | "pathToken">
 
@@ -306,6 +319,7 @@ export type TriggerOrderByWithAggregationInput = {
   verification?: Prisma.SortOrderInput | Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.TriggerCountOrderByAggregateInput
   _max?: Prisma.TriggerMaxOrderByAggregateInput
@@ -328,6 +342,7 @@ export type TriggerScalarWhereWithAggregatesInput = {
   verification?: Prisma.EnumTriggerVerificationNullableWithAggregatesFilter<"Trigger"> | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Trigger"> | string
+  projectId?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Trigger"> | Date | string
 }
 
@@ -345,6 +360,7 @@ export type TriggerCreateInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -361,6 +377,7 @@ export type TriggerUncheckedCreateInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -379,6 +396,7 @@ export type TriggerUpdateInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -395,6 +413,7 @@ export type TriggerUncheckedUpdateInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -412,6 +431,7 @@ export type TriggerCreateManyInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
 }
 
@@ -441,6 +461,7 @@ export type TriggerUncheckedUpdateManyInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -472,6 +493,7 @@ export type TriggerCountOrderByAggregateInput = {
   verification?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  projectId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -487,6 +509,7 @@ export type TriggerMaxOrderByAggregateInput = {
   verification?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  projectId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -502,6 +525,7 @@ export type TriggerMinOrderByAggregateInput = {
   verification?: Prisma.SortOrder
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  projectId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -651,6 +675,48 @@ export type NullableEnumTriggerVerificationFieldUpdateOperationsInput = {
   set?: $Enums.TriggerVerification | null
 }
 
+export type TriggerCreateNestedManyWithoutProjectInput = {
+  create?: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput> | Prisma.TriggerCreateWithoutProjectInput[] | Prisma.TriggerUncheckedCreateWithoutProjectInput[]
+  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutProjectInput | Prisma.TriggerCreateOrConnectWithoutProjectInput[]
+  createMany?: Prisma.TriggerCreateManyProjectInputEnvelope
+  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+}
+
+export type TriggerUncheckedCreateNestedManyWithoutProjectInput = {
+  create?: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput> | Prisma.TriggerCreateWithoutProjectInput[] | Prisma.TriggerUncheckedCreateWithoutProjectInput[]
+  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutProjectInput | Prisma.TriggerCreateOrConnectWithoutProjectInput[]
+  createMany?: Prisma.TriggerCreateManyProjectInputEnvelope
+  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+}
+
+export type TriggerUpdateManyWithoutProjectNestedInput = {
+  create?: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput> | Prisma.TriggerCreateWithoutProjectInput[] | Prisma.TriggerUncheckedCreateWithoutProjectInput[]
+  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutProjectInput | Prisma.TriggerCreateOrConnectWithoutProjectInput[]
+  upsert?: Prisma.TriggerUpsertWithWhereUniqueWithoutProjectInput | Prisma.TriggerUpsertWithWhereUniqueWithoutProjectInput[]
+  createMany?: Prisma.TriggerCreateManyProjectInputEnvelope
+  set?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  disconnect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  delete?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  update?: Prisma.TriggerUpdateWithWhereUniqueWithoutProjectInput | Prisma.TriggerUpdateWithWhereUniqueWithoutProjectInput[]
+  updateMany?: Prisma.TriggerUpdateManyWithWhereWithoutProjectInput | Prisma.TriggerUpdateManyWithWhereWithoutProjectInput[]
+  deleteMany?: Prisma.TriggerScalarWhereInput | Prisma.TriggerScalarWhereInput[]
+}
+
+export type TriggerUncheckedUpdateManyWithoutProjectNestedInput = {
+  create?: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput> | Prisma.TriggerCreateWithoutProjectInput[] | Prisma.TriggerUncheckedCreateWithoutProjectInput[]
+  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutProjectInput | Prisma.TriggerCreateOrConnectWithoutProjectInput[]
+  upsert?: Prisma.TriggerUpsertWithWhereUniqueWithoutProjectInput | Prisma.TriggerUpsertWithWhereUniqueWithoutProjectInput[]
+  createMany?: Prisma.TriggerCreateManyProjectInputEnvelope
+  set?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  disconnect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  delete?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
+  update?: Prisma.TriggerUpdateWithWhereUniqueWithoutProjectInput | Prisma.TriggerUpdateWithWhereUniqueWithoutProjectInput[]
+  updateMany?: Prisma.TriggerUpdateManyWithWhereWithoutProjectInput | Prisma.TriggerUpdateManyWithWhereWithoutProjectInput[]
+  deleteMany?: Prisma.TriggerScalarWhereInput | Prisma.TriggerScalarWhereInput[]
+}
+
 export type TriggerCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -664,6 +730,7 @@ export type TriggerCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -679,6 +746,7 @@ export type TriggerUncheckedCreateWithoutWorkspaceInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -725,6 +793,7 @@ export type TriggerScalarWhereInput = {
   verification?: Prisma.EnumTriggerVerificationNullableFilter<"Trigger"> | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
+  projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
 }
 
@@ -741,6 +810,7 @@ export type TriggerCreateWithoutTeammateInput = {
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -756,6 +826,7 @@ export type TriggerUncheckedCreateWithoutTeammateInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -800,6 +871,7 @@ export type TriggerCreateWithoutSessionsInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
 }
 
 export type TriggerUncheckedCreateWithoutSessionsInput = {
@@ -815,6 +887,7 @@ export type TriggerUncheckedCreateWithoutSessionsInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
 }
 
@@ -848,6 +921,7 @@ export type TriggerUpdateWithoutSessionsInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
 }
 
 export type TriggerUncheckedUpdateWithoutSessionsInput = {
@@ -863,6 +937,7 @@ export type TriggerUncheckedUpdateWithoutSessionsInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -879,6 +954,7 @@ export type TriggerCreateWithoutConnectionInput = {
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -894,6 +970,7 @@ export type TriggerUncheckedCreateWithoutConnectionInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -924,6 +1001,66 @@ export type TriggerUpdateManyWithWhereWithoutConnectionInput = {
   data: Prisma.XOR<Prisma.TriggerUpdateManyMutationInput, Prisma.TriggerUncheckedUpdateManyWithoutConnectionInput>
 }
 
+export type TriggerCreateWithoutProjectInput = {
+  id?: string
+  organizationId: string
+  label: string
+  event: string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: string | null
+  verification?: $Enums.TriggerVerification | null
+  verificationSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
+  connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
+}
+
+export type TriggerUncheckedCreateWithoutProjectInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  connectionId: string
+  teammateId: string
+  label: string
+  event: string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: string | null
+  verification?: $Enums.TriggerVerification | null
+  verificationSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
+}
+
+export type TriggerCreateOrConnectWithoutProjectInput = {
+  where: Prisma.TriggerWhereUniqueInput
+  create: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput>
+}
+
+export type TriggerCreateManyProjectInputEnvelope = {
+  data: Prisma.TriggerCreateManyProjectInput | Prisma.TriggerCreateManyProjectInput[]
+  skipDuplicates?: boolean
+}
+
+export type TriggerUpsertWithWhereUniqueWithoutProjectInput = {
+  where: Prisma.TriggerWhereUniqueInput
+  update: Prisma.XOR<Prisma.TriggerUpdateWithoutProjectInput, Prisma.TriggerUncheckedUpdateWithoutProjectInput>
+  create: Prisma.XOR<Prisma.TriggerCreateWithoutProjectInput, Prisma.TriggerUncheckedCreateWithoutProjectInput>
+}
+
+export type TriggerUpdateWithWhereUniqueWithoutProjectInput = {
+  where: Prisma.TriggerWhereUniqueInput
+  data: Prisma.XOR<Prisma.TriggerUpdateWithoutProjectInput, Prisma.TriggerUncheckedUpdateWithoutProjectInput>
+}
+
+export type TriggerUpdateManyWithWhereWithoutProjectInput = {
+  where: Prisma.TriggerScalarWhereInput
+  data: Prisma.XOR<Prisma.TriggerUpdateManyMutationInput, Prisma.TriggerUncheckedUpdateManyWithoutProjectInput>
+}
+
 export type TriggerCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
@@ -936,6 +1073,7 @@ export type TriggerCreateManyWorkspaceInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
 }
 
@@ -952,6 +1090,7 @@ export type TriggerUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -967,6 +1106,7 @@ export type TriggerUncheckedUpdateWithoutWorkspaceInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -983,6 +1123,7 @@ export type TriggerUncheckedUpdateManyWithoutWorkspaceInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -998,6 +1139,7 @@ export type TriggerCreateManyTeammateInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
 }
 
@@ -1014,6 +1156,7 @@ export type TriggerUpdateWithoutTeammateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1029,6 +1172,7 @@ export type TriggerUncheckedUpdateWithoutTeammateInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1045,6 +1189,7 @@ export type TriggerUncheckedUpdateManyWithoutTeammateInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1060,6 +1205,7 @@ export type TriggerCreateManyConnectionInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
+  projectId?: string | null
   createdAt?: Date | string
 }
 
@@ -1076,6 +1222,7 @@ export type TriggerUpdateWithoutConnectionInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1091,6 +1238,7 @@ export type TriggerUncheckedUpdateWithoutConnectionInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1099,6 +1247,73 @@ export type TriggerUncheckedUpdateManyWithoutConnectionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  event?: Prisma.StringFieldUpdateOperationsInput | string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
+  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TriggerCreateManyProjectInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  connectionId: string
+  teammateId: string
+  label: string
+  event: string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: string | null
+  verification?: $Enums.TriggerVerification | null
+  verificationSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+}
+
+export type TriggerUpdateWithoutProjectInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  event?: Prisma.StringFieldUpdateOperationsInput | string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
+  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
+  connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
+}
+
+export type TriggerUncheckedUpdateWithoutProjectInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  connectionId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  event?: Prisma.StringFieldUpdateOperationsInput | string
+  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
+  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
+}
+
+export type TriggerUncheckedUpdateManyWithoutProjectInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  connectionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.StringFieldUpdateOperationsInput | string
   event?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1154,10 +1369,12 @@ export type TriggerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   verification?: boolean
   verificationSecretId?: boolean
   createdByMemberId?: boolean
+  projectId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
   sessions?: boolean | Prisma.Trigger$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
@@ -1175,10 +1392,12 @@ export type TriggerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verification?: boolean
   verificationSecretId?: boolean
   createdByMemberId?: boolean
+  projectId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
 
 export type TriggerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1194,10 +1413,12 @@ export type TriggerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verification?: boolean
   verificationSecretId?: boolean
   createdByMemberId?: boolean
+  projectId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
 
 export type TriggerSelectScalar = {
@@ -1213,14 +1434,16 @@ export type TriggerSelectScalar = {
   verification?: boolean
   verificationSecretId?: boolean
   createdByMemberId?: boolean
+  projectId?: boolean
   createdAt?: boolean
 }
 
-export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "createdAt", ExtArgs["result"]["trigger"]>
+export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "projectId" | "createdAt", ExtArgs["result"]["trigger"]>
 export type TriggerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
   sessions?: boolean | Prisma.Trigger$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1228,11 +1451,13 @@ export type TriggerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
 }
 export type TriggerIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
+  project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
 }
 
 export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1241,6 +1466,7 @@ export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     connection: Prisma.$ConnectionPayload<ExtArgs>
     teammate: Prisma.$TeammatePayload<ExtArgs>
+    project: Prisma.$ProjectPayload<ExtArgs> | null
     sessions: Prisma.$SessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1274,6 +1500,10 @@ export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Runs on this member's accounts.
      */
     createdByMemberId: string
+    /**
+     * The threads it starts are in this project.
+     */
+    projectId: string | null
     createdAt: Date
   }, ExtArgs["result"]["trigger"]>
   composites: {}
@@ -1672,6 +1902,7 @@ export interface Prisma__TriggerClient<T, Null = never, ExtArgs extends runtime.
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   connection<T extends Prisma.ConnectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ConnectionDefaultArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   teammate<T extends Prisma.TeammateDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeammateDefaultArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  project<T extends Prisma.Trigger$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Trigger$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.Trigger$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Trigger$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1714,6 +1945,7 @@ export interface TriggerFieldRefs {
   readonly verification: Prisma.FieldRef<"Trigger", 'TriggerVerification'>
   readonly verificationSecretId: Prisma.FieldRef<"Trigger", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Trigger", 'String'>
+  readonly projectId: Prisma.FieldRef<"Trigger", 'String'>
   readonly createdAt: Prisma.FieldRef<"Trigger", 'DateTime'>
 }
     
@@ -2113,6 +2345,25 @@ export type TriggerDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Limit how many Triggers to delete.
    */
   limit?: number
+}
+
+/**
+ * Trigger.project
+ */
+export type Trigger$projectArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Project
+   */
+  select?: Prisma.ProjectSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Project
+   */
+  omit?: Prisma.ProjectOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProjectInclude<ExtArgs> | null
+  where?: Prisma.ProjectWhereInput
 }
 
 /**

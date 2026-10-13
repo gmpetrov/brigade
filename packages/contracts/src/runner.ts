@@ -5,6 +5,7 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { ProjectCatalogEntry, ThreadProject } from './projects.js'
 import {
   PREVIEW_PORTS_MAX,
   PreviewAction,
@@ -117,6 +118,10 @@ export const ThreadSpec = z.object({
   task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
   /** The workspace's design systems, for designs the teammate makes. */
   designSystems: z.array(ThreadDesignSystem).default([]),
+  /** The project the thread works in: its brief, memory, folder and repositories. */
+  project: ThreadProject.nullish(),
+  /** The workspace's projects (not archived), so a mention of one can be followed. */
+  projects: z.array(ProjectCatalogEntry).default([]),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -322,6 +327,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     sessionId: z.string(),
     summary: z.string().trim().min(1).max(4000),
     workspace: MemoryEdit.default({ add: [], remove: [] }),
+    /** For the thread's project's memory; unset when it has none. */
+    project: MemoryEdit.optional(),
     teammates: z
       .array(z.object({ teammateId: z.string(), edit: MemoryEdit }))
       .max(10)

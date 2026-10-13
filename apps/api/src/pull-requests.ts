@@ -22,6 +22,7 @@ import { GITHUB_API, githubHeaders, installationToken } from './connectors/githu
 import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
+import { projectOfRepository } from './projects.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
 import { loadThread } from './thread-spec.js'
@@ -763,6 +764,7 @@ export async function requestReview(
       memberId: scope.memberId,
       title: `Review ${repo}#${number}: ${p.title}`,
       text,
+      projectId: await projectOfRepository(db, repo),
     }).catch(async (error: unknown) => {
       await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewStatus: 'none' } })
       throw error
@@ -841,6 +843,7 @@ export async function previewPull(
     memberId: scope.memberId,
     title: `Preview ${repo}#${number}: ${p.title}`,
     text: previewPrompt(repo, p, teammate.name),
+    projectId: await projectOfRepository(db, repo),
   })
   await db.pullRequest.updateMany({
     where: { id: row.id, sessionId: null },

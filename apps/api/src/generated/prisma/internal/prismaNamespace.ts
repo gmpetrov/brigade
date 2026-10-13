@@ -436,7 +436,9 @@ export const ModelName = {
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
   PreviewRecipe: 'PreviewRecipe',
-  PreviewVariable: 'PreviewVariable'
+  PreviewVariable: 'PreviewVariable',
+  Project: 'Project',
+  ProjectRepository: 'ProjectRepository'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -452,7 +454,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe" | "previewVariable"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe" | "previewVariable" | "project" | "projectRepository"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3416,6 +3418,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Project: {
+      payload: Prisma.$ProjectPayload<ExtArgs>
+      fields: Prisma.ProjectFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        findMany: {
+          args: Prisma.ProjectFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        create: {
+          args: Prisma.ProjectCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        createMany: {
+          args: Prisma.ProjectCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        update: {
+          args: Prisma.ProjectUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProject>
+        }
+        groupBy: {
+          args: Prisma.ProjectGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProjectRepository: {
+      payload: Prisma.$ProjectRepositoryPayload<ExtArgs>
+      fields: Prisma.ProjectRepositoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectRepositoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectRepositoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectRepositoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectRepositoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        findMany: {
+          args: Prisma.ProjectRepositoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>[]
+        }
+        create: {
+          args: Prisma.ProjectRepositoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        createMany: {
+          args: Prisma.ProjectRepositoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectRepositoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectRepositoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        update: {
+          args: Prisma.ProjectRepositoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectRepositoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectRepositoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectRepositoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectRepositoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectRepositoryPayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectRepositoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectRepository>
+        }
+        groupBy: {
+          args: Prisma.ProjectRepositoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectRepositoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectRepositoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectRepositoryCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3637,7 +3787,8 @@ export const SessionScalarFieldEnum = {
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  taskId: 'taskId'
+  taskId: 'taskId',
+  projectId: 'projectId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -3657,6 +3808,7 @@ export const TaskScalarFieldEnum = {
   completedAt: 'completedAt',
   archivedAt: 'archivedAt',
   trashedAt: 'trashedAt',
+  projectId: 'projectId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -3678,6 +3830,7 @@ export const ScheduleScalarFieldEnum = {
   pausedAt: 'pausedAt',
   nextRunAt: 'nextRunAt',
   lastError: 'lastError',
+  projectId: 'projectId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -3904,6 +4057,7 @@ export const TriggerScalarFieldEnum = {
   verification: 'verification',
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
+  projectId: 'projectId',
   createdAt: 'createdAt'
 } as const
 
@@ -3954,6 +4108,7 @@ export const DocumentScalarFieldEnum = {
   workspaceId: 'workspaceId',
   kind: 'kind',
   path: 'path',
+  projectId: 'projectId',
   teammateId: 'teammateId',
   sessionId: 'sessionId',
   contentType: 'contentType',
@@ -4102,6 +4257,7 @@ export const DesignSystemScalarFieldEnum = {
   folders: 'folders',
   repositories: 'repositories',
   teammateIds: 'teammateIds',
+  projectIds: 'projectIds',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -4140,6 +4296,34 @@ export const PreviewVariableScalarFieldEnum = {
 } as const
 
 export type PreviewVariableScalarFieldEnum = (typeof PreviewVariableScalarFieldEnum)[keyof typeof PreviewVariableScalarFieldEnum]
+
+
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  icon: 'icon',
+  brief: 'brief',
+  folder: 'folder',
+  preferredConnectionIds: 'preferredConnectionIds',
+  archivedAt: 'archivedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const ProjectRepositoryScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  projectId: 'projectId',
+  repository: 'repository',
+  createdAt: 'createdAt'
+} as const
+
+export type ProjectRepositoryScalarFieldEnum = (typeof ProjectRepositoryScalarFieldEnum)[keyof typeof ProjectRepositoryScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -4855,6 +5039,8 @@ export type GlobalOmitConfig = {
   designSystem?: Prisma.DesignSystemOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
   previewVariable?: Prisma.PreviewVariableOmit
+  project?: Prisma.ProjectOmit
+  projectRepository?: Prisma.ProjectRepositoryOmit
 }
 
 /* Types for Logging */

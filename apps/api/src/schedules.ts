@@ -16,6 +16,7 @@ import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { broadcastSchedule } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate } from './thread-spec.js'
+import { projectWhere, usableProject } from './projects.js'
 import { startThread } from './work.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
@@ -30,6 +31,7 @@ type Changes = {
   cron?: string
   timezone?: string
   paused?: boolean
+  projectId?: string | null
 }
 
 const findSchedule = (db: ScopedDb, id: string) =>
@@ -39,6 +41,7 @@ const LIST = {
   teammate: { select: { id: true, name: true, harness: true, archivedAt: true } },
   owner: { select: { id: true, user: { select: { name: true } } } },
   createdByTeammate: { select: { id: true, name: true } },
+  project: { select: { id: true, name: true, icon: true } },
   sessions: {
     orderBy: { createdAt: 'desc' as const },
     take: 1,
@@ -51,7 +54,7 @@ const view = ({ sessions, ...schedule }: Awaited<ReturnType<typeof listRows>>[nu
   lastRun: sessions[0] ?? null,
 })
 
-const listRows = (db: ScopedDb, where: { id?: string } = {}) =>
+const listRows = (db: ScopedDb, where: { id?: string; projectId?: string | null } = {}) =>
   db.schedule.findMany({ where, include: LIST, orderBy: { createdAt: 'desc' }, take: 500 })
 
 /** The next firing after now, or null when the expression never fires again. */
@@ -65,8 +68,9 @@ const localTime = (date: Date, timezone: string) =>
     timeStyle: 'short',
   }).format(date)
 
-export async function listSchedules(db: ScopedDb) {
-  return (await listRows(db)).map(view)
+/** `project`: a project's id, or "none". */
+export async function listSchedules(db: ScopedDb, project?: string) {
+  return (await listRows(db, projectWhere(project))).map(view)
 }
 
 async function getSchedule(db: ScopedDb, id: string) {
@@ -121,11 +125,13 @@ export async function createSchedule(
     instructions: string
     cron: string
     timezone: string
+    projectId?: string | null | undefined
   },
   by: { memberId: string; teammateId?: string },
 ) {
   await requireTeammate(db, input.teammateId)
   checked(input.cron, input.timezone)
+  const projectId = await usableProject(db, input.projectId)
   const schedule = await db.schedule.create({
     data: {
       teammateId: input.teammateId,
@@ -135,6 +141,7 @@ export async function createSchedule(
       timezone: input.timezone,
       ownerMemberId: by.memberId,
       createdByTeammateId: by.teammateId ?? null,
+      projectId: projectId ?? null,
       nextRunAt: upcoming(input.cron, input.timezone),
     } as never,
   })
@@ -161,6 +168,7 @@ async function applyChanges(
   const timezone = changes.timezone ?? schedule.timezone
   const timing = cron !== schedule.cron || timezone !== schedule.timezone
   if (timing) checked(cron, timezone)
+  const projectId = await usableProject(db, changes.projectId)
   const paused = changes.paused ?? schedule.pausedAt !== null
   const resuming = schedule.pausedAt !== null && !paused
   await db.schedule.updateMany({
@@ -169,6 +177,7 @@ async function applyChanges(
       ...(changes.teammateId ? { teammateId: changes.teammateId } : {}),
       ...(changes.title ? { title: changes.title } : {}),
       ...(changes.instructions ? { instructions: changes.instructions } : {}),
+      ...(projectId !== undefined ? { projectId } : {}),
       cron,
       timezone,
       ...(paused
@@ -307,6 +316,7 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
       title: `${schedule.title} · ${localTime(dueAt, schedule.timezone)}`,
       text,
       origin: { kind: 'schedule', scheduleId: schedule.id },
+      projectId: schedule.projectId,
     })
     if (outcome === 'offline') return failed('the computer is offline')
     if (schedule.lastError)
@@ -441,6 +451,8 @@ export async function handleScheduleCall(
           instructions: op.instructions,
           cron: op.cron,
           timezone,
+          // A schedule made in a project's thread runs there.
+          projectId: session.projectId,
         },
         { memberId: session.startedByMemberId, teammateId: teammate.id },
       )

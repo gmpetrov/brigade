@@ -1,16 +1,22 @@
 import { ResolveTicket } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { resolveTicket } from '../decide.js'
+import { projectWhere } from '../projects.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Everything waiting on a person in this workspace. */
 export const tickets = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
+  /** ?project=<id|none>: tickets of a project's threads, or of threads in none. */
   .get('/', async (c) => {
     const status = c.req.query('status') === 'all' ? undefined : 'open'
+    const project = projectWhere(c.req.query('project'))
     const rows = await c.var.db.ticket.findMany({
-      where: status ? { status } : {},
+      where: {
+        ...(status ? { status } : {}),
+        ...('projectId' in project ? { session: { is: project } } : {}),
+      },
       include: {
         session: {
           select: {
@@ -18,6 +24,7 @@ export const tickets = new Hono<AppEnv>()
             title: true,
             origin: true,
             startedByMemberId: true,
+            projectId: true,
             teammate: { select: { id: true, name: true } },
           },
         },

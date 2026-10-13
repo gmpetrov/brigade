@@ -2,7 +2,6 @@
 import { useState, type ReactNode } from 'react'
 import { Cloud, Laptop, Play, Monitor, Terminal, TriangleAlert } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
-import { SavedPreviews } from '@/components/saved-previews'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -158,7 +157,9 @@ export default function Computers() {
             <p>
               A workspace is one trust zone: its teammates are separated by Linux user, which is
               weaker than separate machines,{' '}
-              <strong className="font-semibold">so keep sensitive work in its own workspace.</strong>
+              <strong className="font-semibold">
+                so keep sensitive work in its own workspace.
+              </strong>
             </p>
           </div>
 
@@ -260,8 +261,6 @@ export default function Computers() {
           )}
         </Card>
       </section>
-
-      <SavedPreviews />
     </div>
   )
 }

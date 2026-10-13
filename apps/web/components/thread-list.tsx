@@ -3,22 +3,28 @@ import { MessagesSquare } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import type { ThreadSummary } from '@/lib/api'
-import { StatusBadge, timeAgo } from './dashboard'
+import { StatusBadge, timeAgo, useDashboard } from './dashboard'
+import { ProjectTag } from './projects'
 
 export function ThreadList({
   threads,
   showTeammate = true,
+  showProject = true,
+  empty = 'No threads yet.',
 }: {
   threads: ThreadSummary[]
   showTeammate?: boolean
+  showProject?: boolean
+  empty?: string
 }) {
+  const { projects } = useDashboard()
   if (threads.length === 0)
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-6 py-10 text-center">
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
           <MessagesSquare className="size-5" aria-hidden />
         </span>
-        <p className="text-sm text-muted-foreground">No threads yet.</p>
+        <p className="text-sm text-muted-foreground">{empty}</p>
       </div>
     )
   return (
@@ -31,7 +37,14 @@ export function ThreadList({
               className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-accent/50"
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{t.title}</div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate font-semibold">{t.title}</span>
+                  {showProject && t.projectId && (
+                    <span className="shrink-0 text-xs">
+                      <ProjectTag project={projects.find((p) => p.id === t.projectId)} />
+                    </span>
+                  )}
+                </div>
                 <div className="truncate text-sm text-muted-foreground">
                   {showTeammate && (
                     <>

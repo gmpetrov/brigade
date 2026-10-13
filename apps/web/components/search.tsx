@@ -166,7 +166,7 @@ export function SearchDialog({
 }) {
   const router = useRouter()
   const mac = useIsMac()
-  const { me } = useDashboard()
+  const { me, projects } = useDashboard()
   const workspaceId = me.activeWorkspaceId ?? ''
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<{ query: string; results: SearchResult[] }>()
@@ -217,7 +217,12 @@ export function SearchDialog({
   }, [open, trimmed])
 
   const pages = useMemo<Item[]>(() => {
-    const all = NAV.map((n) => ({ href: n.href, title: n.label }))
+    const all = [
+      ...NAV.map((n) => ({ href: n.href, title: n.label })),
+      ...projects
+        .filter((p) => !p.archivedAt)
+        .map((p) => ({ href: `/app/projects/${p.id}`, title: p.name })),
+    ]
     if (isAdmin(me)) all.push({ href: '/app/teammates/new', title: 'New AI teammate' })
     return all.map((p) => ({
       key: `page:${p.href}`,
@@ -227,7 +232,7 @@ export function SearchDialog({
       snippet: null,
       href: p.href,
     }))
-  }, [me])
+  }, [me, projects])
 
   // Pages at once; the rest once the API answers for this query (or the last one, meanwhile).
   const groups = useMemo(() => {

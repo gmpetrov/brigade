@@ -262,3 +262,14 @@ export type PreviewRecipe = Prisma.PreviewRecipeModel
  * app's environment. A secret's value is sealed in the vault, never shown again.
  */
 export type PreviewVariable = Prisma.PreviewVariableModel
+/**
+ * Model Project
+ * A line of work inside a workspace: its threads, tasks, library folder and
+ * repositories. Organizing and context only: every workspace resource stays shared.
+ */
+export type Project = Prisma.ProjectModel
+/**
+ * Model ProjectRepository
+ * A GitHub repository a project works on. A repository may be in several projects.
+ */
+export type ProjectRepository = Prisma.ProjectRepositoryModel

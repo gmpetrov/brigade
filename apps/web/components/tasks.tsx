@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, type FormEvent } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { Markdown } from '@/components/markdown'
+import { ProjectSelect } from '@/components/projects'
 import type { StatusTone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -248,13 +249,18 @@ export function NewTaskDialog({
   onOpenChange,
   onCreated,
   from,
+  projectId: initialProject,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (task: TaskDetail) => void
+  /** From a thread: the task takes the thread's project. */
   from?: { sessionId: string; title: string }
+  /** The project it starts in, e.g. from a project page. */
+  projectId?: string
 }) {
-  const { teammates } = useDashboard()
+  const { teammates, projects } = useDashboard()
+  const [projectId, setProjectId] = useState(initialProject ?? 'none')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('medium')
@@ -270,8 +276,9 @@ export function NewTaskDialog({
     setDescription('')
     setPriority(PRIORITIES.some((p) => p.id === last.priority) ? last.priority! : 'medium')
     setTeammateId(last.teammateId ?? NOBODY)
+    setProjectId(initialProject ?? 'none')
     setError(undefined)
-  }, [open, from?.title])
+  }, [open, from?.title, initialProject])
 
   const assignee =
     teammateId !== NOBODY && teammates.some((t) => t.id === teammateId) ? teammateId : undefined
@@ -288,6 +295,7 @@ export function NewTaskDialog({
           description,
           priority,
           ...(from ? { sessionId: from.sessionId } : assignee ? { teammateId: assignee } : {}),
+          ...(from ? {} : { projectId: projectId === 'none' ? null : projectId }),
         },
       })
       if (!from)
@@ -356,6 +364,16 @@ export function NewTaskDialog({
               </Field>
             )}
           </div>
+          {!from && projects.some((p) => !p.archivedAt) && (
+            <Field label="Project" htmlFor="task-project">
+              <ProjectSelect
+                id="task-project"
+                value={projectId}
+                onChange={setProjectId}
+                className="sm:w-full"
+              />
+            </Field>
+          )}
           {error && <p className="text-sm text-destructive-text">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={busy || !title.trim()}>
@@ -500,6 +518,7 @@ export function TaskSheet({
   onClose: () => void
   onChanged: () => void
 }) {
+  const { projects } = useDashboard()
   const detail = useApi<TaskDetail>(taskId ? `/tasks/${taskId}` : null)
   const task = detail.data?.id === taskId ? detail.data : undefined
   const [editing, setEditing] = useState(false)
@@ -703,18 +722,37 @@ export function TaskSheet({
                 )}
               </section>
 
-              <section className="flex flex-col gap-2">
-                <Label htmlFor="sheet-priority" className="text-sm font-bold">
-                  Priority
-                </Label>
-                <div className="max-w-48">
-                  <PrioritySelect
-                    id="sheet-priority"
-                    value={task.priority}
-                    onChange={(priority) => void act('', { method: 'PATCH', body: { priority } })}
-                  />
-                </div>
-              </section>
+              <div className="flex flex-wrap gap-x-8 gap-y-4">
+                <section className="flex flex-col gap-2">
+                  <Label htmlFor="sheet-priority" className="text-sm font-bold">
+                    Priority
+                  </Label>
+                  <div className="w-48">
+                    <PrioritySelect
+                      id="sheet-priority"
+                      value={task.priority}
+                      onChange={(priority) => void act('', { method: 'PATCH', body: { priority } })}
+                    />
+                  </div>
+                </section>
+                {(projects.length > 0 || task.projectId) && (
+                  <section className="flex flex-col gap-2">
+                    <Label htmlFor="sheet-project" className="text-sm font-bold">
+                      Project
+                    </Label>
+                    <ProjectSelect
+                      id="sheet-project"
+                      value={task.projectId ?? 'none'}
+                      onChange={(value) =>
+                        void act('', {
+                          method: 'PATCH',
+                          body: { projectId: value === 'none' ? null : value },
+                        })
+                      }
+                    />
+                  </section>
+                )}
+              </div>
 
               {(task.summary || task.deliverables.length > 0 || task.pullRequests.length > 0) && (
                 <section className="flex flex-col gap-2">

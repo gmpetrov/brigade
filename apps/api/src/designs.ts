@@ -47,6 +47,7 @@ export const toDesignSystem = (row: Row): DesignSystem => ({
   folders: row.folders,
   repositories: row.repositories,
   teammateIds: row.teammateIds,
+  projectIds: row.projectIds,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 })
@@ -72,11 +73,16 @@ export async function saveDesignSystem(
     where: { id: { in: input.teammateIds }, archivedAt: null },
     select: { id: true },
   })
+  const projects = await db.project.findMany({
+    where: { id: { in: input.projectIds } },
+    select: { id: true },
+  })
   const data = {
     ...input,
     folders: [...new Set(input.folders)],
     repositories: [...new Set(input.repositories)],
     teammateIds: teammates.map((t) => t.id),
+    projectIds: projects.map((p) => p.id),
   }
   if (data.isDefault)
     await db.designSystem.updateMany({
@@ -143,6 +149,7 @@ export async function saveTeammateDesignSystem(
       folders: input.folders ?? existing?.folders ?? [],
       repositories: input.repositories ?? existing?.repositories ?? [],
       teammateIds: existing?.teammateIds ?? [],
+      projectIds: existing?.projectIds ?? [],
     },
     existing?.id,
   )
@@ -166,6 +173,7 @@ export async function deleteDesignSystem(db: ScopedDb, scope: Scope, actor: Acto
 export async function threadDesignSystems(
   db: ScopedDb,
   teammateId: string,
+  projectId: string | null = null,
 ): Promise<ThreadDesignSystem[]> {
   const rows = await listDesignSystems(db)
   return rows.map((r) => ({
@@ -175,6 +183,7 @@ export async function threadDesignSystems(
     folders: r.folders,
     repositories: r.repositories,
     teammate: r.teammateIds.includes(teammateId),
+    project: !!projectId && r.projectIds.includes(projectId),
     isDefault: r.isDefault,
   }))
 }

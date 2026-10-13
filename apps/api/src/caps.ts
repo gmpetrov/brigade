@@ -1,7 +1,7 @@
 // Daily caps per teammate: threads started, computer hours, and write calls
 // per connection. Counted from the thread, event and call logs; days are UTC.
 import type { Caps } from '@brigade/contracts'
-import type { ScopedDb } from './db.js'
+import type { Prisma, ScopedDb } from './db.js'
 import { eventsOf } from './timeline.js'
 
 export type CapName = keyof Caps
@@ -49,9 +49,30 @@ export async function workingSeconds(
   since: Date,
   now = new Date(),
 ) {
+  return working(db, { teammates: { some: { teammateId } } }, () => [teammateId], since, now)
+}
+
+/** Seconds every teammate spent working in a project's threads since `since`. */
+export async function projectWorkingSeconds(
+  db: ScopedDb,
+  projectId: string,
+  since: Date,
+  now = new Date(),
+) {
+  return working(db, { projectId }, (teammateIds) => teammateIds, since, now)
+}
+
+async function working(
+  db: ScopedDb,
+  sessions: Prisma.SessionWhereInput,
+  /** Whose turns count, of a thread's teammates. */
+  whose: (teammateIds: string[]) => string[],
+  since: Date,
+  now: Date,
+) {
   const events = await db.sessionEvent.findMany({
     where: {
-      session: { teammates: { some: { teammateId } } },
+      session: sessions,
       at: { gte: since },
       type: { in: [...STARTS, ...ENDS, 'account.switched'] },
     },
@@ -60,27 +81,30 @@ export async function workingSeconds(
       type: true,
       at: true,
       data: true,
-      session: { select: { teammateId: true } },
+      session: { select: { teammateId: true, teammates: { select: { teammateId: true } } } },
     },
     orderBy: [{ sessionId: 'asc' }, { seq: 'asc' }],
   })
   let total = 0
   for (const [, all] of Map.groupBy(events, (e) => e.sessionId)) {
-    // In a thread with several teammates, only this one's turns.
-    const list = eventsOf(all, teammateId, all[0]!.session.teammateId)
-    let startedAt: number | null = null
-    for (const [i, e] of list.entries()) {
-      const pausedBySwitch =
-        e.type === 'account.switched' && !(e.data as { toAccountId?: string | null }).toAccountId
-      if (STARTS.has(e.type)) startedAt ??= e.at.getTime()
-      else if (ENDS.has(e.type) || pausedBySwitch) {
-        // A turn that began before `since` counts from `since`.
-        const from = startedAt ?? (i === 0 ? since.getTime() : null)
-        if (from !== null) total += e.at.getTime() - from
-        startedAt = null
+    const session = all[0]!.session
+    for (const teammateId of whose(session.teammates.map((t) => t.teammateId))) {
+      // In a thread with several teammates, only this one's turns.
+      const list = eventsOf(all, teammateId, session.teammateId)
+      let startedAt: number | null = null
+      for (const [i, e] of list.entries()) {
+        const pausedBySwitch =
+          e.type === 'account.switched' && !(e.data as { toAccountId?: string | null }).toAccountId
+        if (STARTS.has(e.type)) startedAt ??= e.at.getTime()
+        else if (ENDS.has(e.type) || pausedBySwitch) {
+          // A turn that began before `since` counts from `since`.
+          const from = startedAt ?? (i === 0 ? since.getTime() : null)
+          if (from !== null) total += e.at.getTime() - from
+          startedAt = null
+        }
       }
+      if (startedAt !== null) total += now.getTime() - startedAt
     }
-    if (startedAt !== null) total += now.getTime() - startedAt
   }
   return total / 1000
 }

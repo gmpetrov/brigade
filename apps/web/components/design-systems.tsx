@@ -12,6 +12,7 @@ import {
 import { Ellipsis, FolderOpen, Palette, Pencil, Plus, Sparkles, Star, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useDashboard } from '@/components/dashboard'
 import { DesignPanel } from '@/components/design-view'
 import { contentUrl } from '@/components/library-browser'
 import { Markdown } from '@/components/markdown'
@@ -209,6 +210,7 @@ function SystemCard({
   onRemove: () => void
   onPreview: () => void
 }) {
+  const { projects } = useDashboard()
   const readme = files.find((f) => f.path === `${system.path}/README.md`)
   const tokens = files.find((f) => f.path === `${system.path}/tokens.css`)
   const hasPreview = files.some((f) => f.path === `${system.path}/${PREVIEW}/index.html`)
@@ -242,6 +244,11 @@ function SystemCard({
   const applies = [
     ...system.folders.map((f) => ({ key: `f:${f}`, label: `${f}/`, mono: true })),
     ...system.repositories.map((r) => ({ key: `r:${r}`, label: r, mono: true })),
+    ...system.projectIds.map((id) => ({
+      key: `p:${id}`,
+      label: projects.find((p) => p.id === id)?.name ?? 'A project',
+      mono: false,
+    })),
     ...system.teammateIds.map((id) => ({
       key: `t:${id}`,
       label: teammates.find((t) => t.id === id)?.name ?? 'A teammate',
@@ -429,6 +436,8 @@ function EditDialog({
   const [folders, setFolders] = useState(system?.folders.join(', ') ?? '')
   const [repositories, setRepositories] = useState(system?.repositories.join(', ') ?? '')
   const [chosen, setChosen] = useState(new Set(system?.teammateIds ?? []))
+  const [inProjects, setInProjects] = useState(new Set(system?.projectIds ?? []))
+  const { projects } = useDashboard()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
 
@@ -445,6 +454,7 @@ function EditDialog({
         folders: list(folders),
         repositories: list(repositories),
         teammateIds: [...chosen],
+        projectIds: [...inProjects],
       }
       await api(system ? `/design-systems/${system.id}` : '/design-systems', {
         method: system ? 'PUT' : 'POST',
@@ -531,6 +541,31 @@ function EditDialog({
                 className="font-mono"
               />
             </div>
+            {projects.some((p) => !p.archivedAt || inProjects.has(p.id)) && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium">Threads in these projects</span>
+                <ul className="flex flex-col gap-1.5">
+                  {projects
+                    .filter((p) => !p.archivedAt || inProjects.has(p.id))
+                    .map((p) => (
+                      <li key={p.id}>
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={inProjects.has(p.id)}
+                            onCheckedChange={(on) => {
+                              const next = new Set(inProjects)
+                              if (on) next.add(p.id)
+                              else next.delete(p.id)
+                              setInProjects(next)
+                            }}
+                          />
+                          {p.name}
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
             {teammates.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium">These teammates</span>

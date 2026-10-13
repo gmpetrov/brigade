@@ -1,5 +1,11 @@
 'use client'
-import { DESIGN_SYSTEM_README, parseMentions, type Mention } from '@brigade/contracts'
+import {
+  DESIGN_SYSTEM_README,
+  isLegacyProjectMention,
+  parseMentions,
+  type Mention,
+} from '@brigade/contracts'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -70,6 +76,20 @@ export function MentionChip({
         : undefined
   const open = path !== undefined && links
   const Tag = open ? 'button' : 'span'
+  const chip =
+    'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground'
+  // A project opens its page.
+  if (mention.kind === 'project' && !isLegacyProjectMention(mention))
+    return (
+      <Link
+        href={`/app/projects/${mention.id}`}
+        data-kind="project"
+        className={cn(chip, 'hover:bg-accent', className)}
+      >
+        <MentionIcon kind="project" />
+        {mention.label}
+      </Link>
+    )
   return (
     <Tag
       data-kind={mention.kind}
@@ -78,13 +98,12 @@ export function MentionChip({
         title: `Open ${mention.label}`,
         onClick: () => links.open({ path }),
       })}
-      className={cn(
-        open && 'cursor-pointer hover:bg-accent',
-        'mx-px inline-flex max-w-[28ch] items-center gap-1.5 overflow-hidden rounded-md border bg-card px-1.5 align-baseline leading-relaxed text-ellipsis whitespace-nowrap text-card-foreground [&>svg]:flex-none [&>svg]:text-muted-foreground',
-        className,
-      )}
+      className={cn(open && 'cursor-pointer hover:bg-accent', chip, className)}
     >
-      <MentionIcon kind={mention.kind} connectionKind={kind} />
+      <MentionIcon
+        kind={isLegacyProjectMention(mention) ? 'repository' : mention.kind}
+        connectionKind={kind}
+      />
       {mention.label}
     </Tag>
   )
@@ -122,8 +141,15 @@ export function MentionIcon({
       </svg>
     )
   }
-  if (kind === 'repository' || kind === 'project')
-    return <ProviderLogo kind="github" className="size-3.5" />
+  if (kind === 'repository') return <ProviderLogo kind="github" className="size-3.5" />
+  if (kind === 'project')
+    // A board: a project's work.
+    return (
+      <svg {...line}>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M9 4v16M15 4v9" />
+      </svg>
+    )
   if (kind === 'document')
     return (
       <svg {...line}>
