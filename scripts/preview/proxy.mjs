@@ -93,6 +93,12 @@ const server = http.createServer(async (req, res) => {
     })
     return res.end()
   }
+  // The preview pane has no address bar and opens the landing page: a preview is for the
+  // dashboard, which sends a signed-out browser on to the sign-in page.
+  if (req.method === 'GET' && path === '/') {
+    res.writeHead(302, { location: '/app', 'cache-control': 'no-store' })
+    return res.end()
+  }
   const headers = { ...req.headers }
   if (signedIn) {
     const pairs = signedIn.map((c) => c.split(';')[0])
