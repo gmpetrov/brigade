@@ -19,7 +19,21 @@ build:api)
   ;;
 deploy:api)
   : "${DATABASE_URL:?Set DATABASE_URL to migrate the database}"
-  pnpm --filter @brigade/api exec prisma migrate deploy
+  # Another deploy can hold Prisma's migration lock for a while: wait for it, then go on.
+  # Any other failure stops the deploy.
+  for attempt in 1 2 3 4; do
+    if out=$(pnpm --filter @brigade/api exec prisma migrate deploy 2>&1); then
+      echo "$out"
+      break
+    fi
+    echo "$out"
+    case "$out" in
+    *P1002*advisory*) [ "$attempt" -lt 4 ] || exit 1 ;;
+    *) exit 1 ;;
+    esac
+    echo "Another deploy is migrating; trying again in 15 seconds"
+    sleep 15
+  done
   SHA=$(node apps/api/scripts/prepare-worker.mjs)
   pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA"
   ;;
