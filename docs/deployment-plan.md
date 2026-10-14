@@ -66,9 +66,10 @@ Cloudflare shipped first, more simply than the phases below:
 ## What runs on the VPS (2026-10-14)
 
 A second deployment, on a Hetzner ARM server (2 vCPUs, 4 GB), with the same settings as
-Cloudflare's except its URLs. It shares Cloudflare's Neon database and R2 bucket, so both
-deployments see the same accounts and files. Both also run the same jobs: a schedule or
-an email can start its thread twice.
+Cloudflare's except its URLs and its database: a Neon database of its own, in Frankfurt
+like the server. Its accounts, workspaces and computers are its own; a computer's runner
+connects to one API, so the two could not share them. It shares Cloudflare's R2 bucket,
+where each file's key is its own id and only a database row deletes it.
 
 - **Hosts.**
   - `vps.brigade.lol`: the dashboard.
@@ -98,9 +99,9 @@ an email can start its thread twice.
   - The Google OAuth client allows `https://vps.brigade.lol` and the VPS callback.
   - The Pub/Sub subscription `brigade-gmail-push-vps` pushes Gmail changes to the VPS API.
   - The R2 bucket's CORS rules allow the VPS dashboard.
-- **GitHub:** the GitHub App has one setup URL, the Cloudflare API's. So connect GitHub
-  from the Cloudflare dashboard; with the shared database, the VPS uses that connection
-  too.
+- **GitHub:** the GitHub App has one setup URL, the Cloudflare API's, so connecting
+  GitHub from the VPS dashboard ends on Cloudflare. The VPS needs a GitHub App of its own
+  for that (its `GITHUB_APP_*` settings).
 
 ## Where each part runs
 
