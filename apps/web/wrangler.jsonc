@@ -5,6 +5,10 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // esbuild's keepNames would add __name() calls inside functions, and next-themes sends
+  // its theme script to the browser as a function's source, where __name is undefined:
+  // the script threw before setting the theme (https://opennext.js.org/cloudflare/howtos/keep_names).
+  "keep_names": false,
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "brigade-web" }],
   "routes": [
