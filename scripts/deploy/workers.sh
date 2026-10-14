@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build or deploy one of Brigade's Workers:
-#   scripts/deploy/workers.sh build|deploy api|web|collab
+#   scripts/deploy/workers.sh build|deploy api|api-front|web|collab
 # Each Worker's Workers Build runs it on a push to main (the cf:* scripts in the root
 # package.json), after installing dependencies. Deploying the API migrates the database
 # first, with DATABASE_URL from the environment (a build secret on Cloudflare). A deploy
@@ -36,7 +36,12 @@ deploy:api)
   done
   SHA=$(node apps/api/scripts/prepare-worker.mjs)
   pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA"
-  # Then the small Worker in front of it, which reaches its Durable Object.
+  ;;
+build:api-front)
+  # Nothing: wrangler bundles it when deploying.
+  ;;
+deploy:api-front)
+  # The small Worker in front of the API's Durable Object (src/front.ts).
   pnpm --filter @brigade/api exec wrangler deploy -c wrangler.front.jsonc
   ;;
 build:web)
@@ -53,7 +58,7 @@ deploy:collab)
   pnpm --filter @brigade/collab exec wrangler deploy --var "API_URL:$API_URL"
   ;;
 *)
-  echo "Usage: $0 build|deploy api|web|collab" >&2
+  echo "Usage: $0 build|deploy api|api-front|web|collab" >&2
   exit 1
   ;;
 esac

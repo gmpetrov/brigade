@@ -19,11 +19,16 @@ copy of the repo; the findings below come from there.
 
 Cloudflare shipped first, more simply than the phases below:
 
-- **One Durable Object for the whole API.** `apps/api/src/worker.ts` forwards every request
-  to a single `Api` object, which runs the Hono app as the one Node process does. The hub,
-  the timers (`src/jobs.ts`) and a Prisma client with its pool all live in that object. A
-  Cron Trigger pings it each minute so the jobs keep running. Phase 3 (a hub per
-  workspace) is needed only once one object is not enough.
+- **One Durable Object for the whole API.** Every request goes to a single `Api` object
+  (`apps/api/src/worker.ts`, in the Worker `brigade-api`), which runs the Hono app as the
+  one Node process does. The hub, the timers (`src/jobs.ts`) and a Prisma client with its
+  pool all live in that object. A Cron Trigger pings it each minute so the jobs keep
+  running. Phase 3 (a hub per workspace) is needed only once one object is not enough.
+- **A small Worker in front.** `brigade-api-front` (`src/front.ts`, `wrangler.front.jsonc`)
+  has the API's domains and forwards each request to the object, through a binding to
+  `brigade-api`'s Durable Object. A new connection can land on a machine that has not
+  loaded the Worker yet. Loading `brigade-api` (13 MB) there took 0.3 to 0.6 s, and each
+  WebSocket has a connection of its own. The front Worker (0.5 KB) loads at once.
 - **Next to the database.** A request makes about ten queries, each a round trip from the
   `Api` object to Neon in Frankfurt, so where the object runs counts most.
   - An object stays in the data center it was created in, near the Worker that first
@@ -31,9 +36,9 @@ Cloudflare shipped first, more simply than the phases below:
     (`"placement": { "region": "aws:eu-central-1" }` in `wrangler.jsonc`).
     - A query takes 2 to 3 ms there. The first object, created with the `weur` hint
       instead, landed in Amsterdam: 13 ms per query.
-    - The placement was removed after: with it, each WebSocket took 0.4 to 0.6 s more to
-      open. A new name in `src/worker.ts` creates a new object; to have it next to the
-      database, place the Worker there again until the object exists.
+    - The placement was removed after: the object stays where it is without it. A new
+      name in `src/api-object.ts` creates a new object; to have it next to the database,
+      place the front Worker there again until the object exists.
   - pg-cloudflare is patched (`patches/`) to send each query in one write. Before, each
     query waited about 70 ms for Nagle's algorithm and delayed ACKs.
   - Hyperdrive is not used. The object keeps its connections open, so Hyperdrive's fast
@@ -47,14 +52,17 @@ Cloudflare shipped first, more simply than the phases below:
 - **Hosts.**
   - `www.brigade.lol`: the dashboard, on OpenNext, with a patch for Next 16.4's
     `preview-props.json`. `brigade.lol` redirects to it.
-  - `api.brigade.lol` and `designs.brigade.lol`: the API.
+  - `api.brigade.lol` and `designs.brigade.lol`: the API, through `brigade-api-front`.
   - `collab.brigade.lol`: live document sync.
   - Files go to the R2 bucket `brigade`.
 - **Deploy** happens on each push to `main`. Workers Builds, Cloudflare's GitHub
-  integration, runs one build per Worker (`brigade-api`, `brigade-web`, `brigade-collab`):
+  integration, runs one build per Worker (`brigade-api`, `brigade-api-front`,
+  `brigade-web`, `brigade-collab`):
   - Each runs from the repository root, with Node from `.nvmrc` and `PNPM_VERSION`
     `8.7.5`. It installs, then runs `pnpm run cf:build:<worker>` and
     `pnpm run cf:deploy:<worker>`. Both call `scripts/deploy/workers.sh`.
+  - A build deploys only its own Worker: Workers Builds gives any other `wrangler deploy`
+    in it the build's Worker name.
   - Watch paths limit each build to the files it is built from.
   - The API's deploy migrates the database first, with the `DATABASE_URL` build secret.
   - A deploy keeps the secrets a Worker has, and no file in the repository holds them:

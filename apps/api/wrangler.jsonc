@@ -1,14 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // The API on Cloudflare Workers (src/worker.ts): deploy with scripts/deploy/workers.sh.
+  // Requests reach its Durable Object through brigade-api-front (wrangler.front.jsonc),
+  // which has the API's domains: this Worker has none.
   "name": "brigade-api",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
-  "routes": [
-    { "pattern": "api.brigade.lol", "custom_domain": true },
-    { "pattern": "designs.brigade.lol", "custom_domain": true },
-  ],
+  "workers_dev": false,
+  "preview_urls": false,
   "durable_objects": {
     "bindings": [{ "name": "API", "class_name": "Api" }],
   },

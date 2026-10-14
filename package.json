@@ -14,6 +14,8 @@
     "format:check": "prettier --check .",
     "cf:build:api": "scripts/deploy/workers.sh build api",
     "cf:deploy:api": "scripts/deploy/workers.sh deploy api",
+    "cf:build:api-front": "scripts/deploy/workers.sh build api-front",
+    "cf:deploy:api-front": "scripts/deploy/workers.sh deploy api-front",
     "cf:build:web": "scripts/deploy/workers.sh build web",
     "cf:deploy:web": "scripts/deploy/workers.sh deploy web",
     "cf:build:collab": "scripts/deploy/workers.sh build collab",
