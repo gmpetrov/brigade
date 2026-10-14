@@ -3,12 +3,14 @@
   "name": "brigade-collab",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
+  // Production (scripts/deploy/workers.sh); `wrangler dev` serves localhost.
+  "routes": [{ "pattern": "collab.brigade.lol", "custom_domain": true }],
   "durable_objects": {
     "bindings": [{ "name": "DocRoom", "class_name": "DocRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DocRoom"] }],
   "vars": {
-    // Where rooms load and save documents. Set to the API's public URL when deploying.
+    // Where rooms load and save documents. The deploy sets the API's public URL.
     "API_URL": "http://localhost:3001",
   },
   // COLLAB_SECRET: the API's, with `wrangler secret put COLLAB_SECRET` (.dev.vars locally).

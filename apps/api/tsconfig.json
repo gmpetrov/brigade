@@ -6,5 +6,12 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/worker.ts",
+    "src/worker-env.ts",
+    "src/platform/workers.ts",
+    "src/platform/jsdom.workers.ts",
+    "src/generated/prisma-workers"
+  ]
 }

@@ -6,6 +6,14 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// The same client for Cloudflare Workers (src/worker.ts): its query compiler is
+// a wasm module, which Node cannot import, so each platform has its own.
+generator workers {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-workers"
+  runtime  = "cloudflare"
+}
+
 datasource db {
   provider = "postgresql"
 }

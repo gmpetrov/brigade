@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+/** A path next to this file's folder. Workers have no files (nor import.meta.url): unused there. */
+const near = (path: string) => (import.meta.url ? new URL(path, import.meta.url).pathname : path)
+
 const Env = z.object({
   PORT: z.coerce.number().default(3001),
   API_URL: z.url().default('http://localhost:3001'),
@@ -16,9 +19,7 @@ const Env = z.object({
   DATABASE_URL: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(32),
   /** The runner bundle served at /runner/bundle.tgz (build with `pnpm --filter @brigade/runner bundle`). */
-  RUNNER_BUNDLE_PATH: z
-    .string()
-    .default(new URL('../../runner/bundle/brigade-runner.tgz', import.meta.url).pathname),
+  RUNNER_BUNDLE_PATH: z.string().default(near('../../runner/bundle/brigade-runner.tgz')),
   /** Master key for the vault (32 bytes, base64). Each organization's key is derived from it. */
   VAULT_KEY: z
     .string()
@@ -61,7 +62,7 @@ const Env = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
   /** Without R2 (development only): a local folder stands in for the bucket. */
-  BUCKET_DIR: z.string().default(new URL('../.bucket', import.meta.url).pathname),
+  BUCKET_DIR: z.string().default(near('../.bucket')),
   /**
    * The collab server (apps/collab, a Cloudflare Worker) that syncs documents
    * people edit together. Without a secret, the dashboard edits documents

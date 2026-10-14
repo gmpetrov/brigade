@@ -137,7 +137,7 @@ export const readInbox = (subscriptionId: string) =>
             if (read >= PER_READ) {
               await save({ cursor })
               // Pushes come only for new changes: read the rest now.
-              if (sub.mode === 'push') setTimeout(() => void readInbox(sub.id), 1000).unref()
+              if (sub.mode === 'push') setTimeout(() => void readInbox(sub.id), 1000)
               return
             }
             read++

@@ -178,6 +178,15 @@ function readSlides(bytes: Uint8Array): Slide[] {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * mammoth's input: Node's build reads `buffer`, the browser build (which
+ * Workers load) only `arrayBuffer`.
+ */
+function mammothInput(bytes: Uint8Array) {
+  const input = { buffer: Buffer.from(bytes), arrayBuffer: bytes.slice().buffer }
+  return input as { buffer: Buffer }
+}
+
 /** A preview of an office file, or why there is none. */
 export async function libraryPreview(
   bytes: Uint8Array,
@@ -186,7 +195,7 @@ export async function libraryPreview(
   try {
     if (contentType === DOCX) {
       const mammoth = await import('mammoth')
-      const { value } = await mammoth.convertToHtml({ buffer: Buffer.from(bytes) })
+      const { value } = await mammoth.convertToHtml(mammothInput(bytes))
       if (value.length > HTML_MAX)
         return { kind: 'none', reason: 'The document is too large to preview' }
       return { kind: 'html', html: value }
@@ -203,7 +212,7 @@ export async function libraryPreview(
 export async function officeText(bytes: Uint8Array, contentType: string) {
   if (contentType === DOCX) {
     const mammoth = await import('mammoth')
-    return (await mammoth.extractRawText({ buffer: Buffer.from(bytes) })).value
+    return (await mammoth.extractRawText(mammothInput(bytes))).value
   }
   if (contentType === XLSX)
     return readSheets(bytes, 5_000)

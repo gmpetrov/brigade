@@ -35,7 +35,10 @@ export async function createWorkspaceComputer(workspace: { id: string; organizat
   const existing = await prisma.computer.findFirst({
     where: { workspaceId: workspace.id, kind: 'cloud', status: { not: 'destroyed' } },
   })
-  if (existing) return existing
+  if (existing) {
+    if (existing.status === 'error' && !refOf(existing)) await reprovision(existing)
+    return existing
+  }
   const computer = await prisma.computer.create({
     data: {
       organizationId: workspace.organizationId,
@@ -46,11 +49,21 @@ export async function createWorkspaceComputer(workspace: { id: string; organizat
       status: 'creating',
     },
   })
+  startProvision(computer)
+  return computer
+}
+
+function startProvision(computer: { id: string; organizationId: string; workspaceId: string }) {
   void provision(computer).catch(async (error) => {
-    console.error(`provisioning ${computer.id} failed:`, error)
+    console.error(`provisioning ${computer.id} failed: ${await providerReason(error)}`, error)
     await setStatus(computer, 'error')
   })
-  return computer
+}
+
+/** A computer whose creation failed before the provider made it: create it again. */
+async function reprovision(computer: { id: string; organizationId: string; workspaceId: string }) {
+  await setStatus(computer, 'creating')
+  startProvision(computer)
 }
 
 async function provision(computer: { id: string; organizationId: string; workspaceId: string }) {
@@ -89,6 +102,8 @@ export async function ensureRunning(computerId: string) {
   if (!provider) return
   const computer = await prisma.computer.findUnique({ where: { id: computerId } })
   const ref = computer && refOf(computer)
+  if (computer?.kind === 'cloud' && !ref && computer.status === 'error')
+    return reprovision(computer)
   if (
     !computer ||
     computer.kind !== 'cloud' ||
@@ -116,7 +131,7 @@ export async function ensureRunning(computerId: string) {
       }),
     )
     .catch(async (error) => {
-      console.error(`starting ${computer.id} failed:`, error)
+      console.error(`starting ${computer.id} failed: ${await providerReason(error)}`, error)
       await setStatus(computer, 'error')
     })
 }
@@ -317,4 +332,7 @@ async function stopIdle() {
   }
 }
 
-if (provider) setInterval(() => void stopIdle().catch(console.error), 60_000).unref()
+/** Stop idle cloud computers every minute. Started by the entry (src/jobs.ts). */
+export const watchIdle = () => {
+  if (provider) setInterval(() => void stopIdle().catch(console.error), 60_000)
+}

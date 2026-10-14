@@ -1,41 +1,21 @@
 // The one-command runner install: `curl -fsSL <api>/runner/install.sh | sh`.
 // Installs Node.js if needed (checksum-verified) and the runner into ~/.brigade. No root.
 // A runner updates itself by running this same script (see apps/runner/src/updater.ts).
-import { createHash } from 'node:crypto'
-import { createReadStream, statSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
-import { Readable } from 'node:stream'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { env } from '../config.js'
+import { runnerBundleFile, runnerBundleSha256 } from '../platform/node.js'
 
 const NODE_VERSION = 'v24.18.1'
 
 /** Exit code of a runner that replaced itself: the wrapper starts the new one. */
 export const UPDATED_EXIT_CODE = 75
 
-let cached: { key: string; sha256: string } | undefined
-
 /**
  * SHA-256 of the runner bundle this API serves, or null when it is not built.
  * Runners installed from another bundle update to it.
  */
-export async function runnerBundle(): Promise<string | null> {
-  let key: string
-  try {
-    const stat = statSync(env.RUNNER_BUNDLE_PATH)
-    key = `${stat.size}:${stat.mtimeMs}`
-  } catch {
-    return null
-  }
-  if (cached?.key !== key) {
-    const sha256 = createHash('sha256')
-      .update(await readFile(env.RUNNER_BUNDLE_PATH))
-      .digest('hex')
-    cached = { key, sha256 }
-  }
-  return cached.sha256
-}
+export const runnerBundle = runnerBundleSha256
 
 export const installScript = (apiUrl: string) => `#!/bin/sh
 # Brigade runner installer. Installs into \${BRIGADE_INSTALL_DIR:-$HOME/.brigade}; needs curl and tar.
@@ -107,19 +87,14 @@ export const runnerInstall = new Hono()
     }),
   )
   .get('/bundle.tgz', async (c) => {
-    let size: number
-    try {
-      size = statSync(env.RUNNER_BUNDLE_PATH).size
-    } catch {
+    const bundle = await runnerBundleFile()
+    if (!bundle)
       throw new HTTPException(503, {
         message: 'The runner bundle is not built. Run: pnpm --filter @brigade/runner bundle',
       })
-    }
-    const sha256 = await runnerBundle()
-    const body = Readable.toWeb(createReadStream(env.RUNNER_BUNDLE_PATH)) as ReadableStream
-    return c.body(body, 200, {
+    return c.body(bundle.body, 200, {
       'content-type': 'application/gzip',
-      'content-length': String(size),
-      ...(sha256 ? { 'x-bundle-sha256': sha256 } : {}),
+      ...(bundle.size !== null ? { 'content-length': String(bundle.size) } : {}),
+      'x-bundle-sha256': bundle.sha256,
     })
   })

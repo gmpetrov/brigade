@@ -343,9 +343,9 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   into another document moves the file there), unfinished uploads after an hour, and a deleted file's at once.
   Mentions: `@` in a document names a library file, teammate, thread, connection or repository, stored as
   `@[label](kind:id)` like messages. `@brigade/editor` (`packages/editor`) holds the editor schema and the Markdown
-  forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. Deploy with
-  `pnpm --filter @brigade/collab deploy` after `wrangler secret put COLLAB_SECRET` and setting `API_URL` in
-  `wrangler.jsonc`; set the API's `COLLAB_URL` to the Worker's URL.
+  forms that survive a round trip (`![name](asset:id)`, `[name](asset:id "video")`), shared by the API and the web. It deploys
+  with the other Workers on a push to `main` (`scripts/deploy/workers.sh`), with the API's `COLLAB_SECRET`; set
+  the API's `COLLAB_URL` to the Worker's URL.
 - **Library on computers** (`apps/runner/src/library.ts`). The runner keeps a read-only mirror per teammate, of
   only what it may read, at `<library>/bt-<teammate id>` under `/var/lib/brigade/library` on the workspace computer
   and `~/.brigade/library` on a member's machine: hard links into one store of the files' bytes (`.files`, by

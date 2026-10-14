@@ -380,7 +380,7 @@ export function watchSchedules() {
           .catch((error) => console.error('schedule tick failed', error))
           .finally(later),
       60_000 - (Date.now() % 60_000) + 250,
-    ).unref()
+    )
   later()
 }
 

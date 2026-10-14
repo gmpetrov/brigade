@@ -97,6 +97,6 @@ export function watchSubscriptions() {
       ticking = false
     }
   }
-  setTimeout(() => void run(), 10_000).unref()
-  setInterval(() => void run(), TICK_MS).unref()
+  setTimeout(() => void run(), 10_000)
+  setInterval(() => void run(), TICK_MS)
 }

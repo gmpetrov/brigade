@@ -11,7 +11,13 @@
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "cf:build:api": "scripts/deploy/workers.sh build api",
+    "cf:deploy:api": "scripts/deploy/workers.sh deploy api",
+    "cf:build:web": "scripts/deploy/workers.sh build web",
+    "cf:deploy:web": "scripts/deploy/workers.sh deploy web",
+    "cf:build:collab": "scripts/deploy/workers.sh build collab",
+    "cf:deploy:collab": "scripts/deploy/workers.sh deploy collab"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
@@ -21,7 +27,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@ai-sdk/harness-codex@1.0.151": "patches/@ai-sdk__harness-codex@1.0.151.patch"
+      "@ai-sdk/harness-codex@1.0.151": "patches/@ai-sdk__harness-codex@1.0.151.patch",
+      "@opennextjs/cloudflare@1.20.7": "patches/@opennextjs__cloudflare@1.20.7.patch"
     }
   }
 }

@@ -1208,5 +1208,5 @@ export function watchMerges() {
     })()
       .catch(console.error)
       .finally(() => (watching = false))
-  }, 60_000).unref()
+  }, 60_000)
 }

@@ -9,8 +9,17 @@ const SIZES: Record<ComputerSize, 'small' | 'default' | 'large'> = {
   '8x16': 'large',
 }
 
+/** On Cloudflare Workers, whose node:http2 is a stub, the SDK must use the global fetch. */
+const onWorkers = globalThis.navigator?.userAgent === 'Cloudflare-Workers'
+
 export function boatClient(apiKey: string, basePath = 'https://boat.dev/api/v1') {
-  return new BoatApi(new Configuration({ basePath, accessToken: apiKey }))
+  return new BoatApi(
+    new Configuration({
+      basePath,
+      accessToken: apiKey,
+      ...(onWorkers ? { fetchApi: (...args: Parameters<typeof fetch>) => fetch(...args) } : {}),
+    }),
+  )
 }
 
 function idOf(ref: ComputerRef) {

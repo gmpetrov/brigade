@@ -171,19 +171,21 @@ export async function dispatch(
 
 /**
  * When the served runner bundle changes (a rebuild, a deploy), tell each
- * connected runner installed from another one, once per bundle.
+ * connected runner installed from another one, once per bundle. Started by
+ * the entry (src/jobs.ts): Workers allow no timers while modules load.
  */
-setInterval(() => {
-  void runnerBundle().then((bundle) => {
-    if (!bundle) return
-    for (const conn of runners.values()) {
-      if (conn.protocolVersion < 3 || !conn.bundle || conn.bundle === bundle) continue
-      if (conn.offered === bundle) continue
-      conn.offered = bundle
-      send(conn.ws, { type: 'update.available', bundle })
-    }
-  }, console.error)
-}, 60_000).unref()
+export const offerRunnerUpdates = () =>
+  setInterval(() => {
+    void runnerBundle().then((bundle) => {
+      if (!bundle) return
+      for (const conn of runners.values()) {
+        if (conn.protocolVersion < 3 || !conn.bundle || conn.bundle === bundle) continue
+        if (conn.offered === bundle) continue
+        conn.offered = bundle
+        send(conn.ws, { type: 'update.available', bundle })
+      }
+    }, console.error)
+  }, 60_000)
 
 function flushQueue(computerId: string) {
   const list = queued.get(computerId) ?? []

@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto'
-import { upgradeWebSocket } from '@hono/node-server'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import WebSocket from 'ws'
 import { desktopUrl } from './cloud.js'
 import { env } from './config.js'
+import { connectSocket, upgradeWebSocket } from './platform/node.js'
+import type { Upstream } from './platform/types.js'
 
 /**
  * A desktop in the dashboard. The provider's desktop URL logs in with a
@@ -75,25 +75,29 @@ export const desktopProxy = new Hono().get(
   upgradeWebSocket((c) => {
     const view = live(c.req.param('id') ?? '')
     if (!view) return { onOpen: (_e, ws) => ws.close(4404, 'view expired') }
-    let upstream: WebSocket | undefined
+    let upstream: Upstream | undefined
+    let open = false
     const pending: ArrayBuffer[] = []
     return {
       onOpen: (_e, ws) => {
-        upstream = new WebSocket(`${view.origin.replace(/^http/, 'ws')}/websockify`, 'binary', {
-          headers: { cookie: view.cookie, origin: view.origin },
-        })
-        upstream.binaryType = 'arraybuffer'
-        upstream.on('open', () => {
-          for (const data of pending.splice(0)) upstream!.send(data)
-        })
-        upstream.on('message', (data: ArrayBuffer) => ws.send(new Uint8Array(data)))
-        upstream.on('close', () => ws.close())
-        upstream.on('error', () => ws.close(1011, 'desktop unavailable'))
+        upstream = connectSocket(
+          `${view.origin}/websockify`,
+          { protocol: 'binary', headers: { cookie: view.cookie, origin: view.origin } },
+          {
+            onOpen: () => {
+              open = true
+              for (const data of pending.splice(0)) upstream!.send(data)
+            },
+            onMessage: (data) => ws.send(new Uint8Array(data)),
+            onClose: () => ws.close(),
+            onError: () => ws.close(1011, 'desktop unavailable'),
+          },
+        )
       },
       onMessage: (e) => {
         if (typeof e.data === 'string') return
         const data = e.data as ArrayBuffer
-        if (upstream?.readyState === WebSocket.OPEN) upstream.send(data)
+        if (open) upstream!.send(data)
         else pending.push(data)
       },
       onClose: () => upstream?.close(),

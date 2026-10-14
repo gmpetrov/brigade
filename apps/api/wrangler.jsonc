@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The API on Cloudflare Workers (src/worker.ts): deploy with scripts/deploy-worker.sh.
+  "name": "brigade-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "api.brigade.lol", "custom_domain": true },
+    { "pattern": "designs.brigade.lol", "custom_domain": true },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "API", "class_name": "Api" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Api"] }],
+  // The same source as on Node, with these modules swapped for their Workers versions
+  // (import paths, matched exactly). Prisma's Workers client comes from `prisma generate`;
+  // jsdom (for @blocknote/server-util, in src/collab.ts) does not run on Workers.
+  "alias": {
+    "./generated/prisma/client.js": "./src/generated/prisma-workers/client.ts",
+    "./platform/node.js": "./src/platform/workers.ts",
+    "../platform/node.js": "./src/platform/workers.ts",
+    "jsdom": "./src/platform/jsdom.workers.ts",
+  },
+  // The runner bundle, served by GET /runner/bundle.tgz; nothing is served from here directly.
+  "assets": { "directory": "dist-worker/assets", "binding": "ASSETS", "run_worker_first": true },
+  "triggers": { "crons": ["* * * * *"] },
+  "limits": { "cpu_ms": 60000 },
+  "vars": { "NODE_ENV": "production" },
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+}
