@@ -18,6 +18,22 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@brigade/web", "exec", "wrangler", "dev", "--port", "8799"],
       "port": 8799
+    },
+    {
+      "name": "api-workers",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@brigade/api",
+        "exec",
+        "wrangler",
+        "dev",
+        "--port",
+        "8798",
+        "--var",
+        "RUNNER_BUNDLE_SHA256:local"
+      ],
+      "port": 8798
     }
   ]
 }
