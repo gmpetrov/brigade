@@ -3,10 +3,12 @@
 // keeps every runner's and dashboard's socket in its memory, so every request
 // goes to that one object. This Worker forwards to it, and wakes it each minute
 // so its jobs (schedules, inboxes, idle computers) run while nobody is connected.
+//
+// The API itself loads only in the object, on first use: the Worker in front of it
+// only forwards, and a new isolate of it starts without evaluating the whole app
+// (281 ms at deploy, with Prisma).
 import './worker-env.js'
 import { DurableObject } from 'cloudflare:workers'
-import { app } from './app.js'
-import { startJobs } from './jobs.js'
 
 type Env = {
   API: DurableObjectNamespace<Api>
@@ -25,10 +27,11 @@ export class Api extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
     // An object left behind under an earlier name runs no jobs, should anything wake it.
-    if ((ctx.id.name ?? NAME) === NAME) startJobs()
+    if ((ctx.id.name ?? NAME) === NAME) void import('./jobs.js').then((jobs) => jobs.startJobs())
   }
 
-  override fetch(request: Request) {
+  override async fetch(request: Request) {
+    const { app } = await import('./app.js')
     return app.fetch(request)
   }
 
