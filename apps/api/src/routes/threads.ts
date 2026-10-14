@@ -61,7 +61,7 @@ import {
 } from '../work.js'
 import { reopenOnMessage } from '../tasks.js'
 import { runLog } from '../timeline.js'
-import { pageEvents, pageStart } from '../thread-history.js'
+import { historyContext, pageEvents, pageStart } from '../thread-history.js'
 import {
   parseBody,
   requireUser,
@@ -212,8 +212,26 @@ export const threads = new Hono<AppEnv>()
     })
   })
 
-  /** An older page of the thread's events: those before `before`, from a turn's start. */
+  /**
+   * An older page of the thread's events: those before `before`, from a turn's start. Without
+   * `before`, the latest page and what the whole thread needs from before it, as a socket's
+   * `history` then `events` bring them: the dashboard opens a thread on it, with the thread,
+   * and its socket only brings what follows.
+   */
   .get('/:id/events', async (c) => {
+    if (c.req.query('before') === undefined) {
+      const thread = await c.var.db.session.findFirst({
+        where: { id: c.req.param('id') },
+        select: { id: true, lastSeq: true },
+      })
+      if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+      const firstSeq = await pageStart(thread.id, thread.lastSeq + 1)
+      const [context, events] = await Promise.all([
+        historyContext(thread.id, firstSeq),
+        pageEvents(thread.id, firstSeq, thread.lastSeq + 1),
+      ])
+      return c.json({ firstSeq, lastSeq: thread.lastSeq, context, events })
+    }
     const before = z.coerce.number().int().min(1).safeParse(c.req.query('before'))
     if (!before.success)
       throw new HTTPException(400, { message: 'before must be a sequence number' })
