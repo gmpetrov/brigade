@@ -337,16 +337,7 @@ export default function PullRequestPage() {
           {p.reviews.map((r) => (
             <Card key={r.id} className="gap-3 px-5 py-4">
               <div className="flex flex-wrap items-center gap-2">
-                {r.teammate && (
-                  <TeammateAvatar
-                    teammate={
-                      teammates.find((m) => m.id === r.teammate!.id) ?? {
-                        name: r.teammate.name,
-                        harness: 'claude_code',
-                      }
-                    }
-                  />
-                )}
+                {r.teammate && <TeammateAvatar teammate={r.teammate} />}
                 <span className="font-semibold">{r.teammate?.name ?? 'A teammate'}</span>
                 <StatusBadge
                   status={r.verdict === 'approve' ? 'approved' : 'changes requested'}

@@ -143,15 +143,7 @@ export default function ProjectOverview() {
                   href={`/app/threads/${t.id}`}
                   className="-mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-accent/50"
                 >
-                  <TeammateAvatar
-                    teammate={
-                      teammates.find((m) => m.id === t.teammate.id) ?? {
-                        ...t.teammate,
-                        harness: 'claude_code',
-                      }
-                    }
-                    className="size-5"
-                  />
+                  <TeammateAvatar teammate={t.teammate} className="size-5" />
                   <span className="min-w-0 flex-1 truncate text-sm">{t.title}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {timeAgo(t.updatedAt)}

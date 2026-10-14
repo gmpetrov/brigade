@@ -199,10 +199,7 @@ function ProposedRow({
       )}
     >
       <div className="flex items-start gap-3">
-        <TeammateAvatar
-          teammate={{ name: t.name, harness: 'claude_code' }}
-          className="size-9 shrink-0 text-sm"
-        />
+        <TeammateAvatar teammate={{ name: t.name }} className="size-9 shrink-0 text-sm" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className="font-semibold">{t.name}</p>
           <p className="text-sm text-muted-foreground">{t.role}</p>
@@ -444,10 +441,7 @@ function CreatedTeam({
               key={t.id}
               className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3"
             >
-              <TeammateAvatar
-                teammate={{ name: t.name, harness: 'claude_code' }}
-                className="size-8 shrink-0 text-sm"
-              />
+              <TeammateAvatar teammate={t} className="size-8 shrink-0 text-sm" />
               <Link href={`/app/teammates/${t.id}`} className="font-semibold hover:underline">
                 {t.name}
               </Link>
