@@ -12,6 +12,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@brigade/web", "dev"],
       "port": 3000
+    },
+    {
+      "name": "web-workers",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@brigade/web", "exec", "wrangler", "dev", "--port", "8799"],
+      "port": 8799
     }
   ]
 }
