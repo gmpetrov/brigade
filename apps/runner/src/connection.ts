@@ -13,6 +13,14 @@ import type { Outbox } from './outbox.js'
 import { installedBundle } from './updater.js'
 
 const BATCH = 200
+/**
+ * A ping this often keeps the socket from looking idle (Cloudflare closes
+ * WebSockets that carry nothing), and one unanswered by the next tells a dead
+ * connection from a quiet one.
+ */
+const HEARTBEAT_MS = 30_000
+/** An upgrade that has not answered in this long is given up and retried. */
+const HANDSHAKE_MS = 15_000
 
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 
@@ -45,11 +53,22 @@ export class Connection {
   start() {
     const url = new URL('/runner/ws', this.config.apiUrl)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(url, { headers: { authorization: `Bearer ${this.config.token}` } })
+    const ws = new WebSocket(url, {
+      headers: { authorization: `Bearer ${this.config.token}` },
+      handshakeTimeout: HANDSHAKE_MS,
+    })
     this.ws = ws
+    let answered = true
+    let heartbeat: ReturnType<typeof setInterval> | undefined
 
+    ws.on('pong', () => (answered = true))
     ws.on('open', async () => {
       this.backoff = 1000
+      heartbeat = setInterval(() => {
+        if (!answered) return ws.terminate()
+        answered = false
+        ws.ping()
+      }, HEARTBEAT_MS)
       const extra = await this.hello().catch(() => ({}))
       this.send({
         ...extra,
@@ -94,6 +113,7 @@ export class Connection {
       }
     })
     ws.on('close', (code, reason) => {
+      clearInterval(heartbeat)
       this.ready = false
       // Calls in flight cannot be answered on a new connection.
       for (const call of this.calls.values())
