@@ -29,8 +29,8 @@ Cloudflare shipped first, more simply than the phases below:
   - An object stays in the data center it was created in, near the Worker that first
     asked for it. The Worker's placement (`aws:eu-central-1` in `wrangler.jsonc`) runs it
     near the database, so the object was created there.
-    - The first object, created with the `weur` hint instead, landed in Amsterdam: 13 ms
-      per query.
+    - A query takes 2 to 3 ms there. The first object, created with the `weur` hint
+      instead, landed in Amsterdam: 13 ms per query.
     - Changing the object's name in `src/worker.ts` creates a new one.
   - pg-cloudflare is patched (`patches/`) to send each query in one write. Before, each
     query waited about 70 ms for Nagle's algorithm and delayed ACKs.
