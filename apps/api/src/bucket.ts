@@ -143,6 +143,13 @@ export async function objectSize(key: string): Promise<number | null> {
   return Number(response.headers.get('content-length'))
 }
 
+/**
+ * The body's own bytes in an ArrayBuffer of their size. A Node Buffer under 4 KB
+ * is a view into a shared 8 KB pool, and its `slice()` is another view: its
+ * `.buffer` would upload the whole pool.
+ */
+export const exactBytes = (body: Uint8Array) => new Uint8Array(body).buffer
+
 export async function putObject(key: string, body: Uint8Array, contentType: string) {
   if (!r2) {
     const file = join(env.BUCKET_DIR, key)
@@ -151,7 +158,7 @@ export async function putObject(key: string, body: Uint8Array, contentType: stri
   }
   const response = await r2.client.fetch(url(key), {
     method: 'PUT',
-    body: body.slice().buffer,
+    body: exactBytes(body),
     headers: { 'content-type': contentType },
   })
   if (!response.ok) throw new Error(`bucket put failed: ${response.status}`)
