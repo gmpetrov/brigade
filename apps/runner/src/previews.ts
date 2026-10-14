@@ -116,7 +116,7 @@ export type PreviewCheck = CheckResult & { serverErrors: string[] }
 export type PreviewControl = {
   start(input: PreviewStart, signal?: AbortSignal): Promise<PreviewResult>
   /** Open these paths as a person would and say what is wrong with them. */
-  check(paths: string[]): Promise<PreviewCheck>
+  check(paths: string[], signal?: AbortSignal): Promise<PreviewCheck>
   /** Save the running preview as its repository's recipe: once its check passed, or with why what it found is expected. */
   save(reason?: string): Promise<{ repository: string; recipe: PreviewRecipe }>
   /** A repository's saved recipe, and its checkout here; null when none is saved. */
@@ -271,7 +271,7 @@ export class Previews {
   forSeat(seat: Seat): PreviewControl {
     return {
       start: (input, signal) => this.start(seat, input, signal),
-      check: (paths) => this.check(seat, paths),
+      check: (paths, signal) => this.check(seat, paths, signal),
       save: (reason) => this.save(seat, reason),
       saved: (repository) => this.saved(seat, repository),
       stop: async () => ({
@@ -304,7 +304,7 @@ export class Previews {
    * Open the preview's pages with the computer's Chrome, at the address people
    * open, as the teammate; screenshots go in .preview-checks in its directory.
    */
-  async check(seat: Seat, paths: string[]): Promise<PreviewCheck> {
+  async check(seat: Seat, paths: string[], signal?: AbortSignal): Promise<PreviewCheck> {
     const preview = this.previews.get(seat.sessionId)
     if (!preview || preview.info.status !== 'running')
       throw new Error('The preview is not running: start it with start_preview first')
@@ -314,7 +314,7 @@ export class Previews {
     preview.info = { ...preview.info, check: { status: 'checking' } }
     this.report(preview)
     try {
-      const result = await this.checkPages(seat, preview, paths)
+      const result = await this.checkPages(seat, preview, paths, signal)
       if (current()) {
         const failed = result.pages.filter((p) => !p.ok).map((p) => p.path)
         preview.checked = result.ok
@@ -338,7 +338,12 @@ export class Previews {
     }
   }
 
-  private async checkPages(seat: Seat, preview: Preview, paths: string[]): Promise<PreviewCheck> {
+  private async checkPages(
+    seat: Seat,
+    preview: Preview,
+    paths: string[],
+    signal?: AbortSignal,
+  ): Promise<PreviewCheck> {
     const port = preview.info.publicPort ?? preview.info.port
     const url = this.options.viewUrl
       ? await this.options.viewUrl(seat.sessionId, port)
@@ -353,7 +358,8 @@ export class Previews {
     const { stdout } = await run(
       seat.runAs ? 'sudo' : process.execPath,
       seat.runAs ? ['-n', '-u', seat.runAs, process.execPath, ...args] : args,
-      { cwd: '/', timeout: 60_000 + paths.length * 120_000, maxBuffer: 1024 * 1024 },
+      // An interrupted turn does not wait for the check.
+      { cwd: '/', timeout: 60_000 + paths.length * 120_000, maxBuffer: 1024 * 1024, signal },
     ).catch((error: { stderr?: string } & Error) => {
       throw new Error(
         `Could not check the preview: ${(error.stderr || error.message).trim().slice(0, 1000)}`,

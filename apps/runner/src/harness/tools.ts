@@ -1316,7 +1316,10 @@ export type PreviewTools = {
     logs?: string
     variables?: string[]
   }>
-  check(paths: string[]): Promise<{
+  check(
+    paths: string[],
+    signal?: AbortSignal,
+  ): Promise<{
     ok: boolean
     pages: {
       path: string
@@ -1370,9 +1373,9 @@ const NOT_READY =
   'service the app does not have here, give it one (env, setup) or ask for its preview variables in a ticket.'
 
 /** Check the preview's pages; a check that cannot run is reported, not thrown. */
-async function checked(previews: PreviewTools, paths: string[]) {
+async function checked(previews: PreviewTools, paths: string[], signal?: AbortSignal) {
   try {
-    const result = await previews.check(paths)
+    const result = await previews.check(paths, signal)
     return {
       ...result,
       note: result.ok
@@ -1524,7 +1527,7 @@ export function previewTools(
           abortSignal,
         )
         if (result.status !== 'running') return result
-        return { ...result, check: await checked(previews, paths) }
+        return { ...result, check: await checked(previews, paths, abortSignal) }
       },
     }),
     check_preview: tool({
@@ -1543,7 +1546,7 @@ export function previewTools(
           },
         },
       }),
-      execute: (input) => checked(previews, input.paths ?? []),
+      execute: (input, { abortSignal }) => checked(previews, input.paths ?? [], abortSignal),
     }),
     save_preview: tool({
       description:

@@ -115,6 +115,8 @@ export function ThreadConversation({
   const repositories = useThreadRepositories(events)
   const offersPreview = !!preview || repositories.length > 0
   const [error, setError] = useState<string>()
+  // The turn asked to stop, until it ends: a tool can take a moment to give up.
+  const [stopping, setStopping] = useState<string>()
   const [text, setText] = useReplyDraft(id)
   const files = useUploads()
   const drop = useFileDrop(files.add)
@@ -790,16 +792,20 @@ export function ThreadConversation({
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          void call('/interrupt', turnId ? { turnId } : {}).catch(() => undefined)
-                        }
+                        disabled={stopping === (turnId ?? '')}
+                        onClick={() => {
+                          setStopping(turnId ?? '')
+                          void call('/interrupt', turnId ? { turnId } : {}).catch(() =>
+                            setStopping(undefined),
+                          )
+                        }}
                         title={
                           queued.length
                             ? `Stop ${answering.name} now; the queued messages run next`
                             : `Stop ${answering.name} now`
                         }
                       >
-                        Interrupt
+                        {stopping === (turnId ?? '') ? 'Stopping…' : 'Interrupt'}
                       </Button>
                     )}
                     <Button
