@@ -27,11 +27,13 @@ Cloudflare shipped first, more simply than the phases below:
 - **Next to the database.** A request makes about ten queries, each a round trip from the
   `Api` object to Neon in Frankfurt, so where the object runs counts most.
   - An object stays in the data center it was created in, near the Worker that first
-    asked for it. The Worker's placement (`aws:eu-central-1` in `wrangler.jsonc`) runs it
-    near the database, so the object was created there.
+    asked for it. This one was created while the Worker was placed next to the database
+    (`"placement": { "region": "aws:eu-central-1" }` in `wrangler.jsonc`).
     - A query takes 2 to 3 ms there. The first object, created with the `weur` hint
       instead, landed in Amsterdam: 13 ms per query.
-    - Changing the object's name in `src/worker.ts` creates a new one.
+    - The placement was removed after: with it, each WebSocket took 0.4 to 0.6 s more to
+      open. A new name in `src/worker.ts` creates a new object; to have it next to the
+      database, place the Worker there again until the object exists.
   - pg-cloudflare is patched (`patches/`) to send each query in one write. Before, each
     query waited about 70 ms for Nagle's algorithm and delayed ACKs.
   - Hyperdrive is not used. The object keeps its connections open, so Hyperdrive's fast

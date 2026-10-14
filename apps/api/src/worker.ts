@@ -17,9 +17,12 @@ type Env = {
 /**
  * The one Api object. An object stays in the data center it was created in, near the
  * first Worker to ask for it, and each query crosses from there to the database. This
- * Worker runs next to the database (placement in wrangler.jsonc), so a request creates it
- * in Frankfurt. The cron is not placed: should it ask first, the hint keeps the object in
- * western Europe. A new name makes a new object, created again where the Worker runs.
+ * one was created in Frankfurt, next to the database, by this Worker while it was placed
+ * there (`"placement": { "region": "aws:eu-central-1" }` in wrangler.jsonc). The
+ * placement is gone since: it made each WebSocket's opening about half a second slower.
+ * A new name makes a new object, near whichever Worker asks first: to have it next to
+ * the database again, place the Worker there until the object is created. The cron is
+ * never placed: should it ask first, the hint keeps the object in western Europe.
  */
 const NAME = 'eu-central-1'
 
