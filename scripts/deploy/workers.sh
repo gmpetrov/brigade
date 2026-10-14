@@ -36,6 +36,8 @@ deploy:api)
   done
   SHA=$(node apps/api/scripts/prepare-worker.mjs)
   pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA"
+  # Then the small Worker in front of it, which reaches its Durable Object.
+  pnpm --filter @brigade/api exec wrangler deploy -c wrangler.front.jsonc
   ;;
 build:web)
   pnpm --filter "@brigade/web^..." build

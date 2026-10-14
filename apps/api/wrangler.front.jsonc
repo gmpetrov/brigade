@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The API's front door (src/front.ts): it forwards each request to the Api object in
+  // brigade-api (wrangler.jsonc), which deploys first (scripts/deploy/workers.sh).
+  "name": "brigade-api-front",
+  "main": "src/front.ts",
+  "compatibility_date": "2026-10-01",
+  "durable_objects": {
+    "bindings": [{ "name": "API", "class_name": "Api", "script_name": "brigade-api" }],
+  },
+  "workers_dev": true,
+  "observability": { "enabled": true },
+}
