@@ -1,0 +1,6 @@
+# Cloudflare only (https://developers.cloudflare.com/workers/static-assets/headers): its
+# static assets otherwise come with max-age=0, so the browser asks again for every script
+# on every page. Next's build files have their hash in their name, as `next start` assumes
+# when it serves them as immutable.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
