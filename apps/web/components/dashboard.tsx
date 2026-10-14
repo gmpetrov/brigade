@@ -56,6 +56,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -383,24 +384,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         }))}
                       action={{ label: 'New project', onSelect: () => setCreatingProject(true) }}
                     />
-                    <RailMenu
-                      icon={UsersRound}
-                      label="AI teammates"
-                      active={pathname.startsWith('/app/teammates')}
-                      items={(teammates.data ?? []).map((t) => ({
-                        href: `/app/teammates/${t.id}`,
-                        label: t.name,
-                        icon: <TeammateAvatar teammate={t} className="size-5" />,
-                      }))}
-                      action={
-                        isAdmin(data)
-                          ? {
-                              label: 'New teammate',
-                              onSelect: () => router.push('/app/teammates/new'),
-                            }
-                          : undefined
-                      }
-                    />
+                    <TeammatesRailMenu teammates={teammates.data ?? []} admin={isAdmin(data)} />
                   </SidebarMenu>
                 </SidebarGroup>
 
@@ -458,21 +442,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     </SidebarGroupAction>
                   )}
                   <SidebarGroupContent>
-                    <SidebarMenu>
-                      {(teammates.data ?? []).map((t) => {
-                        const href = `/app/teammates/${t.id}`
-                        return (
-                          <SidebarMenuItem key={t.id}>
-                            <SidebarMenuButton asChild isActive={pathname === href}>
-                              <Link href={href}>
-                                <TeammateAvatar teammate={t} className="size-5" />
-                                <span>{t.name}</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        )
-                      })}
-                    </SidebarMenu>
+                    <TeammatesMenu teammates={teammates.data ?? []} />
                   </SidebarGroupContent>
                 </SidebarGroup>
 
@@ -580,6 +550,78 @@ export function SidebarToggle({ className }: { className?: string }) {
  * The folded sidebar's way to a list (projects, teammates, settings): its icon, and
  * beside it a menu of the list.
  */
+/**
+ * The teammates in the sidebar. Each opens its threads expanded, on the one last open with it
+ * (thread-panel.tsx); its settings are a step aside, beside its name.
+ */
+function TeammatesMenu({ teammates }: { teammates: Teammate[] }) {
+  const pathname = usePathname()
+  const { expanded, teammateId, teammateHref, openTeammate } = useThreadPanel()
+  return (
+    <SidebarMenu>
+      {teammates.map((t) => {
+        const settings = `/app/teammates/${t.id}`
+        const active =
+          (expanded && teammateId === t.id) ||
+          pathname === settings ||
+          pathname.startsWith(`${settings}/`)
+        return (
+          <SidebarMenuItem key={t.id}>
+            <SidebarMenuButton asChild isActive={active}>
+              <Link
+                href={teammateHref(t.id)}
+                onClick={(e) => {
+                  // A new tab goes to the address as it is.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+                  e.preventDefault()
+                  openTeammate(t.id)
+                }}
+              >
+                <TeammateAvatar teammate={t} className="size-5" />
+                <span>{t.name}</span>
+              </Link>
+            </SidebarMenuButton>
+            <SidebarMenuAction asChild showOnHover>
+              <Link href={settings} aria-label={`${t.name}'s settings`} title="Settings">
+                <Settings />
+              </Link>
+            </SidebarMenuAction>
+          </SidebarMenuItem>
+        )
+      })}
+    </SidebarMenu>
+  )
+}
+
+/** Folded, the teammates as a menu beside the rail: each opens its threads, as above. */
+function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin: boolean }) {
+  const router = useRouter()
+  const { expanded, teammateId, teammateHref, chooseTeammate } = useThreadPanel()
+  const pathname = usePathname()
+  return (
+    <RailMenu
+      icon={UsersRound}
+      label="AI teammates"
+      active={
+        pathname.startsWith('/app/teammates') ||
+        (expanded && teammates.some((t) => t.id === teammateId))
+      }
+      items={teammates.map((t) => ({
+        id: t.id,
+        href: teammateHref(t.id),
+        label: t.name,
+        icon: <TeammateAvatar teammate={t} className="size-5" />,
+        onSelect: () => chooseTeammate(t.id),
+      }))}
+      action={
+        admin
+          ? { label: 'New teammate', onSelect: () => router.push('/app/teammates/new') }
+          : undefined
+      }
+    />
+  )
+}
+
 function RailMenu({
   icon: Icon,
   label,
@@ -593,7 +635,8 @@ function RailMenu({
   /** The list's own page, first in the menu. */
   href?: string
   active: boolean
-  items: { href: string; label: string; icon: ReactNode }[]
+  /** `id` when two go to the same address. */
+  items: { id?: string; href: string; label: string; icon: ReactNode; onSelect?: () => void }[]
   action?: { label: string; onSelect: () => void }
 }) {
   return (
@@ -616,7 +659,7 @@ function RailMenu({
             <DropdownMenuLabel className="text-muted-foreground text-xs">{label}</DropdownMenuLabel>
           )}
           {items.map((item) => (
-            <DropdownMenuItem key={item.href} asChild>
+            <DropdownMenuItem key={item.id ?? item.href} asChild onSelect={item.onSelect}>
               <Link href={item.href}>
                 {item.icon}
                 <span className="truncate">{item.label}</span>

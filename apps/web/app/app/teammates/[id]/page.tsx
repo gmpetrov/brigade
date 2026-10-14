@@ -1,26 +1,25 @@
 'use client'
+// A teammate's settings: who it is, what it may reach and spend, and what it is up to. Its
+// threads are where the sidebar takes you (components/thread-panel.tsx).
 import { modelLabel } from '@brigade/contracts'
-import { Monitor } from 'lucide-react'
+import { MessagesSquare, Monitor } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { NewThread } from '@/components/new-thread'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateForm } from '@/components/teammate-form'
 import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/teammate-oversight'
-import { ThreadList } from '@/components/thread-list'
+import { useThreadPanel } from '@/components/thread-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { api, harnessLabel, useApi, type ThreadSummary } from '@/lib/api'
+import { api, harnessLabel } from '@/lib/api'
 
 export default function TeammatePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { me, teammates, reloadTeammates } = useDashboard()
   const teammate = teammates.find((t) => t.id === id)
-  const threads = useApi<ThreadSummary[]>(`/threads?teammateId=${id}`)
-  const [editing, setEditing] = useState(false)
+  const { teammateHref, openTeammate } = useThreadPanel()
   const oversight = useTeammateTimeline(id)
 
   if (!teammate) return <p className="text-sm text-muted-foreground">Loading…</p>
@@ -49,53 +48,56 @@ export default function TeammatePage() {
               {harnessLabel(teammate.harness)} · {modelLabel(teammate.harness, teammate.model)}
             </Badge>
           </div>
-          {!editing && teammate.instructions && (
+          {!isAdmin(me) && teammate.instructions && (
             <p className="text-sm whitespace-pre-wrap text-muted-foreground">
               {teammate.instructions}
             </p>
           )}
         </div>
         <div className="flex gap-2">
+          <Button asChild>
+            <Link
+              href={teammateHref(id)}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+                e.preventDefault()
+                openTeammate(id)
+              }}
+            >
+              <MessagesSquare aria-hidden />
+              Threads
+            </Link>
+          </Button>
           <Button asChild variant="outline">
             <Link href={`/app/teammates/${id}/computer`}>
               <Monitor aria-hidden />
               Computer
             </Link>
           </Button>
-          {isAdmin(me) && (
-            <>
-              <Button variant="outline" onClick={() => setEditing(!editing)}>
-                {editing ? 'Close' : 'Edit'}
-              </Button>
-              {teammate.kind !== 'chief' && (
-                <Button variant="danger" onClick={archive}>
-                  Archive
-                </Button>
-              )}
-            </>
+          {isAdmin(me) && teammate.kind !== 'chief' && (
+            <Button variant="danger" onClick={archive}>
+              Archive
+            </Button>
           )}
         </div>
       </header>
-      {editing && (
-        <TeammateForm
-          initial={teammate}
-          submitLabel="Save"
-          onSubmit={async (input) => {
-            await api(`/teammates/${id}`, { method: 'PATCH', body: input })
-            await reloadTeammates()
-            setEditing(false)
-          }}
-        />
-      )}
-
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex min-w-0 flex-[999_1_32rem] flex-col gap-5">
-          <section aria-labelledby="new-thread" className="flex flex-col gap-3">
-            <h2 id="new-thread" className="text-base font-bold">
-              New thread
-            </h2>
-            <NewThread teammate={teammate} rows={4} />
-          </section>
+          {isAdmin(me) && (
+            <section aria-labelledby="profile" className="flex flex-col gap-3">
+              <h2 id="profile" className="text-base font-bold">
+                Profile
+              </h2>
+              <TeammateForm
+                initial={teammate}
+                submitLabel="Save"
+                onSubmit={async (input) => {
+                  await api(`/teammates/${id}`, { method: 'PATCH', body: input })
+                  await reloadTeammates()
+                }}
+              />
+            </section>
+          )}
 
           <TeammateAccess
             teammate={teammate}
@@ -116,10 +118,6 @@ export default function TeammatePage() {
 
         <div className="flex min-w-0 flex-[1_1_20rem] flex-col gap-5">
           <TeammateStatus {...oversight} />
-          <section className="flex flex-col gap-3">
-            <h2 className="text-base font-bold">Threads</h2>
-            {threads.data && <ThreadList threads={threads.data} />}
-          </section>
         </div>
       </div>
     </div>

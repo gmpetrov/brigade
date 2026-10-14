@@ -3,8 +3,8 @@
 // details. Beside a thread, the thread's own (who is in it, who started it, its
 // project and task), then the computer it runs on (its screen, taking control,
 // Preview, a shell, the run log) and what it made. Beside the list, what the teammate is
-// on now. Both end with the teammate: routines, profile.
-import { ArrowRight, Globe, Hand, SquareTerminal, UserRound, X } from 'lucide-react'
+// on now. Both end with the teammate: routines, settings.
+import { ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
@@ -142,8 +142,8 @@ function About({ teammate, children }: { teammate: Teammate; children?: ReactNod
       <div className="flex flex-col gap-2">
         <Button asChild variant="outline" className="justify-start">
           <Link href={`/app/teammates/${teammate.id}`}>
-            <UserRound aria-hidden />
-            Profile
+            <Settings aria-hidden />
+            Settings
           </Link>
         </Button>
         {children}
@@ -156,7 +156,7 @@ const BUSY = new Set(['starting', 'running'])
 
 /**
  * A teammate beside its thread list: what it is on now (its screen shows once a
- * thread is open), its routines, and its profile.
+ * thread is open), its routines, and its settings.
  */
 export function TeammatePanel({
   teammate,
@@ -327,7 +327,7 @@ export function ComputerPanel({
           <ThreadOutputs outputs={outputs} onOpen={onOpenFile} />
         </Section>
       )}
-      {/* The teammate's routines and profile are beside its thread list, not each thread. */}
+      {/* The teammate's routines and settings are beside its thread list, not each thread. */}
     </Frame>
   )
 }

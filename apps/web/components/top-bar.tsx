@@ -35,7 +35,7 @@ function useCrumbs(): Crumb[] {
         label: id === 'new' ? 'New' : (teammates.find((t) => t.id === id)?.name ?? 'Teammate'),
         href: `/app/teammates/${id}`,
       },
-      ...(rest[0] === 'computer' ? [{ label: 'Computer' }] : []),
+      ...(id === 'new' ? [] : [{ label: rest[0] === 'computer' ? 'Computer' : 'Settings' }]),
     ]
   if (section === 'pulls' && id)
     return [
