@@ -174,6 +174,12 @@ export async function dispatch(
  * connected runner installed from another one, once per bundle. Started by
  * the entry (src/jobs.ts): Workers allow no timers while modules load.
  */
+/** Dashboards' sockets carry nothing for long stretches: say something before they look idle. */
+export const pingBrowsers = () =>
+  setInterval(() => {
+    for (const conn of browsers) send(conn.ws, { type: 'ping' })
+  }, 30_000)
+
 export const offerRunnerUpdates = () =>
   setInterval(() => {
     void runnerBundle().then((bundle) => {

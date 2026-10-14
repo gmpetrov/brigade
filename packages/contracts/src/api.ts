@@ -259,5 +259,7 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     error: z.string().optional(),
   }),
   z.object({ type: z.literal('error'), message: z.string() }),
+  /** Keeps the socket from looking idle: Cloudflare closes one silent for a minute. */
+  z.object({ type: z.literal('ping') }),
 ])
 export type ApiToBrowser = z.infer<typeof ApiToBrowser>
