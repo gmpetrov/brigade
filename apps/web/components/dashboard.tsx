@@ -127,18 +127,22 @@ export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
 /** A teammate's pebble, drawn from its id so it is the same everywhere; a teammate not
- * created yet (a proposal) has no id, and takes its name instead. */
+ * created yet (a proposal) has no id, and takes its name instead. The chief wears a
+ * crown: known from its kind, or else from the workspace's teammates. */
 export function TeammateAvatar({
   teammate,
   className,
 }: {
-  teammate: Pick<Teammate, 'name'> & { id?: string }
+  teammate: Pick<Teammate, 'name'> & { id?: string; kind?: Teammate['kind'] }
   className?: string
 }) {
+  const dashboard = useContext(DashboardContext)
+  const kind = teammate.kind ?? dashboard?.teammates.find((t) => t.id === teammate.id)?.kind
   return (
     <PebbleAvatar
       seed={teammate.id ?? teammate.name}
       title={teammate.name}
+      crown={kind === 'chief'}
       className={className ?? 'size-6'}
     />
   )
@@ -198,8 +202,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       router.replace('/onboarding')
   }, [me.data, me.error, router])
 
-  if (!me.data?.activeWorkspaceId || !me.data.aiReady)
-    return <AppLoader />
+  if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
