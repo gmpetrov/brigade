@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
 import { env } from './config.js'
+import { prisma } from './db.js'
 import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
 import { desktopProxy } from './desktop-proxy.js'
 import { upgradeWebSocket } from './platform/node.js'
@@ -47,6 +48,24 @@ app.use('/api/*', cors({ origin: env.WEB_URL, credentials: true }))
 app.get('/health', (c) =>
   c.json<HealthResponse>({ status: 'ok', protocolVersion: PROTOCOL_VERSION }),
 )
+
+/**
+ * How far the database is from where the API runs: three `SELECT 1` in a row, and the
+ * Cloudflare data center its requests leave from (on Workers, where the Api object is).
+ */
+app.get('/health/db', async (c) => {
+  const queryMs: number[] = []
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now()
+    await prisma.$queryRaw`SELECT 1`
+    queryMs.push(Math.round(performance.now() - start))
+  }
+  const trace = await fetch('https://www.cloudflare.com/cdn-cgi/trace').then(
+    (r) => r.text(),
+    () => '',
+  )
+  return c.json({ queryMs, colo: /^colo=(\w+)$/m.exec(trace)?.[1] ?? null })
+})
 
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
 app.route('/api', workspaces)
