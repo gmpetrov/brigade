@@ -11,6 +11,9 @@ patchedDependencies:
   '@opennextjs/cloudflare@1.20.7':
     hash: vvod44kpcnn6nzxipuhvehlgiy
     path: patches/@opennextjs__cloudflare@1.20.7.patch
+  pg-cloudflare@1.4.1:
+    hash: no6xa5kaqcyfne4phirjuokd6a
+    path: patches/pg-cloudflare@1.4.1.patch
 
 importers:
 
@@ -8406,11 +8409,12 @@ packages:
     resolution: {integrity: sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g==}
     dev: false
 
-  /pg-cloudflare@1.4.1:
+  /pg-cloudflare@1.4.1(patch_hash=no6xa5kaqcyfne4phirjuokd6a):
     resolution: {integrity: sha512-6PQbsFWZcp9EmJEwy5cGQ2La+AMWpP46lgbb8X+U/XsHIUweYDNCpeuKck5RxL2MdVFi7krbbEi5nX4Zh7JhrQ==}
     requiresBuild: true
     dev: false
     optional: true
+    patched: true
 
   /pg-connection-string@2.14.1:
     resolution: {integrity: sha512-qR3kGNPBLpCNtz0evbKA0Y/MRFXwSSdT+pTJvYp/bXTcReZbvX1kzF0IyTc1QnxqF7AZbOeBhNL8R5mYQZV/MA==}
@@ -8456,7 +8460,7 @@ packages:
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
-      pg-cloudflare: 1.4.1
+      pg-cloudflare: 1.4.1(patch_hash=no6xa5kaqcyfne4phirjuokd6a)
     dev: false
 
   /pgpass@1.0.5:

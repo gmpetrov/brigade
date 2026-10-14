@@ -1,0 +1,58 @@
+diff --git a/dist/index.js b/dist/index.js
+index eb6bbf2d44d5ae85ae9e9b37dd245dd5c9903a0b..54eaf7a73722f5e6916afa3c2644f35c336a1879 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -16,6 +16,8 @@ class CloudflareSocket extends events_1.EventEmitter {
+         this._cfSocket = null;
+         this._cfWriter = null;
+         this._cfReader = null;
++        this._pending = [];
++        this._callbacks = [];
+     }
+     setNoDelay() {
+         return this;
+@@ -84,15 +86,33 @@ class CloudflareSocket extends events_1.EventEmitter {
+             return callback();
+         if (typeof data === 'string')
+             data = Buffer.from(data, encoding);
++        // Brigade: pg writes a query as several small messages (Parse, Bind, Describe,
++        // Execute, Sync), and setNoDelay() cannot turn Nagle's algorithm off here. Sent one
++        // by one, each query waited on a delayed ACK. What is written in the same turn of
++        // the event loop goes out as one write.
++        this._pending.push(data);
++        this._callbacks.push(callback);
++        if (this._pending.length === 1)
++            queueMicrotask(() => this._flush());
++        return true;
++    }
++    _flush() {
++        if (this._pending.length === 0)
++            return;
++        const data = this._pending.length === 1 ? this._pending[0] : Buffer.concat(this._pending);
++        const callbacks = this._callbacks;
++        this._pending = [];
++        this._callbacks = [];
+         log('sending data direct:', data);
+         this._cfWriter.write(data).then(() => {
+             log('data sent');
+-            callback();
++            for (const callback of callbacks)
++                callback();
+         }, (err) => {
+             log('send error', err);
+-            callback(err);
++            for (const callback of callbacks)
++                callback(err);
+         });
+-        return true;
+     }
+     end(data = Buffer.alloc(0), encoding = 'utf8', callback = () => { }) {
+         log('ending CF socket');
+@@ -123,6 +143,7 @@ class CloudflareSocket extends events_1.EventEmitter {
+             this.emit('error', 'Cannot call `startTls()` more than once on a socket');
+             return;
+         }
++        this._flush();
+         this._cfWriter.releaseLock();
+         this._cfReader.releaseLock();
+         this._upgrading = true;
