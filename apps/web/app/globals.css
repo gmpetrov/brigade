@@ -278,17 +278,16 @@
     }
   }
 
-  /* A teammate's picture: a pebble with pill eyes that morphs, glances around and
-   * blinks into happy arcs (components/pebble-avatar.tsx sets the variables from its
-   * id). Sized in percentages and container units, so it draws the same at 20px and
-   * at 64px. Still for those who ask for less motion. */
+  /* A teammate's picture: a bare pebble, with no disc behind it, that morphs, glances
+   * around and blinks its pill eyes into happy arcs (components/pebble-avatar.tsx sets
+   * the variables from its id). Sized in percentages and container units, so it draws
+   * the same at 20px and at 64px. Still for those who ask for less motion. */
   .pebble {
     container-type: size;
-    background: color-mix(in oklch, var(--pebble-c1) 22%, var(--background));
   }
   .pebble-body {
     position: absolute;
-    inset: 10%;
+    inset: 4%;
     background: linear-gradient(var(--pebble-angle), var(--pebble-c1), var(--pebble-c2));
     border-radius: var(--pebble-r1);
     animation: pebble-morph var(--pebble-morph) ease-in-out infinite var(--pebble-morph-at);

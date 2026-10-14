@@ -81,7 +81,7 @@ export function PebbleAvatar({
       role="img"
       aria-label={title}
       title={title}
-      className={cn('pebble relative flex size-8 shrink-0 overflow-hidden rounded-full', className)}
+      className={cn('pebble relative flex size-8 shrink-0', className)}
       style={pebbleStyle(seed)}
     >
       <span className="pebble-body" />

@@ -100,9 +100,9 @@ function ThreadMessage({
         </div>
         {/* The replies line: who answered, how many, when last. */}
         <div className="mt-1 flex min-w-0 items-center gap-2 text-xs">
-          <span className="flex shrink-0 -space-x-1">
+          <span className="flex shrink-0 gap-0.5">
             {people.slice(0, 3).map((p) => (
-              <TeammateAvatar key={p.id} teammate={p} className="size-5 ring-2 ring-background" />
+              <TeammateAvatar key={p.id} teammate={p} className="size-5" />
             ))}
           </span>
           {replies > 0 ? (
