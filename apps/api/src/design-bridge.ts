@@ -195,7 +195,8 @@ const SOURCE = String.raw`(function () {
   addEventListener('scroll', report, true)
   addEventListener('resize', report)
 
-  // The page's height, for the canvas to size the board: on load, and when its content changes size.
+  // The page's size, for the canvas to size the board: on load, and when its content changes size.
+  // Its width too: a page wider than its board would be cut at the board's edge.
   var height = function () {
     return Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0)
   }
@@ -205,7 +206,14 @@ const SOURCE = String.raw`(function () {
   var sendSize = function () {
     clearTimeout(sizeTimer)
     sizeTimer = setTimeout(function () {
-      send({ type: 'size', height: height(), frame: innerHeight, resized: resized })
+      send({
+        type: 'size',
+        height: height(),
+        frame: innerHeight,
+        width: document.documentElement.scrollWidth,
+        frameWidth: innerWidth,
+        resized: resized,
+      })
       resized = false
     }, 150)
   }
