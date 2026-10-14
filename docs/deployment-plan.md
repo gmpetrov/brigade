@@ -42,9 +42,20 @@ Cloudflare shipped first, more simply than the phases below:
     `pnpm run cf:deploy:<worker>`. Both call `scripts/deploy/workers.sh`.
   - Watch paths limit each build to the files it is built from.
   - The API's deploy migrates the database first, with the `DATABASE_URL` build secret.
-  - The Workers keep the secrets they have. To change them, edit `apps/api/.env.prod` and
-    run `scripts/deploy/cloudflare.sh`, which deploys everything from a laptop and sets up
-    the R2 bucket.
+  - A deploy keeps the secrets a Worker has, and no file in the repository holds them:
+    - `brigade-api` reads all its settings from secrets.
+      `pnpm --filter @brigade/api exec wrangler secret list` names them.
+    - `brigade-collab` has `COLLAB_SECRET`, the same as the API's.
+    - To change one, run `pnpm --filter @brigade/api exec wrangler secret put <NAME>`
+      (`@brigade/collab` for collab), or use the Worker's Settings in the dashboard. The
+      Worker restarts with it at once.
+    - `DATABASE_URL` is also a build secret of `brigade-api` (Settings > Build), for the
+      migrations. Change both together.
+  - The R2 bucket was set up once, with `wrangler r2 bucket create brigade --location weur`
+    and `wrangler r2 bucket cors set brigade --file scripts/deploy/r2-cors.json`.
+  - To deploy from a laptop instead, sign in with `wrangler login` and run the same
+    `pnpm run cf:build:<worker>` and `pnpm run cf:deploy:<worker>`. The API's deploy needs
+    `DATABASE_URL` set.
   - Build logs are under each Worker's Deployments in the dashboard, and a check on the
     commit in GitHub.
   - A new version can take a few minutes to reach the running `Api` object; until then

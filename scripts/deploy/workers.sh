@@ -2,11 +2,10 @@
 # Build or deploy one of Brigade's Workers:
 #   scripts/deploy/workers.sh build|deploy api|web|collab
 # Each Worker's Workers Build runs it on a push to main (the cf:* scripts in the root
-# package.json), after installing dependencies; scripts/deploy/cloudflare.sh runs it
-# from a laptop. Deploying the API migrates the database first, with DATABASE_URL from
-# the environment (a build secret on Cloudflare). API_SECRETS and COLLAB_SECRETS, when
-# set, name a file of secrets to upload with that deploy; otherwise the Worker keeps
-# the ones it has.
+# package.json), after installing dependencies. Deploying the API migrates the database
+# first, with DATABASE_URL from the environment (a build secret on Cloudflare). A deploy
+# keeps the secrets a Worker has; change one with `wrangler secret put` (see
+# docs/deployment-plan.md).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 API_URL=https://api.brigade.lol
@@ -22,8 +21,7 @@ deploy:api)
   : "${DATABASE_URL:?Set DATABASE_URL to migrate the database}"
   pnpm --filter @brigade/api exec prisma migrate deploy
   SHA=$(node apps/api/scripts/prepare-worker.mjs)
-  pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA" \
-    ${API_SECRETS:+--secrets-file "$API_SECRETS"}
+  pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA"
   ;;
 build:web)
   pnpm --filter "@brigade/web^..." build
@@ -36,8 +34,7 @@ build:collab)
   # Nothing: wrangler bundles it when deploying.
   ;;
 deploy:collab)
-  pnpm --filter @brigade/collab exec wrangler deploy --var "API_URL:$API_URL" \
-    ${COLLAB_SECRETS:+--secrets-file "$COLLAB_SECRETS"}
+  pnpm --filter @brigade/collab exec wrangler deploy --var "API_URL:$API_URL"
   ;;
 *)
   echo "Usage: $0 build|deploy api|web|collab" >&2
