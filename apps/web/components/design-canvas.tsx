@@ -92,7 +92,14 @@ type FromPage =
   | PageMessage
   | { type: 'hit'; seq: number; element: PageElement | null }
   | { type: 'rects'; rects: Record<string, Rect | null> }
-  | { type: 'size'; height: number; frame: number; resized: boolean }
+  | {
+      type: 'size'
+      height: number
+      frame: number
+      width?: number
+      frameWidth?: number
+      resized: boolean
+    }
   | { type: 'wheel'; dx: number; dy: number; zoom: boolean; x: number; y: number; lines: boolean }
   | { type: 'scrolled'; dx: number; dy: number }
   | { type: 'captured'; id: string; images?: Captured[]; error?: string }
@@ -101,6 +108,8 @@ type FromPage =
 const GROUP_TITLE = 72
 const GROUP_GAP = 200
 const ZOOM_MIN = 0.02
+/** The widest a board grows to fit its page: the widest a design may set. */
+const BOARD_WIDTH_MAX = 4000
 const ZOOM_MAX = 4
 /** What the frame of a board is set to before its page says how tall it is. */
 const startHeight = (board: PlacedBoard) => board.height ?? screenHeight(board.width)
@@ -139,6 +148,8 @@ function DesignCanvasInner({
   const viewRef = useRef(view)
   viewRef.current = view
   const [heights, setHeights] = useState<Record<string, number>>({})
+  // Boards whose page is wider than they are: drawn as wide as the page, not cut at their edge.
+  const [widths, setWidths] = useState<Record<string, number>>({})
   const [scrolling, setScrolling] = useState<Record<string, boolean>>({})
   const sizing = useRef(new Map<string, Sizing>())
   const [reloads, setReloads] = useState<Record<string, number>>({})
@@ -167,18 +178,24 @@ function DesignCanvasInner({
       const y0 = top + (titled ? GROUP_TITLE : 0)
       let bottom = y0
       let right = 0
+      // A board drawn wider pushes the boards after it in its row along by as much.
+      const extra = (b: CanvasBoard) => Math.max(0, (widths[b.key] ?? b.width) - b.width)
       for (const b of group.boards) {
         const frame = heights[b.key] ?? startHeight(b)
-        boards.push({ ...b, y: y0 + b.y, group: group.key, frame })
+        const shift = group.boards
+          .filter((o) => o.y === b.y && o.x < b.x)
+          .reduce((sum, o) => sum + extra(o), 0)
+        const width = b.width + extra(b)
+        boards.push({ ...b, x: b.x + shift, y: y0 + b.y, width, group: group.key, frame })
         bottom = Math.max(bottom, y0 + b.y + frame)
-        right = Math.max(right, b.x + b.width)
+        right = Math.max(right, b.x + shift + width)
       }
       // At the top of its boards: drawn just above their titles.
       if (titled) titles.push({ key: group.key, title: group.title!, x: 0, y: y0, width: right })
       top = bottom + GROUP_GAP
     }
     return { boards, titles }
-  }, [groups, heights])
+  }, [groups, heights, widths])
   const layoutRef = useRef(layout)
   layoutRef.current = layout
   const boardOf = useCallback(
@@ -416,6 +433,20 @@ function DesignCanvasInner({
     },
     [boardOf, heights],
   )
+  /**
+   * A page wider than its board (a fixed 1440px layout on a 1280px board) widens the board to it,
+   * up to the widest a board may be. Measured in a frame of another width, the next report counts.
+   */
+  const onWidth = useCallback(
+    (key: string, width: number, frame: number) => {
+      const board = boardOf(key)
+      if (!board || !width || Math.abs(frame - board.width) > 1) return
+      if (width <= board.width + 1) return
+      const wider = Math.min(BOARD_WIDTH_MAX, Math.ceil(width))
+      setWidths((all) => (all[key] === wider ? all : { ...all, [key]: wider }))
+    },
+    [boardOf],
+  )
   const onSizeRef = useRef(onSize)
   onSizeRef.current = onSize
   const onMessageRef = useRef(onMessage)
@@ -465,6 +496,7 @@ function DesignCanvasInner({
           return next
         })
       } else if (m.type === 'size') {
+        onWidth(key, Number(m.width) || 0, Number(m.frameWidth) || 0)
         onSizeRef.current(key, Number(m.height) || 0, Number(m.frame) || 0, Boolean(m.resized))
       } else if (m.type === 'wheel') {
         const v = viewRef.current
