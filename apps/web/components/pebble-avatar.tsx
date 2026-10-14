@@ -64,16 +64,18 @@ export function pebbleStyle(seed: string): CSSProperties {
 }
 
 /** An agent's picture: a softly morphing pebble with pill eyes that blink into happy
- * arcs, unique to its seed (the agent's id) and the same wherever it shows. Size it
- * with the className (`size-8`). */
+ * arcs, unique to its seed (the agent's id) and the same wherever it shows. The chief
+ * wears a small gold crown. Size it with the className (`size-8`). */
 export function PebbleAvatar({
   seed,
   className,
   title,
+  crown = false,
 }: {
   seed: string
   className?: string
   title?: string
+  crown?: boolean
 }) {
   return (
     <span
@@ -93,6 +95,14 @@ export function PebbleAvatar({
           </span>
         ))}
       </span>
+      {crown && (
+        <svg className="pebble-crown" viewBox="0 0 36 24" aria-hidden>
+          <path d="M5 22 2 6l9 8 7-12 7 12 9-8-3 16Z" fill="#f5c542" />
+          <circle cx="2" cy="6" r="2" fill="#fde68a" />
+          <circle cx="18" cy="2" r="2" fill="#fde68a" />
+          <circle cx="34" cy="6" r="2" fill="#fde68a" />
+        </svg>
+      )}
     </span>
   )
 }

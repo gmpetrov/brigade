@@ -327,6 +327,16 @@
     opacity: 0;
     animation: pebble-smile var(--pebble-blink) ease-in-out infinite var(--pebble-blink-at);
   }
+  /* The chief's crown, sitting on the top of the pebble and rising a little above it. */
+  .pebble-crown {
+    position: absolute;
+    top: -17%;
+    left: 50%;
+    width: 50%;
+    translate: -50% 0;
+    overflow: visible;
+    pointer-events: none;
+  }
   @keyframes pebble-morph {
     0%,
     100% {
