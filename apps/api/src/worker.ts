@@ -12,10 +12,20 @@ type Env = {
   API: DurableObjectNamespace<Api>
 }
 
+/**
+ * The one Api object. An object stays in the data center it was created in, near the
+ * first Worker to ask for it, and each query crosses from there to the database. This
+ * Worker runs next to the database (placement in wrangler.jsonc), so a request creates it
+ * in Frankfurt. The cron is not placed: should it ask first, the hint keeps the object in
+ * western Europe. A new name makes a new object, created again where the Worker runs.
+ */
+const NAME = 'eu-central-1'
+
 export class Api extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
-    startJobs()
+    // An object left behind under an earlier name runs no jobs, should anything wake it.
+    if ((ctx.id.name ?? NAME) === NAME) startJobs()
   }
 
   override fetch(request: Request) {
@@ -28,14 +38,14 @@ export class Api extends DurableObject<Env> {
   }
 }
 
-/** The one Api object, created next to the database (Neon, eu-central-1). */
-const api = (env: Env) => env.API.get(env.API.idFromName('main'), { locationHint: 'weur' })
+const api = (env: Env, locationHint?: DurableObjectLocationHint) =>
+  env.API.get(env.API.idFromName(NAME), locationHint && { locationHint })
 
 export default {
   fetch(request, env) {
     return api(env).fetch(request)
   },
   async scheduled(_controller, env) {
-    await api(env).ping()
+    await api(env, 'weur').ping()
   },
 } satisfies ExportedHandler<Env>

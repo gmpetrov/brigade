@@ -1,10 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // The API on Cloudflare Workers (src/worker.ts): deploy with scripts/deploy-worker.sh.
+  // The API on Cloudflare Workers (src/worker.ts): deploy with scripts/deploy/workers.sh.
   "name": "brigade-api",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Next to the database (Neon, AWS eu-central-1): the Api object is created near the
+  // Worker that first asks for it, and stays there (src/worker.ts).
+  "placement": { "region": "aws:eu-central-1" },
   "routes": [
     { "pattern": "api.brigade.lol", "custom_domain": true },
     { "pattern": "designs.brigade.lol", "custom_domain": true },
