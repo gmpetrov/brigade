@@ -229,14 +229,22 @@ export function TeammatePicker({
 
 const LAST_TEAMMATE = 'brigade.home.teammate'
 
-/** The teammate new messages go to, remembered per browser. */
+/** The teammate `useLastTeammate` remembers, read at once. */
+export function lastTeammate() {
+  try {
+    return localStorage.getItem(LAST_TEAMMATE) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The teammate new messages go to, remembered per browser. Read as it mounts: what asks is in
+ * the dashboard, which shows only in the browser, once the member is in. A first render on
+ * another teammate would load its threads for nothing.
+ */
 export function useLastTeammate() {
-  const [id, setId] = useState<string>()
-  useEffect(() => {
-    try {
-      setId(localStorage.getItem(LAST_TEAMMATE) ?? undefined)
-    } catch {}
-  }, [])
+  const [id, setId] = useState(lastTeammate)
   return [
     id,
     (next: string) => {

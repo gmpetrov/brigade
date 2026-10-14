@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { Markdown } from '@/components/markdown'
 import { ProjectSelect } from '@/components/projects'
@@ -906,7 +906,11 @@ export function ThreadTaskBar({
   const [reassigning, setReassigning] = useState(false)
   const [error, setError] = useState<string>()
   const reload = detail.reload
+  // On a new status: it loaded with the first.
+  const loadedAt = useRef(status)
   useEffect(() => {
+    if (loadedAt.current === status) return
+    loadedAt.current = status
     void reload()
   }, [status, reload])
   useLive((message) => {

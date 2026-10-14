@@ -157,22 +157,51 @@ export const attachmentUrl = (id: string, download = false) =>
 export const threadImageUrl = (threadId: string, path: string, teammateId?: string) =>
   `${API_URL}/api/threads/${threadId}/image?${new URLSearchParams({ path, ...(teammateId ? { teammateId } : {}) })}`
 
-/** Fetch on mount; `reload` refetches. */
+/** GET requests sent ahead, by path: see `preload`. */
+const ahead = new Map<string, Promise<unknown>>()
+
+/**
+ * Send a GET request ahead of what will ask for it. The dashboard waits for the member
+ * before it shows a page, and a page's requests would then be a second trip to the API:
+ * sent with the member's instead, they come back with it. What asks for it as it opens
+ * takes it (`preloaded`); one left untaken goes after a few seconds, as it gets stale.
+ */
+export function preload(path: string) {
+  if (ahead.has(path)) return
+  const request = api(path)
+  // Its error goes to what takes it.
+  request.catch(() => undefined)
+  ahead.set(path, request)
+  setTimeout(() => ahead.get(path) === request && ahead.delete(path), 10_000)
+}
+
+/** The request `preload` sent for this path, once: undefined when there is none. */
+export function preloaded<T>(path: string) {
+  const request = ahead.get(path)
+  ahead.delete(path)
+  return request as Promise<T> | undefined
+}
+
+/** Fetch on mount (taking the request sent ahead, if any); `reload` refetches. */
 export function useApi<T>(path: string | null) {
   const [data, setData] = useState<T | undefined>()
   const [error, setError] = useState<ApiError | undefined>()
-  const reload = useCallback(async () => {
-    if (!path) return
-    try {
-      setData(await api<T>(path))
-      setError(undefined)
-    } catch (e) {
-      setError(e instanceof ApiError ? e : new ApiError(String(e), 0))
-    }
-  }, [path])
+  const load = useCallback(
+    async (opening: boolean) => {
+      if (!path) return
+      try {
+        setData(await ((opening ? preloaded<T>(path) : undefined) ?? api<T>(path)))
+        setError(undefined)
+      } catch (e) {
+        setError(e instanceof ApiError ? e : new ApiError(String(e), 0))
+      }
+    },
+    [path],
+  )
+  const reload = useCallback(() => load(false), [load])
   useEffect(() => {
-    void reload()
-  }, [reload])
+    void load(true)
+  }, [load])
   return { data, error, reload, setData }
 }
 

@@ -39,6 +39,7 @@ import { useDocumentPanel } from '@/components/document-panel'
 import {
   NewThread,
   TeammatePicker,
+  lastTeammate,
   useLastTeammate,
   useThreadDraft,
   type TeammateActivity,
@@ -54,14 +55,15 @@ import {
 import {
   EarlierMessages,
   JumpToEnd,
+  preloadConversation,
   ThreadConversation,
   type ThreadHeading,
 } from '@/components/thread-conversation'
 import { ThreadChannel } from '@/components/thread-list'
 import { Button } from '@/components/ui/button'
-import { api, useApi, type Teammate, type ThreadSummary } from '@/lib/api'
+import { api, preload, preloaded, useApi, type Teammate, type ThreadSummary } from '@/lib/api'
 import { isMac, useIsMac } from '@/lib/platform'
-import { useRememberedFlag } from '@/lib/use-remembered'
+import { rememberedFlag, useRememberedFlag } from '@/lib/use-remembered'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -129,6 +131,8 @@ const OPEN_KEY = 'brigade:threads-panel'
 const LAST_THREADS_KEY = 'brigade:teammate-threads'
 /** Its name among the panels beside a page. */
 const PANEL = 'threads'
+/** Whether the channel shows beside a thread, expanded. */
+const LIST_SHOWN = 'brigade.threads.list'
 
 /** Whether the panel was open, and on which thread, when this browser last left it. */
 function readSaved(): { open: boolean; threadId: string | null } {
@@ -165,6 +169,25 @@ export function useThreadPanel() {
 function routeThread(pathname: string): string | null | undefined {
   const match = /^\/app\/threads(?:\/([^/]+))?\/?$/.exec(pathname)
   return match ? (match[1] ?? null) : undefined
+}
+
+/**
+ * Sends ahead what the panel asks for as it opens (lib/api.ts's `preload`), as the dashboard
+ * starts: every thread, then as it was left in this browser, the thread it shows and the
+ * channel beside it, of the teammate picked last (once the thread is in, the panel may pick
+ * its lead instead).
+ */
+export function preloadThreadPanel(pathname: string) {
+  preload('/threads')
+  const routed = routeThread(pathname)
+  const expanded = routed !== undefined
+  const saved = readSaved()
+  if (!expanded && !saved.open) return
+  const threadId = expanded ? routed : saved.threadId
+  if (threadId) preloadConversation(threadId)
+  const teammate = lastTeammate()
+  if (teammate && (!threadId || (expanded && rememberedFlag(LIST_SHOWN, true))))
+    preload(`${channelPath(teammate)}&limit=${PAGE}`)
 }
 
 const BUSY = new Set(['starting', 'running'])
@@ -472,7 +495,7 @@ export function ThreadPanel() {
   const shown = heading && heading.id === panel.threadId ? heading : undefined
   const lead = shown?.teammate
   // Expanded, the channel beside a thread can be hidden: remembered in this browser.
-  const [listShown, showList] = useRememberedFlag('brigade.threads.list', true)
+  const [listShown, showList] = useRememberedFlag(LIST_SHOWN, true)
   // The channel beside a thread is one of its teammates': the one picked, if in it.
   const inThread = shown?.teammateIds
   // Once per thread, as it opens: picking another teammate after that is the member's choice
@@ -704,6 +727,7 @@ function DetailsButton({ name }: { name?: string }) {
 }
 
 const PAGE = 30
+const channelPath = (teammateId: string) => `/threads?teammateId=${teammateId}`
 
 /**
  * A teammate's threads as a channel, oldest first: the latest page, then earlier
@@ -718,33 +742,40 @@ function useThreadChannel(teammateId: string) {
   // open thread) may ask again before the first one is in.
   const loading = useRef(false)
   const loaded = useRef(0)
-  const path = `/threads?teammateId=${teammateId}`
-  const reload = useCallback(async () => {
-    try {
-      // The newest, as many as are shown (up to the API's most): replies and states change.
-      const limit = Math.min(Math.max(loaded.current, PAGE), 100)
-      const page = (await api<ThreadSummary[]>(`${path}&limit=${limit}`)).reverse()
-      // Whether there are earlier ones: the first page says; after it, earlier pages do.
-      if (loaded.current === 0) setMore(page.length === limit)
-      const ids = new Set(page.map((t) => t.id))
-      const first = page[0]
-      setThreads((shown) => {
-        // Earlier ones beyond it stay as they were.
-        const older = first
-          ? (shown ?? []).filter((t) => !ids.has(t.id) && t.createdAt < first.createdAt)
-          : []
-        const next = [...older, ...page]
-        loaded.current = next.length
-        return next
-      })
-      setError(undefined)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }, [path])
+  const path = channelPath(teammateId)
+  const load = useCallback(
+    async (opening: boolean) => {
+      try {
+        // The newest, as many as are shown (up to the API's most): replies and states change.
+        const limit = Math.min(Math.max(loaded.current, PAGE), 100)
+        const url = `${path}&limit=${limit}`
+        const request =
+          (opening ? preloaded<ThreadSummary[]>(url) : undefined) ?? api<ThreadSummary[]>(url)
+        const page = (await request).reverse()
+        // Whether there are earlier ones: the first page says; after it, earlier pages do.
+        if (loaded.current === 0) setMore(page.length === limit)
+        const ids = new Set(page.map((t) => t.id))
+        const first = page[0]
+        setThreads((shown) => {
+          // Earlier ones beyond it stay as they were.
+          const older = first
+            ? (shown ?? []).filter((t) => !ids.has(t.id) && t.createdAt < first.createdAt)
+            : []
+          const next = [...older, ...page]
+          loaded.current = next.length
+          return next
+        })
+        setError(undefined)
+      } catch (e) {
+        setError((e as Error).message)
+      }
+    },
+    [path],
+  )
+  const reload = useCallback(() => load(false), [load])
   useEffect(() => {
-    void reload()
-  }, [reload])
+    void load(true)
+  }, [load])
   const loadOlder = useCallback(
     async (before: () => void) => {
       const oldest = threads?.[0]

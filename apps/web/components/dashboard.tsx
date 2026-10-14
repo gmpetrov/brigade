@@ -23,7 +23,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { HelpMenu } from '@/components/help-menu'
@@ -32,7 +32,12 @@ import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchButton, SearchDialog } from '@/components/search'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { QuickThread } from '@/components/quick-thread'
-import { ThreadPanel, ThreadPanelProvider, useThreadPanel } from '@/components/thread-panel'
+import {
+  preloadThreadPanel,
+  ThreadPanel,
+  ThreadPanelProvider,
+  useThreadPanel,
+} from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -151,10 +156,13 @@ export function TeammateAvatar({
 export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  // The member first: no page shows before it. What the pages ask for as they open is sent
+  // with it, so as not to wait for it (a trip each to the API): the lists below, and the
+  // thread panel's (sent ahead). Without a workspace they fail, unseen: onboarding comes next.
   const me = useApi<Me>('/me')
-  const ready = me.data?.activeWorkspaceId ?? null
-  const teammates = useApi<Teammate[]>(ready ? '/teammates' : null)
-  const projects = useApi<ProjectSummary[]>(ready ? '/projects' : null)
+  useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const teammates = useApi<Teammate[]>('/teammates')
+  const projects = useApi<ProjectSummary[]>('/projects')
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
   const inSettings = SETTINGS_NAV.some((n) => pathname.startsWith(n.href))
@@ -163,13 +171,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (inSettings) setSettingsOpen(true)
   }, [inSettings])
   // Open pull requests and those waiting on a person, refreshed as the member moves around.
-  const pullsWaiting = useApi<{ count: number; open: number }>(ready ? '/pulls/attention' : null)
+  const pullsWaiting = useApi<{ count: number; open: number }>('/pulls/attention')
   const reloadPulls = pullsWaiting.reload
   // Tickets waiting on this member, the same way.
-  const tickets = useApi<Ticket[]>(ready ? '/tickets' : null)
+  const tickets = useApi<Ticket[]>('/tickets')
   const reloadTickets = tickets.reload
   // Tasks that need a person, the same way.
-  const tasks = useApi<Task[]>(ready ? '/tasks' : null)
+  const tasks = useApi<Task[]>('/tasks')
   const reloadTasks = tasks.reload
   const [searching, setSearching] = useState(false)
   // Expanded or folded to icons, as the member left it: the sidebar keeps it in a cookie.
@@ -177,7 +185,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(
     () => typeof document === 'undefined' || !document.cookie.includes('sidebar_state=false'),
   )
+  // On the next page: the first one loaded them as it opened.
+  const counted = useRef(pathname)
   useEffect(() => {
+    if (counted.current === pathname) return
+    counted.current = pathname
     void reloadPulls()
     void reloadTickets()
     void reloadTasks()

@@ -48,8 +48,8 @@ import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { api, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
-import { useThreadEvents } from '@/lib/use-thread-events'
+import { api, preload, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
+import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
 /** What the threads panel's bar shows of a thread: who leads it, its title and state. */
@@ -76,6 +76,12 @@ function useReplyDraft(id: string) {
     else replyDrafts.delete(id)
   }, [id, text])
   return [text, setText] as const
+}
+
+/** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
+export function preloadConversation(id: string) {
+  preload(`/threads/${id}`)
+  preloadThreadEvents(id)
 }
 
 export function ThreadConversation({
@@ -288,10 +294,14 @@ export function ThreadConversation({
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread.data, status, connected])
-  // Status changes can open or close tickets (a cap, an empty account): refetch them.
+  // Status changes can open or close tickets (a cap, an empty account): refetch them. Not
+  // for the first status: it came with them.
   const reload = thread.reload
+  const statusWas = useRef<string>(undefined)
   useEffect(() => {
-    if (status) void reload()
+    const was = statusWas.current
+    statusWas.current = status
+    if (was && status !== was) void reload()
   }, [status, reload])
 
   // The conversation's column: the page's width expanded, the panel's docked.
