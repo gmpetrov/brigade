@@ -1,13 +1,16 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Prisma, PrismaClient } from './generated/prisma/client.js'
 import { env } from './config.js'
+import { countQuery } from './timing.js'
 
 export { Prisma }
 
 /** Unscoped client. Use only for auth, runner lookup by token hash, and scoped(). */
 export const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
+  log: [{ emit: 'event', level: 'query' }],
 })
+prisma.$on('query', (event) => countQuery(event.duration))
 
 export type Scope = {
   organizationId: string

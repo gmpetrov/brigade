@@ -39,9 +39,11 @@ import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
 import { workspaces } from './routes/workspaces.js'
 import { resolveScope } from './scope.js'
+import { serverTiming } from './timing.js'
 
 export const app = new Hono()
 
+app.use(serverTiming)
 app.use(sandboxHostOnlyDesigns)
 app.use('/api/*', cors({ origin: env.WEB_URL, credentials: true }))
 
