@@ -1,0 +1,74 @@
+# Brigade on one server with Docker (docs/deployment-plan.md). On a push to main,
+# .github/workflows/vps.yml builds the images, copies this folder to /opt/brigade, sets
+# TAG in its .env, migrates and restarts. The secrets stay on the server, in
+# /opt/brigade/api.env (the API's settings) and collab.env (COLLAB_SECRET).
+#
+# The server's Traefik (Coolify's proxy, on the external `coolify` network) owns ports
+# 80 and 443: it routes each host here by the labels below and gets its certificate
+# from Let's Encrypt.
+x-service: &service
+  restart: unless-stopped
+  networks: [default, coolify]
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: '3' }
+
+services:
+  api:
+    <<: *service
+    image: ghcr.io/gmpetrov/brigade-api:${TAG:?Set TAG in .env}
+    env_file: api.env
+    environment:
+      PORT: '3001'
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: coolify
+      # Designs are served by the API, on their own host.
+      traefik.http.routers.brigade-api.rule: Host(`api.vps.brigade.lol`) || Host(`designs.vps.brigade.lol`)
+      traefik.http.routers.brigade-api.entrypoints: https
+      traefik.http.routers.brigade-api.tls.certresolver: letsencrypt
+      traefik.http.routers.brigade-api-http.rule: Host(`api.vps.brigade.lol`) || Host(`designs.vps.brigade.lol`)
+      traefik.http.routers.brigade-api-http.entrypoints: http
+      traefik.http.routers.brigade-api-http.middlewares: brigade-https
+      traefik.http.middlewares.brigade-https.redirectscheme.scheme: https
+      traefik.http.services.brigade-api.loadbalancer.server.port: '3001'
+
+  web:
+    <<: *service
+    image: ghcr.io/gmpetrov/brigade-web:${TAG:?Set TAG in .env}
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: coolify
+      traefik.http.routers.brigade-web.rule: Host(`vps.brigade.lol`)
+      traefik.http.routers.brigade-web.entrypoints: https
+      traefik.http.routers.brigade-web.tls.certresolver: letsencrypt
+      traefik.http.routers.brigade-web-http.rule: Host(`vps.brigade.lol`)
+      traefik.http.routers.brigade-web-http.entrypoints: http
+      traefik.http.routers.brigade-web-http.middlewares: brigade-https
+      traefik.http.services.brigade-web.loadbalancer.server.port: '3000'
+
+  collab:
+    <<: *service
+    image: ghcr.io/gmpetrov/brigade-collab:${TAG:?Set TAG in .env}
+    env_file: collab.env
+    environment:
+      API_URL: http://api:3001
+    volumes:
+      - collab-rooms:/data
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: coolify
+      traefik.http.routers.brigade-collab.rule: Host(`collab.vps.brigade.lol`)
+      traefik.http.routers.brigade-collab.entrypoints: https
+      traefik.http.routers.brigade-collab.tls.certresolver: letsencrypt
+      traefik.http.routers.brigade-collab-http.rule: Host(`collab.vps.brigade.lol`)
+      traefik.http.routers.brigade-collab-http.entrypoints: http
+      traefik.http.routers.brigade-collab-http.middlewares: brigade-https
+      traefik.http.services.brigade-collab.loadbalancer.server.port: '8787'
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  collab-rooms:

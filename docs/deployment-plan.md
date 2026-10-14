@@ -63,6 +63,45 @@ Cloudflare shipped first, more simply than the phases below:
   - The runner bundle comes out the same for the same code, so runners update only when
     the runner changed.
 
+## What runs on the VPS (2026-10-14)
+
+A second deployment, on a Hetzner ARM server (2 vCPUs, 4 GB), with the same settings as
+Cloudflare's except its URLs. It shares Cloudflare's Neon database and R2 bucket, so both
+deployments see the same accounts and files. Both also run the same jobs: a schedule or
+an email can start its thread twice.
+
+- **Hosts.**
+  - `vps.brigade.lol`: the dashboard.
+  - `api.vps.brigade.lol` and `designs.vps.brigade.lol`: the API.
+  - `collab.vps.brigade.lol`: live document sync.
+- **Images** (`deploy/vps/Dockerfile`, built together by `deploy/vps/docker-bake.hcl`):
+  - `api`: the Node entry (`dist/index.js`) with the runner bundle, and the Prisma CLI
+    for migrations.
+  - `web`: Next's standalone server. `NEXT_STANDALONE` turns that output on, and the
+    VPS API's URL is built in.
+  - `collab`: the collab Worker itself, bundled by wrangler, in workerd (Cloudflare's
+    open-source runtime, `deploy/vps/collab.capnp`). Its rooms are kept in SQLite on a
+    volume. It is the same code as on Cloudflare, not a port to Node.
+- **On the server** (`/opt/brigade`, `deploy/vps/compose.yml`): `api`, `web` and
+  `collab`, behind the server's Traefik (Coolify's proxy). Traefik routes by the
+  services' labels and gets the certificates from Let's Encrypt. Secrets are only in
+  `api.env` and `collab.env` there, readable by root alone.
+- **Deploy** happens on each push to `main` that touches what the images are built from
+  (`.github/workflows/vps.yml`):
+  - The workflow builds the images on an ARM runner and pushes them to GitHub's
+    registry, tagged with the commit.
+  - Over SSH, it runs `deploy/vps/deploy.sh` on the server: pull, migrate, restart.
+  - It needs the `VPS_SSH_KEY` secret (a key only for this) and the `VPS_HOST` and
+    `VPS_KNOWN_HOSTS` variables.
+  - To go back, re-run an earlier deploy: the server keeps a week of images.
+- **Outside the repository:**
+  - The Google OAuth client allows `https://vps.brigade.lol` and the VPS callback.
+  - The Pub/Sub subscription `brigade-gmail-push-vps` pushes Gmail changes to the VPS API.
+  - The R2 bucket's CORS rules allow the VPS dashboard.
+- **GitHub:** the GitHub App has one setup URL, the Cloudflare API's. So connect GitHub
+  from the Cloudflare dashboard; with the shared database, the VPS uses that connection
+  too.
+
 ## Where each part runs
 
 | Part                                                              | VPS                                                | Cloudflare                                                          |

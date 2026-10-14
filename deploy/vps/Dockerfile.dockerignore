@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/.open-next
+**/.turbo
+**/.wrangler
+**/dist
+**/dist-worker
+**/*.tsbuildinfo
+**/.env*
+!**/.env.example
+**/.dev.vars
+.git
+.preview
+apps/runner/bundle
+apps/api/.bucket
