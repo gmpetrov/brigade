@@ -74,7 +74,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { pullHref, threadImageUrl, useApi, type Credential, type Teammate } from '@/lib/api'
+import { pullHref, threadImageUrl, useApi, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Item =
@@ -1057,7 +1057,7 @@ export function ThreadItems({
   /** Unset when this member cannot take over the computer (a member's own machine, another in control). */
   takeover?: TicketTakeover
   /** Who answers when a message does not say: shown beside its messages. */
-  teammate?: { name: string; harness: string }
+  teammate?: { id: string; name: string; harness: string }
   /** Everyone in the thread. With several, each message shows who wrote it. */
   teammates?: { id: string; name: string; harness: string }[]
   /** Opens the thread's preview beside it; set while one runs. */
@@ -1067,9 +1067,6 @@ export function ThreadItems({
   /** The thread's computer is starting for that turn. */
   starting?: boolean
 }) {
-  // A teammate carries its harness as a plain string; the avatar only tells codex apart.
-  const avatarOf = (t: { name: string; harness: string } | undefined) =>
-    t && { name: t.name, harness: t.harness as Teammate['harness'] }
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
   const render = (item: Item, i: number): React.ReactNode => {
@@ -1103,7 +1100,6 @@ export function ThreadItems({
       }
       case 'assistant': {
         const author = (item.teammateId && byId.get(item.teammateId)) || teammate
-        const avatar = avatarOf(author)
         // With several teammates, name the author where the speaker changes.
         const previous = items
           .slice(0, i)
@@ -1116,7 +1112,7 @@ export function ThreadItems({
             items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
         return (
           <div key={item.key} className="flex items-start gap-3">
-            {avatar && <TeammateAvatar teammate={avatar} className="mt-0.5 size-8" />}
+            {author && <TeammateAvatar teammate={author} className="mt-0.5 size-8" />}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
               {/* A file it names opens from its own working folder first. */}
