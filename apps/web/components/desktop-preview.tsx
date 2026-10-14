@@ -88,7 +88,11 @@ export function DesktopScreen({
     (reason: string) => {
       if (reason === 'refused' || retries >= RETRIES) {
         setConnection(undefined)
-        setError('The desktop connection was lost.')
+        setError(
+          reason === 'refused'
+            ? "The desktop refused the computer's password."
+            : 'The desktop connection was lost.',
+        )
         return
       }
       setRetries((n) => n + 1)

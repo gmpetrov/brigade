@@ -146,12 +146,25 @@ export async function providerReason(error: unknown) {
   return (text.trim() || (error instanceof Error ? error.message : String(error))).slice(0, 300)
 }
 
+/**
+ * Desktop requests in flight, per computer. A provider sets the desktop up on
+ * the first request after a boot, and two at once can each write a VNC
+ * password, leaving the server with one and the URL with the other.
+ */
+const desktopRequests = new Map<string, Promise<string | null>>()
+
 /** The desktop's URL. A provider that does not answer is a 503, which the dashboard retries. */
 export async function desktopUrl(computer: { providerRef: unknown }) {
   const ref = refOf(computer)
   if (!provider || !ref) return null
+  const key = `${ref.provider}:${ref.id}`
+  let request = desktopRequests.get(key)
+  if (!request) {
+    request = provider.desktopUrl(ref).finally(() => desktopRequests.delete(key))
+    desktopRequests.set(key, request)
+  }
   try {
-    return await provider.desktopUrl(ref)
+    return await request
   } catch (error) {
     throw new HTTPException(503, {
       message: `The workspace computer's provider did not answer: ${await providerReason(error)}`,
