@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Fragment } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
-import type { Teammate, ThreadSummary } from '@/lib/api'
+import type { ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from './dashboard'
 import { ProjectTag } from './projects'
@@ -47,10 +47,7 @@ function ThreadMessage({
   showProject: boolean
   compact: boolean
 }) {
-  const { projects, teammates } = useDashboard()
-  // The avatar's color says its harness: the dashboard's teammates know it.
-  const harnessOf = (id: string) =>
-    teammates.find((p) => p.id === id)?.harness ?? ('claude' as Teammate['harness'])
+  const { projects } = useDashboard()
   const people = t.teammates?.length ? t.teammates.map((p) => p.teammate) : [t.teammate]
   const replies = t.replies ?? 0
   const project = showProject && t.projectId && (
@@ -105,11 +102,7 @@ function ThreadMessage({
         <div className="mt-1 flex min-w-0 items-center gap-2 text-xs">
           <span className="flex shrink-0 -space-x-1">
             {people.slice(0, 3).map((p) => (
-              <TeammateAvatar
-                key={p.id}
-                teammate={{ name: p.name, harness: harnessOf(p.id) }}
-                className="size-5 ring-2 ring-background"
-              />
+              <TeammateAvatar key={p.id} teammate={p} className="size-5 ring-2 ring-background" />
             ))}
           </span>
           {replies > 0 ? (

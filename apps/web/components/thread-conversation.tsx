@@ -413,10 +413,7 @@ export function ThreadConversation({
 
   const peopleLinks = people.map((p, i) => (
     <span key={p.id} className="flex items-center gap-1.5">
-      <TeammateAvatar
-        teammate={{ name: p.name, harness: p.harness as Teammate['harness'] }}
-        className="size-5"
-      />
+      <TeammateAvatar teammate={p} className="size-5" />
       <span>
         <Link
           href={`/app/teammates/${p.id}`}

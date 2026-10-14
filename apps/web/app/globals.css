@@ -278,6 +278,120 @@
     }
   }
 
+  /* A teammate's picture: a pebble with pill eyes that morphs, glances around and
+   * blinks into happy arcs (components/pebble-avatar.tsx sets the variables from its
+   * id). Sized in percentages and container units, so it draws the same at 20px and
+   * at 64px. Still for those who ask for less motion. */
+  .pebble {
+    container-type: size;
+    background: color-mix(in oklch, var(--pebble-c1) 22%, var(--background));
+  }
+  .pebble-body {
+    position: absolute;
+    inset: 10%;
+    background: linear-gradient(var(--pebble-angle), var(--pebble-c1), var(--pebble-c2));
+    border-radius: var(--pebble-r1);
+    animation: pebble-morph var(--pebble-morph) ease-in-out infinite var(--pebble-morph-at);
+  }
+  .pebble-face {
+    position: absolute;
+    inset: 0;
+    left: var(--pebble-eye-x);
+    animation: pebble-look var(--pebble-look) ease-in-out infinite var(--pebble-look-at);
+  }
+  .pebble-eye {
+    position: absolute;
+    top: var(--pebble-eye-top);
+    left: calc(50% - var(--pebble-eye-gap) / 2 - var(--pebble-eye-w));
+    width: var(--pebble-eye-w);
+    height: var(--pebble-eye-h);
+  }
+  .pebble-eye + .pebble-eye {
+    left: calc(50% + var(--pebble-eye-gap) / 2);
+  }
+  .pebble-pill {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--pebble-eye);
+    animation: pebble-pill var(--pebble-blink) ease-in-out infinite var(--pebble-blink-at);
+  }
+  .pebble-smile {
+    position: absolute;
+    left: -35%;
+    top: 30%;
+    width: 170%;
+    height: 55%;
+    border: max(1px, 2.6cqw) solid var(--pebble-eye);
+    border-bottom: 0;
+    border-radius: 999px 999px 0 0;
+    opacity: 0;
+    animation: pebble-smile var(--pebble-blink) ease-in-out infinite var(--pebble-blink-at);
+  }
+  @keyframes pebble-morph {
+    0%,
+    100% {
+      border-radius: var(--pebble-r1);
+    }
+    33% {
+      border-radius: var(--pebble-r2);
+    }
+    66% {
+      border-radius: var(--pebble-r3);
+    }
+  }
+  @keyframes pebble-look {
+    0%,
+    35%,
+    100% {
+      transform: translateX(0);
+    }
+    45%,
+    60% {
+      transform: translateX(-5%);
+    }
+    70%,
+    85% {
+      transform: translateX(5%);
+    }
+  }
+  @keyframes pebble-pill {
+    0%,
+    60%,
+    88%,
+    100% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+    64%,
+    84% {
+      transform: scaleY(0.15);
+      opacity: 0;
+    }
+  }
+  @keyframes pebble-smile {
+    0%,
+    61%,
+    87%,
+    100% {
+      transform: translateY(30%) scaleY(0.4);
+      opacity: 0;
+    }
+    65%,
+    83% {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pebble-body,
+    .pebble-face,
+    .pebble-pill,
+    .pebble-smile {
+      animation: none;
+    }
+  }
+
   /* Composer placeholder: Tiptap's empty paragraph can't take classes. */
   .composer-input p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);

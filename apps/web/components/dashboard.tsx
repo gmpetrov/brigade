@@ -27,6 +27,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { HelpMenu } from '@/components/help-menu'
+import { PebbleAvatar } from '@/components/pebble-avatar'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchButton, SearchDialog } from '@/components/search'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -124,25 +125,21 @@ export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
 
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
+/** A teammate's pebble, drawn from its id so it is the same everywhere; a teammate not
+ * created yet (a proposal) has no id, and takes its name instead. */
 export function TeammateAvatar({
   teammate,
   className,
 }: {
-  teammate: Pick<Teammate, 'name' | 'harness'>
+  teammate: Pick<Teammate, 'name'> & { id?: string }
   className?: string
 }) {
   return (
-    <Avatar className={className ?? 'size-6'}>
-      <AvatarFallback
-        className={
-          teammate.harness === 'codex'
-            ? 'bg-accent text-accent-foreground text-[0.7em] font-bold'
-            : 'bg-primary/15 text-primary text-[0.7em] font-bold'
-        }
-      >
-        {initial(teammate.name)}
-      </AvatarFallback>
-    </Avatar>
+    <PebbleAvatar
+      seed={teammate.id ?? teammate.name}
+      title={teammate.name}
+      className={className ?? 'size-6'}
+    />
   )
 }
 
