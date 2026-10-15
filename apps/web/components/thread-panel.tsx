@@ -709,8 +709,8 @@ function PillBar({ children }: { children: ReactNode }) {
 
 /**
  * Where and who: the project's icon, the teammate's avatar, then the thread's title (or
- * the teammate's name). It grows to show a › on hover; a click opens and closes the details beside it:
- * the thread's, its computer's, the teammate's.
+ * the teammate's name). It grows to show a › on hover; a click opens and closes the details
+ * beside it: the thread's, its computer's, the teammate's.
  */
 function DetailsPill({
   project,
@@ -739,7 +739,7 @@ function DetailsPill({
     <button
       ref={pill}
       type="button"
-      className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
+      className="group pointer-events-auto flex h-11 max-w-full min-w-0 items-center gap-2.5 rounded-full bg-card/90 pr-4 pl-2.5 text-[0.9375rem] font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
       aria-pressed={shown}
       title={shown ? 'Hide details' : `Details: ${details}`}
       onClick={() => {
@@ -750,20 +750,23 @@ function DetailsPill({
     >
       {project && (
         <span title={project.name} className="flex">
-          <ProjectIcon project={project} className="size-5 rounded-md text-[0.625rem]" />
+          <ProjectIcon project={project} className="size-6 rounded-md text-xs" />
           <span className="sr-only">{project.name}: </span>
         </span>
       )}
-      {teammate && <TeammateAvatar teammate={teammate} className="size-5 shrink-0" />}
-      <Label className="min-w-0 truncate">{label}</Label>
+      {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
+      {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
+      <Label className="max-w-72 min-w-0 truncate" title={label}>
+        {label}
+      </Label>
       {reconnecting && <Reconnecting />}
       {/* The pill grows to show it on hover and while open; always there on touch screens,
           which have no hover. */}
       <span
         aria-hidden
-        className="-ml-1 flex w-4 shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-4 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-4 [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-4 [@media(hover:hover)]:group-aria-pressed:opacity-100"
+        className="-ml-1 flex w-[1.125rem] shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2.5 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-[1.125rem] [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-[1.125rem] [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-[1.125rem] [@media(hover:hover)]:group-aria-pressed:opacity-100"
       >
-        <ChevronRight className="size-4 shrink-0" />
+        <ChevronRight className="size-[1.125rem] shrink-0" />
       </span>
     </button>
   )

@@ -7,6 +7,7 @@
 import { ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
@@ -24,6 +25,7 @@ import {
   type Thread,
   type ThreadSummary,
 } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 function Section({
   title,
@@ -44,6 +46,34 @@ function Section({
       </div>
       {children}
     </section>
+  )
+}
+
+/** Round and outlined, as the sidebar's search and new thread buttons. */
+function CloseButton({
+  label,
+  title,
+  onClick,
+  className,
+}: {
+  label: string
+  title: string
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      onClick={onClick}
+      className={cn(
+        'flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-4',
+        className,
+      )}
+    >
+      <X aria-hidden />
+    </button>
   )
 }
 
@@ -78,22 +108,13 @@ function Frame({
       aria-label={`About ${teammate.name}`}
     >
       <PanelResizeHandle />
-      <div className="flex h-12 shrink-0 flex-nowrap items-center gap-3 border-b px-4">
+      <div className="flex h-14 shrink-0 flex-nowrap items-center gap-3 px-4">
         <TeammateAvatar teammate={teammate} className="size-7" />
         <div className="min-w-0 flex-1 leading-tight">
           <strong className="block truncate text-sm font-semibold">{teammate.name}</strong>
           <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label={`Close ${teammate.name}'s panel`}
-          title="Close"
-        >
-          <X aria-hidden />
-        </Button>
+        <CloseButton label={`Close ${teammate.name}'s panel`} title="Close" onClick={onClose} />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">{children}</div>
     </aside>
@@ -473,5 +494,53 @@ export function ComputerScreen({
         </section>
       )}
     </div>
+  )
+}
+
+/**
+ * The computer expanded over the whole window, sidebar included, in place of the thread's
+ * details: opened from them, so the thread stays the page. Escape or × brings them back.
+ */
+export function ExpandedComputer({
+  thread,
+  memberId,
+  status,
+  onChange,
+  onClose,
+}: {
+  thread: Thread
+  memberId: string
+  status: string
+  onChange: () => void
+  onClose: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [shell, setShell] = useState(false)
+  // Not while the screen or the shell has the keyboard: they take Escape (data-keyboard).
+  useEscapeToClose(ref, onClose)
+  // On the body: nothing it sits in may hold it to the page beside the sidebar.
+  return createPortal(
+    <div
+      ref={ref}
+      className="fixed inset-0 z-50 bg-black"
+      aria-label={`${thread.teammate.name}'s computer`}
+      role="region"
+    >
+      <ComputerScreen
+        thread={thread}
+        memberId={memberId}
+        status={status}
+        shell={shell}
+        onShell={setShell}
+        onChange={onChange}
+      />
+      <CloseButton
+        label="Close the computer"
+        title="Close (Esc)"
+        onClick={onClose}
+        className="absolute top-4 right-4 shadow-sm"
+      />
+    </div>,
+    document.body,
   )
 }
