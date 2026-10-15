@@ -94,6 +94,7 @@ export async function specFor(
     designSystems,
     project,
     projects,
+    [imageAccount],
   ] = await Promise.all([
     usableAccounts(db, {
       memberId: thread.startedByMemberId,
@@ -112,6 +113,13 @@ export async function specFor(
     threadDesignSystems(db, teammate.id, thread.projectId),
     threadProject(db, thread.projectId),
     projectCatalog(db),
+    teammate.harness === 'codex'
+      ? []
+      : usableAccounts(db, {
+          memberId: thread.startedByMemberId,
+          computerId: thread.computerId,
+          provider: 'codex',
+        }),
   ])
   // Takeover and terminals need no usage: they may use the thread's current account as is.
   const current =
@@ -137,6 +145,7 @@ export async function specFor(
       })),
     account: accountRef(current),
     fallbacks: fallbacks.map(accountRef),
+    imageAccount: imageAccount ? accountRef(imageAccount) : null,
     sessionId: thread.id,
     teammate: {
       id: teammate.id,

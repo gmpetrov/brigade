@@ -27,13 +27,14 @@ import {
 } from '@tiptap/react'
 import { PluginKey } from '@tiptap/pm/state'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
-import { Palette, Shapes } from 'lucide-react'
+import { ImageIcon, Palette, Shapes } from 'lucide-react'
 import { useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
 import {
   computerName,
   useApi,
+  type Account,
   type ComputersResponse,
   type ConnectionsResponse,
   type Credential,
@@ -324,13 +325,29 @@ function renderMenu<T, P extends object>(
 const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>> = {
   visual: Shapes,
   design: Palette,
+  image: ImageIcon,
 }
-type CommandOption = { name: MessageCommand; label: string; description: string }
+type CommandOption = {
+  name: MessageCommand
+  label: string
+  description: string
+  needs?: 'codex'
+}
 const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([name, c]) => ({
   name: name as MessageCommand,
   label: c.label,
   description: c.description,
+  ...('needs' in c ? { needs: c.needs } : {}),
 }))
+
+/** The commands this member can use: `/image` needs a Codex account of theirs. */
+function useCommandOptions(): CommandOption[] {
+  const accounts = useApi<Account[]>('/accounts')
+  const codex = (accounts.data ?? []).some(
+    (a) => a.provider === 'codex' && (a.status === 'ready' || a.status === 'unverified'),
+  )
+  return useMemo(() => COMMAND_OPTIONS.filter((c) => !c.needs || codex), [codex])
+}
 
 /** A command as the composer and the thread show it. */
 export function CommandChip({
@@ -424,9 +441,11 @@ const CommandNode = Node.create({
 })
 
 /** `/` at the very start of a message opens the commands. */
-const Commands = Extension.create({
+const Commands = Extension.create<{ options: () => CommandOption[] }>({
   name: 'messageCommands',
+  addOptions: () => ({ options: () => COMMAND_OPTIONS }),
   addProseMirrorPlugins() {
+    const { options } = this.options
     return [
       Suggestion<CommandOption, CommandOption>({
         editor: this.editor,
@@ -443,7 +462,7 @@ const Commands = Extension.create({
           })
           return !has
         },
-        items: ({ query }) => COMMAND_OPTIONS.filter((c) => c.name.startsWith(query.toLowerCase())),
+        items: ({ query }) => options().filter((c) => c.name.startsWith(query.toLowerCase())),
         command: ({ editor, range, props }) => {
           editor
             .chain()
@@ -525,9 +544,10 @@ export function Composer({
   autoFocus?: boolean
 }) {
   const options = useMentionOptions(threadId)
+  const commands = useCommandOptions()
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, onChange, onSubmit, placeholder })
-  latest.current = { options, onChange, onSubmit, placeholder }
+  const latest = useRef({ options, commands, onChange, onSubmit, placeholder })
+  latest.current = { options, commands, onChange, onSubmit, placeholder }
   const text = useRef(value)
 
   const editor = useEditor({
@@ -567,7 +587,7 @@ export function Composer({
         },
       }),
       CommandNode,
-      Commands,
+      Commands.configure({ options: () => latest.current.commands }),
       Extension.create({
         name: 'submit',
         // Like Claude: Enter sends, Shift+Enter adds a line. Runs before HardBreak's own keys.
