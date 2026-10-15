@@ -319,6 +319,7 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
         'a web page in the library; answer comments on one; pick its design system. Read before any design work.',
       instructions: `# Designs\n\n${making}`,
       files: [],
+      refs: [],
     },
     {
       name: `${BUILTIN_SKILL_PREFIX}design-systems`,
@@ -327,6 +328,7 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
         'save_design_system. Read when asked for a design system.',
       instructions: `# Making a design system\n\n${system}`,
       files: [],
+      refs: [],
     },
   ]
 }
@@ -439,6 +441,7 @@ const PREVIEW_SKILL: ThreadSkill = {
     'and Safari, need it opened in a new tab (a button on the pane). ' +
     'In your reply, say how it started, what its check found, and that it is saved.',
   files: [],
+  refs: [],
 }
 
 /** Schedules: recurring work, set up when the person asks for it. */

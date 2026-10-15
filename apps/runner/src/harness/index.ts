@@ -90,6 +90,8 @@ export type ThreadContext = {
   /** The thread's live preview: an app the teammate runs for people to try. */
   preview: PreviewTools
   bundles: BundleStore
+  /** A skill's file, by its SHA-256, cached on this computer. */
+  skillFile: (sha256: string) => Promise<Buffer>
   /** Send a file of the teammate's to the API, to go with a connector call. Returns its id. */
   uploadFile: (input: {
     sessionId: string
@@ -743,6 +745,7 @@ export class HarnessThread {
       this.workDir,
       this.spec,
       [...builtinSkills(this.spec, libraryDir), ...(this.spec.skills ?? [])],
+      this.context.skillFile,
       this.runAs,
     ).catch((error) => console.warn(`could not write skills: ${errorMessage(error)}`))
     const credentials = new ThreadCredentials({

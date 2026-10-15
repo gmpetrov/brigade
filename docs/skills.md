@@ -22,9 +22,22 @@ until the work calls for it.
   the risk (they run in the teammate's sandbox and get no credentials); behaviour is, so
   every proposal is approved, scripts or not.
 - **A skill gives no access.** Connections, credentials and grants stay where they are.
-- **Text in the database, not the library.** `Skill` holds the instructions and the files
-  (text only, size-capped), so a thread gets them whole in its spec (`ThreadSpec.skills`)
-  with no library grant or mirror involved.
+- **Text in the database, files in the bucket, not the library.** `Skill` holds the
+  name, description and instructions, and refs to its files (`[{ path, sha256, size }]`),
+  whose bytes are in the bucket at `<org>/<workspace>/skill-files/<sha256>`, kept once
+  whatever the skill. Not the library: any member may edit a library file, so a skill
+  there could change without an admin and drift from its row. Skills saved before files
+  moved to the bucket (`[{ path, content }]`) move on the next list of skills.
+- **A thread gets refs, the runner the bytes.** `ThreadSpec.skills[].refs` names each file;
+  the runner fetches it from `/runner/skill-files/<sha256>` (its own workspace's only),
+  checks the hash and caches it like attachments. Inline `files` stay for runners before
+  protocol 21.
+- **Packs.** Skills imported together (`SkillPack`: a GitHub address, or `file:<name>` for
+  an upload) have one scope, written onto their skills, and one switch over theirs: a skill
+  is given to teammates when its own switch and its pack's are on. Importing the same
+  source again updates the pack: changed skills update, new ones are added, the switches
+  stay; skills the source no longer has stay too. A skill outside the pack with the same
+  name is never taken over.
 - **The harness loads them.** As a session starts, the runner writes Brigade's own skills
   and the workspace's into `<working directory>/.claude/skills/<name>/` (Claude Code) or
   `.agents/skills/<name>/` (Codex), beside the CLAUDE.md or AGENTS.md it writes there.
@@ -35,15 +48,19 @@ until the work calls for it.
   previews (`brigade-designs`, `brigade-design-systems`, `brigade-previews`) left the
   generated CLAUDE.md, which keeps a line saying when to read each. Names starting with
   `brigade-` are reserved, as are the names of Brigade's own commands (`/design`, `/visual`, `/image`).
-- **Import, never sync.** A `SKILL.md`, `.zip` or `.skill` (Claude's export, a zip) is read
-  into the editor to review before saving (`POST /api/skills/import`); binaries are left
-  out and listed.
+- **Import, never sync.** A `SKILL.md`, a `.zip` or `.skill` (one skill folder or many), or
+  a GitHub repository or folder (`POST /api/skills/import`, `/import/github`; a private one
+  through the workspace's GitHub connection) is read into skills to review: their files go
+  to the bucket then, the skills only once someone adds them. One new skill opens in the
+  editor; several, or an update of a pack, in a checklist whose ticks are the switches.
+  Files over 10 MB, and past 200 per skill, are left out and listed; uploads up to 50 MB.
 
 ## Where
 
 - Contracts: `packages/contracts/src/skills.ts` (schemas, SKILL.md read and write),
   `commands.ts` (`skillCommand`, `commandPrompt`).
-- API: `apps/api/src/skills.ts`, `skill-import.ts`, `routes/skills.ts`; the spec in
+- API: `apps/api/src/skills.ts`, `skill-import.ts`, `routes/skills.ts`,
+  `routes/runner-skill-files.ts`; the spec in
   `thread-spec.ts`; proposals in `library-calls.ts` and `decide.ts`.
 - Runner: `apps/runner/src/skills.ts` (writing them), `instructions.ts` (Brigade's own
   skills and the Skills section), `harness/tools.ts` (`propose_skill`).

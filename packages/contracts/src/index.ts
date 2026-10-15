@@ -35,8 +35,9 @@ export * from './thread-history.js'
  * 18: the chief: its kind and roster in the spec, handoffs to teammates not yet in the thread.
  * 19: heartbeats, so the API can tell a runner that is gone from a quiet one.
  * 20: skills in the spec (written into the harness's skills folder) and skill proposals.
+ * 21: a skill's files by reference (`refs`), fetched from /runner/skill-files.
  */
-export const PROTOCOL_VERSION = 20
+export const PROTOCOL_VERSION = 21
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /**

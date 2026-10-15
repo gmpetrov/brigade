@@ -55,6 +55,14 @@ export function assetKey(scope: Scope, assetId: string) {
   return `${scope.organizationId}/${scope.workspaceId}/assets/${assetId}`
 }
 
+/** The bucket key of a skill's file, by its SHA-256: the same bytes are kept once. */
+export function skillFileKey(scope: Scope, sha256: string) {
+  for (const part of [scope.organizationId, scope.workspaceId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/skill-files/${sha256}`
+}
+
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
 
 /**

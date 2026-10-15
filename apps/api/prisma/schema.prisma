@@ -181,6 +181,7 @@ model Workspace {
   auditEntries        AuditEntry[]
   designSystems       DesignSystem[]
   skills              Skill[]
+  skillPacks          SkillPack[]
   previewRecipes      PreviewRecipe[]
   previewVariables    PreviewVariable[]
   threadReads         ThreadRead[]
@@ -1278,8 +1279,9 @@ model DesignSystem {
 
 /// How the workspace does a kind of work, loaded by a teammate when the work
 /// calls for it: written into its harness's skills folder (SKILL.md) as each
-/// session starts. Its text is here, not in the library, so a thread gets it
-/// whole in its spec. A skill gives no access; grants stay where they are.
+/// session starts. Its text is here; the files beside it are in the bucket by
+/// their SHA-256, not in the library, which any member may edit. A skill gives
+/// no access; grants stay where they are.
 model Skill {
   id             String     @id @default(cuid())
   organizationId String
@@ -1290,8 +1292,11 @@ model Skill {
   /// When to use it: what the teammate reads to decide.
   description    String
   instructions   String
-  /// Text files beside SKILL.md: [{ path, content }].
+  /// Files beside SKILL.md, in the bucket: [{ path, sha256, size }]. Before packs: [{ path, content }].
   files          Json       @default("[]")
+  /// The pack it came in: then its pack's scope applies, and its switch too.
+  packId         String?
+  pack           SkillPack? @relation(fields: [packId], references: [id], onDelete: Cascade)
   /// Every thread, or only those of the teammates and projects below.
   everywhere     Boolean    @default(true)
   teammateIds    String[]   @default([])
@@ -1306,6 +1311,31 @@ model Skill {
   updatedAt      DateTime   @updatedAt
 
   @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@index([packId])
+}
+
+/// Skills imported together (a GitHub repository, a zip), kept as one: one
+/// scope, written onto its skills, and one switch over theirs.
+model SkillPack {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  /// A GitHub address, or `file:<name>` for an upload: importing it again updates the pack.
+  source         String
+  everywhere     Boolean   @default(true)
+  teammateIds    String[]  @default([])
+  projectIds     String[]  @default([])
+  enabled        Boolean   @default(true)
+  createdByType  ActorType
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  skills         Skill[]
+
+  @@unique([workspaceId, source])
   @@index([workspaceId])
 }
 

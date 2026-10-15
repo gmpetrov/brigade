@@ -3,7 +3,8 @@
 // `.agents/skills/<name>/SKILL.md` for Codex, in the thread's working
 // directory, written each time its harness session starts. Both list a skill by
 // its name and description, and read the rest only when the work calls for it.
-// A folder there that Brigade did not write is left alone.
+// A folder there that Brigade did not write is left alone. A skill's files
+// come from the API by their SHA-256, cached on the computer.
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { SKILL_ENTRY, type ThreadSkill, type ThreadSpec, skillMarkdown } from '@brigade/contracts'
@@ -38,7 +39,7 @@ process.stdin.setEncoding('utf8').on('data', (d) => (input += d)).on('end', () =
       const target = path.resolve(dir, file.path)
       if (!target.startsWith(dir + path.sep)) continue
       fs.mkdirSync(path.dirname(target), { recursive: true })
-      fs.writeFileSync(target, file.content, { mode: 0o644 })
+      fs.writeFileSync(target, Buffer.from(file.base64, 'base64'), { mode: 0o644 })
     }
     written.push(skill.name)
   }
@@ -46,20 +47,47 @@ process.stdin.setEncoding('utf8').on('data', (d) => (input += d)).on('end', () =
 })
 `
 
-/** Each skill as the files of its folder: SKILL.md first. */
-const folders = (skills: ThreadSkill[]) =>
-  skills.map((skill) => ({
-    name: skill.name,
-    files: [{ path: SKILL_ENTRY, content: skillMarkdown(skill) }, ...skill.files],
-  }))
+const base64 = (text: string) => Buffer.from(text, 'utf8').toString('base64')
+
+/**
+ * Each skill as the files of its folder, SKILL.md first. A file that cannot be
+ * fetched is left out, said in the log; the skill still loads.
+ */
+async function folders(skills: ThreadSkill[], skillFile: (sha256: string) => Promise<Buffer>) {
+  return Promise.all(
+    skills.map(async (skill) => {
+      const refs = await Promise.all(
+        (skill.refs ?? []).map((ref) =>
+          skillFile(ref.sha256).then(
+            (bytes) => [{ path: ref.path, base64: bytes.toString('base64') }],
+            (error: unknown) => {
+              console.warn(`skill ${skill.name}: no ${ref.path}: ${String(error)}`)
+              return []
+            },
+          ),
+        ),
+      )
+      return {
+        name: skill.name,
+        files: [
+          { path: SKILL_ENTRY, base64: base64(skillMarkdown(skill)) },
+          ...(skill.files ?? []).map((f) => ({ path: f.path, base64: base64(f.content) })),
+          ...refs.flat(),
+        ],
+      }
+    }),
+  )
+}
 
 /** Write the skills into the working directory, as the teammate's user on a cloud computer. */
 export async function writeSkills(
   workDir: string,
   spec: ThreadSpec,
   skills: ThreadSkill[],
+  skillFile: (sha256: string) => Promise<Buffer>,
   runAs?: string,
 ) {
+  const input = JSON.stringify(await folders(skills, skillFile))
   const root = join(workDir, skillsDir(spec))
   const node = [process.execPath, '-e', SCRIPT, root]
   const [command, ...args] = runAs ? ['sudo', '-n', '-u', runAs, '--', ...node] : node
@@ -73,6 +101,6 @@ export async function writeSkills(
     )
     // A command that exits without reading its input closes the pipe: its exit says why.
     child.stdin.on('error', () => undefined)
-    child.stdin.end(JSON.stringify(folders(skills)))
+    child.stdin.end(input)
   })
 }

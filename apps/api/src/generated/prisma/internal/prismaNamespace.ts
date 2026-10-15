@@ -438,6 +438,7 @@ export const ModelName = {
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
   Skill: 'Skill',
+  SkillPack: 'SkillPack',
   PreviewRecipe: 'PreviewRecipe',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
@@ -459,7 +460,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3497,6 +3498,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SkillPack: {
+      payload: Prisma.$SkillPackPayload<ExtArgs>
+      fields: Prisma.SkillPackFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SkillPackFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SkillPackFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        findFirst: {
+          args: Prisma.SkillPackFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SkillPackFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        findMany: {
+          args: Prisma.SkillPackFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>[]
+        }
+        create: {
+          args: Prisma.SkillPackCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        createMany: {
+          args: Prisma.SkillPackCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SkillPackCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>[]
+        }
+        delete: {
+          args: Prisma.SkillPackDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        update: {
+          args: Prisma.SkillPackUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        deleteMany: {
+          args: Prisma.SkillPackDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SkillPackUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SkillPackUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>[]
+        }
+        upsert: {
+          args: Prisma.SkillPackUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SkillPackPayload>
+        }
+        aggregate: {
+          args: Prisma.SkillPackAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSkillPack>
+        }
+        groupBy: {
+          args: Prisma.SkillPackGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SkillPackGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SkillPackCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SkillPackCountAggregateOutputType> | number
+        }
+      }
+    }
     PreviewRecipe: {
       payload: Prisma.$PreviewRecipePayload<ExtArgs>
       fields: Prisma.PreviewRecipeFieldRefs
@@ -4673,6 +4748,7 @@ export const SkillScalarFieldEnum = {
   description: 'description',
   instructions: 'instructions',
   files: 'files',
+  packId: 'packId',
   everywhere: 'everywhere',
   teammateIds: 'teammateIds',
   projectIds: 'projectIds',
@@ -4686,6 +4762,25 @@ export const SkillScalarFieldEnum = {
 } as const
 
 export type SkillScalarFieldEnum = (typeof SkillScalarFieldEnum)[keyof typeof SkillScalarFieldEnum]
+
+
+export const SkillPackScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  source: 'source',
+  everywhere: 'everywhere',
+  teammateIds: 'teammateIds',
+  projectIds: 'projectIds',
+  enabled: 'enabled',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
 
 
 export const PreviewRecipeScalarFieldEnum = {
@@ -5506,6 +5601,7 @@ export type GlobalOmitConfig = {
   threadAttachment?: Prisma.ThreadAttachmentOmit
   designSystem?: Prisma.DesignSystemOmit
   skill?: Prisma.SkillOmit
+  skillPack?: Prisma.SkillPackOmit
   previewRecipe?: Prisma.PreviewRecipeOmit
   previewVariable?: Prisma.PreviewVariableOmit
   project?: Prisma.ProjectOmit
