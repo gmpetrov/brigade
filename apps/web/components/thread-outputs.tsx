@@ -1,15 +1,17 @@
 'use client'
 // What a thread made, beside it: files its teammates wrote or named, library
-// documents, images, pull requests, emails and schedules. Read from the event
+// documents, images, pull requests, emails, schedules and skills proposed. Read from the event
 // log, newest first; a file made again keeps one row.
 import {
   bareToolName as bare,
   designName,
   DELIVERABLE_FILE as DELIVERABLE,
   EMAIL_TOOL,
+  PROPOSE_SKILL_TOOL,
   type SequencedEvent,
 } from '@brigade/contracts'
 import {
+  BookOpenText,
   CalendarClock,
   FileText,
   GitPullRequest,
@@ -25,7 +27,7 @@ import { pullHref } from '@/lib/api'
 
 export type ThreadOutput = {
   key: string
-  kind: 'file' | 'library' | 'design' | 'image' | 'pull' | 'email' | 'schedule'
+  kind: 'file' | 'library' | 'design' | 'image' | 'pull' | 'email' | 'schedule' | 'skill'
   label: string
   detail?: string
   at: string
@@ -210,6 +212,18 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               href: '/app/automations',
             })
+          } else if (tool === PROPOSE_SKILL_TOOL) {
+            // A proposal waits for an admin in Tickets; once approved it is on the Connections page.
+            const output = (e.output ?? {}) as { name?: unknown; change?: unknown }
+            if (typeof output.name !== 'string') break
+            add({
+              key: `skill:${output.name}`,
+              kind: 'skill',
+              label: `/${output.name}`,
+              detail: output.change ? 'Skill · a change to approve' : 'Skill · to approve',
+              at: e.at,
+              href: '/app/tickets',
+            })
           }
           break
         }
@@ -228,6 +242,7 @@ const ICONS = {
   pull: GitPullRequest,
   email: Mail,
   schedule: CalendarClock,
+  skill: BookOpenText,
 } satisfies Record<ThreadOutput['kind'], unknown>
 
 const time = (at: string) =>

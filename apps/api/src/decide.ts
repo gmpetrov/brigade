@@ -17,6 +17,7 @@ import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
+import { decideSkillProposal } from './skills.js'
 import { loadThread, specFor, teammateIn } from './thread-spec.js'
 import { handBack, joinThread, promptThread } from './work.js'
 
@@ -261,6 +262,8 @@ type TicketPayload = {
   credentialAction?: CredentialAction
   credentialId?: string
   always?: boolean
+  /** A teammate's skill proposal (SkillProposalPayload): an admin's call. */
+  skillAction?: 'create' | 'update'
 }
 
 /**
@@ -348,6 +351,13 @@ export async function resolveTicket(
   }
 
   if (ticket.type === 'approval') {
+    if (payload.skillAction) {
+      // A skill shapes what every teammate does: admins decide, like writing one.
+      if (!isAdmin)
+        throw new HTTPException(403, { message: 'Only an admin can add or change a skill' })
+      await decideSkillProposal(db, scope, ticket, input.approved)
+      return { ok: true, live: false }
+    }
     if (payload.credentialAction) {
       await mayDecideCredential(db, scope, payload, { isAdmin, isStarter, always: input.always })
       return { ok: true, live: await decideTicket(scope, ticket.id, input) }

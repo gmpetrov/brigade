@@ -9,6 +9,7 @@ import {
   InterruptThread,
   mentionsToText,
   messageCommand,
+  skillCommand,
   PreviewAction,
   StartPreview,
   QueuedMessageAction,
@@ -478,7 +479,17 @@ export const threads = new Hono<AppEnv>()
     }
     // A thread runs on the starting member's accounts, never anyone else's.
     // The title is what the message is about, not the command it starts with.
-    const firstLine = mentionsToText(messageCommand(input.text)?.rest ?? input.text).split('\n')[0]!
+    const skill = input.text.startsWith('/')
+      ? skillCommand(
+          input.text,
+          (await db.skill.findMany({ select: { name: true } })).map((s) => s.name),
+        )
+      : null
+    // A skill names what was asked: `/release-notes for 2.4` is "release-notes for 2.4".
+    const asked =
+      messageCommand(input.text)?.rest ??
+      (skill ? `${skill.skill} ${skill.rest}`.trim() : input.text)
+    const firstLine = mentionsToText(asked).split('\n')[0]!
     if ('error' in project) throw project.error
     const projectId = project.id
     const { thread, outcome } = await startThread(db, scope, {

@@ -8,6 +8,7 @@ import type {
   CredentialKind,
   CredentialSummary,
   DocumentAsset,
+  SkillProposalPayload,
   TaskColumn,
   TaskPriority,
   UploadTicket,
@@ -621,7 +622,7 @@ export type Ticket = {
     details?: CredentialSummary['details']
     changes?: Record<string, string>
     secretReplaced?: boolean
-  }
+  } & Partial<SkillProposalPayload>
   createdAt: string
   resolvedAt: string | null
   session: {
@@ -645,6 +646,8 @@ export function waitsOn(t: Ticket, me: Me) {
   if (t.status !== 'open') return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
+  // A skill shapes what every teammate does: an admin's call.
+  if (t.type === 'approval' && t.payload.skillAction) return admin
   if (t.type === 'approval')
     return credentialManagersOnly(t)
       ? admin || t.payload.credentialOwnerId === me.memberId

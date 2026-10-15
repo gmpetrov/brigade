@@ -14,6 +14,7 @@ import {
   PreviewStartOutcome,
 } from './previews.js'
 import { ScheduleOperation } from './schedules.js'
+import { SkillProposal, ThreadSkill } from './skills.js'
 import { TaskOperation } from './tasks.js'
 import { TeammateKind } from './chief.js'
 
@@ -118,6 +119,8 @@ export const ThreadSpec = z.object({
   task: z.object({ id: z.string(), title: z.string(), description: z.string() }).nullish(),
   /** The workspace's design systems, for designs the teammate makes. */
   designSystems: z.array(ThreadDesignSystem).default([]),
+  /** The workspace's skills that apply to this thread (enabled, and for its teammate and project). */
+  skills: z.array(ThreadSkill).default([]),
   /** The project the thread works in: its brief, memory, folder and repositories. */
   project: ThreadProject.nullish(),
   /** The workspace's projects (not archived), so a mention of one can be followed. */
@@ -230,7 +233,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   }),
   /**
    * A teammate searches the library, memory and past thread summaries,
-   * saves a file to the library, or registers a design system it saved there.
+   * saves a file to the library, registers a design system it saved there,
+   * or proposes a skill.
    * The API checks its grant. Answered like a connector call.
    */
   z.object({
@@ -255,6 +259,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       z.object({ name: z.literal('design_system'), designSystem: TeammateDesignSystem }),
       /** Files of a design a person changed since this thread last saved them: asked before saving it. */
       z.object({ name: z.literal('design_edits'), path: LibraryPath }),
+      /** Propose a skill, or a change to one: it waits for a person's approval in a ticket. */
+      z.object({ name: z.literal('skill_proposal'), proposal: SkillProposal }),
     ]),
   }),
   /**

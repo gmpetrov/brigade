@@ -4,6 +4,8 @@ import {
   formatMention,
   MESSAGE_COMMANDS,
   messageCommand,
+  skillCommand,
+  type Skill,
   type DesignSystem,
   parseMentions,
   type Mention,
@@ -27,8 +29,8 @@ import {
 } from '@tiptap/react'
 import { PluginKey } from '@tiptap/pm/state'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
-import { Palette, Shapes } from 'lucide-react'
-import { useEffect, useMemo, useRef, type ComponentType } from 'react'
+import { BookOpenText, Palette, Shapes } from 'lucide-react'
+import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
 import {
@@ -319,28 +321,45 @@ function renderMenu<T, P extends object>(
   }
 }
 
-// -- Commands: `/design`, `/visual` at the start of a message ------------------
+// -- Commands: `/design`, `/visual`, or a skill, at the start of a message ----
 
 const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>> = {
   visual: Shapes,
   design: Palette,
 }
-type CommandOption = { name: MessageCommand; label: string; description: string }
+/** A command to pick: what to make, or a workspace skill to follow. */
+type CommandOption = { name: string; label: string; description: string; skill?: boolean }
 const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([name, c]) => ({
-  name: name as MessageCommand,
+  name,
   label: c.label,
   description: c.description,
 }))
 
-/** A command as the composer and the thread show it. */
-export function CommandChip({
-  command,
-  className,
-}: {
-  command: MessageCommand
-  className?: string
-}) {
-  const Icon = COMMAND_ICON[command]
+const isMessageCommand = (name: string): name is MessageCommand => name in MESSAGE_COMMANDS
+
+/** The workspace's skills that are on: each a command, `/name`. */
+export function useSkillCommands(): CommandOption[] {
+  const skills = useApi<Skill[]>('/skills')
+  return useMemo(
+    () =>
+      (skills.data ?? [])
+        .filter((s) => s.enabled)
+        .map((s) => ({ name: s.name, label: s.name, description: s.description, skill: true })),
+    [skills.data],
+  )
+}
+
+/** The command a message starts with: what to make, or a skill by its name. */
+export function startingCommand(text: string, skills: readonly string[]) {
+  const made = messageCommand(text)
+  if (made) return made
+  const skill = skillCommand(text, skills)
+  return skill ? { command: skill.skill, rest: skill.rest } : null
+}
+
+/** A command as the composer and the thread show it: a skill by its `/name`. */
+export function CommandChip({ command, className }: { command: string; className?: string }) {
+  const Icon = isMessageCommand(command) ? COMMAND_ICON[command] : BookOpenText
   return (
     <span
       className={cn(
@@ -349,7 +368,7 @@ export function CommandChip({
       )}
     >
       <Icon aria-hidden className="size-3.5" />
-      {MESSAGE_COMMANDS[command].label}
+      {isMessageCommand(command) ? MESSAGE_COMMANDS[command].label : `/${command}`}
     </span>
   )
 }
@@ -363,33 +382,39 @@ function CommandMenu({ items, selected, query, onPick, onHover }: MenuProps<Comm
     )
   return (
     <div className={menuClass} role="listbox">
-      <div className="px-2 pt-2 pb-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-        Make
-      </div>
       {items.map((o, i) => {
-        const Icon = COMMAND_ICON[o.name]
+        const Icon = isMessageCommand(o.name) ? COMMAND_ICON[o.name] : BookOpenText
+        // A heading where a group starts: what to make, then the workspace's skills.
+        const heading = i === 0 || !!items[i - 1]!.skill !== !!o.skill
         return (
-          <button
-            key={o.name}
-            type="button"
-            role="option"
-            aria-selected={i === selected}
-            className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-primary/15 aria-selected:shadow-[inset_2px_0_0_var(--primary)]"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              onPick(o)
-            }}
-            onMouseMove={() => i !== selected && onHover(i)}
-          >
-            <Icon
-              aria-hidden
-              className="size-4 text-muted-foreground group-aria-selected:text-primary"
-            />
-            <span className="font-medium">/{o.name}</span>
-            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-              {o.description}
-            </span>
-          </button>
+          <Fragment key={o.name}>
+            {heading && (
+              <div className="px-2 pt-2 pb-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                {o.skill ? 'Skills' : 'Make'}
+              </div>
+            )}
+            <button
+              key={o.name}
+              type="button"
+              role="option"
+              aria-selected={i === selected}
+              className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm aria-selected:bg-primary/15 aria-selected:shadow-[inset_2px_0_0_var(--primary)]"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onPick(o)
+              }}
+              onMouseMove={() => i !== selected && onHover(i)}
+            >
+              <Icon
+                aria-hidden
+                className="size-4 text-muted-foreground group-aria-selected:text-primary"
+              />
+              <span className="font-medium">/{o.name}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {o.description}
+              </span>
+            </button>
+          </Fragment>
         )
       })}
     </div>
@@ -400,7 +425,7 @@ function CommandView({ node, selected }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper as="span">
       <CommandChip
-        command={node.attrs.name as MessageCommand}
+        command={node.attrs.name as string}
         className={selected ? 'outline-2 outline-offset-1 outline-primary' : undefined}
       />
     </NodeViewWrapper>
@@ -423,9 +448,10 @@ const CommandNode = Node.create({
   },
 })
 
-/** `/` at the very start of a message opens the commands. */
-const Commands = Extension.create({
+/** `/` at the very start of a message opens the commands: what to make, then the skills. */
+const Commands = Extension.create<{ commands: () => CommandOption[] }>({
   name: 'messageCommands',
+  addOptions: () => ({ commands: () => COMMAND_OPTIONS }),
   addProseMirrorPlugins() {
     return [
       Suggestion<CommandOption, CommandOption>({
@@ -443,7 +469,8 @@ const Commands = Extension.create({
           })
           return !has
         },
-        items: ({ query }) => COMMAND_OPTIONS.filter((c) => c.name.startsWith(query.toLowerCase())),
+        items: ({ query }) =>
+          this.options.commands().filter((c) => c.name.startsWith(query.toLowerCase())),
         command: ({ editor, range, props }) => {
           editor
             .chain()
@@ -462,8 +489,8 @@ const Commands = Extension.create({
 })
 
 /** Message text, one paragraph per line, mentions (and a command it starts with) as nodes. */
-function toDoc(text: string): JSONContent {
-  const found = messageCommand(text)
+function toDoc(text: string, skills: readonly string[]): JSONContent {
+  const found = startingCommand(text, skills)
   const body = found ? found.rest : text
   const lines = body.split('\n').map((line) => ({
     type: 'paragraph',
@@ -525,9 +552,11 @@ export function Composer({
   autoFocus?: boolean
 }) {
   const options = useMentionOptions(threadId)
+  const skills = useSkillCommands()
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, onChange, onSubmit, placeholder })
-  latest.current = { options, onChange, onSubmit, placeholder }
+  const latest = useRef({ options, skills, onChange, onSubmit, placeholder })
+  latest.current = { options, skills, onChange, onSubmit, placeholder }
+  const skillNames = () => latest.current.skills.map((s) => s.name)
   const text = useRef(value)
 
   const editor = useEditor({
@@ -567,7 +596,7 @@ export function Composer({
         },
       }),
       CommandNode,
-      Commands,
+      Commands.configure({ commands: () => [...COMMAND_OPTIONS, ...latest.current.skills] }),
       Extension.create({
         name: 'submit',
         // Like Claude: Enter sends, Shift+Enter adds a line. Runs before HardBreak's own keys.
@@ -587,7 +616,7 @@ export function Composer({
         },
       }),
     ],
-    content: toDoc(value),
+    content: toDoc(value, skillNames()),
     editorProps: {
       attributes: {
         // `composer-input` hooks the placeholder rule in globals.css (ProseMirror markup).
@@ -614,7 +643,7 @@ export function Composer({
   useEffect(() => {
     if (!editor || value === text.current) return
     text.current = value
-    editor.commands.setContent(toDoc(value), { emitUpdate: false })
+    editor.commands.setContent(toDoc(value, skillNames()), { emitUpdate: false })
   }, [editor, value])
 
   useEffect(() => {

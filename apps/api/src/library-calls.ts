@@ -9,6 +9,7 @@ import { personEdits, saveTeammateDesignSystem } from './designs.js'
 import { notifyLibraryChanged } from './hub.js'
 import { teammateLibraryAccess } from './library-folders.js'
 import { editMemory, saveLibraryFile, saveSummary, search } from './library.js'
+import { proposeSkill } from './skills.js'
 import { actingTeammate } from './thread-spec.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
@@ -61,6 +62,9 @@ export async function handleLibraryCall(
       throw error
     }
   }
+
+  if (op.name === 'skill_proposal')
+    return done(await proposeSkill(db, scope, teammate, session.id, op.proposal))
 
   const access = (await teammateLibraryAccess(db, teammate)).of(op.path)
   if (op.name === 'design_edits')

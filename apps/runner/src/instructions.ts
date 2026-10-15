@@ -16,7 +16,10 @@ import {
   DESIGN_SYSTEM_README,
   DESIGN_SYSTEM_TOKENS,
   PROPOSE_TEAM_TOOL,
+  BUILTIN_SKILL_PREFIX,
+  PROPOSE_SKILL_TOOL,
   SHOW_WIDGET_TOOL,
+  type ThreadSkill,
   type ThreadSpec,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
@@ -82,9 +85,10 @@ export function instructions(
     projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
     VISUALS,
-    designs(spec, libraryDir),
+    designs(spec),
     spec.git && code(spec),
     PREVIEWS,
+    skills(spec),
     tasks(spec),
     SCHEDULES,
     credentials(browser),
@@ -194,12 +198,26 @@ function chief(spec: ThreadSpec) {
     .join('\n\n')
 }
 
-/** Making designs as HTML, and the design systems they follow. Only for teammates who can save them. */
-function designs(spec: ThreadSpec, libraryDir: string) {
-  const canSave =
-    spec.library === 'read_write' ||
-    (spec.libraryFolders ?? []).some((f) => f.access === 'read_write')
-  if (!canSave) return ''
+/** Designs are for teammates who can save them to the library. */
+const canSaveDesigns = (spec: ThreadSpec) =>
+  spec.library === 'read_write' ||
+  (spec.libraryFolders ?? []).some((f) => f.access === 'read_write')
+
+/** Designs: when to make one, here; how, in Brigade's design skills. */
+function designs(spec: ThreadSpec) {
+  if (!canSaveDesigns(spec)) return ''
+  return [
+    '## Designs',
+    'When asked for a visual design (a page, a screen, a prototype, slides, a one-pager), to change one, or in a ' +
+      'message that starts with "Comment on the design", read the `brigade-designs` skill before you start: how to ' +
+      'make, check and save one, and which design system it follows. When asked for a design system, read ' +
+      '`brigade-design-systems`.',
+  ].join('\n\n')
+}
+
+/** Making designs as HTML, and the design systems they follow: Brigade's skills for them. */
+function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
+  if (!canSaveDesigns(spec)) return []
   const systems = spec.designSystems ?? []
   const appliesTo = (s: ThreadSpec['designSystems'][number]) =>
     [
@@ -211,8 +229,7 @@ function designs(spec: ThreadSpec, libraryDir: string) {
     ]
       .filter(Boolean)
       .join(', ')
-  return [
-    '## Designs',
+  const making = [
     'When asked for a visual design (a page, a screen, a prototype, slides, a one-pager), make it as a web page: ' +
       `a folder with \`${DESIGN_ENTRY}\` and \`${DESIGN_MANIFEST}\` at its top, and its assets beside them. ` +
       'Link everything in it by relative paths; libraries and fonts from public CDNs are fine, but the page may ' +
@@ -258,26 +275,9 @@ function designs(spec: ThreadSpec, libraryDir: string) {
     'People comment on a design from its canvas: such a message starts with "Comment on the design" and names the ' +
       'board (its file and width), the element by its `data-id` (or a CSS path) and its line in the file. Change the ' +
       'design, check it and save it again.',
-    [
-      '### Making a design system',
-      'When asked for a design system (from a repository, a site, an export or a brief), make it in a folder on ' +
-        'this computer. It is not a design: do not save it with `save_design`.',
-      `- \`${DESIGN_SYSTEM_README}\`: the rules a designer follows. Color use, typography, spacing, radius, shadows, ` +
-        'layout, imagery and voice, the main components and when to use each, with do and don’t examples. ' +
-        'Point to the files below.',
-      `- \`${DESIGN_SYSTEM_TOKENS}\`: every token as a CSS custom property on \`:root\`, and dark mode values if it has them.`,
-      '- `assets/`: the logos, fonts and icons designs need.',
-      `- \`${DESIGN_SYSTEM_PREVIEW}/\`: a design that shows the palette, type scale and main components. A design ` +
-        'only reaches its own folder, so copy the tokens and assets it uses into it.',
-      'Take values from the source, not from guesses, and say what you could not find. Check the preview with ' +
-        '`check_design`, then call `save_design_system` with the folder, a library folder under ' +
-        '`design-systems/` and its name, and say where it applies: the repository it comes from, the library ' +
-        'folders or the default, as the person asks. It applies to threads that start after that. Mention its ' +
-        'preview in your reply.',
-    ].join('\n'),
     systems.length > 0
       ? [
-          '### Design systems',
+          '## Design systems',
           'A design follows exactly one design system: the one the person names or mentions; else one for the library ' +
             "folder the design goes in; else one for the repository you are working in; else the project's; else yours; else the " +
             'default. When none applies and there are several, ask which one. Before designing, read its ' +
@@ -295,7 +295,69 @@ function designs(spec: ThreadSpec, libraryDir: string) {
       : 'The workspace has no design system yet. Follow the look of the product the design is for when you can ' +
         'find it (its repository, its site), and say which choices you made.',
   ].join('\n\n')
+  const system = [
+    'When asked for a design system (from a repository, a site, an export or a brief), make it in a folder on ' +
+      'this computer. It is not a design: do not save it with `save_design`.',
+    `- \`${DESIGN_SYSTEM_README}\`: the rules a designer follows. Color use, typography, spacing, radius, shadows, ` +
+      'layout, imagery and voice, the main components and when to use each, with do and don’t examples. ' +
+      'Point to the files below.',
+    `- \`${DESIGN_SYSTEM_TOKENS}\`: every token as a CSS custom property on \`:root\`, and dark mode values if it has them.`,
+    '- `assets/`: the logos, fonts and icons designs need.',
+    `- \`${DESIGN_SYSTEM_PREVIEW}/\`: a design that shows the palette, type scale and main components. A design ` +
+      'only reaches its own folder, so copy the tokens and assets it uses into it.',
+    'Take values from the source, not from guesses, and say what you could not find. Check the preview with ' +
+      '`check_design`, then call `save_design_system` with the folder, a library folder under ' +
+      '`design-systems/` and its name, and say where it applies: the repository it comes from, the library ' +
+      'folders or the default, as the person asks. It applies to threads that start after that. Mention its ' +
+      'preview in your reply.',
+  ].join('\n')
+  return [
+    {
+      name: `${BUILTIN_SKILL_PREFIX}designs`,
+      description:
+        'Make, change, check and save a visual design (a page, a screen, a prototype, slides, a one-pager) as ' +
+        'a web page in the library; answer comments on one; pick its design system. Read before any design work.',
+      instructions: `# Designs\n\n${making}`,
+      files: [],
+    },
+    {
+      name: `${BUILTIN_SKILL_PREFIX}design-systems`,
+      description:
+        'Make a design system (from a repository, a site, an export or a brief) and register it with ' +
+        'save_design_system. Read when asked for a design system.',
+      instructions: `# Making a design system\n\n${system}`,
+      files: [],
+    },
+  ]
 }
+
+/** Skills: the workspace's, Brigade's own, and proposing one. */
+const skills = (spec: ThreadSpec) =>
+  [
+    '## Skills',
+    "Your skills say how this workspace does certain work. Before work a skill's description matches, read the " +
+      'skill and follow it. Those named `' +
+      BUILTIN_SKILL_PREFIX +
+      "…` are Brigade's own. A message that starts with " +
+      '`/name` asks for the skill of that name.' +
+      ((spec.skills ?? []).length > 0
+        ? ` The workspace's: ${spec.skills.map((s) => `\`${s.name}\``).join(', ')}.`
+        : ' The workspace has none of its own yet.'),
+    `When a person asks you to make or change a skill, or you finished work of several steps that worked and the ` +
+      'workspace will likely ask for again, and no skill covers it, propose one with `' +
+      PROPOSE_SKILL_TOOL +
+      '`: ' +
+      'write its folder on this computer (a `SKILL.md` with `name` and `description` frontmatter, then the steps, ' +
+      'and any files it points to) and pass the folder. To change a skill, propose it again under its name, whole. ' +
+      'An admin approves it in a ticket before it applies, in threads that start after that; you do not wait for it. ' +
+      'Propose rarely: a procedure, never a fact (that is memory), nor a one-off. Never put secrets in a skill.',
+  ].join('\n\n')
+
+/** Brigade's own skills for this thread: how to make designs and design systems, and run previews. */
+export const builtinSkills = (spec: ThreadSpec, libraryDir: string): ThreadSkill[] => [
+  ...designSkills(spec, libraryDir),
+  PREVIEW_SKILL,
+]
 
 /** The rest of the board, which any teammate may manage. */
 const BOARD_TOOLS =
@@ -325,7 +387,6 @@ const tasks = (spec: ThreadSpec) =>
       'Do not ask first: create it, say so in one line, and do the work.\n\n' +
       BOARD_TOOLS
 
-/** Previews: the app a teammate builds, run for people to try when they ask. */
 /** Widgets: visuals drawn in the thread, for every teammate. */
 const VISUALS =
   '## Visuals\n\n' +
@@ -335,6 +396,7 @@ const VISUALS =
   'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
   'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
+/** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =
   '## Previews\n\n' +
   'Start a preview only when the person asks to try the app, or asks you to build something for them to try ' +
@@ -347,24 +409,37 @@ const PREVIEWS =
   'typecheck, a build or check_preview for each tweak; at most check_preview the one page you changed when ' +
   'you are unsure it still renders. Run the full checks once, before you commit or push, or when a change ' +
   'reaches data, routes or the server. ' +
-  'To start one in a checkout, first try `start_preview({ repository })`: a repository set up before starts ' +
-  'as it was saved. Otherwise set it up in start_preview itself, not in your shell, so it can be saved: ' +
-  '`setup` (install; `docker compose up -d` for its database, cache or mail: you have your own Docker; ' +
-  'migrate; seed sample data so pages show something), a `command` that takes its port from $PORT (e.g. ' +
-  '"pnpm dev --port $PORT"), so it gets a free one when another preview has it, `env` ' +
-  '(${BRIGADE_PREVIEW_URL} for its own address in auth, callback and API URLs; random values for secrets it only ' +
-  'needs locally; the always-pass test keys CAPTCHA providers publish), and `paths`: the home page, sign-in and ' +
-  'the pages you changed. Run its database and other services yourself rather than asking for one. Values only a ' +
-  "person has, such as a third-party API key, are the repository's preview variables: ask for them in one ticket " +
-  '(a `variables` ask; read .env.example for what the app needs), never in words. Each start gives them to the ' +
-  'app, over `env`; you see their names, never their values, and people start it without you. ' +
-  'start_preview opens those pages as a person would: fix what it finds and run `check_preview` until they pass ' +
-  'before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
-  'without you. If it fails, read `preview_logs`. ' +
-  'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
-  "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
-  'and Safari, need it opened in a new tab (a button on the pane). ' +
-  'In your reply, say how it started, what its check found, and that it is saved.'
+  'Before you start, set up, check or save one, read the `brigade-previews` skill.'
+
+/** How to start, check and save a preview: Brigade's skill for it. */
+const PREVIEW_SKILL: ThreadSkill = {
+  name: `${BUILTIN_SKILL_PREFIX}previews`,
+  description:
+    'Start, set up, check, fix and save a preview of an app (start_preview, check_preview, save_preview, ' +
+    'preview_logs, preview variables). Read before starting a preview.',
+  instructions:
+    '# Previews\n\n' +
+    'Start one only when the person asks to try the app, or asks you to build something for them to try in a browser. ' +
+    'To start one in a checkout, first try `start_preview({ repository })`: a repository set up before starts ' +
+    'as it was saved. Otherwise set it up in start_preview itself, not in your shell, so it can be saved: ' +
+    '`setup` (install; `docker compose up -d` for its database, cache or mail: you have your own Docker; ' +
+    'migrate; seed sample data so pages show something), a `command` that takes its port from $PORT (e.g. ' +
+    '"pnpm dev --port $PORT"), so it gets a free one when another preview has it, `env` ' +
+    '(${BRIGADE_PREVIEW_URL} for its own address in auth, callback and API URLs; random values for secrets it only ' +
+    'needs locally; the always-pass test keys CAPTCHA providers publish), and `paths`: the home page, sign-in and ' +
+    'the pages you changed. Run its database and other services yourself rather than asking for one. Values only a ' +
+    "person has, such as a third-party API key, are the repository's preview variables: ask for them in one ticket " +
+    '(a `variables` ask; read .env.example for what the app needs), never in words. Each start gives them to the ' +
+    'app, over `env`; you see their names, never their values, and people start it without you. ' +
+    'start_preview opens those pages as a person would: fix what it finds and run `check_preview` until they pass ' +
+    'before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
+    'without you. If it fails, read `preview_logs`. ' +
+    'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
+    "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
+    'and Safari, need it opened in a new tab (a button on the pane). ' +
+    'In your reply, say how it started, what its check found, and that it is saved.',
+  files: [],
+}
 
 /** Schedules: recurring work, set up when the person asks for it. */
 const SCHEDULES =
@@ -429,7 +504,8 @@ const code = (spec: ThreadSpec) =>
       'two weeks with everything on GitHub is removed to free disk; `checkout_repository` brings it back, with your ' +
       'branch or backup.',
     'A repository has its own instructions for working on it: read its AGENTS.md, CLAUDE.md or README after ' +
-      'checking it out. A message mentions a repository as `@[owner/name](repository:owner/name)`.',
+      'checking it out, and the skills it keeps (`.claude/skills/` or `.agents/skills/` in it) whose description ' +
+      'matches the work. A message mentions a repository as `@[owner/name](repository:owner/name)`.',
   ]
     .filter(Boolean)
     .join('\n\n')

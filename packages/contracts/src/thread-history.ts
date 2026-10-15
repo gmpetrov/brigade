@@ -23,6 +23,7 @@ export const OUTPUT_TOOLS = [
   'save_design_system',
   'github_create_pull_request',
   'create_schedule',
+  'propose_skill',
 ]
 /** Email a teammate sent or drafted: a bare tool name, from a tool whose full name says mail. */
 export const EMAIL_TOOL = /^(?:gmail_)?(?:send|send_message|create_draft|reply|forward)$/

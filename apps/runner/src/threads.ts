@@ -689,7 +689,7 @@ export class Threads {
         ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
         : {}),
     })
-    message.upTo = this.note(spec, null, 'A member', this.promptText(message))
+    message.upTo = this.note(spec, null, 'A member', this.promptText(message, spec))
     return message.upTo
   }
 
@@ -697,8 +697,9 @@ export class Threads {
    * What the teammate reads: the text (a command it starts with, in words: a harness
    * takes a leading `/` for its own), and where the files that came with it are.
    */
-  private promptText(message: Message) {
-    return [commandPrompt(message.text), attachmentLines(message.attachments)]
+  private promptText(message: Message, spec: ThreadSpec) {
+    const skills = (spec.skills ?? []).map((s) => s.name)
+    return [commandPrompt(message.text, skills), attachmentLines(message.attachments)]
       .filter(Boolean)
       .join('\n\n')
   }
@@ -781,7 +782,7 @@ export class Threads {
     try {
       // The files that came with it are in the teammate's folder before it reads where they are.
       await this.placeFiles(spec, seat.folder)
-      await seat.harness.steer(this.promptText(message))
+      await seat.harness.steer(this.promptText(message, spec))
       const end = await this.show(thread, message, true)
       // It read the message in this turn: its next turn does not tell it again.
       const log = await thread.log

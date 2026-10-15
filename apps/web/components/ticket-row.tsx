@@ -62,7 +62,21 @@ export function TicketRow({
 
   const owner = t.payload.credentialOwnerId === me.memberId
   let actions: React.ReactNode = null
-  if (open && t.type === 'approval' && t.payload.credentialAction) {
+  if (open && t.type === 'approval' && t.payload.skillAction) {
+    // A teammate's skill: it shapes what every teammate does, so an admin decides.
+    actions = admin ? (
+      <>
+        <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+          {t.payload.skillAction === 'update' ? 'Apply the change' : 'Add the skill'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+          Reject
+        </Button>
+      </>
+    ) : (
+      <span className="text-sm text-muted-foreground">Waiting for an admin</span>
+    )
+  } else if (open && t.type === 'approval' && t.payload.credentialAction) {
     // A credential's ticket: sharing or changing it is for its creator or an admin.
     const managersOnly = credentialManagersOnly(t)
     const mayDecide = managersOnly ? admin || owner : admin || starter
@@ -216,6 +230,7 @@ export function TicketRow({
           )}
         </Detail>
       )}
+      {t.payload.skillAction && t.payload.skill && <SkillProposalDetail ticket={t} />}
       {t.type === 'cap' && t.payload.pending && (
         <Detail summary="The message waiting to run">{t.payload.pending.text}</Detail>
       )}
@@ -244,5 +259,29 @@ export function TicketRow({
         </Detail>
       )}
     </li>
+  )
+}
+
+/** What a teammate proposes a skill should say, and what it said before. */
+function SkillProposalDetail({ ticket: t }: { ticket: Ticket }) {
+  const skill = t.payload.skill!
+  const previous = t.payload.previous
+  const files = skill.files.map((f) => f.path)
+  return (
+    <>
+      <p className="mt-1.5 text-sm">
+        <span className="font-mono font-semibold">/{skill.name}</span>: {skill.description}
+      </p>
+      <Detail summary={previous ? 'The skill as proposed' : 'The skill'}>
+        {skill.instructions}
+        {files.length > 0 && `\n\nWith ${files.join(', ')}`}
+      </Detail>
+      {previous && (
+        <Detail summary="The skill as it is now">
+          {previous.instructions}
+          {previous.files.length > 0 && `\n\nWith ${previous.files.join(', ')}`}
+        </Detail>
+      )}
+    </>
   )
 }
