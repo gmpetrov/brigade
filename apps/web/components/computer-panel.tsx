@@ -55,7 +55,7 @@ function Frame({
   onEscape = onClose,
   children,
 }: {
-  teammate: Pick<Teammate, 'name' | 'harness'>
+  teammate: Pick<Teammate, 'id' | 'name' | 'harness'>
   subtitle: string
   onClose: () => void
   /** What Escape does: closes it, as it does the other panels beside a page, unless told else. */
@@ -290,7 +290,7 @@ export function ComputerPanel({
 
   return (
     <Frame
-      teammate={{ name: teammate.name, harness: teammate.harness as Teammate['harness'] }}
+      teammate={{ ...teammate, harness: teammate.harness as Teammate['harness'] }}
       subtitle={`${teammateModelLabel(teammate)} on ${cloud ? 'the workspace computer' : thread.computer.name}`}
       onClose={onClose}
     >
