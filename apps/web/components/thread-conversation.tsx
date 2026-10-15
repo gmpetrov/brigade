@@ -33,7 +33,7 @@ import {
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { ComputerPanel } from '@/components/computer-panel'
+import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
@@ -164,6 +164,8 @@ export function ThreadConversation({
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
   // The app the teammate runs, beside the thread in the desktop's place.
   const [previewing, setPreviewing] = useState(false)
+  // The computer expanded over the thread from its details, which it hides until it closes.
+  const [computerOpen, setComputerOpen] = useState(false)
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.
   const documents = useDocumentPanel()
   const openFile = (f: { path: string; teammateId?: string }) => {
@@ -618,11 +620,21 @@ export function ThreadConversation({
           onAsk={t.mayPrompt ? askInComposer : undefined}
         />
       )}
-      {expanded && !file && !documents.current && !previewing && watching && (
+      {expanded && computerOpen && t.computer.kind === 'cloud' && (
+        <ExpandedComputer
+          thread={t}
+          memberId={me.memberId ?? ''}
+          status={status ?? t.status}
+          onChange={() => void thread.reload()}
+          onClose={() => setComputerOpen(false)}
+        />
+      )}
+      {expanded && !computerOpen && !file && !documents.current && !previewing && watching && (
         <ComputerPanel
           thread={t}
           memberId={me.memberId ?? ''}
-          onOpenComputer={() => showComputer()}
+          // Expanded where it is: the thread stays the page.
+          onOpenComputer={() => setComputerOpen(true)}
           onClose={() => setWatching(false)}
           outputs={outputs}
           onOpenFile={openFile}

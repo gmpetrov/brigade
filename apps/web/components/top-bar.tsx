@@ -2,6 +2,7 @@
 // On a phone, across the top of every page: the button that opens the sidebar, where you
 // are, and the threads panel's button. On a wider screen there is none: the sidebar is
 // always there (⌘B folds it), ⌘J opens the threads panel, and each page has its title.
+// Home has no bar: its two buttons alone, which scroll away with it, as a thread floats its own.
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react'
@@ -54,6 +55,13 @@ function useCrumbs(): Crumb[] {
 
 export function TopBar() {
   const crumbs = useCrumbs()
+  if (usePathname() === '/app')
+    return (
+      <div data-top-bar className="flex h-12 shrink-0 items-center justify-between px-4 md:hidden">
+        <SidebarToggle />
+        <ThreadsButton />
+      </div>
+    )
   return (
     <header
       data-top-bar

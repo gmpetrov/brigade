@@ -709,8 +709,8 @@ function PillBar({ children }: { children: ReactNode }) {
 
 /**
  * Where and who: the project's icon, the teammate's avatar, then the thread's title (or
- * the teammate's name). A › shows on hover; a click opens and closes the details beside it:
- * the thread's, its computer's, the teammate's.
+ * the teammate's name). It grows to show a › on hover; a click opens and closes the details
+ * beside it: the thread's, its computer's, the teammate's.
  */
 function DetailsPill({
   project,
@@ -734,10 +734,12 @@ function DetailsPill({
   // A file, preview or document in its place: pressing brings it back in front.
   const shown = open && !covered && !documents.current
   const Label = heading ? 'h1' : 'span'
+  const pill = useSlideAcross<HTMLButtonElement>()
   return (
     <button
+      ref={pill}
       type="button"
-      className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full border bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
+      className="group pointer-events-auto flex h-11 max-w-full min-w-0 items-center gap-2.5 rounded-full bg-card/90 pr-4 pl-2.5 text-[0.9375rem] font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
       aria-pressed={shown}
       title={shown ? 'Hide details' : `Details: ${details}`}
       onClick={() => {
@@ -748,20 +750,76 @@ function DetailsPill({
     >
       {project && (
         <span title={project.name} className="flex">
-          <ProjectIcon project={project} className="size-5 rounded-md text-[0.625rem]" />
+          <ProjectIcon project={project} className="size-6 rounded-md text-xs" />
           <span className="sr-only">{project.name}: </span>
         </span>
       )}
-      {teammate && <TeammateAvatar teammate={teammate} className="size-5 shrink-0" />}
-      <Label className="min-w-0 truncate">{label}</Label>
+      {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
+      {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
+      <Label className="max-w-72 min-w-0 truncate" title={label}>
+        {label}
+      </Label>
       {reconnecting && <Reconnecting />}
-      {/* Shown on hover and while open; always on touch screens, which have no hover. */}
-      <ChevronRight
+      {/* The pill grows to show it on hover and while open; always there on touch screens,
+          which have no hover. */}
+      <span
         aria-hidden
-        className="-ml-1 size-4 shrink-0 text-muted-foreground transition-opacity group-aria-pressed:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:opacity-100"
-      />
+        className="-ml-1 flex w-[1.125rem] shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2.5 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-[1.125rem] [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-[1.125rem] [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-[1.125rem] [@media(hover:hover)]:group-aria-pressed:opacity-100"
+      >
+        <ChevronRight className="size-[1.125rem] shrink-0" />
+      </span>
     </button>
   )
+}
+
+/** A damped spring: quick out, a slight overshoot, then settles. */
+const SPRING =
+  'linear(0, 0.037, 0.129, 0.25, 0.382, 0.511, 0.63, 0.734, 0.821, 0.89, 0.943, 0.982, 1.008, 1.025, 1.034, 1.038, 1.038, 1.035, 1.031, 1.026, 1.021, 1.016, 1.012, 1.008, 1.005, 1.003, 1.001, 1, 1)'
+
+/**
+ * Slides the element across when it moves sideways, from where it was to where it is: a
+ * panel opening or closing beside the page narrows or widens what it is centered in.
+ * Tracks its center, so growing on hover is not a move; a resize of the window is followed
+ * without sliding.
+ */
+function useSlideAcross<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const last = useRef<number>(undefined)
+  const center = (el: T) => {
+    const r = el.getBoundingClientRect()
+    return r.left + r.width / 2
+  }
+  // After each render: what opens a panel renders, and its room is taken in the same commit.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Mid-slide, from where it shows now.
+    const sliding = el.getAnimations().filter((a) => a.id === 'slide-across')
+    const from = sliding.length ? center(el) : last.current
+    for (const a of sliding) a.cancel()
+    const to = center(el)
+    last.current = to
+    if (from === undefined || Math.abs(from - to) < 1) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    el.animate([{ transform: `translateX(${from - to}px)` }, { transform: 'none' }], {
+      id: 'slide-across',
+      duration: 550,
+      easing: CSS.supports('transition-timing-function', SPRING)
+        ? SPRING
+        : 'cubic-bezier(0.34, 1.3, 0.64, 1)',
+    })
+  })
+  // The window resized: where it is now, so the next render does not slide from before.
+  useEffect(() => {
+    const el = ref.current
+    if (!el?.parentElement) return
+    const observer = new ResizeObserver(() => {
+      if (!el.getAnimations().some((a) => a.id === 'slide-across')) last.current = center(el)
+    })
+    observer.observe(el.parentElement)
+    return () => observer.disconnect()
+  }, [])
+  return ref
 }
 
 function Reconnecting() {
