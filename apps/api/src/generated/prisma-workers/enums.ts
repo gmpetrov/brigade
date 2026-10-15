@@ -255,3 +255,12 @@ export const PreviewVariableKind = {
 } as const
 
 export type PreviewVariableKind = (typeof PreviewVariableKind)[keyof typeof PreviewVariableKind]
+
+
+export const NotifyPreset = {
+  needed: 'needed',
+  finished: 'finished',
+  everything: 'everything'
+} as const
+
+export type NotifyPreset = (typeof NotifyPreset)[keyof typeof NotifyPreset]

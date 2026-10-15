@@ -208,6 +208,8 @@ export const BrowserToApi = z.discriminatedUnion('type', [
     data: z.string().max(65_536),
   }),
   z.object({ type: z.literal('terminal.close'), terminalId: z.string() }),
+  /** The dashboard is in view or not: notifications wait while a member is looking. */
+  z.object({ type: z.literal('presence'), visible: z.boolean() }),
 ])
 export type BrowserToApi = z.infer<typeof BrowserToApi>
 

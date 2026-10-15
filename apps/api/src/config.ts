@@ -83,6 +83,14 @@ const Env = z.object({
    * session cookies are SameSite=None and partitioned, so the frame keeps them.
    */
   CROSS_SITE_COOKIES: z.stringbool().default(false),
+  /**
+   * Web push to the dashboard (src/notifications.ts): a P-256 key pair, base64url, from
+   * `pnpm --filter @brigade/api vapid`. Without them, notifications are off.
+   */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  /** Who push services may contact about Brigade's pushes: mailto: or https:. Default: the dashboard's address. */
+  VAPID_SUBJECT: z.string().optional(),
 })
 
 // An empty value (KEY= in .env, as .env.example has them) means unset.

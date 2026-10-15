@@ -1,5 +1,6 @@
 'use client'
 import {
+  Bell,
   CalendarClock,
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,11 @@ import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
+import {
+  NotificationsDialog,
+  openNotifications,
+  useAppNotifications,
+} from '@/components/notifications'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
 import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
@@ -224,6 +230,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady)) router.replace('/onboarding')
   }, [me.data, me.error, router])
 
+  // Opened from a notification about another of the member's workspaces: switch to it.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('workspace')
+    if (!wanted || !me.data || wanted === me.data.activeWorkspaceId) return
+    if (!me.data.workspaces.some((w) => w.id === wanted)) return
+    void api('/workspaces/switch', { body: { workspaceId: wanted } }).then(() =>
+      window.location.reload(),
+    )
+  }, [me.data])
+
   if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
@@ -403,7 +419,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label={`${data.user.name}: appearance, help and sign out`}
+                        aria-label={`${data.user.name}: appearance, notifications, help and sign out`}
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-10 group-data-[collapsible=icon]:size-8">
@@ -436,6 +452,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={openNotifications}>
+                        <Bell /> Notifications
+                      </DropdownMenuItem>
                       <DropdownMenuItem onSelect={openShortcuts}>
                         <Keyboard /> Keyboard shortcuts
                         <span className="text-muted-foreground ml-auto text-xs">
@@ -478,6 +497,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </SidebarProvider>
           <SearchDialog open={searching} onOpenChange={setSearching} />
           <ShortcutsDialog />
+          <NotificationsDialog />
+          <AppNotifications needsYou={Object.keys(needsYou).length} />
           <NewProjectDialog open={creatingProject} onOpenChange={setCreatingProject} />
         </ThreadPanelProvider>
       </DocumentPanelProvider>
@@ -486,6 +507,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 }
 
 /** What a ticket asks of a person, at the end of its thread's row. */
+/** The service worker, this device's subscription and the app icon badge: what needs the member. */
+function AppNotifications({ needsYou }: { needsYou: number }) {
+  useAppNotifications(needsYou)
+  return null
+}
+
 const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
   approval: 'approve',
   question: 'answer',

@@ -34,6 +34,7 @@ model User {
   authAccounts  AuthAccount[]
   members       Member[]
   invitations   Invitation[]
+  pushDevices   PushDevice[]
 }
 
 /// A signed-in browser session (better-auth "session"). Not a thread.
@@ -113,6 +114,9 @@ model Member {
   tasks          Task[]
   schedules      Schedule[]
   threadReads    ThreadRead[]
+  /// Which notifications reach their devices (src/notifications.ts).
+  notify         NotifyPreset @default(needed)
+  pushNotices    PushNotice[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -178,6 +182,7 @@ model Workspace {
   previewRecipes      PreviewRecipe[]
   previewVariables    PreviewVariable[]
   threadReads         ThreadRead[]
+  pushNotices         PushNotice[]
 
   @@index([organizationId])
 }
@@ -1342,4 +1347,54 @@ model ProjectRepository {
 
   @@id([projectId, repository])
   @@index([workspaceId, repository])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications: web push to the dashboard installed as an app (src/notifications.ts)
+// ---------------------------------------------------------------------------
+
+/// What a member is notified of. needed: what waits on them. finished: and each
+/// task done or pull request merged. everything: and replies in threads they started.
+enum NotifyPreset {
+  needed
+  finished
+  everything
+}
+
+/// A browser or installed app that receives a user's notifications, from PushManager.subscribe.
+model PushDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// One thing a member was or will be notified of, by key (needs:<threadId>,
+/// done:<taskId>, merged:<pullRequestId>, reply:<threadId>:<at>): so each is
+/// sent once, reminded at most once, and its notification closed once resolved.
+model PushNotice {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  key            String
+  /// When it was first seen; it is sent once it has lasted a while.
+  firstSeenAt    DateTime  @default(now())
+  /// Sent (or seen in the dashboard, so never sent).
+  sentAt         DateTime?
+  /// Whether sentAt was a push, which counts toward the hourly cap.
+  pushed         Boolean   @default(false)
+  remindedAt     DateTime?
+  /// No longer waiting: its notification is closed with the next push.
+  resolvedAt     DateTime?
+
+  @@unique([memberId, key])
+  @@index([workspaceId])
 }

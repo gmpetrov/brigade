@@ -275,3 +275,15 @@ export type Project = Prisma.ProjectModel
  * A GitHub repository a project works on. A repository may be in several projects.
  */
 export type ProjectRepository = Prisma.ProjectRepositoryModel
+/**
+ * Model PushDevice
+ * A browser or installed app that receives a user's notifications, from PushManager.subscribe.
+ */
+export type PushDevice = Prisma.PushDeviceModel
+/**
+ * Model PushNotice
+ * One thing a member was or will be notified of, by key (needs:<threadId>,
+ * done:<taskId>, merged:<pullRequestId>, reply:<threadId>:<at>): so each is
+ * sent once, reminded at most once, and its notification closed once resolved.
+ */
+export type PushNotice = Prisma.PushNoticeModel
