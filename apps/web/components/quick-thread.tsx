@@ -2,7 +2,7 @@
 // Start a thread without leaving where you are: ⌘⇧K (Ctrl+Shift+K) opens the
 // new-thread box in a dialog. It is the threads panel's box: the same draft and
 // teammate, so closing it by mistake loses nothing. Sending closes it and says
-// so in the corner; Open there shows the thread in the panel beside the page.
+// so in the corner; Open there goes to the thread.
 import { ArrowRight, CircleCheck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useDashboard } from '@/components/dashboard'

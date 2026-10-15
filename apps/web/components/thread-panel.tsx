@@ -53,7 +53,7 @@ import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 type ThreadPanel = {
-  /** Shown: docked beside the page, or expanded in its place. */
+  /** Shown: expanded in the page's place, or docked beside a teammate's computer. */
   visible: boolean
   expanded: boolean
   /** The thread shown, or null for the list. */
@@ -67,8 +67,6 @@ type ThreadPanel = {
   /** From a thread to the list. */
   back: () => void
   expand: () => void
-  /** Docked beside the page again, the one you were on before it expanded. */
-  dock: () => void
   close: () => void
   /** What each teammate is doing, for the dots beside it. */
   activity: Record<string, TeammateActivity>
@@ -152,6 +150,11 @@ export function useThreadPanel() {
   return value
 }
 
+/** The teammate whose computer an address shows: the one page the panel docks beside. */
+function routeComputer(pathname: string): string | undefined {
+  return /^\/app\/teammates\/([^/]+)\/computer\/?$/.exec(pathname)?.[1]
+}
+
 /** The thread an address shows expanded: its id, null for the list, undefined for none. */
 function routeThread(pathname: string): string | null | undefined {
   const match = /^\/app\/threads(?:\/([^/]+))?\/?$/.exec(pathname)
@@ -169,7 +172,7 @@ export function preloadThreadPanel(pathname: string) {
   const routed = routeThread(pathname)
   const expanded = routed !== undefined
   const saved = readSaved()
-  if (!expanded && !saved.open) return
+  if (!expanded && !(saved.open && routeComputer(pathname))) return
   const threadId = expanded ? routed : saved.threadId
   if (threadId) preloadConversation(threadId)
   // Docked with no thread, the teammate's channel.
@@ -190,6 +193,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(saved.open)
   const [docked, setDocked] = useState<string | null>(saved.threadId)
   const threadId = expanded ? (routed ?? null) : docked
+  // Docked only beside a teammate's computer: anywhere else a thread is its own page, and
+  // leaving it leaves the conversation behind.
+  const computerPage = routeComputer(pathname)
   const [focusKey, setFocusKey] = useState(0)
   const draft = useThreadDraft()
   const [details, remember] = useDesktopPreview()
@@ -197,7 +203,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const [covered, setCovered] = useState(false)
   const [teammateId, chooseTeammate] = useLastTeammate()
   const [shell, setShell] = useState(false)
-  const computerPage = /^\/app\/teammates\/([^/]+)\/computer\/?$/.exec(pathname)?.[1]
   const openComputer = useCallback(
     (teammate: string, options: { threadId?: string; shell?: boolean } = {}) => {
       if (!options.threadId) chooseTeammate(teammate)
@@ -232,18 +237,12 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [computerPage])
 
-  // The page to dock back to: the last one that was not the panel itself.
+  // The page to go back to: the last one that was not the panel itself.
   const lastPage = useRef<string>(undefined)
   useEffect(() => {
     if (!expanded) lastPage.current = pathname
   }, [expanded, pathname])
 
-  const dock = useCallback(() => {
-    setDocked(routed ?? null)
-    setOpen(true)
-    raisePanel(PANEL)
-    router.push(lastPage.current ?? '/app')
-  }, [routed, router])
   const close = useCallback(() => {
     setOpen(false)
     if (expanded) {
@@ -253,14 +252,14 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   }, [expanded, routed, router])
   const openThread = useCallback(
     (id: string) => {
-      if (expanded) router.push(`/app/threads/${id}`)
+      if (expanded || !computerPage) router.push(`/app/threads/${id}`)
       else {
         setDocked(id)
         setOpen(true)
         raisePanel(PANEL)
       }
     },
-    [expanded, router],
+    [expanded, computerPage, router],
   )
   const back = useCallback(() => {
     if (expanded) router.push('/app/threads')
@@ -274,8 +273,8 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     setFocusKey((k) => k + 1)
   }, [routed, router])
   const startThread = useCallback(() => {
-    if (expanded) {
-      if (routed) router.push('/app/threads')
+    if (expanded || !computerPage) {
+      if (routed !== null) router.push('/app/threads')
     } else {
       setDocked(null)
       setOpen(true)
@@ -283,12 +282,14 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       raisePanel(PANEL)
     }
     setFocusKey((k) => k + 1)
-  }, [expanded, routed, router])
-  // Open behind another panel, it comes in front instead of closing.
+  }, [expanded, computerPage, routed, router])
+  // Open behind another panel, it comes in front instead of closing. Away from a computer,
+  // the threads are a page: to the one left last.
   const toggle = useCallback(() => {
-    if (open && !expanded && !panelInFront(PANEL)) raisePanel(PANEL)
+    if (!expanded && !computerPage) expand()
+    else if (open && !expanded && !panelInFront(PANEL)) raisePanel(PANEL)
     else setOpen((o) => !o)
-  }, [open, expanded])
+  }, [open, expanded, computerPage, expand])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -390,7 +391,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      visible: expanded || open,
+      visible: expanded || (open && !!computerPage),
       expanded,
       threadId,
       toggle,
@@ -399,7 +400,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       openThread,
       back,
       expand,
-      dock,
       close,
       activity,
       waiting,
@@ -430,7 +430,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       openThread,
       back,
       expand,
-      dock,
       close,
       activity,
       waiting,
