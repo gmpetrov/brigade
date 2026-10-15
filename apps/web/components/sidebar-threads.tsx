@@ -13,7 +13,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
-import { RailMenu } from '@/components/rail-menu'
+import { RailMenu, type RailMenuControl, type RailMenuItem } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadRow } from '@/components/thread-row'
 import {
@@ -36,7 +36,6 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import { api, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -188,61 +187,6 @@ function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
   return { all, asks }
 }
 
-/** How many threads the folded sidebar's menu lists before its "+N more". */
-const RAIL_LIMIT = 12
-
-/**
- * Folded, the threads as a menu beside the rail: the pinned, then those waiting on a person,
- * those working and the latest, as the list above orders them. "+N more" unfolds the sidebar.
- */
-export function ThreadsRailMenu({ needsYou }: { needsYou: Record<string, string> }) {
-  const pathname = usePathname()
-  const { threads, threadId, expanded } = useThreadPanel()
-  const { setOpen } = useSidebar()
-  const { ordered, asks } = useMemo(() => {
-    const { all, asks } = withAsks(threads ?? [], needsYou)
-    const pinned = all
-      .filter((t) => t.pinnedAt)
-      .sort((a, b) => a.pinnedAt!.localeCompare(b.pinnedAt!))
-    const ordered = [
-      ...pinned,
-      ...(['waiting', 'working', 'rest'] as const).flatMap((g) =>
-        all.filter((t) => !t.pinnedAt && groupOf(t.status) === g),
-      ),
-    ]
-    return { ordered, asks }
-  }, [threads, needsYou])
-  const hidden = ordered.length - RAIL_LIMIT
-  return (
-    <RailMenu
-      icon={MessagesSquare}
-      label="Threads"
-      href="/app/threads"
-      active={pathname.startsWith('/app/threads') || (expanded && !!threadId)}
-      items={ordered.slice(0, RAIL_LIMIT).map((t) => {
-        const ask = asks.get(t.id)
-        return {
-          id: t.id,
-          href: `/app/threads/${t.id}`,
-          label: t.title || 'New thread',
-          icon: <ThreadStatusIcon status={t.status} unread={t.unread} />,
-          trailing: (
-            <span
-              className={cn(
-                'ml-2 shrink-0 text-xs',
-                ask ? 'text-warning font-semibold' : 'text-muted-foreground',
-              )}
-            >
-              {ask ?? shortAgo(t.updatedAt)}
-            </span>
-          ),
-        }
-      })}
-      more={hidden > 0 ? { label: `+${hidden} more`, onSelect: () => setOpen(true) } : undefined}
-    />
-  )
-}
-
 /** Older threads are asked for this many at a time: a step's worth. */
 const OLDER_PAGE = STEP
 
@@ -253,6 +197,7 @@ export function SidebarWork({
   memberId,
   onNewProject,
   needsYou,
+  rail,
 }: {
   teammates: Teammate[]
   projects: ProjectSummary[]
@@ -264,6 +209,8 @@ export function SidebarWork({
    * asks ("approve").
    */
   needsYou: Record<string, string>
+  /** Folded, the menus beside the rail after Threads (projects, teammates). */
+  rail?: ReactNode
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -372,6 +319,78 @@ export function SidebarWork({
     }
   }
 
+  // What the list shows of each status: its first threads, then a "+N more" past them.
+  const sections = (['waiting', 'working', 'rest'] as const).map((group) => {
+    const list = groups[group]
+    const visible = CAPS[group] + extra[group]
+    const hidden = Math.max(0, list.length - visible)
+    // The rest goes on past what is loaded: older threads, from the server.
+    const older = group === 'rest' && mayHaveOlder
+    const next = older && hidden < STEP ? STEP : Math.min(STEP, hidden)
+    const loading = group === 'rest' && loadingOlder
+    return {
+      group,
+      threads: list.slice(0, visible),
+      more:
+        next > 0
+          ? {
+              label: loading ? 'Loading…' : `+${next} more${MORE[group] ? ` ${MORE[group]}` : ''}`,
+              loading,
+              onSelect: () => {
+                setExtra((e) => ({ ...e, [group]: e[group] + STEP }))
+                if (older && hidden < STEP) void loadOlder()
+              },
+            }
+          : undefined,
+    }
+  })
+
+  /** At a row's end: what a thread waiting on a person asks, else how old it is. */
+  function trailing(t: ThreadSummary, group: Group) {
+    return (
+      <span
+        className={
+          group === 'waiting' ? 'text-warning font-semibold' : 'text-muted-foreground font-normal'
+        }
+      >
+        {group === 'waiting' ? (asks.get(t.id) ?? 'needs you') : shortAgo(t.updatedAt)}
+      </span>
+    )
+  }
+
+  // Folded, the same list in the menu beside the rail: the pinned, then each status's first
+  // threads and its "+N more", which grows the list in the menu as it does here.
+  const railItem = (t: ThreadSummary, group: Group): RailMenuItem => ({
+    id: t.id,
+    href: `/app/threads/${t.id}`,
+    label: t.title || 'New thread',
+    icon: <ThreadStatusIcon status={t.status} unread={t.unread} />,
+    trailing: <span className="ml-2 shrink-0 text-xs">{trailing(t, group)}</span>,
+  })
+  const railItems: (RailMenuItem | RailMenuControl)[] = [
+    ...(pinned.length
+      ? [
+          { kind: 'label', key: 'pinned', label: 'Pinned' } as const,
+          ...pinned.map((t) => railItem(t, groupOf(t.status))),
+          { kind: 'separator', key: 'pinned-end' } as const,
+        ]
+      : []),
+    ...sections.flatMap(({ group, threads, more }) => [
+      ...threads.map((t) => railItem(t, group)),
+      ...(more
+        ? [
+            {
+              kind: 'more',
+              key: `more-${group}`,
+              label: more.label,
+              disabled: more.loading,
+              onSelect: more.onSelect,
+            } as const,
+          ]
+        : []),
+    ]),
+  ]
+
   function changed() {
     void reloadThreads()
     if (archived) void loadArchived()
@@ -389,17 +408,7 @@ export function SidebarWork({
         href={href}
         active={threadId === t.id && (expanded || pathname === href)}
         icon={<ThreadStatusIcon status={t.status} unread={t.unread} />}
-        trailing={
-          <span
-            className={
-              group === 'waiting'
-                ? 'text-warning font-semibold'
-                : 'text-muted-foreground font-normal'
-            }
-          >
-            {group === 'waiting' ? (asks.get(t.id) ?? 'needs you') : shortAgo(t.updatedAt)}
-          </span>
-        }
+        trailing={trailing(t, group)}
         memberId={memberId}
         admin={admin}
         onChanged={changed}
@@ -432,6 +441,20 @@ export function SidebarWork({
 
   return (
     <>
+      {/* Folded: threads, then the other menus, beside the rail. */}
+      <SidebarGroup className="hidden group-data-[collapsible=icon]:flex">
+        <SidebarMenu>
+          <RailMenu
+            icon={MessagesSquare}
+            label="Threads"
+            href="/app/threads"
+            active={pathname.startsWith('/app/threads') || (expanded && !!threadId)}
+            items={railItems}
+          />
+          {rail}
+        </SidebarMenu>
+      </SidebarGroup>
+
       {pinned.length > 0 && (
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>Pinned</SidebarGroupLabel>
@@ -597,38 +620,22 @@ export function SidebarWork({
                     : 'No threads yet.'}
               </li>
             )}
-            {(['waiting', 'working', 'rest'] as const).map((group) => {
-              const list = groups[group]
-              const visible = CAPS[group] + extra[group]
-              const hidden = Math.max(0, list.length - visible)
-              // The rest goes on past what is loaded: older threads, from the server.
-              const older = group === 'rest' && mayHaveOlder
-              const next = older && hidden < STEP ? STEP : Math.min(STEP, hidden)
-              const more = () => {
-                setExtra((e) => ({ ...e, [group]: e[group] + STEP }))
-                if (older && hidden < STEP) void loadOlder()
-              }
-              return [
-                ...list.slice(0, visible).map((t) => row(t, group)),
-                // No dot: a control, not a thread; its text lines up with the titles.
-                next > 0 && (
-                  <SidebarMenuItem key={`more-${group}`}>
-                    <SidebarMenuButton
-                      size="sm"
-                      className="text-muted-foreground pl-8"
-                      disabled={group === 'rest' && loadingOlder}
-                      onClick={more}
-                    >
-                      <span>
-                        {group === 'rest' && loadingOlder
-                          ? 'Loading…'
-                          : `+${next} more${MORE[group] ? ` ${MORE[group]}` : ''}`}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ),
-              ]
-            })}
+            {sections.map(({ group, threads, more }) => [
+              ...threads.map((t) => row(t, group)),
+              // No dot: a control, not a thread; its text lines up with the titles.
+              more && (
+                <SidebarMenuItem key={`more-${group}`}>
+                  <SidebarMenuButton
+                    size="sm"
+                    className="text-muted-foreground pl-8"
+                    disabled={more.loading}
+                    onClick={more.onSelect}
+                  >
+                    <span>{more.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ),
+            ])}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
