@@ -342,12 +342,9 @@ pub fn run() {
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
-        .run(|app, event| match event {
-            // No window to close: only Quit exits.
-            RunEvent::ExitRequested {
-                api, code: None, ..
-            } => api.prevent_exit(),
-            RunEvent::Exit => app.state::<Arc<Supervisor>>().stop(),
-            _ => {}
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                app.state::<Arc<Supervisor>>().stop();
+            }
         });
 }

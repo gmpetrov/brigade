@@ -131,6 +131,48 @@ fn running_elsewhere() -> bool {
     })
 }
 
+/// The process group of the runner this app started, kept until it exits: a
+/// runner left behind when the app was killed is the app's to stop, not "elsewhere".
+fn group_file() -> PathBuf {
+    home().join("desktop-runner.pgid")
+}
+
+fn alive(pid: &str) -> bool {
+    Command::new("kill")
+        .args(["-0", pid])
+        .stderr(Stdio::null())
+        .status()
+        .map_or(false, |s| s.success())
+}
+
+/// Stops a runner group an earlier run of this app left behind.
+fn stop_orphan() {
+    let Ok(group) = fs::read_to_string(group_file()) else {
+        return;
+    };
+    let group = group.trim().to_owned();
+    let ours = Command::new("ps")
+        .args(["-o", "command=", "-p", &group])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains("brigade-runner"))
+        .unwrap_or(false);
+    if ours {
+        let target = format!("-{group}");
+        let _ = Command::new("kill").args(["-TERM", "--", &target]).status();
+        let until = Instant::now() + Duration::from_secs(60);
+        while alive(&group) && Instant::now() < until {
+            thread::sleep(Duration::from_millis(200));
+        }
+        let _ = Command::new("kill")
+            .args(["-KILL", "--", &target])
+            .stderr(Stdio::null())
+            .status();
+        // Its node process removes runner.pid as it exits.
+        thread::sleep(Duration::from_millis(500));
+    }
+    let _ = fs::remove_file(group_file());
+}
+
 /// SIGTERM to the whole group (the wrapper and node): the runner freezes a turn
 /// in progress and carries on with it after the next start.
 fn terminate(child: &mut Child) {
@@ -205,6 +247,7 @@ impl Supervisor {
                 self.set(Status::NotConnected);
                 return;
             };
+            stop_orphan();
             if running_elsewhere() {
                 self.set(Status::Elsewhere);
                 return;
@@ -227,6 +270,7 @@ impl Supervisor {
                 }
             };
             let started = Instant::now();
+            let _ = fs::write(group_file(), child.id().to_string());
             *self.child.lock().unwrap() = Some(child);
             self.set(Status::Running { workspace });
             let code = loop {
@@ -235,6 +279,7 @@ impl Supervisor {
                 let Some(child) = slot.as_mut() else { return };
                 if let Ok(Some(status)) = child.try_wait() {
                     *slot = None;
+                    let _ = fs::remove_file(group_file());
                     break status.code();
                 }
             };
@@ -262,6 +307,7 @@ impl Supervisor {
         let child = self.child.lock().unwrap().take();
         if let Some(mut child) = child {
             terminate(&mut child);
+            let _ = fs::remove_file(group_file());
         }
         if !matches!(self.status(), Status::NotConnected | Status::Elsewhere) {
             self.set(Status::Stopped);
