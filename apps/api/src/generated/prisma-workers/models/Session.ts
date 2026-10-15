@@ -51,6 +51,7 @@ export type SessionMinAggregateOutputType = {
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
+  archivedAt: Date | null
   lastSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -75,6 +76,7 @@ export type SessionMaxAggregateOutputType = {
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
+  archivedAt: Date | null
   lastSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -99,6 +101,7 @@ export type SessionCountAggregateOutputType = {
   triggerId: number
   conversationKey: number
   scheduleId: number
+  archivedAt: number
   lastSeq: number
   createdAt: number
   updatedAt: number
@@ -133,6 +136,7 @@ export type SessionMinAggregateInputType = {
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
+  archivedAt?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -157,6 +161,7 @@ export type SessionMaxAggregateInputType = {
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
+  archivedAt?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -181,6 +186,7 @@ export type SessionCountAggregateInputType = {
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
+  archivedAt?: true
   lastSeq?: true
   createdAt?: true
   updatedAt?: true
@@ -292,6 +298,7 @@ export type SessionGroupByOutputType = {
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
+  archivedAt: Date | null
   lastSeq: number
   createdAt: Date
   updatedAt: Date
@@ -339,6 +346,7 @@ export type SessionWhereInput = {
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -361,6 +369,7 @@ export type SessionWhereInput = {
   sentAttachments?: Prisma.AttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
   reads?: Prisma.ThreadReadListRelationFilter
+  pins?: Prisma.ThreadPinListRelationFilter
   task?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
 }
@@ -382,6 +391,7 @@ export type SessionOrderByWithRelationInput = {
   triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   conversationKey?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -404,6 +414,7 @@ export type SessionOrderByWithRelationInput = {
   sentAttachments?: Prisma.AttachmentOrderByRelationAggregateInput
   pullRequests?: Prisma.PullRequestOrderByRelationAggregateInput
   reads?: Prisma.ThreadReadOrderByRelationAggregateInput
+  pins?: Prisma.ThreadPinOrderByRelationAggregateInput
   task?: Prisma.TaskOrderByWithRelationInput
   project?: Prisma.ProjectOrderByWithRelationInput
 }
@@ -429,6 +440,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -450,6 +462,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   sentAttachments?: Prisma.AttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
   reads?: Prisma.ThreadReadListRelationFilter
+  pins?: Prisma.ThreadPinListRelationFilter
   task?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
 }, "id" | "taskId">
@@ -471,6 +484,7 @@ export type SessionOrderByWithAggregationInput = {
   triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   conversationKey?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -503,6 +517,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   triggerId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  archivedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
@@ -520,6 +535,7 @@ export type SessionCreateInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -540,6 +556,7 @@ export type SessionCreateInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -561,6 +578,7 @@ export type SessionUncheckedCreateInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -576,6 +594,7 @@ export type SessionUncheckedCreateInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUpdateInput = {
@@ -588,6 +607,7 @@ export type SessionUpdateInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -608,6 +628,7 @@ export type SessionUpdateInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -629,6 +650,7 @@ export type SessionUncheckedUpdateInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -644,6 +666,7 @@ export type SessionUncheckedUpdateInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateManyInput = {
@@ -663,6 +686,7 @@ export type SessionCreateManyInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -680,6 +704,7 @@ export type SessionUpdateManyMutationInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -702,6 +727,7 @@ export type SessionUncheckedUpdateManyInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -741,6 +767,7 @@ export type SessionCountOrderByAggregateInput = {
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -769,6 +796,7 @@ export type SessionMaxOrderByAggregateInput = {
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -793,6 +821,7 @@ export type SessionMinOrderByAggregateInput = {
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
+  archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -989,6 +1018,20 @@ export type SessionUpdateOneRequiredWithoutReadsNestedInput = {
   upsert?: Prisma.SessionUpsertWithoutReadsInput
   connect?: Prisma.SessionWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutReadsInput, Prisma.SessionUpdateWithoutReadsInput>, Prisma.SessionUncheckedUpdateWithoutReadsInput>
+}
+
+export type SessionCreateNestedOneWithoutPinsInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutPinsInput, Prisma.SessionUncheckedCreateWithoutPinsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutPinsInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutPinsNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutPinsInput, Prisma.SessionUncheckedCreateWithoutPinsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutPinsInput
+  upsert?: Prisma.SessionUpsertWithoutPinsInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutPinsInput, Prisma.SessionUpdateWithoutPinsInput>, Prisma.SessionUncheckedUpdateWithoutPinsInput>
 }
 
 export type EnumSessionStatusFieldUpdateOperationsInput = {
@@ -1351,6 +1394,7 @@ export type SessionCreateWithoutStartedByInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1370,6 +1414,7 @@ export type SessionCreateWithoutStartedByInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1390,6 +1435,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1405,6 +1451,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedByInput = {
@@ -1453,6 +1500,7 @@ export type SessionScalarWhereInput = {
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
+  archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
@@ -1470,6 +1518,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1489,6 +1538,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1509,6 +1559,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1524,6 +1575,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWorkspaceInput = {
@@ -1562,6 +1614,7 @@ export type SessionCreateWithoutComputerInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1581,6 +1634,7 @@ export type SessionCreateWithoutComputerInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1601,6 +1655,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1616,6 +1671,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutComputerInput = {
@@ -1654,6 +1710,7 @@ export type SessionCreateWithoutTeammateInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1673,6 +1730,7 @@ export type SessionCreateWithoutTeammateInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1693,6 +1751,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1708,6 +1767,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammateInput = {
@@ -1746,6 +1806,7 @@ export type SessionCreateWithoutReadsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1765,6 +1826,7 @@ export type SessionCreateWithoutReadsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1786,6 +1848,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1800,6 +1863,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutReadsInput = {
@@ -1828,6 +1892,7 @@ export type SessionUpdateWithoutReadsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1847,6 +1912,7 @@ export type SessionUpdateWithoutReadsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -1868,6 +1934,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1882,9 +1949,10 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
-export type SessionCreateWithoutTaskInput = {
+export type SessionCreateWithoutPinsInput = {
   id?: string
   organizationId: string
   title: string
@@ -1894,6 +1962,7 @@ export type SessionCreateWithoutTaskInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1914,6 +1983,163 @@ export type SessionCreateWithoutTaskInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
+}
+
+export type SessionUncheckedCreateWithoutPinsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  triggerId?: string | null
+  conversationKey?: string | null
+  scheduleId?: string | null
+  archivedAt?: Date | string | null
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  taskId?: string | null
+  projectId?: string | null
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutPinsInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutPinsInput, Prisma.SessionUncheckedCreateWithoutPinsInput>
+}
+
+export type SessionUpsertWithoutPinsInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutPinsInput, Prisma.SessionUncheckedUpdateWithoutPinsInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutPinsInput, Prisma.SessionUncheckedCreateWithoutPinsInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutPinsInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutPinsInput, Prisma.SessionUncheckedUpdateWithoutPinsInput>
+}
+
+export type SessionUpdateWithoutPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
+  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutPinsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+}
+
+export type SessionCreateWithoutTaskInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  conversationKey?: string | null
+  archivedAt?: Date | string | null
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
+  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
 
@@ -1934,6 +2160,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1948,6 +2175,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTaskInput = {
@@ -1976,6 +2204,7 @@ export type SessionUpdateWithoutTaskInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1996,6 +2225,7 @@ export type SessionUpdateWithoutTaskInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
 
@@ -2016,6 +2246,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2030,6 +2261,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutScheduleInput = {
@@ -2042,6 +2274,7 @@ export type SessionCreateWithoutScheduleInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2061,6 +2294,7 @@ export type SessionCreateWithoutScheduleInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2081,6 +2315,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   origin?: $Enums.SessionOrigin
   triggerId?: string | null
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2096,6 +2331,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutScheduleInput = {
@@ -2134,6 +2370,7 @@ export type SessionCreateWithoutTeammatesInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2153,6 +2390,7 @@ export type SessionCreateWithoutTeammatesInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2174,6 +2412,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2188,6 +2427,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammatesInput = {
@@ -2216,6 +2456,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2235,6 +2476,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2256,6 +2498,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2270,6 +2513,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutEventsInput = {
@@ -2282,6 +2526,7 @@ export type SessionCreateWithoutEventsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2301,6 +2546,7 @@ export type SessionCreateWithoutEventsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2322,6 +2568,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2336,6 +2583,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutEventsInput = {
@@ -2364,6 +2612,7 @@ export type SessionUpdateWithoutEventsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2383,6 +2632,7 @@ export type SessionUpdateWithoutEventsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2404,6 +2654,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2418,6 +2669,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAccountInput = {
@@ -2430,6 +2682,7 @@ export type SessionCreateWithoutAccountInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2449,6 +2702,7 @@ export type SessionCreateWithoutAccountInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2469,6 +2723,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2484,6 +2739,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAccountInput = {
@@ -2522,6 +2778,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2541,6 +2798,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2562,6 +2820,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2576,6 +2835,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPullRequestsInput = {
@@ -2604,6 +2864,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2623,6 +2884,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2644,6 +2906,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2658,6 +2921,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutCommentsInput = {
@@ -2670,6 +2934,7 @@ export type SessionCreateWithoutCommentsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2689,6 +2954,7 @@ export type SessionCreateWithoutCommentsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2710,6 +2976,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2724,6 +2991,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutCommentsInput = {
@@ -2752,6 +3020,7 @@ export type SessionUpdateWithoutCommentsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2771,6 +3040,7 @@ export type SessionUpdateWithoutCommentsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2792,6 +3062,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2806,6 +3077,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutConnectionCallsInput = {
@@ -2818,6 +3090,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2837,6 +3110,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2858,6 +3132,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2872,6 +3147,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutConnectionCallsInput = {
@@ -2900,6 +3176,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2919,6 +3196,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2940,6 +3218,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2954,6 +3233,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTriggerInput = {
@@ -2966,6 +3246,7 @@ export type SessionCreateWithoutTriggerInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2985,6 +3266,7 @@ export type SessionCreateWithoutTriggerInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3005,6 +3287,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3020,6 +3303,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTriggerInput = {
@@ -3058,6 +3342,7 @@ export type SessionCreateWithoutTicketsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3077,6 +3362,7 @@ export type SessionCreateWithoutTicketsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3098,6 +3384,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3112,6 +3399,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTicketsInput = {
@@ -3140,6 +3428,7 @@ export type SessionUpdateWithoutTicketsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3159,6 +3448,7 @@ export type SessionUpdateWithoutTicketsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3180,6 +3470,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3194,6 +3485,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutDocumentsInput = {
@@ -3206,6 +3498,7 @@ export type SessionCreateWithoutDocumentsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3225,6 +3518,7 @@ export type SessionCreateWithoutDocumentsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3246,6 +3540,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3260,6 +3555,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutDocumentsInput = {
@@ -3288,6 +3584,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3307,6 +3604,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3328,6 +3626,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3342,6 +3641,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutSentAttachmentsInput = {
@@ -3354,6 +3654,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3373,6 +3674,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3394,6 +3696,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3408,6 +3711,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutSentAttachmentsInput = {
@@ -3436,6 +3740,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3455,6 +3760,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3476,6 +3782,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3490,6 +3797,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAttachmentsInput = {
@@ -3502,6 +3810,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3521,6 +3830,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3542,6 +3852,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3556,6 +3867,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAttachmentsInput = {
@@ -3584,6 +3896,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3603,6 +3916,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3624,6 +3938,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3638,6 +3953,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutProjectInput = {
@@ -3650,6 +3966,7 @@ export type SessionCreateWithoutProjectInput = {
   controlledByMemberId?: string | null
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3670,6 +3987,7 @@ export type SessionCreateWithoutProjectInput = {
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
 }
 
@@ -3690,6 +4008,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3704,6 +4023,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
   reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
+  pins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutProjectInput = {
@@ -3748,6 +4068,7 @@ export type SessionCreateManyStartedByInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3765,6 +4086,7 @@ export type SessionUpdateWithoutStartedByInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3784,6 +4106,7 @@ export type SessionUpdateWithoutStartedByInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3804,6 +4127,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3819,6 +4143,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutStartedByInput = {
@@ -3837,6 +4162,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3860,6 +4186,7 @@ export type SessionCreateManyWorkspaceInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3877,6 +4204,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3896,6 +4224,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3916,6 +4245,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3931,6 +4261,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -3949,6 +4280,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3972,6 +4304,7 @@ export type SessionCreateManyComputerInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3989,6 +4322,7 @@ export type SessionUpdateWithoutComputerInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4008,6 +4342,7 @@ export type SessionUpdateWithoutComputerInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4028,6 +4363,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4043,6 +4379,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutComputerInput = {
@@ -4061,6 +4398,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4084,6 +4422,7 @@ export type SessionCreateManyTeammateInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4101,6 +4440,7 @@ export type SessionUpdateWithoutTeammateInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4120,6 +4460,7 @@ export type SessionUpdateWithoutTeammateInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4140,6 +4481,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4155,6 +4497,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTeammateInput = {
@@ -4173,6 +4516,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4196,6 +4540,7 @@ export type SessionCreateManyScheduleInput = {
   origin?: $Enums.SessionOrigin
   triggerId?: string | null
   conversationKey?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4213,6 +4558,7 @@ export type SessionUpdateWithoutScheduleInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4232,6 +4578,7 @@ export type SessionUpdateWithoutScheduleInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4252,6 +4599,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4267,6 +4615,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutScheduleInput = {
@@ -4285,6 +4634,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4308,6 +4658,7 @@ export type SessionCreateManyAccountInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4325,6 +4676,7 @@ export type SessionUpdateWithoutAccountInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4344,6 +4696,7 @@ export type SessionUpdateWithoutAccountInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4364,6 +4717,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4379,6 +4733,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutAccountInput = {
@@ -4397,6 +4752,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4420,6 +4776,7 @@ export type SessionCreateManyTriggerInput = {
   origin?: $Enums.SessionOrigin
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4437,6 +4794,7 @@ export type SessionUpdateWithoutTriggerInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4456,6 +4814,7 @@ export type SessionUpdateWithoutTriggerInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4476,6 +4835,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4491,6 +4851,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTriggerInput = {
@@ -4509,6 +4870,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4533,6 +4895,7 @@ export type SessionCreateManyProjectInput = {
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
+  archivedAt?: Date | string | null
   lastSeq?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4549,6 +4912,7 @@ export type SessionUpdateWithoutProjectInput = {
   controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4569,6 +4933,7 @@ export type SessionUpdateWithoutProjectInput = {
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
 }
 
@@ -4589,6 +4954,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4603,6 +4969,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
   reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
+  pins?: Prisma.ThreadPinUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutProjectInput = {
@@ -4622,6 +4989,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4644,6 +5012,7 @@ export type SessionCountOutputType = {
   sentAttachments: number
   pullRequests: number
   reads: number
+  pins: number
 }
 
 export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4657,6 +5026,7 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   sentAttachments?: boolean | SessionCountOutputTypeCountSentAttachmentsArgs
   pullRequests?: boolean | SessionCountOutputTypeCountPullRequestsArgs
   reads?: boolean | SessionCountOutputTypeCountReadsArgs
+  pins?: boolean | SessionCountOutputTypeCountPinsArgs
 }
 
 /**
@@ -4739,6 +5109,13 @@ export type SessionCountOutputTypeCountReadsArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.ThreadReadWhereInput
 }
 
+/**
+ * SessionCountOutputType without action
+ */
+export type SessionCountOutputTypeCountPinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadPinWhereInput
+}
+
 
 export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4757,6 +5134,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
+  archivedAt?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -4779,6 +5157,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   sentAttachments?: boolean | Prisma.Session$sentAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Session$pullRequestsArgs<ExtArgs>
   reads?: boolean | Prisma.Session$readsArgs<ExtArgs>
+  pins?: boolean | Prisma.Session$pinsArgs<ExtArgs>
   task?: boolean | Prisma.Session$taskArgs<ExtArgs>
   project?: boolean | Prisma.Session$projectArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -4801,6 +5180,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
+  archivedAt?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -4834,6 +5214,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
+  archivedAt?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -4867,6 +5248,7 @@ export type SessionSelectScalar = {
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
+  archivedAt?: boolean
   lastSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -4874,7 +5256,7 @@ export type SessionSelectScalar = {
   projectId?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "triggerId" | "conversationKey" | "scheduleId" | "lastSeq" | "createdAt" | "updatedAt" | "taskId" | "projectId", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "createdAt" | "updatedAt" | "taskId" | "projectId", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -4893,6 +5275,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   sentAttachments?: boolean | Prisma.Session$sentAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Session$pullRequestsArgs<ExtArgs>
   reads?: boolean | Prisma.Session$readsArgs<ExtArgs>
+  pins?: boolean | Prisma.Session$pinsArgs<ExtArgs>
   task?: boolean | Prisma.Session$taskArgs<ExtArgs>
   project?: boolean | Prisma.Session$projectArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -4952,6 +5335,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * When each member last looked at it.
      */
     reads: Prisma.$ThreadReadPayload<ExtArgs>[]
+    /**
+     * The members who pinned it.
+     */
+    pins: Prisma.$ThreadPinPayload<ExtArgs>[]
     task: Prisma.$TaskPayload<ExtArgs> | null
     project: Prisma.$ProjectPayload<ExtArgs> | null
   }
@@ -4987,6 +5374,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      */
     conversationKey: string | null
     scheduleId: string | null
+    /**
+     * Set while archived: out of the sidebar for everyone. A new message brings it back.
+     */
+    archivedAt: Date | null
     /**
      * Highest contiguous event sequence number stored.
      */
@@ -5412,6 +5803,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   sentAttachments<T extends Prisma.Session$sentAttachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$sentAttachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pullRequests<T extends Prisma.Session$pullRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$pullRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reads<T extends Prisma.Session$readsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$readsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  pins<T extends Prisma.Session$pinsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$pinsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadPinPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   task<T extends Prisma.Session$taskArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$taskArgs<ExtArgs>>): Prisma.Prisma__TaskClient<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   project<T extends Prisma.Session$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
@@ -5459,6 +5851,7 @@ export interface SessionFieldRefs {
   readonly triggerId: Prisma.FieldRef<"Session", 'String'>
   readonly conversationKey: Prisma.FieldRef<"Session", 'String'>
   readonly scheduleId: Prisma.FieldRef<"Session", 'String'>
+  readonly archivedAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly lastSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Session", 'DateTime'>
@@ -6159,6 +6552,30 @@ export type Session$readsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.ThreadReadScalarFieldEnum | Prisma.ThreadReadScalarFieldEnum[]
+}
+
+/**
+ * Session.pins
+ */
+export type Session$pinsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadPin
+   */
+  select?: Prisma.ThreadPinSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadPin
+   */
+  omit?: Prisma.ThreadPinOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadPinInclude<ExtArgs> | null
+  where?: Prisma.ThreadPinWhereInput
+  orderBy?: Prisma.ThreadPinOrderByWithRelationInput | Prisma.ThreadPinOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadPinWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadPinScalarFieldEnum | Prisma.ThreadPinScalarFieldEnum[]
 }
 
 /**
