@@ -1,7 +1,25 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
 
+// Which build this is: the commit, else the time it was built. The pages carry it and
+// /version answers it, so a dashboard left open learns a new one was deployed.
+const buildId =
+  process.env.BRIGADE_BUILD_ID ||
+  (() => {
+    try {
+      return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim()
+    } catch {
+      return String(Date.now())
+    }
+  })()
+// Next loads this file again in its build workers: they must agree on the time.
+process.env.BRIGADE_BUILD_ID = buildId
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_BUILD_ID: buildId },
   // Dev tunnels that serve this dashboard (see apps/web/.env.local).
   allowedDevOrigins: (process.env.DEV_ORIGINS ?? '').split(',').filter(Boolean),
   // The VPS image (deploy/vps/Dockerfile) runs Next's own server, with the files it

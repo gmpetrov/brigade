@@ -59,6 +59,7 @@ import {
   useThreadPanel,
 } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
+import { UpdatePill } from '@/components/update-pill'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -762,6 +763,7 @@ function Inset({ children }: { children: ReactNode }) {
   return (
     // min-w-0: long unwrapped text inside a page must not widen it past the window.
     <SidebarInset className="min-w-0">
+      <UpdatePill header={expanded} />
       {!expanded && <TopBar />}
       {/* Before the document: a document opened over a docked thread covers it until closed. */}
       <ThreadPanel />
