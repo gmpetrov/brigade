@@ -87,6 +87,8 @@ type ThreadPanel = {
   activity: Record<string, TeammateActivity>
   /** Threads waiting on a person: an approval or an answer. */
   waiting: number
+  /** The latest active threads (up to 100), live: the sidebar lists them. */
+  threads?: ThreadSummary[]
   /** The new thread being written: closing the panel keeps it. */
   draft: ThreadDraft
   /** Changes each time the box should take the cursor. */
@@ -391,6 +393,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       close,
       activity,
       waiting,
+      threads: threadList,
       draft,
       focusKey,
       details,
@@ -420,6 +423,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       close,
       activity,
       waiting,
+      threadList,
       draft,
       focusKey,
       details,
