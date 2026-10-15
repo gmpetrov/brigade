@@ -28,13 +28,22 @@ import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
+import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
 import { SidebarWork } from '@/components/sidebar-threads'
 import { QuickThread } from '@/components/quick-thread'
 import {
@@ -168,6 +177,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
   const { theme = 'system', setTheme } = useTheme()
+  const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
   // Open pull requests and those waiting on a person, refreshed as the member moves around.
   const pullsWaiting = useApi<{ count: number; open: number }>('/pulls/attention')
   const reloadPulls = pullsWaiting.reload
@@ -262,10 +272,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     >
       <DocumentPanelProvider>
         <ThreadPanelProvider>
-          <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SidebarProvider
+            open={sidebarOpen}
+            onOpenChange={setSidebarOpen}
+            style={{ '--sidebar-width': `${sidebarWidth}px` } as CSSProperties}
+          >
             {/* Folds to a rail of icons (the top bar's button, ⌘B): projects, teammates and
                 settings then open as menus beside it. */}
             <Sidebar collapsible="icon">
+              <SidebarResizer width={sidebarWidth} onWidth={setSidebarWidth} />
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:block">
@@ -324,6 +339,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <NewThreadRailItem />
+                </SidebarMenu>
+                {/* Home, first: what waits and what runs, across the workspace. */}
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
+                      <Link href="/app">
+                        <House />
+                        <span>Home</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarHeader>
 
@@ -504,17 +530,16 @@ function NewThreadRailItem() {
 }
 
 /**
- * The pages that are not threads: the work (home, tickets, tasks…) and the workspace's
+ * The pages that are not threads or Home: the work (tickets, tasks…) and the workspace's
  * settings, in one menu above the member.
  */
 function MoreMenu({ badges }: { badges: Badges }) {
   const pathname = usePathname()
   const { isMobile, state } = useSidebar()
   const folded = state === 'collapsed' && !isMobile
-  const active = NAV.some(({ href }) =>
-    href === '/app' ? pathname === href : pathname.startsWith(href),
-  )
-  const waiting = WORK_NAV.some(({ href }) => badges[href]?.count && !badges[href]?.quiet)
+  const active = NAV.some(({ href }) => href !== '/app' && pathname.startsWith(href))
+  const work = WORK_NAV.filter(({ href }) => href !== '/app')
+  const waiting = work.some(({ href }) => badges[href]?.count && !badges[href]?.quiet)
   const item = ({ href, label, icon: Icon }: (typeof NAV)[number]) => {
     const badge = badges[href]
     return (
@@ -565,7 +590,7 @@ function MoreMenu({ badges }: { badges: Badges }) {
           align={folded ? 'end' : 'start'}
           className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
         >
-          {WORK_NAV.map(item)}
+          {work.map(item)}
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
             Workspace settings
