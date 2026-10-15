@@ -180,6 +180,7 @@ model Workspace {
   projectRepositories ProjectRepository[]
   auditEntries        AuditEntry[]
   designSystems       DesignSystem[]
+  skills              Skill[]
   previewRecipes      PreviewRecipe[]
   previewVariables    PreviewVariable[]
   threadReads         ThreadRead[]
@@ -1270,6 +1271,39 @@ model DesignSystem {
   projectIds     String[]  @default([])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+/// How the workspace does a kind of work, loaded by a teammate when the work
+/// calls for it: written into its harness's skills folder (SKILL.md) as each
+/// session starts. Its text is here, not in the library, so a thread gets it
+/// whole in its spec. A skill gives no access; grants stay where they are.
+model Skill {
+  id             String     @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// A slug: the folder name, and `/name` in the composer.
+  name           String
+  /// When to use it: what the teammate reads to decide.
+  description    String
+  instructions   String
+  /// Text files beside SKILL.md: [{ path, content }].
+  files          Json       @default("[]")
+  /// Every thread, or only those of the teammates and projects below.
+  everywhere     Boolean    @default(true)
+  teammateIds    String[]   @default([])
+  projectIds     String[]   @default([])
+  enabled        Boolean    @default(true)
+  /// Who wrote it, and who changed it last: a member, or a teammate whose proposal a member approved.
+  createdByType  ActorType
+  createdById    String
+  updatedByType  ActorType
+  updatedById    String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   @@unique([workspaceId, name])
   @@index([workspaceId])

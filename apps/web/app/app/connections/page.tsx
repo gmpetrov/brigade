@@ -6,6 +6,7 @@ import { CircleCheck, ExternalLink, ShieldCheck } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { ProviderTile } from '@/components/provider-logo'
+import { Skills } from '@/components/skills'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -284,6 +285,8 @@ function Connections() {
           </Card>
         )}
       </section>
+
+      <Skills admin={admin} />
 
       {admin && (
         <Card className="gap-4 border-dashed p-5 shadow-none">

@@ -6,6 +6,7 @@ import type { ScopedDb } from './db.js'
 import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { threadDesignSystems } from './designs.js'
+import { threadSkills } from './skills.js'
 import { gitAccess } from './git.js'
 import { folderRules } from './library-folders.js'
 import { projectCatalog, threadProject } from './projects.js'
@@ -92,6 +93,7 @@ export async function specFor(
     rules,
     attachments,
     designSystems,
+    skills,
     project,
     projects,
     [imageAccount],
@@ -111,6 +113,7 @@ export async function specFor(
     folderRules(db),
     threadAttachments(db, thread.id),
     threadDesignSystems(db, teammate.id, thread.projectId),
+    threadSkills(db, teammate.id, thread.projectId),
     threadProject(db, thread.projectId),
     projectCatalog(db),
     teammate.harness === 'codex'
@@ -167,6 +170,7 @@ export async function specFor(
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
     designSystems,
+    skills,
     project,
     projects,
     // A GitHub grant also reaches its repositories through git, via the API's proxy.

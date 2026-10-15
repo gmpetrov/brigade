@@ -91,6 +91,7 @@ export const ModelName = {
   Attachment: 'Attachment',
   ThreadAttachment: 'ThreadAttachment',
   DesignSystem: 'DesignSystem',
+  Skill: 'Skill',
   PreviewRecipe: 'PreviewRecipe',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
@@ -798,6 +799,29 @@ export const DesignSystemScalarFieldEnum = {
 } as const
 
 export type DesignSystemScalarFieldEnum = (typeof DesignSystemScalarFieldEnum)[keyof typeof DesignSystemScalarFieldEnum]
+
+
+export const SkillScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  instructions: 'instructions',
+  files: 'files',
+  everywhere: 'everywhere',
+  teammateIds: 'teammateIds',
+  projectIds: 'projectIds',
+  enabled: 'enabled',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  updatedByType: 'updatedByType',
+  updatedById: 'updatedById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SkillScalarFieldEnum = (typeof SkillScalarFieldEnum)[keyof typeof SkillScalarFieldEnum]
 
 
 export const PreviewRecipeScalarFieldEnum = {

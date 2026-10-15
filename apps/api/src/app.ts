@@ -18,6 +18,7 @@ import { connections } from './routes/connections.js'
 import { credentials } from './routes/credentials.js'
 import { designs, designSystems } from './routes/designs.js'
 import { security } from './routes/security.js'
+import { skills } from './routes/skills.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
@@ -86,6 +87,7 @@ app.route('/api/projects', projects)
 app.route('/api/library/assets', documentAssets)
 app.route('/api/library', library)
 app.route('/api/design-systems', designSystems)
+app.route('/api/skills', skills)
 app.route('/api/designs', designs)
 app.route('/api/attachments', attachments)
 app.route('/api/repositories', repositories)

@@ -18,6 +18,10 @@ import {
   DesignManifest,
   designOptionsOf,
   Choices,
+  parseSkillMarkdown,
+  PROPOSE_SKILL_TOOL,
+  SKILL_ENTRY,
+  SkillContent,
   TeamProposal,
   Widget,
   WIDGET_GUIDE_TOOL,
@@ -26,6 +30,7 @@ import {
   type DesignPersonEdit,
   type TeammateDesignSystem,
   type ScheduleOperation,
+  type SkillProposal,
   type TaskOperation,
 } from '@brigade/contracts'
 import { errorMessage } from './events.js'
@@ -650,6 +655,7 @@ export type LibraryCaller = (call: {
     | { name: 'save'; path: string; content: string }
     | { name: 'design_system'; designSystem: TeammateDesignSystem }
     | { name: 'design_edits'; path: string }
+    | { name: 'skill_proposal'; proposal: SkillProposal }
   toolCallId: string
   toolName: string
   input: unknown
@@ -748,6 +754,82 @@ export function libraryTools(options: {
       },
     }),
   }
+  // Any teammate may propose; an admin decides in a ticket, so nothing waits on the answer.
+  tools[PROPOSE_SKILL_TOOL] = tool({
+    description:
+      'Propose a skill for the workspace, or a change to one: how to do a kind of work, for teammates to follow ' +
+      'when the work calls for it. Write its folder on this computer first: a SKILL.md (YAML frontmatter with ' +
+      '`name`, lowercase words joined by hyphens, and `description`, when to use it; then the steps) and the text ' +
+      'files it points to. To change a skill, propose it whole under its name. An admin approves it in a ticket; it ' +
+      'applies to threads that start after that. Do not wait for the answer.',
+    inputSchema: jsonSchema<{ folder: string; reason?: string }>({
+      type: 'object',
+      properties: {
+        folder: {
+          type: 'string',
+          description: 'The skill folder on this computer, with its SKILL.md',
+        },
+        reason: {
+          type: 'string',
+          description:
+            'For the admin: the work it comes from and why it is worth keeping, in a line or two',
+        },
+      },
+      required: ['folder'],
+    }),
+    execute: async (input, { toolCallId }) => {
+      const folder = input.folder.replace(/\/+$/, '')
+      const paths = await folderFiles(folder)
+      if (!paths.includes(SKILL_ENTRY)) throw new Error(`${folder} has no ${SKILL_ENTRY}`)
+      const decoder = new TextDecoder('utf-8', { fatal: true })
+      const text = (bytes: Buffer) => {
+        if (bytes.includes(0)) return null
+        try {
+          return decoder.decode(bytes)
+        } catch {
+          return null
+        }
+      }
+      const entry = text(await options.readFile(`${folder}/${SKILL_ENTRY}`))
+      if (entry === null) throw new Error(`${SKILL_ENTRY} is not text`)
+      const parsed = parseSkillMarkdown(entry)
+      const files: { path: string; content: string }[] = []
+      const skipped: string[] = []
+      for (const path of paths) {
+        if (path === SKILL_ENTRY) continue
+        const content = text(await options.readFile(`${folder}/${path}`))
+        if (content === null) skipped.push(path)
+        else files.push({ path, content })
+      }
+      const skill = SkillContent.safeParse({
+        name: parsed.name ?? '',
+        description: parsed.description ?? '',
+        instructions: parsed.instructions,
+        files,
+      })
+      if (!skill.success)
+        throw new Error(
+          `Not a skill yet: ${skill.error.issues.map((i) => `${i.path.join('.') || 'skill'}: ${i.message}`).join('; ')}`,
+        )
+      const result = (await options.call({
+        operation: {
+          name: 'skill_proposal',
+          proposal: { skill: skill.data, reason: input.reason?.trim().slice(0, 1000) ?? '' },
+        },
+        toolCallId,
+        toolName: PROPOSE_SKILL_TOOL,
+        input,
+      })) as { ticketId: string; change: boolean }
+      return {
+        ...result,
+        name: skill.data.name,
+        files: files.length,
+        ...(skipped.length > 0 ? { skipped: `Left out (not text): ${skipped.join(', ')}` } : {}),
+        status:
+          'Proposed. An admin approves it in a ticket; it applies to threads that start after that. Go on with your work.',
+      }
+    },
+  })
   if (options.access === 'read_write' || options.folders?.some((f) => f.access === 'read_write')) {
     tools.save_to_library = tool({
       description:

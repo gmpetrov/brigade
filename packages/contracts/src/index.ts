@@ -17,6 +17,7 @@ export * from './repositories.js'
 export * from './runner.js'
 export * from './schedules.js'
 export * from './search.js'
+export * from './skills.js'
 export * from './tasks.js'
 export * from './thread-history.js'
 
@@ -33,8 +34,9 @@ export * from './thread-history.js'
  * 17: people start previews without a turn (preview.start); previews report their steps and checks.
  * 18: the chief: its kind and roster in the spec, handoffs to teammates not yet in the thread.
  * 19: heartbeats, so the API can tell a runner that is gone from a quiet one.
+ * 20: skills in the spec (written into the harness's skills folder) and skill proposals.
  */
-export const PROTOCOL_VERSION = 19
+export const PROTOCOL_VERSION = 20
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /**

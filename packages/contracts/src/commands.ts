@@ -3,7 +3,7 @@
 // verb (what to make), where a mention (`@`) names a thing. The message keeps
 // the command as written, so the thread shows it as a label; the teammate reads
 // it in words (`commandPrompt`), as harnesses take a leading `/` for their own
-// commands.
+// commands. A workspace skill is a command too: `/release-notes for 2.4`.
 
 export const MESSAGE_COMMANDS = {
   visual: {
@@ -39,9 +39,28 @@ export function messageCommand(text: string): { command: MessageCommand; rest: s
   return { command: m[1] as MessageCommand, rest: text.slice(m[0].length).replace(/^\n+/, '') }
 }
 
-/** The message as the teammate reads it: its command, if any, in words before the rest. */
-export function commandPrompt(text: string) {
+const SKILL_COMMAND = /^\/([a-z0-9]+(?:-[a-z0-9]+)*)(?=\s|$)[ \t]*/
+
+/**
+ * The workspace skill a message starts with (`/release-notes for 2.4`), when
+ * one has that name. The commands above come first; no skill takes their names.
+ */
+export function skillCommand(
+  text: string,
+  skills: readonly string[],
+): { skill: string; rest: string } | null {
+  if (messageCommand(text)) return null
+  const m = SKILL_COMMAND.exec(text)
+  if (!m || !skills.includes(m[1]!)) return null
+  return { skill: m[1]!, rest: text.slice(m[0].length).replace(/^\n+/, '') }
+}
+
+/** The message as the teammate reads it: its command or skill, if any, in words before the rest. */
+export function commandPrompt(text: string, skills: readonly string[] = []) {
   const found = messageCommand(text)
-  if (!found) return text
-  return [MESSAGE_COMMANDS[found.command].ask, found.rest].filter(Boolean).join('\n\n')
+  if (found) return [MESSAGE_COMMANDS[found.command].ask, found.rest].filter(Boolean).join('\n\n')
+  const skill = skillCommand(text, skills)
+  if (!skill) return text
+  const ask = `The person asked for the skill ${skill.skill} (/${skill.skill}): read it and follow it.`
+  return [ask, skill.rest].filter(Boolean).join('\n\n')
 }

@@ -25,7 +25,6 @@ import {
   type ReplyTo,
   type SequencedEvent,
   type TicketAnswer,
-  messageCommand,
 } from '@brigade/contracts'
 import {
   AppWindow,
@@ -54,7 +53,7 @@ import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
-import { CommandChip } from '@/components/composer'
+import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
 import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
@@ -1176,11 +1175,12 @@ export function ThreadItems({
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
+  const skillNames = useSkillCommands().map((s) => s.name)
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
-        // A command it starts with (/design) is a label above it: what was asked for.
-        const asked = messageCommand(item.text)
+        // A command it starts with (/design, a skill) is a label above it: what was asked for.
+        const asked = startingCommand(item.text, skillNames)
         const text = asked ? asked.rest : item.text
         return (
           <div

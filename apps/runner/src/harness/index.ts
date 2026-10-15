@@ -26,8 +26,9 @@ import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
-import { instructions, writeInstructions } from '../instructions.js'
+import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
+import { writeSkills } from '../skills.js'
 import { containerEnv, ensureUser, linkAccount, teammateHome } from '../teammates.js'
 import { harnessEnv } from './env.js'
 import {
@@ -729,6 +730,13 @@ export class HarnessThread {
       ),
       this.runAs,
     ).catch((error) => console.warn(`could not write instructions: ${errorMessage(error)}`))
+    // Skills through the harness's own skills folder: Brigade's, then the workspace's.
+    await writeSkills(
+      this.workDir,
+      this.spec,
+      [...builtinSkills(this.spec, libraryDir), ...(this.spec.skills ?? [])],
+      this.runAs,
+    ).catch((error) => console.warn(`could not write skills: ${errorMessage(error)}`))
     const credentials = new ThreadCredentials({
       sessionId: this.spec.sessionId,
       request: this.requestCredential,

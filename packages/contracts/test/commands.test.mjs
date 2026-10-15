@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { commandPrompt, messageCommand } from '../dist/commands.js'
+import { commandPrompt, messageCommand, skillCommand } from '../dist/commands.js'
 
 test('reads the command a message starts with', () => {
   assert.deepEqual(messageCommand('/design a pricing page'), {
@@ -24,6 +24,21 @@ test('the teammate reads the command in words, never a leading slash', () => {
   assert.match(prompt, /^The person asked for a design \(\/design\)/)
   assert.ok(prompt.endsWith('\n\na pricing page for @[acme](repository:acme/web)'))
   assert.equal(commandPrompt('no command here'), 'no command here')
+})
+
+test('a workspace skill is a command, by its name', () => {
+  const skills = ['release-notes', 'triage']
+  assert.deepEqual(skillCommand('/release-notes for 2.4', skills), {
+    skill: 'release-notes',
+    rest: 'for 2.4',
+  })
+  assert.deepEqual(skillCommand('/triage', skills), { skill: 'triage', rest: '' })
+  for (const text of ['/release-notes-old', '/unknown do it', 'use /triage', '/design a page'])
+    assert.equal(skillCommand(text, skills), null, text)
+  const prompt = commandPrompt('/release-notes for 2.4', skills)
+  assert.match(prompt, /^The person asked for the skill release-notes \(\/release-notes\)/)
+  assert.ok(prompt.endsWith('\n\nfor 2.4'))
+  assert.equal(commandPrompt('/release-notes for 2.4'), '/release-notes for 2.4')
 })
 
 test('/image asks for the image tool', () => {
