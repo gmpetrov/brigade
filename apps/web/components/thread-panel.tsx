@@ -340,6 +340,25 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   // The thread last open with each teammate, docked or expanded, for the sidebar to go back to.
   const [lastThreads, setLastThreads] = useState(readLastThreads)
   const threadList = threads.data
+  // The thread shown here is read by this member: as it opens, and again each time a reply
+  // comes in while it shows in a tab in front. The sidebar then shows it read.
+  const [inFront, setInFront] = useState(true)
+  useEffect(() => {
+    const check = () => setInFront(document.visibilityState === 'visible')
+    check()
+    document.addEventListener('visibilitychange', check)
+    return () => document.removeEventListener('visibilitychange', check)
+  }, [])
+  const showing = (expanded || open) && inFront ? threadId : null
+  const unreadShowing = !!threadList?.find((t) => t.id === showing)?.unread
+  const readFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!showing || (readFor.current === showing && !unreadShowing)) return
+    readFor.current = showing
+    api(`/threads/${showing}/read`, { method: 'POST' })
+      .then(() => reloadThreads())
+      .catch(() => {})
+  }, [showing, unreadShowing, reloadThreads])
   useEffect(() => {
     const lead = threadId && threadList?.find((t) => t.id === threadId)?.teammate.id
     if (!lead || lastThreads[lead] === threadId) return

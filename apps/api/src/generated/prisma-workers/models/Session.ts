@@ -360,6 +360,7 @@ export type SessionWhereInput = {
   attachments?: Prisma.ThreadAttachmentListRelationFilter
   sentAttachments?: Prisma.AttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
+  reads?: Prisma.ThreadReadListRelationFilter
   task?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
 }
@@ -402,6 +403,7 @@ export type SessionOrderByWithRelationInput = {
   attachments?: Prisma.ThreadAttachmentOrderByRelationAggregateInput
   sentAttachments?: Prisma.AttachmentOrderByRelationAggregateInput
   pullRequests?: Prisma.PullRequestOrderByRelationAggregateInput
+  reads?: Prisma.ThreadReadOrderByRelationAggregateInput
   task?: Prisma.TaskOrderByWithRelationInput
   project?: Prisma.ProjectOrderByWithRelationInput
 }
@@ -447,6 +449,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   attachments?: Prisma.ThreadAttachmentListRelationFilter
   sentAttachments?: Prisma.AttachmentListRelationFilter
   pullRequests?: Prisma.PullRequestListRelationFilter
+  reads?: Prisma.ThreadReadListRelationFilter
   task?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
 }, "id" | "taskId">
@@ -536,6 +539,7 @@ export type SessionCreateInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -571,6 +575,7 @@ export type SessionUncheckedCreateInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionUpdateInput = {
@@ -602,6 +607,7 @@ export type SessionUpdateInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -637,6 +643,7 @@ export type SessionUncheckedUpdateInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateManyInput = {
@@ -710,6 +717,11 @@ export type SessionListRelationFilter = {
 
 export type SessionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type SessionScalarRelationFilter = {
+  is?: Prisma.SessionWhereInput
+  isNot?: Prisma.SessionWhereInput
 }
 
 export type SessionCountOrderByAggregateInput = {
@@ -795,11 +807,6 @@ export type SessionSumOrderByAggregateInput = {
 export type SessionNullableScalarRelationFilter = {
   is?: Prisma.SessionWhereInput | null
   isNot?: Prisma.SessionWhereInput | null
-}
-
-export type SessionScalarRelationFilter = {
-  is?: Prisma.SessionWhereInput
-  isNot?: Prisma.SessionWhereInput
 }
 
 export type SessionCreateNestedManyWithoutStartedByInput = {
@@ -968,6 +975,20 @@ export type SessionUncheckedUpdateManyWithoutTeammateNestedInput = {
   update?: Prisma.SessionUpdateWithWhereUniqueWithoutTeammateInput | Prisma.SessionUpdateWithWhereUniqueWithoutTeammateInput[]
   updateMany?: Prisma.SessionUpdateManyWithWhereWithoutTeammateInput | Prisma.SessionUpdateManyWithWhereWithoutTeammateInput[]
   deleteMany?: Prisma.SessionScalarWhereInput | Prisma.SessionScalarWhereInput[]
+}
+
+export type SessionCreateNestedOneWithoutReadsInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutReadsInput, Prisma.SessionUncheckedCreateWithoutReadsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutReadsInput
+  connect?: Prisma.SessionWhereUniqueInput
+}
+
+export type SessionUpdateOneRequiredWithoutReadsNestedInput = {
+  create?: Prisma.XOR<Prisma.SessionCreateWithoutReadsInput, Prisma.SessionUncheckedCreateWithoutReadsInput>
+  connectOrCreate?: Prisma.SessionCreateOrConnectWithoutReadsInput
+  upsert?: Prisma.SessionUpsertWithoutReadsInput
+  connect?: Prisma.SessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SessionUpdateToOneWithWhereWithoutReadsInput, Prisma.SessionUpdateWithoutReadsInput>, Prisma.SessionUncheckedUpdateWithoutReadsInput>
 }
 
 export type EnumSessionStatusFieldUpdateOperationsInput = {
@@ -1348,6 +1369,7 @@ export type SessionCreateWithoutStartedByInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1382,6 +1404,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutStartedByInput = {
@@ -1465,6 +1488,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1499,6 +1523,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutWorkspaceInput = {
@@ -1555,6 +1580,7 @@ export type SessionCreateWithoutComputerInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1589,6 +1615,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutComputerInput = {
@@ -1645,6 +1672,7 @@ export type SessionCreateWithoutTeammateInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1679,6 +1707,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammateInput = {
@@ -1705,6 +1734,154 @@ export type SessionUpdateWithWhereUniqueWithoutTeammateInput = {
 export type SessionUpdateManyWithWhereWithoutTeammateInput = {
   where: Prisma.SessionScalarWhereInput
   data: Prisma.XOR<Prisma.SessionUpdateManyMutationInput, Prisma.SessionUncheckedUpdateManyWithoutTeammateInput>
+}
+
+export type SessionCreateWithoutReadsInput = {
+  id?: string
+  organizationId: string
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  conversationKey?: string | null
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
+  startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
+  computer: Prisma.ComputerCreateNestedOneWithoutSessionsInput
+  account?: Prisma.AccountCreateNestedOneWithoutSessionsInput
+  trigger?: Prisma.TriggerCreateNestedOneWithoutSessionsInput
+  schedule?: Prisma.ScheduleCreateNestedOneWithoutSessionsInput
+  events?: Prisma.SessionEventCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  task?: Prisma.TaskCreateNestedOneWithoutSessionInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
+}
+
+export type SessionUncheckedCreateWithoutReadsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  startedByMemberId: string
+  computerId: string
+  accountId?: string | null
+  title: string
+  status?: $Enums.SessionStatus
+  private?: boolean
+  othersMayPrompt?: boolean
+  controlledByMemberId?: string | null
+  origin?: $Enums.SessionOrigin
+  triggerId?: string | null
+  conversationKey?: string | null
+  scheduleId?: string | null
+  lastSeq?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  taskId?: string | null
+  projectId?: string | null
+  events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
+  teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutSessionInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutSessionInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutSessionInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
+  attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
+  sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+}
+
+export type SessionCreateOrConnectWithoutReadsInput = {
+  where: Prisma.SessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.SessionCreateWithoutReadsInput, Prisma.SessionUncheckedCreateWithoutReadsInput>
+}
+
+export type SessionUpsertWithoutReadsInput = {
+  update: Prisma.XOR<Prisma.SessionUpdateWithoutReadsInput, Prisma.SessionUncheckedUpdateWithoutReadsInput>
+  create: Prisma.XOR<Prisma.SessionCreateWithoutReadsInput, Prisma.SessionUncheckedCreateWithoutReadsInput>
+  where?: Prisma.SessionWhereInput
+}
+
+export type SessionUpdateToOneWithWhereWithoutReadsInput = {
+  where?: Prisma.SessionWhereInput
+  data: Prisma.XOR<Prisma.SessionUpdateWithoutReadsInput, Prisma.SessionUncheckedUpdateWithoutReadsInput>
+}
+
+export type SessionUpdateWithoutReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
+  startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
+  computer?: Prisma.ComputerUpdateOneRequiredWithoutSessionsNestedInput
+  account?: Prisma.AccountUpdateOneWithoutSessionsNestedInput
+  trigger?: Prisma.TriggerUpdateOneWithoutSessionsNestedInput
+  schedule?: Prisma.ScheduleUpdateOneWithoutSessionsNestedInput
+  events?: Prisma.SessionEventUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
+}
+
+export type SessionUncheckedUpdateWithoutReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  startedByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  computerId?: Prisma.StringFieldUpdateOperationsInput | string
+  accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  private?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  othersMayPrompt?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  controlledByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  origin?: Prisma.EnumSessionOriginFieldUpdateOperationsInput | $Enums.SessionOrigin
+  triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
+  teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutSessionNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutSessionNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutSessionNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
+  attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTaskInput = {
@@ -1736,6 +1913,7 @@ export type SessionCreateWithoutTaskInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
 
@@ -1769,6 +1947,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTaskInput = {
@@ -1816,6 +1995,7 @@ export type SessionUpdateWithoutTaskInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
 
@@ -1849,6 +2029,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutScheduleInput = {
@@ -1879,6 +2060,7 @@ export type SessionCreateWithoutScheduleInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -1913,6 +2095,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutScheduleInput = {
@@ -1969,6 +2152,7 @@ export type SessionCreateWithoutTeammatesInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2003,6 +2187,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTeammatesInput = {
@@ -2049,6 +2234,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2083,6 +2269,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutEventsInput = {
@@ -2113,6 +2300,7 @@ export type SessionCreateWithoutEventsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2147,6 +2335,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutEventsInput = {
@@ -2193,6 +2382,7 @@ export type SessionUpdateWithoutEventsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2227,6 +2417,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAccountInput = {
@@ -2257,6 +2448,7 @@ export type SessionCreateWithoutAccountInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2291,6 +2483,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAccountInput = {
@@ -2347,6 +2540,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2381,6 +2575,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutPullRequestsInput = {
@@ -2427,6 +2622,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2461,6 +2657,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutCommentsInput = {
@@ -2491,6 +2688,7 @@ export type SessionCreateWithoutCommentsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2525,6 +2723,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutCommentsInput = {
@@ -2571,6 +2770,7 @@ export type SessionUpdateWithoutCommentsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2605,6 +2805,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutConnectionCallsInput = {
@@ -2635,6 +2836,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2669,6 +2871,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutConnectionCallsInput = {
@@ -2715,6 +2918,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2749,6 +2953,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutTriggerInput = {
@@ -2779,6 +2984,7 @@ export type SessionCreateWithoutTriggerInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2813,6 +3019,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTriggerInput = {
@@ -2869,6 +3076,7 @@ export type SessionCreateWithoutTicketsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -2903,6 +3111,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutTicketsInput = {
@@ -2949,6 +3158,7 @@ export type SessionUpdateWithoutTicketsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -2983,6 +3193,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutDocumentsInput = {
@@ -3013,6 +3224,7 @@ export type SessionCreateWithoutDocumentsInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3047,6 +3259,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutDocumentsInput = {
@@ -3093,6 +3306,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3127,6 +3341,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutSentAttachmentsInput = {
@@ -3157,6 +3372,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3191,6 +3407,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutSentAttachmentsInput = {
@@ -3237,6 +3454,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3271,6 +3489,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutAttachmentsInput = {
@@ -3301,6 +3520,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   documents?: Prisma.DocumentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
   project?: Prisma.ProjectCreateNestedOneWithoutSessionsInput
 }
@@ -3335,6 +3555,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutAttachmentsInput = {
@@ -3381,6 +3602,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   documents?: Prisma.DocumentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3415,6 +3637,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionCreateWithoutProjectInput = {
@@ -3446,6 +3669,7 @@ export type SessionCreateWithoutProjectInput = {
   attachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadCreateNestedManyWithoutSessionInput
   task?: Prisma.TaskCreateNestedOneWithoutSessionInput
 }
 
@@ -3479,6 +3703,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutSessionInput
   sentAttachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutSessionInput
   pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutSessionInput
+  reads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutSessionInput
 }
 
 export type SessionCreateOrConnectWithoutProjectInput = {
@@ -3558,6 +3783,7 @@ export type SessionUpdateWithoutStartedByInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3592,6 +3818,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutStartedByInput = {
@@ -3668,6 +3895,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3702,6 +3930,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -3778,6 +4007,7 @@ export type SessionUpdateWithoutComputerInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3812,6 +4042,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutComputerInput = {
@@ -3888,6 +4119,7 @@ export type SessionUpdateWithoutTeammateInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -3922,6 +4154,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTeammateInput = {
@@ -3998,6 +4231,7 @@ export type SessionUpdateWithoutScheduleInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4032,6 +4266,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutScheduleInput = {
@@ -4108,6 +4343,7 @@ export type SessionUpdateWithoutAccountInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4142,6 +4378,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutAccountInput = {
@@ -4218,6 +4455,7 @@ export type SessionUpdateWithoutTriggerInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSessionsNestedInput
 }
@@ -4252,6 +4490,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutTriggerInput = {
@@ -4329,6 +4568,7 @@ export type SessionUpdateWithoutProjectInput = {
   attachments?: Prisma.ThreadAttachmentUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUpdateManyWithoutSessionNestedInput
   task?: Prisma.TaskUpdateOneWithoutSessionNestedInput
 }
 
@@ -4362,6 +4602,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   attachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutSessionNestedInput
   sentAttachments?: Prisma.AttachmentUncheckedUpdateManyWithoutSessionNestedInput
   pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutSessionNestedInput
+  reads?: Prisma.ThreadReadUncheckedUpdateManyWithoutSessionNestedInput
 }
 
 export type SessionUncheckedUpdateManyWithoutProjectInput = {
@@ -4402,6 +4643,7 @@ export type SessionCountOutputType = {
   attachments: number
   sentAttachments: number
   pullRequests: number
+  reads: number
 }
 
 export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4414,6 +4656,7 @@ export type SessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   attachments?: boolean | SessionCountOutputTypeCountAttachmentsArgs
   sentAttachments?: boolean | SessionCountOutputTypeCountSentAttachmentsArgs
   pullRequests?: boolean | SessionCountOutputTypeCountPullRequestsArgs
+  reads?: boolean | SessionCountOutputTypeCountReadsArgs
 }
 
 /**
@@ -4489,6 +4732,13 @@ export type SessionCountOutputTypeCountPullRequestsArgs<ExtArgs extends runtime.
   where?: Prisma.PullRequestWhereInput
 }
 
+/**
+ * SessionCountOutputType without action
+ */
+export type SessionCountOutputTypeCountReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadReadWhereInput
+}
+
 
 export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4528,6 +4778,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   attachments?: boolean | Prisma.Session$attachmentsArgs<ExtArgs>
   sentAttachments?: boolean | Prisma.Session$sentAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Session$pullRequestsArgs<ExtArgs>
+  reads?: boolean | Prisma.Session$readsArgs<ExtArgs>
   task?: boolean | Prisma.Session$taskArgs<ExtArgs>
   project?: boolean | Prisma.Session$projectArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -4641,6 +4892,7 @@ export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   attachments?: boolean | Prisma.Session$attachmentsArgs<ExtArgs>
   sentAttachments?: boolean | Prisma.Session$sentAttachmentsArgs<ExtArgs>
   pullRequests?: boolean | Prisma.Session$pullRequestsArgs<ExtArgs>
+  reads?: boolean | Prisma.Session$readsArgs<ExtArgs>
   task?: boolean | Prisma.Session$taskArgs<ExtArgs>
   project?: boolean | Prisma.Session$projectArgs<ExtArgs>
   _count?: boolean | Prisma.SessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -4696,6 +4948,10 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Pull requests opened from this thread; their review loop runs here.
      */
     pullRequests: Prisma.$PullRequestPayload<ExtArgs>[]
+    /**
+     * When each member last looked at it.
+     */
+    reads: Prisma.$ThreadReadPayload<ExtArgs>[]
     task: Prisma.$TaskPayload<ExtArgs> | null
     project: Prisma.$ProjectPayload<ExtArgs> | null
   }
@@ -5155,6 +5411,7 @@ export interface Prisma__SessionClient<T, Null = never, ExtArgs extends runtime.
   attachments<T extends Prisma.Session$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sentAttachments<T extends Prisma.Session$sentAttachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$sentAttachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pullRequests<T extends Prisma.Session$pullRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$pullRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reads<T extends Prisma.Session$readsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$readsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   task<T extends Prisma.Session$taskArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$taskArgs<ExtArgs>>): Prisma.Prisma__TaskClient<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   project<T extends Prisma.Session$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Session$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
@@ -5878,6 +6135,30 @@ export type Session$pullRequestsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.PullRequestScalarFieldEnum | Prisma.PullRequestScalarFieldEnum[]
+}
+
+/**
+ * Session.reads
+ */
+export type Session$readsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadRead
+   */
+  select?: Prisma.ThreadReadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadRead
+   */
+  omit?: Prisma.ThreadReadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadReadInclude<ExtArgs> | null
+  where?: Prisma.ThreadReadWhereInput
+  orderBy?: Prisma.ThreadReadOrderByWithRelationInput | Prisma.ThreadReadOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadReadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadReadScalarFieldEnum | Prisma.ThreadReadScalarFieldEnum[]
 }
 
 /**

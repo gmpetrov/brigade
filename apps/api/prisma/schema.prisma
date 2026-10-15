@@ -112,6 +112,7 @@ model Member {
   sessions       Session[]
   tasks          Task[]
   schedules      Schedule[]
+  threadReads    ThreadRead[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -176,6 +177,7 @@ model Workspace {
   designSystems       DesignSystem[]
   previewRecipes      PreviewRecipe[]
   previewVariables    PreviewVariable[]
+  threadReads         ThreadRead[]
 
   @@index([organizationId])
 }
@@ -307,6 +309,21 @@ enum SessionStatus {
   done
 }
 
+/// When a member last looked at a thread: a teammate's reply after it is unread for them.
+model ThreadRead {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seenAt         DateTime  @default(now())
+
+  @@id([memberId, sessionId])
+  @@index([sessionId])
+}
+
 /// A thread: one conversation with one teammate, one harness session.
 enum SessionOrigin {
   member
@@ -359,6 +376,8 @@ model Session {
   sentAttachments      Attachment[]
   /// Pull requests opened from this thread; their review loop runs here.
   pullRequests         PullRequest[]
+  /// When each member last looked at it.
+  reads                ThreadRead[]
   /// The task this thread works on. One thread per task for now.
   taskId               String?            @unique
   task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)

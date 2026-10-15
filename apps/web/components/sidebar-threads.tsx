@@ -55,10 +55,23 @@ const LABELS: Record<string, string> = {
   running: 'working',
 }
 
-/** A thread's status as a shape and a colour, its word on hover. */
-export function ThreadStatusIcon({ status, className }: { status: string; className?: string }) {
-  const label = LABELS[status] ?? status
+/**
+ * A thread's status as a dot, its word on hover: violet while a teammate works, orange when
+ * it waits on a person, red when it failed. Otherwise grey: filled while a reply is unread,
+ * a ring once read.
+ */
+export function ThreadStatusIcon({
+  status,
+  unread = false,
+  className,
+}: {
+  status: string
+  unread?: boolean
+  className?: string
+}) {
   const group = groupOf(status)
+  const label =
+    (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
   return (
     <span
       role="img"
@@ -67,13 +80,13 @@ export function ThreadStatusIcon({ status, className }: { status: string; classN
       className={cn('flex size-4 shrink-0 items-center justify-center', className)}
     >
       {group === 'working' ? (
-        <span className="border-primary size-3 animate-spin rounded-full border-2 border-t-transparent" />
+        <span className="bg-primary ring-primary/25 size-2 rounded-full ring-[3px]" />
       ) : group === 'waiting' ? (
         <span className="bg-warning ring-warning/25 size-2 rounded-full ring-[3px]" />
       ) : status === 'failed' ? (
         <span className="bg-destructive size-2 rounded-full" />
-      ) : status === 'done' ? (
-        <span className="bg-success size-2 rounded-full" />
+      ) : unread ? (
+        <span className="bg-muted-foreground size-2 rounded-full" />
       ) : (
         <span className="border-muted-foreground/70 size-2 rounded-full border-[1.5px]" />
       )}
@@ -95,21 +108,10 @@ function shortAgo(iso: string) {
 const inThread = (t: ThreadSummary, teammateId: string) =>
   t.teammate.id === teammateId || !!t.teammates?.some((p) => p.teammate.id === teammateId)
 
-/** What waits on a person and whether anything is working, among some threads. */
-function signalsOf(threads: ThreadSummary[]) {
-  let waiting = 0
-  let working = false
-  for (const t of threads) {
-    const group = groupOf(t.status)
-    if (group === 'waiting') waiting++
-    else if (group === 'working') working = true
-  }
-  return { waiting, working }
-}
-
+/** How many of some threads wait on a person: beside a teammate or project. */
 function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHover?: boolean }) {
-  const { waiting, working } = signalsOf(threads)
-  if (!waiting && !working) return null
+  const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
+  if (!waiting) return null
   return (
     <span
       className={cn(
@@ -117,13 +119,8 @@ function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHov
         hideOnHover && 'group-hover/menu-item:opacity-0',
       )}
     >
-      {working && <ThreadStatusIcon status="running" />}
-      {waiting > 0 && (
-        <>
-          <ThreadStatusIcon status="waiting" />
-          <span className="text-warning font-semibold">{waiting}</span>
-        </>
-      )}
+      <ThreadStatusIcon status="waiting" />
+      <span className="text-warning font-semibold">{waiting}</span>
     </span>
   )
 }
@@ -445,7 +442,7 @@ export function SidebarWork({
                         isActive={threadId === t.id && (expanded || pathname === href)}
                       >
                         <Link href={href} title={title}>
-                          <ThreadStatusIcon status={t.status} />
+                          <ThreadStatusIcon status={t.status} unread={t.unread} />
                           <span className="flex-1 truncate">{title}</span>
                           <span
                             className={cn(

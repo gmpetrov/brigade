@@ -264,6 +264,8 @@ export type ThreadSummary = {
   lastReplyAt: string | null
   /** Its open pull requests that wait on a person: to review and merge, or stuck. */
   pullsWaiting?: number
+  /** A teammate replied since this member last looked at it. */
+  unread?: boolean
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {

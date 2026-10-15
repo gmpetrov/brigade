@@ -108,6 +108,13 @@ function mayPrompt(
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
 }
 
+/**
+ * Unread for a member: a teammate finished a turn after they last looked, or since it
+ * started when they never have.
+ */
+const unread = (lastTurnAt: Date | null | undefined, seenAt: Date | undefined) =>
+  !!lastTurnAt && (!seenAt || lastTurnAt > seenAt)
+
 export const threads = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
@@ -174,6 +181,13 @@ export const threads = new Hono<AppEnv>()
           _count: { _all: true },
         })
       : []
+    // When this member last looked at each: a teammate's turn after it is unread for them.
+    const reads = rows.length
+      ? await c.var.db.threadRead.findMany({
+          where: { memberId: c.var.scope.memberId, sessionId: { in: rows.map((r) => r.id) } },
+          select: { sessionId: true, seenAt: true },
+        })
+      : []
     return c.json(
       rows.map((row) => {
         const of = (type: string) => counts.find((n) => n.sessionId === row.id && n.type === type)
@@ -187,6 +201,7 @@ export const threads = new Hono<AppEnv>()
           ...row,
           replies: asked + (turns?._count._all ?? 0),
           lastReplyAt: latest?.toISOString() ?? null,
+          unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
         }
       }),
@@ -433,6 +448,29 @@ export const threads = new Hono<AppEnv>()
   })
 
   /** A reply continues the same harness session. */
+  /** This member looked at it: what the teammates wrote so far is read. */
+  .post('/:id/read', async (c) => {
+    const sessionId = c.req.param('id')
+    const thread = await c.var.db.session.findFirst({
+      where: { id: sessionId },
+      select: { id: true },
+    })
+    if (!thread) return c.json({ error: 'Thread not found' }, 404)
+    const memberId = c.var.scope.memberId
+    await c.var.db.threadRead.upsert({
+      where: { memberId_sessionId: { memberId, sessionId } },
+      create: {
+        organizationId: c.var.scope.organizationId,
+        workspaceId: c.var.scope.workspaceId,
+        memberId,
+        sessionId,
+        seenAt: new Date(),
+      },
+      update: { seenAt: new Date() },
+    })
+    return c.json({ ok: true })
+  })
+
   .post('/:id/messages', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
