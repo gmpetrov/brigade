@@ -94,6 +94,11 @@ export type Runner = Prisma.RunnerModel
  */
 export type Teammate = Prisma.TeammateModel
 /**
+ * Model ThreadRead
+ * When a member last looked at a thread: a teammate's reply after it is unread for them.
+ */
+export type ThreadRead = Prisma.ThreadReadModel
+/**
  * Model Session
  * 
  */

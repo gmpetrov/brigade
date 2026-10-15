@@ -408,6 +408,7 @@ export const ModelName = {
   Computer: 'Computer',
   Runner: 'Runner',
   Teammate: 'Teammate',
+  ThreadRead: 'ThreadRead',
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
@@ -454,7 +455,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe" | "previewVariable" | "project" | "projectRepository"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "previewRecipe" | "previewVariable" | "project" | "projectRepository"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1269,6 +1270,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TeammateCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TeammateCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThreadRead: {
+      payload: Prisma.$ThreadReadPayload<ExtArgs>
+      fields: Prisma.ThreadReadFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadReadFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadReadFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadReadFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadReadFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        findMany: {
+          args: Prisma.ThreadReadFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>[]
+        }
+        create: {
+          args: Prisma.ThreadReadCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        createMany: {
+          args: Prisma.ThreadReadCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadReadCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadReadDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        update: {
+          args: Prisma.ThreadReadUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadReadDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadReadUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadReadUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadReadUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadReadPayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadReadAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadRead>
+        }
+        groupBy: {
+          args: Prisma.ThreadReadGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadReadGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadReadCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadReadCountAggregateOutputType> | number
         }
       }
     }
@@ -3767,6 +3842,17 @@ export const TeammateScalarFieldEnum = {
 export type TeammateScalarFieldEnum = (typeof TeammateScalarFieldEnum)[keyof typeof TeammateScalarFieldEnum]
 
 
+export const ThreadReadScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  sessionId: 'sessionId',
+  seenAt: 'seenAt'
+} as const
+
+export type ThreadReadScalarFieldEnum = (typeof ThreadReadScalarFieldEnum)[keyof typeof ThreadReadScalarFieldEnum]
+
+
 export const SessionScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -5010,6 +5096,7 @@ export type GlobalOmitConfig = {
   computer?: Prisma.ComputerOmit
   runner?: Prisma.RunnerOmit
   teammate?: Prisma.TeammateOmit
+  threadRead?: Prisma.ThreadReadOmit
   session?: Prisma.SessionOmit
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit

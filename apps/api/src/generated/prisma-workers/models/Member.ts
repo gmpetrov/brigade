@@ -189,6 +189,7 @@ export type MemberWhereInput = {
   sessions?: Prisma.SessionListRelationFilter
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
+  threadReads?: Prisma.ThreadReadListRelationFilter
 }
 
 export type MemberOrderByWithRelationInput = {
@@ -204,6 +205,7 @@ export type MemberOrderByWithRelationInput = {
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   tasks?: Prisma.TaskOrderByRelationAggregateInput
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
+  threadReads?: Prisma.ThreadReadOrderByRelationAggregateInput
 }
 
 export type MemberWhereUniqueInput = Prisma.AtLeast<{
@@ -223,6 +225,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   sessions?: Prisma.SessionListRelationFilter
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
+  threadReads?: Prisma.ThreadReadListRelationFilter
 }, "id" | "organizationId_userId">
 
 export type MemberOrderByWithAggregationInput = {
@@ -258,6 +261,7 @@ export type MemberCreateInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateInput = {
@@ -271,6 +275,7 @@ export type MemberUncheckedCreateInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUpdateInput = {
@@ -284,6 +289,7 @@ export type MemberUpdateInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateInput = {
@@ -297,6 +303,7 @@ export type MemberUncheckedUpdateInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateManyInput = {
@@ -470,6 +477,20 @@ export type MemberUpdateOneWithoutComputersNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutComputersInput, Prisma.MemberUpdateWithoutComputersInput>, Prisma.MemberUncheckedUpdateWithoutComputersInput>
 }
 
+export type MemberCreateNestedOneWithoutThreadReadsInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThreadReadsInput, Prisma.MemberUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThreadReadsInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutThreadReadsNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutThreadReadsInput, Prisma.MemberUncheckedCreateWithoutThreadReadsInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutThreadReadsInput
+  upsert?: Prisma.MemberUpsertWithoutThreadReadsInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutThreadReadsInput, Prisma.MemberUpdateWithoutThreadReadsInput>, Prisma.MemberUncheckedUpdateWithoutThreadReadsInput>
+}
+
 export type MemberCreateNestedOneWithoutSessionsInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutSessionsInput, Prisma.MemberUncheckedCreateWithoutSessionsInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutSessionsInput
@@ -536,6 +557,7 @@ export type MemberCreateWithoutUserInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutUserInput = {
@@ -548,6 +570,7 @@ export type MemberUncheckedCreateWithoutUserInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutUserInput = {
@@ -597,6 +620,7 @@ export type MemberCreateWithoutOrganizationInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutOrganizationInput = {
@@ -609,6 +633,7 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutOrganizationInput = {
@@ -647,6 +672,7 @@ export type MemberCreateWithoutComputersInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutComputersInput = {
@@ -659,6 +685,7 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutComputersInput = {
@@ -687,6 +714,7 @@ export type MemberUpdateWithoutComputersInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutComputersInput = {
@@ -695,6 +723,75 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberCreateWithoutThreadReadsInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+}
+
+export type MemberUncheckedCreateWithoutThreadReadsInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+}
+
+export type MemberCreateOrConnectWithoutThreadReadsInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThreadReadsInput, Prisma.MemberUncheckedCreateWithoutThreadReadsInput>
+}
+
+export type MemberUpsertWithoutThreadReadsInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutThreadReadsInput, Prisma.MemberUncheckedUpdateWithoutThreadReadsInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutThreadReadsInput, Prisma.MemberUncheckedCreateWithoutThreadReadsInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutThreadReadsInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutThreadReadsInput, Prisma.MemberUncheckedUpdateWithoutThreadReadsInput>
+}
+
+export type MemberUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutThreadReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -711,6 +808,7 @@ export type MemberCreateWithoutSessionsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSessionsInput = {
@@ -723,6 +821,7 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSessionsInput = {
@@ -751,6 +850,7 @@ export type MemberUpdateWithoutSessionsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSessionsInput = {
@@ -763,6 +863,7 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutTasksInput = {
@@ -775,6 +876,7 @@ export type MemberCreateWithoutTasksInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutTasksInput = {
@@ -787,6 +889,7 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutTasksInput = {
@@ -815,6 +918,7 @@ export type MemberUpdateWithoutTasksInput = {
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutTasksInput = {
@@ -827,6 +931,7 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSchedulesInput = {
@@ -839,6 +944,7 @@ export type MemberCreateWithoutSchedulesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSchedulesInput = {
@@ -851,6 +957,7 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSchedulesInput = {
@@ -879,6 +986,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSchedulesInput = {
@@ -891,6 +999,7 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutAccountsInput = {
@@ -903,6 +1012,7 @@ export type MemberCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutAccountsInput = {
@@ -915,6 +1025,7 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutAccountsInput = {
@@ -943,6 +1054,7 @@ export type MemberUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutAccountsInput = {
@@ -955,6 +1067,7 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateManyUserInput = {
@@ -974,6 +1087,7 @@ export type MemberUpdateWithoutUserInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutUserInput = {
@@ -986,6 +1100,7 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutUserInput = {
@@ -1012,6 +1127,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutOrganizationInput = {
@@ -1024,6 +1140,7 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
@@ -1044,6 +1161,7 @@ export type MemberCountOutputType = {
   sessions: number
   tasks: number
   schedules: number
+  threadReads: number
 }
 
 export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1052,6 +1170,7 @@ export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   sessions?: boolean | MemberCountOutputTypeCountSessionsArgs
   tasks?: boolean | MemberCountOutputTypeCountTasksArgs
   schedules?: boolean | MemberCountOutputTypeCountSchedulesArgs
+  threadReads?: boolean | MemberCountOutputTypeCountThreadReadsArgs
 }
 
 /**
@@ -1099,6 +1218,13 @@ export type MemberCountOutputTypeCountSchedulesArgs<ExtArgs extends runtime.Type
   where?: Prisma.ScheduleWhereInput
 }
 
+/**
+ * MemberCountOutputType without action
+ */
+export type MemberCountOutputTypeCountThreadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadReadWhereInput
+}
+
 
 export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1113,6 +1239,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   sessions?: boolean | Prisma.Member$sessionsArgs<ExtArgs>
   tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
@@ -1153,6 +1280,7 @@ export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   sessions?: boolean | Prisma.Member$sessionsArgs<ExtArgs>
   tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
+  threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1174,6 +1302,7 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     tasks: Prisma.$TaskPayload<ExtArgs>[]
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
+    threadReads: Prisma.$ThreadReadPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1582,6 +1711,7 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   sessions<T extends Prisma.Member$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tasks<T extends Prisma.Member$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   schedules<T extends Prisma.Member$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadReads<T extends Prisma.Member$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2134,6 +2264,30 @@ export type Member$schedulesArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.ScheduleScalarFieldEnum | Prisma.ScheduleScalarFieldEnum[]
+}
+
+/**
+ * Member.threadReads
+ */
+export type Member$threadReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadRead
+   */
+  select?: Prisma.ThreadReadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadRead
+   */
+  omit?: Prisma.ThreadReadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadReadInclude<ExtArgs> | null
+  where?: Prisma.ThreadReadWhereInput
+  orderBy?: Prisma.ThreadReadOrderByWithRelationInput | Prisma.ThreadReadOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadReadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadReadScalarFieldEnum | Prisma.ThreadReadScalarFieldEnum[]
 }
 
 /**
