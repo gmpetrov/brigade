@@ -33,6 +33,8 @@ const LOOKING_MS = 2 * 60_000
 const PUSHES_PER_HOUR = 4
 /** Finished work and replies are news for this long; older, they are not sent. */
 const FRESH_MS = 15 * 60_000
+/** What was sent is kept this long once over: past the cap's hour and the news window. */
+const KEEP_MS = 2 * 60 * 60_000
 
 export const vapid = (): Vapid | null =>
   env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY
@@ -378,13 +380,13 @@ async function settle(
     })
 
   // Gone: never sent, forget it; sent and waited on, close its notification with the
-  // next push; finished work, forget it once it is no longer news.
+  // next push. Sent ones stay a while after: the hourly cap counts them.
   const gone = notices.filter((n) => !current.has(n.key))
   const forget = gone.filter(
     (n) =>
       !n.sentAt ||
-      (!n.key.startsWith('needs:') && at - n.firstSeenAt.getTime() > 2 * FRESH_MS) ||
-      (n.resolvedAt && at - n.resolvedAt.getTime() > 24 * 60 * 60_000),
+      (!n.key.startsWith('needs:') && at - n.firstSeenAt.getTime() > KEEP_MS) ||
+      (n.resolvedAt && at - n.resolvedAt.getTime() > KEEP_MS),
   )
   const resolve = gone.filter((n) => n.sentAt && !n.resolvedAt && n.key.startsWith('needs:'))
   if (forget.length)
@@ -399,7 +401,14 @@ async function settle(
   if (back.length)
     await prisma.pushNotice.updateMany({
       where: { id: { in: back.map((n) => n.id) } },
-      data: { resolvedAt: null, sentAt: null, pushed: false, remindedAt: null, firstSeenAt: now },
+      data: {
+        resolvedAt: null,
+        closedAt: null,
+        sentAt: null,
+        pushed: false,
+        remindedAt: null,
+        firstSeenAt: now,
+      },
     })
   const reopened = new Set(back.map((n) => n.key))
 
@@ -444,7 +453,7 @@ async function settle(
   if (times.size >= PUSHES_PER_HOUR) return
 
   const close = notices
-    .filter((n) => n.resolvedAt || resolve.includes(n))
+    .filter((n) => (n.resolvedAt && !n.closedAt) || resolve.includes(n))
     .map((n) => tagOf(n.key))
     .filter((tag) => !items.some((i) => i.tag === tag))
   const message = compose([...due, ...remind], badge, [...new Set(close)])
@@ -471,8 +480,11 @@ async function settle(
       where: { memberId: member.id, key: { in: remind.map((i) => i.key) } },
       data: { remindedAt: now },
     })
-  // Closed with this push: nothing left to do with them.
-  await prisma.pushNotice.deleteMany({ where: { memberId: member.id, resolvedAt: { not: null } } })
+  // Closed with this push.
+  await prisma.pushNotice.updateMany({
+    where: { memberId: member.id, resolvedAt: { not: null }, closedAt: null },
+    data: { closedAt: now },
+  })
 }
 
 /** The tag of a notice's notification, from its key: a thread's id, else the ticket's, task's or pull request's. */

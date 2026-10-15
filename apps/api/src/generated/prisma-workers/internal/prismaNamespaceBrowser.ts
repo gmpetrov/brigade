@@ -869,7 +869,8 @@ export const PushNoticeScalarFieldEnum = {
   sentAt: 'sentAt',
   pushed: 'pushed',
   remindedAt: 'remindedAt',
-  resolvedAt: 'resolvedAt'
+  resolvedAt: 'resolvedAt',
+  closedAt: 'closedAt'
 } as const
 
 export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]

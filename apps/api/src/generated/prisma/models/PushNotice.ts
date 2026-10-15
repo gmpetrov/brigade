@@ -37,6 +37,7 @@ export type PushNoticeMinAggregateOutputType = {
   pushed: boolean | null
   remindedAt: Date | null
   resolvedAt: Date | null
+  closedAt: Date | null
 }
 
 export type PushNoticeMaxAggregateOutputType = {
@@ -50,6 +51,7 @@ export type PushNoticeMaxAggregateOutputType = {
   pushed: boolean | null
   remindedAt: Date | null
   resolvedAt: Date | null
+  closedAt: Date | null
 }
 
 export type PushNoticeCountAggregateOutputType = {
@@ -63,6 +65,7 @@ export type PushNoticeCountAggregateOutputType = {
   pushed: number
   remindedAt: number
   resolvedAt: number
+  closedAt: number
   _all: number
 }
 
@@ -78,6 +81,7 @@ export type PushNoticeMinAggregateInputType = {
   pushed?: true
   remindedAt?: true
   resolvedAt?: true
+  closedAt?: true
 }
 
 export type PushNoticeMaxAggregateInputType = {
@@ -91,6 +95,7 @@ export type PushNoticeMaxAggregateInputType = {
   pushed?: true
   remindedAt?: true
   resolvedAt?: true
+  closedAt?: true
 }
 
 export type PushNoticeCountAggregateInputType = {
@@ -104,6 +109,7 @@ export type PushNoticeCountAggregateInputType = {
   pushed?: true
   remindedAt?: true
   resolvedAt?: true
+  closedAt?: true
   _all?: true
 }
 
@@ -190,6 +196,7 @@ export type PushNoticeGroupByOutputType = {
   pushed: boolean
   remindedAt: Date | null
   resolvedAt: Date | null
+  closedAt: Date | null
   _count: PushNoticeCountAggregateOutputType | null
   _min: PushNoticeMinAggregateOutputType | null
   _max: PushNoticeMaxAggregateOutputType | null
@@ -224,6 +231,7 @@ export type PushNoticeWhereInput = {
   pushed?: Prisma.BoolFilter<"PushNotice"> | boolean
   remindedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
   resolvedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
+  closedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
 }
@@ -239,6 +247,7 @@ export type PushNoticeOrderByWithRelationInput = {
   pushed?: Prisma.SortOrder
   remindedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   member?: Prisma.MemberOrderByWithRelationInput
 }
@@ -258,6 +267,7 @@ export type PushNoticeWhereUniqueInput = Prisma.AtLeast<{
   pushed?: Prisma.BoolFilter<"PushNotice"> | boolean
   remindedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
   resolvedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
+  closedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
 }, "id" | "memberId_key">
@@ -273,6 +283,7 @@ export type PushNoticeOrderByWithAggregationInput = {
   pushed?: Prisma.SortOrder
   remindedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.PushNoticeCountOrderByAggregateInput
   _max?: Prisma.PushNoticeMaxOrderByAggregateInput
   _min?: Prisma.PushNoticeMinOrderByAggregateInput
@@ -292,6 +303,7 @@ export type PushNoticeScalarWhereWithAggregatesInput = {
   pushed?: Prisma.BoolWithAggregatesFilter<"PushNotice"> | boolean
   remindedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PushNotice"> | Date | string | null
   resolvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PushNotice"> | Date | string | null
+  closedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PushNotice"> | Date | string | null
 }
 
 export type PushNoticeCreateInput = {
@@ -303,6 +315,7 @@ export type PushNoticeCreateInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPushNoticesInput
   member: Prisma.MemberCreateNestedOneWithoutPushNoticesInput
 }
@@ -318,6 +331,7 @@ export type PushNoticeUncheckedCreateInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeUpdateInput = {
@@ -329,6 +343,7 @@ export type PushNoticeUpdateInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPushNoticesNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutPushNoticesNestedInput
 }
@@ -344,6 +359,7 @@ export type PushNoticeUncheckedUpdateInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeCreateManyInput = {
@@ -357,6 +373,7 @@ export type PushNoticeCreateManyInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeUpdateManyMutationInput = {
@@ -368,6 +385,7 @@ export type PushNoticeUpdateManyMutationInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeUncheckedUpdateManyInput = {
@@ -381,6 +399,7 @@ export type PushNoticeUncheckedUpdateManyInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeListRelationFilter = {
@@ -409,6 +428,7 @@ export type PushNoticeCountOrderByAggregateInput = {
   pushed?: Prisma.SortOrder
   remindedAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
 }
 
 export type PushNoticeMaxOrderByAggregateInput = {
@@ -422,6 +442,7 @@ export type PushNoticeMaxOrderByAggregateInput = {
   pushed?: Prisma.SortOrder
   remindedAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
 }
 
 export type PushNoticeMinOrderByAggregateInput = {
@@ -435,6 +456,7 @@ export type PushNoticeMinOrderByAggregateInput = {
   pushed?: Prisma.SortOrder
   remindedAt?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
 }
 
 export type PushNoticeCreateNestedManyWithoutMemberInput = {
@@ -530,6 +552,7 @@ export type PushNoticeCreateWithoutMemberInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPushNoticesInput
 }
 
@@ -543,6 +566,7 @@ export type PushNoticeUncheckedCreateWithoutMemberInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeCreateOrConnectWithoutMemberInput = {
@@ -585,6 +609,7 @@ export type PushNoticeScalarWhereInput = {
   pushed?: Prisma.BoolFilter<"PushNotice"> | boolean
   remindedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
   resolvedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
+  closedAt?: Prisma.DateTimeNullableFilter<"PushNotice"> | Date | string | null
 }
 
 export type PushNoticeCreateWithoutWorkspaceInput = {
@@ -596,6 +621,7 @@ export type PushNoticeCreateWithoutWorkspaceInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
   member: Prisma.MemberCreateNestedOneWithoutPushNoticesInput
 }
 
@@ -609,6 +635,7 @@ export type PushNoticeUncheckedCreateWithoutWorkspaceInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeCreateOrConnectWithoutWorkspaceInput = {
@@ -647,6 +674,7 @@ export type PushNoticeCreateManyMemberInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeUpdateWithoutMemberInput = {
@@ -658,6 +686,7 @@ export type PushNoticeUpdateWithoutMemberInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPushNoticesNestedInput
 }
 
@@ -671,6 +700,7 @@ export type PushNoticeUncheckedUpdateWithoutMemberInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeUncheckedUpdateManyWithoutMemberInput = {
@@ -683,6 +713,7 @@ export type PushNoticeUncheckedUpdateManyWithoutMemberInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeCreateManyWorkspaceInput = {
@@ -695,6 +726,7 @@ export type PushNoticeCreateManyWorkspaceInput = {
   pushed?: boolean
   remindedAt?: Date | string | null
   resolvedAt?: Date | string | null
+  closedAt?: Date | string | null
 }
 
 export type PushNoticeUpdateWithoutWorkspaceInput = {
@@ -706,6 +738,7 @@ export type PushNoticeUpdateWithoutWorkspaceInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   member?: Prisma.MemberUpdateOneRequiredWithoutPushNoticesNestedInput
 }
 
@@ -719,6 +752,7 @@ export type PushNoticeUncheckedUpdateWithoutWorkspaceInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type PushNoticeUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -731,6 +765,7 @@ export type PushNoticeUncheckedUpdateManyWithoutWorkspaceInput = {
   pushed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   remindedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -746,6 +781,7 @@ export type PushNoticeSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   pushed?: boolean
   remindedAt?: boolean
   resolvedAt?: boolean
+  closedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pushNotice"]>
@@ -761,6 +797,7 @@ export type PushNoticeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   pushed?: boolean
   remindedAt?: boolean
   resolvedAt?: boolean
+  closedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pushNotice"]>
@@ -776,6 +813,7 @@ export type PushNoticeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   pushed?: boolean
   remindedAt?: boolean
   resolvedAt?: boolean
+  closedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pushNotice"]>
@@ -791,9 +829,10 @@ export type PushNoticeSelectScalar = {
   pushed?: boolean
   remindedAt?: boolean
   resolvedAt?: boolean
+  closedAt?: boolean
 }
 
-export type PushNoticeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "memberId" | "key" | "firstSeenAt" | "sentAt" | "pushed" | "remindedAt" | "resolvedAt", ExtArgs["result"]["pushNotice"]>
+export type PushNoticeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "memberId" | "key" | "firstSeenAt" | "sentAt" | "pushed" | "remindedAt" | "resolvedAt" | "closedAt", ExtArgs["result"]["pushNotice"]>
 export type PushNoticeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -836,6 +875,10 @@ export type $PushNoticePayload<ExtArgs extends runtime.Types.Extensions.Internal
      * No longer waiting: its notification is closed with the next push.
      */
     resolvedAt: Date | null
+    /**
+     * That push went out.
+     */
+    closedAt: Date | null
   }, ExtArgs["result"]["pushNotice"]>
   composites: {}
 }
@@ -1271,6 +1314,7 @@ export interface PushNoticeFieldRefs {
   readonly pushed: Prisma.FieldRef<"PushNotice", 'Boolean'>
   readonly remindedAt: Prisma.FieldRef<"PushNotice", 'DateTime'>
   readonly resolvedAt: Prisma.FieldRef<"PushNotice", 'DateTime'>
+  readonly closedAt: Prisma.FieldRef<"PushNotice", 'DateTime'>
 }
     
 

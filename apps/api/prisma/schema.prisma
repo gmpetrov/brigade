@@ -1394,6 +1394,8 @@ model PushNotice {
   remindedAt     DateTime?
   /// No longer waiting: its notification is closed with the next push.
   resolvedAt     DateTime?
+  /// That push went out.
+  closedAt       DateTime?
 
   @@unique([memberId, key])
   @@index([workspaceId])

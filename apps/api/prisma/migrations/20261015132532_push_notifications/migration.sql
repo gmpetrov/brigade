@@ -28,6 +28,7 @@ CREATE TABLE "PushNotice" (
     "pushed" BOOLEAN NOT NULL DEFAULT false,
     "remindedAt" TIMESTAMP(3),
     "resolvedAt" TIMESTAMP(3),
+    "closedAt" TIMESTAMP(3),
 
     CONSTRAINT "PushNotice_pkey" PRIMARY KEY ("id")
 );
