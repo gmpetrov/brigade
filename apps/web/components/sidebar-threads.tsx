@@ -180,7 +180,10 @@ export function SidebarWork({
   projects: ProjectSummary[]
   admin: boolean
   onNewProject: () => void
-  /** Threads with an open ticket waiting on this member, and what it asks ("approve"). */
+  /**
+   * Threads with an open ticket waiting on this member or a task in Needs you, and what it
+   * asks ("approve").
+   */
   needsYou: Record<string, string>
 }) {
   const router = useRouter()
@@ -216,8 +219,8 @@ export function SidebarWork({
       }))
   }, [pathname])
 
-  // Waiting on a person is more than the thread's own status: a ticket for this member, or a
-  // pull request it opened that a person has to review or merge. Unless it is working: then
+  // Waiting on a person is more than the thread's own status: a ticket for this member, a task
+  // in Needs you, or a pull request it opened that a person has to review or merge. Unless it is working: then
   // it shows as working, and waits once it stops. What each asks goes at the row's end.
   const { all, asks } = useMemo(() => {
     const latestIds = new Set((threads ?? []).map((t) => t.id))
