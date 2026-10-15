@@ -1,5 +1,5 @@
 // Commands a person starts a message with, to say what they want back:
-// `/design a pricing page`, `/visual compare the two flows`. A command is a
+// `/design a pricing page`, `/visual compare the two flows`, `/image a hero photo`. A command is a
 // verb (what to make), where a mention (`@`) names a thing. The message keeps
 // the command as written, so the thread shows it as a label; the teammate reads
 // it in words (`commandPrompt`), as harnesses take a leading `/` for their own
@@ -16,7 +16,17 @@ export const MESSAGE_COMMANDS = {
     description: 'Kept in the library, on a canvas people edit and comment on.',
     ask: 'The person asked for a design (/design): make it as a design and save it to the library with save_design, not as a visual in your reply.',
   },
-} as const
+  image: {
+    label: 'Image',
+    description: 'Made by Codex’s image model, on your Codex account.',
+    ask: 'The person asked for an image (/image): make it with your image generation tool (generate_image, or your own image tool on Codex) and show it in your reply.',
+    /** Shown only to someone with a Codex account: it makes the images. */
+    needs: 'codex',
+  },
+} as const satisfies Record<
+  string,
+  { label: string; description: string; ask: string; needs?: 'codex' }
+>
 
 export type MessageCommand = keyof typeof MESSAGE_COMMANDS
 

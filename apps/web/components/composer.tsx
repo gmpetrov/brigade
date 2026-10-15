@@ -29,13 +29,14 @@ import {
 } from '@tiptap/react'
 import { PluginKey } from '@tiptap/pm/state'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
-import { BookOpenText, Palette, Shapes } from 'lucide-react'
+import { BookOpenText, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
 import {
   computerName,
   useApi,
+  type Account,
   type ComputersResponse,
   type ConnectionsResponse,
   type Credential,
@@ -326,13 +327,21 @@ function renderMenu<T, P extends object>(
 const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>> = {
   visual: Shapes,
   design: Palette,
+  image: ImageIcon,
 }
 /** A command to pick: what to make, or a workspace skill to follow. */
-type CommandOption = { name: string; label: string; description: string; skill?: boolean }
+type CommandOption = {
+  name: string
+  label: string
+  description: string
+  needs?: 'codex'
+  skill?: boolean
+}
 const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([name, c]) => ({
   name,
   label: c.label,
   description: c.description,
+  ...('needs' in c ? { needs: c.needs } : {}),
 }))
 
 const isMessageCommand = (name: string): name is MessageCommand => name in MESSAGE_COMMANDS
@@ -355,6 +364,15 @@ export function startingCommand(text: string, skills: readonly string[]) {
   if (made) return made
   const skill = skillCommand(text, skills)
   return skill ? { command: skill.skill, rest: skill.rest } : null
+}
+
+/** The commands this member can use: `/image` needs a Codex account of theirs. */
+function useCommandOptions(): CommandOption[] {
+  const accounts = useApi<Account[]>('/accounts')
+  const codex = (accounts.data ?? []).some(
+    (a) => a.provider === 'codex' && (a.status === 'ready' || a.status === 'unverified'),
+  )
+  return useMemo(() => COMMAND_OPTIONS.filter((c) => !c.needs || codex), [codex])
 }
 
 /** A command as the composer and the thread show it: a skill by its `/name`. */
@@ -449,10 +467,11 @@ const CommandNode = Node.create({
 })
 
 /** `/` at the very start of a message opens the commands: what to make, then the skills. */
-const Commands = Extension.create<{ commands: () => CommandOption[] }>({
+const Commands = Extension.create<{ options: () => CommandOption[] }>({
   name: 'messageCommands',
-  addOptions: () => ({ commands: () => COMMAND_OPTIONS }),
+  addOptions: () => ({ options: () => COMMAND_OPTIONS }),
   addProseMirrorPlugins() {
+    const { options } = this.options
     return [
       Suggestion<CommandOption, CommandOption>({
         editor: this.editor,
@@ -469,8 +488,7 @@ const Commands = Extension.create<{ commands: () => CommandOption[] }>({
           })
           return !has
         },
-        items: ({ query }) =>
-          this.options.commands().filter((c) => c.name.startsWith(query.toLowerCase())),
+        items: ({ query }) => options().filter((c) => c.name.startsWith(query.toLowerCase())),
         command: ({ editor, range, props }) => {
           editor
             .chain()
@@ -552,10 +570,11 @@ export function Composer({
   autoFocus?: boolean
 }) {
   const options = useMentionOptions(threadId)
+  const commands = useCommandOptions()
   const skills = useSkillCommands()
   // The editor is built once; these keep its callbacks current.
-  const latest = useRef({ options, skills, onChange, onSubmit, placeholder })
-  latest.current = { options, skills, onChange, onSubmit, placeholder }
+  const latest = useRef({ options, commands, skills, onChange, onSubmit, placeholder })
+  latest.current = { options, commands, skills, onChange, onSubmit, placeholder }
   const skillNames = () => latest.current.skills.map((s) => s.name)
   const text = useRef(value)
 
@@ -596,7 +615,7 @@ export function Composer({
         },
       }),
       CommandNode,
-      Commands.configure({ commands: () => [...COMMAND_OPTIONS, ...latest.current.skills] }),
+      Commands.configure({ options: () => [...latest.current.commands, ...latest.current.skills] }),
       Extension.create({
         name: 'submit',
         // Like Claude: Enter sends, Shift+Enter adds a line. Runs before HardBreak's own keys.

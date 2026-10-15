@@ -40,3 +40,9 @@ test('a workspace skill is a command, by its name', () => {
   assert.ok(prompt.endsWith('\n\nfor 2.4'))
   assert.equal(commandPrompt('/release-notes for 2.4'), '/release-notes for 2.4')
 })
+
+test('/image asks for the image tool', () => {
+  const prompt = commandPrompt('/image a violet robot waving')
+  assert.match(prompt, /^The person asked for an image \(\/image\).*generate_image/)
+  assert.ok(prompt.endsWith('\n\na violet robot waving'))
+})

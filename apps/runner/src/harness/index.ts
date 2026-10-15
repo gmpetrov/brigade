@@ -47,6 +47,7 @@ import {
   askUserTool,
   connectorTools,
   credentialTools,
+  imageTools,
   libraryTools,
   offerChoicesTool,
   OPEN_TICKET_TOOL,
@@ -58,6 +59,7 @@ import {
   showWidgetTool,
   taskTools,
   type ConnectorCaller,
+  type ImageMaker,
   type LibraryCaller,
   type PreviewTools,
   type ScheduleCaller,
@@ -145,6 +147,7 @@ function createAgent(
   callTask: TaskCaller,
   callSchedule: ScheduleCaller,
   preview: PreviewTools,
+  makeImage: ImageMaker | undefined,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -161,6 +164,7 @@ function createAgent(
     ...taskTools(callTask),
     ...scheduleTools(callSchedule),
     ...previewTools(preview, credentials),
+    ...(makeImage ? imageTools(makeImage) : {}),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
@@ -568,7 +572,11 @@ export class HarnessThread {
    * A picture the harness saved in its own folder, copied into the thread's
    * working folder: people see it in the thread, and it stays with the work.
    */
-  private async keepImage(image: { toolCallId: string; savedPath: string; prompt?: string }) {
+  private async keepImage(image: {
+    toolCallId: string
+    savedPath: string
+    prompt?: string
+  }): Promise<string | undefined> {
     const path = `images/${basename(image.savedPath)}`
     const target = join(this.workDir, path)
     try {
@@ -590,6 +598,27 @@ export class HarnessThread {
       toolCallId: image.toolCallId,
       ...(image.prompt ? { prompt: image.prompt } : {}),
     })
+    return path
+  }
+
+  /** generate_image: an image by Codex, on the starter's Codex account, kept like Codex's own. */
+  private async makeImage(input: Parameters<ImageMaker>[0], signal?: AbortSignal) {
+    const account = this.spec.imageAccount
+    if (!account)
+      throw new Error('The person who started this thread has no Codex account with usage left')
+    const image = await generateImage({
+      account,
+      sessionId: this.spec.sessionId,
+      workDir: this.workDir,
+      ...(this.runAs ? { runAs: this.runAs } : {}),
+      prompt: input.prompt,
+      references: input.references.map((file) => resolvePath(this.workDir, file)),
+      ...(signal ? { signal } : {}),
+    })
+    const path = await this.keepImage({ toolCallId: input.toolCallId, ...image })
+    if (!path)
+      throw new Error('Codex made the image, but it could not be copied into the working directory')
+    return { path, ...(image.prompt ? { prompt: image.prompt } : {}) }
   }
 
   /** A person's answer as the result of the question tool that asked it. */
@@ -743,6 +772,7 @@ export class HarnessThread {
       this.context.callTask,
       this.context.callSchedule,
       this.context.preview,
+      this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
@@ -994,6 +1024,80 @@ export async function runOnce(input: {
     if (mapper.exhausted) throw new Error('The account is out of usage')
     if (mapper.error) throw new Error(mapper.error)
     return text
+  } finally {
+    await session.destroy().catch(() => undefined)
+    await sandbox.destroy()
+  }
+}
+
+/** Longest a generate_image call waits for Codex. */
+const IMAGE_TIMEOUT_MS = 5 * 60_000
+
+/**
+ * One image by Codex, for a teammate on another harness: a short Codex run on
+ * the given account, in a folder of its own, told to use its image tool and
+ * nothing else. Returns where Codex saved the image (in its own folder).
+ */
+export async function generateImage(input: {
+  account: AccountRef
+  sessionId: string
+  workDir: string
+  runAs?: string
+  prompt: string
+  /** Absolute paths of images to start from or match. */
+  references: string[]
+  signal?: AbortSignal
+}): Promise<{ savedPath: string; prompt?: string }> {
+  const { account, runAs } = input
+  // Its own empty folder: Codex runs without asking, and has nothing of the thread's to change.
+  const dir = join(input.workDir, '.codex-image')
+  const env = await prepare(dir, account, input.sessionId, runAs)
+  const agent = new HarnessAgent({
+    harness: createCodex({ auth: {} }),
+    tools: {},
+    permissionMode: 'allow-all',
+    sandboxConfig: { workDir: '.' },
+  })
+  const sandbox = createLocalSandboxSession({
+    id: `${input.sessionId}-image`,
+    workingDirectory: dir,
+    port: await freePort(),
+    env,
+    ...(runAs ? { runAs } : {}),
+  })
+  const session = await agent.createSession({
+    sessionId: `${input.sessionId}-image-${Date.now()}`,
+    sandboxSession: sandbox,
+  })
+  const prompt = [
+    'Generate exactly one image with your image generation tool, as described below. ' +
+      'Do nothing else: no other tools, no files, no commands, no questions.',
+    input.references.length &&
+      `First look at these images with your image viewer, and start from them or match them as the description says:\n${input.references.join('\n')}`,
+    `Description:\n${input.prompt}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+  const timeout = AbortSignal.timeout(IMAGE_TIMEOUT_MS)
+  const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout
+  try {
+    let image: { savedPath: string; prompt?: string } | undefined
+    let text = ''
+    const mapper = new EventMapper((event) => {
+      if (event.type === 'message.done') text = event.text
+    })
+    const result = await agent.stream({ session, prompt, abortSignal: signal })
+    for await (const part of result.fullStream) {
+      mapper.map(part)
+      const made = generatedImage(part)
+      if (made)
+        image = { savedPath: made.savedPath, ...(made.prompt ? { prompt: made.prompt } : {}) }
+    }
+    if (timeout.aborted) throw new Error('Codex took too long to make the image')
+    if (mapper.exhausted) throw new Error('The Codex account is out of usage')
+    if (mapper.error) throw new Error(mapper.error)
+    if (!image) throw new Error(`Codex made no image${text ? `: ${text.slice(0, 500)}` : ''}`)
+    return image
   } finally {
     await session.destroy().catch(() => undefined)
     await sandbox.destroy()

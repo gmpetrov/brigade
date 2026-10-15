@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
-import { QuestionAnswer, SequencedEvent, TicketAnswer } from './events.js'
+import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
 import { ProjectCatalogEntry, ThreadProject } from './projects.js'
 import {
@@ -86,6 +86,11 @@ export const ThreadSpec = z.object({
   /** The account to run on, then the starter's other accounts with usage left, in order. */
   account: AccountRef,
   fallbacks: z.array(AccountRef),
+  /**
+   * A teammate not on Codex: the starter's Codex account with usage left, if any,
+   * which makes images for it (generate_image). Codex teammates make their own.
+   */
+  imageAccount: AccountRef.nullable().default(null),
   /** Connector tools; every call goes back to the API, which checks and makes it. */
   connectors: z.array(ConnectorGrant).default([]),
   /**
@@ -377,6 +382,8 @@ export const ThreadPrompt = z.object({
   messageId: z.string().max(64).optional(),
   /** Give it to the first teammate during its running turn, if it is running one; else queue it. */
   steer: z.boolean().optional(),
+  /** The earlier message it replies to: quoted to the teammate, shown above it. */
+  replyTo: ReplyTo.optional(),
 })
 export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 

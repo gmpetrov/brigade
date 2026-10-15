@@ -15,6 +15,7 @@ import {
   type ApiToRunner,
   type RunnerToApi,
   type ThreadAttachmentRef,
+  type ReplyTo,
   type ThreadPrompt,
   type ThreadSpec,
 } from '@brigade/contracts'
@@ -99,6 +100,8 @@ type Message = {
   text: string
   memberId: string | null
   attachments: ThreadAttachmentRef[]
+  /** The earlier message it replies to. */
+  replyTo?: ReplyTo
   state: 'queued' | 'held' | 'steering' | 'shown' | 'steered' | 'cancelled'
   /** Settles when a steer in progress is done, either way. */
   steering?: Promise<void>
@@ -236,6 +239,7 @@ export class Threads {
         text: command.text,
         memberId: command.memberId,
         attachments: command.attachments,
+        ...(command.replyTo ? { replyTo: command.replyTo } : {}),
         state: 'queued',
       }
       // Into a quiet thread it shows at once; into a busy one it shows as queued until its turn.
@@ -685,6 +689,7 @@ export class Threads {
       memberId: message.memberId,
       messageId: message.id,
       ...(steered ? { steered: true } : {}),
+      ...(message.replyTo ? { replyTo: message.replyTo } : {}),
       ...(message.attachments.length
         ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
         : {}),
@@ -694,12 +699,17 @@ export class Threads {
   }
 
   /**
-   * What the teammate reads: the text (a command it starts with, in words: a harness
-   * takes a leading `/` for its own), and where the files that came with it are.
+   * What the teammate reads: the message it replies to, quoted; the text (a command
+   * it starts with, in words: a harness takes a leading `/` for its own); and where
+   * the files that came with it are.
    */
   private promptText(message: Message, spec: ThreadSpec) {
     const skills = (spec.skills ?? []).map((s) => s.name)
-    return [commandPrompt(message.text, skills), attachmentLines(message.attachments)]
+    return [
+      replyLines(message.specs[0]!, message.replyTo),
+      commandPrompt(message.text, skills),
+      attachmentLines(message.attachments),
+    ]
       .filter(Boolean)
       .join('\n\n')
   }
@@ -712,6 +722,7 @@ export class Threads {
       text: message.text,
       memberId: message.memberId,
       waitingFor: message.state === 'held' ? 'person' : 'turn',
+      ...(message.replyTo ? { replyTo: message.replyTo } : {}),
       ...(note ? { note } : {}),
       ...(message.attachments.length
         ? { attachments: message.attachments.map((a) => MessageAttachment.parse(a)) }
@@ -1126,4 +1137,22 @@ export function mentionedTeammates(text: string, spec: ThreadSpec) {
     rest = rest.replace(pattern, (whole) => ' '.repeat(whole.length))
   }
   return [...new Set(found.sort((a, b) => a.at - b.at).map((f) => f.id))]
+}
+
+/**
+ * The earlier message a member replies to, quoted above their text. Named by
+ * its author, not "your": every teammate in the thread reads the same line.
+ */
+export function replyLines(spec: ThreadSpec, reply?: ReplyTo) {
+  if (!reply) return ''
+  const author = reply.teammateId
+    ? ([spec.teammate, ...spec.teammates].find((t) => t.id === reply.teammateId)?.name ??
+      'a teammate')
+    : 'a member'
+  const quote = reply.text
+    .trim()
+    .split('\n')
+    .map((line) => `> ${line}`.trimEnd())
+    .join('\n')
+  return `Replying to this earlier message from ${author}:\n${quote}`
 }

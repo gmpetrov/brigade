@@ -12,6 +12,17 @@ const base = {
   teammateId: z.string().optional(),
 }
 
+/**
+ * The earlier message a member's message answers: where it is in the thread
+ * (its event's seq), who wrote it (a teammate, else a person) and its text, clipped.
+ */
+export const ReplyTo = z.object({
+  seq: z.number().int().positive(),
+  teammateId: z.string().optional(),
+  text: z.string().max(2000),
+})
+export type ReplyTo = z.infer<typeof ReplyTo>
+
 /** A question the harness asks a person (its own question tool). */
 export const Question = z.object({
   id: z.string(),
@@ -259,6 +270,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     messageId: z.string().optional(),
     /** Given to the teammate during its running turn rather than in a turn of its own. */
     steered: z.boolean().optional(),
+    /** The earlier message it replies to. */
+    replyTo: ReplyTo.optional(),
   }),
   /**
    * A message waits for the turn before it to end, or for a person to answer
@@ -271,6 +284,7 @@ export const AgentEvent = z.discriminatedUnion('type', [
     text: z.string(),
     memberId: z.string().nullable(),
     attachments: z.array(MessageAttachment).optional(),
+    replyTo: ReplyTo.optional(),
     /** turn: another turn runs first. person: an approval, question or ticket is answered first. */
     waitingFor: z.enum(['turn', 'person']),
     /** Why a request on it did not happen, e.g. it could not be steered. */

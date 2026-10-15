@@ -12,14 +12,17 @@ import {
   CloudUpload,
   CornerDownLeft,
   FolderKanban,
+  Reply,
   ListOrdered,
   LoaderCircle,
   SquareKanban,
   SquareTerminal,
   UserRound,
   UsersRound,
+  X,
   Zap,
 } from 'lucide-react'
+import { mentionsToText, type ReplyTo } from '@brigade/contracts'
 import Link from 'next/link'
 import {
   useEffect,
@@ -147,6 +150,9 @@ export function ThreadConversation({
   // The turn asked to stop, until it ends: a tool can take a moment to give up.
   const [stopping, setStopping] = useState<string>()
   const [text, setText] = useReplyDraft(id)
+  // The message the next one replies to, quoted above the composer.
+  const [replyTo, setReplyTo] = useState<ReplyTo>()
+  useEffect(() => setReplyTo(undefined), [id])
   const files = useUploads()
   const drop = useFileDrop(files.add)
   const root = useRef<HTMLDivElement>(null)
@@ -227,9 +233,7 @@ export function ThreadConversation({
   useEffect(() => {
     if (previewStart.error) setError(previewStart.error)
   }, [previewStart.error])
-  /** A message for the teammate, in the composer for the person to send. */
-  const askInComposer = (message: string) => {
-    setText(message)
+  const focusComposer = () =>
     requestAnimationFrame(() =>
       root.current
         ?.querySelector<HTMLElement>(
@@ -237,6 +241,14 @@ export function ThreadConversation({
         )
         ?.focus(),
     )
+  /** A message for the teammate, in the composer for the person to send. */
+  const askInComposer = (message: string) => {
+    setText(message)
+    focusComposer()
+  }
+  const replyToMessage = (reply: ReplyTo) => {
+    setReplyTo(reply)
+    focusComposer()
   }
   // Messages sent from here that the thread has not shown yet (queued, read or cancelled).
   const [outgoing, setOutgoing] = useState<Outgoing[]>([])
@@ -397,19 +409,27 @@ export function ThreadConversation({
     e?.preventDefault()
     if (!ready || current === 'waiting') return
     const sending = text.trim()
+    const replying = replyTo
     setText('')
+    setReplyTo(undefined)
     try {
-      await deliver(sending, files.ids)
+      await deliver(sending, files.ids, undefined, replying)
       files.clear()
     } catch (err) {
       // Not sent: back in the composer, as it was.
       setText((current) => current || sending)
+      setReplyTo((current) => current ?? replying)
       setError((err as Error).message)
     }
   }
 
   /** Send a message to the thread: the composer's, or a choice someone clicked. Throws when it is not sent. */
-  async function deliver(sending: string, attachmentIds: string[] = [], pick?: string) {
+  async function deliver(
+    sending: string,
+    attachmentIds: string[] = [],
+    pick?: string,
+    replyTo?: ReplyTo,
+  ) {
     const message: Outgoing = {
       messageId: newMessageId(),
       text: sending,
@@ -426,7 +446,7 @@ export function ThreadConversation({
     following.current = true
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
-        body: { text: message.text, attachmentIds, messageId: message.messageId, pick },
+        body: { text: message.text, attachmentIds, messageId: message.messageId, pick, replyTo },
       })
       setError(undefined)
       const starting = sent.delivery === 'starting'
@@ -738,6 +758,7 @@ export function ThreadConversation({
                         ? (text, pick) => deliver(text, [], pick)
                         : undefined
                     }
+                    onReply={t.mayPrompt && !t.controlledByMemberId ? replyToMessage : undefined}
                     onTicket={(requestId, answer) =>
                       // Answering may hand control back: show the composer again.
                       api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(
@@ -804,6 +825,32 @@ export function ThreadConversation({
                     drop.dragging && 'border-primary',
                   )}
                 >
+                  {replyTo && (
+                    <div className="flex items-center gap-2 pl-2 text-sm text-muted-foreground">
+                      <Reply className="size-4 shrink-0" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate" title={replyTo.text}>
+                        {replyTo.teammateId && (
+                          <span className="font-medium text-foreground">
+                            {people.find((p) => p.id === replyTo.teammateId)?.name ??
+                              t.teammate.name}
+                            :{' '}
+                          </span>
+                        )}
+                        “{mentionsToText(replyTo.text).replace(/\s+/g, ' ')}”
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="shrink-0 rounded-full"
+                        onClick={() => setReplyTo(undefined)}
+                        aria-label="Don’t reply to this message"
+                        title="Don’t reply to this message"
+                      >
+                        <X aria-hidden />
+                      </Button>
+                    </div>
+                  )}
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">

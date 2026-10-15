@@ -34,7 +34,7 @@ until the work calls for it.
 - **Brigade's own instructions are skills too.** How to make designs, design systems and
   previews (`brigade-designs`, `brigade-design-systems`, `brigade-previews`) left the
   generated CLAUDE.md, which keeps a line saying when to read each. Names starting with
-  `brigade-` are reserved, as are `/design` and `/visual`.
+  `brigade-` are reserved, as are the names of Brigade's own commands (`/design`, `/visual`, `/image`).
 - **Import, never sync.** A `SKILL.md`, `.zip` or `.skill` (Claude's export, a zip) is read
   into the editor to review before saving (`POST /api/skills/import`); binaries are left
   out and listed.

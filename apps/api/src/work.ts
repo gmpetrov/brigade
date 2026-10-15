@@ -1,7 +1,7 @@
 // Starting a teammate's next turn. Members' messages, triggers and approved
 // caps all come through here, so caps are checked in one place.
 import { randomUUID } from 'node:crypto'
-import { mentionedIds, type ThreadAttachmentRef } from '@brigade/contracts'
+import { mentionedIds, type ReplyTo, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { attachToThread, detach } from './attachments.js'
 import { audit } from './audit.js'
@@ -33,6 +33,8 @@ type Prompt = {
   messageId?: string
   /** Give it to the teammate's running turn instead of queuing it. */
   steer?: boolean
+  /** The earlier message it replies to. */
+  replyTo?: ReplyTo
 }
 
 const MAX_TEAMMATES_PER_MESSAGE = 5
@@ -142,6 +144,7 @@ export async function promptThread(
     attachments: prompt.attachments ?? [],
     ...(prompt.messageId ? { messageId: prompt.messageId } : {}),
     ...(prompt.steer ? { steer: true } : {}),
+    ...(prompt.replyTo ? { replyTo: prompt.replyTo } : {}),
   })
 }
 
