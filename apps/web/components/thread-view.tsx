@@ -22,6 +22,7 @@ import {
   type MessageAttachment,
   type Question,
   type QuestionAnswer,
+  type ReplyTo,
   type SequencedEvent,
   type TicketAnswer,
   messageCommand,
@@ -42,6 +43,7 @@ import {
   Monitor,
   Plus,
   RefreshCw,
+  Reply,
   ShieldAlert,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -80,12 +82,23 @@ type Item =
   | {
       kind: 'user'
       key: string
+      /** Where it is in the thread: a reply names it by this. */
+      seq: number
       text: string
       attachments: MessageAttachment[]
+      /** The earlier message it replies to. */
+      replyTo?: ReplyTo
       /** Given to this teammate during its running turn. */
       steeredTo?: string
     }
-  | { kind: 'assistant'; key: string; text: string; done: boolean; teammateId?: string }
+  | {
+      kind: 'assistant'
+      key: string
+      seq: number
+      text: string
+      done: boolean
+      teammateId?: string
+    }
   | { kind: 'thinking'; key: string; text: string }
   | {
       kind: 'tool'
@@ -192,8 +205,10 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           add({
             kind: 'user',
             key: `u${seq}`,
+            seq,
             text: e.text,
             attachments: e.attachments ?? [],
+            ...(e.replyTo ? { replyTo: e.replyTo } : {}),
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
           })
           break
@@ -231,14 +246,30 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           const key = `m${e.teammateId ?? ''}:${e.id}`
           const item = byKey.get(key)
           if (item?.kind === 'assistant') item.text += e.text
-          else add({ kind: 'assistant', key, text: e.text, done: false, teammateId: e.teammateId })
+          else
+            add({
+              kind: 'assistant',
+              key,
+              seq,
+              text: e.text,
+              done: false,
+              teammateId: e.teammateId,
+            })
           break
         }
         case 'message.done': {
           const key = `m${e.teammateId ?? ''}:${e.id}`
           const item = byKey.get(key)
           if (item?.kind === 'assistant') Object.assign(item, { text: e.text, done: true })
-          else add({ kind: 'assistant', key, text: e.text, done: true, teammateId: e.teammateId })
+          else
+            add({
+              kind: 'assistant',
+              key,
+              seq,
+              text: e.text,
+              done: true,
+              teammateId: e.teammateId,
+            })
           break
         }
         case 'tool.started':
@@ -405,6 +436,48 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
 
 const clipText = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max)}…` : text
+
+/** What a reply quotes of a message: its start, as long as a reply carries. */
+const replyText = (text: string) => clipText(text.trim(), 1999)
+
+/** Reply to a message: shown while the pointer is over it (always on phones). */
+function ReplyButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      className="shrink-0 rounded-full text-muted-foreground [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"
+      onClick={onClick}
+      aria-label="Reply"
+      title="Reply"
+    >
+      <Reply className="size-3.5" aria-hidden />
+    </Button>
+  )
+}
+
+/** The message a person's message replies to, above it: a click scrolls to it. */
+function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
+  return (
+    <button
+      type="button"
+      className="flex max-w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+      title="Show the message it replies to"
+      onClick={() =>
+        document
+          .querySelector(`[data-seq="${reply.seq}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    >
+      <Reply className="size-3.5 shrink-0" aria-hidden />
+      <span className="truncate">
+        {author && <span className="font-medium">{author}: </span>}“
+        {mentionsToText(reply.text).replace(/\s+/g, ' ')}”
+      </span>
+    </button>
+  )
+}
 
 const json = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value, null, 2)
@@ -1037,6 +1110,7 @@ export function ThreadItems({
   onAnswer,
   onTicket,
   onChoose,
+  onReply,
   canApprove,
   takeover,
   teammate,
@@ -1052,6 +1126,8 @@ export function ThreadItems({
   onTicket: (requestId: string, answer: TicketAnswer) => Promise<void>
   /** Sends a choice someone clicked as their message, with the option's design it picks. Unset when they cannot send one now. */
   onChoose?: (text: string, pick?: string) => Promise<void>
+  /** Quotes a message in the composer, for the next one to reply to it. Unset when they cannot send one. */
+  onReply?: (reply: ReplyTo) => void
   canApprove: boolean
   /** Unset when this member cannot take over the computer (a member's own machine, another in control). */
   takeover?: TicketTakeover
@@ -1075,11 +1151,30 @@ export function ThreadItems({
         const asked = messageCommand(item.text)
         const text = asked ? asked.rest : item.text
         return (
-          <div key={item.key} className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
+          <div
+            key={item.key}
+            data-seq={item.seq}
+            className="flex max-w-[85%] flex-col items-end gap-1.5 self-end"
+          >
+            {item.replyTo && (
+              <ReplyQuote
+                reply={item.replyTo}
+                author={
+                  item.replyTo.teammateId ? byId.get(item.replyTo.teammateId)?.name : undefined
+                }
+              />
+            )}
             {asked && <CommandChip command={asked.command} />}
             {text && (
-              <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
-                <MessageWithCode text={text} />
+              <div className="group/message flex items-center gap-1">
+                {onReply && (
+                  <ReplyButton
+                    onClick={() => onReply({ seq: item.seq, text: replyText(item.text) })}
+                  />
+                )}
+                <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
+                  <MessageWithCode text={text} />
+                </div>
               </div>
             )}
             {item.attachments.length > 0 && (
@@ -1110,7 +1205,7 @@ export function ThreadItems({
             previous.teammateId !== item.teammateId ||
             items.slice(items.indexOf(previous), i).some((it) => it.kind === 'user'))
         return (
-          <div key={item.key} className="flex items-start gap-3">
+          <div key={item.key} data-seq={item.seq} className="group/message flex items-start gap-3">
             {author && <TeammateAvatar teammate={author} className="mt-0.5 size-8" />}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1">
               {named && <span className="text-sm font-semibold">{author.name}</span>}
@@ -1118,6 +1213,19 @@ export function ThreadItems({
               <FileLinksProvider value={{ teammateId: item.teammateId }}>
                 <Markdown text={item.text} />
               </FileLinksProvider>
+              {onReply && item.done && (
+                <div className="-ml-1.5">
+                  <ReplyButton
+                    onClick={() =>
+                      onReply({
+                        seq: item.seq,
+                        ...(author ? { teammateId: author.id } : {}),
+                        text: replyText(item.text),
+                      })
+                    }
+                  />
+                </div>
+              )}
             </div>
           </div>
         )

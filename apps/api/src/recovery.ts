@@ -74,6 +74,7 @@ export async function messagesToRequeue(runner: Runner, queued: QueuedMessage[])
         memberId: event.memberId,
         attachments: first!.attachments.filter((a) => ids.has(a.id)),
         messageId,
+        ...(event.replyTo ? { replyTo: event.replyTo } : {}),
       })
     } catch (error) {
       console.warn(`thread ${sessionId}: a queued message cannot be queued again: ${String(error)}`)
