@@ -7,15 +7,17 @@ The control plane for a business or project run with AI teammates. The product s
 
 pnpm workspaces + Turborepo.
 
-| Path                 | Package              | Runs                                                                                                                                |
-| -------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/contracts` | `@brigade/contracts` | Zod schemas: `AgentEvent`, API payloads, runner and browser socket messages. Imported by all others.                                |
-| `packages/providers` | `@brigade/providers` | `ComputerProvider` interface (boat implementation arrives in build step 4). Used only by `api`.                                     |
-| `apps/api`           | `@brigade/api`       | Hono on Node.js: auth, workspaces, teammates, threads, runner linking, the WebSocket hub. The only package that touches PostgreSQL. |
-| `apps/runner`        | `@brigade/runner`    | `brigade-runner`: links a computer to a workspace and runs its threads through the AI SDK harness layer.                            |
-| `apps/web`           | `@brigade/web`       | Next.js dashboard and landing page.                                                                                                 |
-| `packages/editor`    | `@brigade/editor`    | The document editor's schema (mentions) and lossless Markdown conversion for media and mentions. Used by `api` and `web`.           |
-| `apps/collab`        | `@brigade/collab`    | Cloudflare Worker: one Durable Object per document people edit together, syncing their editors over Yjs (y-partyserver).            |
+| Path                      | Package                       | Runs                                                                                                                                |
+| ------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/contracts`      | `@brigade/contracts`          | Zod schemas: `AgentEvent`, API payloads, runner and browser socket messages. Imported by all others.                                |
+| `packages/providers`      | `@brigade/providers`          | `ComputerProvider` interface (boat implementation arrives in build step 4). Used only by `api`.                                     |
+| `apps/api`                | `@brigade/api`                | Hono on Node.js: auth, workspaces, teammates, threads, runner linking, the WebSocket hub. The only package that touches PostgreSQL. |
+| `apps/runner`             | `@brigade/runner`             | `brigade-runner`: links a computer to a workspace and runs its threads through the AI SDK harness layer.                            |
+| `apps/web`                | `@brigade/web`                | Next.js dashboard and landing page.                                                                                                 |
+| `packages/editor`         | `@brigade/editor`             | The document editor's schema (mentions) and lossless Markdown conversion for media and mentions. Used by `api` and `web`.           |
+| `apps/collab`             | `@brigade/collab`             | Cloudflare Worker: one Durable Object per document people edit together, syncing their editors over Yjs (y-partyserver).            |
+| `apps/desktop`            | `@brigade/desktop`            | Brigade.app (Tauri): menu-bar app that installs, links and runs the runner on a member's Mac, starts at login, updates itself.      |
+| `apps/computer-use-macos` | `@brigade/computer-use-macos` | Brigade Computer Use.app (Swift): holds Screen Recording and Accessibility; the runner's `computer_*` tools go through it.          |
 
 ## Develop
 
@@ -46,6 +48,31 @@ node apps/runner/dist/index.js start
 
 The runner keeps its token, event outbox and harness state in `~/.brigade` (override with `BRIGADE_HOME`).
 It strips `ANTHROPIC_*` and other API-key variables at startup, so Claude Code runs on your subscription login.
+Only one runner runs per home: `start` claims `runner.pid` and exits with code 3 while another holds it.
+
+### Brigade.app and computer use (macOS)
+
+Members link a Mac with **Brigade.app** (`apps/desktop`) instead of the terminal: **Computers → Link this Mac →
+Open in Brigade** opens a `brigade://link?code=…&api=…` link, the app asks before connecting, runs the API's
+`install.sh` (Node.js and the runner, as the command does), links the runner and keeps `brigade-runner start`
+running from the menu bar. The runner still updates itself from the API's bundle; the app updates itself from
+GitHub Releases (`apps/desktop/release`). Logs: `~/.brigade/logs/runner.log`.
+
+Inside it, **Brigade Computer Use.app** (`apps/computer-use-macos`) gives teammates `computer_screenshot`,
+`computer_click`, `computer_type`, `computer_key`, `computer_scroll`, `computer_drag`, `computer_move`,
+`computer_apps`, `computer_open_app` and `computer_ui_tree` on the member's Mac. The runner starts it with `open`,
+so macOS gives Screen Recording and Accessibility to it, not to Brigade.app or a terminal, and talks to it over a
+token-checked socket in `~/.brigade/computer-use`. While a teammate acts, a pill shows its name with a Stop button
+(no Esc shortcut); Stop ends computer use for that turn.
+
+```bash
+pnpm --filter @brigade/computer-use-macos install:app   # helper only, into ~/Applications (runner finds it there)
+pnpm --filter @brigade/desktop build:app                 # Brigade.app and its .dmg, with the helper inside
+```
+
+Both sign with the first "Developer ID Application" identity in the keychain (or `BRIGADE_SIGN_IDENTITY`), else ad
+hoc, in which case macOS asks for the helper's permissions again after each rebuild. To try Brigade.app without
+touching your real runner, run its binary with `BRIGADE_HOME` set to another folder.
 
 ### Theme
 
