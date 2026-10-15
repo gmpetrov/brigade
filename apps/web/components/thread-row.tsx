@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { renamedHere, StreamedTitle } from '@/components/streamed-title'
 import { api, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -93,6 +94,7 @@ export function ThreadRow({
     const value = next.trim()
     if (!value || value === thread.title) return
     try {
+      renamedHere(thread.id, value)
       await api(`/threads/${thread.id}/title`, { method: 'PUT', body: { title: value } })
       onChanged()
     } catch (e) {
@@ -165,7 +167,9 @@ export function ThreadRow({
           }}
         >
           {icon}
-          <span className="flex-1 truncate">{title}</span>
+          <span className="flex-1 truncate">
+            <StreamedTitle threadId={thread.id} text={title} />
+          </span>
           <span
             className={cn(
               'ml-auto shrink-0 text-xs',

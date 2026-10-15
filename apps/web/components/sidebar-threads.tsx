@@ -16,6 +16,7 @@ import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadRow } from '@/components/thread-row'
+import { StreamedTitle } from '@/components/streamed-title'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -480,7 +481,9 @@ export function SidebarWork({
                         />
                       )}
                     </span>
-                    <span>{title}</span>
+                    <span>
+                      <StreamedTitle threadId={t.id} text={title} />
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

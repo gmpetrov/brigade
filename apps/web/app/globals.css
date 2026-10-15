@@ -187,6 +187,18 @@
     mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
   }
 
+  /* A thread's new title, streaming in a piece at a time as a model's answer does
+   * (components/streamed-title.tsx): each piece comes into focus as it arrives. */
+  .stream-piece {
+    animation: stream-piece 0.35s ease-out both;
+  }
+  @keyframes stream-piece {
+    from {
+      opacity: 0;
+      filter: blur(4px);
+    }
+  }
+
   /* A status line a light passes over, while a teammate gets to a message
    * (components/thread-view.tsx). Still for those who ask for less motion. */
   .text-shimmer {

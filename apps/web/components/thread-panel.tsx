@@ -58,6 +58,7 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { isMac, useIsMac } from '@/lib/platform'
+import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -544,6 +545,7 @@ export function ThreadPanel() {
               project={shown.project}
               teammate={lead}
               label={shown.title}
+              threadId={shown.id}
               heading
               details={`${lead?.name ?? 'the teammate'}'s computer, routines and more`}
               reconnecting={!shown.connected}
@@ -614,7 +616,7 @@ export function ThreadPanel() {
               {shown && (
                 <>
                   <h2 className="min-w-0 truncate text-sm font-semibold" title={shown.title}>
-                    {shown.title}
+                    <StreamedTitle threadId={shown.id} text={shown.title} />
                   </h2>
                   <StatusDot status={shown.status} />
                   {!shown.connected && <Reconnecting />}
@@ -716,6 +718,7 @@ function DetailsPill({
   project,
   teammate,
   label,
+  threadId,
   heading = false,
   details,
   reconnecting = false,
@@ -723,6 +726,8 @@ function DetailsPill({
   project?: Pick<ProjectRef, 'name' | 'icon'> | null
   teammate?: Pick<Teammate, 'id' | 'name' | 'harness'>
   label: string
+  /** The label is this thread's title: it streams in when it changes. */
+  threadId?: string
   /** The label is the page's heading. */
   heading?: boolean
   /** What the details show, for its label. */
@@ -757,7 +762,7 @@ function DetailsPill({
       {teammate && <TeammateAvatar teammate={teammate} className="size-6 shrink-0" />}
       {/* Capped, so a long title keeps it a pill: the whole of it on hover. */}
       <Label className="max-w-72 min-w-0 truncate" title={label}>
-        {label}
+        {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
       </Label>
       {reconnecting && <Reconnecting />}
       {/* The pill grows to show it on hover and while open; always there on touch screens,
