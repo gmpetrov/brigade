@@ -50,6 +50,8 @@ export type GhPull = {
   body?: string | null
   mergeable?: boolean | null
   mergeable_state?: string
+  /** False when GitHub cannot replay the branch's commits on its base (a merge that resolved conflicts). */
+  rebaseable?: boolean | null
   additions?: number
   deletions?: number
   changed_files?: number
@@ -1097,7 +1099,7 @@ function resolvePrompt(row: LoopRow, p: GhPull, author: string, method: MergeMet
     `${author}, fetch \`${p.base.ref}\` and merge it into \`${p.head.ref}\`. Resolve each conflict so ` +
       `both sides' changes still work, run the typecheck and tests, then commit and push to ` +
       `\`${p.head.ref}\`. Do not rebase or force-push. When you are done, Brigade merges it ` +
-      `(${method}) once GitHub allows it. If a conflict needs a person to decide, say so in your ` +
+      `(${method === 'rebase' ? 'rebase, or squashed when GitHub cannot rebase it' : method}) once GitHub allows it. If a conflict needs a person to decide, say so in your ` +
       'reply and do not push. Do not mention other teammates in your reply.',
   ].join('\n')
 }
@@ -1254,7 +1256,10 @@ async function advanceMerge(scope: Scope, id: string) {
       'GitHub requires an approving review or another rule before merging. Approve it on GitHub, or let the Brigade app bypass the rule',
       true,
     )
-  const method = MergeMethod.safeParse(row.mergeMethod).data ?? 'squash'
+  const asked = MergeMethod.safeParse(row.mergeMethod).data ?? 'squash'
+  // A branch GitHub cannot rebase, such as one whose conflicts were resolved by merging
+  // its base in, still lands as one commit on the base: squashed.
+  const method = asked === 'rebase' && p.rebaseable === false ? 'squash' : asked
   const merged = await mergeOnGitHub(gh, row.repository, p, method)
   if ('refused' in merged)
     return waiting(db, row, `GitHub refused the merge: ${merged.refused}`, true)
