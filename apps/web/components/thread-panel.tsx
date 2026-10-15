@@ -734,8 +734,10 @@ function DetailsPill({
   // A file, preview or document in its place: pressing brings it back in front.
   const shown = open && !covered && !documents.current
   const Label = heading ? 'h1' : 'span'
+  const pill = useSlideAcross<HTMLButtonElement>()
   return (
     <button
+      ref={pill}
       type="button"
       className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full border bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
       aria-pressed={shown}
@@ -765,6 +767,50 @@ function DetailsPill({
       </span>
     </button>
   )
+}
+
+/**
+ * Slides the element across when it moves sideways, from where it was to where it is: a
+ * panel opening or closing beside the page narrows or widens what it is centered in.
+ * Tracks its center, so growing on hover is not a move; a resize of the window is followed
+ * without sliding.
+ */
+function useSlideAcross<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const last = useRef<number>(undefined)
+  const center = (el: T) => {
+    const r = el.getBoundingClientRect()
+    return r.left + r.width / 2
+  }
+  // After each render: what opens a panel renders, and its room is taken in the same commit.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Mid-slide, from where it shows now.
+    const sliding = el.getAnimations().filter((a) => a.id === 'slide-across')
+    const from = sliding.length ? center(el) : last.current
+    for (const a of sliding) a.cancel()
+    const to = center(el)
+    last.current = to
+    if (from === undefined || Math.abs(from - to) < 1) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    el.animate([{ transform: `translateX(${from - to}px)` }, { transform: 'none' }], {
+      id: 'slide-across',
+      duration: 300,
+      easing: 'cubic-bezier(0.2, 0, 0, 1)',
+    })
+  })
+  // The window resized: where it is now, so the next render does not slide from before.
+  useEffect(() => {
+    const el = ref.current
+    if (!el?.parentElement) return
+    const observer = new ResizeObserver(() => {
+      if (!el.getAnimations().some((a) => a.id === 'slide-across')) last.current = center(el)
+    })
+    observer.observe(el.parentElement)
+    return () => observer.disconnect()
+  }, [])
+  return ref
 }
 
 function Reconnecting() {
