@@ -1591,3 +1591,45 @@ export function previewTools(
     }),
   }
 }
+
+/** Makes an image with Codex's image model, on the thread starter's Codex account. */
+export type ImageMaker = (
+  input: { prompt: string; references: string[]; toolCallId: string },
+  abortSignal?: AbortSignal,
+) => Promise<{ path: string; prompt?: string }>
+
+/** For a teammate not on Codex, when the starter has a Codex account: images by Codex. */
+export function imageTools(makeImage: ImageMaker): Record<string, Tool> {
+  return {
+    generate_image: tool({
+      description:
+        "Make an image (an illustration, a photo, an icon, a mockup, a banner) with OpenAI's image model, " +
+        "through the Codex account of the person who started this thread. It spends that account's usage, " +
+        'several times a text turn, so make the images asked for, not drafts. Returns the file it saved in your ' +
+        'working directory (images/...), which the thread shows; open it to look at it. To change an image, ' +
+        'give it as a reference with what to change.',
+      inputSchema: jsonSchema<{ prompt: string; references?: string[] }>({
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description:
+              'What to draw, in full: subject, style, composition, colours, any text it shows, and its shape (square, landscape, portrait)',
+          },
+          references: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Image files on this computer to start from or match (an earlier image to edit, a logo, a photo)',
+          },
+        },
+        required: ['prompt'],
+      }),
+      execute: (input, { abortSignal, toolCallId }) =>
+        makeImage(
+          { prompt: input.prompt, references: input.references ?? [], toolCallId },
+          abortSignal,
+        ),
+    }),
+  }
+}

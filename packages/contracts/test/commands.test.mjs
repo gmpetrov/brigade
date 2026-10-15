@@ -25,3 +25,9 @@ test('the teammate reads the command in words, never a leading slash', () => {
   assert.ok(prompt.endsWith('\n\na pricing page for @[acme](repository:acme/web)'))
   assert.equal(commandPrompt('no command here'), 'no command here')
 })
+
+test('/image asks for the image tool', () => {
+  const prompt = commandPrompt('/image a violet robot waving')
+  assert.match(prompt, /^The person asked for an image \(\/image\).*generate_image/)
+  assert.ok(prompt.endsWith('\n\na violet robot waving'))
+})
