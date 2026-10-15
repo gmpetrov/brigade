@@ -20,6 +20,7 @@ import {
   type ThreadSummary,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { useLive } from '@/lib/use-live'
 
 const slugify = (name: string) =>
@@ -85,12 +86,15 @@ export default function Onboarding() {
       api<Me>('/me')
         .then((next) => {
           setMe(next)
+          markSignedIn()
           setAdding((was) => was ?? (!!next.activeWorkspaceId && next.aiReady))
           return next
         })
         .catch((e) => {
-          if (e instanceof ApiError && e.status === 401) router.replace('/sign-in')
-          else setError(String(e))
+          if (e instanceof ApiError && e.status === 401) {
+            markSignedOut()
+            router.replace('/sign-in')
+          } else setError(String(e))
           return undefined
         }),
     [router],

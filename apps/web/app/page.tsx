@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { Button } from '@/components/ui/button'
 
 export default function Landing() {
   return (
     <main className="flex min-h-svh items-center justify-center px-4 py-12">
+      <RedirectIfSignedIn />
       <div className="flex w-full max-w-xl flex-col items-center gap-6 text-center">
         <span
           aria-hidden

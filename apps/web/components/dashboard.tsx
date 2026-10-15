@@ -84,6 +84,7 @@ import {
   type Ticket,
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
+import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -208,10 +209,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    if (me.error?.status === 401) router.replace('/sign-in')
+    if (me.error?.status === 401) {
+      markSignedOut()
+      router.replace('/sign-in')
+    } else if (me.data) markSignedIn()
     // No workspace yet, or no AI account to run anything: onboarding first.
-    else if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady))
-      router.replace('/onboarding')
+    if (me.data && (!me.data.activeWorkspaceId || !me.data.aiReady)) router.replace('/onboarding')
   }, [me.data, me.error, router])
 
   if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
@@ -246,6 +249,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await authClient.signOut()
+    markSignedOut()
     router.replace('/sign-in')
   }
 

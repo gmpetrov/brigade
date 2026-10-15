@@ -20,6 +20,18 @@ export const auth = betterAuth({
   trustedOrigins: env.WEB_URL,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
+  // The OAuth client connections use (src/connectors/google-oauth.ts), with the
+  // redirect URI {API_URL}/api/auth/callback/google added to it.
+  ...(env.GOOGLE_CLIENT_ID &&
+    env.GOOGLE_CLIENT_SECRET && {
+      socialProviders: {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          prompt: 'select_account',
+        },
+      },
+    }),
   session: {
     modelName: 'authSession',
     additionalFields: {

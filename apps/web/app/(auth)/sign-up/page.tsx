@@ -2,11 +2,13 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { GoogleSignIn } from '@/components/google-sign-in'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
+import { markSignedIn } from '@/lib/signed-in'
 
 export default function SignUp() {
   const router = useRouter()
@@ -23,6 +25,7 @@ export default function SignUp() {
         password: String(form.get('password')),
       })
       if (error) return setError(error.message ?? 'Could not create the account')
+      markSignedIn()
       router.push('/onboarding')
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
@@ -44,7 +47,13 @@ export default function SignUp() {
           <h1 className="text-3xl font-extrabold tracking-tight">Create your account</h1>
         </div>
         <Card>
-          <CardContent>
+          <CardContent className="flex flex-col gap-5">
+            <GoogleSignIn onError={setError} />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              or
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <form action={submit} className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Name</Label>

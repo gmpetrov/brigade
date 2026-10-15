@@ -1,17 +1,24 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { GoogleSignIn } from '@/components/google-sign-in'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
+import { markSignedIn } from '@/lib/signed-in'
 
 export default function SignIn() {
   const router = useRouter()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  // Back from Google with ?error=: the API names what went wrong.
+  useEffect(() => {
+    const failed = new URLSearchParams(location.search).get('error')
+    if (failed) setError(`Could not sign in with Google (${failed.replaceAll('_', ' ')})`)
+  }, [])
 
   async function submit(form: FormData) {
     setError(undefined)
@@ -22,6 +29,7 @@ export default function SignIn() {
         password: String(form.get('password')),
       })
       if (error) return setError(error.message ?? 'Could not sign in')
+      markSignedIn()
       router.push('/app')
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
@@ -46,7 +54,13 @@ export default function SignIn() {
           </div>
         </div>
         <Card>
-          <CardContent>
+          <CardContent className="flex flex-col gap-5">
+            <GoogleSignIn onError={setError} />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              or
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <form action={submit} className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">Email</Label>
