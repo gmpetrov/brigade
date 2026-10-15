@@ -533,7 +533,10 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
-    const { text, attachmentIds, messageId, steer, pick } = await parseBody(c.req.raw, SendMessage)
+    const { text, attachmentIds, messageId, steer, pick, replyTo } = await parseBody(
+      c.req.raw,
+      SendMessage,
+    )
     // A design picked from the thread's options: checked first, moved once the message is sent.
     const picking = pick ? await checkPick(db, thread.id, pick) : undefined
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
@@ -551,6 +554,7 @@ export const threads = new Hono<AppEnv>()
         attachmentIds,
         ...(messageId ? { messageId } : {}),
         ...(steer ? { steer } : {}),
+        ...(replyTo ? { replyTo } : {}),
       },
       { memberId: scope.memberId },
     )
