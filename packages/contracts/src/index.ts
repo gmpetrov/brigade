@@ -16,6 +16,7 @@ export * from './pulls.js'
 export * from './repositories.js'
 export * from './runner.js'
 export * from './schedules.js'
+export * from './wakeups.js'
 export * from './search.js'
 export * from './skills.js'
 export * from './tasks.js'
@@ -36,8 +37,9 @@ export * from './thread-history.js'
  * 19: heartbeats, so the API can tell a runner that is gone from a quiet one.
  * 20: skills in the spec (written into the harness's skills folder) and skill proposals.
  * 21: a skill's files by reference (`refs`), fetched from /runner/skill-files.
+ * 22: wake-ups (set, list, cancel), sent as schedule.call operations.
  */
-export const PROTOCOL_VERSION = 21
+export const PROTOCOL_VERSION = 22
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /**

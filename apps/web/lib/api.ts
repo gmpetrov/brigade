@@ -301,6 +301,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   task: { id: string; title: string; completedAt: string | null } | null
   /** The project it works in: its brief, memory and folder come with each turn. */
   project: ProjectSummary | null
+  /** When its teammates asked to be prompted here again, soonest first. */
+  wakeups: { id: string; teammateId: string; note: string; wakeAt: string }[]
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'

@@ -26,6 +26,10 @@ import {
   Widget,
   WIDGET_GUIDE_TOOL,
   WIDGET_HTML_MAX,
+  WAKEUP_MAX_DAYS,
+  WAKEUP_MIN_MINUTES,
+  WAKEUPS_IN_A_ROW,
+  WAKEUPS_PER_THREAD,
   type ConnectorGrant,
   type DesignPersonEdit,
   type TeammateDesignSystem,
@@ -1336,6 +1340,67 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
           operation: { name: 'update', ...input },
           toolCallId,
           toolName: 'update_schedule',
+          input,
+        }),
+    }),
+    set_wakeup: tool({
+      description:
+        'Be prompted again in this thread later, with this conversation, to check on something that is not ' +
+        'ready yet: a deploy, a CI run, a reply, a site coming up ("check again in 10 minutes"). Give minutes ' +
+        `or at (${WAKEUP_MIN_MINUTES} minute to ${WAKEUP_MAX_DAYS} days ahead) and a note saying what to check; ` +
+        'the note is the prompt you get back. Then end your turn: never sleep or poll in a loop to wait. ' +
+        "Prefer what notifies you by itself (a pull request's review loop, a ticket) when there is one. " +
+        `At most ${WAKEUPS_PER_THREAD} pending per thread, and ${WAKEUPS_IN_A_ROW} in a row without a word ` +
+        'from a person. Only in a thread a person started.',
+      inputSchema: jsonSchema<{ minutes?: number; at?: string; note: string }>({
+        type: 'object',
+        properties: {
+          minutes: { type: 'number', description: 'In this many minutes. Or at.' },
+          at: {
+            type: 'string',
+            description:
+              'An ISO 8601 time with its offset, e.g. "2026-10-16T09:00:00+02:00". Or minutes.',
+          },
+          note: {
+            type: 'string',
+            description:
+              'What to check and how, standing alone, e.g. "Check CI on PR #412; if green, merge it as asked"',
+          },
+        },
+        required: ['note'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'wake',
+            note: input.note,
+            ...(input.minutes !== undefined ? { minutes: input.minutes } : {}),
+            ...(input.at !== undefined ? { at: input.at } : {}),
+          },
+          toolCallId,
+          toolName: 'set_wakeup',
+          input,
+        }),
+    }),
+    list_wakeups: tool({
+      description: 'List your pending wake-ups in this thread: id, note and when.',
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({ operation: { name: 'list_wakeups' }, toolCallId, toolName: 'list_wakeups', input }),
+    }),
+    cancel_wakeup: tool({
+      description:
+        'Cancel one of your pending wake-ups in this thread, e.g. once what it was to check is done.',
+      inputSchema: jsonSchema<{ wakeupId: string }>({
+        type: 'object',
+        properties: { wakeupId: { type: 'string', description: 'From list_wakeups' } },
+        required: ['wakeupId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'cancel_wakeup', wakeupId: input.wakeupId },
+          toolCallId,
+          toolName: 'cancel_wakeup',
           input,
         }),
     }),

@@ -660,6 +660,7 @@ export function ThreadConversation({
           onOpenFile={openFile}
           details={details}
           actions={computerActions}
+          onChange={() => void thread.reload()}
         />
       )}
 

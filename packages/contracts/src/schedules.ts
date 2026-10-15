@@ -3,6 +3,7 @@
 // and compute runs with these same helpers.
 import { Cron } from 'croner'
 import { z } from 'zod'
+import { WakeupOperations } from './wakeups.js'
 
 /** Runs closer together than this are refused. */
 export const SCHEDULE_MIN_GAP_MINUTES = 5
@@ -106,5 +107,6 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
     timezone: Timezone.optional(),
     paused: z.boolean().optional(),
   }),
+  ...WakeupOperations,
 ])
 export type ScheduleOperation = z.infer<typeof ScheduleOperation>

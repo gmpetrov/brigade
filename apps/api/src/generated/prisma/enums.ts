@@ -86,6 +86,16 @@ export const TaskPriority = {
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
 
 
+export const WakeupStatus = {
+  pending: 'pending',
+  fired: 'fired',
+  cancelled: 'cancelled',
+  missed: 'missed'
+} as const
+
+export type WakeupStatus = (typeof WakeupStatus)[keyof typeof WakeupStatus]
+
+
 export const AccountStatus = {
   signing_in: 'signing_in',
   unverified: 'unverified',

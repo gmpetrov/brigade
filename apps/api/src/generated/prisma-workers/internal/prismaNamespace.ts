@@ -413,6 +413,7 @@ export const ModelName = {
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
+  Wakeup: 'Wakeup',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
@@ -460,7 +461,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1645,6 +1646,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ScheduleCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ScheduleCountAggregateOutputType> | number
+        }
+      }
+    }
+    Wakeup: {
+      payload: Prisma.$WakeupPayload<ExtArgs>
+      fields: Prisma.WakeupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WakeupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WakeupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        findFirst: {
+          args: Prisma.WakeupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WakeupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        findMany: {
+          args: Prisma.WakeupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>[]
+        }
+        create: {
+          args: Prisma.WakeupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        createMany: {
+          args: Prisma.WakeupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WakeupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>[]
+        }
+        delete: {
+          args: Prisma.WakeupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        update: {
+          args: Prisma.WakeupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        deleteMany: {
+          args: Prisma.WakeupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WakeupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WakeupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>[]
+        }
+        upsert: {
+          args: Prisma.WakeupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WakeupPayload>
+        }
+        aggregate: {
+          args: Prisma.WakeupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWakeup>
+        }
+        groupBy: {
+          args: Prisma.WakeupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WakeupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WakeupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WakeupCountAggregateOutputType> | number
         }
       }
     }
@@ -4312,6 +4387,22 @@ export const ScheduleScalarFieldEnum = {
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
 
 
+export const WakeupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  note: 'note',
+  wakeAt: 'wakeAt',
+  status: 'status',
+  firedAt: 'firedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type WakeupScalarFieldEnum = (typeof WakeupScalarFieldEnum)[keyof typeof WakeupScalarFieldEnum]
+
+
 export const ThreadTeammateScalarFieldEnum = {
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
@@ -5117,6 +5208,20 @@ export type ListEnumTaskPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<
 
 
 /**
+ * Reference to a field of type 'WakeupStatus'
+ */
+export type EnumWakeupStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'WakeupStatus[]'
+ */
+export type ListEnumWakeupStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'AccountSource'
  */
 export type EnumAccountSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AccountSource'>
@@ -5576,6 +5681,7 @@ export type GlobalOmitConfig = {
   session?: Prisma.SessionOmit
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit
+  wakeup?: Prisma.WakeupOmit
   threadTeammate?: Prisma.ThreadTeammateOmit
   sessionEvent?: Prisma.SessionEventOmit
   account?: Prisma.AccountOmit
