@@ -152,18 +152,26 @@ export const githubSourceKey = (s: GitHubSource) =>
   (s.ref ? `/tree/${s.ref}${s.path ? `/${s.path}` : ''}` : s.path ? `/tree/HEAD/${s.path}` : '')
 
 /**
- * The repository's zip at that ref: with the workspace's GitHub connection when
- * it reaches the repository (a private one), else as anyone would.
+ * The repository's zip at that ref (its default branch when unset). A public
+ * one comes from codeload.github.com, as a browser's "Download ZIP" does: the
+ * API allows 60 requests an hour per address without a login, which a server
+ * many people share uses up. A private one comes through the API, with the
+ * workspace's GitHub connection.
  */
 export async function fetchGitHubZip(source: GitHubSource, token?: string) {
-  const ref = source.ref ? `/${encodeURIComponent(source.ref)}` : ''
+  const ref = source.ref ?? 'HEAD'
+  if (!/^[A-Za-z0-9._/-]{1,200}$/.test(ref) || ref.split('/').includes('..'))
+    throw new HTTPException(400, { message: 'That branch or tag name is not one GitHub uses' })
   const response = await fetch(
-    `https://api.github.com/repos/${source.owner}/${source.repo}/zipball${ref}`,
+    token
+      ? `https://api.github.com/repos/${source.owner}/${source.repo}/zipball/${ref}`
+      : `https://codeload.github.com/${source.owner}/${source.repo}/zip/${ref}`,
     {
       headers: {
-        accept: 'application/vnd.github+json',
         'user-agent': 'Brigade',
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(token
+          ? { accept: 'application/vnd.github+json', authorization: `Bearer ${token}` }
+          : {}),
       },
       redirect: 'follow',
     },
@@ -172,7 +180,11 @@ export async function fetchGitHubZip(source: GitHubSource, token?: string) {
     throw new HTTPException(404, {
       message: token
         ? 'That repository or branch was not found'
-        : 'That repository was not found. A private one needs a GitHub connection that reaches it.',
+        : 'That repository or branch was not found. A private one needs a GitHub connection that reaches it.',
+    })
+  if (response.status === 403 || response.status === 429)
+    throw new HTTPException(503, {
+      message: 'GitHub is limiting downloads from Brigade right now. Try again in a few minutes.',
     })
   if (!response.ok)
     throw new HTTPException(502, { message: `GitHub did not send it (${response.status})` })
@@ -184,7 +196,7 @@ export async function fetchGitHubZip(source: GitHubSource, token?: string) {
   return bytes
 }
 
-/** A zipball holds everything under one `<owner>-<repo>-<sha>/` folder. */
+/** A repository's zip holds everything under one folder: `<repo>-<ref>/`, or `<owner>-<repo>-<sha>/`. */
 export function zipballRoot(bytes: Uint8Array) {
   let root = ''
   // Names only: nothing is unpacked.
