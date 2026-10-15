@@ -130,26 +130,41 @@ export const runnerLink = new Hono().post('/link', async (c) => {
       where: { id: grant.workspaceId, organizationId: grant.organizationId },
     })
     // A machine linked again (a reinstall, Brigade.app after the terminal) keeps its computer
-    // when the member and workspace are the same; else it is a new one.
-    const previous =
-      grant.kind === 'cloud' || !input.computerId
+    // when the member and workspace are the same; else it is a new one. The machine ID finds
+    // it even when runner.json is gone; the computer runner.json named, from older runners.
+    const mine =
+      grant.kind === 'cloud'
         ? null
-        : await tx.computer.findFirst({
-            where: {
-              id: input.computerId,
-              workspaceId: workspace.id,
-              kind: 'member_machine',
-              memberId: grant.memberId,
-              status: { not: 'destroyed' },
-            },
-          })
+        : {
+            workspaceId: workspace.id,
+            kind: 'member_machine' as const,
+            memberId: grant.memberId,
+            status: { not: 'destroyed' as const },
+          }
+    const previous = !mine
+      ? null
+      : ((input.machineId
+          ? await tx.computer.findFirst({
+              where: { ...mine, machineId: input.machineId },
+              orderBy: { createdAt: 'desc' },
+            })
+          : null) ??
+        (input.computerId
+          ? await tx.computer.findFirst({ where: { ...mine, id: input.computerId } })
+          : null))
     const computer =
       grant.kind === 'cloud'
         ? await tx.computer.findFirstOrThrow({
             where: { id: grant.computerId, workspaceId: workspace.id, kind: 'cloud' },
           })
         : previous
-          ? await tx.computer.update({ where: { id: previous.id }, data: { name: input.name } })
+          ? await tx.computer.update({
+              where: { id: previous.id },
+              data: {
+                name: input.name,
+                ...(input.machineId ? { machineId: input.machineId } : {}),
+              },
+            })
           : await tx.computer.create({
               data: {
                 organizationId: grant.organizationId,
@@ -157,6 +172,7 @@ export const runnerLink = new Hono().post('/link', async (c) => {
                 kind: 'member_machine',
                 memberId: grant.memberId,
                 name: input.name,
+                machineId: input.machineId ?? null,
                 status: 'pending',
               },
             })

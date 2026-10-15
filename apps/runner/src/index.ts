@@ -18,6 +18,7 @@ import {
   CLOUD,
   HOME,
   loadConfig,
+  machineId,
   paths,
   saveConfig,
   VERSION,
@@ -84,6 +85,7 @@ async function link(code: string | undefined) {
       name: values.name,
       platform: `${process.platform}-${process.arch}`,
       version: VERSION,
+      ...(CLOUD ? {} : { machineId: machineId() }),
       ...(previous && previous.apiUrl === values.api ? { computerId: previous.computerId } : {}),
     }),
   })
@@ -512,7 +514,7 @@ async function start() {
   // cloud computer, which root setup it has. Each connect also refreshes the library.
   const hello = async () => {
     void library.sync()
-    if (!CLOUD) return { machineLogins: await machineLogins() }
+    if (!CLOUD) return { machineLogins: await machineLogins(), machineId: machineId() }
     const setup = await readFile('/var/lib/brigade/setup', 'utf8').catch(() => '')
     return setup.trim() ? { setup: setup.trim() } : {}
   }
