@@ -3,10 +3,22 @@ import { readFileSync, unlinkSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /** Everything the runner keeps on this computer lives here. */
 export const HOME = process.env.BRIGADE_HOME ?? join(homedir(), '.brigade')
-export const VERSION = '0.0.0'
+/**
+ * What the dashboard shows as the runner's version: the start of the SHA-256 of the
+ * bundle it was installed from (install.sh writes it beside dist/), or "dev" from source.
+ */
+export const VERSION = (() => {
+  try {
+    const sha = readFileSync(fileURLToPath(new URL('../.bundle-sha256', import.meta.url)), 'utf8')
+    return sha.trim().slice(0, 7) || 'dev'
+  } catch {
+    return 'dev'
+  }
+})()
 /** A workspace cloud computer: each teammate runs as its own Linux user. */
 export const CLOUD = process.env.BRIGADE_CLOUD === '1' || process.argv.includes('--cloud')
 /** Account login directories. Shared with teammate users on a cloud computer. */

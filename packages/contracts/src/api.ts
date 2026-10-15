@@ -177,6 +177,8 @@ export const RunnerLink = z.object({
   name: z.string().trim().min(1).max(120),
   platform: z.string().max(60),
   version: z.string().max(40),
+  /** The computer this runner was linked as before: linking again replaces it instead of adding one. */
+  computerId: z.string().max(60).optional(),
 })
 export const RunnerLinkResult = z.object({
   token: z.string(),
