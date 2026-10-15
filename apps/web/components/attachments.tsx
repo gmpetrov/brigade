@@ -1,14 +1,15 @@
 'use client'
 // Files for a message: picked, dropped or pasted into the composer, uploaded
 // right away, and sent with the message by their ids. In the thread, the files
-// a message came with show under it and open in the file panel.
+// a message came with show under it: images and videos open over the page,
+// other files in the file panel.
 import {
   ATTACHMENT_MAX,
   ATTACHMENTS_PER_MESSAGE,
   type AttachmentInfo,
   type MessageAttachment,
 } from '@brigade/contracts'
-import { Ban, FileText, Paperclip, X } from 'lucide-react'
+import { Ban, FileText, Paperclip, Play, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,13 @@ import { api, attachmentUrl, uploadAttachment } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
+const VIDEO = /^video\/(mp4|webm|quicktime)$/
+
+type Media = { name: string; src: string; kind: 'image' | 'video' }
+
+/** How a file of this type shows over the page, if it does. */
+const mediaKind = (contentType: string) =>
+  IMAGE.test(contentType) ? 'image' : VIDEO.test(contentType) ? 'video' : undefined
 
 export function fileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -33,8 +41,9 @@ type Upload = {
   info?: AttachmentInfo
   error?: string
   controller: AbortController
-  /** An image's own pixels, shown before it finishes uploading (an object URL). */
+  /** An image's or video's own bytes, shown before it finishes uploading (an object URL). */
   preview?: string
+  media?: Media['kind']
 }
 
 /** The files of the message being written: each uploads as soon as it is added. */
@@ -63,7 +72,9 @@ export function useUploads() {
           size: file.size,
           progress: 0,
           controller: new AbortController(),
-          ...(IMAGE.test(file.type) ? { preview: URL.createObjectURL(file) } : {}),
+          ...(mediaKind(file.type)
+            ? { preview: URL.createObjectURL(file), media: mediaKind(file.type) }
+            : {}),
         }
         const error =
           list.current.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
@@ -200,8 +211,8 @@ export function AttachButton({
 const extension = (name: string) => /\.([a-z0-9]{1,5})$/i.exec(name)?.[1]?.toUpperCase() ?? ''
 
 /**
- * The files of the message being written, as tiles like Claude's: an image shows itself
- * and opens larger on a click (Esc closes it), any other file its name and kind.
+ * The files of the message being written, as tiles like Claude's: an image or video
+ * shows itself and opens larger on a click (Esc closes it), any other file its name and kind.
  */
 export function UploadList({
   uploads,
@@ -210,15 +221,14 @@ export function UploadList({
   uploads: ReturnType<typeof useUploads>['uploads']
   onRemove: (key: string) => void
 }) {
-  const [viewing, setViewing] = useState<{ name: string; src: string }>()
+  const [viewing, setViewing] = useState<Media>()
   if (uploads.length === 0) return null
   return (
     <>
       <ul className="flex flex-wrap gap-2 px-1 pt-1" aria-label="Attached files">
         {uploads.map((u) => {
-          const src =
-            u.preview ??
-            (u.info && IMAGE.test(u.info.contentType) ? attachmentUrl(u.info.id) : undefined)
+          const kind = u.media ?? (u.info && mediaKind(u.info.contentType))
+          const src = u.preview ?? (u.info && kind ? attachmentUrl(u.info.id) : undefined)
           return (
             <li
               key={u.key}
@@ -227,16 +237,15 @@ export function UploadList({
                 u.error && 'border-destructive/40',
               )}
             >
-              {src && !u.error ? (
+              {src && kind && !u.error ? (
                 <button
                   type="button"
-                  className="block size-full cursor-zoom-in"
-                  onClick={() => setViewing({ name: u.name, src })}
+                  className="relative block size-full cursor-zoom-in"
+                  onClick={() => setViewing({ name: u.name, src, kind })}
                   aria-label={`Preview ${u.name}`}
                   title={u.name}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="size-full object-cover" />
+                  <Thumbnail src={src} kind={kind} />
                 </button>
               ) : (
                 <div className="flex size-full flex-col justify-between gap-1 p-2" title={u.name}>
@@ -280,26 +289,57 @@ export function UploadList({
           )
         })}
       </ul>
-      <ImagePreview image={viewing} onClose={() => setViewing(undefined)} />
+      <MediaPreview media={viewing} onClose={() => setViewing(undefined)} />
     </>
   )
 }
 
-/** An image at full size over the page; Esc, a click outside or × closes it. */
-function ImagePreview({
-  image,
-  onClose,
+/** An image or a video's first frame, filling its tile; a video has a play mark. */
+function Thumbnail({
+  src,
+  kind,
+  small = false,
 }: {
-  image?: { name: string; src: string }
-  onClose: () => void
+  src: string
+  kind: Media['kind']
+  small?: boolean
 }) {
+  if (kind === 'image')
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" className="size-full object-cover" />
   return (
-    <Dialog open={!!image} onOpenChange={(open) => !open && onClose()}>
+    <>
+      {/* #t=0.1 makes Safari draw a frame instead of a blank box. */}
+      <video
+        src={`${src}#t=0.1`}
+        muted
+        playsInline
+        preload="metadata"
+        className="pointer-events-none size-full object-cover"
+      />
+      <span className="absolute inset-0 grid place-items-center">
+        <span
+          className={cn(
+            'grid place-items-center rounded-full bg-black/60 text-white',
+            small ? 'size-4' : 'size-6',
+          )}
+        >
+          <Play aria-hidden className={cn('fill-current', small ? 'size-2' : 'size-3')} />
+        </span>
+      </span>
+    </>
+  )
+}
+
+/** An image or a video at full size over the page; Esc, a click outside or × closes it. */
+function MediaPreview({ media, onClose }: { media?: Media; onClose: () => void }) {
+  return (
+    <Dialog open={!!media} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
         className="block w-auto max-w-none overflow-hidden p-0 sm:max-w-none"
       >
-        <DialogTitle className="sr-only">{image?.name}</DialogTitle>
+        <DialogTitle className="sr-only">{media?.name}</DialogTitle>
         <DialogClose asChild>
           <Button
             variant="secondary"
@@ -311,12 +351,22 @@ function ImagePreview({
             <X aria-hidden />
           </Button>
         </DialogClose>
-        {image && (
+        {media?.kind === 'image' && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={image.src}
-            alt={image.name}
+            src={media.src}
+            alt={media.name}
             className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] object-contain"
+          />
+        )}
+        {media?.kind === 'video' && (
+          <video
+            src={media.src}
+            aria-label={media.name}
+            controls
+            autoPlay
+            playsInline
+            className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] bg-black"
           />
         )}
       </DialogContent>
@@ -324,7 +374,10 @@ function ImagePreview({
   )
 }
 
-/** The files a message came with, under it: each opens in the file panel. */
+/**
+ * The files a message came with, under it: an image or video opens over the page
+ * like in the composer, any other file in the file panel.
+ */
 export function MessageAttachments({
   attachments,
   className,
@@ -333,57 +386,68 @@ export function MessageAttachments({
   className?: string
 }) {
   const links = useFileLinks()
+  const [viewing, setViewing] = useState<Media>()
   return (
-    <ul className={cn('flex flex-wrap gap-2', className)} aria-label="Attached files">
-      {attachments.map((a) => {
-        const image = a.status === 'ready' && IMAGE.test(a.contentType)
-        const body = (
-          <>
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={attachmentUrl(a.id)}
-                alt=""
-                className="size-8 shrink-0 rounded object-cover"
-              />
-            ) : a.status === 'ready' ? (
-              <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-            ) : (
-              <Ban aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-            )}
-            <span className="flex min-w-0 flex-col text-left">
-              <span className="truncate font-medium">{a.name}</span>
-              <span className="truncate text-muted-foreground">
-                {a.status === 'ready' ? fileSize(a.size) : (a.note ?? 'Not kept')}
+    <>
+      <ul className={cn('flex flex-wrap gap-2', className)} aria-label="Attached files">
+        {attachments.map((a) => {
+          const kind = a.status === 'ready' ? mediaKind(a.contentType) : undefined
+          const body = (
+            <>
+              {kind ? (
+                <span className="relative size-8 shrink-0 overflow-hidden rounded">
+                  <Thumbnail src={attachmentUrl(a.id)} kind={kind} small />
+                </span>
+              ) : a.status === 'ready' ? (
+                <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <Ban aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              )}
+              <span className="flex min-w-0 flex-col text-left">
+                <span className="truncate font-medium">{a.name}</span>
+                <span className="truncate text-muted-foreground">
+                  {a.status === 'ready' ? fileSize(a.size) : (a.note ?? 'Not kept')}
+                </span>
               </span>
-            </span>
-          </>
-        )
-        const chip =
-          'flex max-w-64 items-center gap-2 rounded-lg border bg-card py-1.5 pr-3 pl-2 text-xs'
-        return (
-          <li key={a.id}>
-            {a.status !== 'ready' ? (
-              <span className={cn(chip, 'opacity-70')} title={a.note}>
-                {body}
-              </span>
-            ) : links ? (
-              <button
-                type="button"
-                className={cn(chip, 'hover:border-ring')}
-                onClick={() => links.open({ path: a.path })}
-                title={a.path}
-              >
-                {body}
-              </button>
-            ) : (
-              <a href={attachmentUrl(a.id)} target="_blank" rel="noreferrer" className={chip}>
-                {body}
-              </a>
-            )}
-          </li>
-        )
-      })}
-    </ul>
+            </>
+          )
+          const chip =
+            'flex max-w-64 items-center gap-2 rounded-lg border bg-card py-1.5 pr-3 pl-2 text-xs'
+          return (
+            <li key={a.id}>
+              {a.status !== 'ready' ? (
+                <span className={cn(chip, 'opacity-70')} title={a.note}>
+                  {body}
+                </span>
+              ) : kind ? (
+                <button
+                  type="button"
+                  className={cn(chip, 'cursor-zoom-in hover:border-ring')}
+                  onClick={() => setViewing({ name: a.name, src: attachmentUrl(a.id), kind })}
+                  aria-label={`Preview ${a.name}`}
+                  title={a.name}
+                >
+                  {body}
+                </button>
+              ) : links ? (
+                <button
+                  type="button"
+                  className={cn(chip, 'hover:border-ring')}
+                  onClick={() => links.open({ path: a.path })}
+                  title={a.path}
+                >
+                  {body}
+                </button>
+              ) : (
+                <a href={attachmentUrl(a.id)} target="_blank" rel="noreferrer" className={chip}>
+                  {body}
+                </a>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <MediaPreview media={viewing} onClose={() => setViewing(undefined)} />
+    </>
   )
 }
