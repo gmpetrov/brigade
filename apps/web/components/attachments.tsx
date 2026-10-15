@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 const IMAGE = /^image\/(png|jpeg|gif|webp)$/
 const VIDEO = /^video\/(mp4|webm|quicktime)$/
 
-type Media = { name: string; src: string; kind: 'image' | 'video' }
+export type Media = { name: string; src: string; kind: 'image' | 'video' }
 
 /** How a file of this type shows over the page, if it does. */
 const mediaKind = (contentType: string) =>
@@ -332,7 +332,7 @@ function Thumbnail({
 }
 
 /** An image or a video at full size over the page; Esc, a click outside or × closes it. */
-function MediaPreview({ media, onClose }: { media?: Media; onClose: () => void }) {
+export function MediaPreview({ media, onClose }: { media?: Media; onClose: () => void }) {
   return (
     <Dialog open={!!media} onOpenChange={(open) => !open && onClose()}>
       <DialogContent

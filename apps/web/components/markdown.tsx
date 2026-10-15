@@ -1,15 +1,17 @@
 'use client'
 // Markdown in the thread: teammates' replies, thinking and questions. Raw HTML
 // is never rendered (react-markdown escapes it), remote images are not loaded
-// (a link instead), mentions a teammate echoes back show as chips, and code
-// blocks are highlighted (highlight.js's common languages: JSON, YAML, XML/HTML,
-// CSS, JS/TS, Python, shell, SQL, diff and more; colors in globals.css).
+// (a link instead), an image in a teammate's folder opens over the page,
+// mentions a teammate echoes back show as chips, and code blocks are highlighted
+// (highlight.js's common languages: JSON, YAML, XML/HTML, CSS, JS/TS, Python,
+// shell, SQL, diff and more; colors in globals.css).
 import { MENTION_KINDS, type MentionKind } from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
 import { memo, useState, type ComponentProps, type ReactNode } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
+import { MediaPreview } from '@/components/attachments'
 import {
   FileLinksProvider,
   looksLikeFile,
@@ -17,6 +19,7 @@ import {
   useFileLinks,
 } from '@/components/file-links'
 import { MentionChip, MessageText } from '@/components/mention'
+import { threadImageUrl } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const MENTION_HREF = new RegExp(`^(${MENTION_KINDS.join('|')}):([^\\s]+)$`)
@@ -111,18 +114,54 @@ function InlineCode({ className, children, ...props }: ComponentProps<'code'>) {
   )
 }
 
-/** A link; a relative one (a file next to this one) opens in the panel. */
+const linkClass = 'font-medium text-primary underline underline-offset-2 hover:no-underline'
+
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i
+
+/**
+ * An image in a teammate's folder, named by a relative link or `![](path)`: it
+ * opens over the page like an attached one. Its path is no address on the web.
+ */
+function FileImage({ path, children }: { path: string; children: ReactNode }) {
+  const links = useFileLinks()
+  const [open, setOpen] = useState(false)
+  if (!links?.threadId) return <>{children}</>
+  const name = path.split('/').pop() ?? path
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title={`Preview ${name}`}
+        className={cn(linkClass, 'inline-flex cursor-zoom-in items-center gap-1')}
+      >
+        {children}
+      </button>
+      <MediaPreview
+        media={
+          open
+            ? { name, src: threadImageUrl(links.threadId, path, links.teammateId), kind: 'image' }
+            : undefined
+        }
+        onClose={() => setOpen(false)}
+      />
+    </>
+  )
+}
+
+/** A link; a relative one (a file next to this one) opens in the panel, or over the page for an image. */
 function Anchor({ href, children, ...props }: ComponentProps<'a'>) {
   const links = useFileLinks()
   const file = links ? relativeFile(href, links.base) : undefined
-  const className = 'font-medium text-primary underline underline-offset-2 hover:no-underline'
+  if (links?.threadId && file && IMAGE_FILE.test(file))
+    return <FileImage path={file}>{children}</FileImage>
   if (links && file)
     return (
       <button
         type="button"
         onClick={() => links.open({ path: file, teammateId: links.teammateId })}
         title={`Open ${file}`}
-        className={cn(className, 'cursor-pointer')}
+        className={cn(linkClass, 'cursor-pointer')}
       >
         {children}
       </button>
@@ -132,10 +171,43 @@ function Anchor({ href, children, ...props }: ComponentProps<'a'>) {
       href={href}
       target="_blank"
       rel="noopener noreferrer nofollow"
-      className={className}
+      className={linkClass}
       {...props}
     >
       {children}
+    </a>
+  )
+}
+
+/**
+ * `![alt](src)`. Loading a remote image would tell its host who reads the thread:
+ * a link to it instead. One in a teammate's folder opens over the page; elsewhere
+ * its name stays plain text, as its path leads nowhere in the browser.
+ */
+function MarkdownImage({ src, alt }: { src?: unknown; alt?: string }) {
+  const links = useFileLinks()
+  if (typeof src !== 'string' || !src) return null
+  const label = (
+    <>
+      <ImageIcon className="size-3.5" aria-hidden />
+      {alt || 'Image'}
+    </>
+  )
+  const file = relativeFile(src, links?.base)
+  if (file)
+    return links?.threadId && IMAGE_FILE.test(file) ? (
+      <FileImage path={file}>{label}</FileImage>
+    ) : (
+      <span className="inline-flex items-center gap-1 font-medium">{label}</span>
+    )
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      className={cn(linkClass, 'inline-flex items-center gap-1')}
+    >
+      {label}
     </a>
   )
 }
@@ -196,19 +268,7 @@ const components: Components = {
       </Anchor>
     )
   },
-  // Loading a remote image would tell its host who reads the thread: link to it instead.
-  img: ({ src, alt }) =>
-    typeof src === 'string' && src ? (
-      <a
-        href={src}
-        target="_blank"
-        rel="noopener noreferrer nofollow"
-        className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 hover:no-underline"
-      >
-        <ImageIcon className="size-3.5" aria-hidden />
-        {alt || 'Image'}
-      </a>
-    ) : null,
+  img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} />,
   code: ({ node: _, ...props }) => <InlineCode {...props} />,
   // A code block's text is code, not links.
   pre: ({ node: _, ...props }) => (
