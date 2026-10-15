@@ -30,6 +30,7 @@ export type MemberMinAggregateOutputType = {
   userId: string | null
   role: string | null
   createdAt: Date | null
+  notify: $Enums.NotifyPreset | null
 }
 
 export type MemberMaxAggregateOutputType = {
@@ -38,6 +39,7 @@ export type MemberMaxAggregateOutputType = {
   userId: string | null
   role: string | null
   createdAt: Date | null
+  notify: $Enums.NotifyPreset | null
 }
 
 export type MemberCountAggregateOutputType = {
@@ -46,6 +48,7 @@ export type MemberCountAggregateOutputType = {
   userId: number
   role: number
   createdAt: number
+  notify: number
   _all: number
 }
 
@@ -56,6 +59,7 @@ export type MemberMinAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  notify?: true
 }
 
 export type MemberMaxAggregateInputType = {
@@ -64,6 +68,7 @@ export type MemberMaxAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  notify?: true
 }
 
 export type MemberCountAggregateInputType = {
@@ -72,6 +77,7 @@ export type MemberCountAggregateInputType = {
   userId?: true
   role?: true
   createdAt?: true
+  notify?: true
   _all?: true
 }
 
@@ -153,6 +159,7 @@ export type MemberGroupByOutputType = {
   userId: string
   role: string
   createdAt: Date
+  notify: $Enums.NotifyPreset
   _count: MemberCountAggregateOutputType | null
   _min: MemberMinAggregateOutputType | null
   _max: MemberMaxAggregateOutputType | null
@@ -182,6 +189,7 @@ export type MemberWhereInput = {
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   computers?: Prisma.ComputerListRelationFilter
@@ -190,6 +198,7 @@ export type MemberWhereInput = {
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   threadReads?: Prisma.ThreadReadListRelationFilter
+  pushNotices?: Prisma.PushNoticeListRelationFilter
 }
 
 export type MemberOrderByWithRelationInput = {
@@ -198,6 +207,7 @@ export type MemberOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  notify?: Prisma.SortOrder
   organization?: Prisma.OrganizationOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
   computers?: Prisma.ComputerOrderByRelationAggregateInput
@@ -206,6 +216,7 @@ export type MemberOrderByWithRelationInput = {
   tasks?: Prisma.TaskOrderByRelationAggregateInput
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   threadReads?: Prisma.ThreadReadOrderByRelationAggregateInput
+  pushNotices?: Prisma.PushNoticeOrderByRelationAggregateInput
 }
 
 export type MemberWhereUniqueInput = Prisma.AtLeast<{
@@ -218,6 +229,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   computers?: Prisma.ComputerListRelationFilter
@@ -226,6 +238,7 @@ export type MemberWhereUniqueInput = Prisma.AtLeast<{
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   threadReads?: Prisma.ThreadReadListRelationFilter
+  pushNotices?: Prisma.PushNoticeListRelationFilter
 }, "id" | "organizationId_userId">
 
 export type MemberOrderByWithAggregationInput = {
@@ -234,6 +247,7 @@ export type MemberOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  notify?: Prisma.SortOrder
   _count?: Prisma.MemberCountOrderByAggregateInput
   _max?: Prisma.MemberMaxOrderByAggregateInput
   _min?: Prisma.MemberMinOrderByAggregateInput
@@ -248,12 +262,14 @@ export type MemberScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Member"> | string
   role?: Prisma.StringWithAggregatesFilter<"Member"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Member"> | Date | string
+  notify?: Prisma.EnumNotifyPresetWithAggregatesFilter<"Member"> | $Enums.NotifyPreset
 }
 
 export type MemberCreateInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -262,6 +278,7 @@ export type MemberCreateInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateInput = {
@@ -270,18 +287,21 @@ export type MemberUncheckedCreateInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -290,6 +310,7 @@ export type MemberUpdateInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateInput = {
@@ -298,12 +319,14 @@ export type MemberUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateManyInput = {
@@ -312,12 +335,14 @@ export type MemberCreateManyInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
 }
 
 export type MemberUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
 }
 
 export type MemberUncheckedUpdateManyInput = {
@@ -326,6 +351,7 @@ export type MemberUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
 }
 
 export type MemberListRelationFilter = {
@@ -349,6 +375,7 @@ export type MemberCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  notify?: Prisma.SortOrder
 }
 
 export type MemberMaxOrderByAggregateInput = {
@@ -357,6 +384,7 @@ export type MemberMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  notify?: Prisma.SortOrder
 }
 
 export type MemberMinOrderByAggregateInput = {
@@ -365,6 +393,7 @@ export type MemberMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  notify?: Prisma.SortOrder
 }
 
 export type MemberNullableScalarRelationFilter = {
@@ -461,6 +490,10 @@ export type MemberUncheckedUpdateManyWithoutOrganizationNestedInput = {
   deleteMany?: Prisma.MemberScalarWhereInput | Prisma.MemberScalarWhereInput[]
 }
 
+export type EnumNotifyPresetFieldUpdateOperationsInput = {
+  set?: $Enums.NotifyPreset
+}
+
 export type MemberCreateNestedOneWithoutComputersInput = {
   create?: Prisma.XOR<Prisma.MemberCreateWithoutComputersInput, Prisma.MemberUncheckedCreateWithoutComputersInput>
   connectOrCreate?: Prisma.MemberCreateOrConnectWithoutComputersInput
@@ -547,10 +580,25 @@ export type MemberUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutAccountsInput, Prisma.MemberUpdateWithoutAccountsInput>, Prisma.MemberUncheckedUpdateWithoutAccountsInput>
 }
 
+export type MemberCreateNestedOneWithoutPushNoticesInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutPushNoticesInput
+  connect?: Prisma.MemberWhereUniqueInput
+}
+
+export type MemberUpdateOneRequiredWithoutPushNoticesNestedInput = {
+  create?: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
+  connectOrCreate?: Prisma.MemberCreateOrConnectWithoutPushNoticesInput
+  upsert?: Prisma.MemberUpsertWithoutPushNoticesInput
+  connect?: Prisma.MemberWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.MemberUpdateToOneWithWhereWithoutPushNoticesInput, Prisma.MemberUpdateWithoutPushNoticesInput>, Prisma.MemberUncheckedUpdateWithoutPushNoticesInput>
+}
+
 export type MemberCreateWithoutUserInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
@@ -558,6 +606,7 @@ export type MemberCreateWithoutUserInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutUserInput = {
@@ -565,12 +614,14 @@ export type MemberUncheckedCreateWithoutUserInput = {
   organizationId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutUserInput = {
@@ -608,12 +659,14 @@ export type MemberScalarWhereInput = {
   userId?: Prisma.StringFilter<"Member"> | string
   role?: Prisma.StringFilter<"Member"> | string
   createdAt?: Prisma.DateTimeFilter<"Member"> | Date | string
+  notify?: Prisma.EnumNotifyPresetFilter<"Member"> | $Enums.NotifyPreset
 }
 
 export type MemberCreateWithoutOrganizationInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
@@ -621,6 +674,7 @@ export type MemberCreateWithoutOrganizationInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutOrganizationInput = {
@@ -628,12 +682,14 @@ export type MemberUncheckedCreateWithoutOrganizationInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutOrganizationInput = {
@@ -666,6 +722,7 @@ export type MemberCreateWithoutComputersInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
@@ -673,6 +730,7 @@ export type MemberCreateWithoutComputersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutComputersInput = {
@@ -681,11 +739,13 @@ export type MemberUncheckedCreateWithoutComputersInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutComputersInput = {
@@ -708,6 +768,7 @@ export type MemberUpdateWithoutComputersInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
@@ -715,6 +776,7 @@ export type MemberUpdateWithoutComputersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutComputersInput = {
@@ -723,17 +785,20 @@ export type MemberUncheckedUpdateWithoutComputersInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutThreadReadsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -741,6 +806,7 @@ export type MemberCreateWithoutThreadReadsInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutThreadReadsInput = {
@@ -749,11 +815,13 @@ export type MemberUncheckedCreateWithoutThreadReadsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutThreadReadsInput = {
@@ -776,6 +844,7 @@ export type MemberUpdateWithoutThreadReadsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -783,6 +852,7 @@ export type MemberUpdateWithoutThreadReadsInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutThreadReadsInput = {
@@ -791,17 +861,20 @@ export type MemberUncheckedUpdateWithoutThreadReadsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSessionsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -809,6 +882,7 @@ export type MemberCreateWithoutSessionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSessionsInput = {
@@ -817,11 +891,13 @@ export type MemberUncheckedCreateWithoutSessionsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSessionsInput = {
@@ -844,6 +920,7 @@ export type MemberUpdateWithoutSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -851,6 +928,7 @@ export type MemberUpdateWithoutSessionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSessionsInput = {
@@ -859,17 +937,20 @@ export type MemberUncheckedUpdateWithoutSessionsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutTasksInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -877,6 +958,7 @@ export type MemberCreateWithoutTasksInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutTasksInput = {
@@ -885,11 +967,13 @@ export type MemberUncheckedCreateWithoutTasksInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutTasksInput = {
@@ -912,6 +996,7 @@ export type MemberUpdateWithoutTasksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -919,6 +1004,7 @@ export type MemberUpdateWithoutTasksInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutTasksInput = {
@@ -927,17 +1013,20 @@ export type MemberUncheckedUpdateWithoutTasksInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutSchedulesInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -945,6 +1034,7 @@ export type MemberCreateWithoutSchedulesInput = {
   sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutSchedulesInput = {
@@ -953,11 +1043,13 @@ export type MemberUncheckedCreateWithoutSchedulesInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutSchedulesInput = {
@@ -980,6 +1072,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -987,6 +1080,7 @@ export type MemberUpdateWithoutSchedulesInput = {
   sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutSchedulesInput = {
@@ -995,17 +1089,20 @@ export type MemberUncheckedUpdateWithoutSchedulesInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberCreateWithoutAccountsInput = {
   id: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutMembersInput
   computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
@@ -1013,6 +1110,7 @@ export type MemberCreateWithoutAccountsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutMemberInput
 }
 
 export type MemberUncheckedCreateWithoutAccountsInput = {
@@ -1021,11 +1119,13 @@ export type MemberUncheckedCreateWithoutAccountsInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
   threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutMemberInput
 }
 
 export type MemberCreateOrConnectWithoutAccountsInput = {
@@ -1048,6 +1148,7 @@ export type MemberUpdateWithoutAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
@@ -1055,6 +1156,7 @@ export type MemberUpdateWithoutAccountsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutAccountsInput = {
@@ -1063,7 +1165,85 @@ export type MemberUncheckedUpdateWithoutAccountsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberCreateWithoutPushNoticesInput = {
+  id: string
+  role?: string
+  createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
+  organization: Prisma.OrganizationCreateNestedOneWithoutMembersInput
+  user: Prisma.UserCreateNestedOneWithoutMembersInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutMemberInput
+}
+
+export type MemberUncheckedCreateWithoutPushNoticesInput = {
+  id: string
+  organizationId: string
+  userId: string
+  role?: string
+  createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutMemberInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutMemberInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutStartedByInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutOwnerInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutMemberInput
+}
+
+export type MemberCreateOrConnectWithoutPushNoticesInput = {
+  where: Prisma.MemberWhereUniqueInput
+  create: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
+}
+
+export type MemberUpsertWithoutPushNoticesInput = {
+  update: Prisma.XOR<Prisma.MemberUpdateWithoutPushNoticesInput, Prisma.MemberUncheckedUpdateWithoutPushNoticesInput>
+  create: Prisma.XOR<Prisma.MemberCreateWithoutPushNoticesInput, Prisma.MemberUncheckedCreateWithoutPushNoticesInput>
+  where?: Prisma.MemberWhereInput
+}
+
+export type MemberUpdateToOneWithWhereWithoutPushNoticesInput = {
+  where?: Prisma.MemberWhereInput
+  data: Prisma.XOR<Prisma.MemberUpdateWithoutPushNoticesInput, Prisma.MemberUncheckedUpdateWithoutPushNoticesInput>
+}
+
+export type MemberUpdateWithoutPushNoticesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutStartedByNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+}
+
+export type MemberUncheckedUpdateWithoutPushNoticesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -1075,12 +1255,14 @@ export type MemberCreateManyUserInput = {
   organizationId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
 }
 
 export type MemberUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
@@ -1088,6 +1270,7 @@ export type MemberUpdateWithoutUserInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutUserInput = {
@@ -1095,12 +1278,14 @@ export type MemberUncheckedUpdateWithoutUserInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutUserInput = {
@@ -1108,6 +1293,7 @@ export type MemberUncheckedUpdateManyWithoutUserInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
 }
 
 export type MemberCreateManyOrganizationInput = {
@@ -1115,12 +1301,14 @@ export type MemberCreateManyOrganizationInput = {
   userId: string
   role?: string
   createdAt?: Date | string
+  notify?: $Enums.NotifyPreset
 }
 
 export type MemberUpdateWithoutOrganizationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   user?: Prisma.UserUpdateOneRequiredWithoutMembersNestedInput
   computers?: Prisma.ComputerUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutMemberNestedInput
@@ -1128,6 +1316,7 @@ export type MemberUpdateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateWithoutOrganizationInput = {
@@ -1135,12 +1324,14 @@ export type MemberUncheckedUpdateWithoutOrganizationInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
   computers?: Prisma.ComputerUncheckedUpdateManyWithoutMemberNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutMemberNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutStartedByNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutOwnerNestedInput
   threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutMemberNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
@@ -1148,6 +1339,7 @@ export type MemberUncheckedUpdateManyWithoutOrganizationInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notify?: Prisma.EnumNotifyPresetFieldUpdateOperationsInput | $Enums.NotifyPreset
 }
 
 
@@ -1162,6 +1354,7 @@ export type MemberCountOutputType = {
   tasks: number
   schedules: number
   threadReads: number
+  pushNotices: number
 }
 
 export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1171,6 +1364,7 @@ export type MemberCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   tasks?: boolean | MemberCountOutputTypeCountTasksArgs
   schedules?: boolean | MemberCountOutputTypeCountSchedulesArgs
   threadReads?: boolean | MemberCountOutputTypeCountThreadReadsArgs
+  pushNotices?: boolean | MemberCountOutputTypeCountPushNoticesArgs
 }
 
 /**
@@ -1225,6 +1419,13 @@ export type MemberCountOutputTypeCountThreadReadsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.ThreadReadWhereInput
 }
 
+/**
+ * MemberCountOutputType without action
+ */
+export type MemberCountOutputTypeCountPushNoticesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PushNoticeWhereInput
+}
+
 
 export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1232,6 +1433,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  notify?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   computers?: boolean | Prisma.Member$computersArgs<ExtArgs>
@@ -1240,6 +1442,7 @@ export type MemberSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
   threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
+  pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
 
@@ -1249,6 +1452,7 @@ export type MemberSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  notify?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
@@ -1259,6 +1463,7 @@ export type MemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  notify?: boolean
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["member"]>
@@ -1269,9 +1474,10 @@ export type MemberSelectScalar = {
   userId?: boolean
   role?: boolean
   createdAt?: boolean
+  notify?: boolean
 }
 
-export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt", ExtArgs["result"]["member"]>
+export type MemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "userId" | "role" | "createdAt" | "notify", ExtArgs["result"]["member"]>
 export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1281,6 +1487,7 @@ export type MemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   tasks?: boolean | Prisma.Member$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Member$schedulesArgs<ExtArgs>
   threadReads?: boolean | Prisma.Member$threadReadsArgs<ExtArgs>
+  pushNotices?: boolean | Prisma.Member$pushNoticesArgs<ExtArgs>
   _count?: boolean | Prisma.MemberCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1303,6 +1510,7 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     tasks: Prisma.$TaskPayload<ExtArgs>[]
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     threadReads: Prisma.$ThreadReadPayload<ExtArgs>[]
+    pushNotices: Prisma.$PushNoticePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1310,6 +1518,10 @@ export type $MemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     userId: string
     role: string
     createdAt: Date
+    /**
+     * Which notifications reach their devices (src/notifications.ts).
+     */
+    notify: $Enums.NotifyPreset
   }, ExtArgs["result"]["member"]>
   composites: {}
 }
@@ -1712,6 +1924,7 @@ export interface Prisma__MemberClient<T, Null = never, ExtArgs extends runtime.T
   tasks<T extends Prisma.Member$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   schedules<T extends Prisma.Member$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   threadReads<T extends Prisma.Member$threadReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$threadReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  pushNotices<T extends Prisma.Member$pushNoticesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Member$pushNoticesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PushNoticePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1746,6 +1959,7 @@ export interface MemberFieldRefs {
   readonly userId: Prisma.FieldRef<"Member", 'String'>
   readonly role: Prisma.FieldRef<"Member", 'String'>
   readonly createdAt: Prisma.FieldRef<"Member", 'DateTime'>
+  readonly notify: Prisma.FieldRef<"Member", 'NotifyPreset'>
 }
     
 
@@ -2288,6 +2502,30 @@ export type Member$threadReadsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.ThreadReadScalarFieldEnum | Prisma.ThreadReadScalarFieldEnum[]
+}
+
+/**
+ * Member.pushNotices
+ */
+export type Member$pushNoticesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PushNotice
+   */
+  select?: Prisma.PushNoticeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PushNotice
+   */
+  omit?: Prisma.PushNoticeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PushNoticeInclude<ExtArgs> | null
+  where?: Prisma.PushNoticeWhereInput
+  orderBy?: Prisma.PushNoticeOrderByWithRelationInput | Prisma.PushNoticeOrderByWithRelationInput[]
+  cursor?: Prisma.PushNoticeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PushNoticeScalarFieldEnum | Prisma.PushNoticeScalarFieldEnum[]
 }
 
 /**

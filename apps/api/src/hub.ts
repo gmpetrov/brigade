@@ -55,6 +55,8 @@ type BrowserConn = {
   scope: WorkspaceScope
   ws: WSContext
   sessions: Set<string>
+  /** The dashboard is in view (its last presence message; until one comes, it is). */
+  visible: boolean
 }
 
 const runners = new Map<string, RunnerConn>() // by computerId
@@ -273,6 +275,22 @@ function broadcast(workspaceId: string, message: ApiToBrowser, sessionId?: strin
 }
 
 /** Send to every open dashboard of one member, e.g. sign-in progress for their account. */
+/** When each member last had a dashboard in view, for a while after they leave it. */
+const lastLooked = new Map<string, number>()
+
+/**
+ * Whether a member is looking at a dashboard, or was in the last `withinMs`: what
+ * would notify them is already in front of them.
+ */
+export function isLooking(memberId: string, withinMs: number) {
+  for (const b of browsers) if (b.scope.memberId === memberId && b.visible) return true
+  return Date.now() - (lastLooked.get(memberId) ?? 0) < withinMs
+}
+
+const leftView = (conn: BrowserConn) => {
+  if (conn.visible) lastLooked.set(conn.scope.memberId, Date.now())
+}
+
 export function sendToMember(memberId: string, message: ApiToBrowser) {
   for (const b of browsers) if (b.scope.memberId === memberId) send(b.ws, message)
 }
@@ -1114,7 +1132,12 @@ function describeInput(input: unknown) {
 // ---------------------------------------------------------------------------
 
 export function browserSocket(scope: WorkspaceScope) {
-  const conn: BrowserConn = { scope, ws: undefined as unknown as WSContext, sessions: new Set() }
+  const conn: BrowserConn = {
+    scope,
+    ws: undefined as unknown as WSContext,
+    sessions: new Set(),
+    visible: true,
+  }
   return {
     onOpen(ws: WSContext) {
       conn.ws = ws
@@ -1125,6 +1148,11 @@ export function browserSocket(scope: WorkspaceScope) {
       if (!parsed.success) return send(ws, { type: 'error', message: 'bad message' })
       const message = parsed.data
       if (message.type === 'unsubscribe') return void conn.sessions.delete(message.sessionId)
+      if (message.type === 'presence') {
+        if (!message.visible) leftView(conn)
+        conn.visible = message.visible
+        return
+      }
       if (message.type === 'terminal.input' || message.type === 'terminal.close') {
         const terminal = terminals.get(message.terminalId)
         if (!terminal || terminal.conn !== conn) return
@@ -1178,6 +1206,7 @@ export function browserSocket(scope: WorkspaceScope) {
     },
     onClose() {
       browsers.delete(conn)
+      leftView(conn)
       for (const [id, terminal] of terminals) {
         if (terminal.conn !== conn) continue
         terminals.delete(id)

@@ -18,7 +18,14 @@ export type Scope = {
 }
 
 const ORG_ONLY = new Set(['Member', 'Invitation'])
-const UNSCOPED = new Set(['User', 'AuthSession', 'AuthAccount', 'Verification', 'Organization'])
+const UNSCOPED = new Set([
+  'User',
+  'AuthSession',
+  'AuthAccount',
+  'Verification',
+  'Organization',
+  'PushDevice',
+])
 const READS_AND_BULK = new Set([
   'findUnique',
   'findUniqueOrThrow',

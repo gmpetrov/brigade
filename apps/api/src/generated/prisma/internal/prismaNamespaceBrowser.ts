@@ -93,7 +93,9 @@ export const ModelName = {
   PreviewRecipe: 'PreviewRecipe',
   PreviewVariable: 'PreviewVariable',
   Project: 'Project',
-  ProjectRepository: 'ProjectRepository'
+  ProjectRepository: 'ProjectRepository',
+  PushDevice: 'PushDevice',
+  PushNotice: 'PushNotice'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -190,7 +192,8 @@ export const MemberScalarFieldEnum = {
   organizationId: 'organizationId',
   userId: 'userId',
   role: 'role',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  notify: 'notify'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]
@@ -842,6 +845,34 @@ export const ProjectRepositoryScalarFieldEnum = {
 } as const
 
 export type ProjectRepositoryScalarFieldEnum = (typeof ProjectRepositoryScalarFieldEnum)[keyof typeof ProjectRepositoryScalarFieldEnum]
+
+
+export const PushDeviceScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  endpoint: 'endpoint',
+  p256dh: 'p256dh',
+  auth: 'auth',
+  createdAt: 'createdAt'
+} as const
+
+export type PushDeviceScalarFieldEnum = (typeof PushDeviceScalarFieldEnum)[keyof typeof PushDeviceScalarFieldEnum]
+
+
+export const PushNoticeScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  key: 'key',
+  firstSeenAt: 'firstSeenAt',
+  sentAt: 'sentAt',
+  pushed: 'pushed',
+  remindedAt: 'remindedAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]
 
 
 export const SortOrder = {

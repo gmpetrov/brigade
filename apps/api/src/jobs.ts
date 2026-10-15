@@ -6,6 +6,7 @@ import { sweepUploads } from './attachments.js'
 import { watchIdle } from './cloud.js'
 import { offerRunnerUpdates, pingBrowsers, watchRunners } from './hub.js'
 import { sweepTrash } from './library-history.js'
+import { watchNotifications } from './notifications.js'
 import { watchMerges } from './pull-requests.js'
 import { watchSchedules } from './schedules.js'
 import { watchSubscriptions } from './subscriptions/index.js'
@@ -17,6 +18,7 @@ export function startJobs() {
   started = true
   watchSubscriptions()
   watchMerges()
+  watchNotifications()
   watchSchedules()
   watchIdle()
   offerRunnerUpdates()

@@ -148,6 +148,23 @@ export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
 }
 
+export type EnumNotifyPresetFilter<$PrismaModel = never> = {
+  equals?: $Enums.NotifyPreset | Prisma.EnumNotifyPresetFieldRefInput<$PrismaModel>
+  in?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  notIn?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel> | $Enums.NotifyPreset
+}
+
+export type EnumNotifyPresetWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.NotifyPreset | Prisma.EnumNotifyPresetFieldRefInput<$PrismaModel>
+  in?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  notIn?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumNotifyPresetWithAggregatesFilter<$PrismaModel> | $Enums.NotifyPreset
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
+}
+
 export type EnumComputerKindFilter<$PrismaModel = never> = {
   equals?: $Enums.ComputerKind | Prisma.EnumComputerKindFieldRefInput<$PrismaModel>
   in?: $Enums.ComputerKind[] | Prisma.ListEnumComputerKindFieldRefInput<$PrismaModel>
@@ -952,6 +969,23 @@ export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
   _max?: Prisma.NestedDateTimeNullableFilter<$PrismaModel>
+}
+
+export type NestedEnumNotifyPresetFilter<$PrismaModel = never> = {
+  equals?: $Enums.NotifyPreset | Prisma.EnumNotifyPresetFieldRefInput<$PrismaModel>
+  in?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  notIn?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel> | $Enums.NotifyPreset
+}
+
+export type NestedEnumNotifyPresetWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.NotifyPreset | Prisma.EnumNotifyPresetFieldRefInput<$PrismaModel>
+  in?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  notIn?: $Enums.NotifyPreset[] | Prisma.ListEnumNotifyPresetFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumNotifyPresetWithAggregatesFilter<$PrismaModel> | $Enums.NotifyPreset
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumNotifyPresetFilter<$PrismaModel>
 }
 
 export type NestedEnumComputerKindFilter<$PrismaModel = never> = {

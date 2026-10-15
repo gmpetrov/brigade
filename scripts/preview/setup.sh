@@ -15,6 +15,13 @@ if [ ! -f apps/api/.env ]; then
     apps/api/.env.example >apps/api/.env
 fi
 
+# Notifications: a VAPID key pair, once (a new pair would unsubscribe every device).
+if ! grep -q '^VAPID_PRIVATE_KEY=.' apps/api/.env; then
+  say "Adding a VAPID key pair for notifications"
+  sed -i.bak '/^VAPID_PUBLIC_KEY=/d; /^VAPID_PRIVATE_KEY=/d' apps/api/.env && rm -f apps/api/.env.bak
+  node apps/api/scripts/vapid.mjs >>apps/api/.env
+fi
+
 say "Installing dependencies"
 "${PNPM[@]}" install --frozen-lockfile
 

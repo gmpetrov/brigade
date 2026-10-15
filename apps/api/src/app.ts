@@ -21,6 +21,7 @@ import { security } from './routes/security.js'
 import { gitProxy } from './routes/git.js'
 import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
+import { notifications } from './routes/notifications.js'
 import { projects } from './routes/projects.js'
 import { pulls } from './routes/pulls.js'
 import { repositories } from './routes/repositories.js'
@@ -92,6 +93,7 @@ app.route('/api/pulls', pulls)
 app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)
 app.route('/api/search', search)
+app.route('/api/notifications', notifications)
 app.route('/runner', runnerLink)
 app.route('/runner', runnerInstall)
 app.route('/runner/library', runnerLibrary)

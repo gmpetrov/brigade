@@ -4,3 +4,6 @@
 # when it serves them as immutable.
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+# The service worker: browsers check it for updates, never from a cache.
+/sw.js
+  Cache-Control: no-cache
