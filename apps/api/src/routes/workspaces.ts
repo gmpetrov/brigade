@@ -15,7 +15,7 @@ export const workspaces = new Hono<AppEnv>()
     const [user, memberships] = await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: { id: c.var.userId },
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, image: true },
       }),
       prisma.member.findMany({ where: { userId: c.var.userId }, include: { organization: true } }),
     ])

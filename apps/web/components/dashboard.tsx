@@ -60,7 +60,7 @@ import {
 } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -425,6 +425,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-10 group-data-[collapsible=icon]:size-8">
+                          {data.user.image && (
+                            <AvatarImage
+                              src={data.user.image}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                            />
+                          )}
                           <AvatarFallback className="bg-secondary text-sm font-bold">
                             {initial(data.user.name)}
                           </AvatarFallback>
