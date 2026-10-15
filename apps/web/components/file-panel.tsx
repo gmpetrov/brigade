@@ -12,7 +12,7 @@ import { FilePreview, PdfView } from '@/components/file-preview'
 import { Markdown } from '@/components/markdown'
 import { Badge } from '@/components/ui/badge'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
-import { SidePanel } from '@/components/side-panel'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { api, attachmentUrl, threadImageUrl } from '@/lib/api'
 import { API_URL } from '@/lib/config'
@@ -153,6 +153,7 @@ function ThreadFilePanel({
             </Link>
           </Button>
         )}
+        <PanelExpandButton />
         <Button
           type="button"
           variant="ghost"
