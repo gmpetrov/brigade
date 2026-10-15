@@ -8,7 +8,9 @@
   },
   "app": {
     "windows": [],
-    "security": { "csp": "default-src 'none'" },
+    "security": {
+      "csp": "default-src 'none'"
+    },
     "macOSPrivateApi": false
   },
   "bundle": {
@@ -17,7 +19,13 @@
     "createUpdaterArtifacts": true,
     "category": "DeveloperTool",
     "shortDescription": "Run your Brigade teammates on this computer",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "resources": {
       "../../computer-use-macos/build/Brigade Computer Use.app/": "Brigade Computer Use.app/"
     },
@@ -29,10 +37,12 @@
   },
   "plugins": {
     "deep-link": {
-      "desktop": { "schemes": ["brigade"] }
+      "desktop": {
+        "schemes": ["brigade"]
+      }
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYyN0M5RUI1QTc1Njk0MDkKUldRSmxGYW50WjU4OG1vTEIrVlJLcVBQemFFU2NnR2xNZTlaTWwwdk8veTNHZ3dPRUJQNkR5Y0wK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM3RjZERTc4RkRCNzRERDgKUldUWVRiZjllTjcyTnd3YXdHSlZoWUpFYWgxQVIxb0lxOUtxYVFFUEUwWStJNTRhdUkyN2RJZFoK",
       "endpoints": ["https://github.com/gmpetrov/brigade/releases/latest/download/latest.json"]
     }
   }
