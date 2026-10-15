@@ -4,7 +4,7 @@
 import { sweepAssets } from './assets.js'
 import { sweepUploads } from './attachments.js'
 import { watchIdle } from './cloud.js'
-import { offerRunnerUpdates, pingBrowsers } from './hub.js'
+import { offerRunnerUpdates, pingBrowsers, watchRunners } from './hub.js'
 import { sweepTrash } from './library-history.js'
 import { watchMerges } from './pull-requests.js'
 import { watchSchedules } from './schedules.js'
@@ -21,6 +21,7 @@ export function startJobs() {
   watchIdle()
   offerRunnerUpdates()
   pingBrowsers()
+  watchRunners()
 
   // Uploads abandoned mid-way or never sent with a message; files no document refers to;
   // library files in the trash long enough.

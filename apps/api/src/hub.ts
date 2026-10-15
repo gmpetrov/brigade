@@ -5,6 +5,7 @@ import {
   ApiToBrowser,
   ApiToRunner,
   BrowserToApi,
+  HEARTBEAT_PROTOCOL,
   MIN_PROTOCOL_VERSION,
   RESUME_PROTOCOL,
   RunnerToApi,
@@ -46,6 +47,8 @@ type RunnerConn = {
   organizationId: string
   workspaceId: string
   ws: WSContext
+  /** When it last said anything (Date.now()): see watchRunners. */
+  heardAt: number
 }
 
 type BrowserConn = {
@@ -64,9 +67,10 @@ export function isOnline(computerId: string) {
 }
 
 /**
- * Forget a computer's runner connection, its computer stopped (src/cloud.ts's stopComputer).
- * A stopped cloud computer's connection dies without closing: kept, it looked online, so
- * commands went into it and were lost, and the computer was never started again for them.
+ * Forget a computer's runner connection: its computer stopped (src/cloud.ts's stopComputer),
+ * or the runner went silent (watchRunners). Such a connection dies without closing: kept, it
+ * looked online, so commands went into it and were lost, and the computer was never started
+ * again for them.
  */
 export function dropRunner(computerId: string) {
   const conn = runners.get(computerId)
@@ -189,6 +193,27 @@ export async function dispatch(
  * connected runner installed from another one, once per bundle. Started by
  * the entry (src/jobs.ts): Workers allow no timers while modules load.
  */
+/** A runner that says nothing for this long is gone: it says something every 30 s. */
+const SILENT_MS = 90_000
+
+/**
+ * Forget runners that stopped saying anything, whose connection died without closing (a
+ * cloud computer stopped or crashed, a laptop asleep): until then the computer looked
+ * online, and commands sent to it were lost. Runners too old to send heartbeats stay until
+ * their connection closes. Started by the entry (src/jobs.ts).
+ */
+export const watchRunners = () =>
+  setInterval(() => {
+    const now = Date.now()
+    for (const conn of runners.values()) {
+      if (conn.protocolVersion < HEARTBEAT_PROTOCOL || now - conn.heardAt < SILENT_MS) continue
+      console.warn(
+        `runner of ${conn.computerId} silent for ${Math.round((now - conn.heardAt) / 1000)} s: forgotten`,
+      )
+      dropRunner(conn.computerId)
+    }
+  }, 30_000)
+
 /** Dashboards' sockets carry nothing for long stretches: say something before they look idle. */
 export const pingBrowsers = () =>
   setInterval(() => {
@@ -317,6 +342,8 @@ export function runnerSocket(runner: {
 
   return {
     onMessage(raw: unknown, ws: WSContext) {
+      // Heard now, though its turn in the queue may come later.
+      if (conn) conn.heardAt = Date.now()
       queue = queue
         .then(() => handle(raw, ws))
         .catch((error) => console.error('runner message failed', error))
@@ -368,6 +395,7 @@ export function runnerSocket(runner: {
         runnerId: runner.id,
         protocolVersion: message.protocolVersion,
         ws,
+        heardAt: Date.now(),
         ...(message.bundle ? { bundle: message.bundle } : {}),
         ...(bundle ? { offered: bundle } : {}),
       }
@@ -455,6 +483,8 @@ export function runnerSocket(runner: {
       return
     }
     if (!conn) return // must say hello first
+    // Heard, which is all it says (onMessage).
+    if (message.type === 'heartbeat') return
 
     if (message.type === 'events') {
       const bySession = Map.groupBy(message.events, (e) => e.sessionId)

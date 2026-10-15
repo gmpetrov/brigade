@@ -31,10 +31,17 @@ export * from './thread-history.js'
  * 16: welcome resumes lost turns and queues lost messages again.
  * 17: people start previews without a turn (preview.start); previews report their steps and checks.
  * 18: the chief: its kind and roster in the spec, handoffs to teammates not yet in the thread.
+ * 19: heartbeats, so the API can tell a runner that is gone from a quiet one.
  */
-export const PROTOCOL_VERSION = 18
+export const PROTOCOL_VERSION = 19
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
+/**
+ * Runners from this version on say they are still there every 30 s: the API forgets one it has
+ * not heard from in 90 s, whose connection died without closing (a cloud computer stopped, a
+ * laptop asleep). Older ones stay until their connection closes.
+ */
+export const HEARTBEAT_PROTOCOL = 19
 /** Runners from this version on keep restricted folders from teammates without access. */
 export const LIBRARY_VIEWS_PROTOCOL = 13
 /** The API rejects runners below this protocol version. */

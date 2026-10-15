@@ -149,6 +149,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       .optional(),
   }),
   z.object({ type: z.literal('events'), events: z.array(SequencedEvent) }),
+  /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
+  z.object({ type: z.literal('heartbeat') }),
   z.object({ type: z.literal('command.failed'), commandId: z.string(), error: z.string() }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({

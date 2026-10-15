@@ -16,7 +16,8 @@ const BATCH = 200
 /**
  * A ping this often keeps the socket from looking idle (Cloudflare closes
  * WebSockets that carry nothing), and one unanswered by the next tells a dead
- * connection from a quiet one.
+ * connection from a quiet one. The API cannot see pings: a heartbeat message
+ * tells it the same, the other way (HEARTBEAT_PROTOCOL).
  */
 const HEARTBEAT_MS = 30_000
 /** An upgrade that has not answered in this long is given up and retried. */
@@ -68,6 +69,7 @@ export class Connection {
         if (!answered) return ws.terminate()
         answered = false
         ws.ping()
+        this.send({ type: 'heartbeat' })
       }, HEARTBEAT_MS)
       const extra = await this.hello().catch(() => ({}))
       this.send({
