@@ -16,11 +16,12 @@ import {
   toInfo,
 } from '../attachments.js'
 import { directUploads } from '../bucket.js'
+import { byteRange } from '../byte-range.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
 /** Types the browser may show inline from the API's origin; anything else downloads. */
 const INLINE =
-  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp))$/
+  /^(text\/plain|text\/markdown|text\/csv|application\/json|application\/pdf|image\/(png|jpeg|gif|webp)|video\/(mp4|quicktime|webm|ogg))$/
 
 export const attachments = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
@@ -102,7 +103,14 @@ export const attachments = new Hono<AppEnv>()
     if (!row) throw new HTTPException(404, { message: 'File not found' })
     const bytes = await readAttachment(scope, row.id)
     const inline = c.req.query('download') === undefined && INLINE.test(row.contentType)
-    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+    // A video seeks with byte ranges; Safari (and so the iPhone app) plays nothing without them.
+    const range = byteRange(c.req.header('range'), bytes.byteLength)
+    const body = range ? bytes.subarray(range.start, range.end + 1) : bytes
+    return c.body(body as Uint8Array<ArrayBuffer>, range ? 206 : 200, {
+      'accept-ranges': 'bytes',
+      ...(range
+        ? { 'content-range': `bytes ${range.start}-${range.end}/${bytes.byteLength}` }
+        : {}),
       'content-type': row.contentType.startsWith('text/')
         ? `${row.contentType}; charset=utf-8`
         : row.contentType,
