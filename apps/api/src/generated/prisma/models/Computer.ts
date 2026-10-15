@@ -32,6 +32,7 @@ export type ComputerMinAggregateOutputType = {
   memberId: string | null
   name: string | null
   size: string | null
+  machineId: string | null
   status: $Enums.ComputerStatus | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -45,6 +46,7 @@ export type ComputerMaxAggregateOutputType = {
   memberId: string | null
   name: string | null
   size: string | null
+  machineId: string | null
   status: $Enums.ComputerStatus | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -59,6 +61,7 @@ export type ComputerCountAggregateOutputType = {
   name: number
   providerRef: number
   size: number
+  machineId: number
   status: number
   createdAt: number
   updatedAt: number
@@ -74,6 +77,7 @@ export type ComputerMinAggregateInputType = {
   memberId?: true
   name?: true
   size?: true
+  machineId?: true
   status?: true
   createdAt?: true
   updatedAt?: true
@@ -87,6 +91,7 @@ export type ComputerMaxAggregateInputType = {
   memberId?: true
   name?: true
   size?: true
+  machineId?: true
   status?: true
   createdAt?: true
   updatedAt?: true
@@ -101,6 +106,7 @@ export type ComputerCountAggregateInputType = {
   name?: true
   providerRef?: true
   size?: true
+  machineId?: true
   status?: true
   createdAt?: true
   updatedAt?: true
@@ -188,6 +194,7 @@ export type ComputerGroupByOutputType = {
   name: string
   providerRef: runtime.JsonValue | null
   size: string | null
+  machineId: string | null
   status: $Enums.ComputerStatus
   createdAt: Date
   updatedAt: Date
@@ -223,6 +230,7 @@ export type ComputerWhereInput = {
   name?: Prisma.StringFilter<"Computer"> | string
   providerRef?: Prisma.JsonNullableFilter<"Computer">
   size?: Prisma.StringNullableFilter<"Computer"> | string | null
+  machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
@@ -242,6 +250,7 @@ export type ComputerOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   providerRef?: Prisma.SortOrderInput | Prisma.SortOrder
   size?: Prisma.SortOrderInput | Prisma.SortOrder
+  machineId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -264,6 +273,7 @@ export type ComputerWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Computer"> | string
   providerRef?: Prisma.JsonNullableFilter<"Computer">
   size?: Prisma.StringNullableFilter<"Computer"> | string | null
+  machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
@@ -283,6 +293,7 @@ export type ComputerOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   providerRef?: Prisma.SortOrderInput | Prisma.SortOrder
   size?: Prisma.SortOrderInput | Prisma.SortOrder
+  machineId?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -303,6 +314,7 @@ export type ComputerScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Computer"> | string
   providerRef?: Prisma.JsonNullableWithAggregatesFilter<"Computer">
   size?: Prisma.StringNullableWithAggregatesFilter<"Computer"> | string | null
+  machineId?: Prisma.StringNullableWithAggregatesFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusWithAggregatesFilter<"Computer"> | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Computer"> | Date | string
@@ -315,6 +327,7 @@ export type ComputerCreateInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -334,6 +347,7 @@ export type ComputerUncheckedCreateInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -349,6 +363,7 @@ export type ComputerUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -368,6 +383,7 @@ export type ComputerUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -385,6 +401,7 @@ export type ComputerCreateManyInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -397,6 +414,7 @@ export type ComputerUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -411,6 +429,7 @@ export type ComputerUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -435,6 +454,7 @@ export type ComputerCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   providerRef?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -448,6 +468,7 @@ export type ComputerMaxOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -461,6 +482,7 @@ export type ComputerMinOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   size?: Prisma.SortOrder
+  machineId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -612,6 +634,7 @@ export type ComputerCreateWithoutMemberInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -629,6 +652,7 @@ export type ComputerUncheckedCreateWithoutMemberInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -675,6 +699,7 @@ export type ComputerScalarWhereInput = {
   name?: Prisma.StringFilter<"Computer"> | string
   providerRef?: Prisma.JsonNullableFilter<"Computer">
   size?: Prisma.StringNullableFilter<"Computer"> | string | null
+  machineId?: Prisma.StringNullableFilter<"Computer"> | string | null
   status?: Prisma.EnumComputerStatusFilter<"Computer"> | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Computer"> | Date | string
@@ -687,6 +712,7 @@ export type ComputerCreateWithoutWorkspaceInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -704,6 +730,7 @@ export type ComputerUncheckedCreateWithoutWorkspaceInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -745,6 +772,7 @@ export type ComputerCreateWithoutRunnerInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -763,6 +791,7 @@ export type ComputerUncheckedCreateWithoutRunnerInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -793,6 +822,7 @@ export type ComputerUpdateWithoutRunnerInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -811,6 +841,7 @@ export type ComputerUncheckedUpdateWithoutRunnerInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -825,6 +856,7 @@ export type ComputerCreateWithoutSessionsInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -843,6 +875,7 @@ export type ComputerUncheckedCreateWithoutSessionsInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -873,6 +906,7 @@ export type ComputerUpdateWithoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -891,6 +925,7 @@ export type ComputerUncheckedUpdateWithoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -905,6 +940,7 @@ export type ComputerCreateWithoutAccountsInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -923,6 +959,7 @@ export type ComputerUncheckedCreateWithoutAccountsInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -953,6 +990,7 @@ export type ComputerUpdateWithoutAccountsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -971,6 +1009,7 @@ export type ComputerUncheckedUpdateWithoutAccountsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -986,6 +1025,7 @@ export type ComputerCreateManyMemberInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -998,6 +1038,7 @@ export type ComputerUpdateWithoutMemberInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1015,6 +1056,7 @@ export type ComputerUncheckedUpdateWithoutMemberInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1031,6 +1073,7 @@ export type ComputerUncheckedUpdateManyWithoutMemberInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1044,6 +1087,7 @@ export type ComputerCreateManyWorkspaceInput = {
   name: string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: string | null
+  machineId?: string | null
   status?: $Enums.ComputerStatus
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1056,6 +1100,7 @@ export type ComputerUpdateWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1073,6 +1118,7 @@ export type ComputerUncheckedUpdateWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1089,6 +1135,7 @@ export type ComputerUncheckedUpdateManyWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   providerRef?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   size?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  machineId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumComputerStatusFieldUpdateOperationsInput | $Enums.ComputerStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1143,6 +1190,7 @@ export type ComputerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   name?: boolean
   providerRef?: boolean
   size?: boolean
+  machineId?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1163,6 +1211,7 @@ export type ComputerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   name?: boolean
   providerRef?: boolean
   size?: boolean
+  machineId?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1179,6 +1228,7 @@ export type ComputerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   name?: boolean
   providerRef?: boolean
   size?: boolean
+  machineId?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1195,12 +1245,13 @@ export type ComputerSelectScalar = {
   name?: boolean
   providerRef?: boolean
   size?: boolean
+  machineId?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ComputerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "memberId" | "name" | "providerRef" | "size" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["computer"]>
+export type ComputerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "kind" | "memberId" | "name" | "providerRef" | "size" | "machineId" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["computer"]>
 export type ComputerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.Computer$memberArgs<ExtArgs>
@@ -1242,6 +1293,11 @@ export type $ComputerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      */
     providerRef: runtime.JsonValue | null
     size: string | null
+    /**
+     * A member's machine: its OS machine ID and runner home, hashed by the runner. Linking
+     * again from the same place keeps this computer.
+     */
+    machineId: string | null
     status: $Enums.ComputerStatus
     createdAt: Date
     updatedAt: Date
@@ -1681,6 +1737,7 @@ export interface ComputerFieldRefs {
   readonly name: Prisma.FieldRef<"Computer", 'String'>
   readonly providerRef: Prisma.FieldRef<"Computer", 'Json'>
   readonly size: Prisma.FieldRef<"Computer", 'String'>
+  readonly machineId: Prisma.FieldRef<"Computer", 'String'>
   readonly status: Prisma.FieldRef<"Computer", 'ComputerStatus'>
   readonly createdAt: Prisma.FieldRef<"Computer", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Computer", 'DateTime'>

@@ -220,6 +220,9 @@ model Computer {
   /// Opaque provider reference for a cloud computer. Only the providers package reads it.
   providerRef    Json?
   size           String?
+  /// A member's machine: its OS machine ID and runner home, hashed by the runner. Linking
+  /// again from the same place keeps this computer.
+  machineId      String?
   status         ComputerStatus @default(pending)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -228,6 +231,7 @@ model Computer {
   accounts       Account[]
 
   @@index([workspaceId])
+  @@index([workspaceId, memberId, machineId])
 }
 
 /// A registered runner process on a computer.

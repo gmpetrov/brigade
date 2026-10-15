@@ -144,6 +144,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     bundle: z.string().optional(),
     /** On a cloud computer: SHA-256 of the root setup last applied (see cloud-bootstrap). */
     setup: z.string().optional(),
+    /** On a member's machine: this machine and runner home, hashed (see RunnerLink). */
+    machineId: z.string().max(128).optional(),
     /** On a member's machine: which harnesses are already signed in there. Never a credential. */
     machineLogins: z
       .array(
