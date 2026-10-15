@@ -416,7 +416,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <MoreMenu badges={badges} />
                 </SidebarMenu>
                 {/* The member and their menu, and the way to connect apps; folded, a column. */}
-                <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:flex-col">
+                <div className="flex items-center gap-2 px-2 pb-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:p-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
@@ -424,7 +424,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         aria-label={`${data.user.name}: appearance, notifications, help and sign out`}
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
-                        <Avatar className="size-10 group-data-[collapsible=icon]:size-8">
+                        <Avatar className="size-9 group-data-[collapsible=icon]:size-8">
                           {data.user.image && (
                             <AvatarImage
                               src={data.user.image}
@@ -478,7 +478,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <Link
                     href="/app/connections"
                     title="Connect apps"
-                    className="bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-10 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-full border text-sm font-semibold outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                    className="bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
                   >
                     <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
                     <span className="truncate group-data-[collapsible=icon]:hidden">
@@ -489,7 +489,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         <span
                           key={letter}
                           className={cn(
-                            'border-card bg-secondary -ml-1 flex size-5 items-center justify-center rounded-md border-[1.5px] text-[0.625rem] font-bold first:ml-0',
+                            'border-card bg-secondary -ml-1 flex size-4 items-center justify-center rounded-[0.3rem] border text-[0.5625rem] font-bold first:ml-0',
                             className,
                           )}
                         >
