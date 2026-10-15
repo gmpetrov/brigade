@@ -477,3 +477,14 @@
 .document-editor [data-content-type='heading'][data-level='3'] {
   --level: 1.15em;
 }
+
+/* While the sidebar's edge is dragged (components/sidebar-resizer.tsx): it follows the
+   pointer without easing, and nothing gets selected on the way. */
+html[data-sidebar-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+html[data-sidebar-resizing] [data-slot='sidebar-gap'],
+html[data-sidebar-resizing] [data-slot='sidebar-container'] {
+  transition: none;
+}

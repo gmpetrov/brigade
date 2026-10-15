@@ -2,6 +2,8 @@
 // Threads, from any page. The top bar's button opens a panel beside the page:
 // a teammate's latest threads with a box to start another below them, and a
 // thread opens in place, its conversation and reply box the same as anywhere.
+// Expanded, the sidebar lists the threads: the panel is the thread alone, or with
+// none open, a box to start one with the teammate picked.
 // It stays open, on the same thread, while you move between pages, and across
 // a reload. Expanded, it takes the page's place: that is the thread's own
 // address (/app/threads/<id>, the list at /app/threads), so links to a thread
@@ -10,13 +12,11 @@
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
 import {
   ArrowLeft,
-  List,
   LoaderCircle,
   Maximize2,
   MessagesSquare,
   Minimize2,
   Monitor,
-  Plus,
   X,
 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -63,7 +63,6 @@ import { ThreadChannel } from '@/components/thread-list'
 import { Button } from '@/components/ui/button'
 import { api, preload, preloaded, useApi, type Teammate, type ThreadSummary } from '@/lib/api'
 import { isMac, useIsMac } from '@/lib/platform'
-import { rememberedFlag, useRememberedFlag } from '@/lib/use-remembered'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -133,8 +132,6 @@ const OPEN_KEY = 'brigade:threads-panel'
 const LAST_THREADS_KEY = 'brigade:teammate-threads'
 /** Its name among the panels beside a page. */
 const PANEL = 'threads'
-/** Whether the channel shows beside a thread, expanded. */
-const LIST_SHOWN = 'brigade.threads.list'
 
 /** Whether the panel was open, and on which thread, when this browser last left it. */
 function readSaved(): { open: boolean; threadId: string | null } {
@@ -187,9 +184,9 @@ export function preloadThreadPanel(pathname: string) {
   if (!expanded && !saved.open) return
   const threadId = expanded ? routed : saved.threadId
   if (threadId) preloadConversation(threadId)
+  // Docked with no thread, the teammate's channel.
   const teammate = lastTeammate()
-  if (teammate && (!threadId || (expanded && rememberedFlag(LIST_SHOWN, true))))
-    preload(`${channelPath(teammate)}&limit=${PAGE}`)
+  if (teammate && !threadId && !expanded) preload(`${channelPath(teammate)}&limit=${PAGE}`)
 }
 
 const BUSY = new Set(['starting', 'running'])
@@ -498,8 +495,6 @@ export function ThreadPanel() {
   const [heading, setHeading] = useState<{ id: string } & ThreadHeading>()
   const shown = heading && heading.id === panel.threadId ? heading : undefined
   const lead = shown?.teammate
-  // Expanded, the channel beside a thread can be hidden: remembered in this browser.
-  const [listShown, showList] = useRememberedFlag(LIST_SHOWN, true)
   // The channel beside a thread is one of its teammates': the one picked, if in it.
   const inThread = shown?.teammateIds
   // Once per thread, as it opens: picking another teammate after that is the member's choice
@@ -535,17 +530,20 @@ export function ThreadPanel() {
           // Teammate / title · status: the title stays in sight while the conversation scrolls.
           // Docked there is room for the title alone, and the status as a dot.
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="size-8 shrink-0"
-              onClick={panel.back}
-              aria-label={teammate ? `Back to ${teammate.name}'s threads` : 'Back to threads'}
-              title={teammate ? `${teammate.name}'s threads` : 'Threads'}
-            >
-              <ArrowLeft aria-hidden />
-            </Button>
+            {/* Expanded, the sidebar's list is the way back. */}
+            {!expanded && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="size-8 shrink-0"
+                onClick={panel.back}
+                aria-label={teammate ? `Back to ${teammate.name}'s threads` : 'Back to threads'}
+                title={teammate ? `${teammate.name}'s threads` : 'Threads'}
+              >
+                <ArrowLeft aria-hidden />
+              </Button>
+            )}
             {/* Who leads it; a click goes to another teammate's latest threads. */}
             {lead &&
               (teammates.some((t) => t.id === lead.id) ? (
@@ -625,21 +623,6 @@ export function ThreadPanel() {
           ))
         )}
         {!threadId && <span className="flex-1" />}
-        {/* Expanded, the threads on the left and the details on the right toggle side by side. */}
-        {expanded && threadId && (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="hidden size-8 aria-pressed:bg-accent aria-pressed:text-accent-foreground lg:inline-flex"
-            aria-pressed={listShown}
-            aria-label={listShown ? 'Hide the thread list' : 'Show the thread list'}
-            title={listShown ? 'Hide the thread list' : 'Show the thread list'}
-            onClick={() => showList(!listShown)}
-          >
-            <List aria-hidden />
-          </Button>
-        )}
         {/* Room for the teammate's panel beside it only expanded; docked, the page is there. */}
         {expanded && <DetailsButton name={threadId ? lead?.name : teammate?.name} />}
         <Button
@@ -666,18 +649,15 @@ export function ThreadPanel() {
         </Button>
       </div>
       {teammate || threadId ? (
-        // The channel, and a thread opened from it. Expanded, the thread opens beside the
-        // channel, which narrows on the left: the same one, so the pages it loaded and where
-        // it was stay. Docked, the thread takes its place.
+        // A thread, else docked the teammate's channel, expanded a box to start one with it.
         <div className="flex min-h-0 flex-1">
-          {teammate && (!threadId || (expanded && listShown)) && (
-            <div
-              className={cn(
-                'flex min-h-0 flex-col',
-                threadId ? 'hidden w-72 shrink-0 border-r lg:flex 2xl:w-96' : 'min-w-0 flex-1',
+          {teammate && !threadId && (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {expanded ? (
+                <TeammateStart key={teammate.id} teammate={teammate} />
+              ) : (
+                <TeammateThreads key={teammate.id} teammate={teammate} />
               )}
-            >
-              <TeammateThreads key={teammate.id} teammate={teammate} beside={!!threadId} />
             </div>
           )}
           {threadId && (
@@ -808,30 +788,63 @@ function useThreadChannel(teammateId: string) {
 }
 
 /**
- * A teammate's threads, read as a channel (newest last), and the box to start another
- * below them. `beside` is beside an open thread: no details, and instead of the box,
- * which would be a second one beside the thread's, a link back to it.
+ * Expanded with no thread open: a box to start one with the teammate, its details beside
+ * it when asked for. The sidebar lists the threads.
  */
-function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; beside?: boolean }) {
-  const {
-    expanded,
-    threadId,
-    openThread,
-    startThread,
-    draft,
-    focusKey,
-    details,
-    setDetails,
-    openComputer,
-  } = useThreadPanel()
+function TeammateStart({ teammate }: { teammate: Teammate }) {
+  const { openThread, draft, focusKey, details, setDetails, openComputer, threads } =
+    useThreadPanel()
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {details && (
+        <TeammatePanel
+          teammate={teammate}
+          threads={threads?.filter(
+            (t) =>
+              t.teammate.id === teammate.id ||
+              t.teammates?.some((p) => p.teammate.id === teammate.id),
+          )}
+          onOpenThread={openThread}
+          onOpenComputer={() => openComputer(teammate.id)}
+          onClose={() => setDetails(false)}
+        />
+      )}
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 pb-16 md:px-10">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <TeammateAvatar teammate={teammate} className="size-12" />
+          <h2 className="text-2xl font-extrabold tracking-tight">
+            What should {teammate.name} work on?
+          </h2>
+        </div>
+        <div className="w-full max-w-3xl">
+          {/* A new key each time it should take the cursor: it focuses as it mounts. */}
+          <NewThread
+            key={focusKey}
+            teammate={teammate}
+            rows={3}
+            draft={draft}
+            autoFocus
+            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
+            onStarted={(thread) => openThread(thread.id)}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Docked with no thread open: a teammate's threads, read as a channel (newest last), and
+ * the box to start another below them.
+ */
+function TeammateThreads({ teammate }: { teammate: Teammate }) {
+  const { openThread, draft, focusKey } = useThreadPanel()
   const channel = useThreadChannel(teammate.id)
-  const mac = useIsMac()
   const reload = channel.reload
   useLive((message) => {
     if (message.type === 'thread.updated') void reload()
   })
-  const wide = expanded && !beside
-  const column = cn('mx-auto w-full', wide && 'max-w-5xl px-4 md:px-10')
+  const column = 'mx-auto w-full'
 
   // Read from its end, as a conversation: it opens there and follows what comes in,
   // unless scrolled up to read. An earlier page goes in above without moving the view.
@@ -860,33 +873,6 @@ function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; bes
     if (fromEnd !== undefined) view.scrollTop = view.scrollHeight - fromEnd
     else if (following.current) view.scrollTop = view.scrollHeight
   }, [list])
-  // Beside a thread, the list shows that one: brought into view as it opens (once loaded),
-  // and loaded first if it is further back than the pages in.
-  const selected = beside ? threadId : null
-  const shownFor = useRef<string | null>(null)
-  const loaded = !!list?.some((t) => t.id === selected)
-  useLayoutEffect(() => {
-    // Back on the list: the next thread opened is brought into view again, even this one.
-    if (!selected) shownFor.current = null
-    if (!selected || !loaded || shownFor.current === selected) return
-    shownFor.current = selected
-    const view = scroller.current
-    const row = view?.querySelector<HTMLElement>('[aria-current]')
-    if (!view || !row) return
-    const box = view.getBoundingClientRect()
-    const at = row.getBoundingClientRect()
-    if (at.top < box.top || at.bottom > box.bottom) row.scrollIntoView({ block: 'center' })
-  }, [selected, loaded])
-  const searched = useRef({ for: null as string | null, pages: 0 })
-  useEffect(() => {
-    if (searched.current.for !== selected) searched.current = { for: selected, pages: 0 }
-    if (!selected || loaded || !list || !channel.more || channel.loadingOlder) return
-    // Ten pages back at most: further than that, it shows without its place in the list.
-    if (searched.current.pages >= 10) return
-    searched.current.pages++
-    void loadEarlier()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, loaded, list, channel.more, channel.loadingOlder])
   const loadEarlier = () =>
     channel.loadOlder(() => {
       const view = scroller.current
@@ -895,17 +881,8 @@ function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; bes
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {expanded && !beside && details && (
-        <TeammatePanel
-          teammate={teammate}
-          threads={list && [...list].reverse()}
-          onOpenThread={openThread}
-          onOpenComputer={() => openComputer(teammate.id)}
-          onClose={() => setDetails(false)}
-        />
-      )}
       <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
-        <div className={cn(column, 'flex min-h-full flex-col justify-end pb-12', wide && 'pt-6')}>
+        <div className={cn(column, 'flex min-h-full flex-col justify-end pb-12')}>
           {list ? (
             <>
               {channel.more && (
@@ -921,7 +898,6 @@ function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; bes
               )}
               <ThreadChannel
                 threads={list}
-                selectedId={beside ? threadId : undefined}
                 onSelect={(t) => openThread(t.id)}
                 empty={`No threads with ${teammate.name} yet. Ask below to start one.`}
               />
@@ -946,36 +922,16 @@ function TeammateThreads({ teammate, beside = false }: { teammate: Teammate; bes
             }
           />
         )}
-        {beside ? (
-          // The thread beside has the box: this one starts another, in its place. Quiet, its
-          // own width, with the shortcut that does the same from anywhere.
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="group/new text-muted-foreground hover:text-foreground"
-            onClick={startThread}
-            aria-keyshortcuts={mac ? 'Meta+Shift+K' : 'Control+Shift+K'}
-          >
-            <Plus aria-hidden />
-            New thread with {teammate.name}
-            {/* At rest the label alone; pointing at it (or tabbing to it) shows the shortcut. */}
-            <span className="hidden text-[0.6875rem] font-normal tracking-widest text-muted-foreground group-hover/new:inline group-focus-visible/new:inline">
-              {mac ? '⌘⇧K' : 'Ctrl+Shift+K'}
-            </span>
-          </Button>
-        ) : (
-          // A new key each time it should take the cursor: it focuses as it mounts.
-          <NewThread
-            key={focusKey}
-            teammate={teammate}
-            rows={2}
-            draft={draft}
-            autoFocus={focusKey > 0}
-            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
-            onStarted={(thread) => openThread(thread.id)}
-          />
-        )}
+        // A new key each time it should take the cursor: it focuses as it mounts.
+        <NewThread
+          key={focusKey}
+          teammate={teammate}
+          rows={2}
+          draft={draft}
+          autoFocus={focusKey > 0}
+          placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
+          onStarted={(thread) => openThread(thread.id)}
+        />
       </div>
     </div>
   )

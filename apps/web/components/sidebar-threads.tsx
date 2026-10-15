@@ -1,15 +1,28 @@
 'use client'
 // The sidebar's work: one list of the latest threads, each with its status, and below it
-// the teammates and projects, which narrow the list to theirs. The list shows a few
-// threads of each status (waiting on a person, working, the rest) and folds the others
-// into a "+N" row, so the teammates and projects stay in reach however many there are.
-import { ArrowUpRight, Plus, Settings, X } from 'lucide-react'
+// the teammates and projects. A teammate opens its latest thread and a project its page,
+// and each narrows the list to theirs; the filter beside "Threads" narrows it by status,
+// teammate or project without going anywhere. The list shows a few threads of each status
+// (waiting on a person, working, the rest) and folds the others into a "+N" row, so the
+// teammates and projects stay in reach however many there are; older ones load on asking.
+import { ListFilter, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useMemo, useState, type ReactNode } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
 import { useThreadPanel } from '@/components/thread-panel'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -20,7 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import type { ProjectSummary, Teammate, ThreadSummary } from '@/lib/api'
+import { api, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Group = 'waiting' | 'working' | 'rest'
@@ -94,11 +107,16 @@ function signalsOf(threads: ThreadSummary[]) {
   return { waiting, working }
 }
 
-function Signals({ threads }: { threads: ThreadSummary[] }) {
+function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHover?: boolean }) {
   const { waiting, working } = signalsOf(threads)
   if (!waiting && !working) return null
   return (
-    <span className="text-muted-foreground ml-auto flex shrink-0 items-center gap-1.5 font-mono text-[0.6875rem] group-hover/menu-item:opacity-0">
+    <span
+      className={cn(
+        'text-muted-foreground ml-auto flex shrink-0 items-center gap-1.5 font-mono text-[0.6875rem]',
+        hideOnHover && 'group-hover/menu-item:opacity-0',
+      )}
+    >
       {working && <ThreadStatusIcon status="running" />}
       {waiting > 0 && (
         <>
@@ -115,7 +133,7 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
     <button
       type="button"
       onClick={onClear}
-      aria-label={`Show every thread, not only ${label}'s`}
+      aria-label={`Clear the filter: ${label}`}
       className="bg-primary/15 text-primary ml-1 inline-flex h-5 max-w-28 items-center gap-1 rounded-full pr-1 pl-2 text-[0.6875rem] font-semibold tracking-normal normal-case"
     >
       <span className="truncate">{label}</span>
@@ -123,6 +141,35 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
     </button>
   )
 }
+
+/** The statuses the filter picks among, and which threads each covers. */
+const STATUSES = [
+  { key: 'waiting', label: 'Needs you', icon: 'waiting' },
+  { key: 'working', label: 'Working', icon: 'running' },
+  { key: 'idle', label: 'Idle', icon: 'idle' },
+  { key: 'done', label: 'Done', icon: 'done' },
+  { key: 'failed', label: 'Failed', icon: 'failed' },
+] as const
+type StatusKey = (typeof STATUSES)[number]['key']
+const statusKey = (status: string): StatusKey => {
+  const group = groupOf(status)
+  if (group !== 'rest') return group
+  return status === 'done' || status === 'failed' ? status : 'idle'
+}
+
+/**
+ * What the list shows. A teammate or project picked from its row (`byRow`) goes with the
+ * page it opened: leaving for another page ends it. One picked from the menu stays.
+ */
+type Filter = {
+  teammateId?: string
+  projectId?: string
+  statuses: StatusKey[]
+  byRow?: 'teammate' | 'project'
+}
+
+/** Older threads are asked for this many at a time. */
+const OLDER_PAGE = 30
 
 export function SidebarWork({
   teammates,
@@ -135,23 +182,52 @@ export function SidebarWork({
   admin: boolean
   onNewProject: () => void
 }) {
+  const router = useRouter()
   const pathname = usePathname()
-  const { threads, threadId, expanded } = useThreadPanel()
-  const [teammateId, setTeammateId] = useState<string>()
-  const [projectId, setProjectId] = useState<string>()
+  const { threads, threadId, expanded, openTeammate } = useThreadPanel()
+  const [filter, setFilter] = useState<Filter>({ statuses: [] })
   const [open, setOpen] = useState<Group[]>([])
-  const all = useMemo(() => threads ?? [], [threads])
+  // Threads older than the latest the panel loads, asked for from the end of the list; and
+  // the filters that have none left, so the list stops offering more.
+  const [older, setOlder] = useState<ThreadSummary[]>([])
+  const [exhausted, setExhausted] = useState<string[]>([])
+  const [loadingOlder, setLoadingOlder] = useState(false)
   const live = projects.filter((p) => !p.archivedAt)
-  const teammate = teammates.find((t) => t.id === teammateId)
-  const project = live.find((p) => p.id === projectId)
+  const teammate = teammates.find((t) => t.id === filter.teammateId)
+  const project = live.find((p) => p.id === filter.projectId)
+  const filtered = !!(filter.teammateId || filter.projectId || filter.statuses.length)
 
+  // A filter from a row ends on a page that is not its own (or a thread).
+  const latest = useRef(filter)
+  latest.current = filter
+  useEffect(() => {
+    const { byRow, teammateId, projectId } = latest.current
+    if (!byRow || pathname.startsWith('/app/threads')) return
+    const own =
+      byRow === 'teammate'
+        ? pathname.startsWith(`/app/teammates/${teammateId}`)
+        : pathname.startsWith(`/app/projects/${projectId}`)
+    if (!own)
+      setFilter((f) => ({
+        ...f,
+        byRow: undefined,
+        ...(byRow === 'teammate' ? { teammateId: undefined } : { projectId: undefined }),
+      }))
+  }, [pathname])
+
+  const all = useMemo(() => {
+    const latestIds = new Set((threads ?? []).map((t) => t.id))
+    return [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))]
+  }, [threads, older])
   const shown = useMemo(
     () =>
       all.filter(
         (t) =>
-          (!teammateId || inThread(t, teammateId)) && (!projectId || t.projectId === projectId),
+          (!filter.teammateId || inThread(t, filter.teammateId)) &&
+          (!filter.projectId || t.projectId === filter.projectId) &&
+          (!filter.statuses.length || filter.statuses.includes(statusKey(t.status))),
       ),
-    [all, teammateId, projectId],
+    [all, filter],
   )
   const groups = useMemo(() => {
     const by: Record<Group, ThreadSummary[]> = { waiting: [], working: [], rest: [] }
@@ -161,21 +237,181 @@ export function SidebarWork({
   const toggleOpen = (group: Group) =>
     setOpen((o) => (o.includes(group) ? o.filter((g) => g !== group) : [...o, group]))
 
+  // Which older threads the server has for this filter: the teammate and project it can
+  // narrow to; the status it cannot, so the list narrows what comes back.
+  const query = `${filter.teammateId ? `&teammateId=${filter.teammateId}` : ''}${
+    filter.projectId ? `&project=${filter.projectId}` : ''
+  }`
+  // Fewer than the panel's latest 100, unfiltered: there are none older.
+  const mayHaveOlder = !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
+  async function loadOlder() {
+    const matching = all.filter(
+      (t) =>
+        (!filter.teammateId || inThread(t, filter.teammateId)) &&
+        (!filter.projectId || t.projectId === filter.projectId),
+    )
+    const oldest = matching[matching.length - 1]
+    setLoadingOlder(true)
+    try {
+      const page = await api<ThreadSummary[]>(
+        `/threads?limit=${OLDER_PAGE}&sort=activity${query}${oldest ? `&before=${oldest.id}` : ''}`,
+      )
+      setOlder((o) => {
+        const ids = new Set(o.map((t) => t.id))
+        return [...o, ...page.filter((t) => !ids.has(t.id))]
+      })
+      if (page.length < OLDER_PAGE) setExhausted((e) => [...e, query])
+    } finally {
+      setLoadingOlder(false)
+    }
+  }
+
+  function clickTeammate(id: string) {
+    if (filter.teammateId === id)
+      return setFilter((f) => ({ ...f, teammateId: undefined, byRow: undefined }))
+    setFilter((f) => ({
+      ...f,
+      teammateId: id,
+      byRow: 'teammate',
+      ...(f.byRow === 'project' ? { projectId: undefined } : {}),
+    }))
+    // Its latest thread, else a box to start one with it.
+    void openTeammate(id)
+  }
+  function clickProject(id: string) {
+    setFilter((f) => ({
+      ...f,
+      projectId: id,
+      byRow: 'project',
+      ...(f.byRow === 'teammate' ? { teammateId: undefined } : {}),
+    }))
+    router.push(`/app/projects/${id}`)
+  }
+
   return (
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel>
+        <SidebarGroupLabel className="pr-8">
           Threads
           {teammate && (
-            <FilterChip label={teammate.name} onClear={() => setTeammateId(undefined)} />
+            <FilterChip
+              label={teammate.name}
+              onClear={() => setFilter((f) => ({ ...f, teammateId: undefined, byRow: undefined }))}
+            />
           )}
-          {project && <FilterChip label={project.name} onClear={() => setProjectId(undefined)} />}
+          {project && (
+            <FilterChip
+              label={project.name}
+              onClear={() => setFilter((f) => ({ ...f, projectId: undefined, byRow: undefined }))}
+            />
+          )}
+          {filter.statuses.length > 0 && (
+            <FilterChip
+              label={
+                filter.statuses.length === 1
+                  ? STATUSES.find((s) => s.key === filter.statuses[0])!.label
+                  : `${filter.statuses.length} statuses`
+              }
+              onClear={() => setFilter((f) => ({ ...f, statuses: [] }))}
+            />
+          )}
         </SidebarGroupLabel>
+        <DropdownMenu>
+          <SidebarGroupAction asChild title="Filter threads">
+            <DropdownMenuTrigger
+              aria-label="Filter threads"
+              className="data-[state=open]:bg-sidebar-accent"
+            >
+              <ListFilter />
+              {filtered && (
+                <span
+                  aria-hidden
+                  className="bg-primary absolute top-0.5 right-0.5 size-1.5 rounded-full"
+                />
+              )}
+            </DropdownMenuTrigger>
+          </SidebarGroupAction>
+          <DropdownMenuContent align="start" side="right" className="min-w-56">
+            <DropdownMenuLabel className="text-muted-foreground text-xs">Status</DropdownMenuLabel>
+            {STATUSES.map((s) => (
+              <DropdownMenuCheckboxItem
+                key={s.key}
+                checked={filter.statuses.includes(s.key)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={(on) =>
+                  setFilter((f) => ({
+                    ...f,
+                    statuses: on ? [...f.statuses, s.key] : f.statuses.filter((k) => k !== s.key),
+                  }))
+                }
+              >
+                <ThreadStatusIcon status={s.icon} />
+                {s.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-muted-foreground text-xs">
+              Teammate
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filter.teammateId ?? ''}
+              onValueChange={(id) =>
+                setFilter((f) => ({
+                  ...f,
+                  teammateId: id || undefined,
+                  byRow: f.byRow === 'teammate' ? undefined : f.byRow,
+                }))
+              }
+            >
+              <DropdownMenuRadioItem value="">Everyone</DropdownMenuRadioItem>
+              {teammates.map((t) => (
+                <DropdownMenuRadioItem key={t.id} value={t.id}>
+                  <TeammateAvatar teammate={t} className="size-4" />
+                  {t.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+            {live.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-muted-foreground text-xs">
+                  Project
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={filter.projectId ?? ''}
+                  onValueChange={(id) =>
+                    setFilter((f) => ({
+                      ...f,
+                      projectId: id || undefined,
+                      byRow: f.byRow === 'project' ? undefined : f.byRow,
+                    }))
+                  }
+                >
+                  <DropdownMenuRadioItem value="">All projects</DropdownMenuRadioItem>
+                  {live.map((p) => (
+                    <DropdownMenuRadioItem key={p.id} value={p.id}>
+                      <ProjectIcon project={p} />
+                      {p.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </>
+            )}
+            {filtered && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setFilter({ statuses: [] })}>
+                  Clear filters
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <SidebarGroupContent>
           <SidebarMenu>
             {threads && shown.length === 0 && (
               <li className="text-muted-foreground px-2 py-1.5 text-xs">
-                {teammate || project ? 'No threads here yet.' : 'No threads yet.'}
+                {filtered ? 'No threads match.' : 'No threads yet.'}
               </li>
             )}
             {(['waiting', 'working', 'rest'] as const).map((group) => {
@@ -186,15 +422,16 @@ export function SidebarWork({
               return [
                 ...list.slice(0, cap).map((t) => {
                   const href = `/app/threads/${t.id}`
+                  const title = t.title || 'New thread'
                   return (
                     <SidebarMenuItem key={t.id}>
                       <SidebarMenuButton
                         asChild
                         isActive={threadId === t.id && (expanded || pathname === href)}
                       >
-                        <Link href={href}>
+                        <Link href={href} title={title}>
                           <ThreadStatusIcon status={t.status} />
-                          <span className="flex-1 truncate">{t.title || 'New thread'}</span>
+                          <span className="flex-1 truncate">{title}</span>
                           <span
                             className={cn(
                               'ml-auto shrink-0 text-xs',
@@ -229,6 +466,20 @@ export function SidebarWork({
                 ),
               ]
             })}
+            {/* Past what is loaded: older threads, from the server, a page at a time. */}
+            {mayHaveOlder && (open.includes('rest') || groups.rest.length <= CAPS.rest) && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  size="sm"
+                  className="text-muted-foreground"
+                  disabled={loadingOlder}
+                  onClick={() => void loadOlder()}
+                >
+                  <ThreadStatusIcon status="idle" className="opacity-60" />
+                  <span>{loadingOlder ? 'Loading…' : 'Show older'}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -246,10 +497,11 @@ export function SidebarWork({
         <SidebarGroupContent>
           <SidebarMenu>
             {teammates.map((t) => (
-              <FilterRow
+              <SidebarRow
                 key={t.id}
-                active={teammateId === t.id}
-                onToggle={() => setTeammateId((id) => (id === t.id ? undefined : t.id))}
+                active={filter.teammateId === t.id}
+                title={`${t.name}: its latest thread, and only its threads above`}
+                onClick={() => clickTeammate(t.id)}
                 icon={<TeammateAvatar teammate={t} className="size-5" />}
                 label={t.name}
                 threads={all.filter((thread) => inThread(thread, t.id))}
@@ -275,18 +527,18 @@ export function SidebarWork({
         <SidebarGroupContent>
           <SidebarMenu>
             {live.map((p) => (
-              <FilterRow
+              <SidebarRow
                 key={p.id}
-                active={projectId === p.id}
-                onToggle={() => setProjectId((id) => (id === p.id ? undefined : p.id))}
+                active={
+                  filter.projectId === p.id ||
+                  pathname === `/app/projects/${p.id}` ||
+                  pathname.startsWith(`/app/projects/${p.id}/`)
+                }
+                title={`${p.name}: its page, and only its threads above`}
+                onClick={() => clickProject(p.id)}
                 icon={<ProjectIcon project={p} />}
                 label={p.name}
                 threads={all.filter((t) => t.projectId === p.id)}
-                action={{
-                  href: `/app/projects/${p.id}`,
-                  label: `Open ${p.name}`,
-                  icon: <ArrowUpRight />,
-                }}
               />
             ))}
             {live.length === 0 && (
@@ -304,39 +556,38 @@ export function SidebarWork({
   )
 }
 
-/** A teammate or project: narrows the list above to its threads; its own page is beside it. */
-function FilterRow({
+/** A teammate or project: opens its thread or page, and narrows the list above to it. */
+function SidebarRow({
   active,
-  onToggle,
+  title,
+  onClick,
   icon,
   label,
   threads,
   action,
 }: {
   active: boolean
-  onToggle: () => void
+  title: string
+  onClick: () => void
   icon: ReactNode
   label: string
   threads: ThreadSummary[]
-  action: { href: string; label: string; icon: ReactNode }
+  action?: { href: string; label: string; icon: ReactNode }
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        isActive={active}
-        aria-pressed={active}
-        title={active ? 'Show every thread' : `Show ${label}'s threads`}
-        onClick={onToggle}
-      >
+      <SidebarMenuButton isActive={active} title={title} onClick={onClick}>
         {icon}
         <span className="truncate">{label}</span>
-        <Signals threads={threads} />
+        <Signals threads={threads} hideOnHover={!!action} />
       </SidebarMenuButton>
-      <SidebarMenuAction asChild showOnHover>
-        <Link href={action.href} aria-label={action.label} title={action.label}>
-          {action.icon}
-        </Link>
-      </SidebarMenuAction>
+      {action && (
+        <SidebarMenuAction asChild showOnHover>
+          <Link href={action.href} aria-label={action.label} title={action.label}>
+            {action.icon}
+          </Link>
+        </SidebarMenuAction>
+      )}
     </SidebarMenuItem>
   )
 }
