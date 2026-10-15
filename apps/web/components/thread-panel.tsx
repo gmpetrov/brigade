@@ -739,7 +739,7 @@ function DetailsPill({
     <button
       ref={pill}
       type="button"
-      className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full border bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
+      className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
       aria-pressed={shown}
       title={shown ? 'Hide details' : `Details: ${details}`}
       onClick={() => {
