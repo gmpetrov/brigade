@@ -50,7 +50,7 @@ import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
 import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
 import { RailMenu } from '@/components/rail-menu'
-import { SidebarWork, ThreadsRailMenu } from '@/components/sidebar-threads'
+import { SidebarWork } from '@/components/sidebar-threads'
 import { QuickThread } from '@/components/quick-thread'
 import {
   preloadThreadPanel,
@@ -389,29 +389,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   memberId={data.memberId}
                   onNewProject={() => setCreatingProject(true)}
                   needsYou={needsYou}
+                  rail={
+                    <>
+                      <RailMenu
+                        icon={FolderKanban}
+                        label="Projects"
+                        href="/app/projects"
+                        active={pathname.startsWith('/app/projects')}
+                        items={(projects.data ?? [])
+                          .filter((p) => !p.archivedAt)
+                          .map((p) => ({
+                            href: `/app/projects/${p.id}`,
+                            label: p.name,
+                            icon: <ProjectIcon project={p} />,
+                          }))}
+                        action={{ label: 'New project', onSelect: () => setCreatingProject(true) }}
+                      />
+                      <TeammatesRailMenu teammates={teammates.data ?? []} admin={isAdmin(data)} />
+                    </>
+                  }
                 />
-
-                {/* Folded: threads, projects and teammates as menus beside the rail. */}
-                <SidebarGroup className="hidden group-data-[collapsible=icon]:flex">
-                  <SidebarMenu>
-                    <ThreadsRailMenu needsYou={needsYou} />
-                    <RailMenu
-                      icon={FolderKanban}
-                      label="Projects"
-                      href="/app/projects"
-                      active={pathname.startsWith('/app/projects')}
-                      items={(projects.data ?? [])
-                        .filter((p) => !p.archivedAt)
-                        .map((p) => ({
-                          href: `/app/projects/${p.id}`,
-                          label: p.name,
-                          icon: <ProjectIcon project={p} />,
-                        }))}
-                      action={{ label: 'New project', onSelect: () => setCreatingProject(true) }}
-                    />
-                    <TeammatesRailMenu teammates={teammates.data ?? []} admin={isAdmin(data)} />
-                  </SidebarMenu>
-                </SidebarGroup>
               </SidebarContent>
 
               <SidebarFooter className="gap-3">

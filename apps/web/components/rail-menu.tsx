@@ -34,13 +34,21 @@ export type RailMenuItem = {
   onSelect?: () => void
 }
 
+/**
+ * Between the items: a heading ("Pinned"), a line, or a control such as "+N more" with no
+ * icon, its text lined up with theirs. A control keeps the menu open, so the list grows in it.
+ */
+export type RailMenuControl =
+  | { kind: 'label'; key: string; label: string }
+  | { kind: 'separator'; key: string }
+  | { kind: 'more'; key: string; label: string; disabled?: boolean; onSelect: () => void }
+
 export function RailMenu({
   icon: Icon,
   label,
   href,
   active,
   items,
-  more,
   action,
 }: {
   icon: LucideIcon
@@ -48,9 +56,7 @@ export function RailMenu({
   /** The list's own page, first in the menu. */
   href?: string
   active: boolean
-  items: RailMenuItem[]
-  /** A control after the items, such as "+N more": no icon, its text lined up with theirs. */
-  more?: { label: string; onSelect: () => void }
+  items: (RailMenuItem | RailMenuControl)[]
   action?: { label: string; onSelect: () => void }
 }) {
   const [open, setOpen] = useState(false)
@@ -147,19 +153,36 @@ export function RailMenu({
           ) : (
             <DropdownMenuLabel className="text-muted-foreground text-xs">{label}</DropdownMenuLabel>
           )}
-          {items.map((item) => (
-            <DropdownMenuItem key={item.id ?? item.href} asChild onSelect={item.onSelect}>
-              <Link href={item.href} title={item.label}>
-                {item.icon}
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.trailing}
-              </Link>
-            </DropdownMenuItem>
-          ))}
-          {more && (
-            <DropdownMenuItem className="text-muted-foreground pl-8" onSelect={more.onSelect}>
-              {more.label}
-            </DropdownMenuItem>
+          {items.map((item) =>
+            'kind' in item ? (
+              item.kind === 'label' ? (
+                <DropdownMenuLabel key={item.key} className="text-muted-foreground text-xs">
+                  {item.label}
+                </DropdownMenuLabel>
+              ) : item.kind === 'separator' ? (
+                <DropdownMenuSeparator key={item.key} />
+              ) : (
+                <DropdownMenuItem
+                  key={item.key}
+                  className="text-muted-foreground pl-8"
+                  disabled={item.disabled}
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    item.onSelect()
+                  }}
+                >
+                  {item.label}
+                </DropdownMenuItem>
+              )
+            ) : (
+              <DropdownMenuItem key={item.id ?? item.href} asChild onSelect={item.onSelect}>
+                <Link href={item.href} title={item.label}>
+                  {item.icon}
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.trailing}
+                </Link>
+              </DropdownMenuItem>
+            ),
           )}
           {action && (
             <>
