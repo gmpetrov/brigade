@@ -1,36 +1,41 @@
 'use client'
 import {
   CalendarClock,
+  ChevronDown,
   ChevronRight,
-  ChevronsUpDown,
+  Ellipsis,
   GitPullRequest,
   House,
   Inbox,
+  Keyboard,
   KeyRound,
   Library,
   LogOut,
   Monitor,
+  Moon,
   Plug,
   Plus,
   Search,
   Settings,
   ShieldCheck,
   SquareKanban,
+  Sun,
   UserRound,
   UsersRound,
   FolderKanban,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
-import { HelpMenu } from '@/components/help-menu'
+import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
-import { SearchButton, SearchDialog } from '@/components/search'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { SearchDialog } from '@/components/search'
+import { SidebarWork } from '@/components/sidebar-threads'
 import { QuickThread } from '@/components/quick-thread'
 import {
   preloadThreadPanel,
@@ -40,13 +45,13 @@ import {
 } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -61,13 +66,8 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
@@ -166,11 +166,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const projects = useApi<ProjectSummary[]>('/projects')
   const reloadProjects = projects.reload
   const [creatingProject, setCreatingProject] = useState(false)
-  const inSettings = SETTINGS_NAV.some((n) => pathname.startsWith(n.href))
-  const [settingsOpen, setSettingsOpen] = useState(inSettings)
-  useEffect(() => {
-    if (inSettings) setSettingsOpen(true)
-  }, [inSettings])
+  const mac = useIsMac()
+  const { theme = 'system', setTheme } = useTheme()
   // Open pull requests and those waiting on a person, refreshed as the member moves around.
   const pullsWaiting = useApi<{ count: number; open: number }>('/pulls/attention')
   const reloadPulls = pullsWaiting.reload
@@ -225,7 +222,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const pullsWaitingCount = pullsWaiting.data?.count ?? 0
   const tasksNeedingYou = tasks.data?.filter((t) => t.column === 'needs_you').length ?? 0
   const tasksDoing = tasks.data?.filter((t) => t.column === 'doing').length ?? 0
-  const badges: Record<string, { count?: number; label: string; quiet?: boolean }> = {
+  const badges: Badges = {
     '/app/tickets': {
       count: tickets.data?.filter((t) => waitsOn(t, data)).length,
       label: 'waiting on you',
@@ -271,31 +268,25 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Sidebar collapsible="icon">
               <SidebarHeader>
                 <SidebarMenu>
-                  <SidebarMenuItem>
+                  <SidebarMenuItem className="flex items-center gap-2 group-data-[collapsible=icon]:block">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                           size="lg"
-                          className="data-[state=open]:bg-sidebar-accent"
+                          className="min-w-0 flex-1 data-[state=open]:bg-sidebar-accent"
                         >
                           <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-sm font-bold">
                             {initial(workspace?.name ?? '')}
                           </span>
-                          <span className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-                            <span className="truncate font-semibold">{workspace?.name}</span>
-                            <span className="text-muted-foreground truncate text-xs">
-                              {organization?.name}
-                            </span>
+                          <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
+                            {workspace?.name}
                           </span>
-                          <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
+                          <ChevronDown className="text-muted-foreground size-3.5! group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="start"
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-                      >
+                      <DropdownMenuContent align="start" className="min-w-56">
                         <DropdownMenuLabel className="text-muted-foreground text-xs">
-                          Workspaces
+                          {organization?.name ?? 'Workspaces'}
                         </DropdownMenuLabel>
                         {data.workspaces.map((w) => (
                           <DropdownMenuItem key={w.id} onSelect={() => void switchWorkspace(w.id)}>
@@ -315,9 +306,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <RoundButton
+                      label={`Search (${mac ? '⌘K' : 'Ctrl+K'})`}
+                      onClick={() => setSearching(true)}
+                    >
+                      <Search />
+                    </RoundButton>
+                    <NewThreadButton />
                   </SidebarMenuItem>
                 </SidebarMenu>
-                <SearchButton onClick={() => setSearching(true)} />
+                {/* Folded: the same two as icons of the rail. */}
                 <SidebarMenu className="hidden group-data-[collapsible=icon]:flex">
                   <SidebarMenuItem>
                     <SidebarMenuButton tooltip="Search" onClick={() => setSearching(true)}>
@@ -325,66 +323,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       <span>Search</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <NewThreadRailItem />
                 </SidebarMenu>
               </SidebarHeader>
 
               <SidebarContent>
-                <SidebarGroup>
-                  <SidebarGroupLabel>Work</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {WORK_NAV.map(({ href, label, icon: Icon }) => {
-                        const badge = badges[href]
-                        return (
-                          <SidebarMenuItem key={href}>
-                            <SidebarMenuButton
-                              asChild
-                              tooltip={
-                                badge?.count ? `${label} · ${badge.count} ${badge.label}` : label
-                              }
-                              isActive={
-                                pathname === href ||
-                                (href === '/app/pulls' && pathname.startsWith(href))
-                              }
-                            >
-                              <Link href={href} className="relative">
-                                <Icon />
-                                {/* Folded, the count is a dot on the icon. */}
-                                {!!badge?.count && (
-                                  <span
-                                    aria-hidden
-                                    className={cn(
-                                      'absolute top-1 right-1 hidden size-2 rounded-full ring-2 ring-sidebar group-data-[collapsible=icon]:block',
-                                      badge.quiet ? 'bg-muted-foreground' : 'bg-primary',
-                                    )}
-                                  />
-                                )}
-                                <span>{label}</span>
-                              </Link>
-                            </SidebarMenuButton>
-                            {!!badge?.count && (
-                              <SidebarMenuBadge
-                                aria-label={`${badge.count} ${badge.label}`}
-                                className="right-2"
-                              >
-                                <span
-                                  className={cn(
-                                    'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
-                                    badge.quiet
-                                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                                      : 'bg-primary text-primary-foreground',
-                                  )}
-                                >
-                                  {badge.count > 99 ? '99+' : badge.count}
-                                </span>
-                              </SidebarMenuBadge>
-                            )}
-                          </SidebarMenuItem>
-                        )
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
+                <SidebarWork
+                  teammates={teammates.data ?? []}
+                  projects={projects.data ?? []}
+                  admin={isAdmin(data)}
+                  onNewProject={() => setCreatingProject(true)}
+                />
 
                 {/* Folded: projects and teammates as menus beside the rail. */}
                 <SidebarGroup className="hidden group-data-[collapsible=icon]:flex">
@@ -406,137 +355,85 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <TeammatesRailMenu teammates={teammates.data ?? []} admin={isAdmin(data)} />
                   </SidebarMenu>
                 </SidebarGroup>
-
-                <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-                  <SidebarGroupLabel asChild>
-                    <Link href="/app/projects">Projects</Link>
-                  </SidebarGroupLabel>
-                  <SidebarGroupAction title="New project" onClick={() => setCreatingProject(true)}>
-                    <Plus />
-                    <span className="sr-only">New project</span>
-                  </SidebarGroupAction>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {(projects.data ?? [])
-                        .filter((p) => !p.archivedAt)
-                        .map((p) => {
-                          const href = `/app/projects/${p.id}`
-                          return (
-                            <SidebarMenuItem key={p.id}>
-                              <SidebarMenuButton
-                                asChild
-                                isActive={pathname === href || pathname.startsWith(`${href}/`)}
-                              >
-                                <Link href={href}>
-                                  <ProjectIcon project={p} />
-                                  <span>{p.name}</span>
-                                </Link>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          )
-                        })}
-                      {projects.data?.every((p) => p.archivedAt) && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            className="text-muted-foreground"
-                            onClick={() => setCreatingProject(true)}
-                          >
-                            <Plus />
-                            <span>New project</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-
-                <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-                  <SidebarGroupLabel>AI teammates</SidebarGroupLabel>
-                  {isAdmin(data) && (
-                    <SidebarGroupAction asChild title="New teammate">
-                      <Link href="/app/teammates/new">
-                        <Plus />
-                        <span className="sr-only">New teammate</span>
-                      </Link>
-                    </SidebarGroupAction>
-                  )}
-                  <SidebarGroupContent>
-                    <TeammatesMenu teammates={teammates.data ?? []} />
-                  </SidebarGroupContent>
-                </SidebarGroup>
-
-                <SidebarGroup className="mt-auto">
-                  <SidebarGroupContent>
-                    <SidebarMenu className="hidden group-data-[collapsible=icon]:flex">
-                      <RailMenu
-                        icon={Settings}
-                        label="Workspace settings"
-                        active={inSettings}
-                        items={SETTINGS_NAV.map(({ href, label, icon: Icon }) => ({
-                          href,
-                          label,
-                          icon: <Icon />,
-                        }))}
-                      />
-                    </SidebarMenu>
-                    <SidebarMenu className="group-data-[collapsible=icon]:hidden">
-                      <Collapsible
-                        open={settingsOpen}
-                        onOpenChange={setSettingsOpen}
-                        className="group/settings"
-                        asChild
-                      >
-                        <SidebarMenuItem>
-                          <CollapsibleTrigger asChild>
-                            <SidebarMenuButton isActive={inSettings && !settingsOpen}>
-                              <Settings />
-                              <span>Workspace settings</span>
-                              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/settings:rotate-90" />
-                            </SidebarMenuButton>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <SidebarMenuSub>
-                              {SETTINGS_NAV.map(({ href, label, icon: Icon }) => (
-                                <SidebarMenuSubItem key={href}>
-                                  <SidebarMenuSubButton
-                                    asChild
-                                    isActive={pathname.startsWith(href)}
-                                  >
-                                    <Link href={href}>
-                                      <Icon />
-                                      <span>{label}</span>
-                                    </Link>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              ))}
-                            </SidebarMenuSub>
-                          </CollapsibleContent>
-                        </SidebarMenuItem>
-                      </Collapsible>
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
               </SidebarContent>
 
-              <SidebarFooter>
-                {/* Folded, a column: the member, then help, appearance and sign out. */}
-                <div className="bg-card flex items-center gap-2 rounded-lg border p-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0">
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-secondary text-xs font-bold">
-                      {initial(data.user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate text-sm font-semibold">{data.user.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {organization?.name}
+              <SidebarFooter className="gap-3">
+                <SidebarMenu>
+                  <MoreMenu badges={badges} />
+                </SidebarMenu>
+                {/* The member and their menu, and the way to connect apps; folded, a column. */}
+                <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:flex-col">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`${data.user.name}: appearance, help and sign out`}
+                        className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
+                      >
+                        <Avatar className="size-10 group-data-[collapsible=icon]:size-8">
+                          <AvatarFallback className="bg-secondary text-sm font-bold">
+                            {initial(data.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="top" align="start" className="min-w-60">
+                      <DropdownMenuLabel className="grid leading-tight">
+                        <span className="truncate">{data.user.name}</span>
+                        <span className="text-muted-foreground truncate text-xs font-normal">
+                          {organization?.name}
+                        </span>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                        Appearance
+                      </DropdownMenuLabel>
+                      <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                        <DropdownMenuRadioItem value="light">
+                          <Sun /> Light
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="dark">
+                          <Moon /> Dark
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="system">
+                          <Monitor /> System
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={openShortcuts}>
+                        <Keyboard /> Keyboard shortcuts
+                        <span className="text-muted-foreground ml-auto text-xs">
+                          {mac ? '⇧?' : 'Shift+?'}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => void signOut()}>
+                        <LogOut /> Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Link
+                    href="/app/connections"
+                    title="Connect apps"
+                    className="bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-10 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-full border text-sm font-semibold outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                  >
+                    <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
+                    <span className="truncate group-data-[collapsible=icon]:hidden">
+                      Connect apps
                     </span>
-                  </div>
-                  <HelpMenu />
-                  <ThemeToggle />
-                  <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={signOut}>
-                    <LogOut />
-                  </Button>
+                    <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
+                      {APP_TILES.map(({ letter, className }) => (
+                        <span
+                          key={letter}
+                          className={cn(
+                            'border-card bg-secondary -ml-1 flex size-5 items-center justify-center rounded-md border-[1.5px] text-[0.625rem] font-bold first:ml-0',
+                            className,
+                          )}
+                        >
+                          {letter}
+                        </span>
+                      ))}
+                    </span>
+                  </Link>
                 </div>
               </SidebarFooter>
             </Sidebar>
@@ -544,10 +441,139 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Inset>{children}</Inset>
           </SidebarProvider>
           <SearchDialog open={searching} onOpenChange={setSearching} />
+          <ShortcutsDialog />
           <NewProjectDialog open={creatingProject} onOpenChange={setCreatingProject} />
         </ThreadPanelProvider>
       </DocumentPanelProvider>
     </DashboardContext.Provider>
+  )
+}
+
+type Badges = Record<string, { count?: number; label: string; quiet?: boolean }>
+
+/** Decoration for Connect apps: letter tiles until the services' own marks are added. */
+const APP_TILES = [
+  { letter: 'G', className: 'text-chart-4' },
+  { letter: 'N', className: 'text-foreground' },
+  { letter: 'S', className: 'text-chart-1' },
+]
+
+/** A round, outlined icon button beside the workspace's name. */
+function RoundButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="bg-card text-foreground hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex size-9 shrink-0 items-center justify-center rounded-full border outline-none focus-visible:ring-2 group-data-[collapsible=icon]:hidden [&>svg]:size-4"
+    >
+      {children}
+    </button>
+  )
+}
+
+function NewThreadButton() {
+  const { startThread } = useThreadPanel()
+  const mac = useIsMac()
+  return (
+    <RoundButton label={`New thread (${mac ? '⌘⇧K' : 'Ctrl+Shift+K'})`} onClick={startThread}>
+      <Plus />
+    </RoundButton>
+  )
+}
+
+function NewThreadRailItem() {
+  const { startThread } = useThreadPanel()
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton tooltip="New thread" onClick={startThread}>
+        <Plus />
+        <span>New thread</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+/**
+ * The pages that are not threads: the work (home, tickets, tasks…) and the workspace's
+ * settings, in one menu above the member.
+ */
+function MoreMenu({ badges }: { badges: Badges }) {
+  const pathname = usePathname()
+  const { isMobile, state } = useSidebar()
+  const folded = state === 'collapsed' && !isMobile
+  const active = NAV.some(({ href }) =>
+    href === '/app' ? pathname === href : pathname.startsWith(href),
+  )
+  const waiting = WORK_NAV.some(({ href }) => badges[href]?.count && !badges[href]?.quiet)
+  const item = ({ href, label, icon: Icon }: (typeof NAV)[number]) => {
+    const badge = badges[href]
+    return (
+      <DropdownMenuItem key={href} asChild>
+        <Link href={href}>
+          <Icon />
+          <span className="flex-1">{label}</span>
+          {!!badge?.count && (
+            <span
+              aria-label={`${badge.count} ${badge.label}`}
+              className={cn(
+                'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
+                badge.quiet
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'bg-primary text-primary-foreground',
+              )}
+            >
+              {badge.count > 99 ? '99+' : badge.count}
+            </span>
+          )}
+        </Link>
+      </DropdownMenuItem>
+    )
+  }
+  return (
+    <SidebarMenuItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <SidebarMenuButton
+            tooltip="More"
+            isActive={active}
+            className="text-muted-foreground data-[state=open]:bg-sidebar-accent relative"
+          >
+            <Ellipsis />
+            {/* Folded, what waits is a dot on the icon. */}
+            {waiting && (
+              <span
+                aria-hidden
+                className="bg-primary ring-sidebar absolute top-1 right-1 hidden size-2 rounded-full ring-2 group-data-[collapsible=icon]:block"
+              />
+            )}
+            <span>More</span>
+            <ChevronRight className="ml-auto group-data-[collapsible=icon]:hidden" />
+          </SidebarMenuButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side={folded ? 'right' : 'top'}
+          align={folded ? 'end' : 'start'}
+          className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+        >
+          {WORK_NAV.map(item)}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+            Workspace settings
+          </DropdownMenuLabel>
+          {SETTINGS_NAV.map(item)}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
   )
 }
 
@@ -569,49 +595,6 @@ export function SidebarToggle({ className }: { className?: string }) {
  * The folded sidebar's way to a list (projects, teammates, settings): its icon, and
  * beside it a menu of the list.
  */
-/**
- * The teammates in the sidebar. Each opens its threads expanded, on the one last open with it
- * (thread-panel.tsx); its settings are a step aside, beside its name.
- */
-function TeammatesMenu({ teammates }: { teammates: Teammate[] }) {
-  const pathname = usePathname()
-  const { expanded, teammateId, teammateHref, openTeammate } = useThreadPanel()
-  return (
-    <SidebarMenu>
-      {teammates.map((t) => {
-        const settings = `/app/teammates/${t.id}`
-        const active =
-          (expanded && teammateId === t.id) ||
-          pathname === settings ||
-          pathname.startsWith(`${settings}/`)
-        return (
-          <SidebarMenuItem key={t.id}>
-            <SidebarMenuButton asChild isActive={active}>
-              <Link
-                href={teammateHref(t.id)}
-                onClick={(e) => {
-                  // A new tab goes to the address as it is.
-                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-                  e.preventDefault()
-                  openTeammate(t.id)
-                }}
-              >
-                <TeammateAvatar teammate={t} className="size-5" />
-                <span>{t.name}</span>
-              </Link>
-            </SidebarMenuButton>
-            <SidebarMenuAction asChild showOnHover>
-              <Link href={settings} aria-label={`${t.name}'s settings`} title="Settings">
-                <Settings />
-              </Link>
-            </SidebarMenuAction>
-          </SidebarMenuItem>
-        )
-      })}
-    </SidebarMenu>
-  )
-}
-
 /** Folded, the teammates as a menu beside the rail: each opens its threads, as above. */
 function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin: boolean }) {
   const router = useRouter()

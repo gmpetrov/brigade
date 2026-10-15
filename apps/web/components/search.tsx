@@ -141,22 +141,6 @@ function Snippet({ text }: { text: string }) {
   )
 }
 
-/** The sidebar's search box: a button that looks like one, with its shortcut. */
-export function SearchButton({ onClick }: { onClick: () => void }) {
-  const mac = useIsMac()
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-8 w-full items-center gap-2 rounded-md border bg-background px-2.5 text-sm text-muted-foreground shadow-xs transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:hidden"
-    >
-      <SearchIcon className="size-4 shrink-0" aria-hidden />
-      <span className="flex-1 text-left">Search…</span>
-      <kbd className="font-sans text-xs text-muted-foreground">{mac ? '⌘K' : 'Ctrl K'}</kbd>
-    </button>
-  )
-}
-
 export function SearchDialog({
   open,
   onOpenChange,

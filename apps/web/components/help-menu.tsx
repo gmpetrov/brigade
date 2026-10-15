@@ -1,10 +1,8 @@
 'use client'
-// The ? in the sidebar footer: help, starting with the keyboard shortcuts.
-// ⇧? anywhere outside a field opens the shortcuts too.
-import { CircleHelp, Keyboard } from 'lucide-react'
+// The keyboard shortcuts: from the member's menu in the sidebar footer (openShortcuts),
+// or ⇧? anywhere outside a field.
 import { Fragment, useEffect, useState } from 'react'
 import { useIsMac } from '@/lib/platform'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -12,12 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 /** Focus is in a field: ? there is text, not a shortcut. */
 const typing = (target: EventTarget | null) =>
@@ -65,7 +57,14 @@ function Keys({ keys, mac }: { keys: string[]; mac: boolean }) {
   )
 }
 
-export function HelpMenu() {
+const OPEN_EVENT = 'brigade:shortcuts'
+
+/** Opens the shortcuts from a menu. */
+export function openShortcuts() {
+  window.dispatchEvent(new Event(OPEN_EVENT))
+}
+
+export function ShortcutsDialog() {
   const mac = useIsMac()
   const [shortcuts, setShortcuts] = useState(false)
 
@@ -77,26 +76,17 @@ export function HelpMenu() {
       e.preventDefault()
       setShortcuts(true)
     }
+    const onOpen = () => setShortcuts(true)
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener(OPEN_EVENT, onOpen)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener(OPEN_EVENT, onOpen)
+    }
   }, [])
 
   return (
     <>
-      {/* Not modal: the dialog it opens takes focus from it cleanly. */}
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Help">
-            <CircleHelp />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="min-w-52">
-          <DropdownMenuItem onSelect={() => setShortcuts(true)}>
-            <Keyboard /> Keyboard shortcuts
-            <span className="ml-auto text-xs text-muted-foreground">{mac ? '⇧?' : 'Shift+?'}</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
       <Dialog open={shortcuts} onOpenChange={setShortcuts}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
