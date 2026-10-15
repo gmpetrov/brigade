@@ -769,6 +769,10 @@ function DetailsPill({
   )
 }
 
+/** A damped spring: quick out, a slight overshoot, then settles. */
+const SPRING =
+  'linear(0, 0.037, 0.129, 0.25, 0.382, 0.511, 0.63, 0.734, 0.821, 0.89, 0.943, 0.982, 1.008, 1.025, 1.034, 1.038, 1.038, 1.035, 1.031, 1.026, 1.021, 1.016, 1.012, 1.008, 1.005, 1.003, 1.001, 1, 1)'
+
 /**
  * Slides the element across when it moves sideways, from where it was to where it is: a
  * panel opening or closing beside the page narrows or widens what it is centered in.
@@ -796,8 +800,10 @@ function useSlideAcross<T extends HTMLElement>() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     el.animate([{ transform: `translateX(${from - to}px)` }, { transform: 'none' }], {
       id: 'slide-across',
-      duration: 300,
-      easing: 'cubic-bezier(0.2, 0, 0, 1)',
+      duration: 550,
+      easing: CSS.supports('transition-timing-function', SPRING)
+        ? SPRING
+        : 'cubic-bezier(0.34, 1.3, 0.64, 1)',
     })
   })
   // The window resized: where it is now, so the next render does not slide from before.
