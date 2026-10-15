@@ -1,6 +1,7 @@
 // The environment harness processes run with. Brigade sets no API key: the
 // vendor CLIs use their own subscription logins, and a turn on a Claude account
 // with a token gets it explicitly (accountEnv).
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
@@ -31,6 +32,37 @@ function ensurePnpmShim() {
     `#!/bin/sh\nexec "${process.execPath}" "${join(pnpmDir, 'bin', 'pnpm.cjs')}" "$@"\n`,
     { mode: 0o755 },
   )
+}
+
+const MARK = '__BRIGADE_PATH__'
+
+/**
+ * On a Mac, where the person's shell finds commands, before what the runner was given:
+ * Brigade.app starts it from Finder with a short PATH, and the harness CLIs live
+ * elsewhere (claude in ~/.local/bin, a Node version manager's bin). Asks the login
+ * shell, then adds the places installers use, so `claude` and `codex` are found.
+ */
+export function usePersonPath(): void {
+  if (process.platform !== 'darwin') return
+  let shellPath = ''
+  try {
+    const out = execFileSync(
+      process.env.SHELL || '/bin/zsh',
+      ['-ilc', `printf '${MARK}%s${MARK}' "$PATH"`],
+      { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] },
+    )
+    shellPath = out.split(MARK)[1] ?? ''
+  } catch {}
+  const home = homedir()
+  const dirs = [
+    ...shellPath.split(delimiter),
+    join(home, '.local', 'bin'),
+    join(home, '.claude', 'local'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    ...(process.env.PATH ?? '').split(delimiter),
+  ]
+  process.env.PATH = [...new Set(dirs.filter(Boolean))].join(delimiter)
 }
 
 /** Remove API keys from the runner's own environment. */
