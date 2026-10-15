@@ -63,6 +63,19 @@ export function isOnline(computerId: string) {
   return runners.has(computerId)
 }
 
+/**
+ * Forget a computer's runner connection, its computer stopped (src/cloud.ts's stopComputer).
+ * A stopped cloud computer's connection dies without closing: kept, it looked online, so
+ * commands went into it and were lost, and the computer was never started again for them.
+ */
+export function dropRunner(computerId: string) {
+  const conn = runners.get(computerId)
+  if (!conn) return
+  runners.delete(computerId)
+  conn.ws.close(1001, 'computer stopped')
+  broadcast(conn.workspaceId, { type: 'computer.updated', computerId, online: false })
+}
+
 /** The protocol version of a computer's connected runner; undefined while it is offline. */
 export function runnerProtocol(computerId: string) {
   return runners.get(computerId)?.protocolVersion

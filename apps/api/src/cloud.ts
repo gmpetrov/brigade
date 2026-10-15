@@ -5,7 +5,13 @@ import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { defaults, env } from './config.js'
 import { prisma } from './db.js'
-import { broadcastComputer, isOnline, notifyLibraryChanged, runnerProtocol } from './hub.js'
+import {
+  broadcastComputer,
+  dropRunner,
+  isOnline,
+  notifyLibraryChanged,
+  runnerProtocol,
+} from './hub.js'
 import { bootstrapScript, reinstallScript, SETUP_SHA, setupScript } from './cloud-bootstrap.js'
 import { issueLinkCode } from './link-codes.js'
 import { runnerBundle } from './routes/runner-install.js'
@@ -173,6 +179,8 @@ export async function stopComputer(
   const ref = refOf(computer)
   if (!provider || !ref) return
   await provider.stop(ref)
+  // Its runner went with it, without closing its connection.
+  dropRunner(computer.id)
   await setStatus(computer, 'stopped')
   await audit({
     organizationId: computer.organizationId,
