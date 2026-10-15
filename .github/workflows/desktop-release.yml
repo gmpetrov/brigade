@@ -43,6 +43,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @brigade/desktop
 
+      # Newer rustup no longer installs the toolchain rust-toolchain.toml pins on its own.
+      - name: Rust toolchain
+        working-directory: apps/desktop/src-tauri
+        run: |
+          CHANNEL="$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$CHANNEL" --profile minimal --target aarch64-apple-darwin --target x86_64-apple-darwin
+
       - uses: actions/cache@v4
         with:
           path: |

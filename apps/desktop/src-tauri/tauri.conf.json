@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "ai.brigade.desktop",
   "build": {
-    "frontendDist": "../dist"
+    "frontendDist": "../page"
   },
   "app": {
     "windows": [],
