@@ -19,8 +19,9 @@ const MIN = 224
 const MAX = 420
 /** Narrower than this while dragging, it folds. */
 const COLLAPSE_AT = 160
-/** Folded, dragged out past this, it opens. */
-const EXPAND_AT = 120
+/** Folded, dragged out past this, it opens. Past COLLAPSE_AT, so that a pointer held
+ *  between the two leaves it as it is instead of folding and opening on every move. */
+const EXPAND_AT = 200
 const clamp = (width: number) => Math.round(Math.min(MAX, Math.max(MIN, width)))
 
 /** The width, as it was left in this browser. */
