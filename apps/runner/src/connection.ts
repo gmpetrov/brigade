@@ -8,7 +8,7 @@ import {
 } from '@brigade/contracts'
 import { randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
-import { VERSION, type RunnerConfig } from './config.js'
+import { HOME, VERSION, type RunnerConfig } from './config.js'
 import type { Outbox } from './outbox.js'
 import { installedBundle } from './updater.js'
 
@@ -125,6 +125,14 @@ export class Connection {
       if (code === 4401) {
         console.error(
           'The API does not recognise this runner. Link it again with `brigade-runner link <code>`.',
+        )
+        process.exit(1)
+      }
+      // Another runner linked to this computer (same runner.json) connected.
+      // Reconnecting would only knock it off again, every second, forever.
+      if (code === 4001) {
+        console.error(
+          `Another runner for this computer connected to ${this.config.apiUrl}, so this one is stopping. Run only one runner per ${HOME}, or give the other its own BRIGADE_HOME.`,
         )
         process.exit(1)
       }
