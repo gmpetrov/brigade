@@ -34,7 +34,7 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
   const t = thread.data?.id === controlId ? thread.data : undefined
 
   return (
-    <div className="h-[calc(100svh-3rem)] min-h-0">
+    <div className="h-[calc(100svh-3rem)] min-h-0 md:h-svh">
       {t && t.computer.kind === 'cloud' ? (
         <ComputerScreen
           thread={t}
