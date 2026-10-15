@@ -28,7 +28,13 @@ Cloudflare shipped first, more simply than the phases below:
   has the API's domains and forwards each request to the object, through a binding to
   `brigade-api`'s Durable Object. A new connection can land on a machine that has not
   loaded the Worker yet. Loading `brigade-api` (13 MB) there took 0.3 to 0.6 s, and each
-  WebSocket has a connection of its own. The front Worker (0.5 KB) loads at once.
+  WebSocket has a connection of its own. The front Worker (44 KB) loads at once.
+  - It answers browsers' CORS preflights for `/api/*` itself, as the API would
+    (`src/cors.ts`). Forwarded, each one went to Frankfurt and back before the write it
+    asked about: about 200 ms more per write from Los Angeles. Browsers may also skip them
+    for 2 hours (`Access-Control-Max-Age`), which helps the VPS too.
+  - It needs the dashboard's origins for that: `WEB_URL` in `wrangler.front.jsonc`, the
+    same as `brigade-api`'s `WEB_URL` secret. Change both together.
 - **Next to the database.** A request makes about ten queries, each a round trip from the
   `Api` object to Neon in Frankfurt, so where the object runs counts most.
   - An object stays in the data center it was created in, near the Worker that first

@@ -13,6 +13,9 @@
   "durable_objects": {
     "bindings": [{ "name": "API", "class_name": "Api", "script_name": "brigade-api" }],
   },
+  // For the preflights it answers (src/front.ts): the same as brigade-api's WEB_URL, a
+  // secret there. Change both together.
+  "vars": { "WEB_URL": "https://www.brigade.lol" },
   "workers_dev": false,
   "preview_urls": false,
   "observability": { "enabled": true },

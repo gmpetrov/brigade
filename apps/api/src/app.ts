@@ -1,8 +1,8 @@
 import { PROTOCOL_VERSION, type HealthResponse } from '@brigade/contracts'
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth.js'
+import { apiCors } from './cors.js'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { designFiles, sandboxHostOnlyDesigns } from './designs.js'
@@ -45,7 +45,7 @@ export const app = new Hono()
 
 app.use(serverTiming)
 app.use(sandboxHostOnlyDesigns)
-app.use('/api/*', cors({ origin: env.WEB_URL, credentials: true }))
+app.use('/api/*', apiCors(env.WEB_URL))
 
 app.get('/health', (c) =>
   c.json<HealthResponse>({ status: 'ok', protocolVersion: PROTOCOL_VERSION }),
