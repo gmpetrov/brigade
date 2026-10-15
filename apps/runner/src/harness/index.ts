@@ -982,7 +982,7 @@ const resolvePath = (workDir: string, file: string) =>
 
 /**
  * One short harness run outside any thread, with no tools: a prompt in, its
- * final text out. Used to take memory from a thread that went quiet.
+ * final text out. Used to take memory from a thread that went quiet, and to name a new one.
  */
 export async function runOnce(input: {
   spec: ThreadSpec
@@ -990,28 +990,33 @@ export async function runOnce(input: {
   runAs?: string
   prompt: string
   signal: AbortSignal
+  /** Instead of the teammate's model. */
+  model?: string
+  /** Names the run's session and sandbox, after the thread's id. */
+  purpose?: string
 }): Promise<string> {
-  const { spec, workDir, runAs } = input
+  const { spec, workDir, runAs, purpose = 'memory' } = input
   const env = await prepare(workDir, spec.account, spec.sessionId, runAs)
   const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
+  const model = input.model ?? spec.teammate.model
   const agent = new HarnessAgent({
     harness: codex ? createCodex(settings) : createClaudeCode(settings),
     tools: {},
-    ...(spec.teammate.model ? { model: spec.teammate.model } : {}),
+    ...(model ? { model } : {}),
     // Nothing to do but answer; Codex cannot ask, so it gets an empty directory.
     permissionMode: codex ? 'allow-all' : 'allow-reads',
     sandboxConfig: { workDir: '.' },
   })
   const sandbox = createLocalSandboxSession({
-    id: `${spec.sessionId}-memory`,
+    id: `${spec.sessionId}-${purpose}`,
     workingDirectory: workDir,
     port: await freePort(),
     env,
     ...(runAs ? { runAs } : {}),
   })
   const session = await agent.createSession({
-    sessionId: `${spec.sessionId}-memory-${Date.now()}`,
+    sessionId: `${spec.sessionId}-${purpose}-${Date.now()}`,
     sandboxSession: sandbox,
   })
   try {

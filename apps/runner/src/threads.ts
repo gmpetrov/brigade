@@ -23,6 +23,7 @@ import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
 import type { Previews } from './previews.js'
 import { memoryPrompt, parseMemory } from './memory.js'
+import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
 import {
@@ -46,6 +47,8 @@ const MAX_HANDOFFS = 40
 const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
 /** Longest a memory run may take. */
 const MEMORY_RUN_MS = 4 * 60_000
+/** Longest a title run may take: past that, the thread keeps its first line. */
+const TITLE_RUN_MS = 60_000
 /** Events after which a thread is no longer running a turn. */
 const OUT_OF_TURN = new Set<AgentEvent['type']>([
   'turn.completed',
@@ -195,6 +198,8 @@ export class Threads {
       ) => Promise<unknown>
       /** What a quiet thread leaves in memory. */
       memoryUpdate: (update: Extract<RunnerToApi, { type: 'memory.update' }>) => void
+      /** A title for a new thread. */
+      title: (update: Extract<RunnerToApi, { type: 'thread.title' }>) => void
     },
   ) {}
 
@@ -250,6 +255,7 @@ export class Threads {
       }
       this.enqueueMessage(thread, message)
       if (command.steer && message.state === 'queued') void this.steer(thread, message)
+      if (command.nameThread !== undefined) void this.name(spec, command.text, command.nameThread)
       return
     }
     let input: ThreadInput
@@ -918,12 +924,34 @@ export class Threads {
     })
   }
 
-  /** Where a memory run works: an empty directory of the teammate's, never the thread's. */
-  private memoryWorkDir(spec: ThreadSpec) {
+  /**
+   * A new thread: a short run on its first message, beside its first turn,
+   * names it with the harness's small model. On failure it keeps its first line.
+   */
+  private async name(spec: ThreadSpec, text: string, from: string) {
+    try {
+      const answer = await runOnce({
+        spec,
+        ...this.memoryWorkDir(spec, 'title-runs'),
+        prompt: titlePrompt(text),
+        model: TITLE_MODEL[spec.teammate.harness],
+        purpose: 'title',
+        signal: AbortSignal.timeout(TITLE_RUN_MS),
+      })
+      const title = parseTitle(answer)
+      if (title && title !== from)
+        this.options.title({ type: 'thread.title', sessionId: spec.sessionId, from, title })
+    } catch (error) {
+      console.warn(`thread ${spec.sessionId}: title run failed: ${String(error)}`)
+    }
+  }
+
+  /** Where a memory or title run works: an empty directory of the teammate's, never the thread's. */
+  private memoryWorkDir(spec: ThreadSpec, folder = 'memory-runs') {
     const user = CLOUD ? teammateUser(spec.teammate.id) : undefined
     return user
-      ? { workDir: `${teammateHome(user)}/.memory-runs/${spec.sessionId}`, runAs: user }
-      : { workDir: join(paths.state, 'memory-runs', spec.sessionId) }
+      ? { workDir: `${teammateHome(user)}/.${folder}/${spec.sessionId}`, runAs: user }
+      : { workDir: join(paths.state, folder, spec.sessionId) }
   }
 
   /**
