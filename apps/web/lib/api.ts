@@ -37,6 +37,11 @@ export async function api<T = unknown>(
     headers: init.body === undefined ? {} : { 'content-type': 'application/json' },
     body: init.body === undefined ? null : JSON.stringify(init.body),
   })
+  return answer<T>(response)
+}
+
+/** An API response's body, or the error it answered with. */
+async function answer<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T
   const body = await response.json().catch(() => ({}))
   if (!response.ok)
@@ -160,6 +165,22 @@ export const threadImageUrl = (threadId: string, path: string, teammateId?: stri
 /** GET requests sent ahead, by path: see `preload`. */
 const ahead = new Map<string, Promise<unknown>>()
 
+declare global {
+  interface Window {
+    /** The requests the page's HTML sent as it arrived (lib/page-requests.ts), by path. */
+    __sentAhead?: Record<string, Promise<Response>>
+  }
+}
+
+/** The request the page's HTML sent for this path, once: undefined when there is none. */
+function sentAhead<T>(path: string) {
+  const sent = typeof window === 'undefined' ? undefined : window.__sentAhead
+  const request = sent?.[path]
+  if (!request) return undefined
+  delete sent[path]
+  return request.then((response) => answer<T>(response))
+}
+
 /**
  * Send a GET request ahead of what will ask for it. The dashboard waits for the member
  * before it shows a page, and a page's requests would then be a second trip to the API:
@@ -168,18 +189,18 @@ const ahead = new Map<string, Promise<unknown>>()
  */
 export function preload(path: string) {
   if (ahead.has(path)) return
-  const request = api(path)
+  const request = sentAhead(path) ?? api(path)
   // Its error goes to what takes it.
   request.catch(() => undefined)
   ahead.set(path, request)
   setTimeout(() => ahead.get(path) === request && ahead.delete(path), 10_000)
 }
 
-/** The request `preload` sent for this path, once: undefined when there is none. */
+/** The request `preload` or the page's HTML sent for this path, once: undefined when none. */
 export function preloaded<T>(path: string) {
-  const request = ahead.get(path)
+  const request = (ahead.get(path) as Promise<T> | undefined) ?? sentAhead<T>(path)
   ahead.delete(path)
-  return request as Promise<T> | undefined
+  return request
 }
 
 /** Fetch on mount (taking the request sent ahead, if any); `reload` refetches. */

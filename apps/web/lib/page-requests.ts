@@ -1,16 +1,15 @@
 // The API requests a dashboard page makes as it opens, named once for both ends: the page's
-// HTML asks the browser to send them as it arrives (app/app/layout.tsx, the thread's page),
-// and the page's own requests, made once its scripts have run (about 150 ms later from
-// France, 300 through a VPN in Los Angeles), take the answers. The browser matches them by
-// address and credentials: a path asked for differently would be asked for twice.
-import { preload } from 'react-dom'
+// first script, inline in its HTML (app/layout.tsx), sends them as the page arrives, and the
+// page's own requests, made once its scripts have run (about 150 ms later from France, 300
+// through a VPN in Los Angeles), take the answers (lib/api.ts's `preloaded`). With fetch():
+// the browser sends `<link rel="preload">` fetches to a host three at a time.
 import { API_URL } from './config'
 
 /**
  * What every page asks for: the member and the shell's lists (components/dashboard.tsx), and
  * every thread, for the thread panel (components/thread-panel.tsx).
  */
-export const EVERY_PAGE = [
+const EVERY_PAGE = [
   '/me',
   '/teammates',
   '/projects',
@@ -26,8 +25,21 @@ export const threadPath = (id: string) => `/threads/${id}`
 /** A thread's latest page of events and what it needs from before (lib/use-thread-events.ts). */
 export const latestPagePath = (id: string) => `/threads/${id}/events`
 
-/** Has the page's HTML send these GET requests to the API, for `api()` to take (lib/api.ts). */
-export function sendAhead(paths: string[]) {
-  for (const path of paths)
-    preload(`${API_URL}/api${path}`, { as: 'fetch', crossOrigin: 'use-credentials' })
-}
+/**
+ * The script: on a dashboard page, every page's requests, and on a thread's page the thread's.
+ * What is not taken within a few seconds goes, as it gets stale.
+ */
+export const SEND_AHEAD = `(() => {
+  const [, app, section, id, rest] = location.pathname.split('/')
+  if (app !== 'app') return
+  const paths = ${JSON.stringify(EVERY_PAGE)}
+  if (section === 'threads' && id && !rest)
+    for (const path of ${JSON.stringify([threadPath(':id'), latestPagePath(':id')])})
+      paths.push(path.replace(':id', id))
+  const sent = (window.__sentAhead = {})
+  for (const path of paths) {
+    sent[path] = fetch(${JSON.stringify(API_URL)} + '/api' + path, { credentials: 'include' })
+    sent[path].catch(() => {})
+  }
+  setTimeout(() => { for (const path in sent) delete sent[path] }, 10000)
+})()`
