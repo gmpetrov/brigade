@@ -10,6 +10,7 @@ import { createClaudeCode } from '@ai-sdk/harness-claude-code'
 import { createCodex } from '@ai-sdk/harness-codex'
 import {
   ATTACHMENT_MAX,
+  CODEX_DEFAULT_MODEL,
   type AccountRef,
   type AgentEvent,
   OFFER_CHOICES_TOOL,
@@ -18,6 +19,7 @@ import {
   SHOW_WIDGET_TOOL,
   type ThreadSpec,
   type TicketAnswer,
+  runModel,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
@@ -137,6 +139,12 @@ const RESTARTED =
 const ASKED =
   'In case your conversation came back without it, this is the latest message you were answering:'
 
+/** The teammate's model for the harness; none leaves Claude Code on the account's own. */
+function withModel(teammate: ThreadSpec['teammate']) {
+  const model = runModel(teammate.harness, teammate.model)
+  return model ? { model } : {}
+}
+
 function createAgent(
   spec: ThreadSpec,
   callConnector: ConnectorCaller,
@@ -180,7 +188,7 @@ function createAgent(
     toolApproval: Object.fromEntries(
       Object.keys(tools).map((name) => [name, 'not-applicable' as const]),
     ),
-    ...(spec.teammate.model ? { model: spec.teammate.model } : {}),
+    ...withModel(spec.teammate),
     ...(spec.teammate.instructions ? { instructions: spec.teammate.instructions } : {}),
     // Codex cannot ask before built-in tool calls (spec, known limits).
     permissionMode: spec.teammate.harness === 'codex' ? 'allow-all' : spec.permissionMode,
@@ -999,11 +1007,10 @@ export async function runOnce(input: {
   const env = await prepare(workDir, spec.account, spec.sessionId, runAs)
   const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
-  const model = input.model ?? spec.teammate.model
   const agent = new HarnessAgent({
     harness: codex ? createCodex(settings) : createClaudeCode(settings),
     tools: {},
-    ...(model ? { model } : {}),
+    ...(input.model ? { model: input.model } : withModel(spec.teammate)),
     // Nothing to do but answer; Codex cannot ask, so it gets an empty directory.
     permissionMode: codex ? 'allow-all' : 'allow-reads',
     sandboxConfig: { workDir: '.' },
@@ -1059,6 +1066,7 @@ export async function generateImage(input: {
   const env = await prepare(dir, account, input.sessionId, runAs)
   const agent = new HarnessAgent({
     harness: createCodex({ auth: {} }),
+    model: CODEX_DEFAULT_MODEL,
     tools: {},
     permissionMode: 'allow-all',
     sandboxConfig: { workDir: '.' },

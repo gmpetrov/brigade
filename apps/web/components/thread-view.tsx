@@ -2183,7 +2183,7 @@ function AskView({
       )}
 
       {ask.type === 'action' && ask.steps?.length ? (
-        <Collapsible>
+        <Collapsible defaultOpen>
           <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium text-primary">
             <ChevronRight
               className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
@@ -2195,10 +2195,11 @@ function AskView({
             <ol className="mt-2 flex flex-col gap-2 text-sm">
               {ask.steps.map((step, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <Checkbox id={`${ask.id}-step-${i}`} className="mt-0.5" />
-                  <Label htmlFor={`${ask.id}-step-${i}`} className="block leading-snug font-normal">
-                    {step}
-                  </Label>
+                  {/* Not a label: its text stays selectable, and its links open without ticking the box. */}
+                  <Checkbox aria-labelledby={`${ask.id}-step-${i}`} className="mt-0.5" />
+                  <div id={`${ask.id}-step-${i}`} className="min-w-0">
+                    <Markdown text={step} className="leading-snug" />
+                  </div>
                 </li>
               ))}
             </ol>

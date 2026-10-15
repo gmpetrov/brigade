@@ -61,7 +61,17 @@ export const HARNESS_MODELS = {
   ],
 } as const satisfies Record<HarnessId, readonly HarnessModel[]>
 
-/** A teammate's model: null runs the account's default model. */
+/**
+ * What a Codex teammate on Default runs, and the image tool. The Codex adapter's
+ * own default (GPT-5.5) was retired for ChatGPT sign-ins on 2026-10-14.
+ */
+export const CODEX_DEFAULT_MODEL = 'gpt-6.1-sol'
+
+/** The model a turn asks for: on Default, Claude Code runs the account's own, Codex ours. */
+export const runModel = (harness: HarnessId, model: string | null) =>
+  model ?? (harness === 'codex' ? CODEX_DEFAULT_MODEL : null)
+
+/** A teammate's model: null is Default (runModel). */
 export const isHarnessModel = (harness: HarnessId, model: string | null) =>
   model === null || HARNESS_MODELS[harness].some((m) => m.id === model)
 
