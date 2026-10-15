@@ -5,12 +5,13 @@
 // teammate or project without going anywhere. The list shows a few threads of each status
 // (waiting on a person, working, the rest) and folds the others into a "+N" row, so the
 // teammates and projects stay in reach however many there are; older ones load on asking.
-import { ChevronUp, ListFilter, Plus, Settings, X } from 'lucide-react'
+import { ChevronUp, ListFilter, MessagesSquare, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
+import { RailMenu } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { api, type ProjectSummary, type Teammate, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -169,6 +171,69 @@ type Filter = {
   byRow?: 'teammate' | 'project'
 }
 
+/** The threads with what each waiting on a person asks, those shown as waiting. */
+function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
+  const asks = new Map<string, string>()
+  const all = threads.map((t) => {
+    const ask =
+      needsYou[t.id] ??
+      (t.pullsWaiting ? 'review PR' : t.status === 'waiting' ? 'needs you' : undefined)
+    if (!ask) return t
+    asks.set(t.id, ask)
+    return groupOf(t.status) === 'rest' ? { ...t, status: 'waiting' } : t
+  })
+  return { all, asks }
+}
+
+/** How many threads the folded sidebar's menu lists before its "+N more". */
+const RAIL_LIMIT = 12
+
+/**
+ * Folded, the threads as a menu beside the rail: those waiting on a person, then those
+ * working, then the latest, as the list above orders them. "+N more" unfolds the sidebar.
+ */
+export function ThreadsRailMenu({ needsYou }: { needsYou: Record<string, string> }) {
+  const pathname = usePathname()
+  const { threads, threadId, expanded } = useThreadPanel()
+  const { setOpen } = useSidebar()
+  const { ordered, asks } = useMemo(() => {
+    const { all, asks } = withAsks(threads ?? [], needsYou)
+    const ordered = (['waiting', 'working', 'rest'] as const).flatMap((g) =>
+      all.filter((t) => groupOf(t.status) === g),
+    )
+    return { ordered, asks }
+  }, [threads, needsYou])
+  const hidden = ordered.length - RAIL_LIMIT
+  return (
+    <RailMenu
+      icon={MessagesSquare}
+      label="Threads"
+      href="/app/threads"
+      active={pathname.startsWith('/app/threads') || (expanded && !!threadId)}
+      items={ordered.slice(0, RAIL_LIMIT).map((t) => {
+        const ask = asks.get(t.id)
+        return {
+          id: t.id,
+          href: `/app/threads/${t.id}`,
+          label: t.title || 'New thread',
+          icon: <ThreadStatusIcon status={t.status} unread={t.unread} />,
+          trailing: (
+            <span
+              className={cn(
+                'ml-2 shrink-0 text-xs',
+                ask ? 'text-warning font-semibold' : 'text-muted-foreground',
+              )}
+            >
+              {ask ?? shortAgo(t.updatedAt)}
+            </span>
+          ),
+        }
+      })}
+      more={hidden > 0 ? { label: `+${hidden} more`, onSelect: () => setOpen(true) } : undefined}
+    />
+  )
+}
+
 /** Older threads are asked for this many at a time: a step's worth. */
 const OLDER_PAGE = STEP
 
@@ -230,16 +295,7 @@ export function SidebarWork({
   // it shows as working, and waits once it stops. What each asks goes at the row's end.
   const { all, asks } = useMemo(() => {
     const latestIds = new Set((threads ?? []).map((t) => t.id))
-    const asks = new Map<string, string>()
-    const all = [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))].map((t) => {
-      const ask =
-        needsYou[t.id] ??
-        (t.pullsWaiting ? 'review PR' : t.status === 'waiting' ? 'needs you' : undefined)
-      if (!ask) return t
-      asks.set(t.id, ask)
-      return groupOf(t.status) === 'rest' ? { ...t, status: 'waiting' } : t
-    })
-    return { all, asks }
+    return withAsks([...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))], needsYou)
   }, [threads, older, needsYou])
   const shown = useMemo(
     () =>
