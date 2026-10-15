@@ -15,7 +15,7 @@ import {
 } from 'react'
 import { DocumentEditor } from '@/components/document-editor'
 import { FileHistory } from '@/components/library-history'
-import { SidePanel } from '@/components/side-panel'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -127,6 +127,7 @@ export function DocumentPanel() {
             <History aria-hidden />
           </Button>
         )}
+        <PanelExpandButton />
         <Button
           type="button"
           variant="ghost"

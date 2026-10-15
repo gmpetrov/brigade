@@ -5,16 +5,23 @@
 // --desktop-w for all of them: drag the left edge to change it, double-click
 // to reset; remembered in this browser. Escape closes it. Panels open together
 // share the right edge: the last one opened, or brought forward, is on top.
+// PanelExpandButton in its header lays it over the whole window and back.
+import { Maximize2, Minimize2 } from 'lucide-react'
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
+  useState,
   useSyncExternalStore,
   type CSSProperties,
   type ComponentProps,
   type ReactNode,
   type RefObject,
 } from 'react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const WIDTH_KEY = 'brigade:panel-width'
@@ -207,6 +214,33 @@ export function useEscapeToClose(
   }, [panel, onClose, last])
 }
 
+/** A panel laid over the whole window, and the way to toggle it; none outside a SidePanel. */
+const FullContext = createContext<{ full: boolean; setFull: (full: boolean) => void } | null>(null)
+
+/** Over the whole window, above the sidebar and the other panels; the same element, so what it shows keeps its state. */
+const FULL =
+  'inset-0 z-50 h-auto rounded-none border-0 xl:inset-0 xl:left-0 xl:z-50 xl:w-auto xl:border-l-0'
+
+/** For a panel's header: lays it over the whole window, and back. Escape brings it back too. */
+export function PanelExpandButton() {
+  const context = useContext(FullContext)
+  if (!context) return null
+  const { full, setFull } = context
+  const label = full ? 'Back to the panel' : 'Expand'
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      title={label}
+      aria-label={label}
+      onClick={() => setFull(!full)}
+    >
+      {full ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+    </Button>
+  )
+}
+
 /**
  * A panel beside the page. Put a header row and a scrolling body inside.
  * Expanded, the same panel takes the page's place instead: in the page's flow,
@@ -233,26 +267,37 @@ export function SidePanel({
 }) {
   const panel = useRef<HTMLElement>(null)
   const stack = usePanelStack(!expanded, name, raiseKey)
-  useEscapeToClose(panel, stack.front ? onClose : undefined)
+  const [full, setFull] = useState(false)
+  const over = full && !expanded
+  const back = useCallback(() => setFull(false), [])
+  // Another panel brought in front: it goes back, so it does not hide that one.
+  useEffect(() => {
+    if (!stack.front) setFull(false)
+  }, [stack.front])
+  // Laid over the window, Escape brings it back to the panel first.
+  useEscapeToClose(panel, stack.front ? (over ? back : onClose) : undefined)
   return (
-    <aside
-      ref={panel}
-      data-desktop-panel={expanded ? undefined : ''}
-      data-expanded={expanded || undefined}
-      className={cn(
-        expanded
-          ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
-          : [
-              'fixed inset-x-0 bottom-0 z-(--sheet-z) flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
-              'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-(--panel-z) xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
-            ],
-        className,
-      )}
-      style={expanded ? style : { ...stack.style, ...style }}
-      {...props}
-    >
-      {!expanded && <PanelResizeHandle />}
-      {children}
-    </aside>
+    <FullContext.Provider value={expanded ? null : { full, setFull }}>
+      <aside
+        ref={panel}
+        data-desktop-panel={expanded ? undefined : ''}
+        data-expanded={expanded || undefined}
+        className={cn(
+          expanded
+            ? 'relative flex h-svh min-w-0 flex-col overflow-hidden bg-background'
+            : [
+                'fixed inset-x-0 bottom-0 z-(--sheet-z) flex h-[70vh] flex-col overflow-hidden rounded-t-xl border-t bg-card shadow-lg',
+                'xl:inset-y-0 xl:right-0 xl:left-auto xl:z-(--panel-z) xl:h-auto xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-t-0 xl:border-l xl:shadow-none',
+              ],
+          over && FULL,
+          className,
+        )}
+        style={expanded ? style : { ...stack.style, ...style }}
+        {...props}
+      >
+        {!expanded && !over && <PanelResizeHandle />}
+        {children}
+      </aside>
+    </FullContext.Provider>
   )
 }

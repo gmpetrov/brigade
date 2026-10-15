@@ -29,7 +29,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { SidePanel } from '@/components/side-panel'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 
 /** The preview's name among the panels beside a page. */
 export const PREVIEW_PANEL = 'preview'
@@ -358,6 +358,7 @@ export function PreviewPanel({
         >
           <ScrollText aria-hidden />
         </Button>
+        <PanelExpandButton />
         <Button
           type="button"
           variant="ghost"

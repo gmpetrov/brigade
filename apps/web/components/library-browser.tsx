@@ -41,7 +41,7 @@ import { DesignPanel } from '@/components/design-view'
 import { libraryDocument, useDocumentPanel } from '@/components/document-panel'
 import { FilePreview } from '@/components/file-preview'
 import { ActorName, FileHistory, size } from '@/components/library-history'
-import { SidePanel } from '@/components/side-panel'
+import { PanelExpandButton, SidePanel } from '@/components/side-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -795,6 +795,7 @@ function LibraryFilePanel({
             <Download aria-hidden />
           </a>
         </Button>
+        <PanelExpandButton />
         <Button
           type="button"
           variant="ghost"
