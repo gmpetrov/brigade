@@ -722,7 +722,7 @@ export function ThreadConversation({
             ) : (
               // In with a quick fade, in the column the placeholder held.
               <div className="animate-in duration-200 fade-in motion-reduce:animate-none">
-                <FileLinksProvider value={{ open: openFile }}>
+                <FileLinksProvider value={{ open: openFile, threadId: t.id }}>
                   {/* Once its page is in and shown at its end, not before: it would load one at once. */}
                   {firstSeq > 1 && (events.at(-1)?.seq ?? 0) >= firstSeq && (
                     <EarlierMessages

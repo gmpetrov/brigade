@@ -48,7 +48,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { MessageAttachments } from '@/components/attachments'
+import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
@@ -576,7 +576,7 @@ function CardLabel({ className, children }: { className?: string; children: Reac
   )
 }
 
-/** A picture a teammate made, under its messages. Opens beside the thread. */
+/** A picture a teammate made, under its messages. Opens over the page, like an attached one. */
 function ThreadImage({
   threadId,
   item,
@@ -584,9 +584,10 @@ function ThreadImage({
   threadId: string
   item: Extract<Item, { kind: 'image' }>
 }) {
-  const links = useFileLinks()
   const [failed, setFailed] = useState(false)
+  const [open, setOpen] = useState(false)
   const name = item.path.split('/').pop()
+  const src = threadImageUrl(threadId, item.path, item.teammateId)
   if (failed)
     return (
       <div className="pl-11 text-sm text-muted-foreground">
@@ -598,18 +599,22 @@ function ThreadImage({
     <div className="pl-11">
       <button
         type="button"
-        className="block overflow-hidden rounded-lg border bg-muted"
+        className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
         title={item.prompt ?? name}
-        onClick={() => links?.open({ path: item.path, teammateId: item.teammateId })}
+        onClick={() => setOpen(true)}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={threadImageUrl(threadId, item.path, item.teammateId)}
+          src={src}
           alt={item.prompt ?? name ?? 'A generated image'}
           className="max-h-96 max-w-full object-contain"
           onError={() => setFailed(true)}
         />
       </button>
+      <MediaPreview
+        media={open ? { name: name ?? item.path, src, kind: 'image' } : undefined}
+        onClose={() => setOpen(false)}
+      />
     </div>
   )
 }

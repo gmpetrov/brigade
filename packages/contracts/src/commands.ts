@@ -19,7 +19,7 @@ export const MESSAGE_COMMANDS = {
   image: {
     label: 'Image',
     description: 'Made by Codex’s image model, on your Codex account.',
-    ask: 'The person asked for an image (/image): make it with your image generation tool (generate_image, or your own image tool on Codex) and show it in your reply.',
+    ask: 'The person asked for an image (/image): make it with your image generation tool (generate_image, or your own image tool on Codex). The thread shows the image by itself: say what you made, without linking or embedding its file.',
     /** Shown only to someone with a Codex account: it makes the images. */
     needs: 'codex',
   },

@@ -12,6 +12,8 @@ type FileLinks = {
   teammateId?: string
   /** Relative links resolve against this folder (a file's own, in the panel). */
   base?: string
+  /** The thread whose teammates' folders hold the files: an image in one opens over the page. */
+  threadId?: string
 }
 
 const Context = createContext<FileLinks | null>(null)
