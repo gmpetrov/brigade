@@ -1,5 +1,5 @@
 'use client'
-import { ShieldCheck, Terminal } from 'lucide-react'
+import { LoaderCircle, ShieldCheck, Terminal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountCard } from '@/components/account-card'
@@ -306,6 +306,11 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
   const computer = usable.find((c) => c.kind === 'cloud') ?? usable.find((c) => c.online)
   const cloud = computers.data?.computers.find((c) => c.kind === 'cloud')
   const signingIn = (accounts.data ?? []).filter((a) => a.source === 'brigade')
+  // A new workspace's computer is still being made: sign-in opens once it starts.
+  const preparing =
+    !computer &&
+    (cloud ? ['pending', 'creating'].includes(cloud.status) : !!computers.data?.cloudAvailable)
+  const failed = !computer && cloud?.status === 'error'
 
   async function signIn(provider: Account['provider']) {
     if (!computer) return
@@ -374,6 +379,32 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                   </p>
                 )}
               </>
+            ) : preparing ? (
+              <div className="flex flex-col items-center gap-2 py-2 text-center">
+                <LoaderCircle aria-hidden className="size-5 animate-spin text-muted-foreground" />
+                <p className="text-sm font-medium">Getting your workspace computer ready…</p>
+                <p className="text-xs text-muted-foreground">
+                  This takes a few minutes the first time. Sign-in opens here as soon as it is up.
+                </p>
+              </div>
+            ) : failed ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Your workspace computer could not be set up. Try again, or link your own machine
+                  below.
+                </p>
+                <Button
+                  variant="outline"
+                  className="self-start"
+                  onClick={() =>
+                    void act(api(`/computers/${cloud!.id}/start`, { method: 'POST' })).then(() =>
+                      computers.reload(),
+                    )
+                  }
+                >
+                  Try again
+                </Button>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
                 This Brigade has no workspace computer. Link your own machine below: its Claude or
@@ -388,7 +419,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
 
       <details
         className="group rounded-lg border px-4 py-3 text-sm"
-        open={!computer && !!computers.data}
+        open={!computer && !preparing && !!computers.data}
       >
         <summary className="flex cursor-pointer items-center gap-2 font-medium">
           <Terminal className="size-4" aria-hidden />
