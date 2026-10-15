@@ -176,11 +176,14 @@ export function SidebarWork({
   projects,
   admin,
   onNewProject,
+  needsYou,
 }: {
   teammates: Teammate[]
   projects: ProjectSummary[]
   admin: boolean
   onNewProject: () => void
+  /** Threads with an open ticket waiting on this member, and what it asks ("approve"). */
+  needsYou: Record<string, string>
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -215,10 +218,22 @@ export function SidebarWork({
       }))
   }, [pathname])
 
-  const all = useMemo(() => {
+  // Waiting on a person is more than the thread's own status: a ticket for this member, or a
+  // pull request it opened that a person has to review or merge. Unless it is working: then
+  // it shows as working, and waits once it stops. What each asks goes at the row's end.
+  const { all, asks } = useMemo(() => {
     const latestIds = new Set((threads ?? []).map((t) => t.id))
-    return [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))]
-  }, [threads, older])
+    const asks = new Map<string, string>()
+    const all = [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))].map((t) => {
+      const ask =
+        needsYou[t.id] ??
+        (t.pullsWaiting ? 'review PR' : t.status === 'waiting' ? 'needs you' : undefined)
+      if (!ask) return t
+      asks.set(t.id, ask)
+      return groupOf(t.status) === 'rest' ? { ...t, status: 'waiting' } : t
+    })
+    return { all, asks }
+  }, [threads, older, needsYou])
   const shown = useMemo(
     () =>
       all.filter(
@@ -440,7 +455,9 @@ export function SidebarWork({
                                 : 'text-muted-foreground font-normal',
                             )}
                           >
-                            {group === 'waiting' ? 'needs you' : shortAgo(t.updatedAt)}
+                            {group === 'waiting'
+                              ? (asks.get(t.id) ?? 'needs you')
+                              : shortAgo(t.updatedAt)}
                           </span>
                         </Link>
                       </SidebarMenuButton>

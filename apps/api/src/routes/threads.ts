@@ -158,6 +158,22 @@ export const threads = new Hono<AppEnv>()
           _max: { at: true },
         })
       : []
+    // Its open pull requests that wait on a person (pull-requests.ts's needsAttention, and
+    // those nobody asked a teammate to review, which a person reviews and merges).
+    const pulls = rows.length
+      ? await c.var.db.pullRequest.groupBy({
+          by: ['sessionId'],
+          where: {
+            sessionId: { in: rows.map((r) => r.id) },
+            state: 'open',
+            OR: [
+              { reviewStatus: { in: ['none', 'stuck', 'changes_requested'] } },
+              { reviewStatus: 'approved', autoMerge: false },
+            ],
+          },
+          _count: { _all: true },
+        })
+      : []
     return c.json(
       rows.map((row) => {
         const of = (type: string) => counts.find((n) => n.sessionId === row.id && n.type === type)
@@ -171,6 +187,7 @@ export const threads = new Hono<AppEnv>()
           ...row,
           replies: asked + (turns?._count._all ?? 0),
           lastReplyAt: latest?.toISOString() ?? null,
+          pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
         }
       }),
     )
