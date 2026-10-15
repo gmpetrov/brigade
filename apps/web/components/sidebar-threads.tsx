@@ -452,6 +452,37 @@ export function SidebarWork({
             items={railItems}
           />
           {rail}
+          {/* The pinned threads in the rail itself: the teammate, and a dot when it has news. */}
+          {pinned.length > 0 && (
+            <li aria-hidden className="bg-sidebar-border mx-auto my-1 h-px w-4" />
+          )}
+          {pinned.map((t) => {
+            const href = `/app/threads/${t.id}`
+            const title = t.title || 'New thread'
+            return (
+              <SidebarMenuItem key={t.id}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={title}
+                  isActive={threadId === t.id && (expanded || pathname === href)}
+                >
+                  <Link href={href} aria-label={title}>
+                    <span className="relative flex size-4 shrink-0 items-center justify-center">
+                      <TeammateAvatar teammate={t.teammate} className="size-5" />
+                      {statusKey(t) && (
+                        <ThreadStatusIcon
+                          status={t.status}
+                          unread={t.unread}
+                          className="absolute -right-1.5 -bottom-1.5 size-3"
+                        />
+                      )}
+                    </span>
+                    <span>{title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarGroup>
 
