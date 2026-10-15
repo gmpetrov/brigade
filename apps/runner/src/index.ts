@@ -32,7 +32,7 @@ import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
-import { stripApiKeys } from './harness/index.js'
+import { stripApiKeys, usePersonPath } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Previews } from './previews.js'
 import { Threads, threadFolder } from './threads.js'
@@ -41,6 +41,7 @@ import { Updater } from './updater.js'
 
 // Brigade sets no API key anywhere; harnesses use this computer's subscription logins.
 stripApiKeys()
+if (!CLOUD) usePersonPath()
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
