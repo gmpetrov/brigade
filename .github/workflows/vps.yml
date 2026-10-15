@@ -9,6 +9,9 @@ on:
     branches: [main]
     paths:
       - apps/**
+      # The Mac app ships through its own release (desktop-release.yml).
+      - '!apps/desktop/**'
+      - '!apps/computer-use-macos/**'
       - packages/**
       - patches/**
       - deploy/vps/**
