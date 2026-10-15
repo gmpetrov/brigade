@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Brigade",
+  "version": "0.1.0",
+  "identifier": "ai.brigade.desktop",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "security": { "csp": "default-src 'none'" },
+    "macOSPrivateApi": false
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "createUpdaterArtifacts": true,
+    "category": "DeveloperTool",
+    "shortDescription": "Run your Brigade teammates on this computer",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "resources": {
+      "../../computer-use-macos/build/Brigade Computer Use.app/": "Brigade Computer Use.app/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "14.0",
+      "entitlements": "entitlements.plist",
+      "hardenedRuntime": true
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["brigade"] }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYyN0M5RUI1QTc1Njk0MDkKUldRSmxGYW50WjU4OG1vTEIrVlJLcVBQemFFU2NnR2xNZTlaTWwwdk8veTNHZ3dPRUJQNkR5Y0wK",
+      "endpoints": ["https://github.com/gmpetrov/brigade/releases/latest/download/latest.json"]
+    }
+  }
+}

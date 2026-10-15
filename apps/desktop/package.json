@@ -1,0 +1,14 @@
+{
+  "name": "@brigade/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brigade.app: the menu-bar app that installs, links and runs the Brigade runner on a member's computer.",
+  "scripts": {
+    "tauri": "tauri",
+    "dev:app": "tauri dev",
+    "build:app": "scripts/build.sh"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3"
+  }
+}

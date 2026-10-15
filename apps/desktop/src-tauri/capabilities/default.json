@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Brigade.app has no window; nothing is exposed to web content.",
+  "windows": [],
+  "permissions": []
+}
