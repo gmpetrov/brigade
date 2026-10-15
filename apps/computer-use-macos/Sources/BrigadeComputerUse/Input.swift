@@ -75,17 +75,20 @@ enum Input {
   }
 
   /// Types text as Unicode, whatever the keyboard layout; a newline presses Return.
-  /// One character per key event: Chromium apps (VS Code, Chrome, Slack) drop events
-  /// that carry several.
+  /// One key per character, on the key the current layout types it with (see Layout).
   static func type(_ text: String) throws {
     try Permissions.requireAccessibility()
+    let strokes = Layout.strokes()
     let lines = text.components(separatedBy: "\n")
     for (index, line) in lines.enumerated() {
       if index > 0 { try key("return") }
       for character in line {
+        // The character's own key when the layout has one; else the character alone.
+        let stroke = strokes[character]
         let units = Array(String(character).utf16)
         for down in [true, false] {
-          let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down)
+          let event = CGEvent(keyboardEventSource: source, virtualKey: stroke?.code ?? 0, keyDown: down)
+          event?.flags = stroke?.flags ?? []
           event?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
           post(event)
         }
