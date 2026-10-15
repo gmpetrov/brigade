@@ -249,6 +249,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     },
   }
 
+  // Threads with a ticket waiting on this member, and what the ticket asks of them.
+  const needsYou: Record<string, string> = {}
+  for (const t of tickets.data ?? [])
+    if (t.session && waitsOn(t, data)) needsYou[t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
+
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
     window.location.href = '/app'
@@ -359,6 +364,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   projects={projects.data ?? []}
                   admin={isAdmin(data)}
                   onNewProject={() => setCreatingProject(true)}
+                  needsYou={needsYou}
                 />
 
                 {/* Folded: projects and teammates as menus beside the rail. */}
@@ -473,6 +479,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </DocumentPanelProvider>
     </DashboardContext.Provider>
   )
+}
+
+/** What a ticket asks of a person, at the end of its thread's row. */
+const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
+  approval: 'approve',
+  question: 'answer',
+  request: 'needs you',
+  sign_in: 'sign in',
+  cap: 'raise cap',
+  usage_limit: 'usage limit',
 }
 
 type Badges = Record<string, { count?: number; label: string; quiet?: boolean }>
