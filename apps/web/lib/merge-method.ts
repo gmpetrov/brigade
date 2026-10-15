@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import type { MergeMethod } from '@/lib/api'
+import type { MergeMethod, PullRequestTracking } from '@/lib/api'
 
 const LAST_MERGE_METHOD = 'brigade.pulls.mergeMethod'
 const mergeMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
@@ -17,6 +17,19 @@ export const blockedBecause: Record<string, string> = {
 /** Whether the Merge button is worth pressing: GitHub has the last word. */
 export const canMerge = (p: { mergeable: boolean | null; mergeableState: string }) =>
   p.mergeable !== false && !['dirty', 'draft'].includes(p.mergeableState)
+
+/** It conflicts, and nobody is resolving it yet: Resolve conflicts takes the Merge button's place. */
+export const hasConflicts = (p: { mergeableState: string; tracking: PullRequestTracking | null }) =>
+  p.mergeableState === 'dirty' &&
+  !['reviewing', 'fixing', 'resolving', 'merging'].includes(p.tracking?.reviewStatus ?? 'none')
+
+/** A teammate wrote it in a thread, so it can resolve the conflicts there; else they are resolved on GitHub. */
+export const resolvesInBrigade = (p: { tracking: PullRequestTracking | null }) =>
+  Boolean(p.tracking?.author && p.tracking.sessionId)
+
+/** Where Brigade waits on the pull request's teammate or on GitHub before it merges. */
+export const resolving = (p: { tracking: PullRequestTracking | null }) =>
+  p.tracking?.reviewStatus === 'resolving' || p.tracking?.reviewStatus === 'merging'
 
 /** The merge method last picked, remembered per browser. Squash until one is picked. */
 export function useLastMergeMethod() {
