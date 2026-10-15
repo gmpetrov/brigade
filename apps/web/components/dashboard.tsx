@@ -253,6 +253,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const needsYou: Record<string, string> = {}
   for (const t of tickets.data ?? [])
     if (t.session && waitsOn(t, data)) needsYou[t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
+  // And threads whose task is in Needs you, so the list agrees with the board.
+  for (const t of tasks.data ?? [])
+    if (t.column === 'needs_you' && t.thread)
+      needsYou[t.thread.id] ??= t.thread.openPullRequests.length ? 'review PR' : 'needs you'
 
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
