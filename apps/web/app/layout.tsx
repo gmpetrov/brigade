@@ -13,6 +13,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
+  // iOS zooms in on a field under 16px as it takes focus; this stops it (pinching still zooms).
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#fdfdfd' },
     { media: '(prefers-color-scheme: dark)', color: '#1a1b1e' },
