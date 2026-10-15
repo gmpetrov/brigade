@@ -49,6 +49,7 @@ import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api, preload, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
+import { threadPath } from '@/lib/page-requests'
 import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -80,7 +81,7 @@ function useReplyDraft(id: string) {
 
 /** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
 export function preloadConversation(id: string) {
-  preload(`/threads/${id}`)
+  preload(threadPath(id))
   preloadThreadEvents(id)
 }
 
@@ -101,7 +102,7 @@ export function ThreadConversation({
   onHeading: (heading: ThreadHeading) => void
 }) {
   const { me, projects } = useDashboard()
-  const thread = useApi<Thread>(`/threads/${id}`)
+  const thread = useApi<Thread>(threadPath(id))
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()

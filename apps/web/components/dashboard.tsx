@@ -159,6 +159,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // The member first: no page shows before it. What the pages ask for as they open is sent
   // with it, so as not to wait for it (a trip each to the API): the lists below, and the
   // thread panel's (sent ahead). Without a workspace they fail, unseen: onboarding comes next.
+  // The page's HTML has asked for these already (lib/page-requests.ts: the same paths).
   const me = useApi<Me>('/me')
   useEffect(() => preloadThreadPanel(pathname), []) // eslint-disable-line react-hooks/exhaustive-deps
   const teammates = useApi<Teammate[]>('/teammates')
