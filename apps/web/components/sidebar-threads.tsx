@@ -5,7 +5,7 @@
 // teammate or project without going anywhere. The list shows a few threads of each status
 // (waiting on a person, working, the rest) and folds the others into a "+N" row, so the
 // teammates and projects stay in reach however many there are; older ones load on asking.
-import { ListFilter, Plus, Settings, X } from 'lucide-react'
+import { ChevronUp, ListFilter, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -40,7 +40,10 @@ type Group = 'waiting' | 'working' | 'rest'
 
 /** How many of each show before the "+N" row. */
 const CAPS: Record<Group, number> = { waiting: 2, working: 2, rest: 3 }
-const MORE: Record<Group, string> = { waiting: 'waiting', working: 'working', rest: 'more' }
+const MORE: Record<Group, string> = { waiting: 'waiting', working: 'working', rest: '' }
+/** Each "+N more" shows this many more; "Threads" goes back to the caps. */
+const STEP = 20
+const NONE_EXTRA: Record<Group, number> = { waiting: 0, working: 0, rest: 0 }
 
 const groupOf = (status: string): Group =>
   status === 'waiting'
@@ -166,8 +169,8 @@ type Filter = {
   byRow?: 'teammate' | 'project'
 }
 
-/** Older threads are asked for this many at a time. */
-const OLDER_PAGE = 30
+/** Older threads are asked for this many at a time: a step's worth. */
+const OLDER_PAGE = STEP
 
 export function SidebarWork({
   teammates,
@@ -190,7 +193,10 @@ export function SidebarWork({
   const pathname = usePathname()
   const { threads, threadId, expanded, openTeammate } = useThreadPanel()
   const [filter, setFilter] = useState<Filter>({ statuses: [] })
-  const [open, setOpen] = useState<Group[]>([])
+  // How many more than its cap each status shows: a step at a time.
+  const [extra, setExtra] = useState(NONE_EXTRA)
+  const grown = extra.waiting + extra.working + extra.rest > 0
+  const shrink = () => setExtra(NONE_EXTRA)
   // Threads older than the latest the panel loads, asked for from the end of the list; and
   // the filters that have none left, so the list stops offering more.
   const [older, setOlder] = useState<ThreadSummary[]>([])
@@ -250,8 +256,8 @@ export function SidebarWork({
     for (const t of shown) by[groupOf(t.status)].push(t)
     return by
   }, [shown])
-  const toggleOpen = (group: Group) =>
-    setOpen((o) => (o.includes(group) ? o.filter((g) => g !== group) : [...o, group]))
+  // Another filter starts from the caps again.
+  useEffect(() => setExtra(NONE_EXTRA), [filter])
 
   // Which older threads the server has for this filter: the teammate and project it can
   // narrow to; the status it cannot, so the list narrows what comes back.
@@ -308,7 +314,21 @@ export function SidebarWork({
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="pr-8">
-          Threads
+          {/* Grown past the caps: the label takes the list back to them. */}
+          {grown ? (
+            <button
+              type="button"
+              onClick={shrink}
+              title="Show fewer"
+              aria-label="Threads: show fewer"
+              className="hover:text-sidebar-foreground -ml-1 flex items-center gap-1 rounded-md px-1"
+            >
+              Threads
+              <ChevronUp className="size-3.5" />
+            </button>
+          ) : (
+            'Threads'
+          )}
           {teammate && (
             <FilterChip
               label={teammate.name}
@@ -432,11 +452,17 @@ export function SidebarWork({
             )}
             {(['waiting', 'working', 'rest'] as const).map((group) => {
               const list = groups[group]
-              const isOpen = open.includes(group)
-              const cap = isOpen ? list.length : CAPS[group]
-              const hidden = list.length - Math.min(list.length, CAPS[group])
+              const visible = CAPS[group] + extra[group]
+              const hidden = Math.max(0, list.length - visible)
+              // The rest goes on past what is loaded: older threads, from the server.
+              const older = group === 'rest' && mayHaveOlder
+              const next = older && hidden < STEP ? STEP : Math.min(STEP, hidden)
+              const more = () => {
+                setExtra((e) => ({ ...e, [group]: e[group] + STEP }))
+                if (older && hidden < STEP) void loadOlder()
+              }
               return [
-                ...list.slice(0, cap).map((t) => {
+                ...list.slice(0, visible).map((t) => {
                   const href = `/app/threads/${t.id}`
                   const title = t.title || 'New thread'
                   return (
@@ -465,39 +491,25 @@ export function SidebarWork({
                     </SidebarMenuItem>
                   )
                 }),
-                hidden > 0 && (
+                // No dot: a control, not a thread; its text lines up with the titles.
+                next > 0 && (
                   <SidebarMenuItem key={`more-${group}`}>
                     <SidebarMenuButton
                       size="sm"
-                      className="text-muted-foreground"
-                      onClick={() => toggleOpen(group)}
+                      className="text-muted-foreground pl-8"
+                      disabled={group === 'rest' && loadingOlder}
+                      onClick={more}
                     >
-                      <ThreadStatusIcon
-                        status={
-                          group === 'working' ? 'running' : group === 'waiting' ? 'waiting' : 'idle'
-                        }
-                        className="opacity-60"
-                      />
-                      <span>{isOpen ? 'Show less' : `+${hidden} ${MORE[group]}`}</span>
+                      <span>
+                        {group === 'rest' && loadingOlder
+                          ? 'Loading…'
+                          : `+${next} more${MORE[group] ? ` ${MORE[group]}` : ''}`}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ),
               ]
             })}
-            {/* Past what is loaded: older threads, from the server, a page at a time. */}
-            {mayHaveOlder && (open.includes('rest') || groups.rest.length <= CAPS.rest) && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  size="sm"
-                  className="text-muted-foreground"
-                  disabled={loadingOlder}
-                  onClick={() => void loadOlder()}
-                >
-                  <ThreadStatusIcon status="idle" className="opacity-60" />
-                  <span>{loadingOlder ? 'Loading…' : 'Show older'}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
