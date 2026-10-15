@@ -13,7 +13,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
-import { RailMenu, type RailMenuControl, type RailMenuItem } from '@/components/rail-menu'
+import { RailPanel } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
 import { ThreadRow } from '@/components/thread-row'
 import {
@@ -358,39 +358,6 @@ export function SidebarWork({
     )
   }
 
-  // Folded, the same list in the menu beside the rail: the pinned, then each status's first
-  // threads and its "+N more", which grows the list in the menu as it does here.
-  const railItem = (t: ThreadSummary, group: Group): RailMenuItem => ({
-    id: t.id,
-    href: `/app/threads/${t.id}`,
-    label: t.title || 'New thread',
-    icon: <ThreadStatusIcon status={t.status} unread={t.unread} />,
-    trailing: <span className="ml-2 shrink-0 text-xs">{trailing(t, group)}</span>,
-  })
-  const railItems: (RailMenuItem | RailMenuControl)[] = [
-    ...(pinned.length
-      ? [
-          { kind: 'label', key: 'pinned', label: 'Pinned' } as const,
-          ...pinned.map((t) => railItem(t, groupOf(t.status))),
-          { kind: 'separator', key: 'pinned-end' } as const,
-        ]
-      : []),
-    ...sections.flatMap(({ group, threads, more }) => [
-      ...threads.map((t) => railItem(t, group)),
-      ...(more
-        ? [
-            {
-              kind: 'more',
-              key: `more-${group}`,
-              label: more.label,
-              disabled: more.loading,
-              onSelect: more.onSelect,
-            } as const,
-          ]
-        : []),
-    ]),
-  ]
-
   function changed() {
     void reloadThreads()
     if (archived) void loadArchived()
@@ -439,18 +406,54 @@ export function SidebarWork({
     router.push(`/app/projects/${id}`)
   }
 
+  // The list, here and folded in the panel beside the rail: each status's first threads and
+  // its "+N more", which grows it in both.
+  const list = (
+    <>
+      {threads && shown.length === 0 && (archived || !pinned.length) && (
+        <li className="text-muted-foreground px-2 py-1.5 text-xs">
+          {archived ? 'No archived threads.' : filtered ? 'No threads match.' : 'No threads yet.'}
+        </li>
+      )}
+      {sections.map(({ group, threads, more }) => [
+        ...threads.map((t) => row(t, group)),
+        // No dot: a control, not a thread; its text lines up with the titles.
+        more && (
+          <SidebarMenuItem key={`more-${group}`}>
+            <SidebarMenuButton
+              size="sm"
+              className="text-muted-foreground pl-8"
+              disabled={more.loading}
+              onClick={more.onSelect}
+            >
+              <span>{more.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ),
+      ])}
+    </>
+  )
+
   return (
     <>
       {/* Folded: threads, then the other menus, beside the rail. */}
       <SidebarGroup className="hidden group-data-[collapsible=icon]:flex">
         <SidebarMenu>
-          <RailMenu
+          <RailPanel
             icon={MessagesSquare}
             label="Threads"
             href="/app/threads"
             active={pathname.startsWith('/app/threads') || (expanded && !!threadId)}
-            items={railItems}
-          />
+          >
+            {pinned.length > 0 && (
+              <>
+                <SidebarGroupLabel className="h-6">Pinned</SidebarGroupLabel>
+                <SidebarMenu>{pinned.map((t) => row(t, groupOf(t.status)))}</SidebarMenu>
+                <hr className="border-sidebar-border mx-2 my-1" />
+              </>
+            )}
+            <SidebarMenu>{list}</SidebarMenu>
+          </RailPanel>
           {rail}
           {/* The pinned threads in the rail itself: the teammate, and a dot when it has news. */}
           {pinned.length > 0 && (
@@ -641,33 +644,7 @@ export function SidebarWork({
           </DropdownMenuContent>
         </DropdownMenu>
         <SidebarGroupContent>
-          <SidebarMenu>
-            {threads && shown.length === 0 && (archived || !pinned.length) && (
-              <li className="text-muted-foreground px-2 py-1.5 text-xs">
-                {archived
-                  ? 'No archived threads.'
-                  : filtered
-                    ? 'No threads match.'
-                    : 'No threads yet.'}
-              </li>
-            )}
-            {sections.map(({ group, threads, more }) => [
-              ...threads.map((t) => row(t, group)),
-              // No dot: a control, not a thread; its text lines up with the titles.
-              more && (
-                <SidebarMenuItem key={`more-${group}`}>
-                  <SidebarMenuButton
-                    size="sm"
-                    className="text-muted-foreground pl-8"
-                    disabled={more.loading}
-                    onClick={more.onSelect}
-                  >
-                    <span>{more.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ),
-            ])}
-          </SidebarMenu>
+          <SidebarMenu>{list}</SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
 
