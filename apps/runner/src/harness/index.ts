@@ -27,6 +27,7 @@ import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
+import { computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
@@ -47,6 +48,7 @@ import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import {
   ASK_USER_TOOL,
   askUserTool,
+  computerUseTools,
   connectorTools,
   credentialTools,
   imageTools,
@@ -60,6 +62,7 @@ import {
   scheduleTools,
   showWidgetTool,
   taskTools,
+  type ComputerUse,
   type ConnectorCaller,
   type ImageMaker,
   type LibraryCaller,
@@ -158,6 +161,7 @@ function createAgent(
   callSchedule: ScheduleCaller,
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
+  computer: ComputerUse | undefined,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -175,6 +179,7 @@ function createAgent(
     ...scheduleTools(callSchedule),
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
+    ...(computer ? computerUseTools(computer) : {}),
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
@@ -250,6 +255,8 @@ export class HarnessThread {
    * starting teammate (as before threads had several); thread and teammate for the others.
    */
   private readonly key: string
+  /** Prompts so far: each is its own computer-use session, which the person can stop. */
+  private prompts = 0
   /** Writes of the state file, in order. */
   private saving: Promise<void> = Promise.resolve()
 
@@ -283,7 +290,10 @@ export class HarnessThread {
     else if (input.kind === 'prompt' && this.saved && this.saved.accountId !== spec.account.id) {
       handoff = await this.switchTo(spec.account, 'unavailable', null)
     }
-    if (input.kind === 'prompt') this.remember('user', input.text)
+    if (input.kind === 'prompt') {
+      this.remember('user', input.text)
+      this.prompts++
+    }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
     if (input.kind !== 'resume') this.saved.recoveries = 0
@@ -611,6 +621,38 @@ export class HarnessThread {
     return path
   }
 
+  /**
+   * On a member's Mac with Brigade Computer Use installed: the teammate sees and
+   * uses its apps. Not on the workspace computer (teammates there have a browser).
+   */
+  private computerUse(): ComputerUse | undefined {
+    if (this.runAs) return
+    const client = computerUseClient()
+    if (!client) return
+    return {
+      request: (method, params, signal) =>
+        client.request(
+          method,
+          {
+            ...params,
+            session: { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name },
+          },
+          signal,
+        ),
+      screenshotPath: () => {
+        const path = `images/screen-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+        return { path, absolute: join(this.workDir, path) }
+      },
+      share: (path, toolCallId) =>
+        this.emit({
+          type: 'image.generated',
+          path,
+          toolCallId,
+          prompt: 'Screenshot of the screen',
+        }),
+    }
+  }
+
   /** generate_image: an image by Codex, on the starter's Codex account, kept like Codex's own. */
   private async makeImage(input: Parameters<ImageMaker>[0], signal?: AbortSignal) {
     const account = this.spec.imageAccount
@@ -784,6 +826,7 @@ export class HarnessThread {
       this.context.callSchedule,
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
+      this.computerUse(),
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
