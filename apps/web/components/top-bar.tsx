@@ -1,6 +1,7 @@
 'use client'
-// Across the top of every page: where you are, and the threads panel's button.
-// On a phone it also opens the sidebar.
+// On a phone, across the top of every page: the button that opens the sidebar, where you
+// are, and the threads panel's button. On a wider screen there is none: the sidebar is
+// always there (⌘B folds it), ⌘J opens the threads panel, and each page has its title.
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react'
@@ -56,7 +57,7 @@ export function TopBar() {
   return (
     <header
       data-top-bar
-      className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6"
+      className="sticky top-0 z-10 flex h-12 md:hidden shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6"
     >
       <SidebarToggle />
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
