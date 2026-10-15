@@ -461,6 +461,13 @@
   }
 }
 
+/* Narrower, the thread's details still sit beside the expanded thread, not over it. */
+@media (64rem <= width < 80rem) {
+  [data-slot='sidebar-inset']:has([data-details-panel]) [data-thread-panel][data-expanded] {
+    padding-right: var(--desktop-w);
+  }
+}
+
 /* The document editor sits in cards: no background of its own, the app's font. */
 .document-editor .bn-editor {
   background-color: transparent;

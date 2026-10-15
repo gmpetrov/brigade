@@ -709,7 +709,7 @@ function PillBar({ children }: { children: ReactNode }) {
 
 /**
  * Where and who: the project's icon, the teammate's avatar, then the thread's title (or
- * the teammate's name). A › shows on hover; a click opens and closes the details beside it:
+ * the teammate's name). It grows to show a › on hover; a click opens and closes the details beside it:
  * the thread's, its computer's, the teammate's.
  */
 function DetailsPill({
@@ -755,11 +755,14 @@ function DetailsPill({
       {teammate && <TeammateAvatar teammate={teammate} className="size-5 shrink-0" />}
       <Label className="min-w-0 truncate">{label}</Label>
       {reconnecting && <Reconnecting />}
-      {/* Shown on hover and while open; always on touch screens, which have no hover. */}
-      <ChevronRight
+      {/* The pill grows to show it on hover and while open; always there on touch screens,
+          which have no hover. */}
+      <span
         aria-hidden
-        className="-ml-1 size-4 shrink-0 text-muted-foreground transition-opacity group-aria-pressed:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:opacity-100"
-      />
+        className="-ml-1 flex w-4 shrink-0 overflow-hidden text-muted-foreground transition-[width,margin,opacity] duration-200 ease-out [@media(hover:hover)]:-ml-2 [@media(hover:hover)]:w-0 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:-ml-1 [@media(hover:hover)]:group-hover:w-4 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:-ml-1 [@media(hover:hover)]:group-focus-visible:w-4 [@media(hover:hover)]:group-focus-visible:opacity-100 [@media(hover:hover)]:group-aria-pressed:-ml-1 [@media(hover:hover)]:group-aria-pressed:w-4 [@media(hover:hover)]:group-aria-pressed:opacity-100"
+      >
+        <ChevronRight className="size-4 shrink-0" />
+      </span>
     </button>
   )
 }

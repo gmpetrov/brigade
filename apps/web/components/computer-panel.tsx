@@ -47,7 +47,10 @@ function Section({
   )
 }
 
-/** The panel itself: fixed to the right on wide screens, a card above the thread on narrow ones. */
+/**
+ * The panel itself, on the right: beside the thread on wide screens, over it on narrower
+ * ones, the whole screen on phones.
+ */
 function Frame({
   teammate,
   subtitle,
@@ -69,8 +72,9 @@ function Frame({
     <aside
       ref={panel}
       data-desktop-panel
+      data-details-panel
       style={stack.style}
-      className="mb-4 flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:fixed xl:inset-y-0 xl:right-0 xl:z-(--panel-z) xl:mb-0 xl:w-(--desktop-w) xl:overflow-visible xl:rounded-none xl:border-y-0 xl:border-r-0 xl:shadow-none"
+      className="fixed inset-0 z-(--sheet-z) flex flex-col overflow-hidden bg-card md:left-auto md:w-(--desktop-w) md:border-l md:shadow-lg lg:shadow-none xl:z-(--panel-z) xl:overflow-visible"
       aria-label={`About ${teammate.name}`}
     >
       <PanelResizeHandle />
