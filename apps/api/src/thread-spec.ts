@@ -84,12 +84,35 @@ export async function specFor(
 ): Promise<ThreadSpec> {
   // The teammate whose turn it is; by default the one asked last.
   const teammate = options.teammate ?? currentTeammate(thread)
-  const [account, ...fallbacks] = await usableAccounts(db, {
-    memberId: thread.startedByMemberId,
-    computerId: thread.computerId,
-    provider: teammate.harness,
-    preferredId: thread.accountId,
-  })
+  // Each a trip to the database, none waiting on another: asked together.
+  const [
+    [account, ...fallbacks],
+    grants,
+    roster,
+    rules,
+    attachments,
+    designSystems,
+    project,
+    projects,
+  ] = await Promise.all([
+    usableAccounts(db, {
+      memberId: thread.startedByMemberId,
+      computerId: thread.computerId,
+      provider: teammate.harness,
+      preferredId: thread.accountId,
+    }),
+    // The connections this teammate is granted, as tool specs. Never a credential.
+    db.grant.findMany({
+      where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
+      include: { connection: true },
+    }),
+    teammate.kind === 'chief' ? chiefRoster(db) : [],
+    folderRules(db),
+    threadAttachments(db, thread.id),
+    threadDesignSystems(db, teammate.id, thread.projectId),
+    threadProject(db, thread.projectId),
+    projectCatalog(db),
+  ])
   // Takeover and terminals need no usage: they may use the thread's current account as is.
   const current =
     account ??
@@ -97,11 +120,6 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
-  // The connections this teammate is granted, as tool specs. Never a credential.
-  const grants = await db.grant.findMany({
-    where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
-    include: { connection: true },
-  })
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
@@ -131,20 +149,17 @@ export async function specFor(
     permissionMode: permissionMode(thread.computer.kind),
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
-    roster: teammate.kind === 'chief' ? await chiefRoster(db) : [],
+    roster,
     library: teammate.libraryAccess,
-    libraryFolders: folderExceptions(
-      { id: teammate.id, library: teammate.libraryAccess },
-      await folderRules(db),
-    ),
+    libraryFolders: folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
     private: thread.private,
-    attachments: await threadAttachments(db, thread.id),
+    attachments,
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }
       : null,
-    designSystems: await threadDesignSystems(db, teammate.id, thread.projectId),
-    project: await threadProject(db, thread.projectId),
-    projects: await projectCatalog(db),
+    designSystems,
+    project,
+    projects,
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {

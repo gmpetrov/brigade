@@ -379,18 +379,24 @@ export const threads = new Hono<AppEnv>()
   .post('/', async (c) => {
     const { scope, db } = c.var
     const input = await parseBody(c.req.raw, StartThread)
-    const teammate = await db.teammate.findFirst({
-      where: { id: input.teammateId, archivedAt: null },
-    })
+    // Looked up together, each a trip to the database; their errors still in this order.
+    const [teammate, computer, project] = await Promise.all([
+      db.teammate.findFirst({ where: { id: input.teammateId, archivedAt: null } }),
+      db.computer.findFirst({ where: { id: input.computerId } }),
+      usableProject(db, input.projectId).then(
+        (id) => ({ id }),
+        (error: unknown) => ({ error }),
+      ),
+    ])
     if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
-    const computer = await db.computer.findFirst({ where: { id: input.computerId } })
     if (!computer || (computer.kind === 'member_machine' && computer.memberId !== scope.memberId)) {
       throw new HTTPException(404, { message: 'Computer not found' })
     }
     // A thread runs on the starting member's accounts, never anyone else's.
     // The title is what the message is about, not the command it starts with.
     const firstLine = mentionsToText(messageCommand(input.text)?.rest ?? input.text).split('\n')[0]!
-    const projectId = await usableProject(db, input.projectId)
+    if ('error' in project) throw project.error
+    const projectId = project.id
     const { thread, outcome } = await startThread(db, scope, {
       teammate,
       computer,

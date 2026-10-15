@@ -119,15 +119,17 @@ export async function promptThread(
       return 'paused'
     }
   }
-  const specs = []
-  for (const teammate of responders) specs.push(await specFor(db, thread, { teammate }))
+  const specs = await Promise.all(responders.map((teammate) => specFor(db, thread, { teammate })))
   // The last to answer is the one a later message without a mention goes to.
   const now = Date.now()
-  for (const [i, teammate] of responders.entries())
-    await db.threadTeammate.updateMany({
-      where: { sessionId: thread.id, teammateId: teammate.id },
-      data: { lastTurnAt: new Date(now + i) },
-    })
+  await Promise.all(
+    responders.map((teammate, i) =>
+      db.threadTeammate.updateMany({
+        where: { sessionId: thread.id, teammateId: teammate.id },
+        data: { lastTurnAt: new Date(now + i) },
+      }),
+    ),
+  )
   const [first, ...then] = specs
   return dispatch(thread.computer, {
     type: 'thread.prompt',
@@ -301,18 +303,21 @@ export async function startThread(
           : {}),
     } as never,
   })
-  await joinThread(db, created.id, teammateIds)
-  const { refs: attachments } = await attachToThread(
-    db,
-    scope,
-    created.id,
-    input.attachmentIds ?? [],
-    input.origin ? null : { memberId: input.memberId },
-  ).catch(async (error: unknown) => {
-    await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
-    throw error
-  })
-  await audit({
+  // Each step below is a trip to the database: what does not wait on another goes with it.
+  const [, { refs: attachments }] = await Promise.all([
+    joinThread(db, created.id, teammateIds),
+    attachToThread(
+      db,
+      scope,
+      created.id,
+      input.attachmentIds ?? [],
+      input.origin ? null : { memberId: input.memberId },
+    ).catch(async (error: unknown) => {
+      await db.session.updateMany({ where: { id: created.id }, data: { status: 'failed' } })
+      throw error
+    }),
+  ])
+  const started = audit({
     ...scope,
     actor: !input.origin
       ? { type: 'member', id: input.memberId }
@@ -329,7 +334,7 @@ export async function startThread(
       ...(input.origin?.kind === 'schedule' ? { scheduleId: input.origin.scheduleId } : {}),
     },
   })
-  const thread = await loadThread(db, created.id)
+  const [, thread] = await Promise.all([started, loadThread(db, created.id)])
   const outcome = await promptThread(
     db,
     scope,

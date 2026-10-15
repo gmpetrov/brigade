@@ -93,12 +93,42 @@ async function provision(computer: { id: string; organizationId: string; workspa
 
 const refOf = (computer: { providerRef: unknown }) => computer.providerRef as ComputerRef | null
 
+/** Computers whose state is being checked to bring them up, by id: see ensureRunning. */
+const bringing = new Map<string, Promise<void>>()
+
 /**
- * Make sure a cloud computer is on its way up. Returns at once; commands for
- * it wait in the hub until its runner connects.
+ * Make sure a cloud computer is on its way up: once its start is asked for, commands
+ * for it wait in the hub until its runner connects. That asks the provider how the
+ * computer is first, a request to boat.dev that can take seconds. Asked again
+ * meanwhile, the same check is waited for: two would start it twice.
  */
-export async function ensureRunning(computerId: string) {
+export function ensureRunning(computerId: string): Promise<void> {
   touch(computerId)
+  const pending = bringing.get(computerId)
+  if (pending) return pending
+  const check = bringUp(computerId)
+    .then(() => undefined)
+    .finally(() => bringing.delete(computerId))
+  bringing.set(computerId, check)
+  return check
+}
+
+/**
+ * ensureRunning, not waited for: for a command queued for the computer, whose sender is
+ * told so either way. A failed check marks the computer errored, so the dashboard says
+ * it and the next command starts it again.
+ */
+export function wake(computerId: string) {
+  void ensureRunning(computerId).catch(async (error: unknown) => {
+    console.error(`waking ${computerId} failed: ${await providerReason(error)}`, error)
+    const computer = await prisma.computer
+      .update({ where: { id: computerId }, data: { status: 'error' } })
+      .catch(() => null)
+    if (computer) broadcastComputer(computer.workspaceId, computer.id)
+  })
+}
+
+async function bringUp(computerId: string) {
   if (!provider) return
   const computer = await prisma.computer.findUnique({ where: { id: computerId } })
   const ref = computer && refOf(computer)

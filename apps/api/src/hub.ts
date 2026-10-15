@@ -15,7 +15,7 @@ import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
-import { ensureRunning, ensureSetup, touch } from './cloud.js'
+import { ensureSetup, touch, wake } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
 import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
@@ -165,7 +165,9 @@ export async function dispatch(
   const list = queued.get(computer.id) ?? []
   list.push({ message, at: Date.now() })
   queued.set(computer.id, list)
-  await ensureRunning(computer.id)
+  // Not waited for: it asks the provider first, at times for seconds, and the answer
+  // here is the same.
+  wake(computer.id)
   return 'queued'
 }
 
