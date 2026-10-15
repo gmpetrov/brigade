@@ -354,12 +354,14 @@
     opacity: 0;
     animation: pebble-smile var(--pebble-blink) ease-in-out infinite var(--pebble-blink-at);
   }
-  /* The chief's crown, sitting on the top of the pebble and rising a little above it. */
+  /* The chief's crown, sitting on the top of the pebble and rising a little above it.
+   * Its size wins over the 16px buttons and menus give every svg inside them. */
   .pebble-crown {
     position: absolute;
     top: -17%;
     left: 50%;
-    width: 50%;
+    width: 50% !important;
+    height: calc(50% * 24 / 36) !important;
     translate: -50% 0;
     overflow: visible;
     pointer-events: none;
