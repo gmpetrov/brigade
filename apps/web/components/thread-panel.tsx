@@ -10,7 +10,7 @@
 // open it there; docking it again goes back to the page you were on.
 // ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
-import { ArrowLeft, LoaderCircle, Maximize2, MessagesSquare, Monitor, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LoaderCircle, Maximize2, MessagesSquare, X } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -24,7 +24,8 @@ import {
   type ReactNode,
 } from 'react'
 import { TeammatePanel } from '@/components/computer-panel'
-import { SidebarToggle, StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { SidebarToggle, TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { ProjectIcon } from '@/components/projects'
 import { StatusDot } from '@/components/status-badge'
 import { useDesktopPreview } from '@/components/desktop-preview'
 import { useDocumentPanel } from '@/components/document-panel'
@@ -47,7 +48,15 @@ import {
 } from '@/components/thread-conversation'
 import { ThreadChannel } from '@/components/thread-list'
 import { Button } from '@/components/ui/button'
-import { api, preload, preloaded, useApi, type Teammate, type ThreadSummary } from '@/lib/api'
+import {
+  api,
+  preload,
+  preloaded,
+  useApi,
+  type ProjectRef,
+  type Teammate,
+  type ThreadSummary,
+} from '@/lib/api'
 import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -526,9 +535,29 @@ export function ThreadPanel() {
   // Docked, Escape closes it (SidePanel's own). Expanded it is the page: Escape leaves it be.
   if (!panel.visible) return null
   const { expanded, threadId } = panel
-  // Expanded, the thread's title is the page's heading.
-  const Title = expanded ? 'h1' : 'h2'
-  const icon = 'size-8'
+  // Expanded: the sidebar's toggle, and a pill saying where and who, which opens the details.
+  const top = expanded ? (
+    <PillBar>
+      {threadId
+        ? shown && (
+            <DetailsPill
+              project={shown.project}
+              teammate={lead}
+              label={shown.title}
+              heading
+              details={`${lead?.name ?? 'the teammate'}'s computer, routines and more`}
+              reconnecting={!shown.connected}
+            />
+          )
+        : teammate && (
+            <DetailsPill
+              teammate={teammate}
+              label={teammate.name}
+              details={`${teammate.name}'s computer, routines and more`}
+            />
+          )}
+    </PillBar>
+  ) : undefined
   return (
     <SidePanel
       aria-label="Threads"
@@ -537,15 +566,12 @@ export function ThreadPanel() {
       expanded={expanded}
       onClose={expanded ? undefined : panel.close}
     >
-      <div className="flex h-12 shrink-0 items-center gap-1 border-b px-2">
-        {/* Expanded, this bar is the top bar: the sidebar's toggle starts it. */}
-        {expanded && <SidebarToggle className="ml-0 shrink-0" />}
-        {threadId ? (
-          // Teammate / title · status: the title stays in sight while the conversation scrolls.
-          // Docked there is room for the title alone, and the status as a dot.
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            {/* Expanded, the sidebar's list is the way back. */}
-            {!expanded && (
+      {/* Docked, a bar; expanded, a pill floats over the conversation instead (`top`). */}
+      {!expanded && (
+        <div className="flex h-12 shrink-0 items-center gap-1 border-b px-2">
+          {threadId ? (
+            // Back · teammate · title · status: the title stays in sight while it scrolls.
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -557,123 +583,93 @@ export function ThreadPanel() {
               >
                 <ArrowLeft aria-hidden />
               </Button>
-            )}
-            {/* Who leads it; a click goes to another teammate's latest threads. */}
-            {lead &&
-              (teammates.some((t) => t.id === lead.id) ? (
-                <TeammatePicker
-                  teammates={teammates}
-                  value={teammates.find((t) => t.id === lead.id)!}
-                  onChange={choose}
-                  heading="Go to"
-                  activity={panel.activity}
-                  compact={!expanded}
-                  recent={{
-                    onOpen: (teammateId, id) => {
-                      choose(teammateId)
-                      panel.openThread(id)
-                    },
-                    onAll: (teammateId) => {
-                      choose(teammateId)
-                      panel.back()
-                    },
-                    onNew: (teammateId) => {
-                      choose(teammateId)
-                      panel.startThread()
-                    },
-                  }}
-                />
-              ) : (
-                <TeammateAvatar teammate={lead} className="size-5 shrink-0" />
-              ))}
-            {shown && (
-              <>
-                {expanded && (
-                  <span aria-hidden className="text-muted-foreground">
-                    /
-                  </span>
-                )}
-                <Title className="min-w-0 truncate text-sm font-semibold" title={shown.title}>
-                  {shown.title}
-                </Title>
-                {expanded ? (
-                  <StatusBadge status={shown.status} className="shrink-0" />
+              {/* Who leads it; a click goes to another teammate's latest threads. */}
+              {lead &&
+                (teammates.some((t) => t.id === lead.id) ? (
+                  <TeammatePicker
+                    teammates={teammates}
+                    value={teammates.find((t) => t.id === lead.id)!}
+                    onChange={choose}
+                    heading="Go to"
+                    activity={panel.activity}
+                    compact
+                    recent={{
+                      onOpen: (teammateId, id) => {
+                        choose(teammateId)
+                        panel.openThread(id)
+                      },
+                      onAll: (teammateId) => {
+                        choose(teammateId)
+                        panel.back()
+                      },
+                      onNew: (teammateId) => {
+                        choose(teammateId)
+                        panel.startThread()
+                      },
+                    }}
+                  />
                 ) : (
+                  <TeammateAvatar teammate={lead} className="size-5 shrink-0" />
+                ))}
+              {shown && (
+                <>
+                  <h2 className="min-w-0 truncate text-sm font-semibold" title={shown.title}>
+                    {shown.title}
+                  </h2>
                   <StatusDot status={shown.status} />
-                )}
-                {shown.private && expanded && (
-                  <StatusBadge
-                    status="private"
-                    tone="neutral"
-                    label="Private"
-                    className="shrink-0"
-                  />
-                )}
-                {!shown.connected && (
-                  <LoaderCircle
-                    role="status"
-                    aria-label="Reconnecting"
-                    className="size-3.5 shrink-0 animate-spin text-muted-foreground"
-                  />
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          teammate &&
-          (teammates.length > 1 ? (
-            <TeammatePicker
-              teammates={teammates}
-              value={teammate}
-              onChange={choose}
-              heading="Threads with"
-              activity={panel.activity}
-            />
+                  {!shown.connected && <Reconnecting />}
+                </>
+              )}
+            </div>
           ) : (
-            <span className="flex min-w-0 items-center gap-2 px-1.5 text-sm font-semibold">
-              <TeammateAvatar teammate={teammate} className="size-5" />
-              <span className="truncate">{teammate.name}</span>
-            </span>
-          ))
-        )}
-        {!threadId && <span className="flex-1" />}
-        {/* Room for the teammate's panel beside it only expanded; docked, the page is there. */}
-        {expanded && <DetailsButton name={threadId ? lead?.name : teammate?.name} />}
-        {/* Docked only: expanded, it is the page, and the sidebar is the way elsewhere. */}
-        {!expanded && (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className={icon}
-              onClick={panel.expand}
-              aria-label="Expand"
-              title="Expand"
-            >
-              <Maximize2 aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className={icon}
-              onClick={panel.close}
-              aria-label="Close threads"
-              title="Close (Esc)"
-            >
-              <X aria-hidden />
-            </Button>
-          </>
-        )}
-      </div>
+            teammate &&
+            (teammates.length > 1 ? (
+              <TeammatePicker
+                teammates={teammates}
+                value={teammate}
+                onChange={choose}
+                heading="Threads with"
+                activity={panel.activity}
+              />
+            ) : (
+              <span className="flex min-w-0 items-center gap-2 px-1.5 text-sm font-semibold">
+                <TeammateAvatar teammate={teammate} className="size-5" />
+                <span className="truncate">{teammate.name}</span>
+              </span>
+            ))
+          )}
+          {!threadId && <span className="flex-1" />}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-8"
+            onClick={panel.expand}
+            aria-label="Expand"
+            title="Expand"
+          >
+            <Maximize2 aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-8"
+            onClick={panel.close}
+            aria-label="Close threads"
+            title="Close (Esc)"
+          >
+            <X aria-hidden />
+          </Button>
+        </div>
+      )}
       {teammate || threadId ? (
         // A thread, else docked the teammate's channel, expanded a box to start one with it.
         <div className="flex min-h-0 flex-1">
           {teammate && !threadId && (
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {expanded ? (
-                <TeammateStart key={teammate.id} teammate={teammate} />
+                <TeammateStart key={teammate.id} teammate={teammate} top={top} />
               ) : (
                 <TeammateThreads key={teammate.id} teammate={teammate} />
               )}
@@ -687,6 +683,7 @@ export function ThreadPanel() {
                 expanded={expanded}
                 onExpand={panel.expand}
                 onHeading={(h) => setHeading({ id: threadId, ...h })}
+                top={top}
               />
             </div>
           )}
@@ -700,32 +697,80 @@ export function ThreadPanel() {
   )
 }
 
-/** Opens and closes the details beside the expanded threads panel: the thread's, its computer's, the teammate's. */
-function DetailsButton({ name }: { name?: string }) {
-  const { details, setDetails, covered } = useThreadPanel()
+/** Floats over the top of an expanded thread: the sidebar's toggle, and the pill centered. */
+function PillBar({ children }: { children: ReactNode }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-center px-12">
+      <SidebarToggle className="pointer-events-auto absolute top-3 left-2 ml-0" />
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Where and who: the project's icon, the teammate's avatar, then the thread's title (or
+ * the teammate's name). A › shows on hover; a click opens and closes the details beside it:
+ * the thread's, its computer's, the teammate's.
+ */
+function DetailsPill({
+  project,
+  teammate,
+  label,
+  heading = false,
+  details,
+  reconnecting = false,
+}: {
+  project?: Pick<ProjectRef, 'name' | 'icon'> | null
+  teammate?: Pick<Teammate, 'id' | 'name' | 'harness'>
+  label: string
+  /** The label is the page's heading. */
+  heading?: boolean
+  /** What the details show, for its label. */
+  details: string
+  reconnecting?: boolean
+}) {
+  const { details: open, setDetails, covered } = useThreadPanel()
   const documents = useDocumentPanel()
   // A file, preview or document in its place: pressing brings it back in front.
-  const shown = details && !covered && !documents.current
-  const label = shown
-    ? 'Hide details'
-    : `Details: ${name ?? 'the teammate'}'s computer, routines and more`
+  const shown = open && !covered && !documents.current
+  const Label = heading ? 'h1' : 'span'
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="icon-sm"
-      className="size-8 aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+      className="group pointer-events-auto flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full border bg-card/90 pr-2.5 pl-2 text-sm font-semibold shadow-sm backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-accent"
       aria-pressed={shown}
-      aria-label={label}
-      title={label}
+      title={shown ? 'Hide details' : `Details: ${details}`}
       onClick={() => {
         if (shown) return setDetails(false)
         documents.close()
         setDetails(true)
       }}
     >
-      <Monitor aria-hidden />
-    </Button>
+      {project && (
+        <span title={project.name} className="flex">
+          <ProjectIcon project={project} className="size-5 rounded-md text-[0.625rem]" />
+          <span className="sr-only">{project.name}: </span>
+        </span>
+      )}
+      {teammate && <TeammateAvatar teammate={teammate} className="size-5 shrink-0" />}
+      <Label className="min-w-0 truncate">{label}</Label>
+      {reconnecting && <Reconnecting />}
+      {/* Shown on hover and while open; always on touch screens, which have no hover. */}
+      <ChevronRight
+        aria-hidden
+        className="-ml-1 size-4 shrink-0 text-muted-foreground transition-opacity group-aria-pressed:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-visible:opacity-100"
+      />
+    </button>
+  )
+}
+
+function Reconnecting() {
+  return (
+    <LoaderCircle
+      role="status"
+      aria-label="Reconnecting"
+      className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+    />
   )
 }
 
@@ -810,11 +855,12 @@ function useThreadChannel(teammateId: string) {
  * Expanded with no thread open: a box to start one with the teammate, its details beside
  * it when asked for. The sidebar lists the threads.
  */
-function TeammateStart({ teammate }: { teammate: Teammate }) {
+function TeammateStart({ teammate, top }: { teammate: Teammate; top?: ReactNode }) {
   const { openThread, draft, focusKey, details, setDetails, openComputer, threads } =
     useThreadPanel()
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {top}
       {details && (
         <TeammatePanel
           teammate={teammate}
