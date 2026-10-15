@@ -693,6 +693,7 @@ export type {
   MergeMethod,
   PullRequestDetail,
   PullRequestList,
+  PullRequestState,
   PullRequestSummary,
   PullRequestTracking,
   ReviewStatus,

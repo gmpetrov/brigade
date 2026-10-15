@@ -35,7 +35,6 @@ import {
   CircleDot,
   CircleHelp,
   ClipboardList,
-  GitPullRequest,
   Hand,
   LayoutTemplate,
   ListChecks,
@@ -45,7 +44,6 @@ import {
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react'
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { MessageAttachments } from '@/components/attachments'
 import { CredentialForm } from '@/components/credential-form'
@@ -57,6 +55,7 @@ import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
+import { PullCard } from '@/components/pull-card'
 import { StatusBadge } from '@/components/status-badge'
 import { TeamProposalCard } from '@/components/team-proposal'
 import { Button } from '@/components/ui/button'
@@ -74,7 +73,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { pullHref, threadImageUrl, useApi, type Credential } from '@/lib/api'
+import { threadImageUrl, useApi, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Item =
@@ -1172,23 +1171,12 @@ export function ThreadItems({
         const opened = item.finished && !item.isError ? openedPull(item) : null
         if (opened)
           return (
-            <Link
+            <PullCard
               key={item.key}
-              href={pullHref(opened.repository, opened.number)}
-              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50"
-            >
-              <GitPullRequest className="size-5 flex-none text-success" aria-hidden />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-semibold">
-                  Opened pull request #{opened.number}
-                  {opened.title && `: ${opened.title}`}
-                </span>
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {opened.repository}
-                </span>
-              </span>
-              <span className="flex-none font-medium text-primary">See the changes</span>
-            </Link>
+              repository={opened.repository}
+              number={opened.number}
+              title={opened.title}
+            />
           )
         return (
           <Collapsible key={item.key} className="min-w-0 text-sm">

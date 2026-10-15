@@ -16,6 +16,7 @@ import {
   openCount,
   previewPull,
   pullDetail,
+  pullState,
   requestReview,
   setPullState,
   stopLoop,
@@ -72,6 +73,12 @@ export const pulls = new Hono<AppEnv>()
   .get('/:owner/:name/:number', async (c) => {
     const { repo, number } = target(c.req.param())
     return c.json(await pullDetail(c.var.db, c.var.scope, repo, number))
+  })
+
+  /** Without the diff, checks or reviews: for the pull request's card in a thread. */
+  .get('/:owner/:name/:number/state', async (c) => {
+    const { repo, number } = target(c.req.param())
+    return c.json(await pullState(c.var.db, c.var.scope, repo, number))
   })
 
   .post('/:owner/:name/:number/review', async (c) => {

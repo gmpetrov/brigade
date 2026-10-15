@@ -93,6 +93,14 @@ export type TeammateReview = {
   createdAt: string
 }
 
+/** Where one pull request stands, without its diff: for its card in a thread. */
+export type PullRequestState = PullRequestSummary & {
+  /** null while GitHub is still working it out. */
+  mergeable: boolean | null
+  /** GitHub's mergeable_state: clean, blocked, behind, dirty, unstable, unknown, draft. */
+  mergeableState: string
+}
+
 export type PullRequestDetail = PullRequestSummary & {
   body: string | null
   headSha: string

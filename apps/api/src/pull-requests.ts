@@ -3,14 +3,16 @@
 // (PullRequest), and drives it. A review request prompts the reviewer in the
 // thread that opened the pull request; its verdict (github_review_pull_request)
 // goes to the author when its turn ends; the author's next turn goes back to the
-// reviewer; an approval merges once GitHub allows it. Teammates never merge: a
-// person does, or an owner or admin arms the loop to.
+// reviewer; an approval merges once GitHub allows it, when an owner or admin
+// armed the loop to. Otherwise a person merges, or asks a teammate with write
+// access to (github_merge_pull_request).
 import type {
   CheckRun,
   DiffFile,
   MergeMethod,
   PullRequestDetail,
   PullRequestList,
+  PullRequestState,
   PullRequestSummary,
   PullRequestTracking,
   TeammateReview,
@@ -359,6 +361,23 @@ async function checksOf(gh: GitHub, repo: string, sha: string): Promise<CheckRun
   ]
 }
 
+/** One pull request's state, one GitHub call: what its card in a thread shows. */
+export async function pullState(
+  db: ScopedDb,
+  scope: Scope,
+  repo: string,
+  number: number,
+): Promise<PullRequestState> {
+  const gh = await github(db, scope, repo)
+  const [p, row] = await Promise.all([pullOf(gh, repo, number), findRow(db, repo, number)])
+  await sync(db, scope, row ?? undefined, p)
+  return {
+    ...summary(repo, p, row ?? undefined),
+    mergeable: p.mergeable ?? null,
+    mergeableState: p.mergeable_state ?? 'unknown',
+  }
+}
+
 export async function pullDetail(
   db: ScopedDb,
   scope: Scope,
@@ -446,9 +465,10 @@ export async function pullDetail(
 // What teammates' connector calls tell Brigade
 // ---------------------------------------------------------------------------
 
-/** A teammate opened a pull request, or reviewed one. Called after the GitHub call succeeded. */
+/** A teammate opened, reviewed or merged a pull request. Called after the GitHub call succeeded. */
 export async function notePullRequestCall(
   db: ScopedDb,
+  scope: Scope,
   call: {
     sessionId: string
     teammateId: string
@@ -505,6 +525,21 @@ export async function notePullRequestCall(
         round: row.round,
         url: out.url,
       } as never,
+    })
+    return
+  }
+  if (call.operation === 'github_merge_pull_request') {
+    const number = Number(call.input.number)
+    const out = call.output as { merged: boolean; method: MergeMethod; sha: string }
+    if (!out.merged) return
+    const row =
+      (await db.pullRequest.findFirst({ where: { repository: repo, number } })) ??
+      (await db.pullRequest.create({
+        data: { repository: repo, number, title: `#${number}`, headRef: '', baseRef: '' } as never,
+      }))
+    await recordMerge(db, scope, row, { type: 'teammate', id: call.teammateId }, out.method, {
+      sessionId: call.sessionId,
+      sha: out.sha,
     })
   }
 }
@@ -626,7 +661,9 @@ function reviewPrompt(
       (author
         ? `Brigade sends a request for changes to ${author} and brings its answer back to you. `
         : '') +
-      (autoMerge ? 'Approving merges it once GitHub allows it. ' : '') +
+      (autoMerge
+        ? 'Approving merges it once GitHub allows it. '
+        : 'Do not merge it yourself: a person decides. ') +
       'Do not mention other teammates in your reply.',
   ].join('\n')
 }
