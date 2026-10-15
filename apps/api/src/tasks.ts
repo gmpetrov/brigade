@@ -56,7 +56,7 @@ const boardRows = (
 const ACTIVE = ['starting', 'running']
 
 /**
- * No thread: backlog. An open ticket, a waiting thread, or a pull request the
+ * No thread: backlog. An open ticket, a waiting thread, or an open pull request the
  * teammate opened and stopped at (for review and merge): needs you. Its merge
  * marks the task done (see settleOnMerge).
  */
@@ -71,7 +71,11 @@ export function columnOf(task: {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
   if (task.session._count.tickets > 0 || task.session.status === 'waiting') return 'needs_you'
-  if (task.session.pullRequests.length > 0 && !ACTIVE.includes(task.session.status))
+  // Only an open one waits on a person: once merged or closed, a reopened task is Doing.
+  if (
+    task.session.pullRequests.some((p) => p.state === 'open') &&
+    !ACTIVE.includes(task.session.status)
+  )
     return 'needs_you'
   return 'doing'
 }
