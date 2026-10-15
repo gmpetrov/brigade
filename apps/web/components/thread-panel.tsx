@@ -75,6 +75,8 @@ type ThreadPanel = {
   toggle: () => void
   /** The list, with the cursor in the box for a new thread. */
   startThread: () => void
+  /** The new-thread page, expanded, with the teammate picked last: the sidebar's +. */
+  newThreadPage: () => void
   openThread: (id: string) => void
   /** From a thread to the list. */
   back: () => void
@@ -281,6 +283,10 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
   const expand = useCallback(() => {
     router.push(docked ? `/app/threads/${docked}` : '/app/threads')
   }, [docked, router])
+  const newThreadPage = useCallback(() => {
+    if (routed !== null) router.push('/app/threads')
+    setFocusKey((k) => k + 1)
+  }, [routed, router])
   const startThread = useCallback(() => {
     if (expanded) {
       if (routed) router.push('/app/threads')
@@ -403,6 +409,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       threadId,
       toggle,
       startThread,
+      newThreadPage,
       openThread,
       back,
       expand,
@@ -433,6 +440,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       threadId,
       toggle,
       startThread,
+      newThreadPage,
       openThread,
       back,
       expand,

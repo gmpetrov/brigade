@@ -524,20 +524,19 @@ function RoundButton({
 }
 
 function NewThreadButton() {
-  const { startThread } = useThreadPanel()
-  const mac = useIsMac()
+  const { newThreadPage } = useThreadPanel()
   return (
-    <RoundButton label={`New thread (${mac ? '⌘⇧K' : 'Ctrl+Shift+K'})`} onClick={startThread}>
+    <RoundButton label="New thread" onClick={newThreadPage}>
       <Plus />
     </RoundButton>
   )
 }
 
 function NewThreadRailItem() {
-  const { startThread } = useThreadPanel()
+  const { newThreadPage } = useThreadPanel()
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton tooltip="New thread" onClick={startThread}>
+      <SidebarMenuButton tooltip="New thread" onClick={newThreadPage}>
         <Plus />
         <span>New thread</span>
       </SidebarMenuButton>

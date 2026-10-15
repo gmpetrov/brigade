@@ -139,19 +139,20 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
   )
 }
 
-/** The statuses the filter picks among, and which threads each covers. */
+/** What the filter picks among: the dots the list shows, each with its word. */
 const STATUSES = [
-  { key: 'waiting', label: 'Needs you', icon: 'waiting' },
-  { key: 'working', label: 'Working', icon: 'running' },
-  { key: 'idle', label: 'Idle', icon: 'idle' },
-  { key: 'done', label: 'Done', icon: 'done' },
-  { key: 'failed', label: 'Failed', icon: 'failed' },
+  { key: 'waiting', label: 'Needs you', icon: 'waiting', unread: false },
+  { key: 'working', label: 'Working', icon: 'running', unread: false },
+  { key: 'unread', label: 'Unread', icon: 'idle', unread: true },
+  { key: 'failed', label: 'Failed', icon: 'failed', unread: false },
 ] as const
 type StatusKey = (typeof STATUSES)[number]['key']
-const statusKey = (status: string): StatusKey => {
-  const group = groupOf(status)
+/** Which of them a thread is: idle or done ones read are none. */
+const statusKey = (t: ThreadSummary): StatusKey | undefined => {
+  const group = groupOf(t.status)
   if (group !== 'rest') return group
-  return status === 'done' || status === 'failed' ? status : 'idle'
+  if (t.status === 'failed') return 'failed'
+  return t.unread ? 'unread' : undefined
 }
 
 /**
@@ -237,7 +238,7 @@ export function SidebarWork({
         (t) =>
           (!filter.teammateId || inThread(t, filter.teammateId)) &&
           (!filter.projectId || t.projectId === filter.projectId) &&
-          (!filter.statuses.length || filter.statuses.includes(statusKey(t.status))),
+          (!filter.statuses.length || filter.statuses.includes(statusKey(t)!)),
       ),
     [all, filter],
   )
@@ -357,7 +358,7 @@ export function SidebarWork({
                   }))
                 }
               >
-                <ThreadStatusIcon status={s.icon} />
+                <ThreadStatusIcon status={s.icon} unread={s.unread} />
                 {s.label}
               </DropdownMenuCheckboxItem>
             ))}
