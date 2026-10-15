@@ -33,42 +33,11 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, useApi, type CheckRun, type MergeMethod, type PullRequestDetail } from '@/lib/api'
+import { blockedBecause, canMerge, useLastMergeMethod } from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
 
 /** While the loop runs, the page follows it. */
 const POLL_MS = 10_000
-
-/** Why GitHub will not merge yet, in GitHub's mergeable_state terms. */
-const blockedBecause: Record<string, string> = {
-  dirty: 'It conflicts with the base branch.',
-  blocked: 'GitHub requires an approving review or passing checks first.',
-  behind: 'The branch is behind the base branch.',
-  draft: 'It is a draft.',
-  unknown: 'GitHub is still checking whether it can merge.',
-}
-
-const LAST_MERGE_METHOD = 'brigade.pulls.mergeMethod'
-const mergeMethods: MergeMethod[] = ['squash', 'merge', 'rebase']
-
-/** The merge method last picked, remembered per browser. Squash until one is picked. */
-function useLastMergeMethod() {
-  const [method, setMethod] = useState<MergeMethod>('squash')
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LAST_MERGE_METHOD) as MergeMethod | null
-      if (saved && mergeMethods.includes(saved)) setMethod(saved)
-    } catch {}
-  }, [])
-  return [
-    method,
-    (next: MergeMethod) => {
-      setMethod(next)
-      try {
-        localStorage.setItem(LAST_MERGE_METHOD, next)
-      } catch {}
-    },
-  ] as const
-}
 
 export default function PullRequestPage() {
   const params = useParams<{ owner: string; name: string; number: string }>()
@@ -114,7 +83,7 @@ export default function PullRequestPage() {
   const open = p.state === 'open'
   const candidates = teammates.filter((m) => m.id !== t?.author?.id)
   const reviewer = reviewerId ?? t?.reviewer?.id ?? candidates[0]?.id
-  const mergeable = p.mergeable !== false && !['dirty', 'draft'].includes(p.mergeableState)
+  const mergeable = canMerge(p)
 
   async function act(run: () => Promise<unknown>) {
     setBusy(true)

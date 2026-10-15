@@ -722,5 +722,39 @@ export const github: ConnectorDefinition = {
           }),
         ),
     }),
+    github_merge_pull_request: op({
+      description:
+        'Merge an open pull request, when a person asked you to; never on your own initiative. ' +
+        'It merges the head you last saw: GitHub refuses when it conflicts, waits on checks or ' +
+        'reviews, or the app has no write access to the repository, and says why.',
+      write: true,
+      input: z.object({
+        repository: repo,
+        number,
+        method: z.enum(['squash', 'merge', 'rebase']).default('squash'),
+      }),
+      target: (i) => `merge ${i.repository}#${i.number} (${i.method})`,
+      run: async (ctx, i) => {
+        const path = `${repoPath(i.repository)}/pulls/${i.number}`
+        const found = await get<PullRequest>(ctx, path)
+        if (found.merged_at) throw new Error(`#${i.number} is already merged`)
+        if (found.state !== 'open') throw new Error(`#${i.number} is closed`)
+        if (found.draft) throw new Error(`#${i.number} is a draft; mark it ready for review first`)
+        const merged = await send<{ sha: string; merged: boolean; message: string }>(
+          ctx,
+          'PUT',
+          `${path}/merge`,
+          { merge_method: i.method, sha: found.head.sha },
+        )
+        return {
+          number: i.number,
+          merged: merged.merged,
+          method: i.method,
+          sha: merged.sha,
+          base: found.base.ref,
+          url: found.html_url,
+        }
+      },
+    }),
   },
 }

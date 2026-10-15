@@ -224,7 +224,7 @@ export async function handleConnectorCall(
     await record({ result: 'ok', target, ...(decision ? { ticketId: decision.ticketId } : {}) })
     // Pull requests a teammate opens or reviews feed the review loop.
     if (connection.kind === 'github')
-      await notePullRequestCall(db, {
+      await notePullRequestCall(db, scope, {
         sessionId: session.id,
         teammateId: teammate.id,
         operation: call.operation,
