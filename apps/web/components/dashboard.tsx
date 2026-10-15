@@ -366,20 +366,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   </SidebarMenuItem>
                   <NewThreadRailItem />
                 </SidebarMenu>
-                {/* Home, first: what waits and what runs, across the workspace. */}
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
-                      <Link href="/app">
-                        <House />
-                        <span>Home</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
               </SidebarHeader>
 
               <SidebarContent>
+                {/* Home, first: what waits and what runs. It scrolls with the threads below. */}
+                <SidebarGroup className="py-0">
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
+                        <Link href="/app">
+                          <House />
+                          <span>Home</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroup>
                 <SidebarWork
                   teammates={teammates.data ?? []}
                   projects={projects.data ?? []}
