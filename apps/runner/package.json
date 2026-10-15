@@ -11,6 +11,7 @@
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
     "clean": "rm -rf dist .turbo",
     "spike": "tsx src/harness/spike.ts",
     "bundle": "scripts/bundle.sh"

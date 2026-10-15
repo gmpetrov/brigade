@@ -7,8 +7,11 @@
 // and untracked work, notes, screenshots) and leaves out what can be made
 // again: folders git ignores (dependencies, build output, local databases) and
 // node_modules anywhere. Whatever next needs the folder (a turn, a preview, a
-// takeover, a file read) puts it back first. Either way, the teammate's next
-// turn is told to reinstall what it needs.
+// takeover, a file read) puts it back first. Quiet threads also lose, however
+// empty the disk, node_modules folders a pnpm before 10 made in projects that
+// now ask for pnpm 10 or later: installing over them would keep their copied
+// packages. Either way, the teammate's next turn is told to reinstall what it
+// needs.
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -71,6 +74,10 @@ const TRIMMED =
   'Note from Brigade: to free disk on this computer while this thread was quiet, its dependency and build folders ' +
   '(node_modules, .next, dist and the like, where git ignores them) were removed. Your files, checkouts, ' +
   'uncommitted work and local databases are as you left them: reinstall or rebuild what you need before running anything.'
+const UPGRADED =
+  'Note from Brigade: while this thread was quiet, the node_modules folders an older pnpm made in its checkouts ' +
+  'were removed: pnpm 10 installing over them would keep the copies of packages they hold. Your files, checkouts, ' +
+  'uncommitted work and local databases are as you left them: install dependencies again before running anything.'
 const STOPPED =
   'Note from Brigade: the containers this thread started were stopped while it was quiet, to free the computer. ' +
   'Their data is kept: start them again (docker compose up -d, say) if you need them.'
@@ -97,6 +104,10 @@ type State = {
   trimmed: string[]
   /** When each folder was last trimmed: trimmed again only once used since. */
   trimmedAt: Record<string, number>
+  /** Folders whose node_modules made by an older pnpm were removed, whose teammate has not been told yet. */
+  upgraded: string[]
+  /** When each folder was last checked for node_modules made by an older pnpm: checked again only once used since. */
+  upgradedAt: Record<string, number>
   /** Folders that could not be archived, and when to try again. */
   retryAt: Record<string, number>
 }
@@ -110,6 +121,8 @@ export class Folders {
     stopped: [],
     trimmed: [],
     trimmedAt: {},
+    upgraded: [],
+    upgradedAt: {},
     retryAt: {},
   }
   private loaded: Promise<void>
@@ -138,6 +151,8 @@ export class Folders {
           stopped: saved.stopped ?? [],
           trimmed: saved.trimmed ?? [],
           trimmedAt: saved.trimmedAt ?? {},
+          upgraded: saved.upgraded ?? [],
+          upgradedAt: saved.upgradedAt ?? {},
           retryAt: saved.retryAt ?? {},
         }
       },
@@ -195,8 +210,8 @@ export class Folders {
 
   /**
    * For a teammate's turn: what to tell it about its folder put back or
-   * trimmed, or its containers stopped, once. A folder put back gets the
-   * caches its checkouts borrow from fetched again.
+   * trimmed, its old node_modules removed, or its containers stopped, once.
+   * A folder put back gets the caches its checkouts borrow from fetched again.
    */
   async takeNote(name: FolderName, git: GitAccess | undefined) {
     if (!CLOUD) return undefined
@@ -204,20 +219,25 @@ export class Folders {
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     const restored = this.state.restored.includes(workDir)
     const trimmed = this.state.trimmed.includes(workDir)
+    const upgraded = this.state.upgraded.includes(workDir)
     const stopped = this.state.stopped.includes(workDir)
-    if (!restored && !trimmed && !stopped) return undefined
+    if (!restored && !trimmed && !upgraded && !stopped) return undefined
     if (restored && git) await repairCaches(workDir, git, runAs)
     this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
     this.state.trimmed = this.state.trimmed.filter((dir) => dir !== workDir)
+    this.state.upgraded = this.state.upgraded.filter((dir) => dir !== workDir)
     this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
     this.save()
-    // Put back says it all.
+    // Put back says it all, and trimmed says node_modules too.
     if (restored) return RESTORED
-    return [trimmed && TRIMMED, stopped && STOPPED].filter(Boolean).join('\n\n')
+    return [trimmed ? TRIMMED : upgraded && UPGRADED, stopped && STOPPED]
+      .filter(Boolean)
+      .join('\n\n')
   }
 
   /**
-   * Stop the containers of threads gone quiet. As the disk fills, remove the
+   * Stop the containers of threads gone quiet, and remove the node_modules
+   * an older pnpm made in them. As the disk fills, remove the
    * dependency and build folders of the threads quiet longest. When it is
    * full, prune what Docker keeps for nothing, then archive the folders of
    * the threads quiet longest until it is not.
@@ -246,6 +266,17 @@ export class Folders {
           if (!this.state.stopped.includes(workDir)) this.state.stopped.push(workDir)
           this.save()
         }
+      }
+
+      for (const candidate of candidates) {
+        if (now - candidate.active < TRIM_QUIET_MS) break
+        if (!quiet(candidate)) continue
+        if ((this.state.upgradedAt[candidate.workDir] ?? 0) >= candidate.active) continue
+        await this.upgrade(candidate).catch((error) =>
+          console.warn(
+            `could not remove old node_modules in ${candidate.workDir}: ${String(error)}`,
+          ),
+        )
       }
 
       if ((await usage()) >= TRIM_AT)
@@ -336,6 +367,26 @@ export class Folders {
     })
   }
 
+  /** Remove the node_modules an older pnpm made in the folder, in place. */
+  private async upgrade(candidate: { name: FolderName; workDir: string; runAs: string }) {
+    const { name, workDir, runAs } = candidate
+    await this.exclusive(workDir, async () => {
+      const used = () => this.used(name, workDir, TRIM_QUIET_MS)
+      if (used() || !(await exists(workDir, runAs))) return
+      const paths = await oldPnpmModules(workDir, runAs)
+      if (used()) return
+      if (paths.length > 0) await run('rm', ['-rf', '--', ...paths], { runAs })
+      this.state.upgradedAt[workDir] = Date.now()
+      if (paths.length > 0 && !this.state.upgraded.includes(workDir))
+        this.state.upgraded.push(workDir)
+      this.save()
+      if (paths.length > 0)
+        console.log(
+          `removed node_modules an older pnpm made in ${workDir}: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`,
+        )
+    })
+  }
+
   /** Used since it was picked as quiet (a file read, say). */
   private used(name: FolderName, workDir: string, quietFor: number) {
     return (
@@ -369,8 +420,10 @@ export class Folders {
         delete this.state.active[workDir]
         delete this.state.retryAt[workDir]
         delete this.state.trimmedAt[workDir]
+        delete this.state.upgradedAt[workDir]
         this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
         this.state.trimmed = this.state.trimmed.filter((dir) => dir !== workDir)
+        this.state.upgraded = this.state.upgraded.filter((dir) => dir !== workDir)
         this.save()
         console.log(`archived ${workDir} (${size} bytes) to free disk`)
       } finally {
@@ -487,6 +540,72 @@ export async function regenerable(workDir: string, runAs?: string): Promise<stri
     if (!inRepo(path)) found.push(path)
   // A checkout cloned into an ignored folder is work, not a build.
   return found.filter((path) => !repos.some((repo) => repo.startsWith(`${path}/`)))
+}
+
+const major = (text: string | undefined, pattern: RegExp) => {
+  const found = text?.match(pattern)?.[1]
+  return found === undefined ? undefined : Number(found)
+}
+
+/**
+ * Whether a project's node_modules was made, wholly or partly, by a pnpm
+ * before 10 while the project asks for pnpm 10 or later. pnpm 8 copied
+ * packages with platform binaries (workerd, next-swc, sharp…) into each
+ * node_modules rather than link them from the store; pnpm 10 installing over
+ * it ignores its lockfile but keeps the package folders it finds, copies and
+ * all. Such a node_modules says pnpm 10 made it and still lists the pnpm 8
+ * paths (`/name/version`) it hoisted or skipped.
+ */
+export function madeByOldPnpm(files: {
+  packageJson: string
+  /** node_modules/.modules.yaml (JSON from pnpm 10, YAML before). */
+  modules: string
+  /** node_modules/.pnpm/lock.yaml, when there is one. */
+  lock?: string
+}) {
+  let packageManager: unknown
+  try {
+    ;({ packageManager } = JSON.parse(files.packageJson) as { packageManager?: unknown })
+  } catch {
+    return false
+  }
+  if (typeof packageManager !== 'string') return false
+  const wanted = major(packageManager, /^pnpm@(\d+)\./)
+  if (wanted === undefined || wanted < 10) return false
+  const madeBy = major(files.modules, /^\s*["']?packageManager["']?\s*:\s*["']?pnpm@(\d+)\./m)
+  if (madeBy !== undefined && madeBy < 10) return true
+  const lockfile = major(files.lock, /^lockfileVersion:\s*["']?(\d+)/m)
+  if (lockfile !== undefined && lockfile < 9) return true
+  return /^\s*(?:-\s*)?["']?\/(?:@[^/\s"']+\/)?[^/\s"']+\/\d/m.test(files.modules)
+}
+
+/**
+ * The node_modules folders in a folder, as its teammate, of projects whose
+ * node_modules an older pnpm made (madeByOldPnpm): the project's own and its
+ * workspace packages', among those regenerable finds.
+ */
+export async function oldPnpmModules(workDir: string, runAs?: string): Promise<string[]> {
+  const read = (path: string) => run('cat', ['--', path], { runAs }).then(String, () => undefined)
+  const projects: string[] = []
+  for (const modules of z(
+    await run('find', [workDir, '-name', 'node_modules', '-prune', '-type', 'd', '-print0'], {
+      runAs,
+    }),
+  )) {
+    const [packageJson, modulesYaml, lock] = await Promise.all([
+      read(`${dirname(modules)}/package.json`),
+      read(`${modules}/.modules.yaml`),
+      read(`${modules}/.pnpm/lock.yaml`),
+    ])
+    if (packageJson && modulesYaml && madeByOldPnpm({ packageJson, modules: modulesYaml, lock }))
+      projects.push(dirname(modules))
+  }
+  if (projects.length === 0) return []
+  return (await regenerable(workDir, runAs)).filter(
+    (path) =>
+      basename(path) === 'node_modules' &&
+      projects.some((project) => path.startsWith(`${project}/`)),
+  )
 }
 
 /**
