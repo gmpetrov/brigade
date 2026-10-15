@@ -57,6 +57,12 @@ export const computers = new Hono<AppEnv>()
       code,
       expiresAt,
       command: `curl -fsSL ${env.API_URL}/runner/install.sh | sh && ${bin} link ${code} --api ${env.API_URL} && ${bin} start`,
+      // Opens Brigade.app (apps/desktop), which asks before it installs and links the runner.
+      appLink: `brigade://link?${new URLSearchParams({
+        code,
+        api: env.API_URL,
+        dashboard: new URL('/app', env.WEB_URL[0]).toString(),
+      })}`,
     })
   })
 

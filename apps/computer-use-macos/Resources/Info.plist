@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>Brigade Computer Use</string>
+  <key>CFBundleName</key>
+  <string>Brigade Computer Use</string>
+  <key>CFBundleExecutable</key>
+  <string>brigade-computer-use</string>
+  <key>CFBundleIdentifier</key>
+  <string>ai.brigade.computer-use</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSAccessibilityUsageDescription</key>
+  <string>Brigade Computer Use needs Accessibility to click, type and read app interfaces when you ask a Brigade teammate to use your apps.</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>Brigade Computer Use needs Screen Recording to see your screen when you ask a Brigade teammate to use your apps.</string>
+</dict>
+</plist>

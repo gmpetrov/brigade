@@ -1715,3 +1715,211 @@ export function imageTools(makeImage: ImageMaker): Record<string, Tool> {
     }),
   }
 }
+
+/** Computer use on the person's own Mac, through Brigade Computer Use.app (see ../computer-use.ts). */
+export type ComputerUse = {
+  /** Asks the app, as this thread's turn (the indicator shows the teammate's name). */
+  request: (
+    method: string,
+    params: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) => Promise<unknown>
+  /** Where the next screenshot goes: relative to the working directory, and absolute. */
+  screenshotPath: () => { path: string; absolute: string }
+  /** Show a screenshot in the thread, like a generated image. */
+  share: (path: string, toolCallId: string) => void
+}
+
+const ABOUT_COMPUTER =
+  "On the person's own Mac (this computer), through Brigade Computer Use. Coordinates are screen points " +
+  'with the top-left of the main display at 0,0: the same units as computer_screenshot and computer_ui_tree. ' +
+  'While you act, a pill on their screen shows your name with a Stop button.'
+
+const point = {
+  x: { type: 'number', description: 'Screen x, in points' },
+  y: { type: 'number', description: 'Screen y, in points' },
+} as const
+
+/**
+ * See and use the apps on a member's Mac: screenshots, the mouse and keyboard,
+ * opening apps and reading their interface. For what nothing else reaches:
+ * the shell, a CLI or an app's own tools come first.
+ */
+export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
+  const act =
+    (method: string) =>
+    (input: object, { abortSignal }: { abortSignal?: AbortSignal }) =>
+      computer.request(method, input as Record<string, unknown>, abortSignal)
+  return {
+    computer_screenshot: tool({
+      description:
+        'Take a screenshot of a display. Returns the PNG it saved in your working directory (images/...): open it ' +
+        'to look at it. Take one before acting on what is on screen and after, to check it worked. With share, ' +
+        'the thread shows it too, for when the person asked to see their screen. ' +
+        ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ display?: number; share?: boolean }>({
+        type: 'object',
+        properties: {
+          display: {
+            type: 'number',
+            description: '0 (default) is the main display; others follow',
+          },
+          share: { type: 'boolean', description: 'Also show it in the thread (default false)' },
+        },
+      }),
+      execute: async (input, { abortSignal, toolCallId }) => {
+        const { path, absolute } = computer.screenshotPath()
+        const shot = (await computer.request(
+          'screenshot',
+          { path: absolute, display: input.display ?? 0 },
+          abortSignal,
+        )) as Record<string, unknown>
+        if (input.share) computer.share(path, toolCallId)
+        return {
+          path,
+          width: shot.width,
+          height: shot.height,
+          origin: shot.origin,
+          displays: shot.displays,
+          next: 'Open the file to look at it. A point in it is at screen (origin.x + x, origin.y + y).',
+          ...(input.share ? { shared: 'The thread shows it: do not link or embed its file.' } : {}),
+        }
+      },
+    }),
+    computer_click: tool({
+      description: 'Click at a point on screen. ' + ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{
+        x: number
+        y: number
+        button?: 'left' | 'right' | 'middle'
+        count?: number
+        modifiers?: string[]
+      }>({
+        type: 'object',
+        properties: {
+          ...point,
+          button: {
+            type: 'string',
+            enum: ['left', 'right', 'middle'],
+            description: 'Default left',
+          },
+          count: { type: 'number', description: '2 for a double click, 3 for a triple click' },
+          modifiers: {
+            type: 'array',
+            items: { type: 'string', enum: ['cmd', 'shift', 'alt', 'ctrl'] },
+            description: 'Keys held during the click',
+          },
+        },
+        required: ['x', 'y'],
+      }),
+      execute: act('click'),
+    }),
+    computer_move: tool({
+      description:
+        'Move the pointer to a point, e.g. to show a tooltip or a menu on hover. ' + ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ x: number; y: number }>({
+        type: 'object',
+        properties: point,
+        required: ['x', 'y'],
+      }),
+      execute: act('move'),
+    }),
+    computer_drag: tool({
+      description: 'Press at one point, drag to another and release. ' + ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ fromX: number; fromY: number; toX: number; toY: number }>({
+        type: 'object',
+        properties: {
+          fromX: { type: 'number' },
+          fromY: { type: 'number' },
+          toX: { type: 'number' },
+          toY: { type: 'number' },
+        },
+        required: ['fromX', 'fromY', 'toX', 'toY'],
+      }),
+      execute: act('drag'),
+    }),
+    computer_scroll: tool({
+      description: 'Scroll at a point. ' + ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{
+        x: number
+        y: number
+        direction: 'up' | 'down' | 'left' | 'right'
+        amount?: number
+      }>({
+        type: 'object',
+        properties: {
+          ...point,
+          direction: { type: 'string', enum: ['up', 'down', 'left', 'right'] },
+          amount: { type: 'number', description: 'Lines to scroll (default 5)' },
+        },
+        required: ['x', 'y', 'direction'],
+      }),
+      execute: act('scroll'),
+    }),
+    computer_type: tool({
+      description:
+        'Type text into whatever has the keyboard focus (click the field first); a newline presses Return. ' +
+        ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ text: string }>({
+        type: 'object',
+        properties: { text: { type: 'string' } },
+        required: ['text'],
+      }),
+      execute: act('type'),
+    }),
+    computer_key: tool({
+      description:
+        'Press a key or a shortcut: "return", "escape", "tab", "cmd+n", "cmd+shift+t", "down". ' +
+        ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ key: string }>({
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'Modifiers (cmd, shift, alt, ctrl) joined with +' },
+        },
+        required: ['key'],
+      }),
+      execute: act('key'),
+    }),
+    computer_apps: tool({
+      description: 'The apps running on this Mac, which one is in front. ' + ABOUT_COMPUTER,
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: act('apps'),
+    }),
+    computer_open_app: tool({
+      description:
+        'Open an app (or bring it to the front) by name or bundle id, e.g. "Visual Studio Code" or ' +
+        '"com.apple.Notes". ' +
+        ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{ app: string }>({
+        type: 'object',
+        properties: { app: { type: 'string' } },
+        required: ['app'],
+      }),
+      execute: act('open_app'),
+    }),
+    computer_ui_tree: tool({
+      description:
+        "An app's interface as text: each element's role, title, value and frame [x,y w×h] in screen points. " +
+        'Cheaper and more exact than a screenshot to find what to click: click the middle of its frame. ' +
+        ABOUT_COMPUTER,
+      inputSchema: jsonSchema<{
+        app?: string
+        maxDepth?: number
+        maxNodes?: number
+        menus?: boolean
+      }>({
+        type: 'object',
+        properties: {
+          app: {
+            type: 'string',
+            description: 'Name, bundle id or pid (default: the app in front)',
+          },
+          maxDepth: { type: 'number', description: 'Default 12' },
+          maxNodes: { type: 'number', description: 'Default 400' },
+          menus: { type: 'boolean', description: 'Include the menu bar (default false)' },
+        },
+      }),
+      execute: act('ui_tree'),
+    }),
+  }
+}

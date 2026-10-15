@@ -1,0 +1,10 @@
+{
+  "name": "@brigade/computer-use-macos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Brigade Computer Use.app: the macOS helper that holds Screen Recording and Accessibility for teammates on a member's Mac.",
+  "scripts": {
+    "build:app": "scripts/build.sh",
+    "install:app": "scripts/build.sh --install"
+  }
+}

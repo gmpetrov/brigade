@@ -1,5 +1,5 @@
 'use client'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Cloud, Laptop, Play, Monitor, Terminal, TriangleAlert } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
 import { StatusBadge, type StatusTone } from '@/components/status-badge'
@@ -9,7 +9,10 @@ import { cn } from '@/lib/utils'
 import { api, useApi, type Computer, type ComputersResponse } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 
-type LinkCode = { code: string; expiresAt: string; command: string }
+type LinkCode = { code: string; expiresAt: string; command: string; appLink?: string }
+
+/** Brigade.app for macOS (apps/desktop), from the latest GitHub release. */
+const MAC_APP_URL = 'https://github.com/gmpetrov/brigade/releases/latest/download/Brigade.dmg'
 
 const STATUS: Record<Computer['status'], { label: string; tone: StatusTone }> = {
   pending: { label: 'waiting for its runner', tone: 'neutral' },
@@ -42,6 +45,9 @@ export default function Computers() {
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
+  // On a Mac, the app links this computer; elsewhere, the command in a terminal.
+  const [mac, setMac] = useState(false)
+
   useLive((message) => {
     if (message.type === 'computer.updated') void computers.reload()
   })
@@ -58,6 +64,17 @@ export default function Computers() {
       void computers.reload()
     }
   }
+
+  const getLink = () =>
+    act(async () => setLink(await api<LinkCode>('/computers/link-code', { method: 'POST' })))
+
+  useEffect(() => {
+    setMac(/Mac/.test(navigator.userAgent) && !/iPhone|iPad/.test(navigator.userAgent))
+    // "Connect this computer…" in Brigade.app's menu opens ?desktop=1: the code is what it came for.
+    if (new URLSearchParams(window.location.search).has('desktop')) void getLink()
+    // Once, on load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const all = computers.data?.computers ?? []
   const cloud = all.find((c) => c.kind === 'cloud')
@@ -236,29 +253,43 @@ export default function Computers() {
               <h3 className="font-semibold">Link your machine</h3>
               {link && (
                 <p className="text-sm text-muted-foreground">
-                  Run this in a terminal on your Mac or Linux machine. The code works once and
-                  expires at {new Date(link.expiresAt).toLocaleTimeString()}.
+                  {mac && link.appLink
+                    ? 'Install Brigade for Mac, then open this link in it.'
+                    : 'Run this in a terminal on your Mac or Linux machine.'}{' '}
+                  The code works once and expires at {new Date(link.expiresAt).toLocaleTimeString()}
+                  .
                 </p>
               )}
             </div>
             {!link && (
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void act(async () =>
-                    setLink(await api<LinkCode>('/computers/link-code', { method: 'POST' })),
-                  )
-                }
-              >
-                Get the install command
+              <Button disabled={busy} onClick={() => void getLink()}>
+                {mac ? 'Link this Mac' : 'Get the install command'}
               </Button>
             )}
           </div>
-          {link && (
-            <pre className="rounded-md border bg-muted p-4 font-mono text-sm break-all whitespace-pre-wrap">
-              {link.command}
-            </pre>
-          )}
+          {link &&
+            (mac && link.appLink ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <a href={MAC_APP_URL}>Download Brigade for Mac</a>
+                  </Button>
+                  <Button asChild>
+                    <a href={link.appLink}>Open in Brigade</a>
+                  </Button>
+                </div>
+                <details className="text-sm text-muted-foreground">
+                  <summary className="cursor-pointer">Or run it in a terminal</summary>
+                  <pre className="mt-2 rounded-md border bg-muted p-4 font-mono text-sm break-all whitespace-pre-wrap text-foreground">
+                    {link.command}
+                  </pre>
+                </details>
+              </>
+            ) : (
+              <pre className="rounded-md border bg-muted p-4 font-mono text-sm break-all whitespace-pre-wrap">
+                {link.command}
+              </pre>
+            ))}
         </Card>
       </section>
     </div>
