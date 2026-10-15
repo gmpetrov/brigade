@@ -1,8 +1,8 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index 9f9501baebce9b609e72a99a6c9c1f8e9328fabf..9d75ad489554ad2483e3a41c668707e5ceeeb6ac 100644
+index 1e3acb5..8d9ba8d 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
-@@ -810,6 +810,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+@@ -875,6 +875,7 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
  	const textByItem = /* @__PURE__ */ new Map();
  	const reasoningByItem = /* @__PURE__ */ new Map();
  	const nativeToolCalls = /* @__PURE__ */ new Map();
@@ -10,7 +10,7 @@ index 9f9501baebce9b609e72a99a6c9c1f8e9328fabf..9d75ad489554ad2483e3a41c668707e5
  	let resolveCompletion = () => {};
  	const completion = new Promise((resolve) => {
  		resolveCompletion = resolve;
-@@ -835,6 +836,39 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
+@@ -900,6 +901,39 @@ function createAppServerEventHandler({ stepTracker, emitStreamEvent, emitWarning
  			if (call?.name === "apply_patch" && item.type === "fileChange") call.successConfirmed = item.status === "completed";
  			else if (call?.name === "view_image" && item.type === "imageView") call.successConfirmed = true;
  		}
@@ -50,7 +50,7 @@ index 9f9501baebce9b609e72a99a6c9c1f8e9328fabf..9d75ad489554ad2483e3a41c668707e5
  		const normalized = normalizeItem({
  			item,
  			textByItem,
-@@ -1583,24 +1617,39 @@ function createDynamicTools(tools) {
+@@ -1649,24 +1683,39 @@ function createDynamicTools(tools) {
  	const validOriginalNames = new Set(tools.map((tool) => tool.name).filter(isValidDynamicToolName));
  	const usedAliases = /* @__PURE__ */ new Set();
  	const originalNameByAlias = /* @__PURE__ */ new Map();

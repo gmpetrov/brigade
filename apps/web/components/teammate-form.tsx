@@ -1,5 +1,5 @@
 'use client'
-import { HARNESS_MODELS, isHarnessModel, modelLabel } from '@brigade/contracts'
+import { CODEX_DEFAULT_MODEL, HARNESS_MODELS, isHarnessModel, modelLabel } from '@brigade/contracts'
 import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -140,7 +140,9 @@ export function TeammateForm({
                 <SelectGroup>
                   <SelectLabel>Select model</SelectLabel>
                   <ModelOption value={DEFAULT_MODEL} label="Default">
-                    The account’s default model
+                    {harness === 'codex'
+                      ? modelLabel(harness, CODEX_DEFAULT_MODEL)
+                      : 'The account’s default model'}
                   </ModelOption>
                   {HARNESS_MODELS[harness].map((m) => (
                     <ModelOption key={m.id} value={m.id} label={m.label}>
@@ -168,7 +170,15 @@ export function TeammateForm({
   )
 }
 
-function ModelOption({ value, label, children }: { value: string; label: string; children: string }) {
+function ModelOption({
+  value,
+  label,
+  children,
+}: {
+  value: string
+  label: string
+  children: string
+}) {
   return (
     <SelectItem value={value} className="items-start py-2">
       <span className="flex flex-col gap-0.5">
