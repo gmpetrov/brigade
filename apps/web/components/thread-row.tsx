@@ -12,7 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
-import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,8 +53,6 @@ export function ThreadRow({
   const [open, setOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [busy, setBusy] = useState(false)
-  // Rename closes the menu, which would give the focus back to ⋮ rather than the field.
-  const keepFocus = useRef(false)
 
   const starter = thread.startedBy.id === memberId
   // As the API decides (routes/threads.ts): who may write in it renames and archives it,
@@ -66,10 +64,7 @@ export function ThreadRow({
 
   async function run(action: Action) {
     setOpen(false)
-    if (action === 'rename') {
-      keepFocus.current = true
-      return setRenaming(true)
-    }
+    if (action === 'rename') return setRenaming(true)
     if (
       action === 'delete' &&
       !confirm(`Delete “${title}” for good, with its files? This can't be undone.`)
@@ -175,7 +170,7 @@ export function ThreadRow({
             className={cn(
               'ml-auto shrink-0 text-xs',
               // On a phone ⋮ is always there: the time goes beside it.
-              'max-md:mr-5 md:group-focus-within/menu-item:opacity-0 md:group-hover/menu-item:opacity-0',
+              'max-md:mr-5 md:group-hover/menu-item:opacity-0',
               open && 'opacity-0',
             )}
           >
@@ -184,11 +179,13 @@ export function ThreadRow({
         </Link>
       </SidebarMenuButton>
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <SidebarMenuAction asChild showOnHover>
+        {/* Only on the hovered row, or while its menu is open: not left behind on a row that
+            keeps the focus after a click or a shortcut. Always there on a phone. */}
+        <SidebarMenuAction asChild>
           <DropdownMenuTrigger
             aria-label={`${title}: more`}
             title="More"
-            className="data-[state=open]:bg-sidebar-accent"
+            className="data-[state=open]:bg-sidebar-accent group-hover/menu-item:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 md:opacity-0"
           >
             <EllipsisVertical />
           </DropdownMenuTrigger>
@@ -198,11 +195,9 @@ export function ThreadRow({
           side="right"
           className="min-w-44"
           onKeyDown={onMenuKey}
-          onCloseAutoFocus={(e) => {
-            if (!keepFocus.current) return
-            keepFocus.current = false
-            e.preventDefault()
-          }}
+          // Not back to ⋮: focused, it would stay shown once the pointer has left the row.
+          // Rename puts the focus in its field instead.
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {shown.map((item) => (
             <Fragment key={item.action}>
