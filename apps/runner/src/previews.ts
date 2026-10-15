@@ -353,6 +353,7 @@ export class Previews {
       url,
       paths: paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/'],
       out: join(seat.workDir, '.preview-checks'),
+      quick: preview.checked === true,
     })
     const args = [CHECKER, input]
     const { stdout } = await run(

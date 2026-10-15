@@ -342,6 +342,11 @@ const PREVIEWS =
   'app people use in a browser, offer one in a line at the end of your reply; they can also start it with ' +
   'Preview at the top of the thread. A preview already running in this thread keeps running, and reloads as ' +
   'you edit when it is a dev server: do not start it again for each change. ' +
+  'While the person tries it and asks for tweaks (a style, a copy, a layout change), keep the loop quick: ' +
+  'edit, then reply as soon as it is saved, since their preview already shows it. Do not run tests, a ' +
+  'typecheck, a build or check_preview for each tweak; at most check_preview the one page you changed when ' +
+  'you are unsure it still renders. Run the full checks once, before you commit or push, or when a change ' +
+  'reaches data, routes or the server. ' +
   'To start one in a checkout, first try `start_preview({ repository })`: a repository set up before starts ' +
   'as it was saved. Otherwise set it up in start_preview itself, not in your shell, so it can be saved: ' +
   '`setup` (install; `docker compose up -d` for its database, cache or mail: you have your own Docker; ' +

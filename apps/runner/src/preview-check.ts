@@ -15,6 +15,8 @@ type Input = {
   url: string
   paths: string[]
   out: string
+  /** Its last check passed (a recheck after an edit): wait less for the page to settle. */
+  quick?: boolean
 }
 
 export type PageCheck = {
@@ -101,8 +103,23 @@ const VISIBLE = `(() => {
 
 /** A page that draws after its data (or a CAPTCHA check) arrives: look again for this long. */
 const SETTLE_MS = 8_000
+/**
+ * Waits after the page loads (network idle, a client render, an empty body),
+ * and shorter ones for a recheck: its pages passed before, so a slow first
+ * render or a CAPTCHA is not what an edit changes.
+ */
+const WAITS = {
+  full: { idle: 10_000, render: 1_500, settle: SETTLE_MS },
+  quick: { idle: 3_000, render: 500, settle: 2_000 },
+}
 
-async function checkPage(page: Page, base: URL, path: string, out: string): Promise<PageCheck> {
+async function checkPage(
+  page: Page,
+  base: URL,
+  path: string,
+  out: string,
+  waits: (typeof WAITS)['full'],
+): Promise<PageCheck> {
   const problems: string[] = []
   const warnings = new Set<string>()
   const origin = base.origin
@@ -142,9 +159,9 @@ async function checkPage(page: Page, base: URL, path: string, out: string): Prom
     if (!WAITING.test(html) || Date.now() > deadline) break
     await page.waitForTimeout(2_000)
   }
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: waits.idle }).catch(() => undefined)
   // Client-rendered pages draw after their data arrives.
-  await page.waitForTimeout(1_500)
+  await page.waitForTimeout(waits.render)
 
   if (status >= 400) problems.push(`the page answered ${status}`)
   type Visible = { text: number; drawn: boolean; body: number; framed: boolean }
@@ -155,7 +172,7 @@ async function checkPage(page: Page, base: URL, path: string, out: string): Prom
   let visible = await look()
   // An empty body in its frame: give it the time a slow render or a CAPTCHA check takes.
   for (
-    const until = Date.now() + SETTLE_MS;
+    const until = Date.now() + waits.settle;
     visible.framed && !visible.body && Date.now() < until;
   ) {
     await page.waitForTimeout(1_000)
@@ -208,7 +225,9 @@ async function main(input: Input): Promise<CheckResult> {
     const origin = new URL(base.origin)
     for (const path of input.paths) {
       const page = await context.newPage()
-      pages.push(await checkPage(page, origin, path, input.out))
+      pages.push(
+        await checkPage(page, origin, path, input.out, WAITS[input.quick ? 'quick' : 'full']),
+      )
       await page.close()
     }
   } finally {

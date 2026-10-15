@@ -1534,7 +1534,9 @@ export function previewTools(
       description:
         "Open the running preview's pages with Chrome as a person would, again: after you fixed what its last " +
         "check found, or for other pages. Reports each one's status, whether it is blank, script and server " +
-        'errors, with screenshots to read.',
+        'errors, with screenshots to read. Not after each small edit while the person tries it: the preview ' +
+        'reloads by itself. When you need one then, pass only the page you changed; once a check passed, ' +
+        'it waits less for pages to settle.',
       inputSchema: jsonSchema<{ paths?: string[] }>({
         type: 'object',
         properties: {
