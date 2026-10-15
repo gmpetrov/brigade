@@ -287,6 +287,7 @@ async function start() {
       memoryFor: (teammateId) => library.memoryFor(teammateId),
       bundles,
       uploadFile: (input) => attachments.upload(input),
+      skillFile: (hash) => attachments.skillFile(hash),
     },
     callLibrary: (sessionId, teammateId, { operation }) =>
       connection.callLibrary({ sessionId, teammateId, operation }),

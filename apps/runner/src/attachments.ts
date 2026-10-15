@@ -1,7 +1,8 @@
 // A thread's files on this computer. The API keeps them; before a teammate's
 // turn the runner fetches the ones its working folder lacks and puts them
 // there, as the teammate's user on a cloud computer. Each is put once: a
-// teammate that edits or removes its copy keeps that.
+// teammate that edits or removes its copy keeps that. Skills' files are
+// fetched the same way, by their SHA-256, and cached alike.
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
@@ -93,6 +94,23 @@ export class Attachments {
     if (!response.ok) throw new Error(`the API refused it (${response.status})`)
     const bytes = Buffer.from(await response.arrayBuffer())
     if (sha256(bytes) !== ref.sha256) throw new Error('it changed on the way; try again')
+    await mkdir(CACHE_DIR, { recursive: true, mode: 0o700 })
+    await writeFile(cached, bytes, { mode: 0o600 })
+    return bytes
+  }
+
+  /** A skill's file, by its SHA-256: from the cache, or the API (once per computer). */
+  async skillFile(hash: string) {
+    if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('not a SHA-256')
+    const cached = join(CACHE_DIR, `skill-${hash}`)
+    const hit = await readFile(cached).catch(() => null)
+    if (hit && sha256(hit) === hash) return hit
+    const response = await fetch(new URL(`/runner/skill-files/${hash}`, this.config.apiUrl), {
+      headers: { authorization: `Bearer ${this.config.token}` },
+    })
+    if (!response.ok) throw new Error(`the API refused it (${response.status})`)
+    const bytes = Buffer.from(await response.arrayBuffer())
+    if (sha256(bytes) !== hash) throw new Error('it changed on the way; try again')
     await mkdir(CACHE_DIR, { recursive: true, mode: 0o700 })
     await writeFile(cached, bytes, { mode: 0o600 })
     return bytes

@@ -240,10 +240,17 @@ export type DesignSystem = Prisma.DesignSystemModel
  * Model Skill
  * How the workspace does a kind of work, loaded by a teammate when the work
  * calls for it: written into its harness's skills folder (SKILL.md) as each
- * session starts. Its text is here, not in the library, so a thread gets it
- * whole in its spec. A skill gives no access; grants stay where they are.
+ * session starts. Its text is here; the files beside it are in the bucket by
+ * their SHA-256, not in the library, which any member may edit. A skill gives
+ * no access; grants stay where they are.
  */
 export type Skill = Prisma.SkillModel
+/**
+ * Model SkillPack
+ * Skills imported together (a GitHub repository, a zip), kept as one: one
+ * scope, written onto its skills, and one switch over theirs.
+ */
+export type SkillPack = Prisma.SkillPackModel
 /**
  * Model PreviewRecipe
  * How a repository's preview starts (PreviewRecipe in contracts), saved by a

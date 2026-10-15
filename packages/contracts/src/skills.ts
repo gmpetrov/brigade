@@ -10,11 +10,19 @@ import { MESSAGE_COMMANDS } from './commands.js'
 export const SKILL_ENTRY = 'SKILL.md'
 /** Skills Brigade ships are named with this; a workspace skill may not be. */
 export const BUILTIN_SKILL_PREFIX = 'brigade-'
-/** Limits a skill stays within: the harness loads it whole into the teammate's context. */
-export const SKILL_INSTRUCTIONS_MAX = 60_000
-export const SKILL_FILES_MAX = 40
-export const SKILL_FILE_MAX = 200_000
-export const SKILL_TOTAL_MAX = 1_000_000
+/** Its instructions, read only when the work calls for the skill: real ones run long. */
+export const SKILL_INSTRUCTIONS_MAX = 500_000
+/** Its description, in every thread's list of skills: real ones run to a paragraph. */
+export const SKILL_DESCRIPTION_MAX = 4_000
+/** The files beside SKILL.md, kept in the bucket: scripts, templates, fonts. */
+export const SKILL_FILES_MAX = 200
+export const SKILL_FILE_MAX = 10 * 1024 * 1024
+export const SKILL_TOTAL_MAX = 25 * 1024 * 1024
+/** A teammate's proposal carries its files as text, in its ticket. */
+export const SKILL_TEXT_FILES_MAX = 40
+export const SKILL_TEXT_FILE_MAX = 200_000
+/** The largest pack to import: a zip, or a GitHub repository's. */
+export const SKILL_PACK_MAX = 50 * 1024 * 1024
 
 /** A slug, as the harnesses and the composer's `/` name it. */
 export const SkillName = z
@@ -46,32 +54,54 @@ export const SkillFilePath = z
     { message: 'a relative path inside the skill, other than SKILL.md' },
   )
 
+/** A text file, carried inline: in a teammate's proposal. */
 export const SkillFile = z.object({
   path: SkillFilePath,
-  content: z.string().max(SKILL_FILE_MAX),
+  content: z.string().max(SKILL_TEXT_FILE_MAX),
 })
 export type SkillFile = z.infer<typeof SkillFile>
 
-/** What a skill says: Grok's three fields, plus the files a SKILL.md folder may carry. */
-export const SkillContent = z
-  .object({
-    name: SkillName,
-    /** When to use it: the teammate reads this to decide. */
-    description: z.string().trim().min(1).max(1024),
-    instructions: z.string().trim().min(1).max(SKILL_INSTRUCTIONS_MAX),
-    files: z.array(SkillFile).max(SKILL_FILES_MAX).default([]),
-  })
-  .refine((s) => new Set(s.files.map((f) => f.path)).size === s.files.length, {
+/** A file kept in the bucket, by its SHA-256: any kind, text or not. */
+export const SkillFileRef = z.object({
+  path: SkillFilePath,
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  size: z.number().int().min(0).max(SKILL_FILE_MAX),
+})
+export type SkillFileRef = z.infer<typeof SkillFileRef>
+
+const uniquePaths = (files: { path: string }[]) =>
+  new Set(files.map((f) => f.path)).size === files.length
+
+/** Grok's three fields: what every skill says. */
+const SkillText = z.object({
+  name: SkillName,
+  /** When to use it: the teammate reads this to decide. */
+  description: z.string().trim().min(1).max(SKILL_DESCRIPTION_MAX),
+  instructions: z.string().trim().min(1).max(SKILL_INSTRUCTIONS_MAX),
+})
+
+/** A skill a teammate proposes: its files as text, inline. */
+export const SkillContent = SkillText.extend({
+  files: z.array(SkillFile).max(SKILL_TEXT_FILES_MAX).default([]),
+}).refine((s) => uniquePaths(s.files), {
+  message: 'two files have the same path',
+  path: ['files'],
+})
+export type SkillContent = z.infer<typeof SkillContent>
+
+/** A skill as saved: its files in the bucket. */
+export const SkillWithFiles = SkillText.extend({
+  files: z.array(SkillFileRef).max(SKILL_FILES_MAX).default([]),
+})
+  .refine((s) => uniquePaths(s.files), {
     message: 'two files have the same path',
     path: ['files'],
   })
-  .refine(
-    (s) =>
-      s.instructions.length + s.files.reduce((sum, f) => sum + f.content.length, 0) <=
-      SKILL_TOTAL_MAX,
-    { message: 'the skill is too large', path: ['files'] },
-  )
-export type SkillContent = z.infer<typeof SkillContent>
+  .refine((s) => s.files.reduce((sum, f) => sum + f.size, 0) <= SKILL_TOTAL_MAX, {
+    message: 'the skill is too large',
+    path: ['files'],
+  })
+export type SkillWithFiles = z.infer<typeof SkillWithFiles>
 
 /** Where a skill applies: every thread, or those of some teammates or projects. */
 export const SkillScope = z.object({
@@ -81,12 +111,82 @@ export const SkillScope = z.object({
 })
 export type SkillScope = z.infer<typeof SkillScope>
 
-/** The body to create or change a skill from the dashboard. */
+/** The body to create or change a skill from the dashboard. In a pack, its scope is the pack's. */
 export const SaveSkill = z.intersection(
-  SkillContent,
+  SkillWithFiles,
   SkillScope.extend({ enabled: z.boolean().default(true) }),
 )
 export type SaveSkill = z.infer<typeof SaveSkill>
+
+/** Skills imported together, kept as one: one scope, a switch for all, updated together. */
+export const SkillPack = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Where it came from: a GitHub address, or `file:<name>` for an upload. */
+  source: z.string(),
+  everywhere: z.boolean(),
+  teammateIds: z.array(z.string()),
+  projectIds: z.array(z.string()),
+  /** Off turns all its skills off; on, each is as its own switch says. */
+  enabled: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+export type SkillPack = z.infer<typeof SkillPack>
+
+/** A pack's name, scope or switch. */
+export const UpdateSkillPack = SkillScope.partial().extend({
+  name: z.string().trim().min(1).max(100).optional(),
+  enabled: z.boolean().optional(),
+})
+export type UpdateSkillPack = z.infer<typeof UpdateSkillPack>
+
+/** One skill an import found, and what adding it would do. */
+export const ImportedSkill = z.object({
+  /** Its folder in the upload or repository, to tell skills apart. */
+  folder: z.string(),
+  name: z.string(),
+  description: z.string(),
+  instructions: z.string(),
+  files: z.array(SkillFileRef),
+  /** Files left out: too large, or past the limit. */
+  skipped: z.array(z.string()),
+  /**
+   * new: not here yet. update / same: in this pack already, changed or not.
+   * taken: a skill outside this pack has the name. invalid: cannot be added as it is.
+   */
+  status: z.enum(['new', 'update', 'same', 'taken', 'invalid']),
+  problem: z.string().optional(),
+  /** Its switch now, for one already in the pack. */
+  enabled: z.boolean().optional(),
+})
+export type ImportedSkill = z.infer<typeof ImportedSkill>
+
+/** What an upload or a GitHub address holds: nothing is saved yet, but its files are in the bucket. */
+export const SkillImport = z.object({
+  source: z.string(),
+  /** A name for the pack: the repository's or the file's. */
+  label: z.string(),
+  /** The pack imported from the same source before, to update. */
+  pack: SkillPack.nullable(),
+  skills: z.array(ImportedSkill),
+})
+export type SkillImport = z.infer<typeof SkillImport>
+
+/** Import from a GitHub repository or a folder of one. */
+export const ImportSkillsFromUrl = z.object({ url: z.string().trim().url().max(500) })
+
+/** Add the skills an import found as a pack, or update the pack. A skill's `enabled` is its switch. */
+export const SaveSkillPack = SkillScope.extend({
+  packId: z.string().optional(),
+  name: z.string().trim().min(1).max(100),
+  source: z.string().trim().min(1).max(500),
+  skills: z
+    .array(z.intersection(SkillWithFiles, z.object({ enabled: z.boolean().default(true) })))
+    .min(1)
+    .max(200),
+})
+export type SaveSkillPack = z.infer<typeof SaveSkillPack>
 
 /** A skill as the dashboard shows it. */
 export const Skill = z.object({
@@ -94,11 +194,16 @@ export const Skill = z.object({
   name: z.string(),
   description: z.string(),
   instructions: z.string(),
-  files: z.array(SkillFile),
+  files: z.array(SkillFileRef),
   everywhere: z.boolean(),
   teammateIds: z.array(z.string()),
   projectIds: z.array(z.string()),
+  /** Its own switch. */
   enabled: z.boolean(),
+  /** The pack it came in, if any: its scope and switch apply. */
+  packId: z.string().nullable(),
+  /** Teammates get it: its switch, and its pack's, are on. */
+  active: z.boolean(),
   /** Who wrote or last changed it: a member, or a teammate whose proposal a person approved. */
   updatedBy: z.object({ type: z.enum(['member', 'teammate']), name: z.string() }).nullable(),
   createdAt: z.string(),
@@ -106,12 +211,17 @@ export const Skill = z.object({
 })
 export type Skill = z.infer<typeof Skill>
 
-/** A skill in a thread's spec: what the runner writes into the teammate's skills folder. */
+/**
+ * A skill in a thread's spec: what the runner writes into the teammate's skills
+ * folder. Its files come from the bucket by their SHA-256 (`refs`); `files`,
+ * inline text, is what runners before protocol 21 read.
+ */
 export const ThreadSkill = z.object({
   name: z.string(),
   description: z.string(),
   instructions: z.string(),
   files: z.array(SkillFile).default([]),
+  refs: z.array(SkillFileRef).default([]),
 })
 export type ThreadSkill = z.infer<typeof ThreadSkill>
 

@@ -346,13 +346,13 @@ const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([
 
 const isMessageCommand = (name: string): name is MessageCommand => name in MESSAGE_COMMANDS
 
-/** The workspace's skills that are on: each a command, `/name`. */
+/** The workspace's skills that are on (and their packs): each a command, `/name`. */
 export function useSkillCommands(): CommandOption[] {
   const skills = useApi<Skill[]>('/skills')
   return useMemo(
     () =>
       (skills.data ?? [])
-        .filter((s) => s.enabled)
+        .filter((s) => s.active)
         .map((s) => ({ name: s.name, label: s.name, description: s.description, skill: true })),
     [skills.data],
   )
