@@ -129,21 +129,37 @@ export const runnerLink = new Hono().post('/link', async (c) => {
     const workspace = await tx.workspace.findFirstOrThrow({
       where: { id: grant.workspaceId, organizationId: grant.organizationId },
     })
+    // A machine linked again (a reinstall, Brigade.app after the terminal) keeps its computer
+    // when the member and workspace are the same; else it is a new one.
+    const previous =
+      grant.kind === 'cloud' || !input.computerId
+        ? null
+        : await tx.computer.findFirst({
+            where: {
+              id: input.computerId,
+              workspaceId: workspace.id,
+              kind: 'member_machine',
+              memberId: grant.memberId,
+              status: { not: 'destroyed' },
+            },
+          })
     const computer =
       grant.kind === 'cloud'
         ? await tx.computer.findFirstOrThrow({
             where: { id: grant.computerId, workspaceId: workspace.id, kind: 'cloud' },
           })
-        : await tx.computer.create({
-            data: {
-              organizationId: grant.organizationId,
-              workspaceId: grant.workspaceId,
-              kind: 'member_machine',
-              memberId: grant.memberId,
-              name: input.name,
-              status: 'pending',
-            },
-          })
+        : previous
+          ? await tx.computer.update({ where: { id: previous.id }, data: { name: input.name } })
+          : await tx.computer.create({
+              data: {
+                organizationId: grant.organizationId,
+                workspaceId: grant.workspaceId,
+                kind: 'member_machine',
+                memberId: grant.memberId,
+                name: input.name,
+                status: 'pending',
+              },
+            })
     // One runner per computer: a re-install replaces the old token.
     await tx.runner.deleteMany({ where: { computerId: computer.id } })
     await tx.runner.create({

@@ -68,6 +68,8 @@ else {
 }
 
 async function link(code: string | undefined) {
+  // Linked before to this API: the API replaces that computer rather than adding a second one.
+  const previous = await loadConfig()
   if (!code) {
     console.error(
       'Usage: brigade-runner link <code> [--api <url>]  (get a code from the dashboard)',
@@ -82,6 +84,7 @@ async function link(code: string | undefined) {
       name: values.name,
       platform: `${process.platform}-${process.arch}`,
       version: VERSION,
+      ...(previous && previous.apiUrl === values.api ? { computerId: previous.computerId } : {}),
     }),
   })
   const body = await response.json().catch(() => ({}))
