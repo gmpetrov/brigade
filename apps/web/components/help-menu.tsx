@@ -32,9 +32,10 @@ const SHORTCUTS: { title: string; items: { label: string; keys: string[][] }[] }
   {
     title: 'Writing a message',
     items: [
-      { label: 'Send', keys: [['mod', 'Enter']] },
+      { label: 'Send, or queue while the teammate works', keys: [['Enter']] },
+      { label: 'New line', keys: [['shift', 'Enter']] },
       { label: 'Mention a teammate, repository, file…', keys: [['@']] },
-      { label: 'New line', keys: [['Enter']] },
+      { label: 'Commands', keys: [['/']] },
     ],
   },
 ]

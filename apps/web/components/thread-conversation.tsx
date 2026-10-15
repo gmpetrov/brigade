@@ -7,8 +7,10 @@
 import {
   AppWindow,
   ArrowDown,
-  ArrowRight,
   CalendarClock,
+  CircleStop,
+  CloudUpload,
+  CornerDownLeft,
   FolderKanban,
   ListOrdered,
   LoaderCircle,
@@ -607,7 +609,12 @@ export function ThreadConversation({
         />
       )}
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        className="relative flex min-h-0 flex-1 flex-col"
+        // Files dropped anywhere on the conversation go with the next message.
+        {...(t.mayPrompt && !t.controlledByMemberId ? drop.props : {})}
+      >
+        {drop.dragging && <DropOverlay />}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.task && (
@@ -752,56 +759,38 @@ export function ThreadConversation({
                 }
               />
               <form onSubmit={(e) => void send(e).catch(() => undefined)}>
+                {/* One line, like Claude's: attach, the message, then stop while the teammate
+                    works and the send button once there is something to send. Files drop
+                    anywhere on the conversation, not just here. */}
                 <Card
                   data-composer-frame
                   className={cn(
-                    'relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring',
-                    drop.dragging && 'border-primary ring-[3px] ring-primary/30',
+                    'relative gap-2 rounded-xl p-2 shadow-md focus-within:border-ring',
+                    drop.dragging && 'border-primary',
                   )}
-                  {...drop.props}
                 >
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
-                  <Composer
-                    bare
-                    threadId={id}
-                    value={text}
-                    onChange={setText}
-                    onSubmit={() => void send().catch(() => undefined)}
-                    rows={2}
-                    placeholder={
-                      busy
-                        ? `${answering.name} is working. Messages you send now are queued for after this turn`
-                        : people.length > 1
-                          ? `Reply to ${answering.name}, or @ a teammate to ask them`
-                          : 'Reply. @ a teammate to bring them in, or a connection, secret or thread; / for a visual or a design'
-                    }
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AttachButton onFiles={files.add} />
-                    {error ? (
-                      <span className="min-w-0 flex-1 pl-2 text-sm text-destructive-text">
-                        {error}
-                      </span>
-                    ) : expanded ? (
-                      <span className="flex min-w-0 flex-1 items-center gap-1.5 pl-2 text-xs text-muted-foreground">
-                        <kbd className="rounded-md bg-secondary px-1.5 font-mono text-foreground">
-                          @
-                        </kbd>
-                        a teammate to bring them in, or a connection or thread
-                        <kbd className="ml-1.5 rounded-md bg-secondary px-1.5 font-mono text-foreground">
-                          /
-                        </kbd>
-                        a visual or a design
-                      </span>
-                    ) : (
-                      // Docked there is no room for the hint; the placeholder says it.
-                      <span className="flex-1" />
-                    )}
+                  <div className="flex items-end gap-1">
+                    <div className="mb-1">
+                      <AttachButton onFiles={files.add} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <Composer
+                        bare
+                        threadId={id}
+                        value={text}
+                        onChange={setText}
+                        onSubmit={() => void send().catch(() => undefined)}
+                        rows={1}
+                        placeholder="Type @ to mention, / for commands"
+                      />
+                    </div>
                     {busy && (
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="mb-1 rounded-full [&_svg:not([class*='size-'])]:size-5"
                         disabled={stopping === (turnId ?? '')}
                         onClick={() => {
                           setStopping(turnId ?? '')
@@ -809,26 +798,31 @@ export function ThreadConversation({
                             setStopping(undefined),
                           )
                         }}
+                        aria-label={`Stop ${answering.name}`}
                         title={
-                          queued.length
-                            ? `Stop ${answering.name} now; the queued messages run next`
-                            : `Stop ${answering.name} now`
+                          stopping === (turnId ?? '')
+                            ? 'Stopping…'
+                            : queued.length
+                              ? `Stop ${answering.name} now; the queued messages run next`
+                              : `Stop ${answering.name}`
                         }
                       >
-                        {stopping === (turnId ?? '') ? 'Stopping…' : 'Interrupt'}
+                        <CircleStop aria-hidden />
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      disabled={!ready || current === 'waiting'}
-                      title={
-                        busy ? `Queued until ${answering.name}'s turn ends (⌘Enter)` : '⌘Enter'
-                      }
-                    >
-                      Send
-                      <ArrowRight aria-hidden />
-                    </Button>
+                    {(text.trim() || files.uploads.length > 0) && (
+                      <Button
+                        size="icon-sm"
+                        className="mb-1 rounded-full"
+                        disabled={!ready || current === 'waiting'}
+                        aria-label={busy ? 'Queue for after this turn' : 'Send'}
+                        title={busy ? 'Queue for after this turn (↵)' : 'Send (↵) · New line (⇧↵)'}
+                      >
+                        <CornerDownLeft aria-hidden />
+                      </Button>
+                    )}
                   </div>
+                  {error && <p className="px-2 pb-1 text-sm text-destructive-text">{error}</p>}
                 </Card>
               </form>
             </>
@@ -854,6 +848,24 @@ export function ThreadConversation({
 const END_SLACK = 48
 
 /** Back down to the latest, while reading higher up. */
+/** Over the whole conversation while files are dragged on it: dropping attaches them. */
+function DropOverlay() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center bg-background/80 backdrop-blur-[2px]">
+      <div className="absolute inset-3 rounded-xl border-2 border-dashed border-primary bg-primary/10" />
+      <div className="relative text-center">
+        <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
+          <CloudUpload aria-hidden className="size-6" />
+        </div>
+        <p className="text-lg font-bold">Drop to attach</p>
+        <p className="text-xs text-muted-foreground">
+          Anywhere in the chat. Images, PDFs, code and docs.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /** Back down to the end of a list read from it, once scrolled up. */
 export function JumpToEnd({ onClick }: { onClick: () => void }) {
   return (

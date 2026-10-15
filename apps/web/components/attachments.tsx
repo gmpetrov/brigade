@@ -9,9 +9,10 @@ import {
   type MessageAttachment,
 } from '@brigade/contracts'
 import { Ban, FileText, Paperclip, X } from 'lucide-react'
-import { useCallback, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { api, attachmentUrl, uploadAttachment } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +33,8 @@ type Upload = {
   info?: AttachmentInfo
   error?: string
   controller: AbortController
+  /** An image's own pixels, shown before it finishes uploading (an object URL). */
+  preview?: string
 }
 
 /** The files of the message being written: each uploads as soon as it is added. */
@@ -60,6 +63,7 @@ export function useUploads() {
           size: file.size,
           progress: 0,
           controller: new AbortController(),
+          ...(IMAGE.test(file.type) ? { preview: URL.createObjectURL(file) } : {}),
         }
         const error =
           list.current.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
@@ -84,6 +88,7 @@ export function useUploads() {
     (key: string) => {
       const upload = list.current.find((u) => u.key === key)
       upload?.controller.abort()
+      if (upload?.preview) URL.revokeObjectURL(upload.preview)
       if (upload?.info)
         void api(`/attachments/${upload.info.id}`, { method: 'DELETE' }).catch(() => undefined)
       commit(list.current.filter((u) => u.key !== key))
@@ -92,7 +97,18 @@ export function useUploads() {
   )
 
   /** After sending: the files went with the message. */
-  const clear = useCallback(() => commit([]), [commit])
+  const clear = useCallback(() => {
+    for (const u of list.current) if (u.preview) URL.revokeObjectURL(u.preview)
+    commit([])
+  }, [commit])
+
+  // Leaving the page with files still on the message: let their previews go.
+  useEffect(
+    () => () => {
+      for (const u of list.current) if (u.preview) URL.revokeObjectURL(u.preview)
+    },
+    [],
+  )
 
   return {
     uploads,
@@ -180,7 +196,13 @@ export function AttachButton({
   )
 }
 
-/** The files of the message being written, each with its progress or error. */
+/** What kind of file, from its name: "PDF", "ZIP"; empty when it has no extension. */
+const extension = (name: string) => /\.([a-z0-9]{1,5})$/i.exec(name)?.[1]?.toUpperCase() ?? ''
+
+/**
+ * The files of the message being written, as tiles like Claude's: an image shows itself
+ * and opens larger on a click (Esc closes it), any other file its name and kind.
+ */
 export function UploadList({
   uploads,
   onRemove,
@@ -188,60 +210,117 @@ export function UploadList({
   uploads: ReturnType<typeof useUploads>['uploads']
   onRemove: (key: string) => void
 }) {
+  const [viewing, setViewing] = useState<{ name: string; src: string }>()
   if (uploads.length === 0) return null
   return (
-    <ul className="flex flex-wrap gap-2 px-1" aria-label="Attached files">
-      {uploads.map((u) => (
-        <li
-          key={u.key}
-          className={cn(
-            'relative flex max-w-64 items-center gap-2 overflow-hidden rounded-lg border bg-muted/40 py-1 pr-1 pl-2 text-xs',
-            u.error && 'border-destructive/40',
-          )}
-        >
-          {u.info && IMAGE.test(u.info.contentType) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={attachmentUrl(u.info.id)}
-              alt=""
-              className="size-6 shrink-0 rounded object-cover"
-            />
-          ) : (
-            <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-          )}
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate font-medium" title={u.name}>
-              {u.name}
-            </span>
-            <span
+    <>
+      <ul className="flex flex-wrap gap-2 px-1 pt-1" aria-label="Attached files">
+        {uploads.map((u) => {
+          const src =
+            u.preview ??
+            (u.info && IMAGE.test(u.info.contentType) ? attachmentUrl(u.info.id) : undefined)
+          return (
+            <li
+              key={u.key}
               className={cn(
-                'truncate',
-                u.error ? 'text-destructive-text' : 'text-muted-foreground',
+                'group relative size-24 shrink-0 overflow-hidden rounded-lg border bg-muted/40 text-xs',
+                u.error && 'border-destructive/40',
               )}
             >
-              {u.error ??
-                (u.info ? fileSize(u.size) : `Uploading ${Math.round(u.progress * 100)}%`)}
-            </span>
-          </span>
+              {src && !u.error ? (
+                <button
+                  type="button"
+                  className="block size-full cursor-zoom-in"
+                  onClick={() => setViewing({ name: u.name, src })}
+                  aria-label={`Preview ${u.name}`}
+                  title={u.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="size-full object-cover" />
+                </button>
+              ) : (
+                <div className="flex size-full flex-col justify-between gap-1 p-2" title={u.name}>
+                  <span className="line-clamp-3 font-medium break-all">{u.name}</span>
+                  {u.error ? (
+                    <span className="line-clamp-2 text-destructive-text">{u.error}</span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      {extension(u.name) ? (
+                        <span className="rounded bg-secondary px-1 font-mono text-[0.625rem] text-muted-foreground">
+                          {extension(u.name)}
+                        </span>
+                      ) : (
+                        <FileText aria-hidden className="size-3.5 text-muted-foreground" />
+                      )}
+                      <span className="truncate text-muted-foreground">
+                        {u.info ? fileSize(u.size) : `${Math.round(u.progress * 100)}%`}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-xs"
+                onClick={() => onRemove(u.key)}
+                aria-label={`Remove ${u.name}`}
+                className="absolute top-1 right-1 rounded-full shadow-sm [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
+              >
+                <X aria-hidden />
+              </Button>
+              {!u.info && !u.error && (
+                <span
+                  aria-hidden
+                  className="absolute bottom-0 left-0 h-0.5 bg-primary transition-[width]"
+                  style={{ width: `${u.progress * 100}%` }}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <ImagePreview image={viewing} onClose={() => setViewing(undefined)} />
+    </>
+  )
+}
+
+/** An image at full size over the page; Esc, a click outside or × closes it. */
+function ImagePreview({
+  image,
+  onClose,
+}: {
+  image?: { name: string; src: string }
+  onClose: () => void
+}) {
+  return (
+    <Dialog open={!!image} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="block w-auto max-w-none overflow-hidden p-0 sm:max-w-none"
+      >
+        <DialogTitle className="sr-only">{image?.name}</DialogTitle>
+        <DialogClose asChild>
           <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onRemove(u.key)}
-            aria-label={`Remove ${u.name}`}
+            variant="secondary"
+            size="icon-sm"
+            aria-label="Close"
+            title="Close (Esc)"
+            className="absolute top-2 right-2 rounded-full shadow-md"
           >
             <X aria-hidden />
           </Button>
-          {!u.info && !u.error && (
-            <span
-              aria-hidden
-              className="absolute bottom-0 left-0 h-0.5 bg-primary transition-[width]"
-              style={{ width: `${u.progress * 100}%` }}
-            />
-          )}
-        </li>
-      ))}
-    </ul>
+        </DialogClose>
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image.src}
+            alt={image.name}
+            className="max-h-[calc(100vh-4rem)] max-w-[calc(100vw-4rem)] object-contain"
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 

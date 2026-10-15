@@ -42,7 +42,6 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
-import { useIsMac } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -328,7 +327,6 @@ export function NewThread({
   layout?: 'card' | 'dialog'
 }) {
   const router = useRouter()
-  const mac = useIsMac()
   const { projects } = useDashboard()
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
@@ -433,8 +431,7 @@ export function NewThread({
       disabled={busy}
       autoFocus={autoFocus}
       placeholder={
-        placeholder ??
-        `What should ${teammate.name} do? @ to bring in a teammate, repository, connection or secret; / for a visual or a design`
+        placeholder ?? `What should ${teammate.name} do? Type @ to mention, / for commands`
       }
     />
   )
@@ -565,7 +562,7 @@ export function NewThread({
           {where}
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-xs text-muted-foreground sm:inline">
-              esc to close · {mac ? '⌘' : 'Ctrl+'}↵ to send
+              esc to close · ↵ to send
             </span>
             {send}
           </div>

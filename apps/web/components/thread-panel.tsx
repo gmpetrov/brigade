@@ -839,7 +839,7 @@ function TeammateStart({ teammate }: { teammate: Teammate }) {
             rows={3}
             draft={draft}
             autoFocus
-            placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
+            placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
             onStarted={(thread) => openThread(thread.id)}
           />
         </div>
@@ -944,7 +944,7 @@ function TeammateThreads({ teammate }: { teammate: Teammate }) {
           rows={2}
           draft={draft}
           autoFocus={focusKey > 0}
-          placeholder={`Ask ${teammate.name} to… @ to bring in another teammate, a repository, connection or secret; / for a visual or a design`}
+          placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
           onStarted={(thread) => openThread(thread.id)}
         />
       </div>

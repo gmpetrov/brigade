@@ -248,6 +248,9 @@ function MentionView({ node, selected }: ReactNodeViewProps) {
   )
 }
 
+/** Editors whose `@` or `/` menu is open with something to pick: Enter picks rather than sends. */
+const picking = new WeakSet<object>()
+
 /** A suggestion menu (`@`, `/`): arrows move, Enter or Tab picks, Escape closes. */
 function renderMenu<T, P extends object>(
   Menu: ComponentType<MenuProps<T>>,
@@ -271,6 +274,7 @@ function renderMenu<T, P extends object>(
     onStart(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
+      if (props.items.length) picking.add(props.editor)
       component = new ReactRenderer(Menu, { props: menuProps(), editor: props.editor })
       // Like a chat app's command menu: docked to the composer's frame, full width, above
       // it (below when there's no room above), rather than floating at the caret.
@@ -288,6 +292,8 @@ function renderMenu<T, P extends object>(
     onUpdate(props: SuggestionProps<T, P>) {
       current = props
       selected = 0
+      if (props.items.length) picking.add(props.editor)
+      else picking.delete(props.editor)
       component?.updateProps(menuProps())
     },
     onKeyDown({ event }: { event: KeyboardEvent }) {
@@ -305,6 +311,7 @@ function renderMenu<T, P extends object>(
       return false
     },
     onExit() {
+      if (current) picking.delete(current.editor)
       unmount?.()
       component?.destroy()
       component = undefined
@@ -477,6 +484,10 @@ function toDoc(text: string): JSONContent {
   return { type: 'doc', content: lines }
 }
 
+/** A phone or tablet: its keyboard's return key adds a line, and the button sends. */
+const touchScreen = () =>
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
 /**
  * A message box where `@` mentions teammates, connections, repositories, library files,
  * credentials, threads and computers, and `/` first in it picks a command (what to make).
@@ -498,7 +509,7 @@ export function Composer({
 }: {
   value: string
   onChange: (text: string) => void
-  /** Cmd/Ctrl+Enter. */
+  /** Enter (Cmd/Ctrl+Enter too); Shift+Enter adds a line. On a touch screen Enter adds a line. */
   onSubmit?: () => void
   placeholder?: string
   disabled?: boolean
@@ -559,12 +570,21 @@ export function Composer({
       Commands,
       Extension.create({
         name: 'submit',
-        addKeyboardShortcuts: () => ({
-          'Mod-Enter': () => {
+        // Like Claude: Enter sends, Shift+Enter adds a line. Runs before HardBreak's own keys.
+        priority: 1000,
+        addKeyboardShortcuts() {
+          const submit = () => {
+            // An open `@` or `/` menu takes Enter to pick; an IME takes it to compose.
+            if (picking.has(this.editor) || this.editor.view.composing) return false
             latest.current.onSubmit?.()
             return true
-          },
-        }),
+          }
+          return {
+            Enter: () => (touchScreen() ? false : submit()),
+            'Mod-Enter': submit,
+            'Shift-Enter': () => this.editor.commands.setHardBreak(),
+          }
+        },
       }),
     ],
     content: toDoc(value),
