@@ -21,7 +21,15 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -50,7 +58,15 @@ import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { api, preload, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
+import {
+  api,
+  preload,
+  teammateModelLabel,
+  useApi,
+  type ProjectSummary,
+  type Teammate,
+  type Thread,
+} from '@/lib/api'
 import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -60,6 +76,8 @@ export type ThreadHeading = {
   /** Everyone in it: the channel beside it is one of theirs. */
   teammateIds: string[]
   title: string
+  /** The project it works in, if any. */
+  project: Pick<ProjectSummary, 'id' | 'name' | 'icon'> | null
   status: string
   private: boolean
   /** The live connection to its events holds. */
@@ -91,6 +109,7 @@ export function ThreadConversation({
   expanded,
   onExpand,
   onHeading,
+  top,
 }: {
   id: string
   /** In the page's place, with room for panels beside it; else docked beside a page. */
@@ -101,6 +120,8 @@ export function ThreadConversation({
    * conversation scrolls. Again on each change.
    */
   onHeading: (heading: ThreadHeading) => void
+  /** Floats over the top of the conversation, which scrolls under it. */
+  top?: ReactNode
 }) {
   const { me, projects } = useDashboard()
   const thread = useApi<Thread>(`/threads/${id}`)
@@ -285,6 +306,7 @@ export function ThreadConversation({
       teammate: { ...t.teammate, harness: t.teammate.harness as Teammate['harness'] },
       teammateIds: t.teammates.length ? t.teammates.map((p) => p.teammate.id) : [t.teammate.id],
       title: t.title,
+      project: t.project,
       status: status ?? t.status,
       private: t.private,
       connected,
@@ -615,8 +637,9 @@ export function ThreadConversation({
         {...(t.mayPrompt && !t.controlledByMemberId ? drop.props : {})}
       >
         {drop.dragging && <DropOverlay />}
+        {top}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
-          <div className={cn(column, expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
+          <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.task && (
               <ThreadTaskBar
                 taskId={t.task.id}
