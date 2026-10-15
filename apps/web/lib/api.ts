@@ -207,7 +207,7 @@ export function useApi<T>(path: string | null) {
 
 // Response shapes used by the dashboard.
 export type Me = {
-  user: { id: string; name: string; email: string }
+  user: { id: string; name: string; email: string; image: string | null }
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
   role: 'owner' | 'admin' | 'member' | null
