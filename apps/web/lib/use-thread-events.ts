@@ -3,7 +3,6 @@ import { ApiToBrowser, SequencedEvent } from '@brigade/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, preload, preloaded } from './api'
 import { WS_URL } from './config'
-import { latestPagePath } from './page-requests'
 
 /**
  * An event this dashboard does not know (a newer runner or API) becomes an
@@ -20,10 +19,13 @@ function known(e: unknown): unknown {
   }
 }
 
+/** A thread's latest page of events, and what the whole thread needs from before it. */
+const latestPage = (sessionId: string) => `/threads/${sessionId}/events`
+
 type LatestPage = { firstSeq: number; lastSeq: number; context: unknown[]; events: unknown[] }
 
 /** Sends a thread's latest page ahead (lib/api.ts's `preload`), for it to open on. */
-export const preloadThreadEvents = (sessionId: string) => preload(latestPagePath(sessionId))
+export const preloadThreadEvents = (sessionId: string) => preload(latestPage(sessionId))
 
 /**
  * Follow a thread live. Opens on its latest page of events, asked for with the
@@ -99,7 +101,7 @@ export function useThreadEvents(sessionId: string, onStatus?: (status: string) =
         JSON.stringify({ type: 'subscribe', sessionId, afterSeq: contiguous(), tail: true }),
       )
     }
-    const path = latestPagePath(sessionId)
+    const path = latestPage(sessionId)
     void (preloaded<LatestPage>(path) ?? api<LatestPage>(path))
       .then((page) => {
         if (stopped) return

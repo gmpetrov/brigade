@@ -49,7 +49,6 @@ import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api, preload, teammateModelLabel, useApi, type Teammate, type Thread } from '@/lib/api'
-import { threadPath } from '@/lib/page-requests'
 import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -81,7 +80,7 @@ function useReplyDraft(id: string) {
 
 /** Sends ahead what a thread's conversation asks for as it opens (lib/api.ts's `preload`). */
 export function preloadConversation(id: string) {
-  preload(threadPath(id))
+  preload(`/threads/${id}`)
   preloadThreadEvents(id)
 }
 
@@ -102,7 +101,7 @@ export function ThreadConversation({
   onHeading: (heading: ThreadHeading) => void
 }) {
   const { me, projects } = useDashboard()
-  const thread = useApi<Thread>(threadPath(id))
+  const thread = useApi<Thread>(`/threads/${id}`)
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
@@ -295,11 +294,6 @@ export function ThreadConversation({
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread.data, status, connected])
-  // When it first shows, for measuring (performance.getEntriesByName('thread-shown')).
-  useEffect(() => {
-    if (thread.data && eventsLoaded && !performance.getEntriesByName('thread-shown').length)
-      performance.mark('thread-shown')
-  }, [thread.data, eventsLoaded])
   // Status changes can open or close tickets (a cap, an empty account): refetch them. Not
   // for the first status: it came with them.
   const reload = thread.reload
