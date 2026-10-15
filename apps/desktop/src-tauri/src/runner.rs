@@ -17,11 +17,15 @@ pub enum Status {
     /// No runner installed yet, or installed but not linked to a workspace.
     NotConnected,
     Installing,
-    Running { workspace: String },
+    Running {
+        workspace: String,
+    },
     /// A runner started elsewhere (a terminal) is running: two would fight over the same computer.
     Elsewhere,
     /// The runner stopped and will start again shortly.
-    Restarting { reason: String },
+    Restarting {
+        reason: String,
+    },
     Stopped,
 }
 
@@ -42,7 +46,9 @@ impl Status {
 pub fn home() -> PathBuf {
     std::env::var_os("BRIGADE_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".brigade"))
+        .unwrap_or_else(|| {
+            PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".brigade")
+        })
 }
 
 fn wrapper() -> PathBuf {
@@ -64,7 +70,10 @@ pub fn workspace() -> Option<String> {
 fn log() -> std::io::Result<File> {
     let path = log_file();
     fs::create_dir_all(path.parent().unwrap())?;
-    if fs::metadata(&path).map(|m| m.len() > 5_000_000).unwrap_or(false) {
+    if fs::metadata(&path)
+        .map(|m| m.len() > 5_000_000)
+        .unwrap_or(false)
+    {
         let _ = fs::rename(&path, path.with_extension("log.1"));
     }
     OpenOptions::new().create(true).append(true).open(path)
@@ -90,26 +99,36 @@ fn command(program: impl AsRef<std::ffi::OsStr>) -> std::io::Result<Command> {
     Ok(command)
 }
 
-/// A runner `start` this app did not start: `pgrep` matches the runner's entry point.
-fn running_elsewhere(own: Option<u32>) -> bool {
-    let Ok(output) = Command::new("pgrep").args(["-f", "runner/dist/index.js start"]).output() else {
-        return false;
-    };
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .filter_map(|line| line.trim().parse::<u32>().ok())
-        .any(|pid| Some(pid) != own && !in_group(pid, own))
-}
+/// Exit code of a runner that found another one running from the same home.
+const ALREADY_RUNNING: i32 = 3;
 
-/// Whether `pid` is in the process group of our wrapper (its node child is).
-fn in_group(pid: u32, own: Option<u32>) -> bool {
-    let Some(group) = own else { return false };
-    Command::new("ps")
-        .args(["-o", "pgid=", "-p", &pid.to_string()])
-        .output()
+/// A runner this app did not start, e.g. in a terminal: the one holding runner.pid
+/// (newer runners), or one `pgrep` finds by its entry point (older ones).
+fn running_elsewhere() -> bool {
+    let holder = fs::read_to_string(home().join("runner.pid"))
         .ok()
-        .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<u32>().ok())
-        == Some(group)
+        .and_then(|text| text.trim().parse::<u32>().ok());
+    let mut pids: Vec<u32> = holder.into_iter().collect();
+    if let Ok(output) = Command::new("pgrep")
+        .args(["-f", "runner/dist/index.js start"])
+        .output()
+    {
+        pids.extend(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .filter_map(|l| l.trim().parse::<u32>().ok()),
+        );
+    }
+    pids.into_iter().any(|pid| {
+        Command::new("ps")
+            .args(["-o", "command=", "-p", &pid.to_string()])
+            .output()
+            .map(|o| {
+                let command = String::from_utf8_lossy(&o.stdout);
+                command.contains("node") || command.contains("tsx")
+            })
+            .unwrap_or(false)
+    })
 }
 
 /// SIGTERM to the whole group (the wrapper and node): the runner freezes a turn
@@ -139,7 +158,10 @@ pub struct Supervisor {
 }
 
 impl Supervisor {
-    pub fn new(helper: Option<PathBuf>, on_change: impl Fn(&Status) + Send + Sync + 'static) -> Arc<Self> {
+    pub fn new(
+        helper: Option<PathBuf>,
+        on_change: impl Fn(&Status) + Send + Sync + 'static,
+    ) -> Arc<Self> {
         Arc::new(Self {
             status: Mutex::new(Status::Stopped),
             child: Mutex::new(None),
@@ -183,7 +205,7 @@ impl Supervisor {
                 self.set(Status::NotConnected);
                 return;
             };
-            if running_elsewhere(None) {
+            if running_elsewhere() {
                 self.set(Status::Elsewhere);
                 return;
             }
@@ -197,7 +219,9 @@ impl Supervisor {
             let child = match spawned {
                 Ok(child) => child,
                 Err(error) => {
-                    self.set(Status::Restarting { reason: error.to_string() });
+                    self.set(Status::Restarting {
+                        reason: error.to_string(),
+                    });
                     thread::sleep(backoff);
                     continue;
                 }
@@ -215,6 +239,10 @@ impl Supervisor {
                 }
             };
             if !self.current(generation) {
+                return;
+            }
+            if code == Some(ALREADY_RUNNING) {
+                self.set(Status::Elsewhere);
                 return;
             }
             // A runner that ran for a while gets a quick restart; one that keeps failing waits longer.
@@ -248,7 +276,8 @@ impl Supervisor {
         let result = (|| {
             let installed = command("sh")
                 .and_then(|mut c| {
-                    c.args(["-c", "curl -fsSL \"$1/runner/install.sh\" | sh", "sh", api]).status()
+                    c.args(["-c", "curl -fsSL \"$1/runner/install.sh\" | sh", "sh", api])
+                        .status()
                 })
                 .map_err(|e| e.to_string())?;
             if !installed.success() {

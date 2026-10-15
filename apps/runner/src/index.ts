@@ -12,7 +12,16 @@ import { hostname } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/contracts'
-import { CLOUD, HOME, loadConfig, paths, saveConfig, VERSION } from './config.js'
+import {
+  ALREADY_RUNNING_EXIT_CODE,
+  claimRunner,
+  CLOUD,
+  HOME,
+  loadConfig,
+  paths,
+  saveConfig,
+  VERSION,
+} from './config.js'
 import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
@@ -99,6 +108,11 @@ async function start() {
       `Not linked yet. Run: brigade-runner link <code> --api <url>   (state lives in ${HOME})`,
     )
     process.exit(1)
+  }
+  const other = await claimRunner()
+  if (other) {
+    console.error(`A runner is already running from ${HOME} (pid ${other}). Stop it first.`)
+    process.exit(ALREADY_RUNNING_EXIT_CODE)
   }
   const outbox = new Outbox(paths.outbox)
   const library = new Library(config)

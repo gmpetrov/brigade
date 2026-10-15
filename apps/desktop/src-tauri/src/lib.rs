@@ -52,7 +52,9 @@ fn save_settings(settings: &Settings) {
 }
 
 fn dashboard() -> String {
-    load_settings().dashboard_url.unwrap_or_else(|| DEFAULT_DASHBOARD.into())
+    load_settings()
+        .dashboard_url
+        .unwrap_or_else(|| DEFAULT_DASHBOARD.into())
 }
 
 /// The menu items that change.
@@ -73,7 +75,11 @@ fn show_status(items: &Items, status: &Status) {
 }
 
 fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
-    app.dialog().message(message).title(title).kind(kind).show(|_| {});
+    app.dialog()
+        .message(message)
+        .title(title)
+        .kind(kind)
+        .show(|_| {});
 }
 
 /// brigade://link?code=…&api=…[&dashboard=…], from "Open in Brigade" in the dashboard.
@@ -81,9 +87,17 @@ fn open_link(app: &AppHandle, link: &Url) {
     if link.scheme() != "brigade" || link.host_str() != Some("link") {
         return;
     }
-    let query = |key: &str| link.query_pairs().find(|(k, _)| k == key).map(|(_, v)| v.into_owned());
-    let (Some(code), Some(api)) = (query("code"), query("api")) else { return };
-    let Ok(api_url) = Url::parse(&api) else { return };
+    let query = |key: &str| {
+        link.query_pairs()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.into_owned())
+    };
+    let (Some(code), Some(api)) = (query("code"), query("api")) else {
+        return;
+    };
+    let Ok(api_url) = Url::parse(&api) else {
+        return;
+    };
     let local = matches!(api_url.host_str(), Some("localhost") | Some("127.0.0.1"));
     if api_url.scheme() != "https" && !local {
         return;
@@ -109,12 +123,19 @@ fn open_link(app: &AppHandle, link: &Url) {
         match supervisor.connect(api.trim_end_matches('/'), &code) {
             Ok(()) => {
                 let mut settings = load_settings();
-                if let Some(url) = dashboard_url.filter(|u| u.starts_with("https://") || u.starts_with("http://localhost")) {
+                if let Some(url) = dashboard_url
+                    .filter(|u| u.starts_with("https://") || u.starts_with("http://localhost"))
+                {
                     settings.dashboard_url = Some(url);
                 }
                 save_settings(&settings);
                 let workspace = runner::workspace().unwrap_or_else(|| "your workspace".into());
-                alert(&app, "Connected", &format!("This computer now runs {workspace}'s teammates."), MessageDialogKind::Info);
+                alert(
+                    &app,
+                    "Connected",
+                    &format!("This computer now runs {workspace}'s teammates."),
+                    MessageDialogKind::Info,
+                );
             }
             Err(error) => alert(&app, "Could not connect", &error, MessageDialogKind::Error),
         }
@@ -137,14 +158,31 @@ async fn check_for_update(app: AppHandle, manual: bool) {
             match update.download_and_install(|_, _| {}, || {}).await {
                 Ok(()) => {
                     *items.update_ready.lock().unwrap() = true;
-                    let _ = items.update.set_text(format!("Restart to update to {version}"));
+                    let _ = items
+                        .update
+                        .set_text(format!("Restart to update to {version}"));
                 }
-                Err(error) if manual => alert(&app, "Update failed", &error.to_string(), MessageDialogKind::Error),
+                Err(error) if manual => alert(
+                    &app,
+                    "Update failed",
+                    &error.to_string(),
+                    MessageDialogKind::Error,
+                ),
                 Err(_) => {}
             }
         }
-        Ok(None) if manual => alert(&app, "Brigade is up to date", &format!("Version {}", app.package_info().version), MessageDialogKind::Info),
-        Err(error) if manual => alert(&app, "Could not check for updates", &error.to_string(), MessageDialogKind::Error),
+        Ok(None) if manual => alert(
+            &app,
+            "Brigade is up to date",
+            &format!("Version {}", app.package_info().version),
+            MessageDialogKind::Info,
+        ),
+        Err(error) if manual => alert(
+            &app,
+            "Could not check for updates",
+            &error.to_string(),
+            MessageDialogKind::Error,
+        ),
         _ => {}
     }
 }
@@ -152,7 +190,9 @@ async fn check_for_update(app: AppHandle, manual: bool) {
 fn on_menu(app: &AppHandle, id: &str) {
     match id {
         "connect" => {
-            let _ = app.opener().open_url(format!("{}/computers?desktop=1", dashboard()), None::<&str>);
+            let _ = app
+                .opener()
+                .open_url(format!("{}/computers?desktop=1", dashboard()), None::<&str>);
         }
         "dashboard" => {
             let _ = app.opener().open_url(dashboard(), None::<&str>);
@@ -160,13 +200,20 @@ fn on_menu(app: &AppHandle, id: &str) {
         "computer-use" => {
             // Opening the helper asks macOS for its permissions when they are missing.
             if let Ok(dir) = app.path().resource_dir() {
-                let _ = Command::new("open").arg("-a").arg(dir.join(HELPER)).status();
+                let _ = Command::new("open")
+                    .arg("-a")
+                    .arg(dir.join(HELPER))
+                    .status();
             }
         }
         "restart-runner" => app.state::<Arc<Supervisor>>().start(),
         "login" => {
             let launch = app.autolaunch();
-            let _ = if launch.is_enabled().unwrap_or(false) { launch.disable() } else { launch.enable() };
+            let _ = if launch.is_enabled().unwrap_or(false) {
+                launch.disable()
+            } else {
+                launch.enable()
+            };
         }
         "update" => {
             if *app.state::<Arc<Items>>().update_ready.lock().unwrap() {
@@ -176,7 +223,10 @@ fn on_menu(app: &AppHandle, id: &str) {
             tauri::async_runtime::spawn(check_for_update(app.clone(), true));
         }
         "logs" => {
-            let _ = Command::new("open").args(["-a", "Console"]).arg(runner::log_file()).status();
+            let _ = Command::new("open")
+                .args(["-a", "Console"])
+                .arg(runner::log_file())
+                .status();
         }
         "quit" => {
             app.state::<Arc<Supervisor>>().stop();
@@ -201,7 +251,12 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let status = MenuItem::with_id(app, "status", "Starting…", false, None::<&str>)?;
     let connect = MenuItem::with_id(app, "connect", "Connect this computer…", true, None::<&str>)?;
     let update = MenuItem::with_id(app, "update", "Check for updates…", true, None::<&str>)?;
-    let helper = app.path().resource_dir().map(|dir| dir.join(HELPER)).ok().filter(|p| p.exists());
+    let helper = app
+        .path()
+        .resource_dir()
+        .map(|dir| dir.join(HELPER))
+        .ok()
+        .filter(|p| p.exists());
     let menu = Menu::with_items(
         app,
         &[
@@ -209,9 +264,22 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "dashboard", "Open dashboard", true, None::<&str>)?,
             &connect,
-            &MenuItem::with_id(app, "computer-use", "Set up computer use…", helper.is_some(), None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                "computer-use",
+                "Set up computer use…",
+                helper.is_some(),
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
-            &CheckMenuItem::with_id(app, "login", "Open at login", true, launch.is_enabled().unwrap_or(false), None::<&str>)?,
+            &CheckMenuItem::with_id(
+                app,
+                "login",
+                "Open at login",
+                true,
+                launch.is_enabled().unwrap_or(false),
+                None::<&str>,
+            )?,
             &update,
             &MenuItem::with_id(app, "restart-runner", "Restart runner", true, None::<&str>)?,
             &MenuItem::with_id(app, "logs", "Show logs", true, None::<&str>)?,
@@ -228,7 +296,12 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .on_menu_event(|app, event| on_menu(app, event.id.as_ref()))
         .build(app)?;
 
-    let items = Arc::new(Items { status, connect, update, update_ready: Mutex::new(false) });
+    let items = Arc::new(Items {
+        status,
+        connect,
+        update,
+        update_ready: Mutex::new(false),
+    });
     app.manage(items.clone());
     let supervisor = Supervisor::new(helper, move |status| show_status(&items, status));
     app.manage(supervisor.clone());
@@ -261,14 +334,19 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
         .run(|app, event| match event {
             // No window to close: only Quit exits.
-            RunEvent::ExitRequested { api, code: None, .. } => api.prevent_exit(),
+            RunEvent::ExitRequested {
+                api, code: None, ..
+            } => api.prevent_exit(),
             RunEvent::Exit => app.state::<Arc<Supervisor>>().stop(),
             _ => {}
         });
