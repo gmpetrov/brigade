@@ -1,15 +1,32 @@
 'use client'
 // The card for a pull request a teammate opened in a thread: the whole card opens
-// its changes, and an owner or admin merges it from here.
-import { GitMerge, GitPullRequest, GitPullRequestClosed } from 'lucide-react'
+// its changes, and an owner or admin merges it from here. One that conflicts has
+// Resolve conflicts instead: its teammate resolves them, then it merges by itself.
+import {
+  ExternalLink,
+  GitCompareArrows,
+  GitMerge,
+  GitPullRequest,
+  GitPullRequestClosed,
+} from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { PullStatus } from '@/components/pull-status'
 import { Button } from '@/components/ui/button'
 import { api, pullHref, useApi, type PullRequestState } from '@/lib/api'
-import { blockedBecause, canMerge, useLastMergeMethod } from '@/lib/merge-method'
+import {
+  blockedBecause,
+  canMerge,
+  hasConflicts,
+  resolvesInBrigade,
+  resolving,
+  useLastMergeMethod,
+} from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
+
+/** While its conflicts are resolved and it merges, the card follows it. */
+const POLL_MS = 10_000
 
 export function PullCard({
   repository,
@@ -31,19 +48,80 @@ export function PullCard({
   const Icon =
     p?.state === 'merged' ? GitMerge : p?.state === 'closed' ? GitPullRequestClosed : GitPullRequest
   const mergeable = p ? canMerge(p) : false
+  const following = p?.state === 'open' && resolving(p)
+  const reload = pull.reload
+  useEffect(() => {
+    if (!following) return
+    const timer = setInterval(() => void reload(), POLL_MS)
+    return () => clearInterval(timer)
+  }, [following, reload])
 
-  async function merge() {
-    if (!p || !confirm(`Merge #${number} into ${p.base} (${method})?`)) return
+  async function act(run: () => Promise<unknown>) {
     setBusy(true)
     setError(undefined)
     try {
-      await api(`${path}/merge`, { body: { method } })
-      await pull.reload()
+      await run()
+      await reload()
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setBusy(false)
     }
+  }
+
+  function merge() {
+    if (!p || !confirm(`Merge #${number} into ${p.base} (${method})?`)) return
+    void act(() => api(`${path}/merge`, { body: { method } }))
+  }
+
+  function resolve() {
+    const author = p?.tracking?.author?.name
+    if (
+      !p ||
+      !confirm(`Ask ${author} to resolve the conflicts with ${p.base}, then merge (${method})?`)
+    )
+      return
+    void act(() => api(`${path}/resolve`, { body: { method } }))
+  }
+
+  const action = () => {
+    if (!p) return null
+    if (p.state !== 'open' || !isAdmin(me)) return <PullStatus pull={p} />
+    if (hasConflicts(p))
+      return resolvesInBrigade(p) ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="relative z-10 flex-none"
+          disabled={busy}
+          onClick={resolve}
+          title={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
+        >
+          <GitCompareArrows />
+          {busy ? 'Asking…' : 'Resolve conflicts'}
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" className="relative z-10 flex-none" asChild>
+          <a href={`${p.url}/conflicts`} target="_blank" rel="noreferrer">
+            Resolve on GitHub
+            <ExternalLink />
+          </a>
+        </Button>
+      )
+    if (resolving(p)) return <PullStatus pull={p} />
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        className="relative z-10 flex-none"
+        disabled={busy || !mergeable}
+        onClick={merge}
+        title={mergeable ? undefined : blockedBecause[p.mergeableState]}
+      >
+        <GitMerge />
+        {busy ? 'Merging…' : 'Merge'}
+      </Button>
+    )
   }
 
   return (
@@ -73,22 +151,7 @@ export function PullCard({
       {!p && pull.error && (
         <span className="flex-none font-medium text-primary">See the changes</span>
       )}
-      {p &&
-        (p.state === 'open' && isAdmin(me) ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="relative z-10 flex-none"
-            disabled={busy || !mergeable}
-            onClick={() => void merge()}
-            title={mergeable ? undefined : blockedBecause[p.mergeableState]}
-          >
-            <GitMerge />
-            {busy ? 'Merging…' : 'Merge'}
-          </Button>
-        ) : (
-          <PullStatus pull={p} />
-        ))}
+      {action()}
     </div>
   )
 }

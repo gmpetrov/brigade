@@ -63,6 +63,7 @@ export const ModelName = {
   Runner: 'Runner',
   Teammate: 'Teammate',
   ThreadRead: 'ThreadRead',
+  ThreadPin: 'ThreadPin',
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
@@ -288,6 +289,17 @@ export const ThreadReadScalarFieldEnum = {
 export type ThreadReadScalarFieldEnum = (typeof ThreadReadScalarFieldEnum)[keyof typeof ThreadReadScalarFieldEnum]
 
 
+export const ThreadPinScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  sessionId: 'sessionId',
+  pinnedAt: 'pinnedAt'
+} as const
+
+export type ThreadPinScalarFieldEnum = (typeof ThreadPinScalarFieldEnum)[keyof typeof ThreadPinScalarFieldEnum]
+
+
 export const SessionScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -305,6 +317,7 @@ export const SessionScalarFieldEnum = {
   triggerId: 'triggerId',
   conversationKey: 'conversationKey',
   scheduleId: 'scheduleId',
+  archivedAt: 'archivedAt',
   lastSeq: 'lastSeq',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
@@ -421,6 +434,7 @@ export const PullRequestScalarFieldEnum = {
   reviewerTeammateId: 'reviewerTeammateId',
   reviewStatus: 'reviewStatus',
   autoMerge: 'autoMerge',
+  mergeMethod: 'mergeMethod',
   requestedByMemberId: 'requestedByMemberId',
   round: 'round',
   reviewedSha: 'reviewedSha',

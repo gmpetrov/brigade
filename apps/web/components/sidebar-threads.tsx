@@ -5,7 +5,9 @@
 // teammate or project without going anywhere. The list shows a few threads of each status
 // (waiting on a person, working, the rest) and folds the others into a "+N" row, so the
 // teammates and projects stay in reach however many there are; older ones load on asking.
-import { ChevronUp, ListFilter, MessagesSquare, Plus, Settings, X } from 'lucide-react'
+// Threads this member pinned sit above them, under Pinned; archived ones are out of both,
+// and the filter lists them.
+import { Archive, ChevronUp, ListFilter, MessagesSquare, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -13,6 +15,7 @@ import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
 import { RailMenu } from '@/components/rail-menu'
 import { useThreadPanel } from '@/components/thread-panel'
+import { ThreadRow } from '@/components/thread-row'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -189,8 +192,8 @@ function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
 const RAIL_LIMIT = 12
 
 /**
- * Folded, the threads as a menu beside the rail: those waiting on a person, then those
- * working, then the latest, as the list above orders them. "+N more" unfolds the sidebar.
+ * Folded, the threads as a menu beside the rail: the pinned, then those waiting on a person,
+ * those working and the latest, as the list above orders them. "+N more" unfolds the sidebar.
  */
 export function ThreadsRailMenu({ needsYou }: { needsYou: Record<string, string> }) {
   const pathname = usePathname()
@@ -198,9 +201,15 @@ export function ThreadsRailMenu({ needsYou }: { needsYou: Record<string, string>
   const { setOpen } = useSidebar()
   const { ordered, asks } = useMemo(() => {
     const { all, asks } = withAsks(threads ?? [], needsYou)
-    const ordered = (['waiting', 'working', 'rest'] as const).flatMap((g) =>
-      all.filter((t) => groupOf(t.status) === g),
-    )
+    const pinned = all
+      .filter((t) => t.pinnedAt)
+      .sort((a, b) => a.pinnedAt!.localeCompare(b.pinnedAt!))
+    const ordered = [
+      ...pinned,
+      ...(['waiting', 'working', 'rest'] as const).flatMap((g) =>
+        all.filter((t) => !t.pinnedAt && groupOf(t.status) === g),
+      ),
+    ]
     return { ordered, asks }
   }, [threads, needsYou])
   const hidden = ordered.length - RAIL_LIMIT
@@ -241,12 +250,14 @@ export function SidebarWork({
   teammates,
   projects,
   admin,
+  memberId,
   onNewProject,
   needsYou,
 }: {
   teammates: Teammate[]
   projects: ProjectSummary[]
   admin: boolean
+  memberId: string | null
   onNewProject: () => void
   /**
    * Threads with an open ticket waiting on this member or a task in Needs you, and what it
@@ -256,8 +267,12 @@ export function SidebarWork({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { threads, threadId, expanded, openTeammate } = useThreadPanel()
+  const { threads, reloadThreads, threadId, expanded, openTeammate } = useThreadPanel()
   const [filter, setFilter] = useState<Filter>({ statuses: [] })
+  // The archived threads, while the list shows them instead (from the filter).
+  const [archived, setArchived] = useState<ThreadSummary[]>()
+  const loadArchived = () =>
+    api<ThreadSummary[]>('/threads?archived=1').then(setArchived, () => setArchived([]))
   // How many more than its cap each status shows: a step at a time.
   const [extra, setExtra] = useState(NONE_EXTRA)
   const grown = extra.waiting + extra.working + extra.rest > 0
@@ -270,7 +285,7 @@ export function SidebarWork({
   const live = projects.filter((p) => !p.archivedAt)
   const teammate = teammates.find((t) => t.id === filter.teammateId)
   const project = live.find((p) => p.id === filter.projectId)
-  const filtered = !!(filter.teammateId || filter.projectId || filter.statuses.length)
+  const filtered = !!(filter.teammateId || filter.projectId || filter.statuses.length || archived)
 
   // A filter from a row ends on a page that is not its own (or a thread).
   const latest = useRef(filter)
@@ -295,12 +310,24 @@ export function SidebarWork({
   // it shows as working, and waits once it stops. What each asks goes at the row's end.
   const { all, asks } = useMemo(() => {
     const latestIds = new Set((threads ?? []).map((t) => t.id))
-    return withAsks([...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))], needsYou)
-  }, [threads, older, needsYou])
+    return withAsks(
+      archived ?? [...(threads ?? []), ...older.filter((t) => !latestIds.has(t.id))],
+      needsYou,
+    )
+  }, [threads, older, needsYou, archived])
+  // Pinned: in the order they were pinned, whatever the filter.
+  const pinned = useMemo(
+    () =>
+      archived
+        ? []
+        : all.filter((t) => t.pinnedAt).sort((a, b) => a.pinnedAt!.localeCompare(b.pinnedAt!)),
+    [all, archived],
+  )
   const shown = useMemo(
     () =>
       all.filter(
         (t) =>
+          (archived || !t.pinnedAt) &&
           (!filter.teammateId || inThread(t, filter.teammateId)) &&
           (!filter.projectId || t.projectId === filter.projectId) &&
           (!filter.statuses.length || filter.statuses.includes(statusKey(t)!)),
@@ -321,7 +348,8 @@ export function SidebarWork({
     filter.projectId ? `&project=${filter.projectId}` : ''
   }`
   // Fewer than the panel's latest 100, unfiltered: there are none older.
-  const mayHaveOlder = !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
+  const mayHaveOlder =
+    !archived && !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
   async function loadOlder() {
     const matching = all.filter(
       (t) =>
@@ -342,6 +370,42 @@ export function SidebarWork({
     } finally {
       setLoadingOlder(false)
     }
+  }
+
+  function changed() {
+    void reloadThreads()
+    if (archived) void loadArchived()
+  }
+  function deleted(id: string) {
+    setOlder((o) => o.filter((t) => t.id !== id))
+    if (threadId === id) router.push('/app')
+  }
+  function row(t: ThreadSummary, group: Group) {
+    const href = `/app/threads/${t.id}`
+    return (
+      <ThreadRow
+        key={t.id}
+        thread={t}
+        href={href}
+        active={threadId === t.id && (expanded || pathname === href)}
+        icon={<ThreadStatusIcon status={t.status} unread={t.unread} />}
+        trailing={
+          <span
+            className={
+              group === 'waiting'
+                ? 'text-warning font-semibold'
+                : 'text-muted-foreground font-normal'
+            }
+          >
+            {group === 'waiting' ? (asks.get(t.id) ?? 'needs you') : shortAgo(t.updatedAt)}
+          </span>
+        }
+        memberId={memberId}
+        admin={admin}
+        onChanged={changed}
+        onDeleted={deleted}
+      />
+    )
   }
 
   function clickTeammate(id: string) {
@@ -368,6 +432,15 @@ export function SidebarWork({
 
   return (
     <>
+      {pinned.length > 0 && (
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{pinned.map((t) => row(t, groupOf(t.status)))}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel className="pr-8">
           {/* Grown past the caps: the label takes the list back to them. */}
@@ -397,6 +470,7 @@ export function SidebarWork({
               onClear={() => setFilter((f) => ({ ...f, projectId: undefined, byRow: undefined }))}
             />
           )}
+          {archived && <FilterChip label="Archived" onClear={() => setArchived(undefined)} />}
           {filter.statuses.length > 0 && (
             <FilterChip
               label={
@@ -489,10 +563,23 @@ export function SidebarWork({
                 </DropdownMenuRadioGroup>
               </>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={!!archived}
+              onCheckedChange={(on) => (on ? void loadArchived() : setArchived(undefined))}
+            >
+              <Archive />
+              Archived
+            </DropdownMenuCheckboxItem>
             {filtered && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setFilter({ statuses: [] })}>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setFilter({ statuses: [] })
+                    setArchived(undefined)
+                  }}
+                >
                   Clear filters
                 </DropdownMenuItem>
               </>
@@ -501,9 +588,13 @@ export function SidebarWork({
         </DropdownMenu>
         <SidebarGroupContent>
           <SidebarMenu>
-            {threads && shown.length === 0 && (
+            {threads && shown.length === 0 && (archived || !pinned.length) && (
               <li className="text-muted-foreground px-2 py-1.5 text-xs">
-                {filtered ? 'No threads match.' : 'No threads yet.'}
+                {archived
+                  ? 'No archived threads.'
+                  : filtered
+                    ? 'No threads match.'
+                    : 'No threads yet.'}
               </li>
             )}
             {(['waiting', 'working', 'rest'] as const).map((group) => {
@@ -518,35 +609,7 @@ export function SidebarWork({
                 if (older && hidden < STEP) void loadOlder()
               }
               return [
-                ...list.slice(0, visible).map((t) => {
-                  const href = `/app/threads/${t.id}`
-                  const title = t.title || 'New thread'
-                  return (
-                    <SidebarMenuItem key={t.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={threadId === t.id && (expanded || pathname === href)}
-                      >
-                        <Link href={href} title={title}>
-                          <ThreadStatusIcon status={t.status} unread={t.unread} />
-                          <span className="flex-1 truncate">{title}</span>
-                          <span
-                            className={cn(
-                              'ml-auto shrink-0 text-xs',
-                              group === 'waiting'
-                                ? 'text-warning font-semibold'
-                                : 'text-muted-foreground font-normal',
-                            )}
-                          >
-                            {group === 'waiting'
-                              ? (asks.get(t.id) ?? 'needs you')
-                              : shortAgo(t.updatedAt)}
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                }),
+                ...list.slice(0, visible).map((t) => row(t, group)),
                 // No dot: a control, not a thread; its text lines up with the titles.
                 next > 0 && (
                   <SidebarMenuItem key={`more-${group}`}>

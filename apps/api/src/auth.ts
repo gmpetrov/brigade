@@ -29,6 +29,9 @@ export const auth = betterAuth({
           clientId: env.GOOGLE_CLIENT_ID,
           clientSecret: env.GOOGLE_CLIENT_SECRET,
           prompt: 'select_account',
+          // Keep the name and profile picture current: an account made with a
+          // password and later signed in with Google gets its picture too.
+          overrideUserInfoOnSignIn: true,
         },
       },
     }),

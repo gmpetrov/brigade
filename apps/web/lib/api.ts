@@ -207,7 +207,7 @@ export function useApi<T>(path: string | null) {
 
 // Response shapes used by the dashboard.
 export type Me = {
-  user: { id: string; name: string; email: string }
+  user: { id: string; name: string; email: string; image: string | null }
   organizations: { id: string; name: string; slug: string; role: string }[]
   activeOrganizationId: string | null
   role: 'owner' | 'admin' | 'member' | null
@@ -266,6 +266,12 @@ export type ThreadSummary = {
   pullsWaiting?: number
   /** A teammate replied since this member last looked at it. */
   unread?: boolean
+  /** When this member pinned it: under Pinned in their sidebar. */
+  pinnedAt?: string | null
+  /** Set while archived: out of the sidebar until someone writes in it. */
+  archivedAt?: string | null
+  /** Others than its starter may write in it, so rename and archive it. */
+  othersMayPrompt?: boolean
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {

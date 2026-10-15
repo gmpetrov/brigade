@@ -1,10 +1,12 @@
 // Pull requests: any member reads them and asks a teammate to review one;
-// owners and admins merge, close or reopen one, or arm a review to merge once approved.
+// owners and admins merge, close or reopen one, arm a review to merge once approved,
+// or have the teammate that wrote one resolve its conflicts and then merge it.
 import {
   MergePullRequest,
   PreviewPullRequest,
   RepositoryName,
   RequestReview,
+  ResolvePullRequest,
   type PullRequestList,
 } from '@brigade/contracts'
 import { Hono } from 'hono'
@@ -18,6 +20,7 @@ import {
   pullDetail,
   pullState,
   requestReview,
+  resolveConflicts,
   setPullState,
   stopLoop,
 } from '../pull-requests.js'
@@ -105,6 +108,13 @@ export const pulls = new Hono<AppEnv>()
     const input = await parseBody(c.req.raw, MergePullRequest)
     await mergeNow(c.var.scope, repo, number, input.method)
     return c.json({ ok: true })
+  })
+
+  /** The teammate that wrote it resolves its conflicts in its thread; then it merges by itself. */
+  .post('/:owner/:name/:number/resolve', async (c) => {
+    const { repo, number } = target(c.req.param())
+    const input = await parseBody(c.req.raw, ResolvePullRequest)
+    return c.json(await resolveConflicts(c.var.scope, repo, number, input.method))
   })
 
   .post('/:owner/:name/:number/close', async (c) => {

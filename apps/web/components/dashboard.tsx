@@ -60,7 +60,7 @@ import {
 } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -366,24 +366,27 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   </SidebarMenuItem>
                   <NewThreadRailItem />
                 </SidebarMenu>
-                {/* Home, first: what waits and what runs, across the workspace. */}
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
-                      <Link href="/app">
-                        <House />
-                        <span>Home</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
               </SidebarHeader>
 
               <SidebarContent>
+                {/* Home, first: what waits and what runs. It scrolls with the threads below. */}
+                <SidebarGroup className="py-0">
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Home" isActive={pathname === '/app'}>
+                        <Link href="/app">
+                          <House />
+                          <span>Home</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroup>
                 <SidebarWork
                   teammates={teammates.data ?? []}
                   projects={projects.data ?? []}
                   admin={isAdmin(data)}
+                  memberId={data.memberId}
                   onNewProject={() => setCreatingProject(true)}
                   needsYou={needsYou}
                 />
@@ -425,6 +428,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-10 group-data-[collapsible=icon]:size-8">
+                          {data.user.image && (
+                            <AvatarImage
+                              src={data.user.image}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                            />
+                          )}
                           <AvatarFallback className="bg-secondary text-sm font-bold">
                             {initial(data.user.name)}
                           </AvatarFallback>

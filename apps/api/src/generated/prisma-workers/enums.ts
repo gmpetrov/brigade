@@ -111,7 +111,9 @@ export const ReviewStatus = {
   fixing: 'fixing',
   approved: 'approved',
   changes_requested: 'changes_requested',
-  stuck: 'stuck'
+  stuck: 'stuck',
+  resolving: 'resolving',
+  merging: 'merging'
 } as const
 
 export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus]

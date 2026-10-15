@@ -131,6 +131,8 @@ export const SubmitLoginCode = z.object({
 export const UpdateAccount = z.object({
   label: z.string().trim().min(1).max(80).optional(),
   isDefault: z.literal(true).optional(),
+  /** Usable again before the reset Brigade noted, as the member says (usage reset or bought). */
+  exhaustedUntil: z.null().optional(),
 })
 export const SendMessage = z
   .object({

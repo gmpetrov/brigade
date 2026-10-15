@@ -74,6 +74,8 @@ type ThreadPanel = {
   waiting: number
   /** The latest active threads (up to 100), live: the sidebar lists them. */
   threads?: ThreadSummary[]
+  /** Fetch them again, after a change made here (pinned, renamed, archived, deleted). */
+  reloadThreads: () => Promise<unknown>
   /** The new thread being written: closing the panel keeps it. */
   draft: ThreadDraft
   /** Changes each time the box should take the cursor. */
@@ -404,6 +406,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       activity,
       waiting,
       threads: threadList,
+      reloadThreads,
       draft,
       focusKey,
       details,
@@ -434,6 +437,7 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       activity,
       waiting,
       threadList,
+      reloadThreads,
       draft,
       focusKey,
       details,

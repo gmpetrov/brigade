@@ -191,6 +191,19 @@ export function AccountCard({
       )}
 
       <div className="mt-auto flex flex-wrap justify-end gap-2">
+        {exhausted && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void onAct(
+                api(`/accounts/${a.id}`, { method: 'PATCH', body: { exhaustedUntil: null } }),
+              )
+            }
+          >
+            Usage is back
+          </Button>
+        )}
         {!a.isDefault && a.status === 'ready' && (
           <Button
             variant="outline"
