@@ -31,7 +31,7 @@ import {
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
-import { handoffThread } from './work.js'
+import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
@@ -618,6 +618,13 @@ export function runnerSocket(runner: {
     if (message.type === 'memory.update') {
       void handleMemoryUpdate(runner, message).catch((error) =>
         console.warn(`runner ${runner.id}: memory update failed: ${String(error)}`),
+      )
+      return
+    }
+
+    if (message.type === 'thread.title') {
+      void titleThread(runner, message).catch((error) =>
+        console.warn(`runner ${runner.id}: thread title failed: ${String(error)}`),
       )
       return
     }

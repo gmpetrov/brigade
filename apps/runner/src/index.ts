@@ -295,6 +295,7 @@ async function start() {
     callSchedule: (sessionId, teammateId, { operation }) =>
       connection.callSchedule({ sessionId, teammateId, operation }),
     memoryUpdate: (update) => connection.send(update),
+    title: (update) => connection.send(update),
   })
   const accounts = new Accounts({
     prompt: (loginId, prompt) =>

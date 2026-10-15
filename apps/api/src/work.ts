@@ -73,7 +73,12 @@ export async function promptThread(
   scope: Scope,
   thread: Thread,
   prompt: Prompt,
-  options: { isNew?: boolean; skipCaps?: boolean } = {},
+  options: {
+    isNew?: boolean
+    skipCaps?: boolean
+    /** A new thread's title from its first message: the runner suggests a better one. */
+    nameThread?: string
+  } = {},
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
   const ids = prompt.teammateIds?.length ? prompt.teammateIds : [currentTeammate(thread).id]
   const responders = ids.map((id) => teammateIn(thread, id))
@@ -145,6 +150,7 @@ export async function promptThread(
     ...(prompt.messageId ? { messageId: prompt.messageId } : {}),
     ...(prompt.steer ? { steer: true } : {}),
     ...(prompt.replyTo ? { replyTo: prompt.replyTo } : {}),
+    ...(options.nameThread ? { nameThread: options.nameThread } : {}),
   })
 }
 
@@ -173,6 +179,29 @@ export async function handBack(
     action: 'takeover.ended',
     target: { type: 'thread', id: thread.id },
   })
+}
+
+/**
+ * A runner's title for a new thread. Kept only while the thread still has the
+ * title it was suggested for: a person who renamed it meanwhile keeps theirs.
+ */
+export async function titleThread(
+  runner: { computerId: string; organizationId: string; workspaceId: string },
+  message: Extract<RunnerToApi, { type: 'thread.title' }>,
+) {
+  const db = scoped({ organizationId: runner.organizationId, workspaceId: runner.workspaceId })
+  // A runner may only name threads on its own computer.
+  const session = await db.session.findFirst({
+    where: { id: message.sessionId, computerId: runner.computerId },
+    select: { id: true, status: true, updatedAt: true },
+  })
+  if (!session) return
+  // Not activity: the thread keeps its place in the list.
+  const { count } = await db.session.updateMany({
+    where: { id: session.id, title: message.from },
+    data: { title: message.title, updatedAt: session.updatedAt },
+  })
+  if (count > 0) broadcastThreadStatus(runner.workspaceId, session.id, session.status)
 }
 
 /** Teammates answering one another stop after this many turns without a member's message. */
@@ -348,7 +377,8 @@ export async function startThread(
       teammateIds,
       attachments,
     },
-    { isNew: true },
+    // A member's thread gets a better title than its first line; an event's or a schedule's keeps its own.
+    { isNew: true, ...(input.origin ? {} : { nameThread: created.title }) },
   ).catch(async (error: unknown) => {
     // E.g. a mentioned teammate's harness has no account: the thread never ran.
     await db.session.updateMany({ where: { id: thread.id }, data: { status: 'failed' } })

@@ -360,6 +360,17 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     fromTeammateId: z.string(),
     teammateIds: z.array(z.string()).min(1).max(5),
   }),
+  /**
+   * A title for a new thread, from a short harness run on its first message.
+   * The API keeps it only while the thread still has the title `from`: a
+   * person's rename always wins.
+   */
+  z.object({
+    type: z.literal('thread.title'),
+    sessionId: z.string(),
+    from: z.string(),
+    title: z.string().trim().min(1).max(120),
+  }),
 ])
 export type RunnerToApi = z.infer<typeof RunnerToApi>
 
@@ -384,6 +395,11 @@ export const ThreadPrompt = z.object({
   steer: z.boolean().optional(),
   /** The earlier message it replies to: quoted to the teammate, shown above it. */
   replyTo: ReplyTo.optional(),
+  /**
+   * A new thread's first message: the title it has now (its first line). The
+   * runner suggests a better one with a short harness run (thread.title).
+   */
+  nameThread: z.string().optional(),
 })
 export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 

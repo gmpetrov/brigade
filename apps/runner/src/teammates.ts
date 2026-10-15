@@ -26,7 +26,18 @@ async function helper(...args: string[]) {
   await run('sudo', ['-n', HELPER, ...args], { cwd: '/' })
 }
 
-export const ensureUser = (user: string) => helper('ensure-user', user)
+const users = new Map<string, Promise<void>>()
+
+/** Once per user: a thread's turn and its title run may both ask at the same time. */
+export function ensureUser(user: string) {
+  let made = users.get(user)
+  if (!made) {
+    made = helper('ensure-user', user)
+    made.catch(() => users.delete(user))
+    users.set(user, made)
+  }
+  return made
+}
 
 const containers = new Map<string, Promise<Record<string, string>>>()
 
