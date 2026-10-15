@@ -1,15 +1,17 @@
 // Thread folders on a cloud computer are a cache. Threads never end, so their
-// folders cannot wait for one to: when the disk fills up, the folders of the
-// threads quiet longest are archived to the API's bucket and removed, until
-// there is room again. The archive keeps what the teammate made (checkouts with
-// their .git, uncommitted and untracked work, notes, screenshots) and leaves
-// out what can be made again: folders git ignores (dependencies, build output,
-// local databases) and node_modules anywhere. Whatever next needs the folder
-// (a turn, a preview, a takeover, a file read) puts it back first, and the
-// teammate's next turn is told to reinstall what it needs.
+// folders cannot wait for one to. As the disk fills, the threads quiet longest
+// first lose their dependency and build folders (node_modules, .next, dist…),
+// which a reinstall or rebuild makes again. When it is full, their folders are
+// archived to the API's bucket and removed, until there is room again. The
+// archive keeps what the teammate made (checkouts with their .git, uncommitted
+// and untracked work, notes, screenshots) and leaves out what can be made
+// again: folders git ignores (dependencies, build output, local databases) and
+// node_modules anywhere. Whatever next needs the folder (a turn, a preview, a
+// takeover, a file read) puts it back first. Either way, the teammate's next
+// turn is told to reinstall what it needs.
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { finished } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
 import type { GitAccess } from '@brigade/contracts'
@@ -19,7 +21,34 @@ import { owners, repairCaches, run } from './repos.js'
 import { teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
 
-/** Archive folders once the disk is this full (space or inodes)… */
+/** Remove dependency and build folders of quiet threads once the disk is this full (space or inodes)… */
+const TRIM_AT = 0.6
+/** …until it is down to this. */
+const TRIM_TO = 0.5
+/** A thread active more recently than this keeps its dependencies until the disk is full. */
+const TRIM_QUIET_MS = 3 * 60 * 60_000
+/** Folders git ignores that a reinstall or rebuild makes again. Others (local databases, say) stay. */
+const REGENERABLE = new Set([
+  'node_modules',
+  '.next',
+  '.nuxt',
+  '.svelte-kit',
+  '.output',
+  '.turbo',
+  '.vite',
+  '.parcel-cache',
+  '.angular',
+  'dist',
+  'build',
+  'coverage',
+  'target',
+  '.venv',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.gradle',
+])
+/** Archive folders once the disk is this full… */
 const FULL = 0.8
 /** …until it is down to this. */
 const ENOUGH = 0.65
@@ -38,6 +67,10 @@ const RESTORED =
   'Your files, checkouts and uncommitted work are as you left them, but folders git ignores (dependencies, ' +
   'build output, local databases) and node_modules folders are gone, and so are the containers and Docker volumes ' +
   'this thread had: reinstall, rebuild or start again what you need before running anything.'
+const TRIMMED =
+  'Note from Brigade: to free disk on this computer while this thread was quiet, its dependency and build folders ' +
+  '(node_modules, .next, dist and the like, where git ignores them) were removed. Your files, checkouts, ' +
+  'uncommitted work and local databases are as you left them: reinstall or rebuild what you need before running anything.'
 const STOPPED =
   'Note from Brigade: the containers this thread started were stopped while it was quiet, to free the computer. ' +
   'Their data is kept: start them again (docker compose up -d, say) if you need them.'
@@ -60,6 +93,10 @@ type State = {
   restored: string[]
   /** Folders whose thread's containers were stopped, whose teammate has not been told yet. */
   stopped: string[]
+  /** Folders whose dependency and build folders were removed, whose teammate has not been told yet. */
+  trimmed: string[]
+  /** When each folder was last trimmed: trimmed again only once used since. */
+  trimmedAt: Record<string, number>
   /** Folders that could not be archived, and when to try again. */
   retryAt: Record<string, number>
 }
@@ -67,7 +104,14 @@ type State = {
 const z = (output: Buffer) => output.toString().split('\0').filter(Boolean)
 
 export class Folders {
-  private state: State = { active: {}, restored: [], stopped: [], retryAt: {} }
+  private state: State = {
+    active: {},
+    restored: [],
+    stopped: [],
+    trimmed: [],
+    trimmedAt: {},
+    retryAt: {},
+  }
   private loaded: Promise<void>
   /** Work on a folder (archiving it, putting it back), one at a time per folder. */
   private locks = new Map<string, Promise<unknown>>()
@@ -92,6 +136,8 @@ export class Folders {
           active: { ...saved.active, ...this.state.active },
           restored: saved.restored ?? [],
           stopped: saved.stopped ?? [],
+          trimmed: saved.trimmed ?? [],
+          trimmedAt: saved.trimmedAt ?? {},
           retryAt: saved.retryAt ?? {},
         }
       },
@@ -148,28 +194,33 @@ export class Folders {
   }
 
   /**
-   * For a teammate's turn: what to tell it about its folder put back or its
-   * containers stopped, once. A folder put back gets the caches its checkouts
-   * borrow from fetched again.
+   * For a teammate's turn: what to tell it about its folder put back or
+   * trimmed, or its containers stopped, once. A folder put back gets the
+   * caches its checkouts borrow from fetched again.
    */
   async takeNote(name: FolderName, git: GitAccess | undefined) {
     if (!CLOUD) return undefined
     await this.loaded
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     const restored = this.state.restored.includes(workDir)
+    const trimmed = this.state.trimmed.includes(workDir)
     const stopped = this.state.stopped.includes(workDir)
-    if (!restored && !stopped) return undefined
+    if (!restored && !trimmed && !stopped) return undefined
     if (restored && git) await repairCaches(workDir, git, runAs)
     this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
+    this.state.trimmed = this.state.trimmed.filter((dir) => dir !== workDir)
     this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
     this.save()
-    return restored ? RESTORED : STOPPED
+    // Put back says it all.
+    if (restored) return RESTORED
+    return [trimmed && TRIMMED, stopped && STOPPED].filter(Boolean).join('\n\n')
   }
 
   /**
-   * Stop the containers of threads gone quiet. When the disk is full, prune
-   * what Docker keeps for nothing, then archive the folders of the threads
-   * quiet longest until it is not.
+   * Stop the containers of threads gone quiet. As the disk fills, remove the
+   * dependency and build folders of the threads quiet longest. When it is
+   * full, prune what Docker keeps for nothing, then archive the folders of
+   * the threads quiet longest until it is not.
    */
   async check() {
     if (this.checking) return
@@ -196,6 +247,18 @@ export class Folders {
           this.save()
         }
       }
+
+      if ((await usage()) >= TRIM_AT)
+        for (const candidate of candidates) {
+          if ((await usage()) < TRIM_TO) break
+          if (now - candidate.active < TRIM_QUIET_MS) break
+          if (!quiet(candidate)) continue
+          // Nothing new since it was last trimmed.
+          if ((this.state.trimmedAt[candidate.workDir] ?? 0) >= candidate.active) continue
+          await this.trim(candidate).catch((error) =>
+            console.warn(`could not trim ${candidate.workDir}: ${String(error)}`),
+          )
+        }
 
       if ((await usage()) < FULL) return
       for (const runAs of await owners())
@@ -253,13 +316,39 @@ export class Folders {
     return found.sort((a, b) => a.active - b.active)
   }
 
+  /** Remove the folder's dependency and build folders, in place. */
+  private async trim(candidate: { name: FolderName; workDir: string; runAs: string }) {
+    const { name, workDir, runAs } = candidate
+    await this.exclusive(workDir, async () => {
+      const used = () => this.used(name, workDir, TRIM_QUIET_MS)
+      if (used() || !(await exists(workDir, runAs))) return
+      const paths = await regenerable(workDir, runAs)
+      if (used()) return
+      if (paths.length > 0) await run('rm', ['-rf', '--', ...paths], { runAs })
+      this.state.trimmedAt[workDir] = Date.now()
+      if (paths.length > 0 && !this.state.trimmed.includes(workDir))
+        this.state.trimmed.push(workDir)
+      this.save()
+      if (paths.length > 0)
+        console.log(
+          `trimmed ${workDir} to free disk: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`,
+        )
+    })
+  }
+
+  /** Used since it was picked as quiet (a file read, say). */
+  private used(name: FolderName, workDir: string, quietFor: number) {
+    return (
+      this.options.inUse(name.sessionId) ||
+      Date.now() - (this.state.active[workDir] ?? 0) < quietFor
+    )
+  }
+
   private async archive(candidate: { name: FolderName; workDir: string; runAs: string }) {
     const { name, workDir, runAs } = candidate
     await this.exclusive(workDir, async () => {
       // Used since it was picked (a file read, say), or gone.
-      const used = () =>
-        this.options.inUse(name.sessionId) ||
-        Date.now() - (this.state.active[workDir] ?? 0) < MIN_QUIET_MS
+      const used = () => this.used(name, workDir, MIN_QUIET_MS)
       if (used() || !(await exists(workDir, runAs))) return
       // Its containers first: one writing into the folder would change it while it is packed.
       await removeFor(runAs, name.sessionId)
@@ -279,7 +368,9 @@ export class Folders {
         await run('rm', ['-rf', '--', workDir], { runAs })
         delete this.state.active[workDir]
         delete this.state.retryAt[workDir]
+        delete this.state.trimmedAt[workDir]
         this.state.stopped = this.state.stopped.filter((dir) => dir !== workDir)
+        this.state.trimmed = this.state.trimmed.filter((dir) => dir !== workDir)
         this.save()
         console.log(`archived ${workDir} (${size} bytes) to free disk`)
       } finally {
@@ -341,6 +432,63 @@ const exists = (dir: string, runAs?: string) =>
     () => false,
   )
 
+const relativeTo = (workDir: string, path: string) => path.slice(workDir.length + 1)
+
+/** The git repositories in a folder, outside node_modules. */
+async function repositories(workDir: string, runAs?: string) {
+  return z(
+    await run(
+      'find',
+      [workDir, '-name', 'node_modules', '-prune', '-o', '-name', '.git', '-print0'],
+      {
+        runAs,
+      },
+    ),
+  ).map((marker) => marker.replace(/\/\.git$/, ''))
+}
+
+/**
+ * The dependency and build folders in a folder, as its teammate: in each git
+ * repository, the folders git ignores named in REGENERABLE; outside
+ * repositories, node_modules. None holding a repository.
+ */
+export async function regenerable(workDir: string, runAs?: string): Promise<string[]> {
+  const repos = await repositories(workDir, runAs)
+  const found: string[] = []
+  for (const repo of repos)
+    for (const path of z(
+      // A repository git cannot read keeps everything.
+      await run(
+        'git',
+        [
+          '-C',
+          repo,
+          'ls-files',
+          '-z',
+          '--others',
+          '--ignored',
+          '--exclude-standard',
+          '--directory',
+        ],
+        { runAs },
+      ).catch(() => Buffer.alloc(0)),
+    ))
+      if (path.endsWith('/') && REGENERABLE.has(basename(path)))
+        found.push(`${repo}/${path.slice(0, -1)}`)
+  const inRepo = (path: string) =>
+    repos.some((repo) => path === repo || path.startsWith(`${repo}/`))
+  for (const path of z(
+    await run(
+      'find',
+      [workDir, '-mindepth', '1', '-name', 'node_modules', '-prune', '-type', 'd', '-print0'],
+      { runAs },
+    ),
+  ))
+    if (!inRepo(path)) found.push(path)
+  // A checkout cloned into an ignored folder is work, not a build.
+  return found.filter((path) => !repos.some((repo) => repo.startsWith(`${path}/`)))
+}
+
 /**
  * Write a folder to `file` as a .tar.gz, as its teammate: in each git
  * repository in it, its .git and every file but those in folders git ignores;
@@ -349,22 +497,10 @@ const exists = (dir: string, runAs?: string) =>
  */
 export async function pack(workDir: string, file: string, runAs?: string): Promise<number | null> {
   const list = (args: string[]) => run(args[0]!, args.slice(1), { runAs }).then(z)
-  const relative = (path: string) => path.slice(workDir.length + 1)
+  const relative = (path: string) => relativeTo(workDir, path)
   const kinds = ['(', '-type', 'f', '-o', '-type', 'd', '-o', '-type', 'l', ')']
 
-  const repos = (
-    await list([
-      'find',
-      workDir,
-      '-name',
-      'node_modules',
-      '-prune',
-      '-o',
-      '-name',
-      '.git',
-      '-print0',
-    ])
-  ).map((marker) => marker.replace(/\/\.git$/, ''))
+  const repos = await repositories(workDir, runAs)
   const files = new Set<string>()
   for (const repo of repos) {
     const git = (...args: string[]) => list(['git', '-C', repo, ...args])
