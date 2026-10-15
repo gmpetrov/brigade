@@ -942,7 +942,7 @@ function TeammateThreads({ teammate }: { teammate: Teammate }) {
             }
           />
         )}
-        // A new key each time it should take the cursor: it focuses as it mounts.
+        {/* A new key each time it should take the cursor: it focuses as it mounts. */}
         <NewThread
           key={focusKey}
           teammate={teammate}
