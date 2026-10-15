@@ -114,6 +114,7 @@ model Member {
   tasks          Task[]
   schedules      Schedule[]
   threadReads    ThreadRead[]
+  threadPins     ThreadPin[]
   /// Which notifications reach their devices (src/notifications.ts).
   notify         NotifyPreset @default(needed)
   pushNotices    PushNotice[]
@@ -182,6 +183,7 @@ model Workspace {
   previewRecipes      PreviewRecipe[]
   previewVariables    PreviewVariable[]
   threadReads         ThreadRead[]
+  threadPins          ThreadPin[]
   pushNotices         PushNotice[]
 
   @@index([organizationId])
@@ -329,6 +331,21 @@ model ThreadRead {
   @@index([sessionId])
 }
 
+/// A thread a member pinned: it stays at the top of their sidebar, under Pinned.
+model ThreadPin {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  pinnedAt       DateTime  @default(now())
+
+  @@id([memberId, sessionId])
+  @@index([sessionId])
+}
+
 /// A thread: one conversation with one teammate, one harness session.
 enum SessionOrigin {
   member
@@ -365,6 +382,8 @@ model Session {
   conversationKey      String?
   scheduleId           String?
   schedule             Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  /// Set while archived: out of the sidebar for everyone. A new message brings it back.
+  archivedAt           DateTime?
   /// Highest contiguous event sequence number stored.
   lastSeq              Int                @default(0)
   createdAt            DateTime           @default(now())
@@ -383,6 +402,8 @@ model Session {
   pullRequests         PullRequest[]
   /// When each member last looked at it.
   reads                ThreadRead[]
+  /// The members who pinned it.
+  pins                 ThreadPin[]
   /// The task this thread works on. One thread per task for now.
   taskId               String?            @unique
   task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)

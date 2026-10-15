@@ -102,6 +102,11 @@ export type Teammate = Prisma.TeammateModel
  */
 export type ThreadRead = Prisma.ThreadReadModel
 /**
+ * Model ThreadPin
+ * A thread a member pinned: it stays at the top of their sidebar, under Pinned.
+ */
+export type ThreadPin = Prisma.ThreadPinModel
+/**
  * Model Session
  * 
  */

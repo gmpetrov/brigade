@@ -384,6 +384,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   teammates={teammates.data ?? []}
                   projects={projects.data ?? []}
                   admin={isAdmin(data)}
+                  memberId={data.memberId}
                   onNewProject={() => setCreatingProject(true)}
                   needsYou={needsYou}
                 />

@@ -23,7 +23,7 @@ import {
   type PreviewView,
   type ThreadPreviewState,
 } from '@brigade/contracts'
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { readAttachment, toInfo } from '../attachments.js'
@@ -42,6 +42,7 @@ import { watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import {
+  broadcastTask,
   broadcastThreadStatus,
   desktopClipboard,
   dispatch,
@@ -60,6 +61,7 @@ import {
   startThread,
 } from '../work.js'
 import { reopenOnMessage } from '../tasks.js'
+import { deleteThread } from '../thread-delete.js'
 import { runLog } from '../timeline.js'
 import { historyContext, pageEvents, pageStart } from '../thread-history.js'
 import {
@@ -108,6 +110,35 @@ function mayPrompt(
     throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
 }
 
+const isAdmin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
+
+/** Renaming and archiving a thread is for who may write in it, and admins. */
+function mayChange(
+  scope: WorkspaceScope,
+  thread: { startedByMemberId: string | null; othersMayPrompt: boolean },
+) {
+  if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt && !isAdmin(scope))
+    throw new HTTPException(403, { message: 'Only who may write in this thread can do that' })
+}
+
+async function archive(c: Context<AppEnv>, on: boolean) {
+  const { scope, db } = c.var
+  const thread = await loadThread(db, c.req.param('id')!)
+  mayChange(scope, thread)
+  await db.session.updateMany({
+    where: { id: thread.id },
+    data: { archivedAt: on ? new Date() : null, updatedAt: thread.updatedAt },
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: on ? 'thread.archived' : 'thread.unarchived',
+    target: { type: 'thread', id: thread.id },
+  })
+  broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+  return c.json({ ok: true })
+}
+
 /**
  * Unread for a member: a teammate finished a turn after they last looked, or since it
  * started when they never have.
@@ -127,11 +158,21 @@ export const threads = new Hono<AppEnv>()
     const asked = Math.trunc(Number(c.req.query('limit')))
     const limit = asked > 0 ? Math.min(asked, 100) : undefined
     const before = c.req.query('before')
+    const include = {
+      teammate: { select: { id: true, name: true } },
+      teammates: {
+        select: { teammate: { select: { id: true, name: true } } },
+        orderBy: { joinedAt: 'asc' as const },
+      },
+      startedBy: { select: { id: true, user: { select: { name: true } } } },
+    }
     const rows = await c.var.db.session.findMany({
       where: {
         // A teammate's threads: those it started and those it joined.
         ...(teammateId ? { teammates: { some: { teammateId } } } : {}),
         ...projectWhere(c.req.query('project')),
+        // Archived ones only when asked for: ?archived=1.
+        archivedAt: c.req.query('archived') === '1' ? { not: null } : null,
       },
       ...(limit
         ? {
@@ -143,15 +184,25 @@ export const threads = new Hono<AppEnv>()
             ...(before ? { cursor: { id: before }, skip: 1 } : {}),
           }
         : { orderBy: { updatedAt: 'desc' as const }, take: 100 }),
-      include: {
-        teammate: { select: { id: true, name: true } },
-        teammates: {
-          select: { teammate: { select: { id: true, name: true } } },
-          orderBy: { joinedAt: 'asc' },
-        },
-        startedBy: { select: { id: true, user: { select: { name: true } } } },
-      },
+      include,
     })
+    // This member's pins. The whole list (the sidebar's) has every pinned thread, however
+    // long ago it was active.
+    const pins = await c.var.db.threadPin.findMany({
+      where: { memberId: c.var.scope.memberId },
+      select: { sessionId: true, pinnedAt: true },
+    })
+    if (!limit && !teammateId && !c.req.query('project') && c.req.query('archived') !== '1') {
+      const loaded = new Set(rows.map((r) => r.id))
+      const missing = pins.map((p) => p.sessionId).filter((id) => !loaded.has(id))
+      if (missing.length)
+        rows.push(
+          ...(await c.var.db.session.findMany({
+            where: { id: { in: missing }, archivedAt: null },
+            include,
+          })),
+        )
+    }
     // How much each one was answered, for the list's replies line: people's messages
     // after the first, and the teammates' turns.
     const counts = rows.length
@@ -203,6 +254,7 @@ export const threads = new Hono<AppEnv>()
           lastReplyAt: latest?.toISOString() ?? null,
           unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
+          pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
         }
       }),
     )
@@ -507,6 +559,9 @@ export const threads = new Hono<AppEnv>()
         message: 'That computer is offline. Start its runner and try again.',
       })
     if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
+    // Written in again, an archived thread is back in the sidebar.
+    if (thread.archivedAt)
+      await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
@@ -887,6 +942,78 @@ export const threads = new Hono<AppEnv>()
       data: { from: thread.projectId, to: next },
     })
     broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    return c.json({ ok: true })
+  })
+
+  /** Rename it: who may write in it, or an admin. */
+  .put('/:id/title', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    const { title } = await parseBody(
+      c.req.raw,
+      z.object({ title: z.string().trim().min(1).max(200) }),
+    )
+    // Not activity: the thread keeps its place in the list.
+    await db.session.updateMany({
+      where: { id: thread.id },
+      data: { title, updatedAt: thread.updatedAt },
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.renamed',
+      target: { type: 'thread', id: thread.id },
+      data: { from: thread.title, to: title },
+    })
+    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+    return c.json({ ok: true })
+  })
+
+  /** Pin it to the top of this member's sidebar; DELETE unpins it. Each member's own. */
+  .post('/:id/pin', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    await db.threadPin.upsert({
+      where: { memberId_sessionId: { memberId: scope.memberId, sessionId: thread.id } },
+      create: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        memberId: scope.memberId,
+        sessionId: thread.id,
+      },
+      update: {},
+    })
+    return c.json({ ok: true })
+  })
+  .delete('/:id/pin', async (c) => {
+    const { scope, db } = c.var
+    await db.threadPin.deleteMany({
+      where: { memberId: scope.memberId, sessionId: c.req.param('id') },
+    })
+    return c.json({ ok: true })
+  })
+
+  /** Archive it: out of everyone's sidebar until someone writes in it; DELETE brings it back. */
+  .post('/:id/archive', async (c) => archive(c, true))
+  .delete('/:id/archive', async (c) => archive(c, false))
+
+  /** Delete it for good, with its files in the bucket: its starter or an admin. */
+  .delete('/:id', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (thread.startedByMemberId !== scope.memberId && !isAdmin(scope))
+      throw new HTTPException(403, {
+        message: 'Only the member who started this thread or an admin can delete it',
+      })
+    const { taskId } = await deleteThread(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      thread.id,
+    )
+    broadcastThreadStatus(scope.workspaceId, thread.id, 'deleted')
+    if (taskId) broadcastTask(scope.workspaceId, taskId)
     return c.json({ ok: true })
   })
 
