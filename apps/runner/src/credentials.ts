@@ -111,6 +111,8 @@ function run(command: string, args: string[], stdin: string, runAs?: string, tim
         ? resolve(stdout)
         : reject(new Error(stderr.trim() || (code === null ? 'It took too long' : `exit ${code}`))),
     )
+    // A command that exits without reading its input closes the pipe: its exit says why.
+    child.stdin.on('error', () => undefined)
     child.stdin.end(stdin)
   })
 }

@@ -458,6 +458,8 @@ export async function writeInstructions(
     child.on('exit', (code) =>
       code === 0 ? resolve() : reject(new Error(stderr.trim() || `exit ${code}`)),
     )
+    // A command that exits without reading its input closes the pipe: its exit says why.
+    child.stdin.on('error', () => undefined)
     child.stdin.end(text)
   })
 }

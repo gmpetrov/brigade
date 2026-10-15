@@ -133,7 +133,11 @@ export function createLocalSandboxSession(options: {
       child.stdout!.on('data', (d: Buffer) => chunks.push(d))
       child.once('error', fail)
       child.once('close', (code) => done({ code: code ?? 1, stdout: Buffer.concat(chunks) }))
-      if (input) child.stdin!.end(input)
+      if (input) {
+        // A command that exits without reading its input closes the pipe: its code says why.
+        child.stdin!.on('error', () => undefined)
+        child.stdin!.end(input)
+      }
     })
   const readAs = async (path: string) => {
     const r = await asUser('test -f "$0" && cat -- "$0"', [at(path)])

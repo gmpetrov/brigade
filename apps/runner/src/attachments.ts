@@ -8,6 +8,7 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { ATTACHMENTS_DIR, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HOME, paths, type RunnerConfig } from './config.js'
+import { ensureUser } from './teammates.js'
 
 /** Fetched files, shared by the teammates of a thread: one download each. Only the runner reads it. */
 const CACHE_DIR = join(HOME, 'attachments')
@@ -35,8 +36,10 @@ export class Attachments {
     )
     const failed: string[] = []
     let changed = false
-    for (const ref of ready) {
-      if (index[ref.path] === ref.id) continue
+    const missing = ready.filter((ref) => index[ref.path] !== ref.id)
+    // A teammate's first turn places its files before its harness starts: its user comes first.
+    if (missing.length > 0 && folder.runAs) await ensureUser(folder.runAs)
+    for (const ref of missing) {
       const target = inside(folder.workDir, ref.path)
       if (!target || !SAFE_ID.test(ref.id)) {
         failed.push(`${ref.name}: not a path in the working folder`)
@@ -142,6 +145,8 @@ async function writeAs(target: string, bytes: Uint8Array, runAs?: string) {
     child.once('close', (code) =>
       code === 0 ? done() : fail(new Error(`could not write it (${code})`)),
     )
+    // sudo that fails (an unknown user, say) exits without reading: its close says why.
+    child.stdin.on('error', () => undefined)
     child.stdin.end(bytes)
   })
 }

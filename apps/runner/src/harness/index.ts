@@ -130,6 +130,10 @@ const RESTARTED =
   "Brigade's computer restarted while you were working on this thread, so your last turn stopped partway. " +
   'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
 
+/** Before the message a cut-off turn answered, told again after a restart. */
+const ASKED =
+  'In case your conversation came back without it, this is the latest message you were answering:'
+
 function createAgent(
   spec: ThreadSpec,
   callConnector: ConnectorCaller,
@@ -348,7 +352,13 @@ export class HarnessThread {
     const resume = resumable(spec.teammate.harness, saved.resume)
     if (resume) {
       saved.resume = resume
-      return { input: { kind: 'resume', text: told } }
+      // A turn cut off before the harness wrote its conversation comes back without the
+      // message it answered (Claude Code then starts a new one): it is told it again.
+      const asked = saved.transcript.findLast((t) => t.role === 'user')
+      const again = asked && `${ASKED}\n\n${asked.text}`
+      return {
+        input: { kind: 'resume', text: [RESTARTED, again, unseen].filter(Boolean).join('\n\n') },
+      }
     }
     const handoff = this.handoff(
       'This conversation continues in a new session because the computer it ran on restarted and the previous session could not be resumed.',
