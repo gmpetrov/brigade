@@ -30,12 +30,14 @@ import {
 import {
   AppWindow,
   ChevronDown,
+  Check,
   ChevronRight,
   Circle,
   CircleCheck,
   CircleDot,
   CircleHelp,
   ClipboardList,
+  Copy,
   Hand,
   LayoutTemplate,
   ListChecks,
@@ -440,20 +442,50 @@ const clipText = (text: string, max: number) =>
 /** What a reply quotes of a message: its start, as long as a reply carries. */
 const replyText = (text: string) => clipText(text.trim(), 1999)
 
-/** Reply to a message: shown while the pointer is over it (always on phones). */
-function ReplyButton({ onClick }: { onClick: () => void }) {
+/**
+ * Copy a message, and reply to it when the person can send one: shown while the
+ * pointer is over it (always on phones).
+ */
+function MessageActions({ text, onReply }: { text: string; onReply?: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const button =
+    'shrink-0 rounded-full text-muted-foreground [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100'
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-xs"
-      className="shrink-0 rounded-full text-muted-foreground [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"
-      onClick={onClick}
-      aria-label="Reply"
-      title="Reply"
-    >
-      <Reply className="size-3.5" aria-hidden />
-    </Button>
+    <div className="flex shrink-0 items-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className={button}
+        onClick={() =>
+          void navigator.clipboard.writeText(mentionsToText(text).trim()).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+          })
+        }
+        aria-label={copied ? 'Copied' : 'Copy'}
+        title={copied ? 'Copied' : 'Copy'}
+      >
+        {copied ? (
+          <Check className="size-3.5" aria-hidden />
+        ) : (
+          <Copy className="size-3.5" aria-hidden />
+        )}
+      </Button>
+      {onReply && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className={button}
+          onClick={onReply}
+          aria-label="Reply"
+          title="Reply"
+        >
+          <Reply className="size-3.5" aria-hidden />
+        </Button>
+      )}
+    </div>
   )
 }
 
@@ -1167,11 +1199,12 @@ export function ThreadItems({
             {asked && <CommandChip command={asked.command} />}
             {text && (
               <div className="group/message flex items-center gap-1">
-                {onReply && (
-                  <ReplyButton
-                    onClick={() => onReply({ seq: item.seq, text: replyText(item.text) })}
-                  />
-                )}
+                <MessageActions
+                  text={text}
+                  onReply={
+                    onReply && (() => onReply({ seq: item.seq, text: replyText(item.text) }))
+                  }
+                />
                 <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
                   <MessageWithCode text={text} />
                 </div>
@@ -1213,15 +1246,18 @@ export function ThreadItems({
               <FileLinksProvider value={{ teammateId: item.teammateId }}>
                 <Markdown text={item.text} />
               </FileLinksProvider>
-              {onReply && item.done && (
-                <div className="-ml-1.5">
-                  <ReplyButton
-                    onClick={() =>
-                      onReply({
-                        seq: item.seq,
-                        ...(author ? { teammateId: author.id } : {}),
-                        text: replyText(item.text),
-                      })
+              {item.done && (
+                <div className="-ml-1.5 flex">
+                  <MessageActions
+                    text={item.text}
+                    onReply={
+                      onReply &&
+                      (() =>
+                        onReply({
+                          seq: item.seq,
+                          ...(author ? { teammateId: author.id } : {}),
+                          text: replyText(item.text),
+                        }))
                     }
                   />
                 </div>
