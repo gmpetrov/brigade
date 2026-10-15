@@ -10,15 +10,7 @@
 // open it there; docking it again goes back to the page you were on.
 // ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
-import {
-  ArrowLeft,
-  LoaderCircle,
-  Maximize2,
-  MessagesSquare,
-  Minimize2,
-  Monitor,
-  X,
-} from 'lucide-react'
+import { ArrowLeft, LoaderCircle, Maximize2, MessagesSquare, Monitor, X } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -45,13 +37,7 @@ import {
   type TeammateActivity,
   type ThreadDraft,
 } from '@/components/new-thread'
-import {
-  panelInFront,
-  raisePanel,
-  SidePanel,
-  useEscapeToClose,
-  usePanelInFront,
-} from '@/components/side-panel'
+import { panelInFront, raisePanel, SidePanel, usePanelInFront } from '@/components/side-panel'
 import {
   EarlierMessages,
   JumpToEnd,
@@ -534,10 +520,7 @@ export function ThreadPanel() {
     if (!lead || !inThread || !teammate || inThread.includes(teammate.id)) return
     if (teammates.some((t) => t.id === lead.id)) choose(lead.id)
   }, [shown, lead, inThread, teammate, teammates, choose])
-  // Expanded, Escape docks it beside the page you were on, once nothing beside it took it;
-  // docked, Escape again closes it (SidePanel's own).
-  const escapeArea = useRef<HTMLElement>(null)
-  useEscapeToClose(escapeArea, panel.expanded ? panel.dock : undefined, true)
+  // Docked, Escape closes it (SidePanel's own). Expanded it is the page: Escape leaves it be.
   if (!panel.visible) return null
   const { expanded, threadId } = panel
   // Expanded, the thread's title is the page's heading.
@@ -653,28 +636,33 @@ export function ThreadPanel() {
         {!threadId && <span className="flex-1" />}
         {/* Room for the teammate's panel beside it only expanded; docked, the page is there. */}
         {expanded && <DetailsButton name={threadId ? lead?.name : teammate?.name} />}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className={icon}
-          onClick={expanded ? panel.dock : panel.expand}
-          aria-label={expanded ? 'Dock beside the page' : 'Expand'}
-          title={expanded ? 'Dock beside the page' : 'Expand'}
-        >
-          {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className={icon}
-          onClick={panel.close}
-          aria-label="Close threads"
-          title={expanded ? 'Close' : 'Close (Esc)'}
-        >
-          <X aria-hidden />
-        </Button>
+        {/* Docked only: expanded, it is the page, and the sidebar is the way elsewhere. */}
+        {!expanded && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className={icon}
+              onClick={panel.expand}
+              aria-label="Expand"
+              title="Expand"
+            >
+              <Maximize2 aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className={icon}
+              onClick={panel.close}
+              aria-label="Close threads"
+              title="Close (Esc)"
+            >
+              <X aria-hidden />
+            </Button>
+          </>
+        )}
       </div>
       {teammate || threadId ? (
         // A thread, else docked the teammate's channel, expanded a box to start one with it.
