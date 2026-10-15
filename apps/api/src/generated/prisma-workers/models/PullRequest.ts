@@ -50,6 +50,7 @@ export type PullRequestMinAggregateOutputType = {
   reviewerTeammateId: string | null
   reviewStatus: $Enums.ReviewStatus | null
   autoMerge: boolean | null
+  mergeMethod: string | null
   requestedByMemberId: string | null
   round: number | null
   reviewedSha: string | null
@@ -74,6 +75,7 @@ export type PullRequestMaxAggregateOutputType = {
   reviewerTeammateId: string | null
   reviewStatus: $Enums.ReviewStatus | null
   autoMerge: boolean | null
+  mergeMethod: string | null
   requestedByMemberId: string | null
   round: number | null
   reviewedSha: string | null
@@ -98,6 +100,7 @@ export type PullRequestCountAggregateOutputType = {
   reviewerTeammateId: number
   reviewStatus: number
   autoMerge: number
+  mergeMethod: number
   requestedByMemberId: number
   round: number
   reviewedSha: number
@@ -134,6 +137,7 @@ export type PullRequestMinAggregateInputType = {
   reviewerTeammateId?: true
   reviewStatus?: true
   autoMerge?: true
+  mergeMethod?: true
   requestedByMemberId?: true
   round?: true
   reviewedSha?: true
@@ -158,6 +162,7 @@ export type PullRequestMaxAggregateInputType = {
   reviewerTeammateId?: true
   reviewStatus?: true
   autoMerge?: true
+  mergeMethod?: true
   requestedByMemberId?: true
   round?: true
   reviewedSha?: true
@@ -182,6 +187,7 @@ export type PullRequestCountAggregateInputType = {
   reviewerTeammateId?: true
   reviewStatus?: true
   autoMerge?: true
+  mergeMethod?: true
   requestedByMemberId?: true
   round?: true
   reviewedSha?: true
@@ -293,6 +299,7 @@ export type PullRequestGroupByOutputType = {
   reviewerTeammateId: string | null
   reviewStatus: $Enums.ReviewStatus
   autoMerge: boolean
+  mergeMethod: string | null
   requestedByMemberId: string | null
   round: number
   reviewedSha: string | null
@@ -340,6 +347,7 @@ export type PullRequestWhereInput = {
   reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -369,6 +377,7 @@ export type PullRequestOrderByWithRelationInput = {
   reviewerTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewStatus?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
   reviewedSha?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -402,6 +411,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -431,6 +441,7 @@ export type PullRequestOrderByWithAggregationInput = {
   reviewerTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewStatus?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
   reviewedSha?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -463,6 +474,7 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   reviewerTeammateId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   reviewStatus?: Prisma.EnumReviewStatusWithAggregatesFilter<"PullRequest"> | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolWithAggregatesFilter<"PullRequest"> | boolean
+  mergeMethod?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   round?: Prisma.IntWithAggregatesFilter<"PullRequest"> | number
   reviewedSha?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
@@ -483,6 +495,7 @@ export type PullRequestCreateInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -512,6 +525,7 @@ export type PullRequestUncheckedCreateInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -533,6 +547,7 @@ export type PullRequestUpdateInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -562,6 +577,7 @@ export type PullRequestUncheckedUpdateInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -587,6 +603,7 @@ export type PullRequestCreateManyInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -607,6 +624,7 @@ export type PullRequestUpdateManyMutationInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -631,6 +649,7 @@ export type PullRequestUncheckedUpdateManyInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -671,6 +690,7 @@ export type PullRequestCountOrderByAggregateInput = {
   reviewerTeammateId?: Prisma.SortOrder
   reviewStatus?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   reviewedSha?: Prisma.SortOrder
@@ -700,6 +720,7 @@ export type PullRequestMaxOrderByAggregateInput = {
   reviewerTeammateId?: Prisma.SortOrder
   reviewStatus?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   reviewedSha?: Prisma.SortOrder
@@ -724,6 +745,7 @@ export type PullRequestMinOrderByAggregateInput = {
   reviewerTeammateId?: Prisma.SortOrder
   reviewStatus?: Prisma.SortOrder
   autoMerge?: Prisma.SortOrder
+  mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
   reviewedSha?: Prisma.SortOrder
@@ -940,6 +962,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -967,6 +990,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1021,6 +1045,7 @@ export type PullRequestScalarWhereInput = {
   reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
   reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -1041,6 +1066,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1068,6 +1094,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1099,6 +1126,7 @@ export type PullRequestCreateWithoutReviewerTeammateInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1126,6 +1154,7 @@ export type PullRequestUncheckedCreateWithoutReviewerTeammateInput = {
   authorTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1189,6 +1218,7 @@ export type PullRequestCreateWithoutSessionInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1216,6 +1246,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1263,6 +1294,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   baseRef: string
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1291,6 +1323,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1327,6 +1360,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1355,6 +1389,7 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1378,6 +1413,7 @@ export type PullRequestCreateManyWorkspaceInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1398,6 +1434,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1425,6 +1462,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1449,6 +1487,7 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1472,6 +1511,7 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1495,6 +1535,7 @@ export type PullRequestCreateManyReviewerTeammateInput = {
   authorTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1515,6 +1556,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1542,6 +1584,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1566,6 +1609,7 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1586,6 +1630,7 @@ export type PullRequestUpdateWithoutReviewerTeammateInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1613,6 +1658,7 @@ export type PullRequestUncheckedUpdateWithoutReviewerTeammateInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1637,6 +1683,7 @@ export type PullRequestUncheckedUpdateManyWithoutReviewerTeammateInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1660,6 +1707,7 @@ export type PullRequestCreateManySessionInput = {
   reviewerTeammateId?: string | null
   reviewStatus?: $Enums.ReviewStatus
   autoMerge?: boolean
+  mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
   reviewedSha?: string | null
@@ -1680,6 +1728,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1707,6 +1756,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1731,6 +1781,7 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
   autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
   reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1786,6 +1837,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   reviewerTeammateId?: boolean
   reviewStatus?: boolean
   autoMerge?: boolean
+  mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
   reviewedSha?: boolean
@@ -1816,6 +1868,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   reviewerTeammateId?: boolean
   reviewStatus?: boolean
   autoMerge?: boolean
+  mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
   reviewedSha?: boolean
@@ -1844,6 +1897,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   reviewerTeammateId?: boolean
   reviewStatus?: boolean
   autoMerge?: boolean
+  mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
   reviewedSha?: boolean
@@ -1872,6 +1926,7 @@ export type PullRequestSelectScalar = {
   reviewerTeammateId?: boolean
   reviewStatus?: boolean
   autoMerge?: boolean
+  mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
   reviewedSha?: boolean
@@ -1882,7 +1937,7 @@ export type PullRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewerTeammateId" | "reviewStatus" | "autoMerge" | "requestedByMemberId" | "round" | "reviewedSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewerTeammateId" | "reviewStatus" | "autoMerge" | "mergeMethod" | "requestedByMemberId" | "round" | "reviewedSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
@@ -1936,13 +1991,17 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
      * Merge once approved and GitHub allows it. Only an owner or admin arms it.
      */
     autoMerge: boolean
+    /**
+     * How it merges when Brigade merges it; squash when unset.
+     */
+    mergeMethod: string | null
     requestedByMemberId: string | null
     /**
      * Review rounds in the current loop, from 1.
      */
     round: number
     /**
-     * The head commit the latest review looked at.
+     * The head commit the latest review looked at; while resolving conflicts, the one before the author's turn.
      */
     reviewedSha: string | null
     /**
@@ -2397,6 +2456,7 @@ export interface PullRequestFieldRefs {
   readonly reviewerTeammateId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly reviewStatus: Prisma.FieldRef<"PullRequest", 'ReviewStatus'>
   readonly autoMerge: Prisma.FieldRef<"PullRequest", 'Boolean'>
+  readonly mergeMethod: Prisma.FieldRef<"PullRequest", 'String'>
   readonly requestedByMemberId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly round: Prisma.FieldRef<"PullRequest", 'Int'>
   readonly reviewedSha: Prisma.FieldRef<"PullRequest", 'String'>

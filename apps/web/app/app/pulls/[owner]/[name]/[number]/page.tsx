@@ -5,6 +5,7 @@ import {
   CircleDashed,
   CircleX,
   ExternalLink,
+  GitCompareArrows,
   GitMerge,
   GitPullRequestClosed,
   MessagesSquare,
@@ -33,7 +34,14 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, useApi, type CheckRun, type MergeMethod, type PullRequestDetail } from '@/lib/api'
-import { blockedBecause, canMerge, useLastMergeMethod } from '@/lib/merge-method'
+import {
+  blockedBecause,
+  canMerge,
+  hasConflicts,
+  resolvesInBrigade,
+  resolving,
+  useLastMergeMethod,
+} from '@/lib/merge-method'
 import { cn } from '@/lib/utils'
 
 /** While the loop runs, the page follows it. */
@@ -57,6 +65,8 @@ export default function PullRequestPage() {
   const running =
     t?.reviewStatus === 'reviewing' ||
     t?.reviewStatus === 'fixing' ||
+    t?.reviewStatus === 'resolving' ||
+    t?.reviewStatus === 'merging' ||
     (t?.reviewStatus === 'approved' && t.autoMerge)
   const reload = pull.reload
   useEffect(() => {
@@ -84,6 +94,7 @@ export default function PullRequestPage() {
   const candidates = teammates.filter((m) => m.id !== t?.author?.id)
   const reviewer = reviewerId ?? t?.reviewer?.id ?? candidates[0]?.id
   const mergeable = canMerge(p)
+  const conflicts = hasConflicts(p)
 
   async function act(run: () => Promise<unknown>) {
     setBusy(true)
@@ -107,6 +118,15 @@ export default function PullRequestPage() {
   const merge = () => {
     if (!confirm(`Merge #${p.number} into ${p.base} (${method})?`)) return
     void act(() => api(`${path}/merge`, { body: { method } }))
+  }
+  const resolve = () => {
+    if (
+      !confirm(
+        `Ask ${t?.author?.name} to resolve the conflicts with ${p.base}, then merge (${method})?`,
+      )
+    )
+      return
+    void act(() => api(`${path}/resolve`, { body: { method } }))
   }
   const stop = () => void act(() => api(`${path}/stop`, { body: {} }))
   const close = () => {
@@ -173,16 +193,35 @@ export default function PullRequestPage() {
           )}
           {admin && (
             <div className="flex items-center">
-              <Button
-                variant="outline"
-                className="rounded-r-none"
-                disabled={busy || !mergeable}
-                onClick={merge}
-                title={mergeable ? undefined : blockedBecause[p.mergeableState]}
-              >
-                <GitMerge />
-                Merge
-              </Button>
+              {conflicts && resolvesInBrigade(p) ? (
+                <Button
+                  variant="outline"
+                  className="rounded-r-none"
+                  disabled={busy}
+                  onClick={resolve}
+                >
+                  <GitCompareArrows />
+                  Resolve conflicts
+                </Button>
+              ) : conflicts ? (
+                <Button variant="outline" className="rounded-r-none" asChild>
+                  <a href={`${p.url}/conflicts`} target="_blank" rel="noreferrer">
+                    <GitCompareArrows />
+                    Resolve on GitHub
+                  </a>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="rounded-r-none"
+                  disabled={busy || !mergeable}
+                  onClick={merge}
+                  title={mergeable ? undefined : blockedBecause[p.mergeableState]}
+                >
+                  <GitMerge />
+                  Merge
+                </Button>
+              )}
               <Select value={method} onValueChange={(v) => setMethod(v as MergeMethod)}>
                 <SelectTrigger aria-label="Merge method" className="w-32 rounded-l-none border-l-0">
                   <SelectValue />
@@ -203,7 +242,7 @@ export default function PullRequestPage() {
           )}
           {running && (
             <Button variant="ghost" disabled={busy} onClick={stop}>
-              Stop the review
+              {resolving(p) ? 'Stop merging' : 'Stop the review'}
             </Button>
           )}
           {admin && (
@@ -219,6 +258,14 @@ export default function PullRequestPage() {
           <RotateCcw />
           Reopen
         </Button>
+      )}
+      {open && admin && conflicts && (
+        <p className="text-sm text-muted-foreground">
+          It conflicts with <code className="font-mono text-xs">{p.base}</code>.{' '}
+          {resolvesInBrigade(p)
+            ? `${t?.author?.name} resolves the conflicts in its thread, then it merges by itself.`
+            : 'Resolve them on GitHub, then merge it here.'}
+        </p>
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
 
@@ -363,7 +410,7 @@ export default function PullRequestPage() {
   )
 }
 
-/** Where the review loop is: whose move, which round, and what it waits for. */
+/** Where the review loop, or a merge a person asked for, is: whose move, which round, and what it waits for. */
 function Loop({ pull: p }: { pull: PullRequestDetail }) {
   const t = p.tracking!
   const turn =
@@ -377,7 +424,11 @@ function Loop({ pull: p }: { pull: PullRequestDetail }) {
             : `${t.reviewer?.name ?? 'The reviewer'} approved it. Ready to merge.`
           : t.reviewStatus === 'changes_requested'
             ? `${t.reviewer?.name ?? 'The reviewer'} asked for changes.`
-            : 'The review stopped and needs you.'
+            : t.reviewStatus === 'resolving'
+              ? `${t.author?.name ?? 'The author'} is resolving the conflicts. It merges after.`
+              : t.reviewStatus === 'merging'
+                ? 'It merges once GitHub allows it.'
+                : 'The review stopped and needs you.'
   return (
     <Card
       className={cn(

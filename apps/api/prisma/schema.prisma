@@ -606,6 +606,10 @@ enum ReviewStatus {
   changes_requested
   /// The loop stopped and a person has a ticket: rounds used up, or GitHub refuses the merge.
   stuck
+  /// A person asked to merge it once its conflicts are resolved: the author teammate's turn.
+  resolving
+  /// A person asked to merge it: it merges once GitHub allows it, with mergeMethod.
+  merging
 }
 
 /// A pull request Brigade knows about: opened by a teammate, or put through a review.
@@ -630,10 +634,12 @@ model PullRequest {
   reviewStatus        ReviewStatus        @default(none)
   /// Merge once approved and GitHub allows it. Only an owner or admin arms it.
   autoMerge           Boolean             @default(false)
+  /// How it merges when Brigade merges it; squash when unset.
+  mergeMethod         String?
   requestedByMemberId String?
   /// Review rounds in the current loop, from 1.
   round               Int                 @default(0)
-  /// The head commit the latest review looked at.
+  /// The head commit the latest review looked at; while resolving conflicts, the one before the author's turn.
   reviewedSha         String?
   /// Why the loop is waiting or stopped, shown on the pull request.
   note                String?

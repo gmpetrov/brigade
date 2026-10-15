@@ -9,6 +9,10 @@ export const ReviewStatus = z.enum([
   'approved',
   'changes_requested',
   'stuck',
+  /** A person asked to merge it once its conflicts are resolved: the author's turn. */
+  'resolving',
+  /** A person asked to merge it: it merges once GitHub allows it. */
+  'merging',
 ])
 export type ReviewStatus = z.infer<typeof ReviewStatus>
 
@@ -28,6 +32,10 @@ export type PreviewPullRequest = z.infer<typeof PreviewPullRequest>
 
 export const MergePullRequest = z.object({ method: MergeMethod.default('squash') })
 export type MergePullRequest = z.infer<typeof MergePullRequest>
+
+/** Ask the teammate that wrote it to resolve its conflicts, then merge it. Owners and admins only. */
+export const ResolvePullRequest = MergePullRequest
+export type ResolvePullRequest = MergePullRequest
 
 /** Brigade's side of a pull request: who wrote it, and where its review loop stands. */
 export type PullRequestTracking = {
