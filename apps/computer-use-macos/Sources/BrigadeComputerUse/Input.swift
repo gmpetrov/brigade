@@ -75,21 +75,21 @@ enum Input {
   }
 
   /// Types text as Unicode, whatever the keyboard layout; a newline presses Return.
+  /// One character per key event: Chromium apps (VS Code, Chrome, Slack) drop events
+  /// that carry several.
   static func type(_ text: String) throws {
     try Permissions.requireAccessibility()
     let lines = text.components(separatedBy: "\n")
     for (index, line) in lines.enumerated() {
       if index > 0 { try key("return") }
-      var units = Array(line.utf16)
-      while !units.isEmpty {
-        let chunk = Array(units.prefix(16))
-        units.removeFirst(chunk.count)
+      for character in line {
+        let units = Array(String(character).utf16)
         for down in [true, false] {
           let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down)
-          event?.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: chunk)
+          event?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
           post(event)
         }
-        pause(0.01)
+        pause(0.008)
       }
     }
   }

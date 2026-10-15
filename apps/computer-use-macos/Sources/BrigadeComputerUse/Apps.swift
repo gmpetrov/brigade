@@ -28,9 +28,11 @@ enum Apps {
       throw HelperError("app_not_found", "no app is in front")
     }
     if let pid = Int32(query), let app = running.first(where: { $0.processIdentifier == pid }) { return app }
-    let lower = query.lowercased()
+    let lower = query.lowercased().replacingOccurrences(of: ".app", with: "")
+    // By bundle id, by the name it runs as ("Code"), or by its file ("Visual Studio Code.app").
     if let app = running.first(where: {
       $0.bundleIdentifier?.lowercased() == lower || $0.localizedName?.lowercased() == lower
+        || $0.bundleURL?.deletingPathExtension().lastPathComponent.lowercased() == lower
     }) {
       return app
     }
@@ -45,7 +47,17 @@ enum Apps {
     let configuration = NSWorkspace.OpenConfiguration()
     configuration.activates = true
     let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
-    return ["name": app.localizedName ?? query, "bundleId": app.bundleIdentifier ?? "", "pid": Int(app.processIdentifier)]
+    // A background app may not activate another since macOS 14 (an app already running
+    // stays behind): bring it to the front through Accessibility, which the helper holds.
+    let element = AXUIElementCreateApplication(app.processIdentifier)
+    AXUIElementSetAttributeValue(element, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+    for _ in 0..<20 where !app.isActive {
+      try await Task.sleep(nanoseconds: 100_000_000)
+    }
+    return [
+      "name": app.localizedName ?? query, "bundleId": app.bundleIdentifier ?? "",
+      "pid": Int(app.processIdentifier), "active": app.isActive,
+    ]
   }
 
   private static func applicationURL(_ query: String) -> URL? {
