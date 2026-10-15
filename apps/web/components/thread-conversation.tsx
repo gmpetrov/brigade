@@ -295,6 +295,11 @@ export function ThreadConversation({
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread.data, status, connected])
+  // When it first shows, for measuring (performance.getEntriesByName('thread-shown')).
+  useEffect(() => {
+    if (thread.data && eventsLoaded && !performance.getEntriesByName('thread-shown').length)
+      performance.mark('thread-shown')
+  }, [thread.data, eventsLoaded])
   // Status changes can open or close tickets (a cap, an empty account): refetch them. Not
   // for the first status: it came with them.
   const reload = thread.reload
