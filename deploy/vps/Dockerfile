@@ -5,7 +5,7 @@
 ARG NODE=node:22.22.0-bookworm-slim
 
 FROM ${NODE} AS deps
-RUN npm install --global pnpm@8.7.5
+RUN npm install --global pnpm@10.34.6
 WORKDIR /repo
 # Packages first, from the lockfile alone: this layer stays cached until it changes.
 COPY pnpm-lock.yaml pnpm-workspace.yaml .npmrc package.json ./

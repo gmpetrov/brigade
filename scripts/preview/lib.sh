@@ -30,9 +30,12 @@ use_node() {
   export PATH=$dir/bin:$PATH
 }
 
-# pnpm, through Corepack (the version package.json asks for) when it is not installed.
+# pnpm, through Corepack (the version package.json asks for) when it is not installed or
+# older than 10, which cannot read the lockfile. pnpm 10 itself runs package.json's version.
 use_pnpm() {
-  if command -v pnpm >/dev/null; then PNPM=(pnpm); else PNPM=(env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm); fi
+  local major
+  major=$(cd "$REPO" && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm -v 2>/dev/null | cut -d. -f1) || true
+  if [ "${major:-0}" -ge 10 ] 2>/dev/null; then PNPM=(pnpm); else PNPM=(env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm); fi
 }
 
 # PostgreSQL from docker-compose.yml when Docker works here, else embedded (no Docker or root needed).

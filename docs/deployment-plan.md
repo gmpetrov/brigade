@@ -65,7 +65,7 @@ Cloudflare shipped first, more simply than the phases below:
   integration, runs one build per Worker (`brigade-api`, `brigade-api-front`,
   `brigade-web`, `brigade-collab`):
   - Each runs from the repository root, with Node from `.nvmrc` and `PNPM_VERSION`
-    `8.7.5`. It installs, then runs `pnpm run cf:build:<worker>` and
+    `10.34.6`. It installs, then runs `pnpm run cf:build:<worker>` and
     `pnpm run cf:deploy:<worker>`. Both call `scripts/deploy/workers.sh`.
   - A build deploys only its own Worker: Workers Builds gives any other `wrangler deploy`
     in it the build's Worker name.
