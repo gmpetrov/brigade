@@ -25,7 +25,6 @@ import {
   UsersRound,
   FolderKanban,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
@@ -50,7 +49,8 @@ import {
 import { NewProjectDialog, ProjectIcon } from '@/components/projects'
 import { SearchDialog } from '@/components/search'
 import { SidebarResizer, useSidebarWidth } from '@/components/sidebar-resizer'
-import { SidebarWork } from '@/components/sidebar-threads'
+import { RailMenu } from '@/components/rail-menu'
+import { SidebarWork, ThreadsRailMenu } from '@/components/sidebar-threads'
 import { QuickThread } from '@/components/quick-thread'
 import {
   preloadThreadPanel,
@@ -391,9 +391,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   needsYou={needsYou}
                 />
 
-                {/* Folded: projects and teammates as menus beside the rail. */}
+                {/* Folded: threads, projects and teammates as menus beside the rail. */}
                 <SidebarGroup className="hidden group-data-[collapsible=icon]:flex">
                   <SidebarMenu>
+                    <ThreadsRailMenu needsYou={needsYou} />
                     <RailMenu
                       icon={FolderKanban}
                       label="Projects"
@@ -673,23 +674,16 @@ export function SidebarToggle({ className }: { className?: string }) {
   )
 }
 
-/**
- * The folded sidebar's way to a list (projects, teammates, settings): its icon, and
- * beside it a menu of the list.
- */
 /** Folded, the teammates as a menu beside the rail: each opens its threads, as above. */
 function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin: boolean }) {
   const router = useRouter()
-  const { expanded, teammateId, teammateHref, chooseTeammate } = useThreadPanel()
+  const { teammateHref, chooseTeammate } = useThreadPanel()
   const pathname = usePathname()
   return (
     <RailMenu
       icon={UsersRound}
       label="AI teammates"
-      active={
-        pathname.startsWith('/app/teammates') ||
-        (expanded && teammates.some((t) => t.id === teammateId))
-      }
+      active={pathname.startsWith('/app/teammates')}
       items={teammates.map((t) => ({
         id: t.id,
         href: teammateHref(t.id),
@@ -703,64 +697,6 @@ function TeammatesRailMenu({ teammates, admin }: { teammates: Teammate[]; admin:
           : undefined
       }
     />
-  )
-}
-
-function RailMenu({
-  icon: Icon,
-  label,
-  href,
-  active,
-  items,
-  action,
-}: {
-  icon: LucideIcon
-  label: string
-  /** The list's own page, first in the menu. */
-  href?: string
-  active: boolean
-  /** `id` when two go to the same address. */
-  items: { id?: string; href: string; label: string; icon: ReactNode; onSelect?: () => void }[]
-  action?: { label: string; onSelect: () => void }
-}) {
-  return (
-    <SidebarMenuItem>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuButton tooltip={label} isActive={active}>
-            <Icon />
-            <span>{label}</span>
-          </SidebarMenuButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" className="min-w-52">
-          {href ? (
-            <DropdownMenuItem asChild>
-              <Link href={href} className="text-muted-foreground text-xs font-medium">
-                {label}
-              </Link>
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuLabel className="text-muted-foreground text-xs">{label}</DropdownMenuLabel>
-          )}
-          {items.map((item) => (
-            <DropdownMenuItem key={item.id ?? item.href} asChild onSelect={item.onSelect}>
-              <Link href={item.href}>
-                {item.icon}
-                <span className="truncate">{item.label}</span>
-              </Link>
-            </DropdownMenuItem>
-          ))}
-          {action && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={action.onSelect}>
-                <Plus /> {action.label}
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
   )
 }
 
