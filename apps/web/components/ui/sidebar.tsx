@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
@@ -70,6 +71,10 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  // On phones the sidebar covers the page: going to another page closes it, by a link
+  // or a button that navigates (New thread, a menu item).
+  const pathname = usePathname()
+  React.useEffect(() => setOpenMobile(false), [pathname])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -205,6 +210,11 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          // A link to the page already open changes no path: close on the tap itself.
+          onClickCapture={(event) => {
+            const link = (event.target as HTMLElement).closest("a[href]")
+            if (link && link.getAttribute("target") !== "_blank") setOpenMobile(false)
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
