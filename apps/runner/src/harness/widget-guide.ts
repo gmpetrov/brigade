@@ -46,7 +46,7 @@ ${WIDGET_THEME_VARS.map((v) => `\`${v}\``).join(', ')}
 
 When you offer alternatives:
 1. Number them in the widget, each a card with its number and a short name, the variant drawn, and one line on what sets it apart.
-2. Call \`offer_choices\` last, one option per card, its label the same number and name ("3 · Small square caps"), without \`design\`. The pick arrives as the person's next message, "Go with 3 · Small square caps": other teammates see that, never the widget, so the name must say what it is.
+2. End your reply with a \`choices\` block, one option per card, its label the same number and name ("3 · Small square caps"), without \`design\`. The pick arrives as the person's next message, "Go with 3 · Small square caps": other teammates see that, never the widget, so the name must say what it is.
 
 ## Quality
 

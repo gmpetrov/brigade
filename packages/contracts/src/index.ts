@@ -1,6 +1,7 @@
 // Zod schemas shared by api, runner and web. The single source of types.
 export * from './api.js'
 export * from './attachments.js'
+export * from './cards.js'
 export * from './chief.js'
 export * from './commands.js'
 export * from './credentials.js'

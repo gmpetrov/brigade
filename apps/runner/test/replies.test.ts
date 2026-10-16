@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { AgentEvent } from '@brigade/contracts'
 import { AFTER_STEP, NO_REPLY, ReplyWatch, terminalTools } from '../src/harness/replies.js'
-import { offerChoicesTool, suggestRepliesTool } from '../src/harness/tools.js'
+import { EventMapper } from '../src/harness/events.js'
 
 const at = '2026-10-16T18:00:00.000Z'
 const text = (value: string): AgentEvent => ({ at, type: 'message.done', id: value, text: value })
@@ -68,28 +68,29 @@ test('a message steered into the turn needs a reply of its own, after what was r
   assert.equal(silent.ask(), NO_REPLY)
 })
 
-test('a card never tells the teammate to write a reply it may have written', async () => {
-  const replies = (await suggestRepliesTool.execute!(
-    { replies: ['Send it'] },
-    {
-      toolCallId: 'c1',
-      messages: [],
-    },
-  )) as { next: string }
-  assert.match(replies.next, /If you have not written that reply yet/)
-  assert.match(replies.next, /if you have, your turn is over/)
-  const choices = (await offerChoicesTool.execute!(
-    {
-      question: 'Which one?',
-      options: [
-        { id: 'a', label: 'A' },
-        { id: 'b', label: 'B' },
-      ],
-    },
-    { toolCallId: 'c2', messages: [] },
-  )) as { next: string }
-  assert.match(choices.next, /if you have, your turn is over/)
-  assert.match(String(suggestRepliesTool.description), /do not write it again/)
+test('a card written at the end of the reply is its card, and no part of its text', () => {
+  const events: AgentEvent[] = []
+  const mapper = new EventMapper((event) => events.push(event))
+  const reply = 'Je merge #148 et je teste la connexion BigQuery ?'
+  mapper.map({ type: 'text-start', id: 't1' })
+  mapper.map({
+    type: 'text-delta',
+    id: 't1',
+    text: `${reply}\n\n\`\`\`replies\nMerge #148\nPas encore\n\`\`\``,
+  })
+  mapper.map({ type: 'text-end', id: 't1' })
+  const done = events.filter((e) => e.type !== 'message.delta').map(({ at: _, ...e }) => e)
+  const card = { toolCallId: 't1:suggest_replies', toolName: 'suggest_replies' }
+  assert.deepEqual(done, [
+    { type: 'message.done', id: 't1', text: reply },
+    { type: 'tool.started', ...card, input: { replies: ['Merge #148', 'Pas encore'] } },
+    { type: 'tool.finished', ...card, output: { shown: 2 }, isError: false },
+  ])
+  // The reply then ends the turn: nothing is asked of the teammate.
+  const watch = new ReplyWatch()
+  watch.start()
+  for (const event of events) watch.see(event)
+  assert.equal(watch.ask(), undefined)
 })
 
 test("every tool ends a turn for Claude Code: Brigade's by its MCP name, and its own", () => {

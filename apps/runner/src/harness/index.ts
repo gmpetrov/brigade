@@ -13,18 +13,15 @@ import {
   CODEX_DEFAULT_MODEL,
   type AccountRef,
   type AgentEvent,
-  OFFER_CHOICES_TOOL,
   PROPOSE_TEAM_TOOL,
   type QuestionAnswer,
   SHOW_WIDGET_TOOL,
-  SUGGEST_REPLIES_TOOL,
   type ThreadSpec,
   type TicketAnswer,
   runModel,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
-import type { Tool } from 'ai'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
@@ -57,7 +54,6 @@ import {
   credentialTools,
   imageTools,
   libraryTools,
-  offerChoicesTool,
   OPEN_TICKET_TOOL,
   openTicketTool,
   previewTools,
@@ -65,7 +61,6 @@ import {
   repoTools,
   scheduleTools,
   showWidgetTool,
-  suggestRepliesTool,
   taskTools,
   type ComputerUse,
   type ConnectorCaller,
@@ -186,8 +181,6 @@ function createAgent(
   const harness = codex
     ? createCodex({ ...settings, ...(effort ? { reasoningEffort: effort } : {}) })
     : createClaudeCode({ ...settings, ...(effort ? { effort } : {}) })
-  // Cards come right before the answer: loaded up front, not through tool search.
-  const closing = (t: Tool) => (codex ? t : alwaysLoaded(t))
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
     ...connectorTools(spec.connectors, callConnector, { defer: codex }),
@@ -202,11 +195,12 @@ function createAgent(
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
-    [OFFER_CHOICES_TOOL]: closing(offerChoicesTool),
-    [SUGGEST_REPLIES_TOOL]: closing(suggestRepliesTool),
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
-    ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: closing(proposeTeamTool) } : {}),
+    // Replies and choices are blocks in the reply (replyCard); the team, with its long instructions, a tool.
+    ...(spec.teammate.kind === 'chief'
+      ? { [PROPOSE_TEAM_TOOL]: codex ? proposeTeamTool : alwaysLoaded(proposeTeamTool) }
+      : {}),
   }
   return {
     agent: new HarnessAgent({

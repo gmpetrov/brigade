@@ -21,6 +21,7 @@ import {
   turnAnswer,
   visibleChars,
   Widget,
+  withoutCard,
   type LibraryFile,
   type AgentEvent,
   type Ask,
@@ -1388,7 +1389,8 @@ export function ThreadItems({
               {named && <span className="text-sm font-semibold">{author.name}</span>}
               {/* A file it names opens from its own working folder first. */}
               <FileLinksProvider value={{ teammateId: item.teammateId }}>
-                <Markdown text={item.text} />
+                {/* A card it ends with shows once the reply is done, without its markup. */}
+                <Markdown text={item.done ? item.text : withoutCard(item.text)} />
               </FileLinksProvider>
               {item.done && (
                 <div className="-ml-1.5 flex">

@@ -19,7 +19,6 @@ import {
   BUILTIN_SKILL_PREFIX,
   PROPOSE_SKILL_TOOL,
   SHOW_WIDGET_TOOL,
-  SUGGEST_REPLIES_TOOL,
   type ThreadSkill,
   type ThreadSpec,
   WIDGET_GUIDE_TOOL,
@@ -180,7 +179,7 @@ function chief(spec: ThreadSpec) {
       'person first.',
     'The card lets the person edit and create the team. Their answer is then "Created the team: …" naming the new ' +
       'teammates: welcome them in one line each (names without the @), then offer one small first task per teammate that finishes in ' +
-      'minutes with something to see (call `offer_choices` with them). When the person picks one, hand it to that ' +
+      'minutes with something to see (in a choices block). When the person picks one, hand it to that ' +
       'teammate as below. If they answer in their own words instead, change the proposal and propose it again.',
     [
       '### Answering and routing',
@@ -270,8 +269,8 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
     'Variants of a small detail (a button, a label, an icon) to pick from are a widget, not designs. ' +
       'When you offer alternatives (several directions to choose from), make each its own design folder, check it ' +
       `and save it into one options folder for the design they are for: \`acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}\`, ` +
-      `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Call \`offer_choices\` with one option per design ` +
-      'and its library path in `design` (the person picks one by its picture), then describe them in your reply. Their pick ' +
+      `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Describe them in your reply and end it with a choices ` +
+      'block, one option per design with its library path in `design` (the person picks one by its picture). Their pick ' +
       `arrives as their next message, and by then it has become the design (\`acme/pricing${DESIGN_SUFFIX}\`, replacing ` +
       'any design there) and the other options are in the trash: go on from that path. When they answer in their own ' +
       `words instead (mix two, change one), save new options into the same folder and offer them again, or save the ` +
@@ -441,19 +440,26 @@ const VISUALS =
   `When seeing beats reading (variants of a small UI change, a flow, numbers that make a shape), draw it in your reply with \`${SHOW_WIDGET_TOOL}\`. ` +
   `Read \`${WIDGET_GUIDE_TOOL}\` before your first one in a thread. A widget is not kept: what someone will keep, comment on or build from is a design. ` +
   'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
-  'call `offer_choices` right before your final reply, with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
+  'end your reply with a choices block whose labels are numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
   'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
-/** Suggested replies: one-click answers when a reply proposes a next step. */
+/** Cards a reply ends with: buttons to answer in one click, alternatives to pick (replyCard). */
 const REPLIES =
-  '## Suggested replies\n\n' +
+  '## Buttons and choices\n\n' +
   'When your reply ends by proposing a next step for the person to approve (send the email, post it, build it ' +
-  `and open a PR), call \`${SUGGEST_REPLIES_TOOL}\` with the 1 to 3 answers they would most likely type, ` +
-  'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
-  'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
-  'questions, and not with `offer_choices`, which already gives them something to click. ' +
-  'The buttons show under your reply: call it right before writing that reply. If you wrote the reply before ' +
-  'the call, do not write it again.'
+  'and open a PR), end it with the 1 to 3 answers they would most likely type, each naming the action ("Send it", ' +
+  '"Send to 5 first", "Build and merge", "Not yet"), never a generic "Yes", one per line in a `replies` block:\n\n' +
+  '```replies\nSend it\nNot yet\n```\n\n' +
+  'They show as buttons under your reply; a click is their next message, word for word, and counts as them ' +
+  'asking for it. Not after explanations or open questions.\n\n' +
+  'To let the person pick among alternatives you made (designs, approaches, drafts), end your reply instead with ' +
+  'a `choices` block: 2 to 6 options, each with a short unique `id`, a `label` of a few words, an optional ' +
+  'one-line `description` and, for a design, its library path in `design`:\n\n' +
+  '```choices\n{"question": "Which card should I build?", "options": [{"id": "a", "label": "A · Bold", ' +
+  '"description": "Large type, one accent"}, {"id": "b", "label": "B · Calm", "description": "Muted, more air"}]}\n```\n\n' +
+  'Their pick arrives as their next message ("Go with A · Bold"), or they write their own; your reply describes the ' +
+  'options. For a choice you cannot go on without, ask a question instead. One block per reply, at its very end: ' +
+  'the person never sees the block itself, only the buttons or cards.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

@@ -7,7 +7,6 @@ import {
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
   DESIGN_MANIFEST,
-  DESIGN_OPTIONS_SUFFIX,
   DESIGN_SUFFIX,
   DESIGN_SYSTEM_FILES_MAX,
   DESIGN_SYSTEM_PREVIEW,
@@ -16,14 +15,10 @@ import {
   DESIGN_THUMBNAIL,
   designFolderOf,
   DesignManifest,
-  designOptionsOf,
-  Choices,
   parseSkillMarkdown,
   PROPOSE_SKILL_TOOL,
   SKILL_ENTRY,
   SkillContent,
-  SUGGESTED_REPLY_MAX,
-  SuggestedReplies,
   TeamProposal,
   Widget,
   WIDGET_GUIDE_TOOL,
@@ -317,12 +312,11 @@ export const openTicketTool = tool({
 })
 
 /**
- * A card shows under the teammate's reply, whether it comes before or after it.
- * It is best called right before the reply: text written before a tool call may
- * come back only as the server's summary of it (narration). Its result never asks
- * for the reply outright: the teammate knows whether it wrote it, and one told to
- * write it again did. A turn that ends with no reply the person can read is asked
- * for one once, by the runner (see `ReplyWatch`).
+ * The team card shows under the chief's reply, whether it comes before or after
+ * it. It is best called right before the reply: text written before a tool call
+ * may come back only as the server's summary of it (narration). Its result never
+ * asks for the reply outright: the chief knows whether it wrote it, and one told
+ * to write it again did. Replies and choices are blocks in the reply (replyCard).
  */
 const UNDER_REPLY =
   'It shows under your reply: call it right before writing that reply, as text written before a tool call ' +
@@ -332,112 +326,14 @@ const SHOWN =
   'your turn is over: write nothing more.'
 
 /**
- * Replies for the person to send with one click, shown as buttons under the
- * reply. Like offer_choices it does not pause: the turn ends, and a click
- * sends the reply as the person's next message.
- */
-export const suggestRepliesTool = tool({
-  description:
-    'When your reply ends by proposing a next step ("Want me to send it?", "Build it and open a PR?"), ' +
-    'give the person the 1 to 3 answers they would most likely type, as buttons they send with one click. ' +
-    'Each is a short reply in their voice naming the action ("Send it", "Send to 5 first", "Build and merge", ' +
-    '"Not yet"), never a generic "Yes". A click arrives as their next message, word for word. ' +
-    'Not for explanations, open questions or alternatives to compare (offer_choices). ' +
-    UNDER_REPLY,
-  inputSchema: jsonSchema<SuggestedReplies>({
-    type: 'object',
-    properties: {
-      replies: {
-        type: 'array',
-        minItems: 1,
-        maxItems: 3,
-        items: { type: 'string', maxLength: SUGGESTED_REPLY_MAX },
-        description: 'The likeliest first, e.g. ["Build it", "Build and merge"]',
-      },
-    },
-    required: ['replies'],
-  }),
-  execute: async (input) => {
-    const parsed = SuggestedReplies.safeParse(input)
-    if (!parsed.success) throw new Error(`Invalid replies: ${parsed.error.message}`)
-    return {
-      shown: parsed.data.replies.length,
-      next: `${SHOWN} A click arrives as their next message.`,
-    }
-  },
-})
-
-/**
- * Alternatives for a person to pick from, shown in the thread as cards (with
- * the design's picture when an option is one). Unlike ask_user it does not
- * pause: the turn ends, and a click sends the pick as the person's next message.
- */
-export const offerChoicesTool = tool({
-  description:
-    'Show the person alternatives you made (designs, approaches, drafts) as cards they pick from with one click. ' +
-    'Their pick arrives as their next message ("Go with <label>"), or they write their own; your reply describes ' +
-    'them. For a choice you cannot go on without, ask a question instead. ' +
-    UNDER_REPLY,
-  inputSchema: jsonSchema<Choices>({
-    type: 'object',
-    properties: {
-      question: { type: 'string', description: 'e.g. "Which card should I build?"' },
-      options: {
-        type: 'array',
-        minItems: 2,
-        maxItems: 6,
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Short id, unique among these options' },
-            label: { type: 'string', description: 'A few words, e.g. "A · Signature swatches"' },
-            description: { type: 'string', description: 'One sentence: what sets it apart' },
-            design: {
-              type: 'string',
-              description: `Its design's library path, saved with save_design in the options folder all the offered designs share ("<name>${DESIGN_OPTIONS_SUFFIX}/<option>${DESIGN_SUFFIX}"): its picture shows on the card`,
-            },
-          },
-          required: ['id', 'label'],
-        },
-      },
-    },
-    required: ['question', 'options'],
-  }),
-  execute: async (input) => {
-    const parsed = Choices.safeParse(input)
-    if (!parsed.success) throw new Error(`Invalid choices: ${parsed.error.message}`)
-    const folders = new Set<string | undefined>()
-    for (const o of parsed.data.options) {
-      if (o.design === undefined) continue
-      const design = o.design.replace(/\/+$/, '')
-      if (designFolderOf(design) !== design)
-        throw new Error(
-          `"${o.design}" is not a design's library path (one ending in "${DESIGN_SUFFIX}")`,
-        )
-      folders.add(designOptionsOf(design))
-    }
-    if (folders.has(undefined) || folders.size > 1)
-      throw new Error(
-        `Save the designs you offer together in one options folder, ` +
-          `"<name>${DESIGN_OPTIONS_SUFFIX}/<option>${DESIGN_SUFFIX}" (e.g. "acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}"): ` +
-          `the pick becomes "acme/pricing${DESIGN_SUFFIX}" and the rest go to the trash`,
-      )
-    return {
-      shown: parsed.data.options.length,
-      next: `${SHOWN} The pick arrives as their next message.`,
-    }
-  },
-})
-
-/**
  * A visual drawn in the thread: throwaway HTML the dashboard shows in a
- * sandboxed frame. Like offer_choices it does not pause the turn.
+ * sandboxed frame. It does not pause the turn.
  */
 export const showWidgetTool = tool({
   description:
     'Draw a visual in the thread: options side by side, a diagram, a chart of data you have. For seeing ' +
     `something now, not for keeping (that is a design). Call ${WIDGET_GUIDE_TOOL} once before your first widget ` +
-    'in a thread. To let the person pick among options it shows, call offer_choices after it.',
+    'in a thread. To let the person pick among options it shows, end your reply with a choices block.',
   inputSchema: jsonSchema<Widget>({
     type: 'object',
     properties: {
@@ -459,7 +355,7 @@ export const showWidgetTool = tool({
     return {
       shown: true,
       next:
-        'If it shows options, call offer_choices right before your final reply, labels numbered and named as in the widget ("3 · Small square caps"): ' +
+        'If it shows options, end your reply with a choices block, labels numbered and named as in the widget ("3 · Small square caps"): ' +
         'other teammates see the pick, never the widget.',
     }
   },

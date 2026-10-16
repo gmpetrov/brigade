@@ -3,7 +3,10 @@
 import {
   Ask,
   hasVisibleText,
+  OFFER_CHOICES_TOOL,
   Question,
+  replyCard,
+  SUGGEST_REPLIES_TOOL,
   type AgentEvent,
   type QuestionAnswer,
   type TicketAnswer,
@@ -313,9 +316,34 @@ export class EventMapper {
         return this.emit({ at, type: 'message.delta', id: part.id, text: part.text })
       }
       case 'text-end': {
-        const text = this.texts.get(part.id) ?? ''
+        const { text, replies, choices } = replyCard(this.texts.get(part.id) ?? '')
         this.texts.delete(part.id)
-        return this.emit({ at, type: 'message.done', id: part.id, text })
+        this.emit({ at, type: 'message.done', id: part.id, text })
+        // A card written at the end of the reply, recorded as the card tools recorded one: threads read it as before.
+        const card = replies
+          ? { toolName: SUGGEST_REPLIES_TOOL, input: replies, shown: replies.replies.length }
+          : choices && {
+              toolName: OFFER_CHOICES_TOOL,
+              input: choices,
+              shown: choices.options.length,
+            }
+        if (!card) return
+        const toolCallId = `${part.id}:${card.toolName}`
+        this.emit({
+          at,
+          type: 'tool.started',
+          toolCallId,
+          toolName: card.toolName,
+          input: card.input,
+        })
+        return this.emit({
+          at,
+          type: 'tool.finished',
+          toolCallId,
+          toolName: card.toolName,
+          output: { shown: card.shown },
+          isError: false,
+        })
       }
       case 'reasoning-delta':
         return void this.reasoning.set(part.id, (this.reasoning.get(part.id) ?? '') + part.text)
