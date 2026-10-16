@@ -355,11 +355,53 @@ const skills = (spec: ThreadSpec) =>
       'Propose rarely: a procedure, never a fact (that is memory), nor a one-off. Never put secrets in a skill.',
   ].join('\n\n')
 
-/** Brigade's own skills for this thread: how to make designs and design systems, and run previews. */
+/** Brigade's own skills for this thread: how to make designs and design systems, run previews, learn a task. */
 export const builtinSkills = (spec: ThreadSpec, libraryDir: string): ThreadSkill[] => [
   ...designSkills(spec, libraryDir),
   PREVIEW_SKILL,
+  TEACH_SKILL,
 ]
+
+/**
+ * Learning a task from a person's recording (Teach a task): the dashboard sends
+ * `/teach` with the video and a zip of the steps it logged and a frame at each.
+ */
+const TEACH_SKILL: ThreadSkill = {
+  name: `${BUILTIN_SKILL_PREFIX}teach`,
+  description:
+    'Learn a task from a recording a person made with Teach a task (a `/teach` message with a video and a ' +
+    'demonstration zip), and propose it as a skill of your own. Read when a message asks you to learn from a demonstration.',
+  instructions:
+    '# Learning a task from a demonstration\n\n' +
+    'The person did a task on your computer while the dashboard recorded it. The message brings two files in ' +
+    '`attachments/`: the video, for people to watch again, and a zip with `steps.md` (each click, key and ' +
+    "scroll, with its time) and `frames/` (the screen at each step). You can't watch the video: work from the zip.\n\n" +
+    '1. Unzip it into a folder of its own: `python3 -m zipfile -e attachments/<the zip> demonstration/`. Read ' +
+    '`steps.md`, then the frames in order with your file reading tool. A red ring on a frame marks where the click ' +
+    'landed. Typed text is not logged, only how many characters: read what was typed on the frame after the typing; ' +
+    'a password field shows dots, and that is on purpose. The person may have added a note in their message: it ' +
+    'says what the task is for.\n' +
+    '2. If there is no task in it (nothing opened, clicked or typed, or only a desktop), say so in a line and ask ' +
+    'them to record it again with Teach a task in the composer’s + menu, opening the app or site first. Stop there.\n' +
+    '3. Work out the goal, the apps and sites it uses, and each step: what to open, which button or link to click ' +
+    'by its label (positions change; use them only where nothing else names the spot), what to type, and what the ' +
+    'screen shows when the step worked. Leave out detours and mistakes the person undid.\n' +
+    "4. Find what changes from one run to the next (a name, a date, an amount, a file) and make those the skill's " +
+    'inputs; keep the rest fixed. When you cannot tell, ask one short question with the options you see, then go on.\n' +
+    '5. Write the steps for your own tools, which are not a mouse on a screen: on a website, your browser tools, ' +
+    'by page, link and button names; in a terminal, the commands. Where it signs in, the skill says to sign in with ' +
+    'the vault credential for that site (`fill_credential`), never what was typed, and to open a credential ticket ' +
+    'when the vault has none. Never write a password, code or key you saw into the skill.\n' +
+    '6. Write the skill folder (a `SKILL.md`: `name`, lowercase words joined by hyphens, named after the task; a ' +
+    '`description` saying when to use it, in the words a person would ask with; then Inputs, Steps, and how to ' +
+    'check it worked) and propose it with `' +
+    PROPOSE_SKILL_TOOL +
+    '` and `onlyMe: true`, the recording as its reason.\n' +
+    '7. Reply in a few lines: the task as you understood it, its inputs, and that it waits for an admin in Needs ' +
+    'you. Offer to run it once now, so the person can check it before approving.',
+  files: [],
+  refs: [],
+}
 
 /** The rest of the board, which any teammate may manage. */
 const BOARD_TOOLS =

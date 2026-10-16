@@ -27,6 +27,7 @@ export function DesktopScreen({
   mode,
   onOpen,
   onCollapse,
+  onConnect,
   toolbar,
 }: {
   /**
@@ -44,6 +45,8 @@ export function DesktopScreen({
   onCollapse?: () => void
   /** Open: what goes first in the toolbar, before Reconnect and Collapse (Take control, the shell). */
   toolbar?: ReactNode
+  /** The screen shows: each time it connects, and again after a reconnect. */
+  onConnect?: () => void
 }) {
   const threadId = 'thread' in source ? source.thread : undefined
   const base = threadId
@@ -122,7 +125,10 @@ export function DesktopScreen({
       control={mode === 'open' && control}
       focus={mode === 'open'}
       clipboard={clipboard}
-      onConnect={() => setRetries(0)}
+      onConnect={() => {
+        setRetries(0)
+        onConnect?.()
+      }}
       onLost={onLost}
     />
   ) : (

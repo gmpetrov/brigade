@@ -23,9 +23,16 @@ export const MESSAGE_COMMANDS = {
     /** Shown only to someone with a Codex account: it makes the images. */
     needs: 'codex',
   },
+  teach: {
+    label: 'Learn from demonstration',
+    description: 'A recording of a task, made with Teach a task, to learn it as a skill.',
+    ask: 'The person recorded themselves doing a task on the computer (Teach a task) and wants you to learn it as a skill: read the `brigade-teach` skill and follow it.',
+    /** Sent by Teach a task with its recording, never picked in the `/` menu. */
+    hidden: true,
+  },
 } as const satisfies Record<
   string,
-  { label: string; description: string; ask: string; needs?: 'codex' }
+  { label: string; description: string; ask: string; needs?: 'codex'; hidden?: true }
 >
 
 export type MessageCommand = keyof typeof MESSAGE_COMMANDS

@@ -290,6 +290,8 @@ export const SkillProposal = z.object({
   skill: SkillContent,
   /** Why it is worth keeping: what work it came from. */
   reason: z.string().trim().max(1000).default(''),
+  /** A new skill for the proposing teammate's threads only, not everywhere (a task it was taught). */
+  teammateOnly: z.boolean().default(false),
 })
 export type SkillProposal = z.infer<typeof SkillProposal>
 
@@ -303,4 +305,6 @@ export type SkillProposalPayload = {
   previous?: { description: string; instructions: string; files: string[] }
   teammateId: string
   reason?: string
+  /** A new skill applies to `teammateId`'s threads only. */
+  teammateOnly?: boolean
 }

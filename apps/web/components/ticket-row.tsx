@@ -272,6 +272,12 @@ function SkillProposalDetail({ ticket: t }: { ticket: Ticket }) {
       <p className="mt-1.5 text-sm">
         <span className="font-mono font-semibold">/{skill.name}</span>: {skill.description}
       </p>
+      {t.payload.teammateOnly && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          For {t.session?.teammate.name ?? 'this teammate'}&apos;s threads only. Change where it
+          applies in Skills.
+        </p>
+      )}
       <Detail summary={previous ? 'The skill as proposed' : 'The skill'}>
         {skill.instructions}
         {files.length > 0 && `\n\nWith ${files.join(', ')}`}

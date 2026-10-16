@@ -35,10 +35,17 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
-import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
+import {
+  AttachButton,
+  ComposerMenu,
+  UploadList,
+  useFileDrop,
+  useUploads,
+} from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
+import { TeachTask } from '@/components/teach-task'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
@@ -63,6 +70,7 @@ import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   api,
   computerName,
@@ -179,6 +187,10 @@ export function ThreadConversation({
   const [previewing, setPreviewing] = useState(false)
   // The computer expanded over the thread from its details, which it hides until it closes.
   const [computerOpen, setComputerOpen] = useState(false)
+  // Teach a task: the computer over the window, recording the person doing it.
+  const [teaching, setTeaching] = useState(false)
+  // Recording a task needs a desktop to do it on: not offered on phones.
+  const phone = useIsMobile()
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.
   const documents = useDocumentPanel()
   const openFile = (f: { path: string; teammateId?: string }) => {
@@ -681,6 +693,16 @@ export function ThreadConversation({
           onClose={() => setComputerOpen(false)}
         />
       )}
+      {teaching && t.computer.kind === 'cloud' && (
+        <TeachTask
+          thread={t}
+          memberId={me.memberId ?? ''}
+          status={status ?? t.status}
+          onChange={() => void thread.reload()}
+          onSend={(sending, ids) => deliver(sending, ids)}
+          onClose={() => setTeaching(false)}
+        />
+      )}
       {expanded && !computerOpen && !file && !documents.current && !previewing && watching && (
         <ComputerPanel
           thread={t}
@@ -887,7 +909,18 @@ export function ThreadConversation({
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
-                      <AttachButton onFiles={files.add} />
+                      {phone ? (
+                        <AttachButton onFiles={files.add} />
+                      ) : (
+                        <ComposerMenu
+                          onFiles={files.add}
+                          teach={
+                            t.computer.kind === 'cloud'
+                              ? () => setTeaching(true)
+                              : 'Not yet on threads that run on a member’s machine'
+                          }
+                        />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <Composer
