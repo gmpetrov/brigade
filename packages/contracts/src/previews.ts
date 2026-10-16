@@ -144,6 +144,8 @@ export const PreviewRecipe = z.object({
   /** Pages the check opens, e.g. ["/", "/signin"]. */
   paths: z.array(z.string().startsWith('/').max(500)).min(1).max(10).default(['/']),
   timeoutSeconds: z.number().int().min(10).max(600).optional(),
+  /** Saved once its check passed (not with a reason): a later start checks it with the shorter waits. */
+  passed: z.boolean().optional(),
 })
 export type PreviewRecipe = z.infer<typeof PreviewRecipe>
 

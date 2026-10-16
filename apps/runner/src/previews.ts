@@ -104,6 +104,8 @@ export type PreviewStart = {
   paths?: string[]
   /** owner/name: its address stays the same for it on this computer. */
   repository?: string
+  /** Started from a saved recipe whose check passed: its first check uses the shorter waits. */
+  passed?: boolean
 }
 
 /** A saved recipe, and where its repository is checked out in the teammate's directory. */
@@ -349,12 +351,14 @@ export class Previews {
       ? await this.options.viewUrl(seat.sessionId, port)
       : `http://localhost:${port}`
     const from = preview.written
-    const pages = paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/']
+    const saved = preview.input.paths?.length ? preview.input.paths : ['/']
+    // A recheck after a passed one, with no pages given: the first is enough to see it still renders.
+    const pages = paths.length ? paths : preview.checked ? saved.slice(0, 1) : saved
     const input = JSON.stringify({
       url,
       paths: pages,
       out: join(seat.workDir, '.preview-checks'),
-      quick: preview.checked === true,
+      quick: preview.checked ?? preview.input.passed === true,
     })
     const args = [CHECKER, input]
     const { stdout } = await run(
@@ -406,6 +410,7 @@ export class Previews {
       credentials: input.credentials ?? [],
       paths: input.paths?.length ? input.paths : ['/'],
       ...(input.timeoutMs ? { timeoutSeconds: Math.round(input.timeoutMs / 1000) } : {}),
+      ...(preview.checked ? { passed: true } : {}),
     }
     await this.options.recipes(seat.sessionId, seat.teammateId, {
       name: 'save',
@@ -1108,6 +1113,7 @@ function fromRecipe(recipe: PreviewRecipe, checkout: string, repository: string)
     ...(recipe.envFile ? { envFile: recipe.envFile } : {}),
     paths: recipe.paths,
     repository,
+    ...(recipe.passed ? { passed: true } : {}),
   }
 }
 
