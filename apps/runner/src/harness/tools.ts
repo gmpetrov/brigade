@@ -320,7 +320,7 @@ export const suggestRepliesTool = tool({
     if (!parsed.success) throw new Error(`Invalid replies: ${parsed.error.message}`)
     return {
       shown: parsed.data.replies.length,
-      next: 'End your reply: a click arrives as their next message.',
+      next: 'Your reply is over: write nothing more, a click arrives as their next message.',
     }
   },
 })
@@ -381,7 +381,7 @@ export const offerChoicesTool = tool({
       )
     return {
       shown: parsed.data.options.length,
-      next: 'End your reply: the pick arrives as their next message.',
+      next: 'Your reply is over: write nothing more, the pick arrives as their next message.',
     }
   },
 })
@@ -492,7 +492,7 @@ export const proposeTeamTool = tool({
     if (new Set(names).size !== names.length) throw new Error('Give each teammate its own name')
     return {
       shown: parsed.data.teammates.length,
-      next: 'End your reply: the person edits the card and creates the team, or answers in their own words.',
+      next: 'Your reply is over: write nothing more, the person edits the card and creates the team, or answers in their own words.',
     }
   },
 })

@@ -683,6 +683,32 @@ const isActivity = (item: Item): item is ActivityItem =>
     !proposedTeam(item) &&
     !(item.finished && !item.isError && openedPull(item)))
 
+/** A card asking a person to act on what a message says: it reads after the message. */
+const isActionCard = (item: Item) =>
+  item.kind === 'tool' &&
+  !!(
+    offeredChoices(item) ||
+    suggestedReplies(item) ||
+    proposedTeam(item) ||
+    (item.finished && !item.isError && openedPull(item))
+  )
+
+/**
+ * Moves the action cards a teammate put up before its last message to just after it,
+ * so the decision follows what explains it. Never past a person's message.
+ */
+function actionsLast(items: Item[], is: number[]) {
+  const at = is.findLastIndex((i) => items[i]!.kind === 'assistant')
+  if (at < 0) return is
+  const moved: number[] = []
+  for (let k = at - 1; k >= 0 && items[is[k]!]!.kind !== 'user'; k--)
+    if (isActionCard(items[is[k]!]!)) moved.unshift(is[k]!)
+  if (!moved.length) return is
+  const rest = is.filter((i) => !moved.includes(i))
+  const after = rest.indexOf(is[at]!) + 1
+  return [...rest.slice(0, after), ...moved, ...rest.slice(after)]
+}
+
 /** What a long turn's "Worked for" line folds away: its steps and the messages between them. */
 const FOLDS = new Set<Item['kind']>(['thinking', 'tool', 'file', 'assistant', 'plan', 'note'])
 
@@ -704,7 +730,7 @@ type Node =
 function layoutThread(items: Item[], working: boolean) {
   const group = (is: number[]): Node[] => {
     const nodes: Node[] = []
-    for (const i of is) {
+    for (const i of actionsLast(items, is)) {
       const last = nodes.at(-1)
       // Taking over, handing back and shell commands in a row fold the same way.
       const type = isActivity(items[i]!)
@@ -726,11 +752,15 @@ function layoutThread(items: Item[], working: boolean) {
   const fold = (turn: number[], end: Extract<Item, { kind: 'turn' }>): Node[] => {
     const ms = end.startedAt === undefined ? 0 : end.at - end.startedAt
     if (ms < QUICK_TURN_MS) return group(turn)
-    const final = turn.findLast((i) => items[i]!.kind === 'assistant')
-    const folded = turn.filter((i) => {
+    turn = actionsLast(items, turn)
+    // The answer: every message after its last step, not only the very last one.
+    const done = turn.findLastIndex((i) => isActivity(items[i]!))
+    const answer = turn.findIndex((i, at) => at > done && items[i]!.kind === 'assistant')
+    const final = answer >= 0 ? answer : turn.findLastIndex((i) => items[i]!.kind === 'assistant')
+    const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
-        (final === undefined || i < final) &&
+        (final < 0 || at < final) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
           (item.kind === 'preview' && turn.some((j) => j > i && items[j]!.kind === 'preview'))) &&
@@ -738,13 +768,14 @@ function layoutThread(items: Item[], working: boolean) {
       )
     })
     if (!folded.some((i) => isActivity(items[i]!))) return group(turn)
-    const first = folded[0]!
-    const kept = turn.filter((i) => !folded.includes(i))
+    const first = turn.indexOf(folded[0]!)
+    const kept = (from: number, to: number) =>
+      turn.slice(from, to).filter((i) => !folded.includes(i))
     return [
-      ...group(kept.filter((i) => i < first)),
+      ...group(kept(0, first)),
       // Keyed by its end: an older page loading above does not close it.
       { type: 'worked', key: `w${end.key}`, ms, inner: group(folded) },
-      ...group(kept.filter((i) => i > first)),
+      ...group(kept(first, turn.length)),
     ]
   }
   const nodes: Node[] = []
