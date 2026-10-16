@@ -51,7 +51,11 @@ app.use(sandboxHostOnlyDesigns)
 app.use('/api/*', apiCors(env.WEB_URL))
 
 app.get('/health', (c) =>
-  c.json<HealthResponse>({ status: 'ok', protocolVersion: PROTOCOL_VERSION }),
+  c.json<HealthResponse>({
+    status: 'ok',
+    protocolVersion: PROTOCOL_VERSION,
+    build: process.env.BRIGADE_BUILD_ID || undefined,
+  }),
 )
 
 /**
