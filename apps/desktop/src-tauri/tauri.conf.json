@@ -9,9 +9,10 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'none'"
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'"
     },
-    "macOSPrivateApi": false
+    "macOSPrivateApi": false,
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
