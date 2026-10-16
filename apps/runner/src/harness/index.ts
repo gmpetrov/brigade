@@ -22,8 +22,6 @@ import {
   type TicketAnswer,
   runModel,
   WIDGET_GUIDE_TOOL,
-  hasVisibleText,
-  ASIDE_TOOLS,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import type { Tool } from 'ai'
@@ -49,10 +47,10 @@ import {
   ticketResult,
 } from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
+import { ReplyWatch, terminalTools } from './replies.js'
 import {
   ASK_USER_TOOL,
   alwaysLoaded,
-  replyAware,
   askUserTool,
   computerUseTools,
   connectorTools,
@@ -177,8 +175,6 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
-  /** The teammate wrote text the person sees since its last step of work. */
-  replied: () => boolean,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -187,8 +183,7 @@ function createAgent(
   const codex = spec.teammate.harness === 'codex'
   const harness = codex ? createCodex(settings) : createClaudeCode(settings)
   // Cards come right before the answer: loaded up front, not through tool search.
-  const closing = (t: Tool) =>
-    codex ? replyAware(t, replied) : alwaysLoaded(replyAware(t, replied))
+  const closing = (t: Tool) => (codex ? t : alwaysLoaded(t))
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
     ...connectorTools(spec.connectors, callConnector, { defer: codex }),
@@ -209,23 +204,27 @@ function createAgent(
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
     ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: closing(proposeTeamTool) } : {}),
   }
-  return new HarnessAgent({
-    harness,
-    tools,
-    // The API is the enforcement point for connector calls and credentials; the harness does not ask again.
-    toolApproval: Object.fromEntries(
-      Object.keys(tools).map((name) => [name, 'not-applicable' as const]),
-    ),
-    ...withModel(spec.teammate),
-    ...(spec.teammate.instructions ? { instructions: spec.teammate.instructions } : {}),
-    // Codex cannot ask before built-in tool calls (spec, known limits).
-    permissionMode: spec.teammate.harness === 'codex' ? 'allow-all' : spec.permissionMode,
-    sandboxConfig: { workDir: '.' },
-  })
+  return {
+    agent: new HarnessAgent({
+      harness,
+      tools,
+      // The API is the enforcement point for connector calls and credentials; the harness does not ask again.
+      toolApproval: Object.fromEntries(
+        Object.keys(tools).map((name) => [name, 'not-applicable' as const]),
+      ),
+      ...withModel(spec.teammate),
+      ...(spec.teammate.instructions ? { instructions: spec.teammate.instructions } : {}),
+      // Codex cannot ask before built-in tool calls (spec, known limits).
+      permissionMode: spec.teammate.harness === 'codex' ? 'allow-all' : spec.permissionMode,
+      sandboxConfig: { workDir: '.' },
+    }),
+    /** Brigade's tools, by name. */
+    tools: Object.keys(tools),
+  }
 }
 
 type Live = {
-  agent: ReturnType<typeof createAgent>
+  agent: ReturnType<typeof createAgent>['agent']
   session: HarnessAgentSession
   sandbox: ReturnType<typeof createLocalSandboxSession>
   account: AccountRef
@@ -278,8 +277,8 @@ export class HarnessThread {
   private saved: SavedState | undefined
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
-  /** The teammate wrote text the person sees since its last step of work (see replyAware). */
-  private replied = false
+  /** What the person has read of the turn: a turn without a reply is asked for one. */
+  private readonly replies = new ReplyWatch()
   private readonly stateFile: string
   /**
    * Names this harness session and its saved state. The thread's id for its
@@ -310,6 +309,9 @@ export class HarnessThread {
 
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
     this.spec = spec
+    // An approval, an answer or a ticket goes on with the turn it paused.
+    if (input.kind === 'prompt') this.replies.start()
+    else if (input.kind === 'resume') this.replies.resume()
     await this.load()
     if (spec.moved && this.saved?.movedAt !== spec.moved.at) await this.arrive(spec.moved)
     let handoff: string | undefined
@@ -489,6 +491,7 @@ export class HarnessThread {
     if (!live) throw new Error('No turn is running')
     await live.agent.experimental_steer({ session: live.session, text })
     this.remember('user', text)
+    this.replies.steered()
   }
 
   /** Stop the harness and keep its saved state, so the next message resumes it. */
@@ -521,16 +524,10 @@ export class HarnessThread {
     // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
     // How its stream ends then is no failure of the teammate's.
     const frozenUnder = () => attached !== undefined && this.live !== attached
-    this.replied = false
     const mapper = new EventMapper((event) => {
       if (frozenUnder()) return
-      if (event.type === 'message.done') {
-        this.remember('assistant', event.text)
-        if (hasVisibleText(event.text)) this.replied = true
-      }
-      // Work after the text (a command, a PR) needs a reply of its own; loading a tool or drawing does not.
-      if (event.type === 'tool.started' && !ASIDE_TOOLS.has(bareName(event.toolName)))
-        this.replied = false
+      if (event.type === 'message.done') this.remember('assistant', event.text)
+      this.replies.see(event)
       this.emitEvent(event)
     }, this.toolCalls)
     try {
@@ -624,6 +621,19 @@ export class HarnessThread {
         })
         await consume(result.fullStream)
       }
+      // Over with no reply after its work (only in its thinking, or before its last step): asked for once.
+      const over =
+        !frozenUnder() &&
+        !signal.aborted &&
+        !mapper.exhausted &&
+        !mapper.error &&
+        !live.session.hasUnfinishedTurn()
+      const ask = over ? this.replies.ask() : undefined
+      if (ask)
+        await consume(
+          (await live.agent.stream({ session: live.session, prompt: ask, abortSignal: signal }))
+            .fullStream,
+        )
       if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       // A login from before tokens, refreshed during the turn, goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
@@ -899,7 +909,7 @@ export class HarnessThread {
       readFile: (file) =>
         readAs(resolvePath(this.workDir, file), this.runAs, 1024 * 1024, 'A secret file'),
     })
-    const agent = createAgent(
+    const { agent, tools } = createAgent(
       this.spec,
       (call) => this.callWithFiles(call),
       credentials,
@@ -928,13 +938,13 @@ export class HarnessThread {
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
-      () => this.replied,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
       workingDirectory: this.workDir,
       port: await freePort(),
-      env,
+      // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch).
+      env: this.spec.teammate.harness === 'codex' ? env : { ...env, ...terminalTools(tools) },
       ...(this.runAs ? { runAs: this.runAs } : {}),
     })
     const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
@@ -1042,19 +1052,6 @@ export class HarnessThread {
   }
 }
 
-const bareName = (toolName: string) => toolName.replace(/^mcp__.+?__/, '')
-
-/**
- * Cards a turn may end on, with nothing written after them (the reply came
- * before). Claude Code otherwise sees no text after the last tool, asks for a
- * visible reply, and the teammate writes its answer a second time.
- */
-const TERMINAL_TOOLS = {
-  CLAUDE_CODE_TERMINAL_MCP_TOOLS: [SUGGEST_REPLIES_TOOL, OFFER_CHOICES_TOOL, PROPOSE_TEAM_TOOL]
-    .map((name) => `mcp__harness-tools__${name}`)
-    .join(','),
-}
-
 /**
  * The working directory and harness environment for an account: on a cloud
  * computer the teammate's own Linux user, home and private config directory.
@@ -1062,13 +1059,12 @@ const TERMINAL_TOOLS = {
 async function prepare(workDir: string, account: AccountRef, sessionId: string, runAs?: string) {
   if (!runAs) {
     await mkdir(workDir, { recursive: true })
-    return harnessEnv({ ...TERMINAL_TOOLS, ...accountEnv(account) })
+    return harnessEnv(accountEnv(account))
   }
   await ensureUser(runAs)
   await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
   const home = teammateHome(runAs)
   return harnessEnv({
-    ...TERMINAL_TOOLS,
     ...(await linkAccount(runAs, account)),
     ...accountToken(account),
     ...(await containerEnv(runAs, sessionId)),

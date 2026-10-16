@@ -98,7 +98,7 @@ export const WIDGET_GUIDE_TOOL = 'widget_guide'
 /**
  * Steps that are no work of their own, by bare tool name: the reply written
  * before one still answers the turn. A closing card counts even when it was
- * refused and called again.
+ * refused and called again; so do a wake-up and a task closed after the reply.
  */
 export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   'ToolSearch',
@@ -110,7 +110,52 @@ export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
   SUGGEST_REPLIES_TOOL,
   OFFER_CHOICES_TOOL,
   PROPOSE_TEAM_TOOL,
+  'set_wakeup',
+  'cancel_wakeup',
+  'complete_task',
 ])
+
+/** How many characters of a text a person sees: spaces and zero-width ones do not count. */
+export const visibleChars = (text: string) =>
+  text.replace(/[\s\u200b-\u200d\u2060\ufeff]/g, '').length
+
+/** A turn's entries, in order, as its answer is found among them. */
+export type TurnEntry =
+  | { kind: 'message'; chars: number }
+  /** A step of work: a tool call other than an aside, a file changed. */
+  | { kind: 'step' }
+  /** Anything else: thinking, an aside, a card, a note. */
+  | { kind: 'other' }
+
+/** Text with fewer visible characters is a line, such as one on what a step did; with more, an answer. */
+export const LINE_CHARS = 200
+
+/**
+ * Which messages answer a turn, by position: those after its last step of work,
+ * or its last message when none follows that step. The message before that step
+ * answers too when it is no mere line and only a line comes after it: a teammate
+ * that wrote its answer, then pushed its branch, adds "Pushed." and nothing more.
+ * `first` is the first message after the last step (the last message when none).
+ */
+export function turnAnswer(entries: TurnEntry[]): { first: number; messages: number[] } {
+  const chars = (at: number) => {
+    const entry = entries[at]
+    return entry?.kind === 'message' ? entry.chars : 0
+  }
+  const done = entries.findLastIndex((e) => e.kind === 'step')
+  const after = entries.flatMap((e, at) => (at > done && e.kind === 'message' ? [at] : []))
+  if (!after.length) {
+    const last = entries.findLastIndex((e) => e.kind === 'message')
+    return { first: last, messages: last < 0 ? [] : [last] }
+  }
+  const before = entries.findLastIndex((e, at) => at < done && e.kind === 'message')
+  const line = after.reduce((n, at) => n + chars(at), 0) < LINE_CHARS
+  return {
+    first: after[0]!,
+    messages: line && before >= 0 && chars(before) >= LINE_CHARS ? [before, ...after] : after,
+  }
+}
+
 /** Written in one tool call and shown only once it is made, so it stays small. */
 export const WIDGET_HTML_MAX = 30_000
 export const Widget = z.object({

@@ -7,10 +7,14 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  ASIDE_TOOLS,
   attachmentLines,
+  bareToolName,
   commandPrompt,
   mentionedIds,
   MessageAttachment,
+  turnAnswer,
+  visibleChars,
   type AgentEvent,
   type ApiToRunner,
   type RunnerToApi,
@@ -18,6 +22,7 @@ import {
   type ReplyTo,
   type ThreadPrompt,
   type ThreadSpec,
+  type TurnEntry,
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
@@ -87,8 +92,15 @@ type Seat = {
   harness: HarnessThread
   folder: Folder
   parkTimer: NodeJS.Timeout | undefined
-  reply?: string
+  /** The running turn's messages and steps: its answer is what hands it on (handOn). */
+  turn: (TurnEntry & { text?: string })[]
 }
+
+/** A turn's answer as the thread shows it (turnAnswer), joined. */
+const answerOf = (turn: Seat['turn']) =>
+  turnAnswer(turn)
+    .messages.map((at) => turn[at]!.text)
+    .join('\n\n')
 
 /**
  * A member's message, from when it comes in until a teammate reads it. queued:
@@ -650,7 +662,7 @@ export class Threads {
           accountId: spec.account.id,
           turnId,
         })
-        seat.reply = undefined
+        seat.turn = []
         const outcome = await seat.harness.run(turn, spec, controller.signal)
         if (outcome.status === 'waiting' && outcome.error) {
           this.options.emit(spec.sessionId, {
@@ -672,7 +684,8 @@ export class Threads {
           thread.lastSpec = spec
           clearTimeout(thread.quietTimer)
           thread.quietTimer = setTimeout(() => this.memorize(spec.sessionId), QUIET_AFTER_MS)
-          if (!controller.signal.aborted && !thread.takeover) this.handOn(thread, spec, seat.reply)
+          if (!controller.signal.aborted && !thread.takeover)
+            this.handOn(thread, spec, answerOf(seat.turn))
         }
         // A person answered: the messages that waited on them go now.
         if (turn.kind !== 'prompt' && turn.kind !== 'resume')
@@ -1125,8 +1138,12 @@ export class Threads {
           this.options.emit(spec.sessionId, { ...event, teammateId })
           if (event.type === 'message.done' && event.text.trim()) {
             this.note(spec, teammateId, spec.teammate.name, event.text)
-            seat!.reply = event.text
+            seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
           }
+          if (event.type === 'tool.started')
+            seat!.turn.push({
+              kind: ASIDE_TOOLS.has(bareToolName(event.toolName)) ? 'other' : 'step',
+            })
           // What the turn checked out, for the dashboard's Preview.
           if (event.type === 'turn.completed')
             void this.options.previews
@@ -1165,7 +1182,7 @@ export class Threads {
         },
         user,
       )
-      seat = { harness, folder, parkTimer: undefined }
+      seat = { harness, folder, parkTimer: undefined, turn: [] }
       thread.harnesses.set(teammateId, seat)
     }
     return seat

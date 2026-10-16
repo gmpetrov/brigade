@@ -450,9 +450,9 @@ const REPLIES =
   'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
   'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
   'questions, and not with `offer_choices`, which already gives them something to click. ' +
-  'Call it right before your final reply, then write the reply as the last thing in your turn: the buttons show ' +
-  'under it. Text written before a tool call comes back summarized like your thinking, and the person never ' +
-  'sees it as your reply.'
+  'The buttons show under your reply: call it right before writing that reply. The person reads all the text ' +
+  'you write, before a tool call or after it, and never your thinking: write your reply once, and never again ' +
+  'after a tool call.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

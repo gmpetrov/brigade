@@ -18,6 +18,8 @@ import {
   hasVisibleText,
   SuggestedReplies,
   TeamProposal,
+  turnAnswer,
+  visibleChars,
   Widget,
   type LibraryFile,
   type AgentEvent,
@@ -690,10 +692,10 @@ const isActivity = (item: Item): item is ActivityItem =>
     !(item.finished && !item.isError && openedPull(item)))
 
 /**
- * A step that does no work: thinking, loading a tool, or a card refused and called
- * again (a reply too long for its button). A teammate often does one between its
- * answer and the card closing it, so it does not end the work: the answer before
- * it stays out of the fold.
+ * A step that does no work: thinking, loading a tool, a card refused and called
+ * again (a reply too long for its button), a wake-up or a task closed after the
+ * answer. A teammate often does one after its answer, so it does not end the
+ * work: the answer before it stays out of the fold.
  */
 const isAside = (item: Item) =>
   item.kind === 'thinking' || (item.kind === 'tool' && ASIDE_TOOLS.has(bareToolName(item.toolName)))
@@ -768,13 +770,19 @@ function layoutThread(items: Item[], working: boolean) {
     const ms = end.startedAt === undefined ? 0 : end.at - end.startedAt
     if (ms < QUICK_TURN_MS) return group(turn)
     turn = actionsLast(items, turn)
-    // The answer: every message after its last step, not only the very last one.
-    const done = turn.findLastIndex((i) => isActivity(items[i]!) && !isAside(items[i]!))
-    const answer = turn.findIndex((i, at) => at > done && items[i]!.kind === 'assistant')
-    const final = answer >= 0 ? answer : turn.findLastIndex((i) => items[i]!.kind === 'assistant')
+    // The answer: every message after its last step, and a long one before that step when only a line follows.
+    const { first: final, messages } = turnAnswer(
+      turn.map((i) => {
+        const item = items[i]!
+        if (item.kind === 'assistant') return { kind: 'message', chars: visibleChars(item.text) }
+        return isActivity(item) && !isAside(item) ? { kind: 'step' } : { kind: 'other' }
+      }),
+    )
+    const answer = new Set(messages)
     const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
+        !answer.has(at) &&
         (final < 0 || at < final || isAside(item)) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
