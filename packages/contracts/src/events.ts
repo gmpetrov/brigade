@@ -175,7 +175,14 @@ export const Ask = z.discriminatedUnion('type', [
      * A connection: the App and the access the teammate needs. Granting gives it
      * that access to one of the App's accounts, from the ticket.
      */
-    app: z.object({ kind: z.string().max(40), scope: z.enum(['read', 'read_write']) }).optional(),
+    app: z
+      .object({
+        kind: z.string().max(40),
+        scope: z.enum(['read', 'read_write']),
+        /** kind mcp: the MCP server's URL, which the person adds from the ticket if it is not yet. */
+        url: z.string().max(500).optional(),
+      })
+      .optional(),
     /**
      * A credential: what the teammate knows of it, so a person can save it to
      * the vault from the ticket. Only fills in the form; never a secret.

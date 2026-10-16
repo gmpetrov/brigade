@@ -5,6 +5,7 @@ import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'luci
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
+import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
@@ -61,6 +62,7 @@ export function AppSheet({
   catalog,
   reload,
   onClose,
+  onAdded,
 }: {
   kind: Kind
   /** Unset: not added yet, the catalog's description and Add. */
@@ -70,11 +72,16 @@ export function AppSheet({
   catalog?: TriggerCatalog
   reload: () => Promise<unknown>
   onClose: () => void
+  /** An MCP server added from this sheet: show its App. */
+  onAdded?: (appId: string) => void
 }) {
   const { me } = useDashboard()
   const admin = isAdmin(me)
   const entry = data.catalog[kind]
   const custom = kind === 'webhook'
+  // An MCP server added by its URL: its App keeps the server, its tools and how it signs in.
+  const server = kind === 'mcp'
+  const mcp = app?.mcp ?? null
   const accounts = app ? data.connections.filter((c) => c.appId === app.id) : []
   const added = accounts.length > 0
   const name = app?.name ?? entry.name
@@ -101,7 +108,7 @@ export function AppSheet({
    * the sheet stays open and shows the account once it has connected.
    */
   const route =
-    custom || kind === 'stripe'
+    custom || server || kind === 'stripe'
       ? null
       : kind === 'cloudflare'
         ? 'mcp'
@@ -190,7 +197,9 @@ export function AppSheet({
         setAddingSkills(false)
       }
     })
-  const enabled = entry.tools.filter((t) => !app?.disabledTools.includes(t.name)).length
+  const tools = server ? (mcp?.tools ?? []) : entry.tools
+  const enabled = tools.filter((t) => !app?.disabledTools.includes(t.name)).length
+  const host = mcp ? new URL(mcp.url).host : null
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -199,9 +208,13 @@ export function AppSheet({
         className="flex max-h-[min(90dvh,52rem)] flex-col gap-6 overflow-y-auto sm:max-w-2xl"
       >
         <div className="flex items-start gap-4">
-          <ProviderTile kind={kind} />
+          <ProviderTile kind={kind} icons={mcp?.icons} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <DialogTitle className="text-xl font-bold tracking-tight">{name}</DialogTitle>
+            {/* A server added by its URL shows the server it connects to, not a developer. */}
+            {mcp && (
+              <span className="truncate font-mono text-xs text-muted-foreground">{mcp.url}</span>
+            )}
             {(entry.developer || entry.source) && (
               <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                 {entry.developer && <span>By {entry.developer}</span>}
@@ -218,15 +231,17 @@ export function AppSheet({
               </span>
             )}
           </div>
-          {!added && !custom && (
+          {!added && !custom && !server && (
             <Button onClick={() => void connect()} disabled={!data.available[kind]}>
               Add
             </Button>
           )}
           <CloseButton label={`Close ${name}`} title="Close" onClick={onClose} />
         </div>
-        <DialogDescription className="text-base text-foreground">
-          {entry.description}
+        <DialogDescription
+          className={cn('text-base text-foreground', mcp && !mcp.description && 'sr-only')}
+        >
+          {mcp ? (mcp.description ?? `The MCP server at ${host}.`) : entry.description}
         </DialogDescription>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         {waiting && (
@@ -236,6 +251,21 @@ export function AppSheet({
           </p>
         )}
         {!data.available[kind] && <Unavailable kind={kind} />}
+
+        {server && !added && (
+          <Section title="Server">
+            <div className="px-4 py-4">
+              <McpServerCard
+                connections={data.connections}
+                reload={reload}
+                onConnected={({ appId }) => {
+                  void reload()
+                  onAdded?.(appId)
+                }}
+              />
+            </div>
+          </Section>
+        )}
 
         {(added || adding) && (
           <Section title={custom ? 'App' : 'Accounts'}>
@@ -252,11 +282,25 @@ export function AppSheet({
             ))}
             {adding && kind === 'stripe' && <StripeForm onSubmit={connectStripe} />}
             {adding && custom && <CustomAppForm onSubmit={connectCustomApp} />}
-            {added && !custom && !adding && (
+            {adding && server && app && (
+              <div className="px-4 py-4">
+                <McpServerCard
+                  app={app}
+                  connections={data.connections}
+                  reload={reload}
+                  onConnected={() => {
+                    setAdding(false)
+                    void reload()
+                  }}
+                />
+              </div>
+            )}
+            {/* A server with nothing to sign in to has one account. */}
+            {added && !custom && !adding && mcp?.auth !== 'none' && (
               <button
                 type="button"
                 disabled={!data.available[kind]}
-                onClick={() => void connect()}
+                onClick={() => (server ? setAdding(true) : void connect())}
                 className="flex items-center gap-2 px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
               >
                 <Plus className="size-4" aria-hidden />
@@ -266,18 +310,18 @@ export function AppSheet({
           </Section>
         )}
 
-        {entry.tools.length > 0 && (
+        {tools.length > 0 && (
           <Section title="Tools">
             <Collapsible>
               <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium">
-                {enabled} of {entry.tools.length} enabled
+                {enabled} of {tools.length} enabled
                 <ChevronDown
                   className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
                   aria-hidden
                 />
               </CollapsibleTrigger>
               <CollapsibleContent className="flex flex-col divide-y border-t">
-                {entry.tools.map((tool) => (
+                {tools.map((tool) => (
                   <label
                     key={tool.name}
                     className="flex items-start gap-3 px-4 py-2.5 text-sm has-[:disabled]:cursor-default"
@@ -358,8 +402,28 @@ export function AppSheet({
         )}
 
         <Section title="Information">
-          <Info label="Developer" value={entry.developer ?? 'You'} />
-          <Info label="Category" value={entry.category} />
+          {mcp && host ? (
+            <>
+              <Info label="Server" value={host} />
+              <Info
+                label="Sign-in"
+                value={
+                  mcp.auth === 'oauth'
+                    ? `OAuth, on ${host}`
+                    : mcp.auth === 'api_key'
+                      ? `API key, in ${mcp.header ?? 'Authorization'}`
+                      : 'None'
+                }
+              />
+            </>
+          ) : server ? (
+            <Info label="Category" value={entry.category} />
+          ) : (
+            <>
+              <Info label="Developer" value={entry.developer ?? 'You'} />
+              <Info label="Category" value={entry.category} />
+            </>
+          )}
           {!custom && (
             <Info
               label="Accounts"

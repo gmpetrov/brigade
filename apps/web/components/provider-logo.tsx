@@ -1,4 +1,6 @@
-import { Webhook } from 'lucide-react'
+'use client'
+import { useState, type ReactNode } from 'react'
+import { Plug, Webhook } from 'lucide-react'
 import type { Connection } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -65,6 +67,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
       </svg>
     )
   if (kind === 'webhook') return <Webhook {...common} />
+  if (kind === 'mcp') return <Plug {...common} />
   if (kind === 'cloudflare')
     return (
       <svg viewBox="0 0 66 30" {...common}>
@@ -92,8 +95,18 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
   )
 }
 
-/** The logo on a tile, where a connection is listed. */
-export function ProviderTile({ kind, small }: { kind: ProviderKind; small?: boolean }) {
+/** The logo on a tile, where a connection is listed. An MCP server shows its own icon, if any. */
+export function ProviderTile({
+  kind,
+  small,
+  icons,
+}: {
+  kind: ProviderKind
+  small?: boolean
+  /** Images to try, best first (an MCP server's icon, its site's); the kind's mark if none loads. */
+  icons?: string[]
+}) {
+  const className = small ? 'size-[18px]' : 'size-6'
   return (
     <span
       aria-hidden
@@ -102,7 +115,37 @@ export function ProviderTile({ kind, small }: { kind: ProviderKind; small?: bool
         small ? 'size-8' : 'size-11',
       )}
     >
-      <ProviderLogo kind={kind} className={small ? 'size-[18px]' : 'size-6'} />
+      <ServerIcon
+        key={icons?.join(' ')}
+        icons={icons ?? []}
+        className={className}
+        fallback={<ProviderLogo kind={kind} className={className} />}
+      />
     </span>
+  )
+}
+
+/** The first of a server's images that loads, else the fallback. */
+function ServerIcon({
+  icons,
+  className,
+  fallback,
+}: {
+  icons: string[]
+  className: string
+  fallback: ReactNode
+}) {
+  const [failed, setFailed] = useState(0)
+  const src = icons[failed]
+  if (!src) return fallback
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- an MCP server's icon, on its own site
+    <img
+      src={src}
+      alt=""
+      referrerPolicy="no-referrer"
+      className={cn(className, 'rounded-sm object-contain')}
+      onError={() => setFailed((n) => n + 1)}
+    />
   )
 }

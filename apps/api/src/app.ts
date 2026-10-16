@@ -41,6 +41,7 @@ import { runnerInstall } from './routes/runner-install.js'
 import { teammates } from './routes/teammates.js'
 import { threads } from './routes/threads.js'
 import { workspaces } from './routes/workspaces.js'
+import { mcpClientDocument } from './connectors/mcp.js'
 import { resolveScope } from './scope.js'
 import { serverTiming } from './timing.js'
 
@@ -77,6 +78,8 @@ app.get('/health/db', async (c) => {
 })
 
 app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+// Brigade's OAuth client ID metadata document, read by MCP servers' authorization servers.
+app.get('/api/mcp/client.json', (c) => c.json(mcpClientDocument()))
 app.route('/api', workspaces)
 app.route('/api/teammates', teammates)
 app.route('/api/computers', computers)

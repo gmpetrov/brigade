@@ -40,7 +40,7 @@ export type ConnectorContext = {
 }
 
 export type ConnectorKind =
-  'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare'
+  'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare' | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }
@@ -122,7 +122,20 @@ export type McpServer = {
    * the server marks it readOnlyHint.
    */
   tools: Record<string, { description: string; write: boolean }>
+  /**
+   * How an account signs in. oauth (the default): the server's own OAuth. api_key: a key the
+   * member pastes, sent in `header`. none: the server asks for nothing.
+   */
+  auth?: McpAuth
+  /** sse: the older HTTP+SSE transport. Default: Streamable HTTP. */
+  transport?: 'streamable' | 'sse'
+  /** oauth: a client the member registered at the provider, for servers that register none. */
+  client?: { id: string; secretId?: string }
+  /** api_key: the header the key goes in. Default: Authorization, as a Bearer token. */
+  header?: string
 }
+
+export type McpAuth = 'oauth' | 'api_key' | 'none'
 
 export const op = <I extends z.ZodType>(o: Operation<I>) => o as unknown as Operation
 

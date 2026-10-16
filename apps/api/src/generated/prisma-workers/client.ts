@@ -166,7 +166,8 @@ export type McpClient = Prisma.McpClientModel
 /**
  * Model App
  * An App added to the workspace ("Apps" in the dashboard). Its accounts are its
- * connections. key: a connector kind for built-in Apps, custom:<id> for a custom app.
+ * connections. key: a connector kind for built-in Apps, custom:<id> for a custom app,
+ * mcp:<hash of its URL> for an MCP server added by its URL.
  */
 export type App = Prisma.AppModel
 /**

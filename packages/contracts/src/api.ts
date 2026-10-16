@@ -70,6 +70,45 @@ export const ConnectGoogle = z.object({
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
 /** An App whose account signs in on its MCP server's own OAuth. */
 export const ConnectMcp = z.object({ kind: z.enum(['cloudflare']), returnTo: ReturnTo.optional() })
+/** An MCP server's address, to see what it is and how its accounts sign in. */
+export const InspectMcp = z.object({ url: z.string().trim().min(1).max(500) })
+/**
+ * An account on an MCP server added by its URL: a new App (url, with the name it is
+ * shown by) or another account of an App already added (appId). With what its sign-in
+ * needs: nothing, a key (in header, default Authorization as a Bearer token), or for a
+ * server that registers no OAuth client, the member's own.
+ */
+export const ConnectMcpServer = z
+  .object({
+    url: z.string().trim().min(1).max(500).optional(),
+    appId: z.string().optional(),
+    name: z.string().trim().min(1).max(80).optional(),
+    apiKey: z.string().trim().min(1).max(4000).optional(),
+    header: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9-]{1,60}$/, 'A header name, e.g. X-API-Key')
+      .optional(),
+    clientId: z.string().trim().min(1).max(500).optional(),
+    clientSecret: z.string().trim().min(1).max(4000).optional(),
+    returnTo: ReturnTo.optional(),
+  })
+  .refine((v) => v.url || v.appId, 'The server URL, or the App to add an account to')
+/** What an MCP server is, before anyone signs in (see the API's inspectMcp). */
+export type McpInspection = {
+  url: string
+  transport: 'streamable' | 'sse'
+  /** oauth: the provider's sign-in. oauth_client: the same with a client the member registered. */
+  signIn: 'oauth' | 'oauth_client' | 'api_key' | 'none'
+  name: string
+  description: string | null
+  icons: string[]
+  tools: { name: string; description: string; write: boolean }[] | null
+  /** The App this server already is in the workspace, with an account. */
+  app: { id: string; name: string } | null
+  /** Where the member's own OAuth client must send people back. */
+  redirectUri: string
+}
 /** A Stripe secret or restricted key, entered once in the dashboard and kept in the vault. */
 export const ConnectStripe = z.object({
   apiKey: z

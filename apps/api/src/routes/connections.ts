@@ -3,12 +3,14 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
-import { appCatalog, connectors, toolCatalog } from '../connectors/index.js'
+import { appCatalog, connectors, mcpToolName, toolCatalog } from '../connectors/index.js'
 import {
   ConnectGitHub,
   ConnectGoogle,
   ConnectMcp,
+  ConnectMcpServer,
   ConnectStripe,
+  InspectMcp,
   ConnectWebhookApp,
   UpdateApp,
   UpdateConnection,
@@ -37,11 +39,26 @@ import {
 import {
   callMcpTool,
   exchangeMcpCode,
+  inspectMcp,
+  listMcpTools,
   mcpAuthUrl,
+  mcpRedirectUri,
+  mcpServerInfo,
   pkceVerifier,
   revokeMcp,
   type McpCredential,
+  type McpOAuthClient,
 } from '../connectors/mcp.js'
+import type { McpServer } from '../connectors/types.js'
+import {
+  asServer,
+  catalogTools,
+  customMcp,
+  mcpAppKey,
+  normalUrl,
+  toolPrefix,
+  type CustomMcp,
+} from '../mcp-servers.js'
 import { forgetMcpTools } from '../mcp-tools.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
@@ -64,7 +81,9 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare'
+  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'mcp'
+  /** mcp: the App of the server added by its URL. */
+  appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
   installationId?: number
   /** An MCP server's sign-in: the PKCE verifier for its code. */
@@ -123,18 +142,23 @@ async function createConnection(
     externalUrl?: string
   },
   credential: object | null,
+  /** An MCP server added by its URL: its App, added before its first account signs in. */
+  existing?: { id: string },
 ) {
   const db = scoped(scope)
   const vaultSecretId = credential ? await sealSecret(db, scope, credential) : null
   const id = randomUUID()
   const custom = connection.kind === 'webhook'
-  const app = await appFor(db, scope, appKey(connection.kind, id), custom ? connection.label : null)
+  const app =
+    existing ??
+    (await appFor(db, scope, appKey(connection.kind, id), custom ? connection.label : null))
   const row = await db.connection.create({
     data: {
       ...connection,
       id,
       appId: app.id,
-      reach: appCatalog[connection.kind].personal ? 'mine' : 'workspace',
+      // A server with nothing to sign in to is nobody's own account.
+      reach: appCatalog[connection.kind].personal && credential ? 'mine' : 'workspace',
       vaultSecretId,
       createdByMemberId: scope.memberId,
     } as never,
@@ -193,27 +217,44 @@ export const connections = new Hono<AppEnv>()
     if (typeof taken === 'string') return back(`error=${taken}`)
     const { grant, scope } = taken
     back = (query: string) => c.redirect(backTo(grant.returnTo, query))
-    const server = connectors[grant.kind]?.mcp
-    if (!server || !grant.verifier) return back('error=forbidden')
+    const db = scoped(scope)
+    // A server added by its URL, from its App; else a built-in App's.
+    const added =
+      grant.kind === 'mcp' && grant.appId
+        ? await db.app.findFirst({ where: { id: grant.appId } })
+        : null
+    const config = added ? customMcp(added) : null
+    const server = config ? asServer(config) : connectors[grant.kind]?.mcp
+    if (!server || !grant.verifier || (grant.kind === 'mcp' && !added))
+      return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
     let credential: McpCredential
+    let email: string | null
     try {
-      credential = await exchangeMcpCode(server, c.req.query('code')!, grant.verifier)
+      const own = config ? await ownClient(db, scope, config) : undefined
+      ;({ credential, email } = await exchangeMcpCode(
+        server,
+        c.req.query('code')!,
+        grant.verifier,
+        own,
+      ))
     } catch (error) {
       console.error('mcp connection failed:', error instanceof Error ? error.message : error)
       return back('error=mcp')
     }
-    const account = await mcpAccount(server.url, credential)
+    const signedIn = bearer(credential.accessToken)
+    const account = email ?? (await mcpAccount(server, signedIn))
     const kind = grant.kind as ConnectorKind
     const connection = await createConnection(
       scope,
-      { kind, label: appCatalog[kind].name, externalAccount: account },
+      { kind, label: added?.name ?? appCatalog[kind].name, externalAccount: account },
       credential,
+      added ?? undefined,
     )
+    if (added && config) await refreshApp(db, added.id, config, server, signedIn)
     const repository = appCatalog[kind].skills
     if (repository) {
-      const db = scoped(scope)
       const has = await db.skillPack.count({ where: { appId: connection.appId } })
       if (!has)
         await installAppSkills(
@@ -327,6 +368,7 @@ export const connections = new Hono<AppEnv>()
         id: a.id,
         key: a.key,
         name: a.name,
+        mcp: mcpView(customMcp(a)),
         disabledTools: a.disabledTools,
         createdByMemberId: a.createdByMemberId,
         skills: packs.filter((p) => p.appId === a.id).flatMap((p) => p.skills),
@@ -343,6 +385,7 @@ export const connections = new Hono<AppEnv>()
         stripe: true,
         github: githubConfigured(),
         cloudflare: true,
+        mcp: true,
         webhook: true,
       },
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
@@ -357,6 +400,109 @@ export const connections = new Hono<AppEnv>()
     const state = randomBytes(24).toString('base64url')
     await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo })
     return c.json({ url: googleAuthUrl(kind, state) })
+  })
+
+  /**
+   * What an MCP server is and how its accounts sign in, from its URL alone: the dashboard
+   * shows it as a card before anyone signs in, with only the fields its sign-in needs.
+   */
+  .post('/mcp/inspect', async (c) => {
+    const { url } = await parseBody(c.req.raw, InspectMcp)
+    let inspection: Awaited<ReturnType<typeof inspectMcp>>
+    try {
+      inspection = await inspectMcp(url)
+    } catch (error) {
+      throw new HTTPException(400, {
+        message: error instanceof Error ? error.message : 'Not an MCP server',
+      })
+    }
+    const app = await c.var.db.app.findFirst({
+      where: {
+        key: mcpAppKey(inspection.url),
+        connections: { some: { status: { not: 'removed' } } },
+      },
+    })
+    return c.json({
+      ...inspection,
+      app: app ? { id: app.id, name: app.name ?? inspection.name } : null,
+      redirectUri: mcpRedirectUri(),
+    })
+  })
+
+  /**
+   * An account on an MCP server added by its URL. Adds its App the first time, then
+   * signs in the way the server asks: its OAuth (the provider's page, in a window of
+   * its own), a key the member pasted (checked against the server), or nothing.
+   */
+  .post('/mcp/server', async (c) => {
+    const { scope, db } = c.var
+    const input = await parseBody(c.req.raw, ConnectMcpServer)
+    const app = await mcpApp(db, scope, input)
+    const config = customMcp(app)!
+    const server = asServer(config)
+    const name = app.name ?? 'MCP server'
+    const label = { kind: 'mcp' as const, label: name }
+
+    if (config.auth === 'none') {
+      // Nothing to sign in to: one account, for every teammate given it.
+      const existing = await db.connection.findFirst({
+        where: { appId: app.id, status: { not: 'removed' } },
+      })
+      if (existing) return c.json({ id: existing.id, appId: app.id }, 200)
+      const plain = (url: string, init?: RequestInit) => fetch(url, init)
+      const connection = await createConnection(
+        scope,
+        { ...label, externalAccount: null },
+        null,
+        app,
+      )
+      await refreshApp(db, app.id, config, server, plain)
+      return c.json({ id: connection.id, appId: app.id }, 201)
+    }
+
+    if (config.auth === 'api_key') {
+      if (!input.apiKey) throw new HTTPException(400, { message: 'Paste the key for this server' })
+      const header = config.header
+        ? { [config.header]: input.apiKey }
+        : { authorization: `Bearer ${input.apiKey}` }
+      const keyed = (url: string, init: RequestInit = {}) =>
+        fetch(url, { ...init, headers: { ...(init.headers as Record<string, string>), ...header } })
+      try {
+        await listMcpTools(keyed, server)
+      } catch (error) {
+        throw new HTTPException(400, {
+          message: `${name} did not accept that key (${error instanceof Error ? error.message : 'error'})`,
+        })
+      }
+      const connection = await createConnection(
+        scope,
+        { ...label, externalAccount: await mcpAccount(server, keyed) },
+        { apiKey: input.apiKey },
+        app,
+      )
+      await refreshApp(db, app.id, config, server, keyed)
+      return c.json({ id: connection.id, appId: app.id }, 201)
+    }
+
+    // OAuth: the provider's own sign-in page.
+    const state = randomBytes(24).toString('base64url')
+    const verifier = pkceVerifier()
+    let url: string
+    try {
+      url = await mcpAuthUrl(server, state, verifier, await ownClient(db, scope, config))
+    } catch (error) {
+      throw new HTTPException(502, {
+        message: `${name} did not answer: ${error instanceof Error ? error.message : 'error'}`,
+      })
+    }
+    await saveState(stateIdentifier(state), {
+      ...scope,
+      kind: 'mcp',
+      appId: app.id,
+      returnTo: input.returnTo,
+      verifier,
+    })
+    return c.json({ url, appId: app.id })
   })
 
   /** Start an MCP App's sign-in, on its server's own OAuth. */
@@ -488,7 +634,9 @@ export const connections = new Hono<AppEnv>()
     requireAppManager(scope, app, app.connections)
     const { disabledTools } = await parseBody(c.req.raw, UpdateApp)
     const kind = app.connections[0]?.kind ?? (app.key as ConnectorKind)
-    const known = new Set(toolCatalog(kind).map((t) => t.name))
+    const known = new Set(
+      (customMcp(app)?.tools ?? toolCatalog(kind)).map((t: { name: string }) => t.name),
+    )
     const unknown = disabledTools.filter((t) => !known.has(t))
     if (unknown.length)
       throw new HTTPException(400, { message: `Not a tool of this App: ${unknown.join(', ')}` })
@@ -554,6 +702,13 @@ export const connections = new Hono<AppEnv>()
     for (const connection of app.connections) await disconnect(scope, db, connection)
     // Its skills go with it; adding it again brings them back.
     await db.skillPack.deleteMany({ where: { appId: app.id } })
+    // So does the OAuth client a member gave for its server: adding it again asks again.
+    const config = customMcp(app)
+    if (config?.client) {
+      if (config.client.secretId) await deleteSecret(db, config.client.secretId)
+      const { client: _client, ...rest } = config
+      await db.app.updateMany({ where: { id: app.id }, data: { mcp: rest } })
+    }
     return c.body(null, 204)
   })
 
@@ -561,7 +716,7 @@ export const connections = new Hono<AppEnv>()
 async function disconnect(
   scope: WorkspaceScope,
   db: ScopedDb,
-  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
+  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null; appId: string },
 ) {
   // Unsubscribe at the vendor while the credential still works: Stripe endpoints, Gmail watches,
   // Calendar channels.
@@ -571,7 +726,13 @@ async function disconnect(
   if (connection.vaultSecretId) {
     // Google and MCP tokens are revoked at the provider. A Stripe key is revoked in Stripe's
     // dashboard. A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
-    const auth = connectors[connection.kind]?.auth
+    const auth =
+      connection.kind === 'mcp'
+        ? customMcp((await db.app.findFirst({ where: { id: connection.appId } })) ?? {})?.auth ===
+          'oauth'
+          ? 'mcp'
+          : 'api_key'
+        : connectors[connection.kind]?.auth
     if (auth === 'google' || auth === 'mcp') {
       const credential = await openSecret<GoogleCredential | McpCredential>(
         db,
@@ -600,21 +761,22 @@ async function disconnect(
   })
 }
 
+/** A fetch that sends an access token. */
+const bearer =
+  (token: string) =>
+  (target: string, init: RequestInit = {}) =>
+    fetch(target, {
+      ...init,
+      headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${token}` },
+    })
+
 /**
  * Who an MCP account signed in as, to show which one it is: the server's whoami
  * tool when it has one (an email or an account name), else nothing.
  */
-async function mcpAccount(url: string, credential: McpCredential) {
+async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType<typeof bearer>) {
   try {
-    const signedIn = (target: string, init: RequestInit = {}) =>
-      fetch(target, {
-        ...init,
-        headers: {
-          ...(init.headers as Record<string, string>),
-          authorization: `Bearer ${credential.accessToken}`,
-        },
-      })
-    const output = await callMcpTool(signedIn, url, 'whoami', {})
+    const output = await callMcpTool(signedIn, server, 'whoami', {})
     const who = (typeof output === 'string' ? JSON.parse(output) : output) as {
       email?: string
       name?: string
@@ -623,5 +785,182 @@ async function mcpAccount(url: string, credential: McpCredential) {
     return who.email ?? who.name ?? who.id ?? null
   } catch {
     return null
+  }
+}
+
+/** An App's MCP server as the dashboard shows it: never its client's secret. */
+function mcpView(config: CustomMcp | null) {
+  if (!config) return null
+  return {
+    url: config.url,
+    auth: config.auth,
+    transport: config.transport,
+    header: config.header ?? null,
+    clientId: config.client?.id ?? null,
+    icons: config.icons,
+    description: config.description,
+    tools: config.tools,
+  }
+}
+
+/** The client a member registered at the provider for this server, with its secret. */
+async function ownClient(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  config: CustomMcp,
+): Promise<McpOAuthClient | undefined> {
+  if (!config.client) return undefined
+  const secret = config.client.secretId
+    ? await openSecret<{ clientSecret: string }>(db, scope, config.client.secretId)
+    : null
+  return { clientId: config.client.id, clientSecret: secret?.clientSecret ?? null }
+}
+
+/**
+ * The App of an MCP server added by its URL, as the member's request needs it: the one
+ * named, or the one for that URL (added the first time, its server inspected again here
+ * rather than trusted from the dashboard). A client the member gives is kept with it.
+ */
+async function mcpApp(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  input: {
+    url?: string
+    appId?: string
+    name?: string
+    header?: string
+    apiKey?: string
+    clientId?: string
+    clientSecret?: string
+  },
+) {
+  if (input.appId) {
+    const app = await db.app.findFirst({ where: { id: input.appId } })
+    if (!app || !customMcp(app))
+      throw new HTTPException(404, { message: 'That MCP server is not in this workspace' })
+    return withClient(db, scope, app, input)
+  }
+  let inspection: Awaited<ReturnType<typeof inspectMcp>>
+  try {
+    inspection = await inspectMcp(input.url!)
+  } catch (error) {
+    throw new HTTPException(400, {
+      message: error instanceof Error ? error.message : 'Not an MCP server',
+    })
+  }
+  // A server that registers no OAuth client often takes a token too (GitHub's, a personal one).
+  const byKey =
+    inspection.signIn === 'api_key' || (inspection.signIn === 'oauth_client' && !!input.apiKey)
+  if (inspection.signIn === 'oauth_client' && !input.clientId && !byKey)
+    throw new HTTPException(400, {
+      message: `${inspection.name} needs an OAuth client: register one with its provider and enter its client ID, or paste a token`,
+    })
+  const key = mcpAppKey(inspection.url)
+  const existing = await db.app.findFirst({
+    where: { key },
+    include: { connections: { where: { status: { not: 'removed' } } } },
+  })
+  if (existing && existing.connections.length > 0 && customMcp(existing))
+    return withClient(db, scope, existing, input)
+  // Not added yet, or every account of it was removed: set it up as this member asks.
+  const others = await db.app.findMany({ where: { key: { startsWith: 'mcp:' } } })
+  const name = input.name ?? inspection.name
+  const prior = existing ? customMcp(existing) : null
+  // Kept from before, so the names of tools turned off still match.
+  const prefix =
+    prior?.prefix ??
+    toolPrefix(
+      name,
+      others.flatMap((a) => customMcp(a)?.prefix ?? []),
+    )
+  const config: CustomMcp = {
+    url: normalUrl(inspection.url),
+    transport: inspection.transport,
+    auth: inspection.signIn === 'none' ? 'none' : byKey ? 'api_key' : 'oauth',
+    ...(byKey && input.header ? { header: input.header } : {}),
+    // The member kept the name Brigade guessed from the host: the server may say its own later.
+    ...(inspection.signIn !== 'none' && (!input.name || input.name === inspection.name)
+      ? { guessedName: true }
+      : {}),
+    prefix,
+    icons: inspection.icons,
+    description: inspection.description,
+    tools: inspection.tools
+      ? inspection.tools.map((t) => ({ ...t, name: mcpToolName(prefix, t.name) }))
+      : (prior?.tools ?? []),
+  }
+  const app = existing
+    ? await db.app
+        .updateMany({
+          where: { id: existing.id },
+          data: { name, mcp: config, createdByMemberId: scope.memberId },
+        })
+        .then(() => db.app.findFirstOrThrow({ where: { id: existing.id } }))
+    : await appFor(db, scope, key, name).then(async (added) => {
+        await db.app.updateMany({ where: { id: added.id }, data: { name, mcp: config } })
+        return db.app.findFirstOrThrow({ where: { id: added.id } })
+      })
+  return withClient(db, scope, app, input)
+}
+
+/** Keep the OAuth client a member gave with the App (its secret in the vault). */
+async function withClient<A extends { id: string; mcp: unknown }>(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  app: A,
+  input: { clientId?: string; clientSecret?: string },
+) {
+  const config = customMcp(app)!
+  if (!input.clientId || config.auth !== 'oauth') return app
+  if (config.client?.secretId) await deleteSecret(db, config.client.secretId)
+  const secretId = input.clientSecret
+    ? await sealSecret(db, scope, { clientSecret: input.clientSecret })
+    : undefined
+  const mcp: CustomMcp = {
+    ...config,
+    client: { id: input.clientId, ...(secretId ? { secretId } : {}) },
+  }
+  await db.app.updateMany({ where: { id: app.id }, data: { mcp } })
+  return { ...app, mcp }
+}
+
+/**
+ * Once an account works: the server's tools for the App's switches, and its own icon
+ * when it shows one only to signed-in accounts.
+ */
+async function refreshApp(
+  db: ScopedDb,
+  appId: string,
+  config: CustomMcp,
+  server: McpServer,
+  signedIn: (url: string, init?: RequestInit) => Promise<Response>,
+) {
+  try {
+    const [tools, info] = await Promise.all([
+      listMcpTools(signedIn, server),
+      mcpServerInfo(signedIn, server).catch(() => null),
+    ])
+    const icons =
+      info?.icon && !config.icons.includes(info.icon) ? [info.icon, ...config.icons] : config.icons
+    const { guessedName: _guessed, ...rest } = config
+    const named = config.guessedName && info?.name ? info.name.slice(0, 80) : null
+    if (named) {
+      // Its accounts were labelled with the guess too.
+      const app = await db.app.findFirst({ where: { id: appId } })
+      if (app?.name)
+        await db.connection.updateMany({
+          where: { appId, label: app.name },
+          data: { label: named },
+        })
+    }
+    await db.app.updateMany({
+      where: { id: appId },
+      data: {
+        ...(named ? { name: named } : {}),
+        mcp: { ...(named ? rest : config), icons, tools: catalogTools(config.prefix, tools) },
+      },
+    })
+  } catch (error) {
+    console.warn('mcp tools not listed:', error instanceof Error ? error.message : error)
   }
 }

@@ -226,13 +226,17 @@ export const openTicketTool = tool({
             app: {
               type: 'object',
               description:
-                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there',
+                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket',
               properties: {
                 kind: {
                   type: 'string',
-                  enum: ['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare'],
+                  enum: ['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare', 'mcp'],
                 },
                 scope: { type: 'string', enum: ['read', 'read_write'] },
+                url: {
+                  type: 'string',
+                  description: 'kind mcp: the MCP server URL, e.g. https://mcp.example.com/mcp',
+                },
               },
               required: ['kind', 'scope'],
             },

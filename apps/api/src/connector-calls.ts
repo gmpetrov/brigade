@@ -19,6 +19,7 @@ import {
 } from './connectors/github-app.js'
 import { refreshGoogle, type GoogleCredential } from './connectors/google-oauth.js'
 import { refreshMcp, type McpCredential } from './connectors/mcp.js'
+import { serverOf } from './mcp-servers.js'
 import { isMcp, mcpOperation } from './mcp-tools.js'
 import {
   redact,
@@ -271,19 +272,29 @@ export async function handleConnectorCall(
 export async function authorisedFetch(
   db: ScopedDb,
   scope: Scope,
-  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
+  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null; appId?: string },
 ): Promise<ConnectorContext['fetch']> {
+  // An MCP server added by its URL signs in its own way: its OAuth, a pasted key, or nothing.
+  const custom =
+    connection.kind === 'mcp' && connection.appId
+      ? (await serverOf(db, { kind: connection.kind, appId: connection.appId }))?.server
+      : undefined
+  if (custom?.auth === 'none') return (url, init) => fetch(url, init)
   if (!connection.vaultSecretId) throw new Error('This connection has no credential; reconnect it')
   const secretId = connection.vaultSecretId
   const needsReauth = () =>
     db.connection.updateMany({ where: { id: connection.id }, data: { status: 'needs_reauth' } })
 
-  if (connectors[connection.kind]?.auth === 'api_key') {
+  if (connectors[connection.kind]?.auth === 'api_key' || custom?.auth === 'api_key') {
     const { apiKey } = await openSecret<ApiKeyCredential>(db, scope, secretId)
+    // A Bearer token, unless the server reads its key from a header of its own.
+    const header = custom?.header
+      ? { [custom.header]: apiKey }
+      : { authorization: `Bearer ${apiKey}` }
     const authorised = async (url: string, init: RequestInit = {}) => {
       const response = await fetch(url, {
         ...init,
-        headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${apiKey}` },
+        headers: { ...(init.headers as Record<string, string>), ...header },
       })
       if (response.status === 401) await needsReauth()
       return response
@@ -320,7 +331,7 @@ export async function authorisedFetch(
   }
 
   // OAuth tokens the API refreshes: Google's, or an MCP server's own.
-  const mcp = connectors[connection.kind]?.auth === 'mcp'
+  const mcp = connectors[connection.kind]?.auth === 'mcp' || custom?.auth === 'oauth'
   let credential = await openSecret<GoogleCredential | McpCredential>(db, scope, secretId)
   const refresh = async () => {
     try {

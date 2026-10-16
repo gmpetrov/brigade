@@ -143,7 +143,8 @@ export const ConnectorKind = {
   stripe: 'stripe',
   github: 'github',
   webhook: 'webhook',
-  cloudflare: 'cloudflare'
+  cloudflare: 'cloudflare',
+  mcp: 'mcp'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]

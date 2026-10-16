@@ -84,9 +84,14 @@ export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | und
     raw.asks.map((a, i) => ({
       ...a,
       id: a.id || `a${i + 1}`,
-      // An App ask names it by kind: that is enough for what it is.
+      // An App ask names it by kind (an MCP server by its URL): that is enough for what it is.
       ...(!a.what && (a.app as { kind?: string } | undefined)?.kind
-        ? { what: (a.app as { kind: string }).kind }
+        ? {
+            what:
+              (a.app as { kind: string; url?: string }).kind === 'mcp'
+                ? ((a.app as { url?: string }).url ?? 'an MCP server')
+                : (a.app as { kind: string }).kind,
+          }
         : {}),
       ...(Array.isArray(a.options)
         ? {
@@ -142,7 +147,9 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
               ? {
                   note:
                     `The person gave you ${ask.app.scope === 'read' ? 'read' : 'read and write'} access to ${ask.what} from the ticket. ` +
-                    `Its tools (${ask.app.kind}_…) are yours in this thread from now on: carry on with them.`,
+                    (ask.app.kind === 'mcp'
+                      ? 'Its tools are yours in this thread from now on: carry on with them.'
+                      : `Its tools (${ask.app.kind}_…) are yours in this thread from now on: carry on with them.`),
                 }
               : {}),
             ...(reply.granted && reply.credential

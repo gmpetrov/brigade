@@ -7,21 +7,46 @@ import { connectors, mcpToolName } from './connectors/index.js'
 import { callMcpTool, listMcpTools, mcpWrites, type McpTool } from './connectors/mcp.js'
 import { op, type ConnectorKind, type Operation } from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
+import { catalogTools, serverOf } from './mcp-servers.js'
 
 const LIST_MS = 5 * 60_000
 const listed = new Map<string, { at: number; tools: McpTool[] }>()
 
-type McpConnection = { id: string; kind: ConnectorKind; vaultSecretId: string | null }
+type McpConnection = {
+  id: string
+  appId: string
+  kind: ConnectorKind
+  vaultSecretId: string | null
+}
 
 /** Whether a kind's tools come from an MCP server rather than from Brigade. */
-export const isMcp = (kind: ConnectorKind) => Boolean(connectors[kind]?.mcp)
+export const isMcp = (kind: ConnectorKind) => kind === 'mcp' || Boolean(connectors[kind]?.mcp)
 
-async function toolsOf(db: ScopedDb, scope: Scope, connection: McpConnection) {
+async function serverFor(db: ScopedDb, connection: McpConnection) {
+  const found = await serverOf(db, connection)
+  if (!found) throw new Error('This App no longer has its MCP server')
+  return found
+}
+
+async function toolsOf(
+  db: ScopedDb,
+  scope: Scope,
+  connection: McpConnection,
+  found: Awaited<ReturnType<typeof serverFor>>,
+) {
   const hit = listed.get(connection.id)
   if (hit && Date.now() - hit.at < LIST_MS) return hit.tools
-  const server = connectors[connection.kind]!.mcp!
-  const tools = await listMcpTools(await authorisedFetch(db, scope, connection), server.url)
+  const tools = await listMcpTools(await authorisedFetch(db, scope, connection), found.server)
   listed.set(connection.id, { at: Date.now(), tools })
+  // A server added by its URL: its App's tool switches follow what it lists.
+  if (found.app) {
+    const now = catalogTools(found.prefix, tools)
+    if (JSON.stringify(now) !== JSON.stringify(found.app.mcp.tools))
+      await db.app.updateMany({
+        where: { id: found.app.id },
+        data: { mcp: { ...found.app.mcp, tools: now } },
+      })
+  }
   return tools
 }
 
@@ -33,9 +58,10 @@ export async function mcpOperationSpecs(
   grant: 'read' | 'read_write',
   disabled: readonly string[],
 ) {
-  const server = connectors[connection.kind]!.mcp!
-  return (await toolsOf(db, scope, connection))
-    .map((tool) => ({ tool, name: mcpToolName(connection.kind, tool.name) }))
+  const found = await serverFor(db, connection)
+  const { server, prefix } = found
+  return (await toolsOf(db, scope, connection, found))
+    .map((tool) => ({ tool, name: mcpToolName(prefix, tool.name) }))
     .filter(
       ({ tool, name }) =>
         (grant === 'read_write' || !mcpWrites(server, tool)) && !disabled.includes(name),
@@ -65,9 +91,10 @@ export async function mcpOperation(
   connection: McpConnection,
   name: string,
 ): Promise<Operation | undefined> {
-  const server = connectors[connection.kind]!.mcp!
-  const tool = (await toolsOf(db, scope, connection)).find(
-    (t) => mcpToolName(connection.kind, t.name) === name,
+  const found = await serverFor(db, connection)
+  const { server, prefix } = found
+  const tool = (await toolsOf(db, scope, connection, found)).find(
+    (t) => mcpToolName(prefix, t.name) === name,
   )
   if (!tool) return undefined
   return op({
@@ -75,7 +102,7 @@ export async function mcpOperation(
     write: mcpWrites(server, tool),
     input: Input,
     target: targetOf,
-    run: (ctx, input) => callMcpTool(ctx.fetch, server.url, tool.name, input),
+    run: (ctx, input) => callMcpTool(ctx.fetch, server, tool.name, input),
   })
 }
 
