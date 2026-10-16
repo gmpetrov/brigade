@@ -461,8 +461,15 @@ export async function prefetch(
 /**
  * A thread folder put back from its archive: its checkouts borrow objects from
  * the teammate's caches, which may have been swept meanwhile. Fetch those again.
+ * `moved`: the folder came from another computer, whose caches were elsewhere:
+ * the checkouts borrow from this computer's caches instead.
  */
-export async function repairCaches(workDir: string, access: GitAccess, runAs?: string) {
+export async function repairCaches(
+  workDir: string,
+  access: GitAccess,
+  runAs?: string,
+  moved = false,
+) {
   const markers = await findAs(runAs, [
     workDir,
     '-maxdepth',
@@ -478,27 +485,36 @@ export async function repairCaches(workDir: string, access: GitAccess, runAs?: s
     '-print',
   ])
   for (const marker of markers) {
-    const alternates = (
-      await run('cat', [`${marker}/objects/info/alternates`], { runAs }).catch(() =>
-        Buffer.alloc(0),
-      )
-    )
+    const file = `${marker}/objects/info/alternates`
+    const lines = (await run('cat', [file], { runAs }).catch(() => Buffer.alloc(0)))
       .toString()
       .split('\n')
-      .map((line) => line.trim().replace(/\/objects\/?$/, ''))
+      .map((line) => line.trim())
       .filter(Boolean)
-    for (const cache of alternates) {
+    const borrowed = lines.map((line) => line.replace(/\/objects\/?$/, ''))
+    let changed = false
+    for (const [i, cache] of borrowed.entries()) {
       if (await succeeds(run('test', ['-d', cache], { runAs }))) continue
       try {
         const url = await git(['-C', marker, 'ls-remote', '--get-url', 'origin'], access, runAs)
         if (!url.startsWith(access.url)) continue
         const repository = url.slice(access.url.length).replace(/\.git$/, '')
-        if (!REPO.test(repository) || cachePath(repository.toLowerCase(), runAs) !== cache) continue
-        await refreshCache(cache, `${access.url}${repository}.git`, access, runAs)
+        if (!REPO.test(repository)) continue
+        const ours = cachePath(repository.toLowerCase(), runAs)
+        if (ours !== cache && !moved) continue
+        await refreshCache(ours, `${access.url}${repository}.git`, access, runAs)
+        if (ours !== cache) {
+          lines[i] = `${ours}/objects`
+          changed = true
+        }
       } catch (error) {
         console.warn(`could not fetch ${cache} again for ${marker}: ${message(error)}`)
       }
     }
+    if (changed)
+      await run('tee', [file], { runAs, input: Buffer.from(`${lines.join('\n')}\n`) }).catch(
+        (error) => console.warn(`could not point ${marker} at this computer's cache: ${message(error)}`),
+      )
   }
 }
 

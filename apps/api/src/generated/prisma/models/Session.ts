@@ -28,10 +28,12 @@ export type AggregateSession = {
 
 export type SessionAvgAggregateOutputType = {
   lastSeq: number | null
+  movedSeq: number | null
 }
 
 export type SessionSumAggregateOutputType = {
   lastSeq: number | null
+  movedSeq: number | null
 }
 
 export type SessionMinAggregateOutputType = {
@@ -53,6 +55,9 @@ export type SessionMinAggregateOutputType = {
   scheduleId: string | null
   archivedAt: Date | null
   lastSeq: number | null
+  movedAt: Date | null
+  movedFrom: string | null
+  movedSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
   taskId: string | null
@@ -78,6 +83,9 @@ export type SessionMaxAggregateOutputType = {
   scheduleId: string | null
   archivedAt: Date | null
   lastSeq: number | null
+  movedAt: Date | null
+  movedFrom: string | null
+  movedSeq: number | null
   createdAt: Date | null
   updatedAt: Date | null
   taskId: string | null
@@ -103,6 +111,10 @@ export type SessionCountAggregateOutputType = {
   scheduleId: number
   archivedAt: number
   lastSeq: number
+  move: number
+  movedAt: number
+  movedFrom: number
+  movedSeq: number
   createdAt: number
   updatedAt: number
   taskId: number
@@ -113,10 +125,12 @@ export type SessionCountAggregateOutputType = {
 
 export type SessionAvgAggregateInputType = {
   lastSeq?: true
+  movedSeq?: true
 }
 
 export type SessionSumAggregateInputType = {
   lastSeq?: true
+  movedSeq?: true
 }
 
 export type SessionMinAggregateInputType = {
@@ -138,6 +152,9 @@ export type SessionMinAggregateInputType = {
   scheduleId?: true
   archivedAt?: true
   lastSeq?: true
+  movedAt?: true
+  movedFrom?: true
+  movedSeq?: true
   createdAt?: true
   updatedAt?: true
   taskId?: true
@@ -163,6 +180,9 @@ export type SessionMaxAggregateInputType = {
   scheduleId?: true
   archivedAt?: true
   lastSeq?: true
+  movedAt?: true
+  movedFrom?: true
+  movedSeq?: true
   createdAt?: true
   updatedAt?: true
   taskId?: true
@@ -188,6 +208,10 @@ export type SessionCountAggregateInputType = {
   scheduleId?: true
   archivedAt?: true
   lastSeq?: true
+  move?: true
+  movedAt?: true
+  movedFrom?: true
+  movedSeq?: true
   createdAt?: true
   updatedAt?: true
   taskId?: true
@@ -300,6 +324,10 @@ export type SessionGroupByOutputType = {
   scheduleId: string | null
   archivedAt: Date | null
   lastSeq: number
+  move: runtime.JsonValue | null
+  movedAt: Date | null
+  movedFrom: string | null
+  movedSeq: number | null
   createdAt: Date
   updatedAt: Date
   taskId: string | null
@@ -348,6 +376,10 @@ export type SessionWhereInput = {
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
   archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  move?: Prisma.JsonNullableFilter<"Session">
+  movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
+  movedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   taskId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -394,6 +426,10 @@ export type SessionOrderByWithRelationInput = {
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  move?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedFrom?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   taskId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -444,6 +480,10 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
   archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  move?: Prisma.JsonNullableFilter<"Session">
+  movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
+  movedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   projectId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -489,6 +529,10 @@ export type SessionOrderByWithAggregationInput = {
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  move?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedFrom?: Prisma.SortOrderInput | Prisma.SortOrder
+  movedSeq?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   taskId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -522,6 +566,10 @@ export type SessionScalarWhereWithAggregatesInput = {
   scheduleId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   archivedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntWithAggregatesFilter<"Session"> | number
+  move?: Prisma.JsonNullableWithAggregatesFilter<"Session">
+  movedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
+  movedFrom?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  movedSeq?: Prisma.IntNullableWithAggregatesFilter<"Session"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Session"> | Date | string
   taskId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
@@ -540,6 +588,10 @@ export type SessionCreateInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -584,6 +636,10 @@ export type SessionUncheckedCreateInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -614,6 +670,10 @@ export type SessionUpdateInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -658,6 +718,10 @@ export type SessionUncheckedUpdateInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -695,6 +759,10 @@ export type SessionCreateManyInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -713,6 +781,10 @@ export type SessionUpdateManyMutationInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -736,6 +808,10 @@ export type SessionUncheckedUpdateManyInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -776,6 +852,10 @@ export type SessionCountOrderByAggregateInput = {
   scheduleId?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  move?: Prisma.SortOrder
+  movedAt?: Prisma.SortOrder
+  movedFrom?: Prisma.SortOrder
+  movedSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   taskId?: Prisma.SortOrder
@@ -784,6 +864,7 @@ export type SessionCountOrderByAggregateInput = {
 
 export type SessionAvgOrderByAggregateInput = {
   lastSeq?: Prisma.SortOrder
+  movedSeq?: Prisma.SortOrder
 }
 
 export type SessionMaxOrderByAggregateInput = {
@@ -805,6 +886,9 @@ export type SessionMaxOrderByAggregateInput = {
   scheduleId?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  movedAt?: Prisma.SortOrder
+  movedFrom?: Prisma.SortOrder
+  movedSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   taskId?: Prisma.SortOrder
@@ -830,6 +914,9 @@ export type SessionMinOrderByAggregateInput = {
   scheduleId?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   lastSeq?: Prisma.SortOrder
+  movedAt?: Prisma.SortOrder
+  movedFrom?: Prisma.SortOrder
+  movedSeq?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   taskId?: Prisma.SortOrder
@@ -838,6 +925,7 @@ export type SessionMinOrderByAggregateInput = {
 
 export type SessionSumOrderByAggregateInput = {
   lastSeq?: Prisma.SortOrder
+  movedSeq?: Prisma.SortOrder
 }
 
 export type SessionNullableScalarRelationFilter = {
@@ -1417,6 +1505,10 @@ export type SessionCreateWithoutStartedByInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -1459,6 +1551,10 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -1525,6 +1621,10 @@ export type SessionScalarWhereInput = {
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
   archivedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   lastSeq?: Prisma.IntFilter<"Session"> | number
+  move?: Prisma.JsonNullableFilter<"Session">
+  movedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  movedFrom?: Prisma.StringNullableFilter<"Session"> | string | null
+  movedSeq?: Prisma.IntNullableFilter<"Session"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   taskId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -1543,6 +1643,10 @@ export type SessionCreateWithoutWorkspaceInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -1585,6 +1689,10 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -1641,6 +1749,10 @@ export type SessionCreateWithoutComputerInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -1683,6 +1795,10 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -1739,6 +1855,10 @@ export type SessionCreateWithoutTeammateInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -1781,6 +1901,10 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -1837,6 +1961,10 @@ export type SessionCreateWithoutReadsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -1880,6 +2008,10 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -1925,6 +2057,10 @@ export type SessionUpdateWithoutReadsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -1968,6 +2104,10 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1997,6 +2137,10 @@ export type SessionCreateWithoutPinsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2040,6 +2184,10 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2085,6 +2233,10 @@ export type SessionUpdateWithoutPinsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -2128,6 +2280,10 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2157,6 +2313,10 @@ export type SessionCreateWithoutTaskInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2200,6 +2360,10 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   projectId?: string | null
@@ -2245,6 +2409,10 @@ export type SessionUpdateWithoutTaskInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -2288,6 +2456,10 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2317,6 +2489,10 @@ export type SessionCreateWithoutScheduleInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2359,6 +2535,10 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2415,6 +2595,10 @@ export type SessionCreateWithoutWakeupsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2458,6 +2642,10 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2503,6 +2691,10 @@ export type SessionUpdateWithoutWakeupsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -2546,6 +2738,10 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2575,6 +2771,10 @@ export type SessionCreateWithoutTeammatesInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2618,6 +2818,10 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2663,6 +2867,10 @@ export type SessionUpdateWithoutTeammatesInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -2706,6 +2914,10 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2735,6 +2947,10 @@ export type SessionCreateWithoutEventsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2778,6 +2994,10 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2823,6 +3043,10 @@ export type SessionUpdateWithoutEventsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -2866,6 +3090,10 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2895,6 +3123,10 @@ export type SessionCreateWithoutAccountInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -2937,6 +3169,10 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -2993,6 +3229,10 @@ export type SessionCreateWithoutPullRequestsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3036,6 +3276,10 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3081,6 +3325,10 @@ export type SessionUpdateWithoutPullRequestsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -3124,6 +3372,10 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3153,6 +3405,10 @@ export type SessionCreateWithoutCommentsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3196,6 +3452,10 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3241,6 +3501,10 @@ export type SessionUpdateWithoutCommentsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -3284,6 +3548,10 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3313,6 +3581,10 @@ export type SessionCreateWithoutConnectionCallsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3356,6 +3628,10 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3401,6 +3677,10 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -3444,6 +3724,10 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3473,6 +3757,10 @@ export type SessionCreateWithoutTriggerInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3515,6 +3803,10 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3571,6 +3863,10 @@ export type SessionCreateWithoutTicketsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3614,6 +3910,10 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3659,6 +3959,10 @@ export type SessionUpdateWithoutTicketsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -3702,6 +4006,10 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3731,6 +4039,10 @@ export type SessionCreateWithoutDocumentsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3774,6 +4086,10 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3819,6 +4135,10 @@ export type SessionUpdateWithoutDocumentsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -3862,6 +4182,10 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3891,6 +4215,10 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -3934,6 +4262,10 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -3979,6 +4311,10 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4022,6 +4358,10 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4051,6 +4391,10 @@ export type SessionCreateWithoutAttachmentsInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -4094,6 +4438,10 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4139,6 +4487,10 @@ export type SessionUpdateWithoutAttachmentsInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4182,6 +4534,10 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4211,6 +4567,10 @@ export type SessionCreateWithoutProjectInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
@@ -4254,6 +4614,10 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4315,6 +4679,10 @@ export type SessionCreateManyStartedByInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4333,6 +4701,10 @@ export type SessionUpdateWithoutStartedByInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4375,6 +4747,10 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4411,6 +4787,10 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4435,6 +4815,10 @@ export type SessionCreateManyWorkspaceInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4453,6 +4837,10 @@ export type SessionUpdateWithoutWorkspaceInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -4495,6 +4883,10 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4531,6 +4923,10 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4555,6 +4951,10 @@ export type SessionCreateManyComputerInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4573,6 +4973,10 @@ export type SessionUpdateWithoutComputerInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4615,6 +5019,10 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4651,6 +5059,10 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4675,6 +5087,10 @@ export type SessionCreateManyTeammateInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4693,6 +5109,10 @@ export type SessionUpdateWithoutTeammateInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4735,6 +5155,10 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4771,6 +5195,10 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4795,6 +5223,10 @@ export type SessionCreateManyScheduleInput = {
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4813,6 +5245,10 @@ export type SessionUpdateWithoutScheduleInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4855,6 +5291,10 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4891,6 +5331,10 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4915,6 +5359,10 @@ export type SessionCreateManyAccountInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -4933,6 +5381,10 @@ export type SessionUpdateWithoutAccountInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -4975,6 +5427,10 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5011,6 +5467,10 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5035,6 +5495,10 @@ export type SessionCreateManyTriggerInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -5053,6 +5517,10 @@ export type SessionUpdateWithoutTriggerInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -5095,6 +5563,10 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5131,6 +5603,10 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5156,6 +5632,10 @@ export type SessionCreateManyProjectInput = {
   scheduleId?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Date | string | null
+  movedFrom?: string | null
+  movedSeq?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   taskId?: string | null
@@ -5173,6 +5653,10 @@ export type SessionUpdateWithoutProjectInput = {
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
@@ -5216,6 +5700,10 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5252,6 +5740,10 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
+  move?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  movedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  movedFrom?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  movedSeq?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5406,6 +5898,10 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   scheduleId?: boolean
   archivedAt?: boolean
   lastSeq?: boolean
+  move?: boolean
+  movedAt?: boolean
+  movedFrom?: boolean
+  movedSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   taskId?: boolean
@@ -5453,6 +5949,10 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   scheduleId?: boolean
   archivedAt?: boolean
   lastSeq?: boolean
+  move?: boolean
+  movedAt?: boolean
+  movedFrom?: boolean
+  movedSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   taskId?: boolean
@@ -5487,6 +5987,10 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   scheduleId?: boolean
   archivedAt?: boolean
   lastSeq?: boolean
+  move?: boolean
+  movedAt?: boolean
+  movedFrom?: boolean
+  movedSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   taskId?: boolean
@@ -5521,13 +6025,17 @@ export type SessionSelectScalar = {
   scheduleId?: boolean
   archivedAt?: boolean
   lastSeq?: boolean
+  move?: boolean
+  movedAt?: boolean
+  movedFrom?: boolean
+  movedSeq?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   taskId?: boolean
   projectId?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "createdAt" | "updatedAt" | "taskId" | "projectId", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "createdAt" | "updatedAt" | "taskId" | "projectId", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -5658,6 +6166,16 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Highest contiguous event sequence number stored.
      */
     lastSeq: number
+    /**
+     * While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
+     */
+    move: runtime.JsonValue | null
+    /**
+     * When it last came to its computer from another, from which (by name), and its last event then (ThreadSpec.moved).
+     */
+    movedAt: Date | null
+    movedFrom: string | null
+    movedSeq: number | null
     createdAt: Date
     updatedAt: Date
     /**
@@ -6130,6 +6648,10 @@ export interface SessionFieldRefs {
   readonly scheduleId: Prisma.FieldRef<"Session", 'String'>
   readonly archivedAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly lastSeq: Prisma.FieldRef<"Session", 'Int'>
+  readonly move: Prisma.FieldRef<"Session", 'Json'>
+  readonly movedAt: Prisma.FieldRef<"Session", 'DateTime'>
+  readonly movedFrom: Prisma.FieldRef<"Session", 'String'>
+  readonly movedSeq: Prisma.FieldRef<"Session", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly taskId: Prisma.FieldRef<"Session", 'String'>

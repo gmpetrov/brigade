@@ -78,6 +78,24 @@ const UPGRADED =
   'Note from Brigade: while this thread was quiet, the node_modules folders an older pnpm made in its checkouts ' +
   'were removed: pnpm 10 installing over them would keep the copies of packages they hold. Your files, checkouts, ' +
   'uncommitted work and local databases are as you left them: install dependencies again before running anything.'
+/** What a teammate is told about its folder when the thread moved to this computer (arrive). */
+const MOVED = {
+  restored: (from: string) =>
+    `Note from Brigade: this thread moved to this computer from ${from}, and your folder came with it. ` +
+    'Your files, checkouts and uncommitted work are as you left them, but folders git ignores (dependencies, ' +
+    'build output, local databases) and node_modules folders did not come, nor the containers and Docker volumes ' +
+    'the thread had: reinstall, rebuild or start again what you need before running anything. Paths outside this ' +
+    'folder, such as the home directory, are not the same as before.',
+  kept: (from: string) =>
+    `Note from Brigade: this thread moved to this computer from ${from}, which could not hand your folder over. ` +
+    'This folder holds what this computer had of the thread from an earlier time: it may be out of date. ' +
+    'Work you had not pushed may be on GitHub, on your branch or its brigade/wip/ backup: check out a repository ' +
+    'again (checkout_repository) to bring it up to date.',
+  empty: (from: string) =>
+    `Note from Brigade: this thread moved to this computer from ${from}, which could not hand your folder over, ` +
+    'so it starts empty here. Check out the repositories you need again (checkout_repository): your branch, ' +
+    'or its backup of the work you had not pushed, comes back with them.',
+}
 const STOPPED =
   'Note from Brigade: the containers this thread started were stopped while it was quiet, to free the computer. ' +
   'Their data is kept: start them again (docker compose up -d, say) if you need them.'
@@ -110,6 +128,10 @@ type State = {
   upgradedAt: Record<string, number>
   /** Folders that could not be archived, and when to try again. */
   retryAt: Record<string, number>
+  /** When the thread last moved here, by folder: each arrival is taken in once. */
+  arrived: Record<string, string>
+  /** Folders of threads that moved here whose teammate has not been told yet: how it came, and from where. */
+  moved: Record<string, { how: keyof typeof MOVED; from: string }>
 }
 
 const z = (output: Buffer) => output.toString().split('\0').filter(Boolean)
@@ -124,6 +146,8 @@ export class Folders {
     upgraded: [],
     upgradedAt: {},
     retryAt: {},
+    arrived: {},
+    moved: {},
   }
   private loaded: Promise<void>
   /** Work on a folder (archiving it, putting it back), one at a time per folder. */
@@ -154,6 +178,8 @@ export class Folders {
           upgraded: saved.upgraded ?? [],
           upgradedAt: saved.upgradedAt ?? {},
           retryAt: saved.retryAt ?? {},
+          arrived: { ...saved.arrived, ...this.state.arrived },
+          moved: { ...saved.moved, ...this.state.moved },
         }
       },
       () => undefined,
@@ -209,14 +235,100 @@ export class Folders {
   }
 
   /**
-   * For a teammate's turn: what to tell it about its folder put back or
-   * trimmed, its old node_modules removed, or its containers stopped, once.
-   * A folder put back gets the caches its checkouts borrow from fetched again.
+   * The thread moved to this computer (ThreadSpec.moved): once per arrival,
+   * its folder comes from the archive the computer it left made, in place of
+   * whatever this computer had of it from before. With no archive (that
+   * computer was offline), what is here stays. On any computer.
    */
-  async takeNote(name: FolderName, git: GitAccess | undefined) {
-    if (!CLOUD) return undefined
+  async arrive(name: FolderName, moved: { at: string; from: string }) {
     await this.loaded
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
+    if (this.state.arrived[workDir] === moved.at) return
+    await this.exclusive(workDir, async () => {
+      if (this.state.arrived[workDir] === moved.at) return
+      const file = await this.tempFile()
+      let restored = false
+      try {
+        if (await this.options.archives.get(name, file)) {
+          // What was here is from before the thread left: its containers too.
+          if (runAs) await removeFor(runAs, name.sessionId)
+          await run('rm', ['-rf', '--', workDir], { runAs })
+          await unpack(file, workDir, runAs)
+          restored = true
+        }
+      } finally {
+        await rm(file, { force: true })
+      }
+      const here = restored || (await exists(workDir, runAs))
+      this.state.arrived[workDir] = moved.at
+      this.state.moved[workDir] = {
+        how: restored ? 'restored' : here ? 'kept' : 'empty',
+        from: moved.from,
+      }
+      this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
+      this.state.active[workDir] = Date.now()
+      this.save()
+      console.log(`took in ${workDir}, moved from ${moved.from}${restored ? '' : ' without its files'}`)
+      if (restored)
+        await this.options.archives
+          .delete(name)
+          .catch((error) =>
+            console.warn(`could not delete the archive of ${workDir}: ${String(error)}`),
+          )
+    })
+  }
+
+  /**
+   * The thread moves to another computer: its folder goes to the bucket for
+   * that computer to put back (arrive). A cloud computer then removes it; a
+   * member's machine keeps it, theirs to look at. Throws when it could not be
+   * archived. A folder already archived to free disk is in the bucket as is.
+   */
+  async release(name: FolderName) {
+    await this.loaded
+    const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
+    await this.exclusive(workDir, async () => {
+      if (!(await exists(workDir, runAs))) return
+      // Its containers first: one writing into the folder would change it while it is packed.
+      if (runAs) await removeFor(runAs, name.sessionId)
+      const file = await this.tempFile()
+      try {
+        const size = await pack(workDir, file, runAs)
+        if (size === null) throw new Error(`larger than ${ARCHIVE_MAX} bytes without dependencies`)
+        await this.options.archives.put(name, file, size)
+      } finally {
+        await rm(file, { force: true })
+      }
+      if (CLOUD) await run('rm', ['-rf', '--', workDir], { runAs })
+      delete this.state.active[workDir]
+      delete this.state.retryAt[workDir]
+      delete this.state.trimmedAt[workDir]
+      delete this.state.upgradedAt[workDir]
+      delete this.state.moved[workDir]
+      for (const list of ['restored', 'stopped', 'trimmed', 'upgraded'] as const)
+        this.state[list] = this.state[list].filter((dir) => dir !== workDir)
+      this.save()
+      console.log(`handed ${workDir} over to another computer`)
+    })
+  }
+
+  /**
+   * For a teammate's turn: what to tell it about its folder brought from
+   * another computer, put back or trimmed, its old node_modules removed, or
+   * its containers stopped, once. A folder put back or brought over gets the
+   * caches its checkouts borrow from fetched again.
+   */
+  async takeNote(name: FolderName, git: GitAccess | undefined) {
+    await this.loaded
+    const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
+    const moved = this.state.moved[workDir]
+    if (moved) {
+      if (moved.how === 'restored' && git) await repairCaches(workDir, git, runAs, true)
+      delete this.state.moved[workDir]
+      this.save()
+      return MOVED[moved.how](moved.from)
+    }
+    if (!CLOUD) return undefined
     const restored = this.state.restored.includes(workDir)
     const trimmed = this.state.trimmed.includes(workDir)
     const upgraded = this.state.upgraded.includes(workDir)

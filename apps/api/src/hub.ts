@@ -34,6 +34,7 @@ import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
+import { movesOn, onReleased } from './move.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
@@ -310,6 +311,11 @@ export function broadcastThreadStatus(workspaceId: string, sessionId: string, st
   broadcast(workspaceId, { type: 'thread.updated', sessionId, status })
 }
 
+/** A thread started or finished moving to another computer (src/move.ts). */
+export function broadcastThreadMove(workspaceId: string, sessionId: string, status: string) {
+  broadcast(workspaceId, { type: 'thread.updated', sessionId, status, moved: true })
+}
+
 /** Tell dashboards a task was created, changed or removed. */
 export function broadcastTask(workspaceId: string, taskId: string) {
   broadcast(workspaceId, { type: 'task.updated', taskId })
@@ -385,6 +391,8 @@ export function runnerSocket(runner: {
           computerId: runner.computerId,
           online: false,
         })
+        // A thread waiting to leave it leaves without its folders.
+        void movesOn(runner.computerId).catch(console.error)
       }
     },
   }
@@ -513,6 +521,8 @@ export function runnerSocket(runner: {
         computerId: runner.computerId,
         online: true,
       })
+      // Threads that moved here while it was offline get their message now.
+      void movesOn(runner.computerId).catch(console.error)
       return
     }
     if (!conn) return // must say hello first
@@ -695,6 +705,8 @@ export function runnerSocket(runner: {
     if (message.type === 'preview.start.result')
       return settlePreviewStart(runner.computerId, message)
 
+    if (message.type === 'thread.release.result') return onReleased(runner, message)
+
     if (message.type === 'thread.file.result') {
       const read = fileReads.get(message.requestId)
       if (read?.computerId === runner.computerId) read.settle(message)
@@ -759,6 +771,9 @@ export function runnerSocket(runner: {
       await prisma.session.update({ where: { id: sessionId }, data: { lastSeq, status } })
       broadcast(session.workspaceId, { type: 'events', events: fresh }, sessionId)
       if (status !== session.status) broadcastThreadStatus(session.workspaceId, sessionId, status)
+      // A move waiting on the turn goes once it ends.
+      if (status !== session.status && session.move)
+        void movesOn(runner.computerId, sessionId).catch(console.error)
       await noteAccountState(session, fresh)
       await noteAccountSwitches(session, fresh)
       await noteTickets(session, fresh)

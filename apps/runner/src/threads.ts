@@ -4,7 +4,7 @@
 // comes in while the thread is busy waits in its queue, shown as queued, until
 // its turn starts; meanwhile it can be cancelled, edited or steered into the running turn.
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   attachmentLines,
@@ -177,8 +177,8 @@ export class Threads {
       context: Omit<ThreadContext, 'callLibrary' | 'callTask' | 'callSchedule' | 'preview'>
       /** Apps teammates run for people to try, one per thread. */
       previews: Previews
-      /** Thread folders archived to free disk: put back before a turn. */
-      folders: Pick<Folders, 'ready' | 'takeNote' | 'touch'>
+      /** Thread folders archived to free disk, or moved here: put back before a turn. */
+      folders: Pick<Folders, 'ready' | 'takeNote' | 'touch' | 'arrive' | 'release'>
       callLibrary: (
         sessionId: string,
         teammateId: string,
@@ -500,6 +500,61 @@ export class Threads {
     )
   }
 
+  /**
+   * The thread came here from another computer (ThreadSpec.moved): what this
+   * runner kept of it from before it left is out of date. Each teammate's
+   * session and folder are taken in at its next turn (HarnessThread, Folders).
+   */
+  forget(sessionId: string) {
+    const thread = this.threads.get(sessionId)
+    if (thread && this.inUse(sessionId)) return
+    if (thread) {
+      clearTimeout(thread.quietTimer)
+      for (const seat of thread.harnesses.values()) clearTimeout(seat.parkTimer)
+      this.threads.delete(sessionId)
+    }
+    void rm(this.logFile(sessionId), { force: true }).catch(() => undefined)
+  }
+
+  /**
+   * The thread moves to another computer, once its turns here are over (the
+   * API waits for them): its teammates' sessions stop, their folders go to the
+   * bucket for the other computer, and this runner forgets it. Throws when a
+   * folder could not be handed over; the others still are.
+   */
+  async handOver(sessionId: string, teammateIds: string[]) {
+    if (!SAFE_ID.test(sessionId) || teammateIds.some((id) => !SAFE_ID.test(id)))
+      throw new Error('Invalid thread id')
+    const thread = this.threads.get(sessionId)
+    if (thread) {
+      if (thread.takeover) throw new Error('A person has control of this thread')
+      await thread.queue.catch(() => undefined)
+      clearTimeout(thread.quietTimer)
+      for (const seat of thread.harnesses.values()) {
+        clearTimeout(seat.parkTimer)
+        await seat.harness.park().catch(() => undefined)
+      }
+      this.threads.delete(sessionId)
+    }
+    await this.options.previews
+      .stop(sessionId, 'The thread moved to another computer.')
+      .catch(() => undefined)
+    const failed: string[] = []
+    for (const teammateId of teammateIds)
+      await this.options.folders.release({ sessionId, teammateId }).catch((error: unknown) => {
+        failed.push(String(error))
+      })
+    // Its saved sessions and log are the other computer's to make now.
+    await Promise.all(
+      [
+        this.logFile(sessionId),
+        join(paths.state, `${sessionId}.json`),
+        ...teammateIds.map((id) => join(paths.state, `${sessionId}-${id}.json`)),
+      ].map((file) => rm(file, { force: true }).catch(() => undefined)),
+    )
+    if (failed.length > 0) throw new Error(failed.join('; '))
+  }
+
   /** A turn is running or queued somewhere. Threads waiting for a person do not count. */
   get busy() {
     return this.pending > 0
@@ -561,6 +616,7 @@ export class Threads {
         thread.running = { teammateId: me, turnId }
         const name = { sessionId: spec.sessionId, teammateId: me }
         try {
+          if (spec.moved) await this.options.folders.arrive(name, spec.moved)
           await this.options.folders.ready(name)
         } catch (error) {
           this.options.emit(spec.sessionId, {

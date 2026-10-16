@@ -17,10 +17,15 @@ type Stream = { lastSeq: number; acked: number; pending: SequencedEvent[] }
 export class Outbox {
   private streams = new Map<string, Stream>()
   private readonly metaFile: string
+  /** When each thread last moved to this computer (ThreadSpec.moved), taken in once. */
+  private readonly arrivalsFile: string
+  private arrivals: Record<string, string>
 
   constructor(private readonly dir: string) {
     mkdirSync(dir, { recursive: true, mode: 0o700 })
     this.metaFile = join(dir, 'acked.json')
+    this.arrivalsFile = join(dir, 'arrivals.json')
+    this.arrivals = this.readJson<Record<string, string>>(this.arrivalsFile) ?? {}
     const acked = this.readJson<Record<string, number>>(this.metaFile) ?? {}
     for (const [sessionId, seq] of Object.entries(acked))
       this.streams.set(sessionId, { lastSeq: seq, acked: seq, pending: [] })
@@ -68,6 +73,31 @@ export class Outbox {
       this.metaFile,
       JSON.stringify(Object.fromEntries([...this.streams].map(([id, s]) => [id, s.acked]))),
     )
+  }
+
+  /**
+   * The thread moved to this computer, its last event then numbered `seq`:
+   * its events here go on after it. Whatever this computer still held of it
+   * from before it left is out of date: dropped. True on a new arrival.
+   */
+  arrive(sessionId: string, at: string, seq: number) {
+    if (this.arrivals[sessionId] === at) return false
+    const stream = this.stream(sessionId)
+    stream.pending = []
+    stream.lastSeq = stream.acked = seq
+    rmSync(this.file(sessionId), { force: true })
+    writeAtomic(
+      this.metaFile,
+      JSON.stringify(Object.fromEntries([...this.streams].map(([id, s]) => [id, s.acked]))),
+    )
+    this.arrivals[sessionId] = at
+    writeAtomic(this.arrivalsFile, JSON.stringify(this.arrivals))
+    return true
+  }
+
+  /** Every event of the thread is acknowledged: nothing of it left to send. */
+  settled(sessionId: string) {
+    return (this.streams.get(sessionId)?.pending.length ?? 0) === 0
   }
 
   /** The latest event of a thread the API has not acknowledged yet. */

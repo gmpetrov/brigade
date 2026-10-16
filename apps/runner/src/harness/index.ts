@@ -108,6 +108,8 @@ export type ThreadContext = {
     name: string
     bytes: Buffer
   }) => Promise<string>
+  /** What was said in a thread before it moved to this computer, as the teammate's conversation. */
+  conversation: (sessionId: string, teammateId: string) => Promise<Transcript>
 }
 export type { CredentialRequester } from '../credentials.js'
 
@@ -126,12 +128,18 @@ export type ThreadInput =
 /** How a turn ended: idle (done), waiting (for an approval), paused (no account has usage left), or failed. */
 export type TurnOutcome = { status: 'idle' | 'waiting' | 'paused' | 'failed'; error?: string }
 
+export type Transcript = { role: 'user' | 'assistant'; text: string }[]
+
 /** What the runner keeps per thread between processes. Never a credential. */
 type SavedState = {
   accountId: string
   resume?: unknown
   /** Recent conversation, for the handoff when the thread moves to another account. */
-  transcript: { role: 'user' | 'assistant'; text: string }[]
+  transcript: Transcript
+  /** The thread's latest arrival on this computer (ThreadSpec.moved) taken in. */
+  movedAt?: string
+  /** It arrived from this computer, and no turn has run here since: the next starts from the transcript. */
+  arrivedFrom?: string
   /** A turn was running when this was written: found on start, the process stopped without parking. */
   inTurn?: boolean
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
@@ -301,8 +309,22 @@ export class HarnessThread {
   async run(input: ThreadInput, spec: ThreadSpec, signal: AbortSignal): Promise<TurnOutcome> {
     this.spec = spec
     await this.load()
+    if (spec.moved && this.saved?.movedAt !== spec.moved.at) await this.arrive(spec.moved)
     let handoff: string | undefined
-    if (input.kind === 'resume') {
+    // The first turn here since the thread moved: a new session, told the thread so far.
+    const from = this.saved?.arrivedFrom
+    if (from !== undefined && (input.kind === 'prompt' || input.kind === 'resume')) {
+      handoff = [
+        this.handoff(
+          `This conversation continues in a new session because the thread moved to this computer from ${from}; the previous session stayed there.`,
+          null,
+        ),
+        input.text,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+      input = { kind: 'prompt', text: input.text }
+    } else if (input.kind === 'resume') {
       const resumed = await this.recover(input.text, spec)
       if (!resumed) return { status: 'idle' }
       ;({ input, handoff } = resumed)
@@ -347,6 +369,8 @@ export class HarnessThread {
       }
     } finally {
       if (this.saved) {
+        // The new session has the transcript now: later turns resume it.
+        if (result) delete this.saved.arrivedFrom
         this.saved.inTurn = false
         if (result?.status === 'idle') this.saved.recoveries = 0
         await this.persist().catch((error) =>
@@ -778,8 +802,36 @@ export class HarnessThread {
     )
   }
 
-  /** The first message of a new session that carries on the conversation: what was said so far. */
-  private handoff(why: string) {
+  /**
+   * The thread moved to this computer: what this computer kept of it from
+   * before is out of date. Its session starts again from the thread's
+   * conversation so far, on the account chosen here.
+   */
+  private async arrive(moved: NonNullable<ThreadSpec['moved']>) {
+    await this.drop()
+    const transcript = await this.context
+      .conversation(this.spec.sessionId, this.spec.teammate.id)
+      .catch((error: unknown) => {
+        console.warn(`could not fetch the conversation of ${this.key}: ${errorMessage(error)}`)
+        return [] as Transcript
+      })
+    this.saved = {
+      accountId: this.spec.account.id,
+      transcript,
+      movedAt: moved.at,
+      arrivedFrom: moved.from,
+    }
+    await this.persist()
+  }
+
+  /**
+   * The first message of a new session that carries on the conversation: what
+   * was said so far. `where`: what to say of the working directory, if anything.
+   */
+  private handoff(
+    why: string,
+    where: string | null = 'The working directory is exactly as the previous session left it.',
+  ) {
     const transcript = this.saved?.transcript ?? []
     const lines = transcript
       .map((t) => `${t.role === 'user' ? 'User' : 'You'}: ${t.text}`)
@@ -787,7 +839,7 @@ export class HarnessThread {
     const last = transcript.findLast((t) => t.role === 'user')
     return [
       why,
-      'The working directory is exactly as the previous session left it.',
+      where,
       lines && `Conversation so far:\n\n${lines}`,
       last && `Continue with the latest request if it is not finished yet.`,
     ]

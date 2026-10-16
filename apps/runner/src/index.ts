@@ -7,11 +7,17 @@ import { createReadStream, createWriteStream } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import { setTimeout as sleep } from 'node:timers/promises'
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { RunnerLinkResult, type AgentEvent, type ApiToRunner } from '@brigade/contracts'
+import {
+  RunnerLinkResult,
+  type AgentEvent,
+  type ApiToRunner,
+  type ThreadSpec,
+} from '@brigade/contracts'
 import {
   ALREADY_RUNNING_EXIT_CODE,
   claimRunner,
@@ -33,7 +39,7 @@ import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
-import { stripApiKeys, usePersonPath } from './harness/index.js'
+import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Previews } from './previews.js'
 import { Threads, threadFolder } from './threads.js'
@@ -309,6 +315,11 @@ async function start() {
       bundles,
       uploadFile: (input) => attachments.upload(input),
       skillFile: (hash) => attachments.skillFile(hash),
+      conversation: async (sessionId, teammateId) => {
+        const response = await folderRequest({ sessionId, teammateId }, '/conversation')
+        if (!response.ok) throw new Error(`the API refused the conversation (${response.status})`)
+        return ((await response.json()) as { transcript: Transcript }).transcript
+      },
     },
     callLibrary: (sessionId, teammateId, { operation }) =>
       connection.callLibrary({ sessionId, teammateId, operation }),
@@ -332,12 +343,24 @@ async function start() {
     exit: (terminalId, code) => connection.send({ type: 'terminal.exit', terminalId, code }),
     event: (sessionId, event) => connection.sendEvent(outbox.push(sessionId, event)),
   })
+  // A thread that moved here: its events go on after the API's, and what this runner kept of it from before goes.
+  const arrive = (spec: ThreadSpec) => {
+    if (spec.moved && outbox.arrive(spec.sessionId, spec.moved.at, spec.moved.seq))
+      threads.forget(spec.sessionId)
+  }
+  const arriveFolder = (spec: ThreadSpec) =>
+    spec.moved
+      ? folders.arrive({ sessionId: spec.sessionId, teammateId: spec.teammate.id }, spec.moved)
+      : Promise.resolve()
   const onCommand = async (message: ApiToRunner) => {
+    if ('thread' in message) arrive(message.thread)
     switch (message.type) {
       case 'welcome': {
         // Turns and messages a restart cut off go on, in order; what the API could not say how to continue is closed.
         const last = (sessionId: string) => outbox.lastUnacknowledged(sessionId)
         const unacknowledged = (sessionId: string) => outbox.unacknowledgedFor(sessionId)
+        for (const spec of [...(message.resume ?? []), ...(message.requeue ?? []).map((p) => p.thread)])
+          arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
         threads.requeueLost(message.requeue ?? [], unacknowledged)
         const requeued = new Set(
@@ -367,8 +390,21 @@ async function start() {
           })
         }
         return
+      case 'thread.release':
+        return threads
+          .handOver(message.sessionId, message.teammateIds)
+          .then(
+            () => ({ ok: true }),
+            (error: unknown) => ({ ok: false, error: String(error) }),
+          )
+          .then(async (result) => {
+            // Its last events reach the API before it moves: none are numbered twice.
+            for (let i = 0; i < 60 && !outbox.settled(message.sessionId); i++) await sleep(500)
+            connection.send({ type: 'thread.release.result', requestId: message.requestId, ...result })
+          })
       case 'thread.takeover':
-        return folderReady(message.thread.sessionId, [message.thread.teammate.id])
+        return arriveFolder(message.thread)
+          .then(() => folderReady(message.thread.sessionId, [message.thread.teammate.id]))
           .catch((error) =>
             console.warn(`could not put the thread's folder back: ${String(error)}`),
           )
@@ -378,7 +414,8 @@ async function start() {
           changedFilesSince(message.thread, since),
         )
       case 'terminal.open':
-        return folderReady(message.thread.sessionId, [message.thread.teammate.id])
+        return arriveFolder(message.thread)
+          .then(() => folderReady(message.thread.sessionId, [message.thread.teammate.id]))
           .then(() =>
             terminals.start(
               message.terminalId,
