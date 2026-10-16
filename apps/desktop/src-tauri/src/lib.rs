@@ -334,7 +334,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         update_ready: Mutex::new(false),
     });
     app.manage(items.clone());
-    app.manage(setup::Helper::new(helper.clone()));
+    let computer_use = setup::Helper::new(helper.clone());
+    computer_use.restart();
+    app.manage(computer_use);
     app.manage(setup::Last::default());
     app.manage(Awake::default());
     if settings.keep_awake {

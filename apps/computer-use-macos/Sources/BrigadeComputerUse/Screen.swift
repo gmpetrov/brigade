@@ -14,11 +14,10 @@ enum Permissions {
   private static var askedAccessibility = false
 
   /// Whether Screen Recording is on now. CGPreflightScreenCaptureAccess answers once per
-  /// process: turned on while this app runs, it still says no. ScreenCaptureKit asks macOS
-  /// each time, so it confirms a grant made since launch.
+  /// process, both ways: turned on while this app runs it still says no, turned off it still
+  /// says yes. ScreenCaptureKit asks macOS each time, so it alone decides.
   static func hasScreenRecording() async -> Bool {
-    if screenRecording { return true }
-    return (try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)) != nil
+    (try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)) != nil
   }
 
   /// Throws with what the person has to turn on; asks macOS to prompt them once per launch.
