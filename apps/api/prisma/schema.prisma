@@ -401,6 +401,8 @@ model Session {
   movedAt              DateTime?
   movedFrom            String?
   movedSeq             Int?
+  /// How hard its teammates think (ThreadSpec.effort): low, medium, high, xhigh or max. Null: the harness's default.
+  effort               String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   events               SessionEvent[]

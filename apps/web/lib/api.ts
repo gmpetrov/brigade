@@ -1,5 +1,5 @@
 'use client'
-import { HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
+import { type Effort, HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
 import type {
   ProjectSummary,
   AssetTicket,
@@ -282,6 +282,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   othersMayPrompt: boolean
   /** Adds nothing to workspace memory; its summary is the starter's only. */
   private: boolean
+  /** How hard its teammates think, from the next turn on; null: the harness's default. */
+  effort: Effort | null
   controlledByMemberId: string | null
   mayPrompt: boolean
   lastSeq: number

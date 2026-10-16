@@ -29,6 +29,13 @@ export const CLIPBOARD_MAX = 1_000_000
 export const HarnessId = z.enum(['claude_code', 'codex'])
 export type HarnessId = z.infer<typeof HarnessId>
 
+/**
+ * How hard the model thinks (Claude Code `effort`, Codex `reasoningEffort`); a
+ * thread without one runs at the harness's own default. EFFORTS names them.
+ */
+export const Effort = z.enum(['low', 'medium', 'high', 'xhigh', 'max'])
+export type Effort = z.infer<typeof Effort>
+
 /** A harness login on the computer. The runner finds its config directory from these; never a credential. */
 export const AccountRef = z.object({
   id: z.string(),
@@ -87,6 +94,8 @@ export const ThreadSpec = z.object({
     model: z.string().nullable(),
     kind: TeammateKind.default('teammate'),
   }),
+  /** The thread's effort for every teammate in it; null: the harness's default. */
+  effort: Effort.nullable().default(null),
   /** allow-reads: ask before writes and commands. allow-all: never ask. */
   permissionMode: z.enum(['allow-reads', 'allow-edits', 'allow-all']),
   /** The account to run on, then the starter's other accounts with usage left, in order. */

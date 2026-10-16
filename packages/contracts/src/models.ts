@@ -1,7 +1,7 @@
 // The models a teammate can run, per harness. The single list: the teammate form's
 // picker, the API's validation and the labels shown elsewhere all read it. To add a
 // model when it's released, add a line to its harness below; order is display order.
-import type { HarnessId } from './runner.js'
+import type { Effort, HarnessId } from './runner.js'
 
 export type HarnessModel = {
   /** What the harness CLI takes as its model (Claude Code `--model`, Codex `-m`). */
@@ -78,3 +78,16 @@ export const isHarnessModel = (harness: HarnessId, model: string | null) =>
 /** The vendor's name for a model id, or the id itself for one no longer listed. */
 export const modelLabel = (harness: HarnessId, model: string | null) =>
   model === null ? 'Default' : (HARNESS_MODELS[harness].find((m) => m.id === model)?.label ?? model)
+
+/** A thread's effort choices, lowest first, as Claude Code and Codex name them. */
+export const EFFORTS = [
+  { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'high', label: 'High' },
+  { id: 'xhigh', label: 'Extra high' },
+  { id: 'max', label: 'Max' },
+] as const satisfies readonly { id: Effort; label: string }[]
+
+/** An effort's name, or Default for none. */
+export const effortLabel = (effort: Effort | null) =>
+  EFFORTS.find((e) => e.id === effort)?.label ?? 'Default'

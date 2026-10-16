@@ -329,6 +329,7 @@ export const SessionScalarFieldEnum = {
   movedAt: 'movedAt',
   movedFrom: 'movedFrom',
   movedSeq: 'movedSeq',
+  effort: 'effort',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
