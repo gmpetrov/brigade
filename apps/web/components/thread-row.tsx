@@ -6,6 +6,7 @@ import {
   Archive,
   ArchiveRestore,
   EllipsisVertical,
+  Laptop,
   Pencil,
   Pin,
   PinOff,
@@ -172,12 +173,19 @@ export function ThreadRow({
           </span>
           <span
             className={cn(
-              'ml-auto shrink-0 text-xs',
+              'ml-auto flex shrink-0 items-center gap-1.5 text-xs',
               // On a phone ⋮ is always there: the time goes beside it.
               'max-md:mr-5 md:group-hover/menu-item:opacity-0',
               open && 'opacity-0',
             )}
           >
+            {/* On a member's own machine; no laptop means the workspace computer. */}
+            {thread.computer.kind === 'member_machine' && (
+              <span title={`Runs on ${thread.computer.name}`} className="flex">
+                <Laptop aria-hidden className="size-3 opacity-50" />
+                <span className="sr-only">Runs on {thread.computer.name}</span>
+              </span>
+            )}
             {trailing}
           </span>
         </Link>

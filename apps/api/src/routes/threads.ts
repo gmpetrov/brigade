@@ -167,6 +167,8 @@ export const threads = new Hono<AppEnv>()
         orderBy: { joinedAt: 'asc' as const },
       },
       startedBy: { select: { id: true, user: { select: { name: true } } } },
+      // Where it runs: the sidebar marks a member's own machine.
+      computer: { select: { kind: true, name: true } },
     }
     const rows = await c.var.db.session.findMany({
       where: {
