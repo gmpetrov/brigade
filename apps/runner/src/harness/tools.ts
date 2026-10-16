@@ -1,6 +1,6 @@
 // Connector tools: AI SDK tools whose execute forwards the call to the API,
 // which checks the grant, asks for approval if needed, and makes the request.
-import { jsonSchema, tool, type Tool } from 'ai'
+import { asSchema, jsonSchema, tool, type Tool } from 'ai'
 import {
   CHIEF_NAME,
   isChiefName,
@@ -63,6 +63,16 @@ const slug = (text: string) =>
  * instead of getting every schema each turn. Claude Code defers MCP tools on its own.
  */
 const NAMESPACE = 'x-codex-namespace'
+
+/**
+ * Marks a tool's input schema so the Claude Code bridge (patched) never defers it
+ * behind tool search. A closing card loaded after the answer made the teammate
+ * write its answer again once the tool was loaded.
+ */
+export function alwaysLoaded(t: Tool): Tool {
+  const schema = asSchema(t.inputSchema).jsonSchema as Parameters<typeof jsonSchema>[0] & object
+  return { ...t, inputSchema: jsonSchema({ ...schema, 'x-claude-always-load': true }) }
+}
 
 export function connectorTools(
   grants: ConnectorGrant[],

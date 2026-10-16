@@ -1,8 +1,22 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..bd521f224aecbf807b373ab0bfd150ec653303a5 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e30cd2940 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
-@@ -1792,6 +1792,34 @@ async function runTurn(start, turn) {
+@@ -1605,9 +1605,12 @@ async function runTurn(start, turn) {
+ 			name: "harness-tools",
+ 			version: "1.0.0"
+ 		});
++		// Brigade: a schema marked x-claude-always-load is never deferred behind tool search, so the
++		// model calls it without loading it first (a load after its answer made it write the answer again).
+ 		for (const tool of start.tools) server.registerTool(tool.name, {
+ 			description: tool.description ?? "",
+-			inputSchema: jsonSchemaToZodObject(tool.inputSchema)
++			inputSchema: jsonSchemaToZodObject((({ "x-claude-always-load": _, ...schema }) => schema)(tool.inputSchema ?? {})),
++			...tool.inputSchema?.["x-claude-always-load"] === true ? { _meta: { "anthropic/alwaysLoad": true } } : {}
+ 		}, async (...handlerArgs) => {
+ 			const [input, extra] = handlerArgs;
+ 			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
+@@ -1792,6 +1795,34 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -37,7 +51,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..bd521f224aecbf807b373ab0bfd150ec
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1800,6 +1828,27 @@ async function runTurn(start, turn) {
+@@ -1800,6 +1831,27 @@ async function runTurn(start, turn) {
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
  			emitStreamEvent(msg);
@@ -65,7 +79,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..bd521f224aecbf807b373ab0bfd150ec
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,16 +1884,23 @@ async function runTurn(start, turn) {
+@@ -1835,16 +1887,23 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -92,7 +106,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..bd521f224aecbf807b373ab0bfd150ec
  				queryInput.close();
  				break;
  			}
-@@ -1857,6 +1913,7 @@ async function runTurn(start, turn) {
+@@ -1857,6 +1916,7 @@ async function runTurn(start, turn) {
  		return;
  	} finally {
  		gracefulAbort = void 0;
