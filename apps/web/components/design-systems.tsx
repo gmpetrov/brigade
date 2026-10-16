@@ -42,6 +42,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type LibraryTree, type Teammate } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { ProjectIcon } from '@/components/projects'
 
 /** Where design systems go. */
 const FOLDER = 'design-systems'
@@ -559,6 +560,7 @@ function EditDialog({
                               setInProjects(next)
                             }}
                           />
+                          <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
                           {p.name}
                         </label>
                       </li>

@@ -5,7 +5,7 @@ import { test } from 'node:test'
 process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-const { imageType, readPage } = await import('../src/project-sites.js')
+const { imageType, rank, readPage } = await import('../src/project-sites.js')
 
 const HTML = `<!doctype html><html><head>
   <title>Acme | Furniture for offices</title>
@@ -25,10 +25,13 @@ test('a page gives its name, description, icons, more pages and text', () => {
   const page = readPage(HTML, 'https://acme.com/')
   assert.equal(page.name, 'Acme')
   assert.equal(page.description, 'Desks and chairs for small teams.')
-  assert.deepEqual(page.icons, [
-    { href: 'https://acme.com/favicon-32.png', size: 32 },
-    { href: 'https://acme.com/apple.png', size: 180 },
-  ])
+  assert.deepEqual(
+    page.icons.map((c) => ['href' in c.source && c.source.href, c.kind, c.size]),
+    [
+      ['https://acme.com/favicon-32.png', 'icon', 32],
+      ['https://acme.com/apple.png', 'apple-touch-icon', 180],
+    ],
+  )
   assert.equal(page.manifest, 'https://acme.com/site.webmanifest')
   assert.deepEqual(page.more, ['https://acme.com/pricing', 'https://acme.com/about/'])
   assert.match(page.text, /Office furniture, delivered\nOrder online, get it in a week\./)
@@ -52,4 +55,33 @@ test('an image is known by its bytes, not what the server says', () => {
   )
   assert.equal(imageType(svg), 'image/svg+xml')
   assert.equal(imageType(new TextEncoder().encode('<!doctype html><html>')), null)
+})
+
+test('the logo in the header beats a 16 px favicon, and is said in words', () => {
+  const page = readPage(
+    `<html><head><link rel="icon" href="/favicon.ico" sizes="16x16"></head><body>
+      <header><a href="/"><img alt="Lovarank logo" width="28" height="28"
+        srcset="/_next/image?url=%2Fmedia%2Flovarank.png&amp;w=32 1x, /_next/image?url=%2Fmedia%2Flovarank.png&amp;w=64 2x"></a></header>
+      <a href="/"><svg viewBox="0 0 120 24" class="wordmark"><path d="M0 0h1"/></svg></a>
+    </body></html>`,
+    'https://www.lovarank.com/',
+  )
+  const [favicon, img, svg] = page.icons
+  assert.equal(
+    img!.hint,
+    '<img> in the page, in the header, in the link to the home page, alt "Lovarank logo", 28×28, file lovarank.png',
+  )
+  assert.equal(
+    'href' in img!.source && img!.source.href,
+    'https://www.lovarank.com/_next/image?url=%2Fmedia%2Flovarank.png&w=64',
+  )
+  assert.ok(rank(img!) > rank(favicon!))
+  assert.match(svg!.hint, /<svg> drawn in the page, in the link to the home page, .*wide/)
+  assert.ok(
+    'bytes' in svg!.source &&
+      /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/.test(
+        new TextDecoder().decode(svg!.source.bytes),
+      ),
+  )
+  assert.ok(rank(svg!) < rank(img!))
 })

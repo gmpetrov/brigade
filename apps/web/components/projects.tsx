@@ -1,8 +1,14 @@
 'use client'
-import { siteUrl, projectLogoPath, type SiteBrief, type SiteInfo } from '@brigade/contracts'
+import {
+  PROJECT_LOGO_MAX,
+  projectLogoPath,
+  siteUrl,
+  type SiteBrief,
+  type SiteInfo,
+} from '@brigade/contracts'
 import { Check, ChevronDown, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { Button } from '@/components/ui/button'
 import {
@@ -156,24 +162,83 @@ export function ProjectFilter({
   )
 }
 
-/** A violet dot that pulses, and what is going on: no spinners. */
-function Pending({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span aria-hidden className="size-1.5 flex-none animate-pulse rounded-full bg-primary" />
-      {children}
-    </span>
-  )
-}
-
 /** Worth reading: it looks like a site, "acme.com" at least. */
 const looksLikeSite = (text: string) =>
   /^(https?:\/\/)?[^\s/]+\.[a-z]{2,}(\/\S*)?$/i.test(text.trim())
 
+/** Largest side a logo is kept at: it shows at 20 to 44 px. */
+const LOGO_SIDE = 256
+
 /**
- * Name a project and say what it is; it opens once made. Given its website, the
- * name and logo come from the site, and the brief from a short run on the
- * member's own account. Nothing a person typed is replaced.
+ * A logo small enough to keep: a raster one larger than LOGO_SIDE, or heavier
+ * than the API takes, drawn again at that size as a PNG. SVGs stay as they are.
+ */
+export async function shrinkLogo(dataUrl: string): Promise<string | null> {
+  const heavy = dataUrl.length * 0.75 > PROJECT_LOGO_MAX
+  if (dataUrl.startsWith('data:image/svg+xml')) return heavy ? null : dataUrl
+  const image = new Image()
+  image.src = dataUrl
+  await image.decode().catch(() => undefined)
+  const side = Math.max(image.naturalWidth, image.naturalHeight)
+  if (!side) return heavy ? null : dataUrl
+  if (side <= LOGO_SIDE && !heavy) return dataUrl
+  const scale = Math.min(1, LOGO_SIDE / side)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+  canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
+  const png = canvas.toDataURL('image/png')
+  return png.length * 0.75 <= PROJECT_LOGO_MAX ? png : null
+}
+
+type Step = 'waiting' | 'active' | 'done' | 'missed'
+
+/** One step of reading a site: a pulsing violet dot while it runs, no spinners. */
+function StepLine({ state, children }: { state: Step; children: React.ReactNode }) {
+  return (
+    <li
+      className={cn(
+        'flex items-center gap-2.5 text-sm',
+        state === 'waiting'
+          ? 'text-muted-foreground/60'
+          : state === 'active'
+            ? 'text-foreground'
+            : 'text-muted-foreground',
+      )}
+    >
+      <span aria-hidden className="flex size-4 flex-none items-center justify-center">
+        {state === 'done' ? (
+          <Check className="size-4 text-primary" />
+        ) : state === 'active' ? (
+          <span className="size-2 animate-pulse rounded-full bg-primary" />
+        ) : (
+          <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+        )}
+      </span>
+      {children}
+    </li>
+  )
+}
+
+/** The shape of what is coming, while it is read. */
+function Skeleton() {
+  return (
+    <div aria-hidden className="flex flex-col gap-3 pt-1">
+      <div className="flex items-center gap-2">
+        <span className="size-9 flex-none animate-pulse rounded-md bg-muted" />
+        <span className="h-9 flex-1 animate-pulse rounded-full bg-muted" />
+      </div>
+      <span className="h-20 animate-pulse rounded-2xl bg-muted" />
+    </div>
+  )
+}
+
+/**
+ * Name a project and say what it is; it opens once made. Given its website,
+ * only the address shows first; while the site is read and a short run on the
+ * member's own account writes its name and brief and picks its logo, each step
+ * shows; then the fields come, filled in, to edit. Nothing typed can be lost:
+ * the fields are not there while they are being filled.
  */
 export function NewProjectDialog({
   open,
@@ -184,93 +249,118 @@ export function NewProjectDialog({
 }) {
   const router = useRouter()
   const { reloadProjects } = useDashboard()
+  const [stage, setStage] = useState<'url' | 'reading' | 'form'>('url')
   const [url, setUrl] = useState('')
+  /** The address the fields were filled from: another one offers to read it. */
+  const [readUrl, setReadUrl] = useState('')
+  const [steps, setSteps] = useState<{ read: Step; logo: Step; write: Step }>({
+    read: 'waiting',
+    logo: 'waiting',
+    write: 'waiting',
+  })
+  const [host, setHost] = useState('')
   const [name, setName] = useState('')
   const [brief, setBrief] = useState('')
   const [logo, setLogo] = useState<string | null>(null)
-  /** What the site filled in, so a later read replaces only that. */
-  const filled = useRef({ name: '', brief: '' })
-  const [reading, setReading] = useState<string | null>(null)
-  const [writing, setWriting] = useState(false)
   const [note, setNote] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
-  /** The address being read: an answer for an older one is dropped. */
+  /** The address being read: an answer for an older one, or after "fill it in myself", is dropped. */
   const current = useRef('')
+  /** What the site gave so far, for "fill it in myself" mid-way. */
+  const partial = useRef<SiteInfo | null>(null)
 
   function reset() {
+    setStage('url')
     setUrl('')
+    setReadUrl('')
     setName('')
     setBrief('')
     setLogo(null)
     setNote(undefined)
-    setReading(null)
-    setWriting(false)
-    filled.current = { name: '', brief: '' }
+    setError(undefined)
     current.current = ''
+    partial.current = null
   }
 
-  // Read the site once the address has settled for a moment.
-  useEffect(() => {
-    const address = url.trim()
-    if (!open || !looksLikeSite(address)) return
-    const site = siteUrl(address)
-    if (site === current.current) return
-    const timer = setTimeout(() => void read(site), 600)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the address changes
-  }, [url, open])
+  function close(next: boolean) {
+    onOpenChange(next)
+    if (!next) reset()
+  }
 
-  async function read(site: string) {
+  /** Fill the fields and show them. */
+  async function fill(values: { name: string | null; brief: string | null; logo: string | null }) {
+    setName(values.name ?? '')
+    setBrief(values.brief ?? '')
+    setLogo(values.logo ? await shrinkLogo(values.logo).catch(() => null) : null)
+    setStage('form')
+  }
+
+  async function read(address: string) {
+    if (!looksLikeSite(address)) return setError('That does not look like a website')
+    const site = siteUrl(address)
     current.current = site
-    setReading(new URL(site).hostname)
-    setWriting(false)
+    partial.current = null
+    setHost(new URL(site).hostname.replace(/^www\./, ''))
+    setError(undefined)
     setNote(undefined)
+    setSteps({ read: 'active', logo: 'waiting', write: 'waiting' })
+    setStage('reading')
     let info: SiteInfo
     try {
       info = await api<SiteInfo>('/projects/site', { body: { url: site } })
     } catch (e) {
       if (current.current !== site) return
-      setReading(null)
-      setNote((e as Error).message)
+      setStage('url')
+      setError((e as Error).message)
       return
     }
     if (current.current !== site) return
-    setReading(null)
-    setLogo(info.logo)
-    setName((n) => {
-      if (!info.name || (n.trim() && n !== filled.current.name)) return n
-      filled.current.name = info.name
-      return info.name
-    })
-    const fill = (text: string) =>
-      setBrief((b) => {
-        if (b.trim() && b !== filled.current.brief) return b
-        filled.current.brief = text
-        return text
-      })
-    setWriting(true)
+    partial.current = info
+    setReadUrl(address.trim())
+    setSteps({ read: 'done', logo: info.logo ? 'done' : 'missed', write: 'active' })
+    let answer: SiteBrief
     try {
-      const answer = await api<SiteBrief>('/projects/site/brief', { body: { url: info.url } })
-      if (current.current !== site) return
-      if (answer.brief !== null) fill(answer.brief)
-      else {
-        if (info.description) fill(info.description)
-        setNote(
-          `The brief was not written for you. ${answer.reason}${info.description ? ' Here is the site’s own description.' : ''}`,
-        )
-      }
+      answer = await api<SiteBrief>('/projects/site/brief', { body: { url: info.url } })
     } catch (e) {
-      if (current.current !== site) return
-      if (info.description) fill(info.description)
-      setNote((e as Error).message)
-    } finally {
-      if (current.current === site) setWriting(false)
+      answer = { brief: null, reason: (e as Error).message }
     }
+    if (current.current !== site) return
+    if (answer.brief !== null) {
+      setSteps((s) => ({ ...s, write: 'done' }))
+      await fill({
+        name: answer.name ?? info.name,
+        brief: answer.brief,
+        logo: answer.logo ?? info.logo,
+      })
+    } else {
+      setSteps((s) => ({ ...s, write: 'missed' }))
+      setNote(
+        `The brief was not written for you: ${answer.reason}${info.description ? ' Here is the site’s own description.' : ''}`,
+      )
+      await fill({ name: info.name, brief: info.description, logo: info.logo })
+    }
+  }
+
+  /** Stop waiting: show the fields with what has come so far. */
+  function fillMyself() {
+    current.current = ''
+    const info = partial.current
+    void fill({
+      name: info?.name ?? null,
+      brief: info?.description ?? null,
+      logo: info?.logo ?? null,
+    })
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (stage === 'url') {
+      if (url.trim()) void read(url)
+      else setStage('form')
+      return
+    }
+    if (stage !== 'form') return
     if (!name.trim()) return setError('Name the project')
     setBusy(true)
     setError(undefined)
@@ -284,8 +374,7 @@ export function NewProjectDialog({
         },
       })
       await reloadProjects()
-      onOpenChange(false)
-      reset()
+      close(false)
       router.push(`/app/projects/${project.id}`)
     } catch (e) {
       setError((e as Error).message)
@@ -294,76 +383,148 @@ export function NewProjectDialog({
     }
   }
 
+  const urlField = (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="project-url">
+        Website{' '}
+        {stage === 'form' && <span className="font-normal text-muted-foreground">(optional)</span>}
+      </Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id="project-url"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value)
+            setError(undefined)
+          }}
+          onPaste={(e) => {
+            // A pasted address is read at once.
+            const pasted = e.clipboardData.getData('text').trim()
+            if (stage === 'url' && looksLikeSite(pasted) && !url.trim()) {
+              e.preventDefault()
+              setUrl(pasted)
+              void read(pasted)
+            }
+          }}
+          placeholder="acme.com"
+          inputMode="url"
+          autoComplete="url"
+          maxLength={2000}
+          disabled={stage === 'reading'}
+          autoFocus={stage === 'url'}
+        />
+        {stage === 'form' && looksLikeSite(url) && url.trim() !== readUrl && (
+          <Button type="button" variant="outline" onClick={() => void read(url)}>
+            Read it
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>New project</DialogTitle>
             <DialogDescription>
-              A project groups threads, tasks, library files and repositories. Your teammates work
-              across all projects; threads started in one get its brief and memory.
+              {stage === 'form'
+                ? 'A project groups threads, tasks, library files and repositories. Threads started in one get its brief and memory.'
+                : 'Give its website: its name, logo and brief are read from it with your account. You can change them before it is made.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-url">
-              Website <span className="font-normal text-muted-foreground">(optional)</span>
-            </Label>
-            <Input
-              id="project-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="acme.com"
-              inputMode="url"
-              autoComplete="url"
-              maxLength={2000}
-              autoFocus
-            />
-            {reading && <Pending>Reading {reading}…</Pending>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-name">Name</Label>
-            <div className="flex items-center gap-2">
-              {logo && <ProjectLogoPreview logo={logo} onRemove={() => setLogo(null)} />}
-              <Input
-                id="project-name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value)
-                  setError(undefined)
-                }}
-                placeholder="Acme web"
-                maxLength={80}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="project-brief">Brief</Label>
-            <Textarea
-              id="project-brief"
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              placeholder={writing ? '' : 'Customer storefront. Next.js on acme/web, Stripe live.'}
-              rows={3}
-              maxLength={5000}
-            />
-            {writing ? (
-              <Pending>Writing the brief from the site with your account…</Pending>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {note ??
-                  'Given to every thread in the project. You can add repositories once it is made.'}
-              </p>
-            )}
-          </div>
+          {urlField}
+          {stage === 'reading' && (
+            <>
+              <ul className="flex flex-col gap-2" aria-live="polite">
+                <StepLine state={steps.read}>
+                  {steps.read === 'done' ? `Read ${host}` : `Reading ${host}…`}
+                </StepLine>
+                <StepLine state={steps.logo}>
+                  {steps.logo === 'done'
+                    ? 'Found its logos'
+                    : steps.logo === 'missed'
+                      ? 'No logo found'
+                      : 'Finding its logo'}
+                </StepLine>
+                <StepLine state={steps.write}>
+                  {steps.write === 'active'
+                    ? 'Writing its name and brief with your account…'
+                    : 'Writing its name and brief'}
+                </StepLine>
+              </ul>
+              <Skeleton />
+            </>
+          )}
+          {stage === 'form' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="project-name">Name</Label>
+                <div className="flex items-center gap-2">
+                  {logo && <ProjectLogoPreview logo={logo} onRemove={() => setLogo(null)} />}
+                  <Input
+                    id="project-name"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value)
+                      setError(undefined)
+                    }}
+                    placeholder="Acme web"
+                    maxLength={80}
+                    autoFocus={!readUrl}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="project-brief">Brief</Label>
+                <Textarea
+                  id="project-brief"
+                  value={brief}
+                  onChange={(e) => setBrief(e.target.value)}
+                  placeholder="Customer storefront. Next.js on acme/web, Stripe live."
+                  rows={readUrl ? 6 : 3}
+                  maxLength={5000}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {note ??
+                    'Given to every thread in the project. You can add repositories once it is made.'}
+                </p>
+              </div>
+            </>
+          )}
           {error && <p className="text-sm text-destructive-text">{error}</p>}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="items-center">
+            {stage === 'url' && (
+              <button
+                type="button"
+                onClick={() => setStage('form')}
+                className="mr-auto text-sm text-muted-foreground hover:text-foreground"
+              >
+                Start without a website
+              </button>
+            )}
+            {stage === 'reading' && (
+              <button
+                type="button"
+                onClick={fillMyself}
+                className="mr-auto text-sm text-muted-foreground hover:text-foreground"
+              >
+                Fill it in myself
+              </button>
+            )}
+            <Button type="button" variant="ghost" onClick={() => close(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={busy}>
-              Create project
-            </Button>
+            {stage === 'url' ? (
+              <Button type="submit" disabled={!looksLikeSite(url)}>
+                Continue
+              </Button>
+            ) : (
+              <Button type="submit" disabled={busy || stage === 'reading'}>
+                Create project
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
@@ -374,17 +535,19 @@ export function NewProjectDialog({
 /** A logo about to be kept, with a way back to the letter. */
 export function ProjectLogoPreview({ logo, onRemove }: { logo: string; onRemove: () => void }) {
   return (
-    <span className="group relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white">
-      {/* eslint-disable-next-line @next/next/no-img-element -- a data URL */}
-      <img src={logo} alt="Logo" className="size-full object-contain" />
+    <span className="group relative flex-none">
+      <span className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a data URL or a stored logo */}
+        <img src={logo} alt="Logo" className="size-full object-contain" />
+      </span>
       <button
         type="button"
         onClick={onRemove}
         title="Use the letter instead"
         aria-label="Remove the logo"
-        className="absolute inset-0 flex items-center justify-center bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+        className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full border bg-background text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
       >
-        <X className="size-4" aria-hidden />
+        <X className="size-3" aria-hidden />
       </button>
     </span>
   )

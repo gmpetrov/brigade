@@ -133,7 +133,15 @@ function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHov
   )
 }
 
-function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+function FilterChip({
+  label,
+  icon,
+  onClear,
+}: {
+  label: string
+  icon?: React.ReactNode
+  onClear: () => void
+}) {
   return (
     <button
       type="button"
@@ -141,6 +149,7 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
       aria-label={`Clear the filter: ${label}`}
       className="bg-primary/15 text-primary ml-1 inline-flex h-5 max-w-28 items-center gap-1 rounded-full pr-1 pl-2 text-[0.6875rem] font-semibold tracking-normal normal-case"
     >
+      {icon}
       <span className="truncate">{label}</span>
       <X className="size-3 shrink-0" />
     </button>
@@ -527,6 +536,12 @@ export function SidebarWork({
           {project && (
             <FilterChip
               label={project.name}
+              icon={
+                <ProjectIcon
+                  project={project}
+                  className="-ml-1 size-3.5 rounded-[3px] text-[0.5rem]"
+                />
+              }
               onClear={() => setFilter((f) => ({ ...f, projectId: undefined, byRow: undefined }))}
             />
           )}

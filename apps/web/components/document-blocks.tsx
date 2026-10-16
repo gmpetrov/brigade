@@ -135,7 +135,7 @@ export function DocumentBlockNoteView({
         title: o.label,
         subtext: o.hint,
         group: MENTION_GROUPS.find((g) => g.kind === o.kind)?.title,
-        icon: <MentionIcon kind={o.kind} connectionKind={o.connectionKind} />,
+        icon: <MentionIcon kind={o.kind} id={o.id} connectionKind={o.connectionKind} />,
         onItemClick: () =>
           editor.insertInlineContent([
             { type: 'mention', props: { kind: o.kind, id: o.id, label: o.label } } as never,

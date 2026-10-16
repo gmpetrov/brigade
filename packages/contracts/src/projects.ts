@@ -85,6 +85,8 @@ export const projectLogoPath = (project: { id: string; logo: string }) =>
 
 /** Most of a website's text a brief run reads. */
 export const PROJECT_SITE_TEXT_MAX = 12_000
+/** Most logos of a site a brief run chooses among. */
+export const PROJECT_LOGO_CANDIDATES_MAX = 8
 
 /** A website as a person types it ("acme.com"), as a URL: https:// when it names none. */
 export const siteUrl = (raw: string) => {
@@ -102,12 +104,18 @@ export type SiteInfo = {
   name: string | null
   /** Its meta description: the brief when no model can write one. */
   description: string | null
-  /** Its icon as a data URL, the largest square one it lists. */
+  /** Its logo as a data URL: the best guess from the HTML, before the model chooses. */
   logo: string | null
 }
 
 export type SiteBrief =
-  | { brief: string }
+  | {
+      brief: string
+      /** The name the model read on the site; null when it gave none. */
+      name: string | null
+      /** The logo the model chose, as a data URL; null: keep the first guess. */
+      logo: string | null
+    }
   /** Why not: no account, no computer online, out of usage, the run failed. */
   | { brief: null; reason: string }
 
