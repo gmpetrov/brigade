@@ -15,7 +15,7 @@ import { isMac } from '@/lib/platform'
 export function QuickThread() {
   const [open, onOpenChange] = useState(false)
   const { teammates } = useDashboard()
-  const { draft, teammateId, chooseTeammate, openThread, activity } = useThreadPanel()
+  const { draft, teammateId, chooseTeammate, openThread } = useThreadPanel()
   const teammate = teammates.find((t) => t.id === teammateId) ?? teammates[0]
   const [started, setStarted] = useState<{ id: string; teammate: string }>()
 
@@ -69,7 +69,7 @@ export function QuickThread() {
             autoFocus
             picker={
               teammates.length > 1
-                ? { teammates, onChange: chooseTeammate, activity, numbered: true }
+                ? { teammates, onChange: chooseTeammate, numbered: true }
                 : undefined
             }
             placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}

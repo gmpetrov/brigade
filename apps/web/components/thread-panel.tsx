@@ -86,7 +86,7 @@ type ThreadPanel = {
   back: () => void
   expand: () => void
   close: () => void
-  /** What each teammate is doing, for the dots beside it. */
+  /** What each teammate is doing: working, or waiting on a person. */
   activity: Record<string, TeammateActivity>
   /** Threads waiting on a person: an approval or an answer. */
   waiting: number
@@ -602,7 +602,6 @@ export function ThreadPanel() {
                     value={teammates.find((t) => t.id === lead.id)!}
                     onChange={choose}
                     heading="Go to"
-                    activity={panel.activity}
                     compact
                     recent={{
                       onOpen: (teammateId, id) => {
@@ -640,7 +639,6 @@ export function ThreadPanel() {
                 value={teammate}
                 onChange={choose}
                 heading="Threads with"
-                activity={panel.activity}
               />
             ) : (
               <span className="flex min-w-0 items-center gap-2 px-1.5 text-sm font-semibold">
