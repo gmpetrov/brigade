@@ -12,9 +12,18 @@ import {
   type SkillImport,
   type SkillPack,
 } from '@brigade/contracts'
-import { BookOpenText, ChevronRight, FileText, Package, Upload, X } from 'lucide-react'
+import {
+  BookOpenText,
+  ChevronRight,
+  EllipsisVertical,
+  FileText,
+  Package,
+  Upload,
+  X,
+} from 'lucide-react'
 import { useRef, useState } from 'react'
-import { timeAgo, useDashboard } from '@/components/dashboard'
+import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -27,6 +36,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -98,6 +113,37 @@ async function readImport(from: { file: File } | { url: string }): Promise<Skill
   return body
 }
 
+/** The GitHub owner of a pack's source, for its picture: `cloudflare` for github.com/cloudflare/skills. */
+const githubOwner = (source: string) =>
+  /^https:\/\/(www\.)?github\.com\/([\w.-]+)/.exec(source)?.[2]
+
+/** A pack's picture: its GitHub owner's avatar, or a box. */
+function SourceImage({ source }: { source: string }) {
+  const owner = githubOwner(source)
+  return (
+    <Avatar className="size-8 rounded-lg" aria-hidden>
+      {owner && <AvatarImage src={`https://github.com/${owner}.png?size=64`} alt="" />}
+      <AvatarFallback className="rounded-lg bg-accent text-accent-foreground">
+        <Package className="size-4" />
+      </AvatarFallback>
+    </Avatar>
+  )
+}
+
+/** A skill's picture: who wrote it, a teammate's pebble or a member's photo; else a book. */
+function AuthorImage({ skill }: { skill: Skill }) {
+  const by = skill.updatedBy
+  if (by?.type === 'teammate') return <TeammateAvatar teammate={by} className="size-8 shrink-0" />
+  return (
+    <Avatar className="size-8" aria-hidden>
+      {by?.image && <AvatarImage src={by.image} alt="" referrerPolicy="no-referrer" />}
+      <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+        {by ? by.name.trim().charAt(0).toUpperCase() : <BookOpenText className="size-4" />}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
+
 export function Skills({ admin }: { admin: boolean }) {
   const skills = useApi<Skill[]>('/skills')
   const packs = useApi<SkillPack[]>('/skills/packs')
@@ -167,58 +213,64 @@ export function Skills({ admin }: { admin: boolean }) {
     }
   }
 
+  /** Edit, Update and Remove, out of the way. */
+  const menu = (
+    label: string,
+    items: { label: string; onSelect: () => void; danger?: boolean }[],
+  ) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`${label} options`}>
+          <EllipsisVertical aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {items.map((item) => (
+          <DropdownMenuItem
+            key={item.label}
+            variant={item.danger ? 'destructive' : 'default'}
+            onSelect={item.onSelect}
+          >
+            {item.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   const skillRow = (s: Skill, inPack?: SkillPack) => (
-    <div
-      key={s.id}
-      className={`flex flex-wrap items-center gap-4 py-3 pr-5 ${inPack ? 'pl-14' : 'pl-5'}`}
-    >
-      {!inPack && (
+    <div key={s.id} className={`flex items-center gap-3 py-2.5 pr-3 ${inPack ? 'pl-15' : 'pl-4'}`}>
+      {!inPack && <AuthorImage skill={s} />}
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 flex-col text-left"
+        title={s.description}
+        onClick={() => (admin ? setDraft({ ...s }) : setViewing(s))}
+      >
         <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
-          aria-hidden
+          className={`truncate font-mono text-sm font-medium ${s.active ? '' : 'text-muted-foreground'}`}
         >
-          <BookOpenText className="size-5" />
+          /{s.name}
         </span>
+        <span className="truncate text-xs text-muted-foreground">
+          {inPack
+            ? s.description
+            : [where(s), s.updatedBy?.name, timeAgo(s.updatedAt)].filter(Boolean).join(' · ')}
+        </span>
+      </button>
+      {admin && (
+        <>
+          <Switch
+            checked={s.enabled}
+            onCheckedChange={(on) => void toggle(s, on)}
+            aria-label={`Use ${s.name}`}
+          />
+          {menu(`/${s.name}`, [
+            { label: 'Edit', onSelect: () => setDraft({ ...s }) },
+            { label: 'Remove', onSelect: () => void remove(s), danger: true },
+          ])}
+        </>
       )}
-      <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`font-mono font-semibold ${s.active ? '' : 'text-muted-foreground'}`}>
-            /{s.name}
-          </span>
-          {!s.enabled && <Badge variant="secondary">off</Badge>}
-        </div>
-        <span className="line-clamp-2 text-sm">{s.description}</span>
-        <span className="text-sm text-muted-foreground">
-          {[
-            !inPack && where(s),
-            s.files.length > 0 && `${s.files.length} file${s.files.length === 1 ? '' : 's'}`,
-            s.updatedBy && `${s.updatedBy.name}, ${timeAgo(s.updatedAt)}`,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {admin ? (
-          <>
-            <Switch
-              checked={s.enabled}
-              onCheckedChange={(on) => void toggle(s, on)}
-              aria-label={`Use ${s.name}`}
-            />
-            <Button variant="outline" size="sm" onClick={() => setDraft({ ...s })}>
-              Edit
-            </Button>
-            <Button variant="danger" size="sm" onClick={() => void remove(s)}>
-              Remove
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => setViewing(s)}>
-            View
-          </Button>
-        )}
-      </div>
     </div>
   )
 
@@ -269,10 +321,12 @@ export function Skills({ admin }: { admin: boolean }) {
               const expanded = open.has(p.id)
               return (
                 <div key={p.id} className="flex flex-col divide-y">
-                  <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+                  <div className="flex items-center gap-3 py-2.5 pr-3 pl-4">
+                    <SourceImage source={p.source} />
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 basis-60 items-center gap-4 text-left"
+                      className="flex min-w-0 flex-1 flex-col text-left"
+                      title={sourceLabel(p.source)}
                       aria-expanded={expanded}
                       onClick={() => {
                         const next = new Set(open)
@@ -281,60 +335,43 @@ export function Skills({ admin }: { admin: boolean }) {
                         setOpen(next)
                       }}
                     >
-                      <span
-                        className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
-                        aria-hidden
-                      >
-                        <Package className="size-5" />
+                      <span className="flex min-w-0 items-center gap-1">
+                        <span
+                          className={`truncate text-sm font-medium ${p.enabled ? '' : 'text-muted-foreground'}`}
+                        >
+                          {p.name}
+                        </span>
+                        <ChevronRight
+                          aria-hidden
+                          className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
+                        />
                       </span>
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <ChevronRight
-                            aria-hidden
-                            className={`size-4 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
-                          />
-                          <span
-                            className={`font-semibold ${p.enabled ? '' : 'text-muted-foreground'}`}
-                          >
-                            {p.name}
-                          </span>
-                          <Badge variant="secondary">
-                            {p.enabled ? `${on} of ${inPack.length} on` : 'off'}
-                          </Badge>
-                        </span>
-                        <span className="truncate text-sm text-muted-foreground">
-                          {where(p)} · {sourceLabel(p.source)}
-                        </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {on === inPack.length
+                          ? `${inPack.length} skill${inPack.length === 1 ? '' : 's'}`
+                          : `${on} of ${inPack.length} on`}{' '}
+                        · {where(p)}
                       </span>
                     </button>
                     {admin && (
-                      <div className="flex flex-wrap items-center gap-2">
+                      <>
                         <Switch
                           checked={p.enabled}
                           onCheckedChange={(v) => void togglePack(p, v)}
                           aria-label={`Use the pack ${p.name}`}
                         />
-                        <Button variant="outline" size="sm" onClick={() => setEditingPack(p)}>
-                          Edit
-                        </Button>
-                        {!p.source.startsWith('file:') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            title={`Read ${sourceLabel(p.source)} again`}
-                            onClick={() => void updatePack(p)}
-                          >
-                            Update
-                          </Button>
-                        )}
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => void removePack(p, inPack.length)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                        {menu(p.name, [
+                          { label: 'Edit', onSelect: () => setEditingPack(p) },
+                          ...(p.source.startsWith('file:')
+                            ? []
+                            : [{ label: 'Update', onSelect: () => void updatePack(p) }]),
+                          {
+                            label: 'Remove',
+                            onSelect: () => void removePack(p, inPack.length),
+                            danger: true,
+                          },
+                        ])}
+                      </>
                     )}
                   </div>
                   {expanded && inPack.map((s) => skillRow(s, p))}
