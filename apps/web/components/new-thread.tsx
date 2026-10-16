@@ -587,8 +587,8 @@ export function NewThread({
         {uploads}
         {composer}
         <div className="flex flex-wrap items-center gap-1">
-          {teammatePicker}
           <AttachButton onFiles={files.add} />
+          {teammatePicker}
           {projectPicker}
           {where}
           {send}
