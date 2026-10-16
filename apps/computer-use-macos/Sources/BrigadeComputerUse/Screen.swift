@@ -13,16 +13,27 @@ enum Permissions {
   private static var askedScreen = false
   private static var askedAccessibility = false
 
+  /// Whether Screen Recording is on now. CGPreflightScreenCaptureAccess answers once per
+  /// process: turned on while this app runs, it still says no. ScreenCaptureKit asks macOS
+  /// each time, so it confirms a grant made since launch.
+  static func hasScreenRecording() async -> Bool {
+    if screenRecording { return true }
+    return (try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)) != nil
+  }
+
   /// Throws with what the person has to turn on; asks macOS to prompt them once per launch.
-  static func requireScreenRecording() throws {
-    if screenRecording { return }
+  /// Then quits, once the reply is sent: the runner starts the app again on its next request,
+  /// and a new process sees the permission when the person has turned it on meanwhile.
+  static func requireScreenRecording() async throws {
+    if await hasScreenRecording() { return }
     if !askedScreen {
       askedScreen = true
       CGRequestScreenCaptureAccess()
     }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) }
     throw HelperError(
       "permission_missing",
-      "Screen Recording is off for Brigade Computer Use. Ask the person to turn it on in System Settings → Privacy & Security → Screen Recording (macOS may ask them to quit and reopen the app), then try again."
+      "Screen Recording is off for Brigade Computer Use. Ask the person to turn it on in System Settings → Privacy & Security → Screen Recording, then try again: the app restarts by itself to pick it up."
     )
   }
 
@@ -49,7 +60,7 @@ enum Screen {
   }
 
   static func screenshot(display index: Int, to path: String) async throws -> [String: Any] {
-    try Permissions.requireScreenRecording()
+    try await Permissions.requireScreenRecording()
     let (content, displays) = try await displays()
     guard index >= 0, index < displays.count else {
       throw HelperError("invalid_argument", "display \(index) does not exist; there are \(displays.count)")

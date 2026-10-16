@@ -1,10 +1,12 @@
-// Brigade.app: a menu-bar app, no window, no Dock icon. It installs, links and
-// keeps running the Brigade runner (runner.rs), ships Brigade Computer Use.app
-// for teammates to use this Mac's apps, starts at login and updates itself.
+// Brigade.app: a menu-bar app, no Dock icon. It installs, links and keeps
+// running the Brigade runner (runner.rs), ships Brigade Computer Use.app for
+// teammates to use this Mac's apps, starts at login and updates itself. Its one
+// window is the setup checklist (setup.rs).
 mod runner;
+mod setup;
 
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -31,6 +33,12 @@ struct Settings {
     dashboard_url: Option<String>,
     /// Open at login was turned on once, on the first launch; after that it is the person's choice.
     login_set: bool,
+    /// The setup steps missing when the person last closed the checklist.
+    #[serde(default)]
+    setup_dismissed: Vec<String>,
+    /// Keep screen awake, off until the person turns it on.
+    #[serde(default)]
+    keep_awake: bool,
 }
 
 fn settings_file() -> PathBuf {
@@ -62,6 +70,8 @@ struct Items {
     status: MenuItem<Wry>,
     connect: MenuItem<Wry>,
     update: MenuItem<Wry>,
+    login: CheckMenuItem<Wry>,
+    awake: CheckMenuItem<Wry>,
     /// An update is installed and waits for a restart.
     update_ready: Mutex<bool>,
 }
@@ -72,6 +82,26 @@ fn show_status(items: &Items, status: &Status) {
         Status::NotConnected => "Connect this computer…",
         _ => "Connect to another workspace…",
     });
+}
+
+/// `caffeinate` while Keep screen awake is on: the display, and so the Mac, stay
+/// awake for teammates to see and use it. -w ties it to this app, so it ends when Brigade quits.
+#[derive(Default)]
+struct Awake(Mutex<Option<Child>>);
+
+fn keep_awake(app: &AppHandle, on: bool) {
+    let awake = app.state::<Awake>();
+    let mut slot = awake.0.lock().unwrap();
+    if let Some(mut child) = slot.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    if on {
+        *slot = Command::new("caffeinate")
+            .args(["-d", "-i", "-w", &std::process::id().to_string()])
+            .spawn()
+            .ok();
+    }
 }
 
 fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
@@ -129,13 +159,9 @@ fn open_link(app: &AppHandle, link: &Url) {
                     settings.dashboard_url = Some(url);
                 }
                 save_settings(&settings);
-                let workspace = runner::workspace().unwrap_or_else(|| "your workspace".into());
-                alert(
-                    &app,
-                    "Connected",
-                    &format!("This computer now runs {workspace}'s teammates."),
-                    MessageDialogKind::Info,
-                );
+                // What's left to set up, the workspace now checked.
+                let handle = app.clone();
+                let _ = app.run_on_main_thread(move || setup::show(&handle));
             }
             Err(error) => alert(&app, "Could not connect", &error, MessageDialogKind::Error),
         }
@@ -197,16 +223,15 @@ fn on_menu(app: &AppHandle, id: &str) {
         "dashboard" => {
             let _ = app.opener().open_url(dashboard(), None::<&str>);
         }
-        "computer-use" => {
-            // Opening the helper asks macOS for its permissions when they are missing.
-            if let Ok(dir) = app.path().resource_dir() {
-                let _ = Command::new("open")
-                    .arg("-a")
-                    .arg(dir.join(HELPER))
-                    .status();
-            }
-        }
+        "setup" => setup::show(app),
         "restart-runner" => app.state::<Arc<Supervisor>>().start(),
+        "awake" => {
+            let on = app.state::<Arc<Items>>().awake.is_checked().unwrap_or(false);
+            let mut settings = load_settings();
+            settings.keep_awake = on;
+            save_settings(&settings);
+            keep_awake(app, on);
+        }
         "login" => {
             let launch = app.autolaunch();
             let _ = if launch.is_enabled().unwrap_or(false) {
@@ -251,6 +276,22 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let status = MenuItem::with_id(app, "status", "Starting…", false, None::<&str>)?;
     let connect = MenuItem::with_id(app, "connect", "Connect this computer…", true, None::<&str>)?;
     let update = MenuItem::with_id(app, "update", "Check for updates…", true, None::<&str>)?;
+    let awake = CheckMenuItem::with_id(
+        app,
+        "awake",
+        "Keep screen awake",
+        true,
+        settings.keep_awake,
+        None::<&str>,
+    )?;
+    let login = CheckMenuItem::with_id(
+        app,
+        "login",
+        "Open at login",
+        true,
+        launch.is_enabled().unwrap_or(false),
+        None::<&str>,
+    )?;
     let helper = app
         .path()
         .resource_dir()
@@ -264,22 +305,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "dashboard", "Open dashboard", true, None::<&str>)?,
             &connect,
-            &MenuItem::with_id(
-                app,
-                "computer-use",
-                "Set up computer use…",
-                helper.is_some(),
-                None::<&str>,
-            )?,
+            &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &CheckMenuItem::with_id(
-                app,
-                "login",
-                "Open at login",
-                true,
-                launch.is_enabled().unwrap_or(false),
-                None::<&str>,
-            )?,
+            &awake,
+            &login,
             &update,
             &MenuItem::with_id(app, "restart-runner", "Restart runner", true, None::<&str>)?,
             &MenuItem::with_id(app, "logs", "Show logs", true, None::<&str>)?,
@@ -300,12 +329,21 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         status,
         connect,
         update,
+        login,
+        awake,
         update_ready: Mutex::new(false),
     });
     app.manage(items.clone());
+    app.manage(setup::Helper::new(helper.clone()));
+    app.manage(setup::Last::default());
+    app.manage(Awake::default());
+    if settings.keep_awake {
+        keep_awake(app.handle(), true);
+    }
     let supervisor = Supervisor::new(helper, move |status| show_status(&items, status));
     app.manage(supervisor.clone());
     supervisor.start();
+    setup::show_if_needed(app.handle());
 
     let handle = app.handle().clone();
     if let Ok(Some(urls)) = app.deep_link().get_current() {
@@ -339,6 +377,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![setup::setup_state, setup::setup_action])
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")

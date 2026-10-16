@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Brigade.app has no window; nothing is exposed to web content.",
-  "windows": [],
-  "permissions": []
+  "description": "The setup checklist (page/setup.html), the app's own local page, calls its two commands.",
+  "windows": ["setup"],
+  "permissions": ["core:default"]
 }
