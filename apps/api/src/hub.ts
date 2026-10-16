@@ -1268,7 +1268,7 @@ async function openTerminal(
     send(conn.ws, { type: 'terminal.exit', terminalId: message.terminalId, code: null })
   }
   if (!thread || thread.computer.kind !== 'cloud')
-    return fail('Terminals are only available on the workspace computer')
+    return fail('Terminals are only available on the cloud computer')
   if (thread.controlledByMemberId !== scope.memberId) return fail('Take over the thread first')
   if (terminals.has(message.terminalId)) return
   terminals.set(message.terminalId, { conn, computerId: thread.computerId, sessionId: thread.id })

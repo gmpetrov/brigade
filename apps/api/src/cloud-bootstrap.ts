@@ -214,7 +214,7 @@ SUDOERS
 sudo chmod 440 /etc/sudoers.d/brigade-runner
 sudo visudo -cq
 
-sudo -u brigade -H ${runner} link ${input.code} --api ${input.apiUrl} --name 'Workspace computer'
+sudo -u brigade -H ${runner} link ${input.code} --api ${input.apiUrl} --name 'Cloud computer'
 sudo tee /etc/systemd/system/brigade-runner.service >/dev/null <<'UNIT'
 [Unit]
 Description=Brigade runner

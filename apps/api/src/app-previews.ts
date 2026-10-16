@@ -101,7 +101,7 @@ export async function startPreview(
     throw new HTTPException(409, {
       message:
         thread.computer.kind === 'cloud'
-          ? 'The workspace computer is not running. It starts with the next message.'
+          ? 'The cloud computer is not running. It starts with the next message.'
           : `${thread.computer.name} is offline. Start its runner and try again.`,
     })
   if (protocol < PREVIEW_START_PROTOCOL) return { outcome: 'setup', repositories: [] }
@@ -156,7 +156,7 @@ type PreviewComputer = { id: string; kind: string; name: string }
 export function previewOffline(computer: PreviewComputer) {
   if ((runnerProtocol(computer.id) ?? 0) >= PREVIEW_PROTOCOL) return undefined
   return computer.kind === 'cloud'
-    ? 'Stopped with the workspace computer'
+    ? 'Stopped with the cloud computer'
     : `Stopped: ${computer.name} is offline`
 }
 
@@ -169,7 +169,7 @@ export async function livePreview(db: ScopedDb, thread: { id: string; computer: 
     throw new HTTPException(409, {
       message:
         thread.computer.kind === 'cloud'
-          ? 'The workspace computer stopped, so the preview did too. Start it again from the preview panel.'
+          ? 'The cloud computer stopped, so the preview did too. Start it again from the preview panel.'
           : `${thread.computer.name} is offline, so the preview is too. Start its runner, then the preview.`,
     })
   return preview
@@ -196,7 +196,7 @@ export async function handlePreviewExpose(
     include: { computer: true },
   })
   if (!session) return fail('Unknown thread')
-  if (session.computer.kind !== 'cloud') return fail('Only the workspace computer hosts previews')
+  if (session.computer.kind !== 'cloud') return fail('Only the cloud computer hosts previews')
   const origins: Record<number, string> = {}
   const urls: Record<number, string> = {}
   for (const port of call.ports) {

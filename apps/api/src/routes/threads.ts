@@ -741,10 +741,10 @@ export const threads = new Hono<AppEnv>()
       if (thread.controlledByMemberId === scope.memberId) {
         await ensureRunning(thread.computer.id)
         // 503: the dashboard asks again until the computer is up.
-        throw new HTTPException(503, { message: 'Starting the workspace computer…' })
+        throw new HTTPException(503, { message: 'Starting the cloud computer…' })
       }
       throw new HTTPException(409, {
-        message: 'The workspace computer is not running. It starts with the next message.',
+        message: 'The cloud computer is not running. It starts with the next message.',
       })
     }
     const view = await watchDesktop(thread.computer)
@@ -895,7 +895,7 @@ export const threads = new Hono<AppEnv>()
     if (thread.computer.kind !== 'cloud') {
       throw new HTTPException(409, {
         message:
-          'On your own machine, just use your machine. Takeover is for the workspace computer.',
+          'On your own machine, just use your machine. Takeover is for the cloud computer.',
       })
     }
     if (thread.controlledByMemberId && thread.controlledByMemberId !== scope.memberId) {

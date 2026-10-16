@@ -381,7 +381,7 @@ async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code
   throw new HTTPException(409, {
     message: candidates.length
       ? `No ${name} account with usage left on the computers it could run on. Add one under Accounts, or wait for a reset.`
-      : 'No computer is online to run it. Start your runner, or set up the workspace computer.',
+      : 'No computer is online to run it. Start your runner, or set up the cloud computer.',
   })
 }
 

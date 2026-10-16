@@ -353,7 +353,7 @@ export function ComputerPanel({
   return (
     <Frame
       teammate={{ ...teammate, harness: teammate.harness as Teammate['harness'] }}
-      subtitle={`${teammateModelLabel(teammate)} on ${cloud ? 'the workspace computer' : thread.computer.name}`}
+      subtitle={`${teammateModelLabel(teammate)} on ${cloud ? 'the cloud computer' : thread.computer.name}`}
       onClose={onClose}
     >
       <Section title="Computer">

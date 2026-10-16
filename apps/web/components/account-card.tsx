@@ -49,7 +49,7 @@ export function AccountCard({
             {[
               a.email,
               a.plan,
-              a.computer.kind === 'cloud' ? 'workspace computer' : a.computer.name,
+              a.computer.kind === 'cloud' ? 'cloud computer' : a.computer.name,
               a.source === 'machine' && "this machine's own login",
             ]
               .filter(Boolean)

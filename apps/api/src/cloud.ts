@@ -50,7 +50,7 @@ export async function createWorkspaceComputer(workspace: { id: string; organizat
       organizationId: workspace.organizationId,
       workspaceId: workspace.id,
       kind: 'cloud',
-      name: 'Workspace computer',
+      name: 'Cloud computer',
       size: defaults.cloudComputerSize,
       status: 'creating',
     },
@@ -220,7 +220,7 @@ export async function desktopUrl(computer: { providerRef: unknown }) {
     return await request
   } catch (error) {
     throw new HTTPException(503, {
-      message: `The workspace computer's provider did not answer: ${await providerReason(error)}`,
+      message: `The cloud computer's provider did not answer: ${await providerReason(error)}`,
     })
   }
 }
@@ -234,7 +234,7 @@ export async function hostedPort(computer: { providerRef: unknown }, port: numbe
     return await provider.hostPort(ref, port)
   } catch (error) {
     throw new HTTPException(503, {
-      message: `The workspace computer's provider did not host the preview: ${await providerReason(error)}`,
+      message: `The cloud computer's provider did not host the preview: ${await providerReason(error)}`,
     })
   }
 }
