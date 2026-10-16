@@ -369,8 +369,9 @@ export class HarnessThread {
       }
     } finally {
       if (this.saved) {
-        // The new session has the transcript now: later turns resume it.
-        if (result) delete this.saved.arrivedFrom
+        // The new session has the transcript now: later turns resume it. One that failed or
+        // never started (no usage) may have kept nothing: the next starts from it again.
+        if (result?.status === 'idle' || result?.status === 'waiting') delete this.saved.arrivedFrom
         this.saved.inTurn = false
         if (result?.status === 'idle') this.saved.recoveries = 0
         await this.persist().catch((error) =>
