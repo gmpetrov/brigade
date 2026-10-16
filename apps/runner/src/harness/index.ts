@@ -972,18 +972,30 @@ export class HarnessThread {
 }
 
 /**
+ * Closing cards a turn ends on, with nothing written after them. Claude Code
+ * otherwise sees no text after the last tool, asks for a visible reply, and
+ * the teammate writes its whole answer again.
+ */
+const TERMINAL_TOOLS = {
+  CLAUDE_CODE_TERMINAL_MCP_TOOLS: [SUGGEST_REPLIES_TOOL, OFFER_CHOICES_TOOL, PROPOSE_TEAM_TOOL]
+    .map((name) => `mcp__harness-tools__${name}`)
+    .join(','),
+}
+
+/**
  * The working directory and harness environment for an account: on a cloud
  * computer the teammate's own Linux user, home and private config directory.
  */
 async function prepare(workDir: string, account: AccountRef, sessionId: string, runAs?: string) {
   if (!runAs) {
     await mkdir(workDir, { recursive: true })
-    return harnessEnv(accountEnv(account))
+    return harnessEnv({ ...TERMINAL_TOOLS, ...accountEnv(account) })
   }
   await ensureUser(runAs)
   await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
   const home = teammateHome(runAs)
   return harnessEnv({
+    ...TERMINAL_TOOLS,
     ...(await linkAccount(runAs, account)),
     ...accountToken(account),
     ...(await containerEnv(runAs, sessionId)),
