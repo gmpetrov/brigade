@@ -67,10 +67,13 @@ export const pulls = new Hono<AppEnv>()
     return c.json(projectId ? await inProject(c.var.db, list, projectId) : list)
   })
 
-  /** For the sidebar: how many are open and how many wait on a person. Database only, no GitHub call. */
+  /**
+   * For the sidebar and Home: how many are open, and those that wait on a person.
+   * Database only, no GitHub call.
+   */
   .get('/attention', async (c) => {
-    const [count, open] = await Promise.all([needsAttention(c.var.db), openCount(c.var.db)])
-    return c.json({ count, open })
+    const [waiting, open] = await Promise.all([needsAttention(c.var.db), openCount(c.var.db)])
+    return c.json({ count: waiting.length, open, pulls: waiting })
   })
 
   .get('/:owner/:name/:number', async (c) => {

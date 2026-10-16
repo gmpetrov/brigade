@@ -32,10 +32,13 @@ export function PullCard({
   repository,
   number,
   title,
+  open,
 }: {
   repository: string
   number: number
   title: string | null
+  /** Known to be open (Home's waiting ones): Merge shows even when GitHub's state doesn't load. */
+  open?: boolean
 }) {
   const { me } = useDashboard()
   const path = `/pulls/${repository}/${number}`
@@ -70,7 +73,7 @@ export function PullCard({
   }
 
   function merge() {
-    if (!p || !confirm(`Merge #${number} into ${p.base} (${method})?`)) return
+    if (!confirm(`Merge #${number}${p ? ` into ${p.base}` : ''} (${method})?`)) return
     void act(() => api(`${path}/merge`, { body: { method } }))
   }
 
@@ -85,7 +88,8 @@ export function PullCard({
   }
 
   const action = () => {
-    if (!p) return null
+    // Its state from GitHub did not load: still merged from here, GitHub says if it can't be.
+    if (!p) return open && pull.error && isAdmin(me) ? mergeButton(true) : null
     if (p.state !== 'open' || !isAdmin(me)) return <PullStatus pull={p} />
     if (hasConflicts(p))
       return resolvesInBrigade(p) ? (
@@ -109,20 +113,22 @@ export function PullCard({
         </Button>
       )
     if (resolving(p)) return <PullStatus pull={p} />
-    return (
-      <Button
-        size="sm"
-        variant="outline"
-        className="relative z-10 flex-none"
-        disabled={busy || !mergeable}
-        onClick={merge}
-        title={mergeable ? undefined : blockedBecause[p.mergeableState]}
-      >
-        <GitMerge />
-        {busy ? 'Merging…' : 'Merge'}
-      </Button>
-    )
+    return mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
   }
+
+  const mergeButton = (enabled: boolean, title?: string) => (
+    <Button
+      size="sm"
+      variant="outline"
+      className="relative z-10 flex-none"
+      disabled={busy || !enabled}
+      onClick={merge}
+      title={title}
+    >
+      <GitMerge />
+      {busy ? 'Merging…' : 'Merge'}
+    </Button>
+  )
 
   return (
     <div className="relative flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm hover:bg-secondary/50">
@@ -148,9 +154,6 @@ export function PullCard({
         <span className="truncate font-mono text-xs text-muted-foreground">{repository}</span>
         {error && <span className="text-xs text-destructive-text">{error}</span>}
       </span>
-      {!p && pull.error && (
-        <span className="flex-none font-medium text-primary">See the changes</span>
-      )}
       {action()}
     </div>
   )

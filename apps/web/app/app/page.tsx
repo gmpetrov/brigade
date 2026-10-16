@@ -1,15 +1,22 @@
 'use client'
-import { ArrowRight, GitPullRequest, Inbox, UserPlus } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { ActivityFeed } from '@/components/activity-feed'
 import { isAdmin, StatusBadge, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { GettingStarted } from '@/components/getting-started'
+import { NeedsYou } from '@/components/needs-you'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { teammateModelLabel, useApi, waitsOn, type ThreadSummary, type Ticket } from '@/lib/api'
+import {
+  teammateModelLabel,
+  useApi,
+  waitsOn,
+  type PullWaiting,
+  type ThreadSummary,
+  type Ticket,
+} from '@/lib/api'
 import { useLive } from '@/lib/use-live'
-import { cn } from '@/lib/utils'
 
 function greeting(name: string) {
   const hour = new Date().getHours()
@@ -25,89 +32,6 @@ function greeting(name: string) {
 }
 
 const busyStatus = new Set(['starting', 'running', 'waiting'])
-
-/** Tickets and pull requests waiting on this member, with the way to them. */
-function NeedsYou({ tickets, pulls }: { tickets: Ticket[]; pulls: number }) {
-  if (tickets.length === 0 && pulls === 0)
-    return (
-      <p className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-        <span aria-hidden className="size-1.5 rounded-full bg-success" />
-        Nothing is waiting on you.
-      </p>
-    )
-  return (
-    // Side by side when both show; one alone takes the full width.
-    <section
-      aria-labelledby="needs-you"
-      className={cn('grid gap-3', tickets.length > 0 && pulls > 0 && 'sm:grid-cols-2')}
-    >
-      <h2 id="needs-you" className="sr-only">
-        Waiting on you
-      </h2>
-      {tickets.length > 0 && (
-        <Card className="gap-3 border-warning/40 bg-warning/5 p-4">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
-              <Inbox className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold">
-                {tickets.length} {tickets.length === 1 ? 'ticket needs' : 'tickets need'} your input
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Your teammates are waiting on a decision.
-              </p>
-            </div>
-          </div>
-          <ul className="flex flex-col gap-1 text-sm">
-            {tickets.slice(0, 3).map((t) => (
-              <li key={t.id} className="truncate">
-                <span className="font-medium">{t.session?.teammate.name ?? 'Brigade'}</span>
-                <span className="text-muted-foreground">
-                  {' · '}
-                  {/* Titles start with the teammate's name; it is shown just before. */}
-                  {t.session ? t.title.replace(`${t.session.teammate.name}: `, '') : t.title}
-                </span>
-              </li>
-            ))}
-            {tickets.length > 3 && (
-              <li className="text-muted-foreground">and {tickets.length - 3} more</li>
-            )}
-          </ul>
-          <Button asChild size="sm" className="self-start">
-            <Link href="/app/tickets">
-              Review tickets
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-        </Card>
-      )}
-      {pulls > 0 && (
-        <Card className="gap-3 p-4">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <GitPullRequest className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold">
-                {pulls} pull {pulls === 1 ? 'request' : 'requests'} waiting on you
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Review or merge what your teammates opened.
-              </p>
-            </div>
-          </div>
-          <Button asChild size="sm" variant="outline" className="mt-auto self-start">
-            <Link href="/app/pulls">
-              Review pull requests
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-        </Card>
-      )}
-    </section>
-  )
-}
 
 /** Every teammate and what it is doing right now. */
 function Team({ threads }: { threads: ThreadSummary[] }) {
@@ -149,15 +73,18 @@ export default function Home() {
   const { me, teammates } = useDashboard()
   const threads = useApi<ThreadSummary[]>('/threads')
   const tickets = useApi<Ticket[]>('/tickets?status=all')
-  const pulls = useApi<{ count: number }>('/pulls/attention')
+  const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const [chosen, choose] = useLastTeammate()
   const teammate = teammates.find((t) => t.id === chosen) ?? teammates[0]
 
   useLive((message) => {
     if (message.type === 'tickets.updated') void tickets.reload()
+    if (message.type === 'pulls.updated') void pulls.reload()
     if (message.type !== 'thread.updated') return
     void threads.reload()
     void tickets.reload()
+    // A thread's pull requests wait on a person once its teammate stops.
+    void pulls.reload()
   })
 
   const waiting = (tickets.data ?? []).filter((t) => waitsOn(t, me))
@@ -203,7 +130,15 @@ export default function Home() {
 
       <GettingStarted threads={threads.data} />
 
-      {tickets.data && pulls.data && <NeedsYou tickets={waiting} pulls={pulls.data.count} />}
+      {tickets.data && pulls.data && (
+        <NeedsYou
+          tickets={waiting}
+          pulls={pulls.data.pulls}
+          onChange={async () => {
+            await Promise.all([tickets.reload(), pulls.reload()])
+          }}
+        />
+      )}
 
       <div className="flex flex-wrap items-start gap-6">
         <section

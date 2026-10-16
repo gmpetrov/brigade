@@ -606,6 +606,12 @@ export type Ticket = {
     reason?: string
     source?: 'harness'
     toolName?: string
+    /** A harness ticket's teammate, and what it asks: a question's or a ticket's asks. */
+    teammateId?: string
+    questionId?: string
+    questions?: unknown[]
+    requestId?: string
+    asks?: unknown[]
     pending?: { text: string; memberId: string | null }
     cap?: keyof Caps
     limit?: number
@@ -637,6 +643,17 @@ export type Ticket = {
     projectId: string | null
     teammate: { id: string; name: string }
   } | null
+}
+
+/** A pull request that waits on a person, from /pulls/attention. */
+export type PullWaiting = {
+  repository: string
+  number: number
+  title: string
+  reviewStatus: string
+  updatedAt: string
+  session: { id: string; title: string } | null
+  authorTeammate: { id: string; name: string } | null
 }
 
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'

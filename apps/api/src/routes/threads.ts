@@ -61,6 +61,7 @@ import {
   promptWithAttachments,
   startThread,
 } from '../work.js'
+import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
@@ -220,19 +221,11 @@ export const threads = new Hono<AppEnv>()
           _max: { at: true },
         })
       : []
-    // Its open pull requests that wait on a person (pull-requests.ts's needsAttention, and
-    // those nobody asked a teammate to review, which a person reviews and merges).
+    // Its open pull requests that wait on a person, the same ones Home lists.
     const pulls = rows.length
       ? await c.var.db.pullRequest.groupBy({
           by: ['sessionId'],
-          where: {
-            sessionId: { in: rows.map((r) => r.id) },
-            state: 'open',
-            OR: [
-              { reviewStatus: { in: ['none', 'stuck', 'changes_requested'] } },
-              { reviewStatus: 'approved', autoMerge: false },
-            ],
-          },
+          where: { ...waitingOnPerson, sessionId: { in: rows.map((r) => r.id) } },
           _count: { _all: true },
         })
       : []

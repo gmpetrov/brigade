@@ -79,7 +79,7 @@ import { WidgetFrame } from '@/components/widget-frame'
 import { threadImageUrl, useApi, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-type Item =
+export type Item =
   | {
       kind: 'user'
       key: string
@@ -1732,7 +1732,7 @@ function CredentialAccess({
 }
 
 /** The harness asks a person something: options, a free answer, or a decline. */
-function QuestionCard({
+export function QuestionCard({
   item,
   canAnswer,
   onAnswer,
@@ -1986,7 +1986,7 @@ function BrowserAction({
  * A ticket the teammate opened: one or more asks, each answered with its own
  * buttons. The teammate waits; the answers go to it once every ask has one.
  */
-function TicketCard({
+export function TicketCard({
   item,
   canAnswer,
   takeover,
