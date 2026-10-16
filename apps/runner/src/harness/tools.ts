@@ -230,7 +230,7 @@ export const openTicketTool = tool({
             app: {
               type: 'object',
               description:
-                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket',
+                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there. For an MCP server, such as one the person gives you a URL for, use kind mcp with its url: they add it and sign in from the ticket. For an MCP server already added, such as one a message mentions as an App, use kind mcp and put its name in what; the url can be left out',
               properties: {
                 kind: {
                   type: 'string',

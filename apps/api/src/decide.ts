@@ -122,6 +122,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   // App access granted from the ticket, given once every answer checks out.
   const grants: {
     app: NonNullable<Extract<Ask, { type: 'access' }>['app']>
+    what: string
     connectionId?: string
   }[] = []
   if (answer.action === 'answered') {
@@ -164,6 +165,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
       if (ask.type === 'access' && reply.type === 'access' && ask.app && reply.granted)
         grants.push({
           app: ask.app,
+          what: ask.what,
           ...(reply.connectionId ? { connectionId: reply.connectionId } : {}),
         })
       if (ask.type === 'access' && reply.type === 'access' && reply.credential) {
@@ -202,7 +204,7 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
     })
   // Before the answer goes out, so the spec it carries has the App's tools.
   for (const grant of grants)
-    await grantApp(db, scope, thread, asker.id, grant.app, grant.connectionId)
+    await grantApp(db, scope, thread, asker.id, grant.app, grant.what, grant.connectionId)
   const sent = await dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
@@ -253,6 +255,7 @@ async function grantApp(
   thread: { startedByMemberId: string },
   teammateId: string,
   app: { kind: string; scope: 'read' | 'read_write'; url?: string },
+  what: string,
   connectionId: string | undefined,
 ) {
   // An MCP server added by its URL: the App for that URL, whatever its name.
@@ -262,7 +265,14 @@ async function grantApp(
   } catch {
     // not a URL
   }
-  // No URL in the ask: the server of the account the person picked in the ticket.
+  // No URL in the ask: the server added under the name the teammate gave, else the server of
+  // the account the person picked in the ticket.
+  if (app.kind === 'mcp' && !key && !app.url)
+    key = (
+      await db.app.findFirst({
+        where: { key: { startsWith: 'mcp:' }, name: { equals: what.trim(), mode: 'insensitive' } },
+      })
+    )?.key
   if (app.kind === 'mcp' && !key && connectionId)
     key = (
       await db.connection.findFirst({
