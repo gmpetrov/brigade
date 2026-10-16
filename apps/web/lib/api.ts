@@ -640,8 +640,6 @@ export type Ticket = {
     title: string
     origin: 'member' | 'trigger' | 'schedule'
     startedByMemberId: string
-    /** Members other than its starter may prompt it, so answer what it asks. */
-    othersMayPrompt?: boolean
     projectId: string | null
     teammate: { id: string; name: string }
   } | null

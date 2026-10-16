@@ -1,6 +1,8 @@
-import { ResolveTicket } from '@brigade/contracts'
+import { QuestionAnswer, ResolveTicket, TicketAnswer } from '@brigade/contracts'
 import { Hono } from 'hono'
-import { resolveTicket } from '../decide.js'
+import { HTTPException } from 'hono/http-exception'
+import { z } from 'zod'
+import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import { projectWhere } from '../projects.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -24,7 +26,6 @@ export const tickets = new Hono<AppEnv>()
             title: true,
             origin: true,
             startedByMemberId: true,
-            othersMayPrompt: true,
             projectId: true,
             teammate: { select: { id: true, name: true } },
           },
@@ -40,4 +41,25 @@ export const tickets = new Hono<AppEnv>()
   .post('/:id/resolve', async (c) => {
     const input = await parseBody(c.req.raw, ResolveTicket)
     return c.json(await resolveTicket(c.var.scope, c.req.param('id'), input))
+  })
+
+  /**
+   * Answer a teammate's question or ticket outside its thread, as Home does. The starter
+   * or an admin, the same as the tickets waiting on them (decide.ts).
+   */
+  .post('/:id/answer', async (c) => {
+    const id = c.req.param('id')
+    const ticket = await c.var.db.ticket.findFirst({
+      where: { id, status: 'open' },
+      select: { type: true },
+    })
+    if (ticket?.type === 'question') {
+      const { answer } = await parseBody(c.req.raw, z.object({ answer: QuestionAnswer }))
+      return c.json(await answerQuestion(c.var.scope, id, answer))
+    }
+    if (ticket?.type === 'request') {
+      const { answer } = await parseBody(c.req.raw, z.object({ answer: TicketAnswer }))
+      return c.json(await answerTicket(c.var.scope, id, answer))
+    }
+    throw new HTTPException(404, { message: 'Ticket not found or already answered' })
   })
