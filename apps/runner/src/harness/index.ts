@@ -212,7 +212,15 @@ type Live = {
   sandbox: ReturnType<typeof createLocalSandboxSession>
   account: AccountRef
   credentials: ThreadCredentials
+  /** The connector tools the agent was made with (connectorsKey). */
+  connectors: string
 }
+
+/** Which connector tools a spec gives: an agent made with others is out of date. */
+const connectorsKey = (spec: ThreadSpec) =>
+  JSON.stringify(
+    spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
+  )
 
 type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
 
@@ -482,6 +490,16 @@ export class HarnessThread {
       this.emitEvent(event)
     }, this.toolCalls)
     try {
+      // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
+      // teammate's page between turns): the harness stops and resumes with an agent that has
+      // them. A new message while a turn is still unfinished leaves that turn as it is.
+      if (
+        this.live &&
+        this.live.connectors !== connectorsKey(this.spec) &&
+        ((input.kind !== 'prompt' && input.kind !== 'resume') ||
+          !this.live.session.hasUnfinishedTurn())
+      )
+        await this.park()
       const live = (attached = await this.attach())
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
@@ -853,7 +871,14 @@ export class HarnessThread {
       ...(resume ? { resumeFrom: resume as never } : {}),
     })
     this.frozen = frozenMidRun(resume)
-    this.live = { agent, session, sandbox, account, credentials }
+    this.live = {
+      agent,
+      session,
+      sandbox,
+      account,
+      credentials,
+      connectors: connectorsKey(this.spec),
+    }
     this.saved = { transcript: [], ...this.saved, accountId: account.id }
     return this.live
   }
