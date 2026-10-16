@@ -398,6 +398,44 @@ export function ThreadConversation({
       !(ticket.type === 'request' && ticket.payload.source === 'harness') &&
       !(ticket.type === 'cap' && ticket.payload.connectionId),
   )
+  // A skill the teammate proposed has no event in the thread: its ticket shows at the end, where the reply that mentions it is.
+  const proposals = t.tickets.filter(
+    (ticket) => ticket.type === 'approval' && ticket.payload.skillAction,
+  )
+  const ticketCard = (tickets: typeof t.tickets, className: string) => (
+    <Card className={cn('gap-0 overflow-hidden py-0', className)}>
+      <ul className="divide-y">
+        {tickets.map((ticket) => (
+          <TicketRow
+            key={ticket.id}
+            me={me}
+            ticket={{
+              ...ticket,
+              status: 'open',
+              resolvedAt: null,
+              session: {
+                id: t.id,
+                title: t.title,
+                origin: t.origin,
+                startedByMemberId: t.startedByMemberId,
+                projectId: t.project?.id ?? null,
+                teammate: t.teammate,
+              },
+            }}
+            onResolve={async (ticketId, approved) => {
+              setError(undefined)
+              try {
+                await api(`/tickets/${ticketId}/resolve`, { body: { approved } })
+              } catch (e) {
+                setError((e as Error).message)
+              }
+              await thread.reload()
+            }}
+          />
+        ))}
+      </ul>
+    </Card>
+  )
 
   const mine = !!me.memberId && t.controlledByMemberId === me.memberId
   // The computer's own page, the thread docked beside it.
@@ -736,40 +774,7 @@ export function ThreadConversation({
               />
             )}
 
-            {notices.length > 0 && (
-              <Card className="mb-4 gap-0 overflow-hidden py-0">
-                <ul className="divide-y">
-                  {notices.map((ticket) => (
-                    <TicketRow
-                      key={ticket.id}
-                      me={me}
-                      ticket={{
-                        ...ticket,
-                        status: 'open',
-                        resolvedAt: null,
-                        session: {
-                          id: t.id,
-                          title: t.title,
-                          origin: t.origin,
-                          startedByMemberId: t.startedByMemberId,
-                          projectId: t.project?.id ?? null,
-                          teammate: t.teammate,
-                        },
-                      }}
-                      onResolve={async (ticketId, approved) => {
-                        setError(undefined)
-                        try {
-                          await api(`/tickets/${ticketId}/resolve`, { body: { approved } })
-                        } catch (e) {
-                          setError((e as Error).message)
-                        }
-                        await thread.reload()
-                      }}
-                    />
-                  ))}
-                </ul>
-              </Card>
-            )}
+            {notices.length > 0 && ticketCard(notices, 'mb-4')}
 
             {previewStart.dialog}
 
@@ -837,6 +842,7 @@ export function ThreadConversation({
                         : undefined
                     }
                   />
+                  {proposals.length > 0 && ticketCard(proposals, 'mt-4')}
                 </FileLinksProvider>
               </div>
             )}
