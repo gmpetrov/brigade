@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, ExternalLink, Pencil, Plus } from 'lucide-react'
+import { ChevronDown, EllipsisVertical, ExternalLink, Plus } from 'lucide-react'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
@@ -11,6 +11,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -33,6 +43,7 @@ import {
   type Trigger,
   type TriggerCatalog,
 } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 type Kind = Connection['kind']
 type Scope = 'none' | 'read' | 'read_write'
@@ -101,7 +112,6 @@ export function AppSheet({
       await api('/connections/stripe', {
         body: {
           apiKey: String(form.get('apiKey')),
-          ...(form.get('label') ? { label: String(form.get('label')) } : {}),
         },
       })
       setAdding(false)
@@ -278,8 +288,8 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * One account: its name, status and owner, where teammates may use it, and the
- * teammates that have it. Its owner or an admin changes it.
+ * One account on one line: a status dot, the account, a chip when it is kept to
+ * its owner's threads, and a menu for the rest. Its owner or an admin changes it.
  */
 function Account({
   connection: c,
@@ -302,13 +312,9 @@ function Account({
   const manages = admin || mine
   const custom = c.kind === 'webhook'
   const owner = mine ? 'you' : (data.members[c.createdByMemberId] ?? 'a former member')
-  const [renaming, setRenaming] = useState(false)
   const [open, setOpen] = useState<'teammates' | 'log' | 'triggers'>()
-  const toggle = (tab: NonNullable<typeof open>) => setOpen(open === tab ? undefined : tab)
-  const name = (teammateId: string) =>
-    teammates.find((t) => t.id === teammateId)?.name ?? 'a former teammate'
 
-  async function update(body: { label?: string; reach?: Connection['reach'] }) {
+  async function update(body: { reach: Connection['reach'] }) {
     try {
       await api(`/connections/${c.id}`, { method: 'PATCH', body })
       await reload()
@@ -343,174 +349,154 @@ function Account({
     }
   }
 
+  const panels = {
+    teammates: 'Teammates',
+    log: 'Call log',
+    triggers: custom ? 'Webhooks' : 'Triggers',
+  }
+  // A chip only when the account is kept to its owner's threads; a dot says the rest.
+  const chip = c.reach === 'mine' && !custom ? (mine ? 'Only you' : `${owner} only`) : null
+
   return (
     <div className="flex flex-col gap-3 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {renaming ? (
-          <form
-            className="flex min-w-0 flex-1 items-center gap-2"
-            action={(form) => {
-              setRenaming(false)
-              const label = String(form.get('label')).trim()
-              if (label && label !== c.label) void update({ label })
-            }}
-          >
-            <Input
-              name="label"
-              defaultValue={c.label}
-              aria-label="Account name"
-              maxLength={80}
-              autoFocus
-              className="h-8 bg-card"
-            />
-            <Button size="sm">Save</Button>
-          </form>
-        ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="truncate font-medium">
-              {c.label}
-              {c.externalAccount && c.externalAccount !== c.label && (
-                <span className="text-muted-foreground"> · {c.externalAccount}</span>
-              )}
-            </span>
-            {manages && (
-              <button
-                type="button"
-                onClick={() => setRenaming(true)}
-                aria-label={`Rename ${c.label}`}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-              >
-                <Pencil className="size-3.5" aria-hidden />
-              </button>
-            )}
+      <div className="flex min-h-8 items-center gap-3">
+        <span
+          className={cn(
+            'size-2 shrink-0 rounded-full',
+            c.status === 'needs_reauth' ? 'bg-destructive-text' : 'bg-success',
+          )}
+          title={c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}
+        >
+          <span className="sr-only">
+            {c.status === 'needs_reauth' ? 'Reconnect needed' : 'Connected'}
+          </span>
+        </span>
+        {/* The account itself: a mailbox, a Stripe account, a GitHub owner; a custom app's name. */}
+        <span className="min-w-0 flex-1 truncate font-medium">{c.externalAccount ?? c.label}</span>
+        {c.status === 'needs_reauth' && (
+          <span className="shrink-0 text-xs font-medium text-destructive-text">Reconnect</span>
+        )}
+        {chip && (
+          <span className="shrink-0 rounded-md border bg-card px-2 py-0.5 text-xs text-muted-foreground">
+            {chip}
           </span>
         )}
-        {c.status === 'needs_reauth' ? (
-          <StatusBadge status="needs_reauth" tone="destructive" label="Reconnect needed" />
-        ) : (
-          <span className="text-sm font-medium text-success">Connected</span>
-        )}
-      </div>
-
-      {!custom && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <span>Connected by {owner} ·</span>
-          {manages ? (
-            <Select
-              value={c.reach}
-              onValueChange={(reach) => void update({ reach: reach as Connection['reach'] })}
-            >
-              <SelectTrigger size="sm" aria-label="Where teammates may use it">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mine">
-                  {mine ? 'Only in my threads' : `Only in ${owner}'s threads`}
-                </SelectItem>
-                <SelectItem value="workspace">In every thread</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <span>{c.reach === 'mine' ? `Only in ${owner}'s threads` : 'In every thread'}</span>
-          )}
-        </div>
-      )}
-
-      {!custom && (
-        <p className="text-sm text-muted-foreground">
-          {c.grants.length === 0
-            ? 'No teammate has it yet.'
-            : c.grants
-                .map(
-                  (g) =>
-                    `${name(g.teammateId)} (${g.scope === 'read' ? 'read' : 'read and write'})`,
-                )
-                .join(', ')}
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        {!custom && manages && (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-expanded={open === 'teammates'}
-            onClick={() => toggle('teammates')}
-          >
-            Teammates
-          </Button>
-        )}
-        {!custom && (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-expanded={open === 'log'}
-            onClick={() => toggle('log')}
-          >
-            Call log
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          aria-expanded={open === 'triggers'}
-          onClick={() => toggle('triggers')}
-        >
-          {custom ? 'Webhooks' : 'Triggers'}
-          {!custom && triggers.length > 0 && (
-            <span className="text-muted-foreground">{triggers.length}</span>
-          )}
-        </Button>
-        {manages && c.kind === 'github' && c.externalUrl && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={c.externalUrl} target="_blank" rel="noreferrer">
-              Repositories
-              <ExternalLink aria-hidden />
-              <span className="sr-only"> (choose them on GitHub)</span>
-            </a>
-          </Button>
-        )}
-        {manages && !custom && (
-          <Button variant="ghost" size="sm" onClick={() => void remove()}>
-            Disconnect
-          </Button>
-        )}
-      </div>
-
-      {open === 'teammates' && (
-        <div className="flex flex-col divide-y rounded-lg border bg-card">
-          {teammates.map((t) => {
-            const grant = c.grants.find((g) => g.teammateId === t.id)
-            return (
-              <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                <Select
-                  value={grant?.scope ?? 'none'}
-                  onValueChange={(scope) => void setGrant(t.id, scope as Scope)}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={`${c.label} options`}>
+              <EllipsisVertical aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {!custom && (
+              <DropdownMenuItem onSelect={() => setOpen('teammates')}>
+                Teammates
+                <span className="ml-auto text-xs text-muted-foreground">{c.grants.length}</span>
+              </DropdownMenuItem>
+            )}
+            {!custom && (
+              <DropdownMenuItem onSelect={() => setOpen('log')}>Call log</DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setOpen('triggers')}>
+              {panels.triggers}
+              {triggers.length > 0 && (
+                <span className="ml-auto text-xs text-muted-foreground">{triggers.length}</span>
+              )}
+            </DropdownMenuItem>
+            {manages && c.kind === 'github' && c.externalUrl && (
+              <DropdownMenuItem asChild>
+                <a href={c.externalUrl} target="_blank" rel="noreferrer">
+                  Repositories on GitHub
+                  <ExternalLink className="ml-auto" aria-hidden />
+                </a>
+              </DropdownMenuItem>
+            )}
+            {!custom && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                  Teammates may use it
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={c.reach}
+                  onValueChange={(reach) => void update({ reach: reach as Connection['reach'] })}
                 >
-                  <SelectTrigger size="sm" aria-label={`${t.name}'s access to ${c.label}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No access</SelectItem>
-                    <SelectItem value="read">Read</SelectItem>
-                    <SelectItem value="read_write">Read and write</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )
-          })}
+                  <DropdownMenuRadioItem value="mine" disabled={!manages}>
+                    {mine ? 'Only in my threads' : `Only in ${owner}'s threads`}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="workspace" disabled={!manages}>
+                    In every thread
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </>
+            )}
+            {manages && !custom && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => void remove()}>
+                  Disconnect
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {open && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">{panels[open]}</span>
+            <button
+              type="button"
+              onClick={() => setOpen(undefined)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Done
+            </button>
+          </div>
+          {open === 'teammates' && (
+            <div className="flex flex-col divide-y rounded-lg border bg-card">
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                Connected by {owner}.{' '}
+                {c.reach === 'mine'
+                  ? `Used only in ${mine ? 'your' : `${owner}'s`} threads.`
+                  : 'Used in every thread.'}
+              </p>
+              {teammates.map((t) => {
+                const grant = c.grants.find((g) => g.teammateId === t.id)
+                return (
+                  <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    <span className="min-w-0 flex-1 truncate">{t.name}</span>
+                    <Select
+                      value={grant?.scope ?? 'none'}
+                      disabled={!manages}
+                      onValueChange={(scope) => void setGrant(t.id, scope as Scope)}
+                    >
+                      <SelectTrigger size="sm" aria-label={`${t.name}'s access to ${c.label}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No access</SelectItem>
+                        <SelectItem value="read">Read</SelectItem>
+                        <SelectItem value="read_write">Read and write</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {open === 'log' && <CallLog connectionId={c.id} />}
+          {open === 'triggers' && (
+            <ConnectionTriggers
+              connection={c}
+              triggers={triggers}
+              catalog={catalog}
+              reload={reload}
+              editable={admin}
+            />
+          )}
         </div>
-      )}
-      {open === 'log' && <CallLog connectionId={c.id} />}
-      {open === 'triggers' && (
-        <ConnectionTriggers
-          connection={c}
-          triggers={triggers}
-          catalog={catalog}
-          reload={reload}
-          editable={admin}
-        />
       )}
     </div>
   )
@@ -534,10 +520,6 @@ function StripeForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
           className="bg-card font-mono"
           required
         />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="label">Name (optional)</Label>
-        <Input id="label" name="label" placeholder="Stripe" className="bg-card" />
       </div>
       <div className="flex justify-end">
         <Button>Connect</Button>
