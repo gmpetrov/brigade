@@ -104,6 +104,8 @@ export type PreviewStart = {
   paths?: string[]
   /** owner/name: its address stays the same for it on this computer. */
   repository?: string
+  /** Started from a saved recipe whose check passed: its first check uses the shorter waits. */
+  passed?: boolean
 }
 
 /** A saved recipe, and where its repository is checked out in the teammate's directory. */
@@ -349,18 +351,21 @@ export class Previews {
       ? await this.options.viewUrl(seat.sessionId, port)
       : `http://localhost:${port}`
     const from = preview.written
+    const saved = preview.input.paths?.length ? preview.input.paths : ['/']
+    // A recheck after a passed one, with no pages given: the first is enough to see it still renders.
+    const pages = paths.length ? paths : preview.checked ? saved.slice(0, 1) : saved
     const input = JSON.stringify({
       url,
-      paths: paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/'],
+      paths: pages,
       out: join(seat.workDir, '.preview-checks'),
-      quick: preview.checked === true,
+      quick: preview.checked ?? preview.input.passed === true,
     })
     const args = [CHECKER, input]
     const { stdout } = await run(
       seat.runAs ? 'sudo' : process.execPath,
       seat.runAs ? ['-n', '-u', seat.runAs, process.execPath, ...args] : args,
       // An interrupted turn does not wait for the check.
-      { cwd: '/', timeout: 60_000 + paths.length * 120_000, maxBuffer: 1024 * 1024, signal },
+      { cwd: '/', timeout: 60_000 + pages.length * 120_000, maxBuffer: 1024 * 1024, signal },
     ).catch((error: { stderr?: string } & Error) => {
       throw new Error(
         `Could not check the preview: ${(error.stderr || error.message).trim().slice(0, 1000)}`,
@@ -405,6 +410,7 @@ export class Previews {
       credentials: input.credentials ?? [],
       paths: input.paths?.length ? input.paths : ['/'],
       ...(input.timeoutMs ? { timeoutSeconds: Math.round(input.timeoutMs / 1000) } : {}),
+      ...(preview.checked ? { passed: true } : {}),
     }
     await this.options.recipes(seat.sessionId, seat.teammateId, {
       name: 'save',
@@ -1107,6 +1113,7 @@ function fromRecipe(recipe: PreviewRecipe, checkout: string, repository: string)
     ...(recipe.envFile ? { envFile: recipe.envFile } : {}),
     paths: recipe.paths,
     repository,
+    ...(recipe.passed ? { passed: true } : {}),
   }
 }
 

@@ -1500,6 +1500,7 @@ export type PreviewTools = {
       envFiles?: string[]
       paths?: string[]
       repository?: string
+      passed?: boolean
     },
     signal?: AbortSignal,
   ): Promise<{
@@ -1539,6 +1540,7 @@ export type PreviewTools = {
       credentials: string[]
       paths: string[]
       timeoutSeconds?: number
+      passed?: boolean
     }
     checkout: string
   } | null>
@@ -1676,6 +1678,7 @@ export function previewTools(
       }),
       execute: async (args, { abortSignal, toolCallId }) => {
         let input = args
+        let passed = false
         if (args.repository && !args.command) {
           const saved = await previews.saved(args.repository)
           if (!saved)
@@ -1684,6 +1687,7 @@ export function previewTools(
               note: `${args.repository} has no saved preview. Set it up (setup, env, command), start it, and once its check passes, save it with save_preview.`,
             }
           const { recipe, checkout } = saved
+          passed = recipe.passed === true
           input = {
             ...recipe,
             cwd: recipe.cwd ? `${checkout}/${recipe.cwd}` : checkout,
@@ -1716,6 +1720,7 @@ export function previewTools(
             ...(input.credentials?.length ? { credentials: input.credentials, envFiles } : {}),
             paths,
             ...(input.repository ? { repository: input.repository } : {}),
+            ...(passed ? { passed } : {}),
           },
           abortSignal,
         )
@@ -1737,7 +1742,8 @@ export function previewTools(
             type: 'array',
             items: { type: 'string' },
             maxItems: 10,
-            description: 'Pages to check (default: those it started with)',
+            description:
+              'Pages to check (default: those it started with; after a check passed, the first of them)',
           },
         },
       }),
