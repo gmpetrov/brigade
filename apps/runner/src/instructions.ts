@@ -504,7 +504,9 @@ const code = (spec: ThreadSpec) =>
       `it goes into your working directory on a branch of your own for this thread (${threadBranch(spec)}).`,
     'Commit as you go and push with `git push -u origin HEAD`. Git reaches GitHub through Brigade: only branches ' +
       'under `brigade/` can be pushed, so propose changes to other branches with a pull request (the GitHub tool; ' +
-      'a person may need to approve it). The `gh` command is not signed in; use the GitHub tools instead.',
+      'a person may need to approve it). A new tag can be pushed too, on a commit already on the default branch and ' +
+      'only when a person asks for it, since a tag can publish a release; an existing tag is never moved or deleted. ' +
+      'The `gh` command is not signed in; use the GitHub tools instead.',
     'When the thread goes quiet, Brigade backs up commits and changes to tracked files you have not pushed ' +
       '(to `brigade/wip/...`). New files you have not committed are not backed up. A checkout left untouched for ' +
       'two weeks with everything on GitHub is removed to free disk; `checkout_repository` brings it back, with your ' +
