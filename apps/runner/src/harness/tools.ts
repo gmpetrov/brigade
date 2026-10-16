@@ -74,6 +74,27 @@ export function alwaysLoaded(t: Tool): Tool {
   return { ...t, inputSchema: jsonSchema({ ...schema, 'x-claude-always-load': true }) }
 }
 
+/**
+ * A closing card (reply buttons, choices, a team) refuses to show before the
+ * teammate wrote anything in its turn: one that wrote its answer only in its
+ * thinking would otherwise end on buttons with no reply above them.
+ */
+export function afterReply(t: Tool, wrote: () => boolean): Tool {
+  return {
+    ...t,
+    execute: async (input, options) => {
+      // The text reaches the runner on the stream, the call on its own path: give it a moment.
+      if (!wrote()) await new Promise((resolve) => setTimeout(resolve, 500))
+      if (!wrote())
+        throw new Error(
+          'Nothing was shown: the person has seen no reply from you in this turn (your thinking is not ' +
+            'shown to them). Write your reply as text first, then call this again.',
+        )
+      return t.execute!(input, options)
+    },
+  }
+}
+
 export function connectorTools(
   grants: ConnectorGrant[],
   call: ConnectorCaller,
