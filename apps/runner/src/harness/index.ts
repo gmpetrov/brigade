@@ -23,6 +23,7 @@ import {
   runModel,
   WIDGET_GUIDE_TOOL,
   hasVisibleText,
+  ASIDE_TOOLS,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import type { Tool } from 'ai'
@@ -1042,19 +1043,6 @@ export class HarnessThread {
 }
 
 const bareName = (toolName: string) => toolName.replace(/^mcp__.+?__/, '')
-
-/** Steps that are no work of their own: the reply written before them still answers. */
-const ASIDE_TOOLS = new Set([
-  'ToolSearch',
-  'tool_search',
-  'TodoWrite',
-  'update_plan',
-  SHOW_WIDGET_TOOL,
-  WIDGET_GUIDE_TOOL,
-  SUGGEST_REPLIES_TOOL,
-  OFFER_CHOICES_TOOL,
-  PROPOSE_TEAM_TOOL,
-])
 
 /**
  * Cards a turn may end on, with nothing written after them (the reply came

@@ -1,5 +1,6 @@
 'use client'
 import {
+  ASIDE_TOOLS,
   Choices,
   choiceMessage,
   DESIGN_THUMBNAIL,
@@ -689,13 +690,13 @@ const isActivity = (item: Item): item is ActivityItem =>
     !(item.finished && !item.isError && openedPull(item)))
 
 /**
- * A step that does no work: thinking, or loading a tool before using it. A teammate
- * often does one between its answer and the card closing it (loading suggest_replies),
- * so it does not end the work: the answer before it stays out of the fold.
+ * A step that does no work: thinking, loading a tool, or a card refused and called
+ * again (a reply too long for its button). A teammate often does one between its
+ * answer and the card closing it, so it does not end the work: the answer before
+ * it stays out of the fold.
  */
 const isAside = (item: Item) =>
-  item.kind === 'thinking' ||
-  (item.kind === 'tool' && /^(toolsearch|tool_search)$/i.test(bareToolName(item.toolName)))
+  item.kind === 'thinking' || (item.kind === 'tool' && ASIDE_TOOLS.has(bareToolName(item.toolName)))
 
 /** A card asking a person to act on what a message says: it reads after the message. */
 const isActionCard = (item: Item) =>
@@ -1307,6 +1308,10 @@ export function ThreadItems({
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
   const skillNames = useSkillCommands().map((s) => s.name)
+  // A card closing the running turn waits for it to end: under a reply still being written it reads too early.
+  const closingTurn = (i: number) =>
+    working &&
+    !items.slice(i + 1).some((it) => it.kind === 'turn' || (it.kind === 'user' && !it.steeredTo))
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
@@ -1417,6 +1422,7 @@ export function ThreadItems({
         )
       case 'tool': {
         const team = proposedTeam(item)
+        if ((team || offeredChoices(item) || suggestedReplies(item)) && closingTurn(i)) return null
         if (team) {
           // Answered by the next message anyone sent: "Created the team: …" or their own words.
           const reply = items
