@@ -1,13 +1,19 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
-import { KeyRound, Plus, ShieldCheck } from 'lucide-react'
+import { EllipsisVertical, KeyRound, Plus, ShieldCheck } from 'lucide-react'
 import { CredentialForm } from '@/components/credential-form'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
 import { credentialHint } from '@/components/mention'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { api, useApi, type CredentialUse, type CredentialWithGrants } from '@/lib/api'
 
@@ -123,67 +129,78 @@ export default function VaultPage() {
       ) : (credentials.data ?? []).length > 0 ? (
         <Card className="gap-0 divide-y py-0">
           {(credentials.data ?? []).map((c) => (
-            <div key={c.id} className="flex flex-col gap-3 px-5 py-4">
-              <div className="flex flex-wrap items-center gap-4">
+            <div key={c.id} className="flex flex-col">
+              <div className="flex items-center gap-3 py-2.5 pr-3 pl-4">
                 <span
                   aria-hidden
-                  className="flex size-11 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
                 >
-                  <KeyRound className="size-5" />
+                  <KeyRound className="size-4" />
                 </span>
-                <div className="flex min-w-0 flex-1 basis-48 flex-col gap-0.5">
-                  <span className="font-semibold">{c.name}</span>
-                  <span className="truncate text-sm text-muted-foreground">
-                    {credentialHint(c)} · updated {timeAgo(c.updatedAt)}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium" title={c.name}>
+                    {c.name}
                   </span>
-                  <span className="truncate text-sm text-muted-foreground">
-                    Used by {whoUses(c)}
-                    {c.createdByTeammateId &&
-                      ` · saved by ${nameOf(c.createdByTeammateId) ?? 'a teammate'}`}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-expanded={uses === c.id}
-                    onClick={() => setUses(uses === c.id ? undefined : c.id)}
+                  <span
+                    className="truncate text-xs text-muted-foreground"
+                    title={[
+                      credentialHint(c),
+                      c.createdByTeammateId &&
+                        `saved by ${nameOf(c.createdByTeammateId) ?? 'a teammate'}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   >
-                    {uses === c.id ? 'Hide uses' : 'Uses'}
-                  </Button>
-                  {mayEdit(c) && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        aria-expanded={editing === c.id}
-                        onClick={() => setEditing(editing === c.id ? undefined : c.id)}
-                      >
-                        Edit
-                      </Button>
-                      {c.hasPrevious && (
-                        <Button variant="outline" size="sm" onClick={() => void restore(c)}>
-                          Restore previous value
-                        </Button>
-                      )}
-                      <Button variant="danger" size="sm" onClick={() => void remove(c)}>
-                        Delete
-                      </Button>
-                    </>
-                  )}
+                    Used by {whoUses(c)} · {timeAgo(c.updatedAt)}
+                  </span>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" aria-label={`${c.name} options`}>
+                      <EllipsisVertical aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onSelect={() => setUses(uses === c.id ? undefined : c.id)}>
+                      {uses === c.id ? 'Hide uses' : 'Uses'}
+                    </DropdownMenuItem>
+                    {mayEdit(c) && (
+                      <>
+                        <DropdownMenuItem
+                          onSelect={() => setEditing(editing === c.id ? undefined : c.id)}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        {c.hasPrevious && (
+                          <DropdownMenuItem onSelect={() => void restore(c)}>
+                            Restore previous value
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem variant="destructive" onSelect={() => void remove(c)}>
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               {editing === c.id && (
-                <CredentialForm
-                  credential={c}
-                  onCancel={() => setEditing(undefined)}
-                  onSaved={async () => {
-                    setEditing(undefined)
-                    await credentials.reload()
-                  }}
-                />
+                <div className="px-4 pb-4">
+                  <CredentialForm
+                    credential={c}
+                    onCancel={() => setEditing(undefined)}
+                    onSaved={async () => {
+                      setEditing(undefined)
+                      await credentials.reload()
+                    }}
+                  />
+                </div>
               )}
-              {uses === c.id && <Uses credentialId={c.id} />}
+              {uses === c.id && (
+                <div className="px-4 pb-4">
+                  <Uses credentialId={c.id} />
+                </div>
+              )}
             </div>
           ))}
         </Card>
