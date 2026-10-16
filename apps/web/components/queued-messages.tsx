@@ -76,7 +76,7 @@ export function QueuedMessages({
             type="button"
             aria-expanded={open}
             onClick={() => setOpen(!open)}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left"
+            className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
             title={`${teammateName} reads them in order, after the current turn`}
           >
             <span className="shrink-0 font-medium">
@@ -96,11 +96,11 @@ export function QueuedMessages({
             />
           </button>
           {open && (
-            <ul className="divide-y border-t">
+            <ul className="mx-5 divide-y border-t">
               {queued.map((m) => {
                 const files = m.attachments.length
                 return (
-                  <li key={m.messageId} className="px-3 py-2">
+                  <li key={m.messageId} className="py-2.5">
                     {editing?.messageId === m.messageId ? (
                       <form
                         className="flex flex-col gap-2"
@@ -202,7 +202,7 @@ export function QueuedMessages({
             </ul>
           )}
           {open && queued.length > 1 && (
-            <div className="flex justify-end border-t px-1.5 py-1">
+            <div className="mx-5 flex justify-end border-t py-1">
               <Button
                 type="button"
                 variant="danger"
