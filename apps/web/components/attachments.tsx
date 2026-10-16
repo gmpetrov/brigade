@@ -280,6 +280,7 @@ export function ComposerMenu({
   const picked = useRef(false)
   // Effort's slider opens over the composer from the +, once the menu has closed.
   const [effortOpen, setEffortOpen] = useState(false)
+  const effortNext = useRef(false)
   const index = effort ? EFFORTS.findIndex((e) => e.id === (effort.value ?? effort.fallback)) : -1
   return (
     <Popover.Root open={effortOpen} onOpenChange={setEffortOpen}>
@@ -303,6 +304,14 @@ export function ComposerMenu({
           side="top"
           className="min-w-52"
           onCloseAutoFocus={(e) => {
+            // Effort picked: its slider opens only now that the menu is gone. Opened
+            // with the menu still closing, it closed again as the menu went.
+            if (effortNext.current) {
+              effortNext.current = false
+              e.preventDefault()
+              setEffortOpen(true)
+              return
+            }
             if (!picked.current) return
             picked.current = false
             e.preventDefault()
@@ -367,8 +376,7 @@ export function ComposerMenu({
               {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onSelect={() => {
-                  picked.current = true
-                  setEffortOpen(true)
+                  effortNext.current = true
                 }}
               >
                 <EffortBars index={index} className="mr-0.5" />
