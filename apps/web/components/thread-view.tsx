@@ -390,7 +390,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
               ? e.reason === 'usage_limit'
                 ? 'The account ran out of usage. Continuing on your next account with a summary of this thread.'
                 : 'Continuing on another of your accounts with a summary of this thread.'
-              : `Paused: all your accounts for this agent are out of usage${e.resetsAt ? ` until ${new Date(e.resetsAt).toLocaleString()}` : ''}. Add an account or send a message after the reset.`,
+              : `Paused: all your accounts for this agent are out of usage${e.resetsAt ? ` until ${new Date(e.resetsAt).toLocaleString()}` : ''}. Send a message to try again, for example after upgrading your plan, or add an account.`,
           })
           break
         case 'terminal.command':

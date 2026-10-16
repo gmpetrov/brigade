@@ -997,7 +997,12 @@ async function noteOneAccount(
       ...(usage && usage.event.type === 'usage.updated'
         ? { lastUsage: usage.event.limits as Prisma.InputJsonValue, lastUsageAt: new Date() }
         : {}),
-      ...(authFailed ? { status: 'needs_sign_in' } : worked ? { status: 'ready' } : {}),
+      // A reply also proves usage is back, sooner than the reset said (a plan upgraded).
+      ...(authFailed
+        ? { status: 'needs_sign_in' }
+        : worked
+          ? { status: 'ready', exhaustedUntil: null }
+          : {}),
     },
   })
 }

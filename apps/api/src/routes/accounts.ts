@@ -25,6 +25,9 @@ const providerName = (provider: string) => (provider === 'codex' ? 'Codex' : 'Cl
 /**
  * The member's usable accounts for a harness on a computer, best first: the
  * preferred one, then the default, then the rest. Never another member's.
+ * Accounts that ran out of usage come last (the preferred one, then soonest
+ * reset first): a plan upgraded or a limit lifted early only shows when the
+ * provider is asked again, so a new message tries them rather than waiting.
  */
 export async function usableAccounts(
   db: ScopedDb,
@@ -42,13 +45,18 @@ export async function usableAccounts(
       computerId: input.computerId,
       provider: input.provider,
       status: { in: ['ready', 'unverified'] },
-      OR: [{ exhaustedUntil: null }, { exhaustedUntil: { lt: now } }],
     },
     orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
   })
-  const preferred = rows.findIndex((r) => r.id === input.preferredId)
-  if (preferred > 0) rows.unshift(...rows.splice(preferred, 1))
-  return rows
+  const exhausted = (r: (typeof rows)[number]) =>
+    r.exhaustedUntil && r.exhaustedUntil > now ? 1 : 0
+  // Stable: the default, then the oldest, within each group.
+  return rows.sort(
+    (a, b) =>
+      exhausted(a) - exhausted(b) ||
+      Number(b.id === input.preferredId) - Number(a.id === input.preferredId) ||
+      (exhausted(a) ? a.exhaustedUntil!.getTime() - b.exhaustedUntil!.getTime() : 0),
+  )
 }
 
 async function loadOwn(db: ScopedDb, scope: WorkspaceScope, id: string) {
