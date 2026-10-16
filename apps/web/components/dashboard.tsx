@@ -39,6 +39,7 @@ import { AppLoader } from '@/components/app-loader'
 import { DocumentPanel, DocumentPanelProvider } from '@/components/document-panel'
 import { openShortcuts, ShortcutsDialog } from '@/components/help-menu'
 import { PebbleAvatar } from '@/components/pebble-avatar'
+import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import {
   NotificationsDialog,
   openNotifications,
@@ -458,22 +459,25 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <Link
                     href="/app/connections"
                     title="Connect apps"
-                    className="bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                    className="group/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
                   >
                     <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
                     <span className="truncate group-data-[collapsible=icon]:hidden">
                       Connect apps
                     </span>
                     <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
-                      {APP_TILES.map(({ letter, className }) => (
+                      {APP_TILES.map(({ kind, fan }) => (
                         <span
-                          key={letter}
+                          key={kind}
                           className={cn(
-                            'border-card bg-secondary -ml-1 flex size-4 items-center justify-center rounded-[0.3rem] border text-[0.5625rem] font-bold first:ml-0',
-                            className,
+                            'border-card -ml-1.5 flex size-5 items-center justify-center overflow-hidden rounded-[0.35rem] border bg-white text-[#181717] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] first:ml-0 motion-reduce:transition-none',
+                            fan,
                           )}
                         >
-                          {letter}
+                          <ProviderLogo
+                            kind={kind}
+                            className={kind === 'stripe' ? 'size-full' : 'size-3.5'}
+                          />
                         </span>
                       ))}
                     </span>
@@ -511,11 +515,20 @@ const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
   usage_limit: 'usage limit',
 }
 
-/** Decoration for Connect apps: letter tiles until the services' own marks are added. */
-const APP_TILES = [
-  { letter: 'G', className: 'text-chart-4' },
-  { letter: 'N', className: 'text-foreground' },
-  { letter: 'S', className: 'text-chart-1' },
+/** Decoration for Connect apps: the services' marks, which fan out while the pointer is over the button. */
+const APP_TILES: { kind: ProviderKind; fan: string }[] = [
+  {
+    kind: 'github',
+    fan: 'group-hover/apps:-translate-x-1 group-hover/apps:-rotate-12 group-focus-visible/apps:-translate-x-1 group-focus-visible/apps:-rotate-12',
+  },
+  {
+    kind: 'gmail',
+    fan: 'group-hover/apps:-translate-y-0.5 group-hover/apps:scale-110 group-focus-visible/apps:-translate-y-0.5 group-focus-visible/apps:scale-110',
+  },
+  {
+    kind: 'stripe',
+    fan: 'group-hover/apps:translate-x-1 group-hover/apps:rotate-12 group-focus-visible/apps:translate-x-1 group-focus-visible/apps:rotate-12',
+  },
 ]
 
 /** A round, outlined icon button beside the workspace's name. */
