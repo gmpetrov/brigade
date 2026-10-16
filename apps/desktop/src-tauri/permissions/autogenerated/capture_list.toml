@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-list"
+description = "Enables the capture_list command without any pre-configured scope."
+commands.allow = ["capture_list"]
+
+[[permission]]
+identifier = "deny-capture-list"
+description = "Denies the capture_list command without any pre-configured scope."
+commands.deny = ["capture_list"]

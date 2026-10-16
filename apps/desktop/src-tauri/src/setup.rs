@@ -56,16 +56,46 @@ impl Helper {
     }
 
     fn ask(&self) -> Option<Value> {
-        let dir = PathBuf::from(std::env::var_os("HOME")?).join(".brigade/computer-use");
-        let token = std::fs::read_to_string(dir.join("token")).ok()?;
-        let mut socket = UnixStream::connect(dir.join("sock")).ok()?;
-        socket.set_read_timeout(Some(Duration::from_secs(3))).ok()?;
-        let request = json!({ "id": 1, "token": token.trim(), "method": "status", "params": {} });
-        writeln!(socket, "{request}").ok()?;
+        self.request("status", json!({}), Duration::from_secs(3)).ok()?.ok()
+    }
+
+    /// One request: Err when the helper can't be reached, Ok(Err(message)) when it answers with an error.
+    fn request(&self, method: &str, params: Value, wait: Duration) -> Result<Result<Value, String>, ()> {
+        let dir = PathBuf::from(std::env::var_os("HOME").ok_or(())?).join(".brigade/computer-use");
+        let token = std::fs::read_to_string(dir.join("token")).map_err(|_| ())?;
+        let mut socket = UnixStream::connect(dir.join("sock")).map_err(|_| ())?;
+        socket.set_read_timeout(Some(wait)).map_err(|_| ())?;
+        let request = json!({ "id": 1, "token": token.trim(), "method": method, "params": params });
+        writeln!(socket, "{request}").map_err(|_| ())?;
         let mut line = String::new();
-        BufReader::new(socket).read_line(&mut line).ok()?;
-        let reply: Value = serde_json::from_str(&line).ok()?;
-        (reply["ok"] == true).then(|| reply["result"].clone())
+        BufReader::new(socket).read_line(&mut line).map_err(|_| ())?;
+        let reply: Value = serde_json::from_str(&line).map_err(|_| ())?;
+        Ok(if reply["ok"] == true {
+            Ok(reply["result"].clone())
+        } else {
+            Err(reply["error"]["message"].as_str().unwrap_or("It failed.").to_owned())
+        })
+    }
+
+    /// A request that starts the helper first when it isn't running. Blocking: call from a thread.
+    pub fn call(&self, method: &str, params: Value, wait: Duration) -> Result<Value, String> {
+        if self.app.is_none() {
+            return Err("This build of Brigade has no Brigade Computer Use.".into());
+        }
+        if let Ok(reply) = self.request(method, params.clone(), wait) {
+            return reply;
+        }
+        self.launch();
+        let until = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(250));
+            if self.ask().is_some() {
+                return self
+                    .request(method, params, wait)
+                    .unwrap_or_else(|()| Err("Brigade Computer Use stopped answering.".into()));
+            }
+        }
+        Err("Brigade Computer Use did not start. Open Set up Brigade… in the menu.".into())
     }
 
     fn launch(&self) {

@@ -97,3 +97,24 @@ enum Screen {
     guard CGImageDestinationFinalize(destination) else { throw HelperError("failed", "cannot write \(path)") }
   }
 }
+
+/// Brigade.app's screenshot shortcut: macOS's own selection (a region, or Space for a window),
+/// as with ⌘⇧4. screencapture runs as this app's child, so it captures with this app's
+/// Screen Recording rather than asking for Brigade.app's.
+enum Capture {
+  static func interactive(to path: String) async throws -> [String: Any] {
+    try await Permissions.requireScreenRecording()
+    try FileManager.default.createDirectory(
+      at: URL(fileURLWithPath: path).deletingLastPathComponent(), withIntermediateDirectories: true)
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+    process.arguments = ["-i", path]
+    try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
+      process.terminationHandler = { _ in done.resume() }
+      do { try process.run() } catch { done.resume(throwing: error) }
+    }
+    // Esc during the selection leaves no file.
+    guard FileManager.default.fileExists(atPath: path) else { return ["cancelled": true] }
+    return ["path": path]
+  }
+}

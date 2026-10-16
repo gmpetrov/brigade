@@ -19,6 +19,7 @@
     "@brigade/editor": "workspace:^",
     "@novnc/novnc": "1.7.0",
     "@tailwindcss/postcss": "4.3.3",
+    "@tauri-apps/api": "2.12.4",
     "@tiptap/core": "3.31.4",
     "@tiptap/extension-document": "3.31.4",
     "@tiptap/extension-hard-break": "3.31.4",
