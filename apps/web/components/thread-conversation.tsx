@@ -1024,7 +1024,7 @@ export function JumpToEnd({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Scroll to the latest"
       title="Scroll to the latest"
-      className="absolute -top-6 left-1/2 z-10 size-8 -translate-x-1/2 rounded-full bg-background shadow-md"
+      className="absolute -top-8 left-1/2 z-10 size-8 -translate-x-1/2 rounded-full bg-background shadow-md"
     >
       <ArrowDown aria-hidden />
     </Button>
