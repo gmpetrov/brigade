@@ -2,6 +2,7 @@
 // to these; nothing outside the runner sees a harness type.
 import { z } from 'zod'
 import { MessageAttachment } from './attachments.js'
+import { PROPOSE_TEAM_TOOL } from './chief.js'
 import { CredentialKind } from './credentials.js'
 import { EnvName, PreviewInfo } from './previews.js'
 
@@ -94,6 +95,22 @@ export type SuggestedReplies = z.infer<typeof SuggestedReplies>
 export const SHOW_WIDGET_TOOL = 'show_widget'
 /** The rules a teammate reads before its first widget in a thread. */
 export const WIDGET_GUIDE_TOOL = 'widget_guide'
+/**
+ * Steps that are no work of their own, by bare tool name: the reply written
+ * before one still answers the turn. A closing card counts even when it was
+ * refused and called again.
+ */
+export const ASIDE_TOOLS: ReadonlySet<string> = new Set([
+  'ToolSearch',
+  'tool_search',
+  'TodoWrite',
+  'update_plan',
+  SHOW_WIDGET_TOOL,
+  WIDGET_GUIDE_TOOL,
+  SUGGEST_REPLIES_TOOL,
+  OFFER_CHOICES_TOOL,
+  PROPOSE_TEAM_TOOL,
+])
 /** Written in one tool call and shown only once it is made, so it stays small. */
 export const WIDGET_HTML_MAX = 30_000
 export const Widget = z.object({
