@@ -172,10 +172,10 @@ export function usePanelStack(stacked = true, name?: string, raiseKey?: unknown)
 }
 
 /** Menus, popovers and dialogs that take Escape first: the editor's, the dashboard's. */
-const OPEN_LAYER =
+export const OPEN_LAYER =
   '.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-panel, .bn-menu-dropdown, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
 
-const editable = (el: Element) =>
+export const editable = (el: Element) =>
   el instanceof HTMLInputElement ||
   el instanceof HTMLTextAreaElement ||
   el instanceof HTMLSelectElement ||

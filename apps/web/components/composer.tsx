@@ -27,12 +27,13 @@ import {
   useEditor,
   type ReactNodeViewProps,
 } from '@tiptap/react'
-import { PluginKey } from '@tiptap/pm/state'
+import { PluginKey, Selection } from '@tiptap/pm/state'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
 import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
+import { editable, OPEN_LAYER } from '@/components/side-panel'
 import {
   computerName,
   useApi,
@@ -555,6 +556,7 @@ export function Composer({
   threadId,
   bare,
   autoFocus,
+  typeToFocus,
 }: {
   value: string
   onChange: (text: string) => void
@@ -572,6 +574,11 @@ export function Composer({
   bare?: boolean
   /** Focused at the end of its text once the editor is ready. */
   autoFocus?: boolean
+  /**
+   * The page's main message box, like Claude's: focused as it appears (not on a touch
+   * screen, where that opens the keyboard), and typing with nothing else focused lands in it.
+   */
+  typeToFocus?: boolean
 }) {
   const options = useMentionOptions(threadId)
   const commands = useCommandOptions()
@@ -585,7 +592,7 @@ export function Composer({
   const editor = useEditor({
     immediatelyRender: false,
     // The editor is built after mount, so a focus from outside can miss it; it focuses itself.
-    autofocus: autoFocus ? 'end' : false,
+    autofocus: autoFocus || (typeToFocus && !touchScreen()) ? 'end' : false,
     extensions: [
       Document,
       Paragraph,
@@ -672,6 +679,27 @@ export function Composer({
   useEffect(() => {
     editor?.setEditable(!disabled)
   }, [editor, disabled])
+
+  useEffect(() => {
+    if (!editor || !typeToFocus) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      // A character only: shortcuts, Space and the arrows (scrolling), Tab and Escape stay the page's.
+      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key.length !== 1 || e.key === ' ') return
+      if (!editor.isEditable || !editor.view.dom.getClientRects().length) return
+      // Not while typing elsewhere, nor into a remote screen or terminal (`data-keyboard`).
+      const focus = document.activeElement
+      if (focus && (editable(focus) || focus.closest('[data-keyboard]'))) return
+      // Nor under a menu, a dialog or a view laid over the window (`data-overlay`).
+      if (document.querySelector(`${OPEN_LAYER}, [data-overlay]`)) return
+      // Focused now, as the key goes down, so the character it types lands here.
+      const { state, view } = editor
+      view.dispatch(state.tr.setSelection(Selection.atEnd(state.doc)))
+      view.focus()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [editor, typeToFocus])
 
   // The placeholder reads `latest`; redraw when it changes.
   useEffect(() => {

@@ -970,6 +970,7 @@ function TeammateStart({ teammate, top }: { teammate: Teammate; top?: ReactNode 
             rows={3}
             draft={draft}
             autoFocus
+            typeToFocus
             placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
             onStarted={(thread) => openThread(thread.id)}
           />
@@ -1075,6 +1076,7 @@ function TeammateThreads({ teammate }: { teammate: Teammate }) {
           rows={2}
           draft={draft}
           autoFocus={focusKey > 0}
+          typeToFocus
           placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
           onStarted={(thread) => openThread(thread.id)}
         />

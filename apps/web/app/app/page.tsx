@@ -105,6 +105,7 @@ export default function Home() {
         <NewThread
           teammate={teammate}
           rows={3}
+          typeToFocus
           picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
           placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
         />

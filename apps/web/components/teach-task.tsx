@@ -212,6 +212,7 @@ export function TeachTask({
     <div
       ref={ref}
       className="fixed inset-0 z-50 flex flex-col bg-black"
+      data-overlay
       aria-label={`Teach ${name} a task`}
       role="region"
     >
