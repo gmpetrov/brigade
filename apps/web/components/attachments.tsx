@@ -23,9 +23,8 @@ import {
   Plus,
   X,
 } from 'lucide-react'
-import { Popover } from 'radix-ui'
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
-import { EffortBars, EffortPanel, type EffortPick } from '@/components/effort'
+import { EffortBars, type EffortPick, EffortSlider } from '@/components/effort'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -278,118 +277,123 @@ export function ComposerMenu({
   const input = useRef<HTMLInputElement>(null)
   // A computer picked: the cursor goes to the message, not back to the +.
   const picked = useRef(false)
-  // Effort's slider opens over the composer from the +, once the menu has closed.
-  const [effortOpen, setEffortOpen] = useState(false)
-  const effortNext = useRef(false)
+  // Effort turns the menu itself into its slider: no second layer opening as the menu
+  // closes, which closed again with it in some browsers.
+  const [open, setOpen] = useState(false)
+  const [view, setView] = useState<'menu' | 'effort'>('menu')
   const index = effort ? EFFORTS.findIndex((e) => e.id === (effort.value ?? effort.fallback)) : -1
   return (
-    <Popover.Root open={effortOpen} onOpenChange={setEffortOpen}>
-      <DropdownMenu>
-        <Popover.Anchor asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-full [&_svg:not([class*='size-'])]:size-5"
-              aria-label="Add files and more"
-              title="Add files and more"
-            >
-              <Plus aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-        </Popover.Anchor>
+    <>
+      <DropdownMenu
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          // Back to the list for next time, once the menu has faded out.
+          if (!next) setTimeout(() => setView('menu'), 200)
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full [&_svg:not([class*='size-'])]:size-5"
+            aria-label="Add files and more"
+            title="Add files and more"
+          >
+            <Plus aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
           side="top"
-          className="min-w-52"
+          className={cn('min-w-52', view === 'effort' && 'rounded-xl p-3.5')}
           onCloseAutoFocus={(e) => {
-            // Effort picked: its slider opens only now that the menu is gone. Opened
-            // with the menu still closing, it closed again as the menu went.
-            if (effortNext.current) {
-              effortNext.current = false
-              e.preventDefault()
-              setEffortOpen(true)
-              return
-            }
             if (!picked.current) return
             picked.current = false
             e.preventDefault()
           }}
         >
-          <DropdownMenuItem onSelect={() => input.current?.click()}>
-            <Paperclip aria-hidden />
-            Attach files
-          </DropdownMenuItem>
-          {teach !== undefined && (
-            <DropdownMenuItem
-              disabled={typeof teach === 'string'}
-              onSelect={() => typeof teach === 'function' && teach()}
-              className="items-start"
-            >
-              <CircleDot aria-hidden className="mt-0.5 text-destructive-text" />
-              <span className="flex flex-col">
-                Teach a task
-                {typeof teach === 'string' && (
-                  <span className="text-xs text-muted-foreground">{teach}</span>
-                )}
-              </span>
-            </DropdownMenuItem>
-          )}
-          {move && move.targets.length > 1 && (
+          {view === 'effort' && effort ? (
+            <EffortSlider effort={effort} autoFocus {...(effortLater ? { later: true } : {})} />
+          ) : (
             <>
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ArrowRightLeft aria-hidden />
-                  Continue on…
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="min-w-56">
-                  {move.targets.map((target) => (
-                    <DropdownMenuItem
-                      key={target.id}
-                      disabled={target.current || !!target.unavailable}
-                      onSelect={() => {
-                        picked.current = true
-                        move.onPick(target)
-                      }}
-                    >
-                      <ComputerIcon cloud={target.cloud} />
-                      <span className="min-w-0 flex-1 truncate">{target.name}</span>
-                      {target.current ? (
-                        <Check aria-label="Runs here now" className="ml-auto" />
-                      ) : (
-                        (target.unavailable || target.offline) && (
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {target.unavailable ?? 'Offline'}
-                          </span>
-                        )
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </>
-          )}
-          {effort && (
-            <>
-              {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                onSelect={() => {
-                  effortNext.current = true
-                }}
-              >
-                <EffortBars index={index} className="mr-0.5" />
-                Effort
-                <span className="ml-auto pl-3 text-xs text-muted-foreground">
-                  {EFFORTS[index]?.label}
-                </span>
+              <DropdownMenuItem onSelect={() => input.current?.click()}>
+                <Paperclip aria-hidden />
+                Attach files
               </DropdownMenuItem>
+              {teach !== undefined && (
+                <DropdownMenuItem
+                  disabled={typeof teach === 'string'}
+                  onSelect={() => typeof teach === 'function' && teach()}
+                  className="items-start"
+                >
+                  <CircleDot aria-hidden className="mt-0.5 text-destructive-text" />
+                  <span className="flex flex-col">
+                    Teach a task
+                    {typeof teach === 'string' && (
+                      <span className="text-xs text-muted-foreground">{teach}</span>
+                    )}
+                  </span>
+                </DropdownMenuItem>
+              )}
+              {move && move.targets.length > 1 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ArrowRightLeft aria-hidden />
+                      Continue on…
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="min-w-56">
+                      {move.targets.map((target) => (
+                        <DropdownMenuItem
+                          key={target.id}
+                          disabled={target.current || !!target.unavailable}
+                          onSelect={() => {
+                            picked.current = true
+                            move.onPick(target)
+                          }}
+                        >
+                          <ComputerIcon cloud={target.cloud} />
+                          <span className="min-w-0 flex-1 truncate">{target.name}</span>
+                          {target.current ? (
+                            <Check aria-label="Runs here now" className="ml-auto" />
+                          ) : (
+                            (target.unavailable || target.offline) && (
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {target.unavailable ?? 'Offline'}
+                              </span>
+                            )
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </>
+              )}
+              {effort && (
+                <>
+                  {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      // Stay open: the slider takes the menu's place.
+                      e.preventDefault()
+                      setView('effort')
+                    }}
+                  >
+                    <EffortBars index={index} className="mr-0.5" />
+                    Effort
+                    <span className="ml-auto pl-3 text-xs text-muted-foreground">
+                      {EFFORTS[index]?.label}
+                    </span>
+                  </DropdownMenuItem>
+                </>
+              )}
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {effort && <EffortPanel effort={effort} later={!!effortLater} align="start" />}
       <input
         ref={input}
         type="file"
@@ -400,7 +404,7 @@ export function ComposerMenu({
           e.target.value = ''
         }}
       />
-    </Popover.Root>
+    </>
   )
 }
 
