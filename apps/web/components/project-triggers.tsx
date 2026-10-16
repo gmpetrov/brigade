@@ -3,7 +3,7 @@ import { Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useApi, type Trigger } from '@/lib/api'
 
-/** A project's triggers: each event starts a thread in it. They are set up on Connections. */
+/** A project's triggers: each event starts a thread in it. They are set up on Apps. */
 export function ProjectTriggers({ projectId }: { projectId: string }) {
   const triggers = useApi<Trigger[]>(`/triggers?project=${projectId}`)
   return (
@@ -16,7 +16,7 @@ export function ProjectTriggers({ projectId }: { projectId: string }) {
         <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
           No trigger starts threads in this project. Add one on{' '}
           <Link href="/app/connections" className="font-medium text-primary hover:underline">
-            Connections
+            Apps
           </Link>{' '}
           and choose this project.
         </p>
@@ -30,7 +30,7 @@ export function ProjectTriggers({ projectId }: { projectId: string }) {
                 href="/app/connections"
                 className="ml-auto text-xs text-muted-foreground hover:underline"
               >
-                On Connections
+                On Apps
               </Link>
             </li>
           ))}

@@ -10,6 +10,7 @@ import {
 import { dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { requireAccountManager } from '../apps.js'
 import { audit } from '../audit.js'
 import { watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
@@ -236,8 +237,8 @@ export const teammates = new Hono<AppEnv>()
     return c.json(rows.map((g) => ({ connectionId: g.connectionId, scope: g.scope })))
   })
 
+  /** Give a teammate an account, or take it back: an admin, or the member who connected it. */
   .put('/:id/grants', async (c) => {
-    requireRole(c.var.scope, 'owner', 'admin')
     const { db, scope } = c.var
     const input = await parseBody(c.req.raw, SetGrant)
     const teammate = await db.teammate.findFirst({
@@ -248,6 +249,7 @@ export const teammates = new Hono<AppEnv>()
     })
     if (!teammate || !connection)
       throw new HTTPException(404, { message: 'Teammate or connection not found' })
+    requireAccountManager(scope, connection)
     if (connection.kind === 'webhook')
       throw new HTTPException(400, {
         message: 'A custom app only sends events; there is nothing to grant',

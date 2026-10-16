@@ -7,6 +7,7 @@ import type {
   RunnerToApi,
   ThreadAttachmentRef,
 } from '@brigade/contracts'
+import { usableIn } from './apps.js'
 import { keepConnectorFile, readAttachment } from './attachments.js'
 import { audit } from './audit.js'
 import { connectors } from './connectors/index.js'
@@ -78,6 +79,7 @@ export async function handleConnectorCall(
   if (!teammate) return result({ ok: false, error: 'That teammate is not in this thread' })
   const connection = await db.connection.findFirst({
     where: { id: call.connectionId, status: { not: 'removed' } },
+    include: { app: { select: { disabledTools: true } } },
   })
   const operation =
     connection && (connectors[connection.kind]?.operations[call.operation] as Operation | undefined)
@@ -114,6 +116,18 @@ export async function handleConnectorCall(
       ok: false,
       error: `${teammate.name} has no access to ${connection.label}`,
     })
+  }
+  // A member's own account only in their threads; an App's turned-off tools nowhere.
+  if (!usableIn(connection, session)) {
+    await record({ result: 'denied', target, error: 'account of another member' })
+    return result({
+      ok: false,
+      error: `${connection.label} belongs to another member and is used only in their threads`,
+    })
+  }
+  if (connection.app.disabledTools.includes(call.operation)) {
+    await record({ result: 'denied', target, error: 'tool turned off' })
+    return result({ ok: false, error: `${call.operation} is turned off for ${connection.label}` })
   }
   if (operation.write && grant.scope !== 'read_write') {
     await record({ result: 'denied', target, error: 'read-only grant' })

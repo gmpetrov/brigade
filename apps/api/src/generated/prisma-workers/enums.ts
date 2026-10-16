@@ -157,6 +157,14 @@ export const ConnectionStatus = {
 export type ConnectionStatus = (typeof ConnectionStatus)[keyof typeof ConnectionStatus]
 
 
+export const ConnectionReach = {
+  mine: 'mine',
+  workspace: 'workspace'
+} as const
+
+export type ConnectionReach = (typeof ConnectionReach)[keyof typeof ConnectionReach]
+
+
 export const CredentialKind = {
   website: 'website',
   database: 'database',

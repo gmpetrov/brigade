@@ -3,8 +3,16 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { env } from '../config.js'
-import { connectors } from '../connectors/index.js'
-import { ConnectGitHub, ConnectGoogle, ConnectStripe, ConnectWebhookApp } from '@brigade/contracts'
+import { appCatalog, connectors, toolCatalog } from '../connectors/index.js'
+import {
+  ConnectGitHub,
+  ConnectGoogle,
+  ConnectStripe,
+  ConnectWebhookApp,
+  UpdateApp,
+  UpdateConnection,
+} from '@brigade/contracts'
+import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
 import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
@@ -24,11 +32,10 @@ import {
   revokeGoogle,
   type GoogleCredential,
 } from '../connectors/google-oauth.js'
-import { prisma, scoped } from '../db.js'
+import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
 import {
   parseBody,
-  requireRole,
   requireUser,
   requireWorkspace,
   resolveScope,
@@ -61,7 +68,7 @@ const backTo = (returnTo: string | undefined, query: string) => {
 
 /**
  * The connect request a state was issued for. It must be the same signed-in
- * member, still an admin of that workspace. Returns the reason otherwise.
+ * member, still in that workspace. Returns the reason otherwise.
  */
 async function takeState(identifier: string, userId: string) {
   const row = await prisma.verification.findFirst({
@@ -75,8 +82,7 @@ async function takeState(identifier: string, userId: string) {
     activeOrganizationId: grant.organizationId,
     activeWorkspaceId: grant.workspaceId,
   })
-  if (!scope || scope.userId !== grant.userId || (scope.role !== 'owner' && scope.role !== 'admin'))
-    return 'forbidden'
+  if (!scope || scope.userId !== grant.userId) return 'forbidden'
   return { grant, scope }
 }
 
@@ -90,7 +96,11 @@ const saveState = (identifier: string, value: OAuthState) =>
     },
   })
 
-/** Seal the credential, if any, in the vault and record the connection. */
+/**
+ * Seal the credential, if any, in the vault and record the connection as an
+ * account of its App, adding the App the first time. A personal account (a
+ * mailbox, a calendar) starts as the member's own: used only in their threads.
+ */
 async function createConnection(
   scope: WorkspaceScope,
   connection: {
@@ -103,8 +113,18 @@ async function createConnection(
 ) {
   const db = scoped(scope)
   const vaultSecretId = credential ? await sealSecret(db, scope, credential) : null
+  const id = randomUUID()
+  const custom = connection.kind === 'webhook'
+  const app = await appFor(db, scope, appKey(connection.kind, id), custom ? connection.label : null)
   const row = await db.connection.create({
-    data: { ...connection, vaultSecretId, createdByMemberId: scope.memberId } as never,
+    data: {
+      ...connection,
+      id,
+      appId: app.id,
+      reach: appCatalog[connection.kind].personal ? 'mine' : 'workspace',
+      vaultSecretId,
+      createdByMemberId: scope.memberId,
+    } as never,
   })
   await audit({
     ...scope,
@@ -223,7 +243,26 @@ export const connections = new Hono<AppEnv>()
       },
       orderBy: { createdAt: 'asc' },
     })
+    const [apps, members] = await Promise.all([
+      c.var.db.app.findMany({ orderBy: { createdAt: 'asc' } }),
+      // Who connected each account.
+      c.var.db.member.findMany({ select: { id: true, user: { select: { name: true } } } }),
+    ])
     return c.json({
+      members: Object.fromEntries(members.map((m) => [m.id, m.user.name])),
+      apps: apps.map((a) => ({
+        id: a.id,
+        key: a.key,
+        name: a.name,
+        disabledTools: a.disabledTools,
+        createdByMemberId: a.createdByMemberId,
+      })),
+      catalog: Object.fromEntries(
+        (Object.keys(appCatalog) as ConnectorKind[]).map((kind) => {
+          const { personal: _personal, ...app } = appCatalog[kind]
+          return [kind, { ...app, tools: toolCatalog(kind) }]
+        }),
+      ),
       available: {
         gmail: googleConfigured(),
         google_calendar: googleConfigured(),
@@ -235,9 +274,8 @@ export const connections = new Hono<AppEnv>()
     })
   })
 
-  /** Start Google's consent flow for a new connection. Admins only. */
+  /** Start Google's consent flow for a new connection. */
   .post('/google', async (c) => {
-    requireRole(c.var.scope, 'owner', 'admin')
     if (!googleConfigured())
       throw new HTTPException(409, { message: 'Google is not configured on this Brigade server' })
     const { kind, returnTo } = await parseBody(c.req.raw, ConnectGoogle)
@@ -248,10 +286,9 @@ export const connections = new Hono<AppEnv>()
 
   /**
    * Start a GitHub connection: install Brigade's GitHub App and pick the
-   * repositories. Admins only. One request per member at a time.
+   * repositories. One request per member at a time.
    */
   .post('/github', async (c) => {
-    requireRole(c.var.scope, 'owner', 'admin')
     if (!githubConfigured())
       throw new HTTPException(409, { message: 'GitHub is not configured on this Brigade server' })
     // The body is optional: the Connections page sends none.
@@ -267,7 +304,6 @@ export const connections = new Hono<AppEnv>()
   /** Connect Stripe with a key entered once here. It goes straight into the vault. */
   .post('/stripe', async (c) => {
     const { scope } = c.var
-    requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, ConnectStripe)
     let account: string
     try {
@@ -291,7 +327,6 @@ export const connections = new Hono<AppEnv>()
    */
   .post('/webhook', async (c) => {
     const { scope } = c.var
-    requireRole(scope, 'owner', 'admin')
     const input = await parseBody(c.req.raw, ConnectWebhookApp)
     const connection = await createConnection(
       scope,
@@ -314,45 +349,116 @@ export const connections = new Hono<AppEnv>()
     return c.json(calls)
   })
 
-  /** Disconnect: revoke at the provider, delete the credential, keep the call log. */
-  .delete('/:id', async (c) => {
+  /** Rename an account, or change where teammates may use it. */
+  .patch('/:id', async (c) => {
     const { scope, db } = c.var
-    requireRole(scope, 'owner', 'admin')
     const connection = await db.connection.findFirst({
       where: { id: c.req.param('id'), status: { not: 'removed' } },
     })
     if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
-    // Unsubscribe at the vendor while the credential still works: Stripe endpoints, Gmail watches,
-    // Calendar channels.
-    await syncConnection(scope, connection.id, { removing: true }).catch((error) =>
-      console.error('unsubscribe failed:', error instanceof Error ? error.message : error),
-    )
-    if (connection.vaultSecretId) {
-      // Google tokens are revoked at Google. A Stripe key is revoked in Stripe's dashboard.
-      // A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
-      if (connectors[connection.kind]?.auth === 'google') {
-        const credential = await openSecret<GoogleCredential>(
-          db,
-          scope,
-          connection.vaultSecretId,
-        ).catch(() => null)
-        if (credential) await revokeGoogle(credential)
-      }
-      await db.connection.updateMany({
-        where: { id: connection.id },
-        data: { status: 'removed', vaultSecretId: null },
+    requireAccountManager(scope, connection)
+    const input = await parseBody(c.req.raw, UpdateConnection)
+    await db.connection.updateMany({ where: { id: connection.id }, data: input })
+    if (connection.kind === 'webhook' && input.label)
+      await db.app.updateMany({ where: { id: connection.appId }, data: { name: input.label } })
+    if (input.reach && input.reach !== connection.reach)
+      await audit({
+        ...scope,
+        actor: { type: 'member', id: scope.memberId },
+        action: 'connection.reach',
+        target: { type: 'connection', id: connection.id },
+        data: { reach: input.reach },
       })
-      await deleteSecret(db, connection.vaultSecretId)
-    } else {
-      await db.connection.updateMany({ where: { id: connection.id }, data: { status: 'removed' } })
-    }
-    await db.grant.deleteMany({ where: { connectionId: connection.id } })
-    await deleteTriggers(db, { connectionId: connection.id })
+    return c.json({ ok: true })
+  })
+
+  /** Disconnect: revoke at the provider, delete the credential, keep the call log. */
+  .delete('/:id', async (c) => {
+    const { scope, db } = c.var
+    const connection = await db.connection.findFirst({
+      where: { id: c.req.param('id'), status: { not: 'removed' } },
+    })
+    if (!connection) throw new HTTPException(404, { message: 'Connection not found' })
+    requireAccountManager(scope, connection)
+    await disconnect(scope, db, connection)
+    return c.body(null, 204)
+  })
+
+  /** Turn an App's tools on or off, for every account and teammate. */
+  .patch('/apps/:id', async (c) => {
+    const { scope, db } = c.var
+    const app = await db.app.findFirst({
+      where: { id: c.req.param('id') },
+      include: { connections: { where: { status: { not: 'removed' } } } },
+    })
+    if (!app) throw new HTTPException(404, { message: 'App not found' })
+    requireAppManager(scope, app, app.connections)
+    const { disabledTools } = await parseBody(c.req.raw, UpdateApp)
+    const kind = app.connections[0]?.kind ?? (app.key as ConnectorKind)
+    const known = new Set(toolCatalog(kind).map((t) => t.name))
+    const unknown = disabledTools.filter((t) => !known.has(t))
+    if (unknown.length)
+      throw new HTTPException(400, { message: `Not a tool of this App: ${unknown.join(', ')}` })
+    await db.app.updateMany({ where: { id: app.id }, data: { disabledTools } })
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
-      action: 'connection.removed',
-      target: { type: 'connection', id: connection.id },
+      action: 'app.tools',
+      target: { type: 'app', id: app.id },
+      data: { disabledTools },
     })
+    return c.json({ ok: true })
+  })
+
+  /** Remove an App: disconnect every account in it. The App stays for the call logs. */
+  .delete('/apps/:id', async (c) => {
+    const { scope, db } = c.var
+    const app = await db.app.findFirst({
+      where: { id: c.req.param('id') },
+      include: { connections: { where: { status: { not: 'removed' } } } },
+    })
+    if (!app) throw new HTTPException(404, { message: 'App not found' })
+    requireAppManager(scope, app, app.connections)
+    for (const connection of app.connections) await disconnect(scope, db, connection)
     return c.body(null, 204)
   })
+
+/** Revoke at the provider, delete the credential, drop grants and triggers, keep the call log. */
+async function disconnect(
+  scope: WorkspaceScope,
+  db: ScopedDb,
+  connection: { id: string; kind: ConnectorKind; vaultSecretId: string | null },
+) {
+  // Unsubscribe at the vendor while the credential still works: Stripe endpoints, Gmail watches,
+  // Calendar channels.
+  await syncConnection(scope, connection.id, { removing: true }).catch((error) =>
+    console.error('unsubscribe failed:', error instanceof Error ? error.message : error),
+  )
+  if (connection.vaultSecretId) {
+    // Google tokens are revoked at Google. A Stripe key is revoked in Stripe's dashboard.
+    // A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
+    if (connectors[connection.kind]?.auth === 'google') {
+      const credential = await openSecret<GoogleCredential>(
+        db,
+        scope,
+        connection.vaultSecretId,
+      ).catch(() => null)
+      if (credential) await revokeGoogle(credential)
+    }
+    await db.connection.updateMany({
+      where: { id: connection.id },
+      data: { status: 'removed', vaultSecretId: null },
+    })
+    await deleteSecret(db, connection.vaultSecretId)
+  } else {
+    await db.connection.updateMany({ where: { id: connection.id }, data: { status: 'removed' } })
+  }
+  await db.grant.deleteMany({ where: { connectionId: connection.id } })
+  await deleteTriggers(db, { connectionId: connection.id })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'connection.removed',
+    target: { type: 'connection', id: connection.id },
+  })
+}

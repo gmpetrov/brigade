@@ -42,7 +42,7 @@ export function ConnectGitHub({ state }: { state: Exclude<GitHubState, 'loading'
       ? 'The GitHub connection stopped working: the app was uninstalled or lost access. Reconnect it to see pull requests again.'
       : state === 'unavailable'
         ? "GitHub needs Brigade's GitHub App configured on this Brigade server (GITHUB_APP_*)."
-        : "Install Brigade's GitHub App on your account or organization and pick the repositories teammates may work on. Then give teammates access to it on the Connections page."
+        : "Install Brigade's GitHub App on your account or organization and pick the repositories teammates may work on. Then give teammates access to it on the Apps page."
   return (
     <Card className="flex-row flex-wrap items-center gap-4 px-5 py-4">
       <ProviderTile kind="github" />
@@ -57,7 +57,7 @@ export function ConnectGitHub({ state }: { state: Exclude<GitHubState, 'loading'
         (admin ? (
           state === 'needs_reauth' ? (
             <Button asChild>
-              <Link href="/app/connections">Open Connections</Link>
+              <Link href="/app/connections">Open Apps</Link>
             </Button>
           ) : (
             <Button onClick={() => void connect()}>Connect GitHub</Button>

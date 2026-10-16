@@ -40,7 +40,8 @@ const connectionsOf = (installationId: number) =>
 
 async function pushed(installationId: number, repository: string) {
   for (const connection of await connectionsOf(installationId)) {
-    if (connection.status !== 'active') continue
+    // A member's own account reaches only their threads: nothing is fetched ahead onto computers.
+    if (connection.status !== 'active' || connection.reach === 'mine') continue
     const grants = await prisma.grant.findMany({
       where: { connectionId: connection.id, teammate: { archivedAt: null } },
       select: { teammateId: true },
@@ -107,7 +108,8 @@ async function triggered(
   if (payload.sender?.type === 'Bot' && payload.sender.login === `${env.GITHUB_APP_SLUG}[bot]`)
     return
   for (const connection of await connectionsOf(installationId)) {
-    if (connection.status !== 'active') continue
+    // A member's own account reaches only their threads: nothing is fetched ahead onto computers.
+    if (connection.status !== 'active' || connection.reach === 'mine') continue
     // GitHub does not retry: a thread that could not start leaves a ticket (see deliver).
     await dispatch(connection, { id: deliveryId, type, payload })
   }
