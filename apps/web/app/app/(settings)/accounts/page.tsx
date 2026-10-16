@@ -1,22 +1,22 @@
 'use client'
 import { useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
-import { AccountCard } from '@/components/account-card'
+import { Cloud, Laptop, ShieldCheck } from 'lucide-react'
+import { AccountRow, machineName } from '@/components/account-card'
+import { HarnessLogo } from '@/components/harness-logo'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   api,
   harnessLabel,
   useApi,
   usableComputers,
-  computerName,
   type Account,
   type AccountLogin,
   type ComputersResponse,
@@ -45,16 +45,8 @@ export default function Accounts() {
     }
   }
 
-  async function add(form: FormData) {
-    await act(
-      api('/accounts', {
-        body: {
-          computerId: String(form.get('computerId')),
-          provider: String(form.get('provider')),
-        },
-      }),
-    )
-  }
+  const add = (provider: Account['provider'], computerId: string) =>
+    act(api('/accounts', { body: { computerId, provider } }))
 
   const online = usableComputers(computers.data)
   const byProvider = (provider: Account['provider']) =>
@@ -85,8 +77,12 @@ export default function Accounts() {
           aria-labelledby={`accounts-${provider}`}
           className="flex flex-col gap-3"
         >
-          <h2 id={`accounts-${provider}`} className="text-lg font-bold tracking-tight">
-            {provider === 'codex' ? 'Codex' : 'Claude'}{' '}
+          <h2
+            id={`accounts-${provider}`}
+            className="flex items-center gap-2 text-lg font-bold tracking-tight"
+          >
+            <HarnessLogo harness={provider} className="size-5" />
+            {harnessLabel(provider)}
             <span className="font-semibold text-muted-foreground">
               {byProvider(provider).length}
             </span>
@@ -96,49 +92,66 @@ export default function Accounts() {
               No {harnessLabel(provider)} accounts yet.
             </p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <Card className="gap-0 divide-y overflow-hidden py-0">
               {byProvider(provider).map((a) => (
-                <AccountCard key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
+                <AccountRow key={a.id} account={a} login={logins[a.id] ?? a.login} onAct={act} />
               ))}
-            </div>
+            </Card>
           )}
         </section>
       ))}
 
-      <Card className="gap-4 border-dashed p-5 shadow-none">
-        <form action={add} className="flex flex-col gap-4">
-          <h2 className="font-bold tracking-tight">Add an account</h2>
-          {online.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No computer is online.</p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <Select name="provider" defaultValue="claude_code">
-                <SelectTrigger aria-label="Provider">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="claude_code">Claude</SelectItem>
-                  <SelectItem value="codex">Codex (ChatGPT)</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">on</span>
-              <Select name="computerId" defaultValue={online[0]?.id}>
-                <SelectTrigger aria-label="Computer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {online.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {computerName(c)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button className="ml-auto">Sign in</Button>
-            </div>
-          )}
-        </form>
-      </Card>
+      <section aria-labelledby="accounts-add" className="flex flex-col gap-3">
+        <h2 id="accounts-add" className="sr-only">
+          Add an account
+        </h2>
+        {online.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No computer is online, so no account can be added right now.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(['claude_code', 'codex'] as const).map((provider) => {
+              const label = (
+                <>
+                  <HarnessLogo harness={provider} />
+                  Add {harnessLabel(provider)} account
+                </>
+              )
+              // With one computer there is nothing to pick: sign in there at once.
+              const [only] = online
+              if (only && online.length === 1)
+                return (
+                  <Button
+                    key={provider}
+                    variant="outline"
+                    onClick={() => void add(provider, only.id)}
+                  >
+                    {label}
+                  </Button>
+                )
+              return (
+                <DropdownMenu key={provider}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">{label}</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-60">
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      Sign in with {provider === 'codex' ? 'ChatGPT' : 'Claude'} on
+                    </DropdownMenuLabel>
+                    {online.map((c) => (
+                      <DropdownMenuItem key={c.id} onSelect={() => void add(provider, c.id)}>
+                        {c.kind === 'cloud' ? <Cloud aria-hidden /> : <Laptop aria-hidden />}
+                        <span className="truncate">{machineName(c)}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+            })}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
