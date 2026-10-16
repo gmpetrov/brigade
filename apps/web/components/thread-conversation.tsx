@@ -45,7 +45,7 @@ import {
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
-import { TeachTask } from '@/components/teach-task'
+import { takeTeachOnOpen, TeachTask } from '@/components/teach-task'
 import { useDocumentPanel } from '@/components/document-panel'
 import { FileLinksProvider } from '@/components/file-links'
 import { FilePanel } from '@/components/file-panel'
@@ -189,6 +189,10 @@ export function ThreadConversation({
   const [computerOpen, setComputerOpen] = useState(false)
   // Teach a task: the computer over the window, recording the person doing it.
   const [teaching, setTeaching] = useState(false)
+  // A thread started from Teach a task in a new thread's box opens on it.
+  useEffect(() => {
+    if (takeTeachOnOpen(id)) setTeaching(true)
+  }, [id])
   // Recording a task needs a desktop to do it on: not offered on phones.
   const phone = useIsMobile()
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.

@@ -17,6 +17,26 @@ import { api, uploadAttachment, type Thread } from '@/lib/api'
 import { canRecord, DemoRecorder } from '@/lib/demo-recorder'
 import { cn } from '@/lib/utils'
 
+const OPEN_KEY = 'brigade.teachOnOpen'
+
+/** Open Teach a task when this thread opens next: a new thread started to teach one. */
+export function teachOnOpen(threadId: string) {
+  try {
+    sessionStorage.setItem(OPEN_KEY, threadId)
+  } catch {}
+}
+
+/** Whether the thread opens on Teach a task, asked once by `teachOnOpen`. */
+export function takeTeachOnOpen(threadId: string) {
+  try {
+    if (sessionStorage.getItem(OPEN_KEY) !== threadId) return false
+    sessionStorage.removeItem(OPEN_KEY)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Longest recording: its video stays under an attachment's 25 MB. */
 const MAX_MS = 10 * 60_000
 

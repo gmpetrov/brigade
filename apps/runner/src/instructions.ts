@@ -375,7 +375,10 @@ const TEACH_SKILL: ThreadSkill = {
     '# Learning a task from a demonstration\n\n' +
     'The person did a task on your computer while the dashboard recorded it. The message brings two files in ' +
     '`attachments/`: the video, for people to watch again, and a zip with `steps.md` (each click, key and ' +
-    "scroll, with its time) and `frames/` (the screen at each step). You can't watch the video: work from the zip.\n\n" +
+    "scroll, with its time) and `frames/` (the screen at each step). You can't watch the video: work from the zip. " +
+    'A thread started to teach a task opens with `/teach` and no files: the person is about to record it on your ' +
+    'computer. Say in one line that you are ready to watch, without touching the computer, and stop ' +
+    'there; the recording comes in their next message.\n\n' +
     '1. Unzip it into a folder of its own: `python3 -m zipfile -e attachments/<the zip> demonstration/`. Read ' +
     '`steps.md`, then the frames in order with your file reading tool. A red ring on a frame marks where the click ' +
     'landed. Typed text is not logged, only how many characters: read what was typed on the frame after the typing; ' +

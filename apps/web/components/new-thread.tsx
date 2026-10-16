@@ -3,11 +3,18 @@ import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } fro
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
+import {
+  AttachButton,
+  ComposerMenu,
+  UploadList,
+  useFileDrop,
+  useUploads,
+} from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
+import { teachOnOpen } from '@/components/teach-task'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -42,6 +49,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -366,9 +374,14 @@ export function NewThread({
   const ready =
     (text.trim() || files.ids.length > 0) && !files.busy && !files.failed && computer && account
 
-  async function start(e?: FormEvent) {
+  /**
+   * Start the thread. To teach a task, it starts with `/teach` (and what is written, which
+   * says what the task is), and opens on Teach a task: the recording needs its computer.
+   */
+  async function start(e?: FormEvent, teach = false) {
     e?.preventDefault()
-    if (busy || !ready) return
+    const startable = teach ? !files.busy && !files.failed : ready
+    if (busy || !startable || !computer || !account) return
     setBusy(true)
     setError(undefined)
     try {
@@ -377,12 +390,13 @@ export function NewThread({
           teammateId: teammate.id,
           computerId: computer.id,
           accountId: account.id,
-          text,
+          text: teach ? ['/teach', text.trim()].filter(Boolean).join(' ') : text,
           attachmentIds: files.ids,
           ...(projectId !== 'none' && { projectId }),
         },
       })
       files.clear()
+      if (teach) teachOnOpen(thread.id)
       if (onStarted) {
         setText('')
         setBusy(false)
@@ -421,6 +435,22 @@ export function NewThread({
   const focusMessage = () =>
     form.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus()
   const uploads = <UploadList uploads={files.uploads} onRemove={files.remove} />
+  // Phones keep the paperclip: teaching a task needs a desktop to record it on.
+  const phone = useIsMobile()
+  const attach = phone ? (
+    <AttachButton onFiles={files.add} />
+  ) : (
+    <ComposerMenu
+      onFiles={files.add}
+      teach={
+        !computer || !account
+          ? 'Needs a computer and an account to start the thread on'
+          : computer.kind !== 'cloud'
+            ? 'Not yet on threads that run on a member’s machine'
+            : () => void start(undefined, true)
+      }
+    />
+  )
   const composer = (
     <Composer
       bare
@@ -558,7 +588,7 @@ export function NewThread({
         </div>
         {message && <div className="px-3 pb-2">{message}</div>}
         <div className="flex flex-wrap items-center gap-1 border-t px-3 py-2">
-          <AttachButton onFiles={files.add} />
+          {attach}
           {where}
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-xs text-muted-foreground sm:inline">
@@ -584,7 +614,7 @@ export function NewThread({
         {composer}
         <div className="flex flex-wrap items-center gap-1">
           {teammatePicker}
-          <AttachButton onFiles={files.add} />
+          {attach}
           {projectPicker}
           {where}
           {send}
