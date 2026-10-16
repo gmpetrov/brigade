@@ -117,17 +117,23 @@ export function EffortSlider({ effort, later }: { effort: EffortPick; later?: bo
         <span className="text-muted-foreground">Effort</span>
         <span key={index} className={cn('effort-name font-medium', max && 'effort-name-max')}>
           {EFFORTS[index]!.label}
+          {/* Inside the name, right after its text: Safari can keep the box at the width
+              of the level shown before, which pushed what came after it far off. */}
+          {onDefault && (
+            <span className="ml-1.5 inline-block rounded-full border px-1.5 align-[1px] text-[11px] font-normal text-muted-foreground">
+              Default
+            </span>
+          )}
+          {max && (
+            <svg
+              aria-hidden
+              viewBox="0 0 12 14"
+              className="effort-bolt ml-1 inline-block size-3.5 align-[-2px]"
+            >
+              <path d="M7 0 1 8h4l-1 6 6-8H6z" />
+            </svg>
+          )}
         </span>
-        {onDefault && (
-          <span className="rounded-full border px-1.5 text-[11px] text-muted-foreground">
-            Default
-          </span>
-        )}
-        {max && (
-          <svg aria-hidden viewBox="0 0 12 14" className="effort-bolt size-3.5">
-            <path d="M7 0 1 8h4l-1 6 6-8H6z" />
-          </svg>
-        )}
         <span
           className="ml-auto text-muted-foreground"
           title="How hard teammates think. Higher is slower and uses more of your plan. It applies to every teammate in the thread."
@@ -206,10 +212,12 @@ export function EffortButton({
   later?: boolean
   className?: string
 }) {
-  if (!effortChanged(effort)) return null
+  // Open, it stays while the slider goes back to Default; closed there, it goes.
+  const [open, setOpen] = useState(false)
+  if (!effortChanged(effort) && !open) return null
   const index = level(effort)
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
           type="button"
