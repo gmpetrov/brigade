@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useState, type ReactNode } from 'react'
-import { ChevronDown, EllipsisVertical, ExternalLink, Plus } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
@@ -43,6 +43,7 @@ import {
   type Trigger,
   type TriggerCatalog,
 } from '@/lib/api'
+import { openSignIn } from '@/lib/sign-in-window'
 import { cn } from '@/lib/utils'
 
 type Kind = Connection['kind']
@@ -95,17 +96,44 @@ export function AppSheet({
     }
   }
 
-  /** Google and GitHub sign in at the provider and come back to the Apps page. */
+  /**
+   * Google, GitHub and MCP Apps sign in at the provider, in a window of its own:
+   * the sheet stays open and shows the account once it has connected.
+   */
+  const route =
+    custom || kind === 'stripe'
+      ? null
+      : kind === 'cloudflare'
+        ? 'mcp'
+        : kind === 'github'
+          ? 'github'
+          : 'google'
   const connect = () =>
     run(async () => {
-      if (kind === 'gmail' || kind === 'google_calendar') {
-        const { url } = await api<{ url: string }>('/connections/google', { body: { kind } })
-        window.location.href = url
-      } else if (kind === 'github') {
-        const { url } = await api<{ url: string }>('/connections/github', { body: {} })
-        window.location.href = url
-      } else setAdding(true)
+      if (!route) return setAdding(true)
+      const before = accounts.length
+      const inWindow = await openSignIn(async (returnTo) => {
+        const { url } = await api<{ url: string }>(`/connections/${route}`, {
+          body: {
+            ...(route === 'github' ? {} : { kind }),
+            ...(returnTo ? { returnTo } : {}),
+          },
+        })
+        return url
+      })
+      if (inWindow) setWaiting({ before, since: Date.now() })
     })
+  // While the sign-in window is open: look for the new account every few seconds, for a while.
+  const [waiting, setWaiting] = useState<{ before: number; since: number }>()
+  useEffect(() => {
+    if (!waiting) return
+    if (accounts.length > waiting.before) return setWaiting(undefined)
+    const timer = setInterval(() => {
+      if (Date.now() - waiting.since > 10 * 60_000) setWaiting(undefined)
+      else void reload()
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [waiting, accounts.length, reload])
 
   const connectStripe = (form: FormData) =>
     run(async () => {
@@ -148,6 +176,7 @@ export function AppSheet({
       await reload()
     })
 
+  const skills = added ? (app?.skills ?? []) : []
   const enabled = entry.tools.filter((t) => !app?.disabledTools.includes(t.name)).length
 
   return (
@@ -160,8 +189,20 @@ export function AppSheet({
           <ProviderTile kind={kind} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <DialogTitle className="text-xl font-bold tracking-tight">{name}</DialogTitle>
-            {entry.developer && (
-              <span className="text-sm text-muted-foreground">By {entry.developer}</span>
+            {(entry.developer || entry.source) && (
+              <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+                {entry.developer && <span>By {entry.developer}</span>}
+                {entry.source && (
+                  <a
+                    href={entry.source}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    View source <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                )}
+              </span>
             )}
           </div>
           {!added && !custom && (
@@ -175,6 +216,12 @@ export function AppSheet({
           {entry.description}
         </DialogDescription>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
+        {waiting && (
+          <p className="text-sm text-muted-foreground">
+            Finish signing in in the window that opened. The account shows here once it is
+            connected.
+          </p>
+        )}
         {!data.available[kind] && <Unavailable kind={kind} />}
 
         {(added || adding) && (
@@ -243,6 +290,44 @@ export function AppSheet({
                 ))}
               </CollapsibleContent>
             </Collapsible>
+          </Section>
+        )}
+
+        {(skills.length > 0 || entry.source) && (
+          <Section title="Skills">
+            {skills.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-muted-foreground">
+                Its skills come with the first account: how to build and deploy on {name}, for the
+                teammates that have it.
+              </p>
+            ) : (
+              <Collapsible>
+                <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium">
+                  {skills.length} {skills.length === 1 ? 'skill' : 'skills'}, for the teammates that
+                  have it
+                  <ChevronDown
+                    className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                    aria-hidden
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex flex-col divide-y border-t">
+                  {skills.map((skill) => (
+                    <div key={skill.name} className="flex items-start gap-3 px-4 py-2.5 text-sm">
+                      <Package
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="font-medium">{skill.name}</span>
+                        <span className="line-clamp-2 text-muted-foreground">
+                          {skill.description}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </Section>
         )}
 

@@ -14,7 +14,14 @@ import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } fr
 import { delivery, SubscribeError, syncConnection, unavailable } from '../subscriptions/index.js'
 import { deleteSecret, sealSecret } from '../vault.js'
 
-const KINDS: ConnectorKind[] = ['gmail', 'google_calendar', 'stripe', 'github', 'webhook']
+const KINDS: ConnectorKind[] = [
+  'gmail',
+  'google_calendar',
+  'stripe',
+  'github',
+  'cloudflare',
+  'webhook',
+]
 
 const urlOf = (pathToken: string) => `${env.API_URL}/hooks/${pathToken}`
 

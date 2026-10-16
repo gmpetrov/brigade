@@ -7,11 +7,13 @@ import { appCatalog, connectors, toolCatalog } from '../connectors/index.js'
 import {
   ConnectGitHub,
   ConnectGoogle,
+  ConnectMcp,
   ConnectStripe,
   ConnectWebhookApp,
   UpdateApp,
   UpdateConnection,
 } from '@brigade/contracts'
+import { installAppSkills } from '../app-skills.js'
 import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
 import { stripeAccount } from '../connectors/stripe.js'
 import type { ConnectorKind } from '../connectors/types.js'
@@ -32,6 +34,15 @@ import {
   revokeGoogle,
   type GoogleCredential,
 } from '../connectors/google-oauth.js'
+import {
+  callMcpTool,
+  exchangeMcpCode,
+  mcpAuthUrl,
+  pkceVerifier,
+  revokeMcp,
+  type McpCredential,
+} from '../connectors/mcp.js'
+import { forgetMcpTools } from '../mcp-tools.js'
 import { prisma, scoped, type ScopedDb } from '../db.js'
 import { hashToken } from '../hub.js'
 import {
@@ -53,9 +64,11 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github'
+  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare'
   /** github: the installation GitHub named, still to be checked against the person. */
   installationId?: number
+  /** An MCP server's sign-in: the PKCE verifier for its code. */
+  verifier?: string
   /** The dashboard page to send the person back to; default the Connections page. */
   returnTo?: string
 }
@@ -149,7 +162,7 @@ export const connections = new Hono<AppEnv>()
     if (typeof taken === 'string') return back(`error=${taken}`)
     const { grant, scope } = taken
     back = (query: string) => c.redirect(backTo(grant.returnTo, query))
-    if (grant.kind === 'github') return back('error=forbidden')
+    if (grant.kind !== 'gmail' && grant.kind !== 'google_calendar') return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
     let credential: GoogleCredential
@@ -166,6 +179,53 @@ export const connections = new Hono<AppEnv>()
       { kind: grant.kind, label: connectors[grant.kind]!.label, externalAccount: account },
       credential,
     )
+    return back(`connected=${connection.id}`)
+  })
+
+  /**
+   * An MCP server's redirect back after its sign-in: the code and the PKCE
+   * verifier for tokens, straight into the vault. The App's skills come with
+   * its first account.
+   */
+  .get('/oauth/mcp/callback', async (c) => {
+    let back = (query: string) => c.redirect(backTo(undefined, query))
+    const taken = await takeState(stateIdentifier(c.req.query('state') ?? ''), c.var.userId)
+    if (typeof taken === 'string') return back(`error=${taken}`)
+    const { grant, scope } = taken
+    back = (query: string) => c.redirect(backTo(grant.returnTo, query))
+    const server = connectors[grant.kind]?.mcp
+    if (!server || !grant.verifier) return back('error=forbidden')
+    if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
+
+    let credential: McpCredential
+    try {
+      credential = await exchangeMcpCode(server, c.req.query('code')!, grant.verifier)
+    } catch (error) {
+      console.error('mcp connection failed:', error instanceof Error ? error.message : error)
+      return back('error=mcp')
+    }
+    const account = await mcpAccount(server.url, credential)
+    const kind = grant.kind as ConnectorKind
+    const connection = await createConnection(
+      scope,
+      { kind, label: appCatalog[kind].name, externalAccount: account },
+      credential,
+    )
+    const repository = appCatalog[kind].skills
+    if (repository) {
+      const db = scoped(scope)
+      const has = await db.skillPack.count({ where: { appId: connection.appId } })
+      if (!has)
+        await installAppSkills(
+          db,
+          scope,
+          { type: 'member', id: scope.memberId },
+          { id: connection.appId, name: appCatalog[kind].name },
+          repository,
+        ).catch((error) =>
+          console.error('app skills failed:', error instanceof Error ? error.message : error),
+        )
+    }
     return back(`connected=${connection.id}`)
   })
 
@@ -243,10 +303,18 @@ export const connections = new Hono<AppEnv>()
       },
       orderBy: { createdAt: 'asc' },
     })
-    const [apps, members] = await Promise.all([
+    const [apps, members, packs] = await Promise.all([
       c.var.db.app.findMany({ orderBy: { createdAt: 'asc' } }),
       // Who connected each account.
       c.var.db.member.findMany({ select: { id: true, user: { select: { name: true } } } }),
+      // The skills that came with each App.
+      c.var.db.skillPack.findMany({
+        where: { appId: { not: null } },
+        select: {
+          appId: true,
+          skills: { select: { name: true, description: true }, orderBy: { name: 'asc' } },
+        },
+      }),
     ])
     return c.json({
       members: Object.fromEntries(members.map((m) => [m.id, m.user.name])),
@@ -256,11 +324,12 @@ export const connections = new Hono<AppEnv>()
         name: a.name,
         disabledTools: a.disabledTools,
         createdByMemberId: a.createdByMemberId,
+        skills: packs.filter((p) => p.appId === a.id).flatMap((p) => p.skills),
       })),
       catalog: Object.fromEntries(
         (Object.keys(appCatalog) as ConnectorKind[]).map((kind) => {
-          const { personal: _personal, ...app } = appCatalog[kind]
-          return [kind, { ...app, tools: toolCatalog(kind) }]
+          const { personal: _personal, skills: source, ...app } = appCatalog[kind]
+          return [kind, { ...app, tools: toolCatalog(kind), source: source ?? null }]
         }),
       ),
       available: {
@@ -268,6 +337,7 @@ export const connections = new Hono<AppEnv>()
         google_calendar: googleConfigured(),
         stripe: true,
         github: githubConfigured(),
+        cloudflare: true,
         webhook: true,
       },
       connections: rows.map(({ vaultSecretId: _secret, ...row }) => row),
@@ -282,6 +352,24 @@ export const connections = new Hono<AppEnv>()
     const state = randomBytes(24).toString('base64url')
     await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo })
     return c.json({ url: googleAuthUrl(kind, state) })
+  })
+
+  /** Start an MCP App's sign-in, on its server's own OAuth. */
+  .post('/mcp', async (c) => {
+    const { kind, returnTo } = await parseBody(c.req.raw, ConnectMcp)
+    const server = connectors[kind]!.mcp!
+    const state = randomBytes(24).toString('base64url')
+    const verifier = pkceVerifier()
+    let url: string
+    try {
+      url = await mcpAuthUrl(server, state, verifier)
+    } catch (error) {
+      throw new HTTPException(502, {
+        message: `${appCatalog[kind].name} did not answer: ${error instanceof Error ? error.message : 'error'}`,
+      })
+    }
+    await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo, verifier })
+    return c.json({ url })
   })
 
   /**
@@ -420,6 +508,8 @@ export const connections = new Hono<AppEnv>()
     if (!app) throw new HTTPException(404, { message: 'App not found' })
     requireAppManager(scope, app, app.connections)
     for (const connection of app.connections) await disconnect(scope, db, connection)
+    // Its skills go with it; adding it again brings them back.
+    await db.skillPack.deleteMany({ where: { appId: app.id } })
     return c.body(null, 204)
   })
 
@@ -435,16 +525,19 @@ async function disconnect(
     console.error('unsubscribe failed:', error instanceof Error ? error.message : error),
   )
   if (connection.vaultSecretId) {
-    // Google tokens are revoked at Google. A Stripe key is revoked in Stripe's dashboard.
-    // A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
-    if (connectors[connection.kind]?.auth === 'google') {
-      const credential = await openSecret<GoogleCredential>(
+    // Google and MCP tokens are revoked at the provider. A Stripe key is revoked in Stripe's
+    // dashboard. A GitHub installation stays: other workspaces may use it; it is uninstalled on GitHub.
+    const auth = connectors[connection.kind]?.auth
+    if (auth === 'google' || auth === 'mcp') {
+      const credential = await openSecret<GoogleCredential | McpCredential>(
         db,
         scope,
         connection.vaultSecretId,
       ).catch(() => null)
-      if (credential) await revokeGoogle(credential)
+      if (credential && auth === 'google') await revokeGoogle(credential as GoogleCredential)
+      if (credential && auth === 'mcp') await revokeMcp(credential as McpCredential)
     }
+    forgetMcpTools(connection.id)
     await db.connection.updateMany({
       where: { id: connection.id },
       data: { status: 'removed', vaultSecretId: null },
@@ -461,4 +554,30 @@ async function disconnect(
     action: 'connection.removed',
     target: { type: 'connection', id: connection.id },
   })
+}
+
+/**
+ * Who an MCP account signed in as, to show which one it is: the server's whoami
+ * tool when it has one (an email or an account name), else nothing.
+ */
+async function mcpAccount(url: string, credential: McpCredential) {
+  try {
+    const signedIn = (target: string, init: RequestInit = {}) =>
+      fetch(target, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string>),
+          authorization: `Bearer ${credential.accessToken}`,
+        },
+      })
+    const output = await callMcpTool(signedIn, url, 'whoami', {})
+    const who = (typeof output === 'string' ? JSON.parse(output) : output) as {
+      email?: string
+      name?: string
+      id?: string
+    }
+    return who.email ?? who.name ?? who.id ?? null
+  } catch {
+    return null
+  }
 }

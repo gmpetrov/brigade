@@ -24,6 +24,7 @@ const CONNECT_ERRORS: Record<string, string> = {
   forbidden: 'You are no longer in this workspace.',
   declined: 'Access was not granted.',
   google: 'Google did not complete the sign-in. Try again.',
+  mcp: 'The sign-in did not complete. Try again.',
   github: 'GitHub did not complete the sign-in. Try again.',
   github_requested:
     "Your request to install Brigade was sent to the GitHub organization's owners. Connect GitHub again once they approve it.",
@@ -32,7 +33,7 @@ const CONNECT_ERRORS: Record<string, string> = {
 }
 
 /** The built-in Apps, in the order the page offers them. A custom app can be added many times. */
-const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'stripe']
+const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'cloudflare', 'stripe']
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
 type Open = { kind: Kind; appId?: string }
@@ -46,6 +47,30 @@ export default function AppsPage() {
 }
 
 function Apps() {
+  const params = useSearchParams()
+  // Back from a provider in the sign-in window: the page that opened it shows the account.
+  if (params.get('popup')) return <SignedIn error={params.get('error')} />
+  return <AppsList />
+}
+
+/** The sign-in window's last page: closes itself, or says to. */
+function SignedIn({ error }: { error: string | null }) {
+  useEffect(() => {
+    if (!error) window.close()
+  }, [error])
+  return (
+    <div className="flex flex-col gap-2 py-16 text-center">
+      <p className="font-semibold">{error ? 'The account was not connected.' : 'Connected.'}</p>
+      <p className="text-sm text-muted-foreground">
+        {error
+          ? (CONNECT_ERRORS[error] ?? `(${error})`)
+          : 'You can close this window and go back to Brigade.'}
+      </p>
+    </div>
+  )
+}
+
+function AppsList() {
   const { me } = useDashboard()
   const params = useSearchParams()
   const router = useRouter()

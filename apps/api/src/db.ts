@@ -25,6 +25,7 @@ const UNSCOPED = new Set([
   'Verification',
   'Organization',
   'PushDevice',
+  'McpClient',
 ])
 const READS_AND_BULK = new Set([
   'findUnique',

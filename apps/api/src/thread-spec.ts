@@ -1,6 +1,8 @@
-import { folderExceptions, type ThreadSpec } from '@brigade/contracts'
+import { folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
+import { runnerProtocol } from './hub.js'
+import { isMcp, mcpOperationSpecs } from './mcp-tools.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
 import type { ScopedDb } from './db.js'
@@ -94,7 +96,6 @@ export async function specFor(
     rules,
     attachments,
     designSystems,
-    skills,
     project,
     projects,
     [imageAccount],
@@ -114,7 +115,6 @@ export async function specFor(
     folderRules(db),
     threadAttachments(db, thread.id),
     threadDesignSystems(db, teammate.id, thread.projectId),
-    threadSkills(db, teammate.id, thread.projectId),
     threadProject(db, thread.projectId),
     projectCatalog(db),
     teammate.harness === 'codex'
@@ -137,18 +137,44 @@ export async function specFor(
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
-  return {
-    connectors: grants
+  // An MCP connector's tools come from its server; a runner too old to know its kind gets none.
+  const protocol = runnerProtocol(thread.computerId)
+  const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }
+  const specs = await Promise.all(
+    grants
       .filter((g) => connectors[g.connection.kind])
-      .map((g) => ({
+      .filter((g) => !isMcp(g.connection.kind) || (protocol ?? MCP_PROTOCOL) >= MCP_PROTOCOL)
+      .map(async (g) => ({
         connectionId: g.connection.id,
         // Only kinds with operations get here; a custom app's webhook connection has none.
         kind: g.connection.kind as Exclude<typeof g.connection.kind, 'webhook'>,
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
-        operations: operationSpecs(g.connection.kind, g.scope, g.connection.app.disabledTools),
+        operations: isMcp(g.connection.kind)
+          ? await mcpOperationSpecs(
+              db,
+              scope,
+              g.connection,
+              g.scope,
+              g.connection.app.disabledTools,
+            ).catch((error) => {
+              // Signed out or the server is down: the thread runs without its tools.
+              console.warn(`mcp tools of ${g.connection.id}: ${String(error)}`)
+              return []
+            })
+          : operationSpecs(g.connection.kind, g.scope, g.connection.app.disabledTools),
       })),
+  )
+  // An App's skills only for teammates that can use one of its accounts here.
+  const skills = await threadSkills(
+    db,
+    teammate.id,
+    thread.projectId,
+    new Set(grants.map((g) => g.connection.appId)),
+  )
+  return {
+    connectors: specs,
     account: accountRef(current),
     fallbacks: fallbacks.map(accountRef),
     imageAccount: imageAccount ? accountRef(imageAccount) : null,

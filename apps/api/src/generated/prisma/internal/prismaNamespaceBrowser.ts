@@ -74,6 +74,7 @@ export const ModelName = {
   PullRequest: 'PullRequest',
   PullRequestReview: 'PullRequestReview',
   Comment: 'Comment',
+  McpClient: 'McpClient',
   App: 'App',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
@@ -503,6 +504,18 @@ export const CommentScalarFieldEnum = {
 export type CommentScalarFieldEnum = (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum]
 
 
+export const McpClientScalarFieldEnum = {
+  id: 'id',
+  issuer: 'issuer',
+  redirectUri: 'redirectUri',
+  clientId: 'clientId',
+  clientSecret: 'clientSecret',
+  createdAt: 'createdAt'
+} as const
+
+export type McpClientScalarFieldEnum = (typeof McpClientScalarFieldEnum)[keyof typeof McpClientScalarFieldEnum]
+
+
 export const AppScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -875,7 +888,8 @@ export const SkillPackScalarFieldEnum = {
   createdByType: 'createdByType',
   createdById: 'createdById',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  appId: 'appId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]

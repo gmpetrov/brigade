@@ -37,6 +37,7 @@ export type SkillPackMinAggregateOutputType = {
   createdById: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  appId: string | null
 }
 
 export type SkillPackMaxAggregateOutputType = {
@@ -51,6 +52,7 @@ export type SkillPackMaxAggregateOutputType = {
   createdById: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  appId: string | null
 }
 
 export type SkillPackCountAggregateOutputType = {
@@ -67,6 +69,7 @@ export type SkillPackCountAggregateOutputType = {
   createdById: number
   createdAt: number
   updatedAt: number
+  appId: number
   _all: number
 }
 
@@ -83,6 +86,7 @@ export type SkillPackMinAggregateInputType = {
   createdById?: true
   createdAt?: true
   updatedAt?: true
+  appId?: true
 }
 
 export type SkillPackMaxAggregateInputType = {
@@ -97,6 +101,7 @@ export type SkillPackMaxAggregateInputType = {
   createdById?: true
   createdAt?: true
   updatedAt?: true
+  appId?: true
 }
 
 export type SkillPackCountAggregateInputType = {
@@ -113,6 +118,7 @@ export type SkillPackCountAggregateInputType = {
   createdById?: true
   createdAt?: true
   updatedAt?: true
+  appId?: true
   _all?: true
 }
 
@@ -202,6 +208,7 @@ export type SkillPackGroupByOutputType = {
   createdById: string
   createdAt: Date
   updatedAt: Date
+  appId: string | null
   _count: SkillPackCountAggregateOutputType | null
   _min: SkillPackMinAggregateOutputType | null
   _max: SkillPackMaxAggregateOutputType | null
@@ -239,8 +246,10 @@ export type SkillPackWhereInput = {
   createdById?: Prisma.StringFilter<"SkillPack"> | string
   createdAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
+  appId?: Prisma.StringNullableFilter<"SkillPack"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   skills?: Prisma.SkillListRelationFilter
+  app?: Prisma.XOR<Prisma.AppNullableScalarRelationFilter, Prisma.AppWhereInput> | null
 }
 
 export type SkillPackOrderByWithRelationInput = {
@@ -257,8 +266,10 @@ export type SkillPackOrderByWithRelationInput = {
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  appId?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   skills?: Prisma.SkillOrderByRelationAggregateInput
+  app?: Prisma.AppOrderByWithRelationInput
 }
 
 export type SkillPackWhereUniqueInput = Prisma.AtLeast<{
@@ -279,8 +290,10 @@ export type SkillPackWhereUniqueInput = Prisma.AtLeast<{
   createdById?: Prisma.StringFilter<"SkillPack"> | string
   createdAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
+  appId?: Prisma.StringNullableFilter<"SkillPack"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   skills?: Prisma.SkillListRelationFilter
+  app?: Prisma.XOR<Prisma.AppNullableScalarRelationFilter, Prisma.AppWhereInput> | null
 }, "id" | "workspaceId_source">
 
 export type SkillPackOrderByWithAggregationInput = {
@@ -297,6 +310,7 @@ export type SkillPackOrderByWithAggregationInput = {
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  appId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SkillPackCountOrderByAggregateInput
   _max?: Prisma.SkillPackMaxOrderByAggregateInput
   _min?: Prisma.SkillPackMinOrderByAggregateInput
@@ -319,6 +333,7 @@ export type SkillPackScalarWhereWithAggregatesInput = {
   createdById?: Prisma.StringWithAggregatesFilter<"SkillPack"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SkillPack"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SkillPack"> | Date | string
+  appId?: Prisma.StringNullableWithAggregatesFilter<"SkillPack"> | string | null
 }
 
 export type SkillPackCreateInput = {
@@ -336,6 +351,7 @@ export type SkillPackCreateInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSkillPacksInput
   skills?: Prisma.SkillCreateNestedManyWithoutPackInput
+  app?: Prisma.AppCreateNestedOneWithoutSkillPacksInput
 }
 
 export type SkillPackUncheckedCreateInput = {
@@ -352,6 +368,7 @@ export type SkillPackUncheckedCreateInput = {
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  appId?: string | null
   skills?: Prisma.SkillUncheckedCreateNestedManyWithoutPackInput
 }
 
@@ -370,6 +387,7 @@ export type SkillPackUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSkillPacksNestedInput
   skills?: Prisma.SkillUpdateManyWithoutPackNestedInput
+  app?: Prisma.AppUpdateOneWithoutSkillPacksNestedInput
 }
 
 export type SkillPackUncheckedUpdateInput = {
@@ -386,6 +404,7 @@ export type SkillPackUncheckedUpdateInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  appId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   skills?: Prisma.SkillUncheckedUpdateManyWithoutPackNestedInput
 }
 
@@ -403,6 +422,7 @@ export type SkillPackCreateManyInput = {
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  appId?: string | null
 }
 
 export type SkillPackUpdateManyMutationInput = {
@@ -434,6 +454,7 @@ export type SkillPackUncheckedUpdateManyInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  appId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SkillPackListRelationFilter = {
@@ -470,6 +491,7 @@ export type SkillPackCountOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  appId?: Prisma.SortOrder
 }
 
 export type SkillPackMaxOrderByAggregateInput = {
@@ -484,6 +506,7 @@ export type SkillPackMaxOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  appId?: Prisma.SortOrder
 }
 
 export type SkillPackMinOrderByAggregateInput = {
@@ -498,6 +521,7 @@ export type SkillPackMinOrderByAggregateInput = {
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  appId?: Prisma.SortOrder
 }
 
 export type SkillPackCreateNestedManyWithoutWorkspaceInput = {
@@ -539,6 +563,48 @@ export type SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   connect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
   update?: Prisma.SkillPackUpdateWithWhereUniqueWithoutWorkspaceInput | Prisma.SkillPackUpdateWithWhereUniqueWithoutWorkspaceInput[]
   updateMany?: Prisma.SkillPackUpdateManyWithWhereWithoutWorkspaceInput | Prisma.SkillPackUpdateManyWithWhereWithoutWorkspaceInput[]
+  deleteMany?: Prisma.SkillPackScalarWhereInput | Prisma.SkillPackScalarWhereInput[]
+}
+
+export type SkillPackCreateNestedManyWithoutAppInput = {
+  create?: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput> | Prisma.SkillPackCreateWithoutAppInput[] | Prisma.SkillPackUncheckedCreateWithoutAppInput[]
+  connectOrCreate?: Prisma.SkillPackCreateOrConnectWithoutAppInput | Prisma.SkillPackCreateOrConnectWithoutAppInput[]
+  createMany?: Prisma.SkillPackCreateManyAppInputEnvelope
+  connect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+}
+
+export type SkillPackUncheckedCreateNestedManyWithoutAppInput = {
+  create?: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput> | Prisma.SkillPackCreateWithoutAppInput[] | Prisma.SkillPackUncheckedCreateWithoutAppInput[]
+  connectOrCreate?: Prisma.SkillPackCreateOrConnectWithoutAppInput | Prisma.SkillPackCreateOrConnectWithoutAppInput[]
+  createMany?: Prisma.SkillPackCreateManyAppInputEnvelope
+  connect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+}
+
+export type SkillPackUpdateManyWithoutAppNestedInput = {
+  create?: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput> | Prisma.SkillPackCreateWithoutAppInput[] | Prisma.SkillPackUncheckedCreateWithoutAppInput[]
+  connectOrCreate?: Prisma.SkillPackCreateOrConnectWithoutAppInput | Prisma.SkillPackCreateOrConnectWithoutAppInput[]
+  upsert?: Prisma.SkillPackUpsertWithWhereUniqueWithoutAppInput | Prisma.SkillPackUpsertWithWhereUniqueWithoutAppInput[]
+  createMany?: Prisma.SkillPackCreateManyAppInputEnvelope
+  set?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  disconnect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  delete?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  connect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  update?: Prisma.SkillPackUpdateWithWhereUniqueWithoutAppInput | Prisma.SkillPackUpdateWithWhereUniqueWithoutAppInput[]
+  updateMany?: Prisma.SkillPackUpdateManyWithWhereWithoutAppInput | Prisma.SkillPackUpdateManyWithWhereWithoutAppInput[]
+  deleteMany?: Prisma.SkillPackScalarWhereInput | Prisma.SkillPackScalarWhereInput[]
+}
+
+export type SkillPackUncheckedUpdateManyWithoutAppNestedInput = {
+  create?: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput> | Prisma.SkillPackCreateWithoutAppInput[] | Prisma.SkillPackUncheckedCreateWithoutAppInput[]
+  connectOrCreate?: Prisma.SkillPackCreateOrConnectWithoutAppInput | Prisma.SkillPackCreateOrConnectWithoutAppInput[]
+  upsert?: Prisma.SkillPackUpsertWithWhereUniqueWithoutAppInput | Prisma.SkillPackUpsertWithWhereUniqueWithoutAppInput[]
+  createMany?: Prisma.SkillPackCreateManyAppInputEnvelope
+  set?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  disconnect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  delete?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  connect?: Prisma.SkillPackWhereUniqueInput | Prisma.SkillPackWhereUniqueInput[]
+  update?: Prisma.SkillPackUpdateWithWhereUniqueWithoutAppInput | Prisma.SkillPackUpdateWithWhereUniqueWithoutAppInput[]
+  updateMany?: Prisma.SkillPackUpdateManyWithWhereWithoutAppInput | Prisma.SkillPackUpdateManyWithWhereWithoutAppInput[]
   deleteMany?: Prisma.SkillPackScalarWhereInput | Prisma.SkillPackScalarWhereInput[]
 }
 
@@ -590,6 +656,7 @@ export type SkillPackCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   skills?: Prisma.SkillCreateNestedManyWithoutPackInput
+  app?: Prisma.AppCreateNestedOneWithoutSkillPacksInput
 }
 
 export type SkillPackUncheckedCreateWithoutWorkspaceInput = {
@@ -605,6 +672,7 @@ export type SkillPackUncheckedCreateWithoutWorkspaceInput = {
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  appId?: string | null
   skills?: Prisma.SkillUncheckedCreateNestedManyWithoutPackInput
 }
 
@@ -651,6 +719,67 @@ export type SkillPackScalarWhereInput = {
   createdById?: Prisma.StringFilter<"SkillPack"> | string
   createdAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SkillPack"> | Date | string
+  appId?: Prisma.StringNullableFilter<"SkillPack"> | string | null
+}
+
+export type SkillPackCreateWithoutAppInput = {
+  id?: string
+  organizationId: string
+  name: string
+  source: string
+  everywhere?: boolean
+  teammateIds?: Prisma.SkillPackCreateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackCreateprojectIdsInput | string[]
+  enabled?: boolean
+  createdByType: $Enums.ActorType
+  createdById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSkillPacksInput
+  skills?: Prisma.SkillCreateNestedManyWithoutPackInput
+}
+
+export type SkillPackUncheckedCreateWithoutAppInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  source: string
+  everywhere?: boolean
+  teammateIds?: Prisma.SkillPackCreateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackCreateprojectIdsInput | string[]
+  enabled?: boolean
+  createdByType: $Enums.ActorType
+  createdById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutPackInput
+}
+
+export type SkillPackCreateOrConnectWithoutAppInput = {
+  where: Prisma.SkillPackWhereUniqueInput
+  create: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput>
+}
+
+export type SkillPackCreateManyAppInputEnvelope = {
+  data: Prisma.SkillPackCreateManyAppInput | Prisma.SkillPackCreateManyAppInput[]
+  skipDuplicates?: boolean
+}
+
+export type SkillPackUpsertWithWhereUniqueWithoutAppInput = {
+  where: Prisma.SkillPackWhereUniqueInput
+  update: Prisma.XOR<Prisma.SkillPackUpdateWithoutAppInput, Prisma.SkillPackUncheckedUpdateWithoutAppInput>
+  create: Prisma.XOR<Prisma.SkillPackCreateWithoutAppInput, Prisma.SkillPackUncheckedCreateWithoutAppInput>
+}
+
+export type SkillPackUpdateWithWhereUniqueWithoutAppInput = {
+  where: Prisma.SkillPackWhereUniqueInput
+  data: Prisma.XOR<Prisma.SkillPackUpdateWithoutAppInput, Prisma.SkillPackUncheckedUpdateWithoutAppInput>
+}
+
+export type SkillPackUpdateManyWithWhereWithoutAppInput = {
+  where: Prisma.SkillPackScalarWhereInput
+  data: Prisma.XOR<Prisma.SkillPackUpdateManyMutationInput, Prisma.SkillPackUncheckedUpdateManyWithoutAppInput>
 }
 
 export type SkillPackCreateWithoutSkillsInput = {
@@ -667,6 +796,7 @@ export type SkillPackCreateWithoutSkillsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSkillPacksInput
+  app?: Prisma.AppCreateNestedOneWithoutSkillPacksInput
 }
 
 export type SkillPackUncheckedCreateWithoutSkillsInput = {
@@ -683,6 +813,7 @@ export type SkillPackUncheckedCreateWithoutSkillsInput = {
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  appId?: string | null
 }
 
 export type SkillPackCreateOrConnectWithoutSkillsInput = {
@@ -715,6 +846,7 @@ export type SkillPackUpdateWithoutSkillsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSkillPacksNestedInput
+  app?: Prisma.AppUpdateOneWithoutSkillPacksNestedInput
 }
 
 export type SkillPackUncheckedUpdateWithoutSkillsInput = {
@@ -731,6 +863,7 @@ export type SkillPackUncheckedUpdateWithoutSkillsInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  appId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SkillPackCreateManyWorkspaceInput = {
@@ -746,6 +879,7 @@ export type SkillPackCreateManyWorkspaceInput = {
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  appId?: string | null
 }
 
 export type SkillPackUpdateWithoutWorkspaceInput = {
@@ -762,6 +896,7 @@ export type SkillPackUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   skills?: Prisma.SkillUpdateManyWithoutPackNestedInput
+  app?: Prisma.AppUpdateOneWithoutSkillPacksNestedInput
 }
 
 export type SkillPackUncheckedUpdateWithoutWorkspaceInput = {
@@ -777,12 +912,80 @@ export type SkillPackUncheckedUpdateWithoutWorkspaceInput = {
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  appId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   skills?: Prisma.SkillUncheckedUpdateManyWithoutPackNestedInput
 }
 
 export type SkillPackUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  everywhere?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  teammateIds?: Prisma.SkillPackUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackUpdateprojectIdsInput | string[]
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  appId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type SkillPackCreateManyAppInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  source: string
+  everywhere?: boolean
+  teammateIds?: Prisma.SkillPackCreateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackCreateprojectIdsInput | string[]
+  enabled?: boolean
+  createdByType: $Enums.ActorType
+  createdById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type SkillPackUpdateWithoutAppInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  everywhere?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  teammateIds?: Prisma.SkillPackUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackUpdateprojectIdsInput | string[]
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSkillPacksNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutPackNestedInput
+}
+
+export type SkillPackUncheckedUpdateWithoutAppInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  everywhere?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  teammateIds?: Prisma.SkillPackUpdateteammateIdsInput | string[]
+  projectIds?: Prisma.SkillPackUpdateprojectIdsInput | string[]
+  enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdByType?: Prisma.EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutPackNestedInput
+}
+
+export type SkillPackUncheckedUpdateManyWithoutAppInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   source?: Prisma.StringFieldUpdateOperationsInput | string
   everywhere?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -840,8 +1043,10 @@ export type SkillPackSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  appId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   skills?: boolean | Prisma.SkillPack$skillsArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
   _count?: boolean | Prisma.SkillPackCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["skillPack"]>
 
@@ -859,7 +1064,9 @@ export type SkillPackSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  appId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
 }, ExtArgs["result"]["skillPack"]>
 
 export type SkillPackSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -876,7 +1083,9 @@ export type SkillPackSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  appId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
 }, ExtArgs["result"]["skillPack"]>
 
 export type SkillPackSelectScalar = {
@@ -893,19 +1102,23 @@ export type SkillPackSelectScalar = {
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  appId?: boolean
 }
 
-export type SkillPackOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "source" | "everywhere" | "teammateIds" | "projectIds" | "enabled" | "createdByType" | "createdById" | "createdAt" | "updatedAt", ExtArgs["result"]["skillPack"]>
+export type SkillPackOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "source" | "everywhere" | "teammateIds" | "projectIds" | "enabled" | "createdByType" | "createdById" | "createdAt" | "updatedAt" | "appId", ExtArgs["result"]["skillPack"]>
 export type SkillPackInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   skills?: boolean | Prisma.SkillPack$skillsArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
   _count?: boolean | Prisma.SkillPackCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SkillPackIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
 }
 export type SkillPackIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  app?: boolean | Prisma.SkillPack$appArgs<ExtArgs>
 }
 
 export type $SkillPackPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -913,6 +1126,7 @@ export type $SkillPackPayload<ExtArgs extends runtime.Types.Extensions.InternalA
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     skills: Prisma.$SkillPayload<ExtArgs>[]
+    app: Prisma.$AppPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -931,6 +1145,10 @@ export type $SkillPackPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     createdById: string
     createdAt: Date
     updatedAt: Date
+    /**
+     * Set when the pack came with an App: its skills load only for teammates with that App.
+     */
+    appId: string | null
   }, ExtArgs["result"]["skillPack"]>
   composites: {}
 }
@@ -1327,6 +1545,7 @@ export interface Prisma__SkillPackClient<T, Null = never, ExtArgs extends runtim
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   skills<T extends Prisma.SkillPack$skillsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SkillPack$skillsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SkillPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  app<T extends Prisma.SkillPack$appArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SkillPack$appArgs<ExtArgs>>): Prisma.Prisma__AppClient<runtime.Types.Result.GetResult<Prisma.$AppPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1369,6 +1588,7 @@ export interface SkillPackFieldRefs {
   readonly createdById: Prisma.FieldRef<"SkillPack", 'String'>
   readonly createdAt: Prisma.FieldRef<"SkillPack", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SkillPack", 'DateTime'>
+  readonly appId: Prisma.FieldRef<"SkillPack", 'String'>
 }
     
 
@@ -1791,6 +2011,25 @@ export type SkillPack$skillsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.SkillScalarFieldEnum | Prisma.SkillScalarFieldEnum[]
+}
+
+/**
+ * SkillPack.app
+ */
+export type SkillPack$appArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the App
+   */
+  select?: Prisma.AppSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the App
+   */
+  omit?: Prisma.AppOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AppInclude<ExtArgs> | null
+  where?: Prisma.AppWhereInput
 }
 
 /**

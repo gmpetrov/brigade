@@ -18,6 +18,8 @@ import {
   type GitHubCredential,
 } from './connectors/github-app.js'
 import { refreshGoogle, type GoogleCredential } from './connectors/google-oauth.js'
+import { refreshMcp, type McpCredential } from './connectors/mcp.js'
+import { isMcp, mcpOperation } from './mcp-tools.js'
 import {
   redact,
   type ApiKeyCredential,
@@ -81,8 +83,12 @@ export async function handleConnectorCall(
     where: { id: call.connectionId, status: { not: 'removed' } },
     include: { app: { select: { disabledTools: true } } },
   })
+  // An MCP server's tools are its own, listed with the account's token.
   const operation =
-    connection && (connectors[connection.kind]?.operations[call.operation] as Operation | undefined)
+    connection &&
+    (isMcp(connection.kind)
+      ? await mcpOperation(db, scope, connection, call.operation).catch(() => undefined)
+      : (connectors[connection.kind]?.operations[call.operation] as Operation | undefined))
   if (!connection || !operation)
     return result({ ok: false, error: 'Unknown connection or operation' })
 
@@ -313,10 +319,14 @@ export async function authorisedFetch(
     return authorised
   }
 
-  let credential = await openSecret<GoogleCredential>(db, scope, secretId)
+  // OAuth tokens the API refreshes: Google's, or an MCP server's own.
+  const mcp = connectors[connection.kind]?.auth === 'mcp'
+  let credential = await openSecret<GoogleCredential | McpCredential>(db, scope, secretId)
   const refresh = async () => {
     try {
-      credential = await refreshGoogle(credential)
+      credential = mcp
+        ? await refreshMcp(credential as McpCredential)
+        : await refreshGoogle(credential as GoogleCredential)
     } catch (error) {
       await needsReauth()
       throw error
