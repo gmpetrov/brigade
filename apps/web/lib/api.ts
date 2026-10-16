@@ -258,6 +258,8 @@ export type ThreadSummary = {
   /** Everyone in it, the starting teammate first. */
   teammates: { teammate: { id: string; name: string } }[]
   startedBy: { id: string; user: { name: string } }
+  /** Where it runs: the workspace computer, or a member's own machine. */
+  computer: { kind: string; name: string }
   projectId: string | null
   createdAt: string
   /** People's messages after the first, and the teammates' answers. */
