@@ -9,11 +9,17 @@ import {
   type AttachmentInfo,
   type MessageAttachment,
 } from '@brigade/contracts'
-import { Ban, FileText, Paperclip, Play, X } from 'lucide-react'
+import { Ban, CircleDot, FileText, Paperclip, Play, Plus, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { api, attachmentUrl, uploadAttachment } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -193,6 +199,68 @@ export function AttachButton({
       >
         <Paperclip aria-hidden />
       </Button>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        hidden
+        onChange={(e) => {
+          if (e.target.files?.length) onFiles([...e.target.files])
+          e.target.value = ''
+        }}
+      />
+    </>
+  )
+}
+
+/**
+ * The composer's +, like Claude's: attach files, or teach the teammate a task by
+ * recording it on its computer. `teach` is unset where teaching is not offered
+ * (phones), and a reason where it is not possible yet.
+ */
+export function ComposerMenu({
+  onFiles,
+  teach,
+}: {
+  onFiles: (files: File[]) => void
+  teach: (() => void) | string
+}) {
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full [&_svg:not([class*='size-'])]:size-5"
+            aria-label="Add files and more"
+            title="Add files and more"
+          >
+            <Plus aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" className="min-w-52">
+          <DropdownMenuItem onSelect={() => input.current?.click()}>
+            <Paperclip aria-hidden />
+            Attach files
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={typeof teach === 'string'}
+            onSelect={() => typeof teach === 'function' && teach()}
+            className="items-start"
+          >
+            <CircleDot aria-hidden className="mt-0.5 text-destructive-text" />
+            <span className="flex flex-col">
+              Teach a task
+              {typeof teach === 'string' && (
+                <span className="text-xs text-muted-foreground">{teach}</span>
+              )}
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <input
         ref={input}
         type="file"

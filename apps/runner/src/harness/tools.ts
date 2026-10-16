@@ -766,7 +766,7 @@ export function libraryTools(options: {
       '`name`, lowercase words joined by hyphens, and `description`, when to use it; then the steps) and the text ' +
       'files it points to. To change a skill, propose it whole under its name. An admin approves it in a ticket; it ' +
       'applies to threads that start after that. Do not wait for the answer.',
-    inputSchema: jsonSchema<{ folder: string; reason?: string }>({
+    inputSchema: jsonSchema<{ folder: string; reason?: string; onlyMe?: boolean }>({
       type: 'object',
       properties: {
         folder: {
@@ -777,6 +777,11 @@ export function libraryTools(options: {
           type: 'string',
           description:
             'For the admin: the work it comes from and why it is worth keeping, in a line or two',
+        },
+        onlyMe: {
+          type: 'boolean',
+          description:
+            "A new skill for your own threads only, not every teammate's: a task a person taught you",
         },
       },
       required: ['folder'],
@@ -818,7 +823,11 @@ export function libraryTools(options: {
       const result = (await options.call({
         operation: {
           name: 'skill_proposal',
-          proposal: { skill: skill.data, reason: input.reason?.trim().slice(0, 1000) ?? '' },
+          proposal: {
+            skill: skill.data,
+            reason: input.reason?.trim().slice(0, 1000) ?? '',
+            teammateOnly: input.onlyMe === true,
+          },
         },
         toolCallId,
         toolName: PROPOSE_SKILL_TOOL,

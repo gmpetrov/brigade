@@ -469,6 +469,7 @@ export async function proposeSkill(
       : {}),
     teammateId: teammate.id,
     ...(proposal.reason ? { reason: proposal.reason } : {}),
+    ...(proposal.teammateOnly && !existing ? { teammateOnly: true } : {}),
   }
   const replaced = await db.ticket.updateMany({
     where: {
@@ -501,7 +502,7 @@ export async function proposeSkill(
 
 /**
  * An admin's answer to a proposal. Approving saves it: a new skill applies
- * everywhere; a change keeps where the skill applied, whether it is on, its
+ * everywhere, or to its teammate only when it asked; a change keeps where the skill applied, whether it is on, its
  * pack, and the files the proposal does not replace (a teammate proposes text,
  * so a pack's fonts or templates stay).
  */
@@ -530,8 +531,8 @@ export async function decideSkillProposal(
       {
         ...skill.data,
         files: [...kept, ...proposed],
-        everywhere: existing?.everywhere ?? true,
-        teammateIds: existing?.teammateIds ?? [],
+        everywhere: existing?.everywhere ?? !payload.teammateOnly,
+        teammateIds: existing?.teammateIds ?? (payload.teammateOnly ? [payload.teammateId] : []),
         projectIds: existing?.projectIds ?? [],
         enabled: existing?.enabled ?? true,
       },

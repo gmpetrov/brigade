@@ -50,7 +50,7 @@ function Section({
 }
 
 /** Round and outlined, as the sidebar's search and new thread buttons. */
-function CloseButton({
+export function CloseButton({
   label,
   title,
   onClick,

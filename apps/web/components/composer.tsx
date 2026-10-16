@@ -29,7 +29,7 @@ import {
 } from '@tiptap/react'
 import { PluginKey } from '@tiptap/pm/state'
 import { Suggestion, type SuggestionProps } from '@tiptap/suggestion'
-import { BookOpenText, ImageIcon, Palette, Shapes } from 'lucide-react'
+import { BookOpenText, GraduationCap, ImageIcon, Palette, Shapes } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, type ComponentType } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { credentialHint, MentionChip, MentionIcon, type ConnectionKind } from '@/components/mention'
@@ -328,6 +328,7 @@ const COMMAND_ICON: Record<MessageCommand, ComponentType<{ className?: string }>
   visual: Shapes,
   design: Palette,
   image: ImageIcon,
+  teach: GraduationCap,
 }
 /** A command to pick: what to make, or a workspace skill to follow. */
 type CommandOption = {
@@ -337,12 +338,15 @@ type CommandOption = {
   needs?: 'codex'
   skill?: boolean
 }
-const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS).map(([name, c]) => ({
-  name,
-  label: c.label,
-  description: c.description,
-  ...('needs' in c ? { needs: c.needs } : {}),
-}))
+const COMMAND_OPTIONS: CommandOption[] = Object.entries(MESSAGE_COMMANDS)
+  // `/teach` comes with a recording, from Teach a task: not a command to type.
+  .filter(([, c]) => !('hidden' in c))
+  .map(([name, c]) => ({
+    name,
+    label: c.label,
+    description: c.description,
+    ...('needs' in c ? { needs: c.needs } : {}),
+  }))
 
 const isMessageCommand = (name: string): name is MessageCommand => name in MESSAGE_COMMANDS
 
