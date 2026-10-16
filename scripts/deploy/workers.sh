@@ -6,9 +6,44 @@
 # first, with DATABASE_URL from the environment (a build secret on Cloudflare). A deploy
 # keeps the secrets a Worker has; change one with `wrangler secret put` (see
 # docs/deployment-plan.md).
+#
+# The API's and the dashboard's builds run side by side, and the dashboard's is done
+# first: deploying it waits until the API runs this commit's API code, so a page never
+# asks the API for something it does not have yet (#94's wake-ups broke every thread
+# page for minutes). The API says which commit it runs at /health.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 API_URL=https://api.brigade.lol
+# The commit being deployed (Workers Builds sets it; git otherwise).
+COMMIT=${WORKERS_CI_COMMIT_SHA:-$(git rev-parse HEAD)}
+# What the API is built from: the dashboard waits for a change in these.
+API_PATHS=(apps/api apps/runner packages patches package.json pnpm-lock.yaml)
+
+# Waits until the API runs code no older than this commit's, up to 12 minutes (a Workers Build stops at 20):
+# the commit it runs has the same API_PATHS, or comes after this one.
+wait_for_api() {
+  local deadline=$((SECONDS + 720)) build
+  while :; do
+    build=$(curl -fsS --max-time 10 "$API_URL/health" 2>/dev/null |
+      node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).build??"")}catch{}})' || true)
+    if [ -n "$build" ]; then
+      [ "$build" = "$COMMIT" ] && return 0
+      # A shallow clone has neither the API's commit nor the history between them.
+      git cat-file -e "$build^{commit}" 2>/dev/null || git fetch -q origin "$build" 2>/dev/null || true
+      if git cat-file -e "$build^{commit}" 2>/dev/null; then
+        [ "$(git rev-parse --is-shallow-repository)" = true ] && git fetch -q --unshallow origin 2>/dev/null || true
+        git diff --quiet "$build" "$COMMIT" -- "${API_PATHS[@]}" && return 0
+        git merge-base --is-ancestor "$COMMIT" "$build" 2>/dev/null && return 0
+      fi
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "The API still runs ${build:-an unknown commit}, not $COMMIT's API code: not deploying the dashboard" >&2
+      return 1
+    fi
+    echo "Waiting for the API to run $COMMIT's API code (it runs ${build:-an unknown commit})"
+    sleep 20
+  done
+}
 
 case "${1:-}:${2:-}" in
 build:api)
@@ -35,7 +70,8 @@ deploy:api)
     sleep 15
   done
   SHA=$(node apps/api/scripts/prepare-worker.mjs)
-  pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA"
+  pnpm --filter @brigade/api exec wrangler deploy --var "RUNNER_BUNDLE_SHA256:$SHA" \
+    --var "BRIGADE_BUILD_ID:$COMMIT"
   ;;
 build:api-front)
   # Nothing: wrangler bundles it when deploying.
@@ -49,6 +85,7 @@ build:web)
   NEXT_PUBLIC_API_URL=$API_URL pnpm --filter @brigade/web exec opennextjs-cloudflare build
   ;;
 deploy:web)
+  wait_for_api
   pnpm --filter @brigade/web exec opennextjs-cloudflare deploy
   ;;
 build:collab)

@@ -9,6 +9,8 @@ import { CLIPBOARD_MAX, HarnessId } from './runner.js'
 export const HealthResponse = z.object({
   status: z.literal('ok'),
   protocolVersion: z.number().int(),
+  /** The commit it was deployed from, when the deploy says (scripts/deploy/workers.sh). */
+  build: z.string().optional(),
 })
 export type HealthResponse = z.infer<typeof HealthResponse>
 
