@@ -412,9 +412,11 @@ export function NewThread({
     try {
       const thread = await create(text, files.ids)
       files.clear()
+      // The effort went with that thread; the next one starts on Default, even from a
+      // draft that outlives the box (the threads panel).
+      setEffortValue(null)
       if (onStarted) {
         setText('')
-        setEffortValue(null)
         setBusy(false)
         onStarted(thread)
       } else router.push(`/app/threads/${thread.id}`)
