@@ -101,16 +101,21 @@ const VISIBLE = `(() => {
   return { text: text.length, drawn, body, framed }
 })()`
 
-/** A page that draws after its data (or a CAPTCHA check) arrives: look again for this long. */
-const SETTLE_MS = 8_000
+/** How often to look at the page while it settles. */
+const LOOK_MS = 300
+/** Pages checked at once, each in its own tab. */
+const AT_ONCE = 4
 /**
- * Waits after the page loads (network idle, a client render, an empty body),
- * and shorter ones for a recheck: its pages passed before, so a slow first
- * render or a CAPTCHA is not what an edit changes.
+ * Waits after the page loads: at least `min` (a client render, a script that
+ * throws just after), then until what it shows has not changed for `stable`,
+ * and at most `max` (data, or a CAPTCHA check, that arrives late). Not until
+ * the network is idle: a page that polls or streams never is. Shorter for a
+ * recheck: its pages passed before, so a slow first render or a CAPTCHA is not
+ * what an edit changes.
  */
 const WAITS = {
-  full: { idle: 10_000, render: 1_500, settle: SETTLE_MS },
-  quick: { idle: 3_000, render: 500, settle: 2_000 },
+  full: { min: 1_500, stable: 1_000, max: 12_000 },
+  quick: { min: 500, stable: 500, max: 4_000 },
 }
 
 async function checkPage(
@@ -159,24 +164,25 @@ async function checkPage(
     if (!WAITING.test(html) || Date.now() > deadline) break
     await page.waitForTimeout(2_000)
   }
-  await page.waitForLoadState('networkidle', { timeout: waits.idle }).catch(() => undefined)
-  // Client-rendered pages draw after their data arrives.
-  await page.waitForTimeout(waits.render)
-
   if (status >= 400) problems.push(`the page answered ${status}`)
   type Visible = { text: number; drawn: boolean; body: number; framed: boolean }
   const look = () =>
     page
       .evaluate(VISIBLE)
       .catch(() => ({ text: 0, drawn: false, body: 0, framed: false })) as Promise<Visible>
+  const shows = (v: Visible) => (v.text >= MIN_TEXT || v.drawn) && !(v.framed && v.body === 0)
+  // Client-rendered pages draw after their data arrives: look until what it shows holds still.
+  const loaded = Date.now()
   let visible = await look()
-  // An empty body in its frame: give it the time a slow render or a CAPTCHA check takes.
-  for (
-    const until = Date.now() + waits.settle;
-    visible.framed && !visible.body && Date.now() < until;
-  ) {
-    await page.waitForTimeout(1_000)
+  let seen = JSON.stringify(visible)
+  let since = loaded
+  while (Date.now() - loaded < waits.max) {
+    const now = Date.now()
+    if (now - loaded >= waits.min && now - since >= waits.stable && shows(visible)) break
+    await page.waitForTimeout(LOOK_MS)
     visible = await look()
+    const next = JSON.stringify(visible)
+    if (next !== seen) [seen, since] = [next, Date.now()]
   }
   const why =
     '(a form hidden until a check passes, a render that needs data or settings it does not have, a script that failed)'
@@ -213,7 +219,7 @@ async function main(input: Input): Promise<CheckResult> {
     headless: true,
     ...(process.platform === 'linux' ? { chromiumSandbox: false } : {}),
   })
-  const pages: PageCheck[] = []
+  const pages: PageCheck[] = new Array(input.paths.length)
   try {
     // One context: the address with its token first, whose cookie lets the pages in.
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } })
@@ -223,13 +229,22 @@ async function main(input: Input): Promise<CheckResult> {
       await page.close()
     }
     const origin = new URL(base.origin)
-    for (const path of input.paths) {
-      const page = await context.newPage()
-      pages.push(
-        await checkPage(page, origin, path, input.out, WAITS[input.quick ? 'quick' : 'full']),
-      )
-      await page.close()
+    // A few tabs at once: a dev server compiles their routes side by side.
+    let next = 0
+    const tab = async () => {
+      for (let i = next++; i < input.paths.length; i = next++) {
+        const page = await context.newPage()
+        pages[i] = await checkPage(
+          page,
+          origin,
+          input.paths[i]!,
+          input.out,
+          WAITS[input.quick ? 'quick' : 'full'],
+        )
+        await page.close()
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(AT_ONCE, input.paths.length) }, tab))
   } finally {
     await browser.close()
   }

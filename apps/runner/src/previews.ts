@@ -349,9 +349,10 @@ export class Previews {
       ? await this.options.viewUrl(seat.sessionId, port)
       : `http://localhost:${port}`
     const from = preview.written
+    const pages = paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/']
     const input = JSON.stringify({
       url,
-      paths: paths.length ? paths : preview.input.paths?.length ? preview.input.paths : ['/'],
+      paths: pages,
       out: join(seat.workDir, '.preview-checks'),
       quick: preview.checked === true,
     })
@@ -360,7 +361,7 @@ export class Previews {
       seat.runAs ? 'sudo' : process.execPath,
       seat.runAs ? ['-n', '-u', seat.runAs, process.execPath, ...args] : args,
       // An interrupted turn does not wait for the check.
-      { cwd: '/', timeout: 60_000 + paths.length * 120_000, maxBuffer: 1024 * 1024, signal },
+      { cwd: '/', timeout: 60_000 + pages.length * 120_000, maxBuffer: 1024 * 1024, signal },
     ).catch((error: { stderr?: string } & Error) => {
       throw new Error(
         `Could not check the preview: ${(error.stderr || error.message).trim().slice(0, 1000)}`,
