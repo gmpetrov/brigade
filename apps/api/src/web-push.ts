@@ -157,7 +157,9 @@ export async function generateVapidKeys() {
   return { publicKey: toBase64Url(publicKey), privateKey: jwk.d! }
 }
 
-export type PushResult = 'sent' | 'gone' | 'failed'
+/** What the push service said. Failed: why, as it said it (e.g. 403 BadJwtToken). */
+export type PushResult =
+  { status: 'sent' } | { status: 'gone' } | { status: 'failed'; detail: string }
 
 /**
  * Send one message. `topic` replaces a message with the same topic the push
@@ -170,23 +172,31 @@ export async function sendPush(
   message: unknown,
   options: { topic?: string; ttlSeconds?: number; urgency?: 'normal' | 'high' } = {},
 ): Promise<PushResult> {
-  const body = await encryptPayload(target, encoder.encode(JSON.stringify(message)))
-  const response = await fetch(target.endpoint, {
-    method: 'POST',
-    headers: {
-      authorization: await vapidAuthorization(vapid, target.endpoint),
-      'content-encoding': 'aes128gcm',
-      'content-type': 'application/octet-stream',
-      ttl: String(options.ttlSeconds ?? 24 * 60 * 60),
-      urgency: options.urgency ?? 'normal',
-      ...(options.topic && { topic: options.topic }),
-    },
-    body,
-  })
-  if (response.ok) return 'sent'
-  if (response.status === 404 || response.status === 410) return 'gone'
-  console.warn(
-    `push to ${new URL(target.endpoint).host} failed: ${response.status} ${await response.text().catch(() => '')}`,
-  )
-  return 'failed'
+  const host = URL.canParse(target.endpoint) ? new URL(target.endpoint).host : 'push service'
+  let response: Response
+  try {
+    const body = await encryptPayload(target, encoder.encode(JSON.stringify(message)))
+    response = await fetch(target.endpoint, {
+      method: 'POST',
+      headers: {
+        authorization: await vapidAuthorization(vapid, target.endpoint),
+        'content-encoding': 'aes128gcm',
+        'content-type': 'application/octet-stream',
+        ttl: String(options.ttlSeconds ?? 24 * 60 * 60),
+        urgency: options.urgency ?? 'normal',
+        ...(options.topic && { topic: options.topic }),
+      },
+      body,
+    })
+  } catch (error) {
+    const detail = `${host}: ${String(error)}`
+    console.warn(`push failed: ${detail}`)
+    return { status: 'failed', detail }
+  }
+  if (response.ok) return { status: 'sent' }
+  if (response.status === 404 || response.status === 410) return { status: 'gone' }
+  const detail =
+    `${host}: ${response.status} ${(await response.text().catch(() => '')).slice(0, 300)}`.trim()
+  console.warn(`push failed: ${detail}`)
+  return { status: 'failed', detail }
 }

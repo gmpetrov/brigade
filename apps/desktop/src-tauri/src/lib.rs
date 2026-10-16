@@ -33,9 +33,6 @@ struct Settings {
     dashboard_url: Option<String>,
     /// Open at login was turned on once, on the first launch; after that it is the person's choice.
     login_set: bool,
-    /// The setup steps missing when the person last closed the checklist.
-    #[serde(default)]
-    setup_dismissed: Vec<String>,
     /// Keep screen awake, off until the person turns it on.
     #[serde(default)]
     keep_awake: bool,
@@ -334,8 +331,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         update_ready: Mutex::new(false),
     });
     app.manage(items.clone());
-    app.manage(setup::Helper::new(helper.clone()));
-    app.manage(setup::Last::default());
+    let computer_use = setup::Helper::new(helper.clone());
+    computer_use.restart();
+    app.manage(computer_use);
     app.manage(Awake::default());
     if settings.keep_awake {
         keep_awake(app.handle(), true);
