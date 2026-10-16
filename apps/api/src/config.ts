@@ -28,6 +28,14 @@ const Env = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   /**
+   * A second Google OAuth client, for Google's MCP servers (BigQuery and the rest), which
+   * register no clients. Google wants agents on a client of their own: a web client with
+   * "Use this client for an AI-powered agent" on and the redirect URI
+   * {API_URL}/api/connections/oauth/mcp/callback.
+   */
+  GOOGLE_MCP_CLIENT_ID: z.string().optional(),
+  GOOGLE_MCP_CLIENT_SECRET: z.string().optional(),
+  /**
    * Gmail push, for "Email received" triggers: a Pub/Sub topic in the OAuth client's Google
    * Cloud project, e.g. projects/acme/topics/brigade-gmail, that
    * gmail-api-push@system.gserviceaccount.com may publish to, with a push subscription
