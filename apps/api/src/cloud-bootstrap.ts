@@ -183,21 +183,24 @@ OOMScoreAdjust=-500
 OOMPolicy=continue
 UNIT
 # Swap for frozen previews (the runner's previews.ts gives their memory back to it): twice the
-# memory, 8 to 16 GiB, where the disk has room for it and 10 GiB more. Made at each boot: a
-# resume brings back neither files at the root nor fstab lines, so it costs nothing at stop or
-# resume. Used before the image's own /swapfile.
+# memory, at most 16 GiB and a quarter of the disk's free space, which thread folders need (the
+# runner's folders.ts does not trim them for it). Made at each boot: a resume brings back neither
+# files at the root nor fstab lines, so it costs nothing at stop or resume. Used before the
+# image's own /swapfile.
 sudo tee /usr/local/sbin/brigade-swap >/dev/null <<'SWAP'
 #!/bin/sh
 set -eu
 F=/brigade.swap
 swapon --show=NAME --noheadings | grep -qx "$F" && exit 0
+HAD=$(stat -c %s "$F" 2>/dev/null || echo 0)
+# Free space in GiB, with the space of a swap file from an earlier boot, made again here.
+FREE=$(( $(df --output=avail -B1 / | tail -1 | tr -dc 0-9) / 1073741824 + HAD / 1073741824 ))
 GIB=$(awk '/^MemTotal:/ { print int($2 / 1048576 + 0.5) * 2 }' /proc/meminfo)
-[ "$GIB" -ge 8 ] || GIB=8
 [ "$GIB" -le 16 ] || GIB=16
-if [ "$(stat -c %s "$F" 2>/dev/null || echo 0)" -ne $((GIB * 1073741824)) ]; then
+[ "$GIB" -le $((FREE / 4)) ] || GIB=$((FREE / 4))
+[ "$GIB" -ge 2 ] || { rm -f "$F"; echo "no room for swap"; exit 0; }
+if [ "$HAD" -ne $((GIB * 1073741824)) ]; then
   rm -f "$F"
-  FREE=$(df --output=avail -B1G / | tail -1 | tr -dc 0-9)
-  [ "$FREE" -ge $((GIB + 10)) ] || { echo "no room for $GIB GiB of swap"; exit 0; }
   fallocate -l "$GIB"G "$F"
 fi
 chmod 600 "$F"

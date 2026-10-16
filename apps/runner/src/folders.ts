@@ -55,6 +55,12 @@ const REGENERABLE = new Set([
 const FULL = 0.8
 /** …until it is down to this. */
 const ENOUGH = 0.65
+/**
+ * The swap file the computer's setup makes for frozen previews (brigade-swap, in the API's
+ * cloud-bootstrap.ts): space set aside, not files. No reason to trim thread folders, so
+ * counted as free for that; counted as used once the disk is really full.
+ */
+const SWAP_FILE = '/brigade.swap'
 /** A thread active more recently than this keeps its folder, however full the disk. */
 const MIN_QUIET_MS = 60 * 60_000
 const CHECK_EVERY_MS = 5 * 60_000
@@ -393,9 +399,9 @@ export class Folders {
         )
       }
 
-      if ((await usage()) >= TRIM_AT)
+      if ((await usage(await swapSize())) >= TRIM_AT)
         for (const candidate of candidates) {
-          if ((await usage()) < TRIM_TO) break
+          if ((await usage(await swapSize())) < TRIM_TO) break
           if (now - candidate.active < TRIM_QUIET_MS) break
           if (!quiet(candidate)) continue
           // Nothing new since it was last trimmed.
@@ -586,11 +592,25 @@ export class Folders {
 }
 
 /** How full the disk holding teammates' homes is: the fuller of space and inodes. */
-async function usage() {
-  const s = await statfs('/home')
-  const space = s.blocks > 0 ? 1 - s.bavail / s.blocks : 0
+/** How full the disk with the thread folders is, by space or inodes; `free` more bytes counted as free. */
+async function usage(free = 0) {
+  return diskUsage(await statfs('/home'), free)
+}
+
+/** How full a disk is, 0 to 1, from its statfs, by space or inodes; `free` more bytes counted as free. */
+export function diskUsage(
+  s: { blocks: number; bavail: number; bsize: number; files: number; ffree: number },
+  free = 0,
+) {
+  const space = s.blocks > 0 ? Math.max(0, 1 - (s.bavail + free / s.bsize) / s.blocks) : 0
   const inodes = s.files > 0 ? 1 - s.ffree / s.files : 0
   return Math.max(space, inodes)
+}
+
+/** The bytes the swap file takes on the thread folders' disk; 0 without one, or on another disk. */
+async function swapSize() {
+  const [home, swap] = await Promise.all([stat('/home'), stat(SWAP_FILE)]).catch(() => [])
+  return home && swap && home.dev === swap.dev ? swap.blocks * 512 : 0
 }
 
 const exists = (dir: string, runAs?: string) =>

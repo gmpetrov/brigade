@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
-import { madeByOldPnpm, oldPnpmModules } from '../src/folders.js'
+import { diskUsage, madeByOldPnpm, oldPnpmModules } from '../src/folders.js'
 
 const wants = (packageManager?: string) => JSON.stringify({ name: 'app', packageManager })
 
@@ -154,4 +154,22 @@ test('a folder without old node_modules has nothing to remove', async (t) => {
   const workDir = await folder({ 'notes.md': 'hello' })
   t.after(() => rm(workDir, { recursive: true, force: true }))
   assert.deepEqual(await oldPnpmModules(workDir), [])
+})
+
+test('the swap file counts as free space for trimming, not otherwise', () => {
+  // A 69 GB disk, 4 KiB blocks: 36 GB used, 16 GiB of it the swap file.
+  const GiB = 1024 ** 3
+  const disk = {
+    bsize: 4096,
+    blocks: (69 * GiB) / 4096,
+    bavail: (33 * GiB) / 4096,
+    files: 100,
+    ffree: 90,
+  }
+  assert.equal(diskUsage(disk).toFixed(2), '0.52')
+  assert.equal(diskUsage(disk, 16 * GiB).toFixed(2), '0.29')
+  // Inodes still count in full.
+  assert.equal(diskUsage({ ...disk, ffree: 10 }, 16 * GiB), 0.9)
+  // Never below empty.
+  assert.equal(diskUsage({ ...disk, ffree: 100 }, 100 * GiB), 0)
 })
