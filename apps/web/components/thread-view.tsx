@@ -285,6 +285,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           break
         }
         case 'tool.started':
+          // The same call started twice (repeated by the harness): one card.
+          if (byKey.has(`t${e.teammateId ?? ''}:${e.toolCallId}`)) break
           add({
             kind: 'tool',
             key: `t${e.teammateId ?? ''}:${e.toolCallId}`,
@@ -1440,8 +1442,11 @@ export function ThreadItems({
         const replies = suggestedReplies(item)
         if (replies) {
           // Gone once anyone answered, with a click or their own words.
-          const answered = items.slice(i + 1).some((it) => it.kind === 'user')
-          if (answered || !onChoose) return null
+          // Only the latest set shows: a teammate that suggested twice offers the last one.
+          const later = items
+            .slice(i + 1)
+            .some((it) => it.kind === 'user' || (it.kind === 'tool' && suggestedReplies(it)))
+          if (later || !onChoose) return null
           return <SuggestedReplyButtons key={item.key} replies={replies} onSend={onChoose} />
         }
         const widget = shownWidget(item)
