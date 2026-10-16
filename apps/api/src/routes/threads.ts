@@ -63,6 +63,7 @@ import {
 } from '../work.js'
 import { reopenOnMessage } from '../tasks.js'
 import { deleteThread } from '../thread-delete.js'
+import { cancelWakeup } from '../wakeups.js'
 import { runLog } from '../timeline.js'
 import { historyContext, pageEvents, pageStart } from '../thread-history.js'
 import {
@@ -287,6 +288,11 @@ export const threads = new Hono<AppEnv>()
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
         task: { select: { id: true, title: true, completedAt: true } },
         project: { select: { id: true, name: true, icon: true, archivedAt: true } },
+        wakeups: {
+          where: { status: 'pending' },
+          select: { id: true, teammateId: true, note: true, wakeAt: true },
+          orderBy: { wakeAt: 'asc' },
+        },
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -1006,6 +1012,15 @@ export const threads = new Hono<AppEnv>()
     await db.threadPin.deleteMany({
       where: { memberId: scope.memberId, sessionId: c.req.param('id') },
     })
+    return c.json({ ok: true })
+  })
+
+  /** Cancel a wake-up a teammate set in it: who may change the thread. */
+  .delete('/:id/wakeups/:wakeupId', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    mayChange(scope, thread)
+    await cancelWakeup(db, scope, thread, c.req.param('wakeupId'))
     return c.json({ ok: true })
   })
 

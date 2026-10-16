@@ -17,6 +17,7 @@ import { broadcastSchedule } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
+import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
 
 /** A thread still `starting` after this is taken as lost (e.g. its queued prompt went with a restart). */
@@ -61,7 +62,7 @@ const listRows = (db: ScopedDb, where: { id?: string; projectId?: string | null 
 const upcoming = (cron: string, timezone: string) => nextRun(cron, timezone) ?? null
 
 /** When it says so in its own timezone, e.g. "12 Oct 2026, 07:00". */
-const localTime = (date: Date, timezone: string) =>
+export const localTime = (date: Date, timezone: string) =>
   new Intl.DateTimeFormat('en-GB', {
     timeZone: timezone,
     dateStyle: 'medium',
@@ -384,6 +385,16 @@ export function watchSchedules() {
   later()
 }
 
+/** A member's timezone, as far as Brigade knows: their latest schedule's, else UTC. */
+export async function memberTimezone(db: ScopedDb, memberId: string) {
+  const latest = await db.schedule.findFirst({
+    where: { ownerMemberId: memberId },
+    orderBy: { createdAt: 'desc' },
+    select: { timezone: true },
+  })
+  return latest?.timezone ?? 'UTC'
+}
+
 /** What a teammate is told about a schedule. */
 const brief = (s: {
   id: string
@@ -422,24 +433,19 @@ export async function handleScheduleCall(
   if (!session) return fail('Unknown thread')
   const teammate = await actingTeammate(db, session, call.teammateId)
   if (!teammate) return fail('That teammate is not in this thread')
+  const op: ScheduleOperation = call.operation
+  // Wake-ups come with the schedule tools; they check the thread themselves.
+  if (isWakeupOperation(op)) {
+    const output = await handleWakeup(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
-  const op: ScheduleOperation = call.operation
   const actor: Actor = { type: 'teammate', id: teammate.id }
 
   try {
     if (op.name === 'create') {
-      // Unset: the zone of the person's latest schedule, else UTC.
-      const timezone =
-        op.timezone ??
-        (
-          await db.schedule.findFirst({
-            where: { ownerMemberId: session.startedByMemberId },
-            orderBy: { createdAt: 'desc' },
-            select: { timezone: true },
-          })
-        )?.timezone ??
-        'UTC'
+      const timezone = op.timezone ?? (await memberTimezone(db, session.startedByMemberId))
       const problem = cronProblem(op.cron, timezone)
       if (problem) return fail(problem)
       const schedule = await createSchedule(

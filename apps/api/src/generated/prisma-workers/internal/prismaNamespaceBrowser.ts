@@ -67,6 +67,7 @@ export const ModelName = {
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
+  Wakeup: 'Wakeup',
   ThreadTeammate: 'ThreadTeammate',
   SessionEvent: 'SessionEvent',
   Account: 'Account',
@@ -373,6 +374,22 @@ export const ScheduleScalarFieldEnum = {
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
+
+
+export const WakeupScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  note: 'note',
+  wakeAt: 'wakeAt',
+  status: 'status',
+  firedAt: 'firedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type WakeupScalarFieldEnum = (typeof WakeupScalarFieldEnum)[keyof typeof WakeupScalarFieldEnum]
 
 
 export const ThreadTeammateScalarFieldEnum = {

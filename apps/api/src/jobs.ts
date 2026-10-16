@@ -10,6 +10,7 @@ import { watchNotifications } from './notifications.js'
 import { watchMerges } from './pull-requests.js'
 import { watchSchedules } from './schedules.js'
 import { watchSubscriptions } from './subscriptions/index.js'
+import { watchWakeups } from './wakeups.js'
 
 let started = false
 
@@ -20,6 +21,7 @@ export function startJobs() {
   watchMerges()
   watchNotifications()
   watchSchedules()
+  watchWakeups()
   watchIdle()
   offerRunnerUpdates()
   pingBrowsers()

@@ -176,6 +176,7 @@ model Workspace {
   pullRequestReviews  PullRequestReview[]
   tasks               Task[]
   schedules           Schedule[]
+  wakeups             Wakeup[]
   projects            Project[]
   projectRepositories ProjectRepository[]
   auditEntries        AuditEntry[]
@@ -299,6 +300,7 @@ model Teammate {
   tasks                 Task[]
   schedules             Schedule[]
   schedulesCreated      Schedule[]           @relation("ScheduleCreatedByTeammate")
+  wakeups               Wakeup[]
 
   @@index([workspaceId])
 }
@@ -416,6 +418,8 @@ model Session {
   /// The project the thread works in: its brief, memory, folder and repositories come with each turn.
   projectId            String?
   project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// Times a teammate set to be prompted here again.
+  wakeups              Wakeup[]
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -511,6 +515,36 @@ model Schedule {
   @@index([nextRunAt])
   @@index([workspaceId])
   @@index([teammateId])
+}
+
+enum WakeupStatus {
+  pending
+  fired
+  cancelled
+  /// Its computer stayed offline too long after it was due.
+  missed
+}
+
+/// A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
+/// The API's minute tick fires it into the same thread, with the conversation so far.
+model Wakeup {
+  id             String       @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  teammateId     String
+  teammate       Teammate     @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// What to check, in the teammate's words: the prompt it gets back.
+  note           String
+  wakeAt         DateTime
+  status         WakeupStatus @default(pending)
+  firedAt        DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, wakeAt])
+  @@index([sessionId, status])
 }
 
 model ThreadTeammate {

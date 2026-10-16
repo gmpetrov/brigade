@@ -451,7 +451,10 @@ const SCHEDULES =
   'each run prompts you in a fresh thread with no memory of this one, so the instructions must stand alone ' +
   '(inputs by name, steps, where the result goes). `list_schedules` and `update_schedule` show and change yours. ' +
   'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
-  'and open a ticket when you need a person.'
+  'and open a ticket when you need a person.\n\n' +
+  'To check on something later in this same thread (a deploy, a CI run, a reply), set a wake-up with ' +
+  '`set_wakeup` and end your turn, instead of waiting or polling: you are prompted again here with your note, ' +
+  'with this conversation.'
 
 /**
  * The teammate's own browser, which website logins need: ready, none on this

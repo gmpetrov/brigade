@@ -4,7 +4,7 @@
 // project and task), then the computer it runs on (its screen, taking control,
 // Preview, a shell, the run log) and what it made. Beside the list, what the teammate is
 // on now. Both end with the teammate: routines, settings.
-import { ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
+import { AlarmClock, ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -281,6 +281,68 @@ function useControl(thread: Thread, memberId: string, status: string, onChange: 
   }
 }
 
+/** "14:30" today, else with its day: "Fri 16 Oct, 09:00". */
+const wakeTime = (at: string) => {
+  const date = new Date(at)
+  const today = date.toDateString() === new Date().toDateString()
+  return date.toLocaleString(undefined, {
+    ...(today ? {} : { weekday: 'short', day: 'numeric', month: 'short' }),
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/** When the thread's teammates will be prompted here again, to check on something. */
+function Wakeups({ thread, onChange }: { thread: Thread; onChange: () => void }) {
+  const [busy, setBusy] = useState<string>()
+  const [error, setError] = useState<string>()
+  const cancel = async (id: string) => {
+    setBusy(id)
+    setError(undefined)
+    try {
+      await api(`/threads/${thread.id}/wakeups/${id}`, { method: 'DELETE' })
+      onChange()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  const names = new Map(thread.teammates.map((t) => [t.teammate.id, t.teammate.name]))
+  return (
+    <Section title="Wake-ups">
+      <ul className="flex flex-col">
+        {thread.wakeups.map((w) => (
+          <li key={w.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
+            <AlarmClock className="size-4 flex-none text-muted-foreground" aria-hidden />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium" title={w.note}>
+                {w.note}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {names.size > 1 && `${names.get(w.teammateId) ?? 'A teammate'} · `}
+                <time dateTime={w.wakeAt}>{wakeTime(w.wakeAt)}</time>
+              </span>
+            </span>
+            {thread.mayPrompt && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy === w.id}
+                onClick={() => void cancel(w.id)}
+              >
+                Cancel
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </Section>
+  )
+}
+
 /**
  * Beside an expanded thread, everything that is not the conversation: its
  * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
@@ -295,6 +357,7 @@ export function ComputerPanel({
   onOpenFile,
   details,
   actions,
+  onChange,
 }: {
   thread: Thread
   memberId: string
@@ -308,6 +371,8 @@ export function ComputerPanel({
   details: ReactNode
   /** Below the computer: Preview, the shell, the run log. */
   actions: ReactNode
+  /** Something here changed the thread (a wake-up cancelled): fetch it again. */
+  onChange: () => void
 }) {
   const teammate = thread.teammate
   const cloud = thread.computer.kind === 'cloud'
@@ -346,6 +411,8 @@ export function ComputerPanel({
       </Section>
 
       <Section title="Details">{details}</Section>
+
+      {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
 
       {outputs.length > 0 && (
         <Section title={`Outputs · ${outputs.length}`}>

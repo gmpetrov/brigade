@@ -101,6 +101,12 @@ export type Task = Prisma.TaskModel
  */
 export type Schedule = Prisma.ScheduleModel
 /**
+ * Model Wakeup
+ * A teammate asked to be prompted again in its thread at a time ("check CI in 10 minutes").
+ * The API's minute tick fires it into the same thread, with the conversation so far.
+ */
+export type Wakeup = Prisma.WakeupModel
+/**
  * Model ThreadTeammate
  * 
  */
