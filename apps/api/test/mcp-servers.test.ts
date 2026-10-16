@@ -240,6 +240,42 @@ test('the older HTTP+SSE transport: found, listed and called', async () => {
   assert.equal(await callMcpTool(plain, server, 'save', { text: 'hi' }), 'called save')
 })
 
+test('an answer sent with an error status still counts', async () => {
+  // As Google's: tools/list comes back as a 403 whose body is the JSON-RPC answer.
+  const origin = await serve((_req, res, body) => {
+    const message = JSON.parse(body)
+    if (message.id === undefined) return json(res, 202, {})
+    json(
+      res,
+      message.method === 'initialize' ? 200 : 403,
+      { jsonrpc: '2.0', id: message.id, result: answer(message) },
+      { 'www-authenticate': 'Bearer error="insufficient_scope"' },
+    )
+  })
+  const server = { url: `${origin}/mcp`, transport: 'streamable' as const }
+  const plain = (url: string, init?: RequestInit) => fetch(url, init)
+  assert.deepEqual(
+    (await listMcpTools(plain, server)).map((t) => t.name),
+    ['search', 'save'],
+  )
+})
+
+test('a refusal with no answer says why', async () => {
+  const origin = await serve((_req, res) =>
+    json(
+      res,
+      403,
+      { error: 'denied' },
+      { 'www-authenticate': 'Bearer error="insufficient_scope"' },
+    ),
+  )
+  const plain = (url: string, init?: RequestInit) => fetch(url, init)
+  await assert.rejects(
+    listMcpTools(plain, { url: `${origin}/mcp`, transport: 'streamable' }),
+    /403 \(error="insufficient_scope"\)/,
+  )
+})
+
 test('a page that is not an MCP server is not taken for one', async () => {
   const origin = await serve((_req, res) => {
     res.writeHead(404, { 'content-type': 'text/html' })
