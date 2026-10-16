@@ -55,13 +55,8 @@ import { cn } from '@/lib/utils'
 const quietSelect =
   'h-8 border-transparent bg-transparent shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent/50'
 
-/** What a teammate is doing, as a dot beside it: working, or waiting on a person. */
+/** What a teammate is doing: working, or waiting on a person. */
 export type TeammateActivity = 'busy' | 'waiting'
-
-const ACTIVITY: Record<TeammateActivity, { dot: string; label: string }> = {
-  busy: { dot: 'bg-primary', label: 'Working' },
-  waiting: { dot: 'bg-warning', label: 'Needs you' },
-}
 
 type RecentThreadActions = {
   onOpen: (teammateId: string, threadId: string) => void
@@ -116,18 +111,6 @@ function RecentThreads({
   )
 }
 
-function ActivityDot({ activity }: { activity?: TeammateActivity }) {
-  if (!activity) return null
-  return (
-    <span
-      role="img"
-      aria-label={ACTIVITY[activity].label}
-      title={ACTIVITY[activity].label}
-      className={cn('size-2 shrink-0 rounded-full', ACTIVITY[activity].dot)}
-    />
-  )
-}
-
 /**
  * Pick a teammate: who a new thread goes to (the lead; others join when the message
  * @mentions them), or whose threads the threads panel lists.
@@ -137,7 +120,6 @@ export function TeammatePicker({
   value,
   onChange,
   heading = 'Send to',
-  activity,
   recent,
   compact = false,
   numbered = false,
@@ -148,8 +130,6 @@ export function TeammatePicker({
   onChange: (id: string) => void
   /** Above the list, and what the button says it changes. */
   heading?: string
-  /** A dot beside each teammate that is working or waiting. */
-  activity?: Record<string, TeammateActivity>
   /**
    * Each teammate opens its latest threads beside it, to go straight to one (or all of
    * them, or a new one) instead of only picking the teammate.
@@ -175,7 +155,6 @@ export function TeammatePicker({
         >
           <TeammateAvatar teammate={value} className="size-5" />
           {!compact && <span className="max-w-40 truncate">{value.name}</span>}
-          <ActivityDot activity={activity?.[value.id]} />
           <ChevronDown className="opacity-60" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -207,7 +186,6 @@ export function TeammatePicker({
                   {teammateModelLabel(t)}
                 </span>
               </span>
-              <ActivityDot activity={activity?.[t.id]} />
               {t.id === value.id && <Check className="text-primary" aria-hidden />}
               {numbered && !recent && i < 9 && (
                 <DropdownMenuShortcut className="ml-0 w-3 text-center">
@@ -321,8 +299,6 @@ export function NewThread({
   picker?: {
     teammates: Teammate[]
     onChange: (id: string) => void
-    /** A dot beside each teammate that is working or waiting. */
-    activity?: Record<string, TeammateActivity>
     /** 1–9 pick a teammate while its menu is open. */
     numbered?: boolean
   }
@@ -472,7 +448,6 @@ export function NewThread({
       teammates={picker.teammates}
       value={teammate}
       onChange={picker.onChange}
-      activity={picker.activity}
       numbered={picker.numbered}
       onPicked={layout === 'dialog' ? focusMessage : undefined}
     />
