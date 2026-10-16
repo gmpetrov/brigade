@@ -3,8 +3,6 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
-  ChevronRight,
-  Ellipsis,
   GitPullRequest,
   House,
   Inbox,
@@ -101,7 +99,7 @@ import {
 } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
-import { useIsMac } from '@/lib/platform'
+import { isMac, useIsMac } from '@/lib/platform'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
@@ -135,8 +133,8 @@ const WORK_NAV = [
   { href: '/app/automations', label: 'Automations', icon: CalendarClock },
 ]
 
-/** The setup every project shares. */
-const SETTINGS_NAV = [
+/** The setup every project shares: the Settings page's sections, its first one first. */
+export const SETTINGS_NAV = [
   { href: '/app/connections', label: 'Apps', icon: Plug },
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
@@ -185,10 +183,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const mac = useIsMac()
   const { theme = 'system', setTheme } = useTheme()
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
-  // Open pull requests and those waiting on a person, refreshed as the member moves around.
-  const pullsWaiting = useApi<{ count: number; open: number }>('/pulls/attention')
-  const reloadPulls = pullsWaiting.reload
-  // Tickets waiting on this member, the same way.
+  // Tickets waiting on this member, refreshed as the member moves around.
   const tickets = useApi<Ticket[]>('/tickets')
   const reloadTickets = tickets.reload
   // Tasks that need a person, the same way.
@@ -205,14 +200,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (counted.current === pathname) return
     counted.current = pathname
-    void reloadPulls()
     void reloadTickets()
     void reloadTasks()
-  }, [pathname, reloadPulls, reloadTickets, reloadTasks])
+  }, [pathname, reloadTickets, reloadTasks])
   // And live: a task's column follows its thread's status and open tickets.
   useLive((message) => {
     if (message.type === 'projects.updated') void reloadProjects()
-    if (message.type === 'pulls.updated') void reloadPulls()
     if (message.type === 'tickets.updated') void reloadTickets()
     if (
       message.type === 'task.updated' ||
@@ -241,31 +234,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     )
   }, [me.data])
 
+  useSettingsShortcut()
+
   if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
-  // A badge counts what waits on the member; quiet ones (open pull requests) just count.
-  const pullsWaitingCount = pullsWaiting.data?.count ?? 0
-  const tasksNeedingYou = tasks.data?.filter((t) => t.column === 'needs_you').length ?? 0
-  const tasksDoing = tasks.data?.filter((t) => t.column === 'doing').length ?? 0
-  const badges: Badges = {
-    '/app/tickets': {
-      count: tickets.data?.filter((t) => waitsOn(t, data)).length,
-      label: 'waiting on you',
-    },
-    '/app/pulls': {
-      count: pullsWaiting.data?.open,
-      label: pullsWaitingCount > 0 ? `open, ${pullsWaitingCount} waiting on you` : 'open',
-      quiet: pullsWaitingCount === 0,
-    },
-    '/app/tasks': {
-      count: tasksNeedingYou + tasksDoing,
-      label: `active: ${tasksNeedingYou} need you, ${tasksDoing} in progress`,
-      quiet: tasksNeedingYou === 0,
-    },
-  }
-
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
   for (const t of tickets.data ?? [])
@@ -412,16 +386,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </SidebarContent>
 
               <SidebarFooter className="gap-3">
-                <SidebarMenu>
-                  <MoreMenu badges={badges} />
-                </SidebarMenu>
                 {/* The member and their menu, and the way to connect apps; folded, a column. */}
                 <div className="flex items-center gap-2 px-2 pb-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:p-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label={`${data.user.name}: appearance, notifications, help and sign out`}
+                        aria-label={`${data.user.name}: settings, appearance, notifications, help and sign out`}
                         className="focus-visible:ring-sidebar-ring shrink-0 rounded-full outline-none focus-visible:ring-2"
                       >
                         <Avatar className="size-9 group-data-[collapsible=icon]:size-8">
@@ -445,6 +416,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           {organization?.name}
                         </span>
                       </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/app/settings">
+                          <Settings /> Settings
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {mac ? '⌘,' : 'Ctrl+,'}
+                          </span>
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
                         Appearance
@@ -531,8 +511,6 @@ const TICKET_ASKS: Partial<Record<Ticket['type'], string>> = {
   usage_limit: 'usage limit',
 }
 
-type Badges = Record<string, { count?: number; label: string; quiet?: boolean }>
-
 /** Decoration for Connect apps: letter tiles until the services' own marks are added. */
 const APP_TILES = [
   { letter: 'G', className: 'text-chart-4' },
@@ -584,77 +562,21 @@ function NewThreadRailItem() {
   )
 }
 
-/**
- * The pages that are not threads or Home: the work (tickets, tasks…) and the workspace's
- * settings, in one menu above the member.
- */
-function MoreMenu({ badges }: { badges: Badges }) {
-  const pathname = usePathname()
-  const { isMobile, state } = useSidebar()
-  const folded = state === 'collapsed' && !isMobile
-  const active = NAV.some(({ href }) => href !== '/app' && pathname.startsWith(href))
-  const work = WORK_NAV.filter(({ href }) => href !== '/app')
-  const waiting = work.some(({ href }) => badges[href]?.count && !badges[href]?.quiet)
-  const item = ({ href, label, icon: Icon }: (typeof NAV)[number]) => {
-    const badge = badges[href]
-    return (
-      <DropdownMenuItem key={href} asChild>
-        <Link href={href}>
-          <Icon />
-          <span className="flex-1">{label}</span>
-          {!!badge?.count && (
-            <span
-              aria-label={`${badge.count} ${badge.label}`}
-              className={cn(
-                'flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1.5 text-[0.6875rem] leading-none font-semibold',
-                badge.quiet
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'bg-primary text-primary-foreground',
-              )}
-            >
-              {badge.count > 99 ? '99+' : badge.count}
-            </span>
-          )}
-        </Link>
-      </DropdownMenuItem>
-    )
-  }
-  return (
-    <SidebarMenuItem>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuButton
-            tooltip="More"
-            isActive={active}
-            className="text-muted-foreground data-[state=open]:bg-sidebar-accent relative"
-          >
-            <Ellipsis />
-            {/* Folded, what waits is a dot on the icon. */}
-            {waiting && (
-              <span
-                aria-hidden
-                className="bg-primary ring-sidebar absolute top-1 right-1 hidden size-2 rounded-full ring-2 group-data-[collapsible=icon]:block"
-              />
-            )}
-            <span>More</span>
-            <ChevronRight className="ml-auto group-data-[collapsible=icon]:hidden" />
-          </SidebarMenuButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          side={folded ? 'right' : 'top'}
-          align={folded ? 'end' : 'start'}
-          className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-        >
-          {work.map(item)}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-            Workspace settings
-          </DropdownMenuLabel>
-          {SETTINGS_NAV.map(item)}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
-  )
+/** ⌘, (Ctrl+, elsewhere) opens Settings, as in most apps; not over a dialog. */
+function useSettingsShortcut() {
+  const router = useRouter()
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.repeat) return
+      const command = isMac() ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+      if (!command || e.shiftKey || e.altKey || e.key !== ',') return
+      if (document.querySelector('[role=dialog][data-state=open]')) return
+      e.preventDefault()
+      router.push('/app/settings')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [router])
 }
 
 /** Folds the sidebar to its icons and back (⌘B); on a phone, opens it. */

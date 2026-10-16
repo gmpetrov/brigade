@@ -6,7 +6,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react'
-import { NAV, SidebarToggle, useDashboard } from '@/components/dashboard'
+import { NAV, SETTINGS_NAV, SidebarToggle, useDashboard } from '@/components/dashboard'
 import { PROJECT_TABS } from '@/components/project-shell'
 import { ThreadsButton } from '@/components/thread-panel'
 
@@ -50,6 +50,8 @@ function useCrumbs(): Crumb[] {
     ]
   if (section === 'threads' && rest[0] === 'log')
     return [{ label: 'Thread', href: `/app/threads/${id}` }, { label: 'Run log' }]
+  if (nav && SETTINGS_NAV.includes(nav))
+    return [{ label: 'Settings', href: '/app/settings' }, { label: nav.label }]
   return [{ label: nav?.label ?? section }]
 }
 
