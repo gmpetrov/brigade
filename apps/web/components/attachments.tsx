@@ -9,7 +9,19 @@ import {
   type AttachmentInfo,
   type MessageAttachment,
 } from '@brigade/contracts'
-import { Ban, CircleDot, FileText, Paperclip, Play, Plus, X } from 'lucide-react'
+import {
+  ArrowRightLeft,
+  Ban,
+  Check,
+  CircleDot,
+  Cloud,
+  FileText,
+  Laptop,
+  Paperclip,
+  Play,
+  Plus,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
@@ -18,6 +30,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { api, attachmentUrl, uploadAttachment } from '@/lib/api'
@@ -213,17 +229,42 @@ export function AttachButton({
   )
 }
 
+/** A computer a thread can continue on, for the + menu's Continue on…. */
+export type MoveTarget = {
+  id: string
+  name: string
+  cloud: boolean
+  /** Where the thread runs now: shown checked, not to pick. */
+  current?: boolean
+  /** Why it cannot be picked (no account there), if so. */
+  unavailable?: string
+  /** Offline: picked, the message goes once it is back. */
+  offline?: boolean
+}
+
+/** A computer's icon: a laptop for a member's machine, a cloud for the cloud computer. */
+export function ComputerIcon({ cloud, className }: { cloud: boolean; className?: string }) {
+  return cloud ? (
+    <Cloud aria-hidden className={className} />
+  ) : (
+    <Laptop aria-hidden className={className} />
+  )
+}
+
 /**
- * The composer's +, like Claude's: attach files, or teach the teammate a task by
- * recording it on its computer. `teach` is unset where teaching is not offered
- * (phones), and a reason where it is not possible yet.
+ * The composer's +, like Claude's: attach files, teach the teammate a task by
+ * recording it on its computer, or continue the thread on another computer.
+ * `teach` is unset where teaching is not offered (phones), and a reason where
+ * it is not possible yet; `move` is unset where the thread cannot move.
  */
 export function ComposerMenu({
   onFiles,
   teach,
+  move,
 }: {
   onFiles: (files: File[]) => void
-  teach: (() => void) | string
+  teach?: (() => void) | string
+  move?: { targets: MoveTarget[]; onPick: (target: MoveTarget) => void }
 }) {
   const input = useRef<HTMLInputElement>(null)
   return (
@@ -246,19 +287,53 @@ export function ComposerMenu({
             <Paperclip aria-hidden />
             Attach files
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={typeof teach === 'string'}
-            onSelect={() => typeof teach === 'function' && teach()}
-            className="items-start"
-          >
-            <CircleDot aria-hidden className="mt-0.5 text-destructive-text" />
-            <span className="flex flex-col">
-              Teach a task
-              {typeof teach === 'string' && (
-                <span className="text-xs text-muted-foreground">{teach}</span>
-              )}
-            </span>
-          </DropdownMenuItem>
+          {teach !== undefined && (
+            <DropdownMenuItem
+              disabled={typeof teach === 'string'}
+              onSelect={() => typeof teach === 'function' && teach()}
+              className="items-start"
+            >
+              <CircleDot aria-hidden className="mt-0.5 text-destructive-text" />
+              <span className="flex flex-col">
+                Teach a task
+                {typeof teach === 'string' && (
+                  <span className="text-xs text-muted-foreground">{teach}</span>
+                )}
+              </span>
+            </DropdownMenuItem>
+          )}
+          {move && move.targets.length > 1 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ArrowRightLeft aria-hidden />
+                  Continue on…
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="min-w-56">
+                  {move.targets.map((target) => (
+                    <DropdownMenuItem
+                      key={target.id}
+                      disabled={target.current || !!target.unavailable}
+                      onSelect={() => move.onPick(target)}
+                    >
+                      <ComputerIcon cloud={target.cloud} />
+                      <span className="min-w-0 flex-1 truncate">{target.name}</span>
+                      {target.current ? (
+                        <Check aria-label="Runs here now" className="ml-auto" />
+                      ) : (
+                        (target.unavailable || target.offline) && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {target.unavailable ?? 'Offline'}
+                          </span>
+                        )
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <input

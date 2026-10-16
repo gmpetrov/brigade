@@ -36,11 +36,12 @@ import {
   type RefObject,
 } from 'react'
 import {
-  AttachButton,
   ComposerMenu,
+  ComputerIcon,
   UploadList,
   useFileDrop,
   useUploads,
+  type MoveTarget,
 } from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
@@ -77,11 +78,13 @@ import {
   preload,
   teammateModelLabel,
   useApi,
+  type Account,
   type ComputersResponse,
   type ProjectSummary,
   type Teammate,
   type Thread,
 } from '@/lib/api'
+import { useLive } from '@/lib/use-live'
 import { preloadThreadEvents, useThreadEvents } from '@/lib/use-thread-events'
 import { cn } from '@/lib/utils'
 
@@ -143,6 +146,13 @@ export function ThreadConversation({
   const { me, projects } = useDashboard()
   const thread = useApi<Thread>(`/threads/${id}`)
   const computers = useApi<ComputersResponse>('/computers')
+  const accounts = useApi<Account[]>('/accounts')
+  // The thread moved, or a computer came or went: where it runs, and where it could, change.
+  useLive((message) => {
+    if (message.type === 'thread.updated' && message.sessionId === id && message.moved)
+      void thread.reload()
+    if (message.type === 'computer.updated') void computers.reload()
+  })
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
@@ -168,6 +178,12 @@ export function ThreadConversation({
   // The message the next one replies to, quoted above the composer.
   const [replyTo, setReplyTo] = useState<ReplyTo>()
   useEffect(() => setReplyTo(undefined), [id])
+  // The computer the next message moves the thread to, as a chip above it (+ › Continue on…).
+  const [moveTo, setMoveTo] = useState<MoveTarget>()
+  useEffect(() => setMoveTo(undefined), [id])
+  // Its machine went offline: Wait keeps the card offering the cloud computer away.
+  const [waitForMachine, setWaitForMachine] = useState(false)
+  useEffect(() => setWaitForMachine(false), [id])
   const files = useUploads()
   const drop = useFileDrop(files.add)
   const root = useRef<HTMLDivElement>(null)
@@ -438,6 +454,55 @@ export function ThreadConversation({
   )
 
   const mine = !!me.memberId && t.controlledByMemberId === me.memberId
+
+  // Where the thread can continue: its starter moves it, it runs on their accounts. The cloud
+  // computer or a machine of theirs, with an account for each of its teammates.
+  const harnesses = new Set(people.map((p) => p.harness))
+  const hasAccounts = (computerId: string) =>
+    [...harnesses].every((harness) =>
+      (accounts.data ?? []).some(
+        (a) =>
+          a.computer.id === computerId &&
+          a.provider === harness &&
+          (a.status === 'ready' || a.status === 'unverified'),
+      ),
+    )
+  const movable = t.startedByMemberId === me.memberId && !t.controlledByMemberId && !t.move
+  const moveTargets: MoveTarget[] = movable
+    ? (computers.data?.computers ?? [])
+        .filter((c) => c.status !== 'destroyed')
+        .map((c) => ({
+          id: c.id,
+          name: computerName(c),
+          cloud: c.kind === 'cloud',
+          current: c.id === t.computer.id,
+          ...(c.id !== t.computer.id && !hasAccounts(c.id) ? { unavailable: 'No account' } : {}),
+          ...(c.kind !== 'cloud' && !c.online ? { offline: true } : {}),
+        }))
+        .sort((a, b) => Number(!!b.current) - Number(!!a.current))
+    : []
+  const machineOnline = computers.data?.computers.find((c) => c.id === t.computer.id)?.online
+  // Its machine is offline: offer the cloud computer, where its teammates can pick up.
+  const cloudTarget = moveTargets.find((c) => c.cloud && !c.current && !c.unavailable)
+  const offerCloud =
+    t.computer.kind !== 'cloud' && machineOnline === false && !!cloudTarget && !waitForMachine
+  const movingTo =
+    t.move &&
+    computerName(
+      computers.data?.computers.find((c) => c.id === t.move!.to) ?? {
+        kind: 'member_machine',
+        name: 'the other computer',
+      },
+    )
+  // A move with a message shows on the message itself.
+  const moveStatus =
+    t.move && !pendingOut.some((o) => o.state === 'moving')
+      ? t.move.phase === 'waiting'
+        ? `Moves to ${movingTo} once this turn ends`
+        : t.move.phase === 'arriving'
+          ? `Moves to ${movingTo} once it is online`
+          : `Moving to ${movingTo}…`
+      : undefined
   // The computer's own page, the thread docked beside it.
   const showComputer = (shell = false) => openComputer(t.teammate.id, { threadId: id, shell })
   async function openShell() {
@@ -460,25 +525,42 @@ export function ThreadConversation({
     }
   }
 
-  const ready = (text.trim() || files.ids.length > 0) && !files.busy && !files.failed
+  const ready = (text.trim() || files.ids.length > 0 || moveTo) && !files.busy && !files.failed
 
-  /** Send the composer's message; it shows above the composer until the thread shows it. Queued while a turn runs. */
+  /**
+   * Send the composer's message; it shows above the composer until the thread shows it.
+   * Queued while a turn runs. With a computer to continue on, the thread moves there
+   * first and the message goes with it; with nothing written, it just moves.
+   */
   async function send(e?: React.FormEvent) {
     e?.preventDefault()
     if (!ready || current === 'waiting') return
     const sending = text.trim()
     const replying = replyTo
+    const moving = moveTo
+    if (moving && !sending && files.ids.length === 0) {
+      setMoveTo(undefined)
+      return moveThread(moving.id).catch(() => setMoveTo((current) => current ?? moving))
+    }
     setText('')
     setReplyTo(undefined)
+    setMoveTo(undefined)
     try {
-      await deliver(sending, files.ids, undefined, replying)
+      await deliver(sending, files.ids, undefined, replying, moving)
       files.clear()
     } catch (err) {
       // Not sent: back in the composer, as it was.
       setText((current) => current || sending)
       setReplyTo((current) => current ?? replying)
+      setMoveTo((current) => current ?? moving)
       setError((err as Error).message)
     }
+  }
+
+  /** Continue the thread on another computer without a message: its teammate picks up where it was. */
+  async function moveThread(computerId: string) {
+    await call('/move', { computerId })
+    await thread.reload()
   }
 
   /** Send a message to the thread: the composer's, or a choice someone clicked. Throws when it is not sent. */
@@ -487,6 +569,7 @@ export function ThreadConversation({
     attachmentIds: string[] = [],
     pick?: string,
     replyTo?: ReplyTo,
+    moveTo?: MoveTarget,
   ) {
     const message: Outgoing = {
       messageId: newMessageId(),
@@ -494,6 +577,7 @@ export function ThreadConversation({
       files: attachmentIds.length,
       afterSeq: events.at(-1)?.seq ?? 0,
       state: 'sending',
+      ...(moveTo ? { movingTo: moveTo.name } : {}),
     }
     const update = (state: Outgoing['state']) =>
       setOutgoing((list) =>
@@ -504,17 +588,27 @@ export function ThreadConversation({
     following.current = true
     try {
       const sent = await api<{ delivery?: string }>(`/threads/${id}/messages`, {
-        body: { text: message.text, attachmentIds, messageId: message.messageId, pick, replyTo },
+        body: {
+          text: message.text,
+          attachmentIds,
+          messageId: message.messageId,
+          pick,
+          replyTo,
+          ...(moveTo ? { moveTo: moveTo.id } : {}),
+        },
       })
       setError(undefined)
       const starting = sent.delivery === 'starting'
-      update(starting ? 'starting' : 'sent')
-      // The computer says it got a message within seconds, or a few minutes when it starts first.
+      const moving = sent.delivery === 'moving'
+      update(moving ? 'moving' : starting ? 'starting' : 'sent')
+      if (moving) void thread.reload()
+      // The computer says it got a message within seconds, or a few minutes when it starts
+      // first. A move waits for the turn, then for the files to be handed over: longer.
       setTimeout(
         () => {
           if (pendingRef.current.some((o) => o.messageId === message.messageId)) update('failed')
         },
-        starting ? 10 * 60_000 : 20_000,
+        moving ? 30 * 60_000 : starting ? 10 * 60_000 : 20_000,
       )
     } catch (err) {
       setOutgoing((list) => list.filter((o) => o.messageId !== message.messageId))
@@ -549,7 +643,6 @@ export function ThreadConversation({
   // computer (with Preview, the shell and the run log), its details, then what it made.
   // One row per fact, an icon for its kind: who is in it, its project, its task, who started it.
   const fact = 'flex min-w-0 items-center gap-2.5'
-  const computerOnline = computers.data?.computers.find((c) => c.id === t.computer.id)?.online
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
     <div className="flex flex-col gap-2 text-sm">
@@ -567,16 +660,16 @@ export function ThreadConversation({
         <span className="min-w-0 truncate" title={computerName(t.computer)}>
           {computerName(t.computer)}
         </span>
-        {t.computer.kind !== 'cloud' && computerOnline !== undefined && (
+        {t.computer.kind !== 'cloud' && machineOnline !== undefined && (
           <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
             <span
               aria-hidden
               className={cn(
                 'size-1.5 rounded-full',
-                computerOnline ? 'bg-success' : 'bg-muted-foreground/50',
+                machineOnline ? 'bg-success' : 'bg-muted-foreground/50',
               )}
             />
-            {computerOnline ? 'online' : 'offline'}
+            {machineOnline ? 'online' : 'offline'}
           </span>
         )}
       </div>
@@ -877,6 +970,44 @@ export function ThreadConversation({
                   setOutgoing((list) => list.filter((o) => o.messageId !== messageId))
                 }
               />
+              {offerCloud && (
+                <Card className="mb-2 gap-2 rounded-xl p-3 text-sm shadow-sm">
+                  <p className="flex items-center gap-2 font-medium">
+                    <span
+                      aria-hidden
+                      className="size-2 shrink-0 rounded-full bg-muted-foreground/50"
+                    />
+                    {computerName(t.computer)} is offline
+                  </p>
+                  <p className="text-muted-foreground">
+                    {answering.name} can carry on on the cloud computer, from what is on GitHub.
+                    Files only on {computerName(t.computer)} stay there.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void moveThread(cloudTarget!.id).catch(() => undefined)}
+                    >
+                      Continue on the cloud computer
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setWaitForMachine(true)}
+                    >
+                      Wait
+                    </Button>
+                  </div>
+                </Card>
+              )}
+              {moveStatus && (
+                <p className="mb-2 flex items-center gap-2 px-2 text-sm text-muted-foreground">
+                  <span aria-hidden className="size-2 shrink-0 rounded-full bg-primary" />
+                  {moveStatus}
+                </p>
+              )}
               <form onSubmit={(e) => void send(e).catch(() => undefined)}>
                 {/* One line, like Claude's: attach, the message, then stop while the teammate
                     works and the send button once there is something to send. Files drop
@@ -914,21 +1045,56 @@ export function ThreadConversation({
                       </Button>
                     </div>
                   )}
+                  {moveTo && (
+                    <div className="flex items-center gap-1 pl-1">
+                      <span className="flex min-w-0 items-center gap-1.5 rounded-full border border-primary/40 py-0.5 pr-1 pl-2.5 text-sm text-primary">
+                        <ComputerIcon cloud={moveTo.cloud} className="size-3.5 shrink-0" />
+                        <span className="min-w-0 truncate">
+                          Continue on {moveTo.name}
+                          {moveTo.offline && (
+                            <span className="text-muted-foreground"> · offline</span>
+                          )}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="shrink-0 rounded-full"
+                          onClick={() => setMoveTo(undefined)}
+                          aria-label={`Don’t move to ${moveTo.name}`}
+                          title="Stay on this computer"
+                        >
+                          <X aria-hidden />
+                        </Button>
+                      </span>
+                    </div>
+                  )}
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
-                      {phone ? (
-                        <AttachButton onFiles={files.add} />
-                      ) : (
-                        <ComposerMenu
-                          onFiles={files.add}
-                          teach={
-                            t.computer.kind === 'cloud'
-                              ? () => setTeaching(true)
-                              : 'Not yet on threads that run on a member’s machine'
-                          }
-                        />
-                      )}
+                      {/* The + on phones too: teaching needs a desktop, so not there. */}
+                      <ComposerMenu
+                        onFiles={files.add}
+                        {...(phone
+                          ? {}
+                          : {
+                              teach:
+                                t.computer.kind === 'cloud'
+                                  ? () => setTeaching(true)
+                                  : 'Not yet on threads that run on a member’s machine',
+                            })}
+                        {...(moveTargets.length > 1
+                          ? {
+                              move: {
+                                targets: moveTargets,
+                                onPick: (target: MoveTarget) => {
+                                  setMoveTo(target)
+                                  focusComposer()
+                                },
+                              },
+                            }
+                          : {})}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <Composer
@@ -967,13 +1133,27 @@ export function ThreadConversation({
                         <CircleStop aria-hidden />
                       </Button>
                     )}
-                    {(text.trim() || files.uploads.length > 0) && (
+                    {(text.trim() || files.uploads.length > 0 || moveTo) && (
                       <Button
                         size="icon-sm"
                         className="mb-1 rounded-full"
                         disabled={!ready || current === 'waiting'}
-                        aria-label={busy ? 'Queue for after this turn' : 'Send'}
-                        title={busy ? 'Queue for after this turn (↵)' : 'Send (↵) · New line (⇧↵)'}
+                        aria-label={
+                          moveTo
+                            ? `Continue on ${moveTo.name}`
+                            : busy
+                              ? 'Queue for after this turn'
+                              : 'Send'
+                        }
+                        title={
+                          moveTo
+                            ? busy
+                              ? `Continue on ${moveTo.name} after this turn (↵)`
+                              : `Continue on ${moveTo.name} (↵)`
+                            : busy
+                              ? 'Queue for after this turn (↵)'
+                              : 'Send (↵) · New line (⇧↵)'
+                        }
                       >
                         <CornerDownLeft aria-hidden />
                       </Button>

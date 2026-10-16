@@ -567,14 +567,20 @@ export const threads = new Hono<AppEnv>()
     if (joined.length > 0) await joinThread(db, thread.id, joined)
     // Continue on another computer: the message goes with the thread once it is there.
     if (moveTo) {
-      await requestMove(db, scope, joined.length > 0 ? await loadThread(db, thread.id) : thread, moveTo, {
-        text,
-        memberId: scope.memberId,
-        ...(mentioned.length ? { teammateIds: mentioned } : {}),
-        attachmentIds,
-        ...(messageId ? { messageId } : {}),
-        ...(replyTo ? { replyTo } : {}),
-      })
+      await requestMove(
+        db,
+        scope,
+        joined.length > 0 ? await loadThread(db, thread.id) : thread,
+        moveTo,
+        {
+          text,
+          memberId: scope.memberId,
+          ...(mentioned.length ? { teammateIds: mentioned } : {}),
+          attachmentIds,
+          ...(messageId ? { messageId } : {}),
+          ...(replyTo ? { replyTo } : {}),
+        },
+      )
       if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
       if (thread.archivedAt)
         await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })

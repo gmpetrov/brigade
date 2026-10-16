@@ -359,7 +359,10 @@ async function start() {
         // Turns and messages a restart cut off go on, in order; what the API could not say how to continue is closed.
         const last = (sessionId: string) => outbox.lastUnacknowledged(sessionId)
         const unacknowledged = (sessionId: string) => outbox.unacknowledgedFor(sessionId)
-        for (const spec of [...(message.resume ?? []), ...(message.requeue ?? []).map((p) => p.thread)])
+        for (const spec of [
+          ...(message.resume ?? []),
+          ...(message.requeue ?? []).map((p) => p.thread),
+        ])
           arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
         threads.requeueLost(message.requeue ?? [], unacknowledged)
@@ -400,7 +403,11 @@ async function start() {
           .then(async (result) => {
             // Its last events reach the API before it moves: none are numbered twice.
             for (let i = 0; i < 60 && !outbox.settled(message.sessionId); i++) await sleep(500)
-            connection.send({ type: 'thread.release.result', requestId: message.requestId, ...result })
+            connection.send({
+              type: 'thread.release.result',
+              requestId: message.requestId,
+              ...result,
+            })
           })
       case 'thread.takeover':
         return arriveFolder(message.thread)
