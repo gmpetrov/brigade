@@ -292,6 +292,7 @@ export function NewThread({
   typeToFocus,
   projectId: initialProject,
   layout = 'card',
+  fill,
 }: {
   /** The project the thread starts in unless changed, e.g. on a project page. */
   projectId?: string
@@ -312,6 +313,8 @@ export function NewThread({
   typeToFocus?: boolean
   /** In a card (a page, the threads panel), or the whole of a dialog. */
   layout?: 'card' | 'dialog'
+  /** The dialog is a whole window (Brigade.app's capture): the message grows to fill it. */
+  fill?: boolean
 }) {
   const router = useRouter()
   const { me, projects } = useDashboard()
@@ -431,6 +434,7 @@ export function NewThread({
   const composer = (
     <Composer
       bare
+      fill={fill}
       rows={rows}
       value={text}
       onChange={setText}
@@ -560,6 +564,7 @@ export function NewThread({
         data-composer-frame
         className={cn(
           'relative flex flex-col rounded-[inherit]',
+          fill && 'min-h-0 flex-1',
           drop.dragging && 'ring-[3px] ring-primary/30 ring-inset',
         )}
         {...drop.props}
@@ -574,7 +579,7 @@ export function NewThread({
             </>
           )}
         </div>
-        <div className="flex flex-col gap-2 border-t px-4 py-3">
+        <div className={cn('flex flex-col gap-2 border-t px-4 py-3', fill && 'min-h-0 flex-1')}>
           {uploads}
           {composer}
         </div>

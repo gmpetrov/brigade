@@ -231,6 +231,9 @@ pub fn show(app: &AppHandle) {
         .always_on_top(true)
         .visible_on_all_workspaces(true)
         .user_agent(USER_AGENT)
+        // Files dropped on the window go to the page (its new-thread box attaches them):
+        // Tauri's own drop handler would take them first and the page would see nothing.
+        .disable_drag_drop_handler()
         .center()
         .focused(true)
         .build();
