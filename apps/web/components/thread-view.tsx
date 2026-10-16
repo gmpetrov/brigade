@@ -753,7 +753,10 @@ function layoutThread(items: Item[], working: boolean) {
     const ms = end.startedAt === undefined ? 0 : end.at - end.startedAt
     if (ms < QUICK_TURN_MS) return group(turn)
     turn = actionsLast(items, turn)
-    const final = turn.findLastIndex((i) => items[i]!.kind === 'assistant')
+    // The answer: every message after its last step, not only the very last one.
+    const done = turn.findLastIndex((i) => isActivity(items[i]!))
+    const answer = turn.findIndex((i, at) => at > done && items[i]!.kind === 'assistant')
+    const final = answer >= 0 ? answer : turn.findLastIndex((i) => items[i]!.kind === 'assistant')
     const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
