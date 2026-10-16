@@ -684,6 +684,15 @@ const isActivity = (item: Item): item is ActivityItem =>
     !proposedTeam(item) &&
     !(item.finished && !item.isError && openedPull(item)))
 
+/**
+ * A step that does no work: thinking, or loading a tool before using it. A teammate
+ * often does one between its answer and the card closing it (loading suggest_replies),
+ * so it does not end the work: the answer before it stays out of the fold.
+ */
+const isAside = (item: Item) =>
+  item.kind === 'thinking' ||
+  (item.kind === 'tool' && /^(toolsearch|tool_search)$/i.test(bareToolName(item.toolName)))
+
 /** A card asking a person to act on what a message says: it reads after the message. */
 const isActionCard = (item: Item) =>
   item.kind === 'tool' &&
@@ -755,13 +764,13 @@ function layoutThread(items: Item[], working: boolean) {
     if (ms < QUICK_TURN_MS) return group(turn)
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, not only the very last one.
-    const done = turn.findLastIndex((i) => isActivity(items[i]!))
+    const done = turn.findLastIndex((i) => isActivity(items[i]!) && !isAside(items[i]!))
     const answer = turn.findIndex((i, at) => at > done && items[i]!.kind === 'assistant')
     const final = answer >= 0 ? answer : turn.findLastIndex((i) => items[i]!.kind === 'assistant')
     const folded = turn.filter((i, at) => {
       const item = items[i]!
       return (
-        (final < 0 || at < final) &&
+        (final < 0 || at < final || isAside(item)) &&
         (FOLDS.has(item.kind) ||
           // A preview's earlier outcomes: the last one says where it stands.
           (item.kind === 'preview' && turn.some((j) => j > i && items[j]!.kind === 'preview'))) &&
