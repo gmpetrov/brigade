@@ -107,9 +107,10 @@ export function CaptureDraft() {
   if (!teammate) return null
 
   return (
-    <div className="flex min-h-svh flex-col bg-card">
+    <div className="flex h-svh flex-col bg-card">
       <NewThread
         layout="dialog"
+        fill
         teammate={teammate}
         rows={4}
         autoFocus

@@ -565,6 +565,7 @@ export function Composer({
   id,
   threadId,
   bare,
+  fill,
   autoFocus,
   typeToFocus,
 }: {
@@ -582,6 +583,8 @@ export function Composer({
   threadId?: string
   /** No border of its own: the surrounding card frames it. */
   bare?: boolean
+  /** Grows to fill its flex column (scrolling past it) instead of stopping at 40vh. */
+  fill?: boolean
   /** Focused at the end of its text once the editor is ready. */
   autoFocus?: boolean
   /**
@@ -661,7 +664,8 @@ export function Composer({
       attributes: {
         // `composer-input` hooks the placeholder rule in globals.css (ProseMirror markup).
         class: cn(
-          'composer-input max-h-[40vh] overflow-y-auto text-sm wrap-anywhere whitespace-pre-wrap outline-none [&[contenteditable=false]]:opacity-60',
+          'composer-input overflow-y-auto text-sm wrap-anywhere whitespace-pre-wrap outline-none [&[contenteditable=false]]:opacity-60',
+          fill ? 'min-h-0 flex-1' : 'max-h-[40vh]',
           bare
             ? 'px-2 py-1.5 text-[0.9375rem]'
             : 'rounded-md border border-input bg-transparent px-3 py-2 shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30',
@@ -719,8 +723,11 @@ export function Composer({
   return (
     // `relative`: the mention menu docks here unless an ancestor is marked
     // `data-composer-frame` (a card around a bare composer).
-    <div className="relative">
-      <EditorContent editor={editor} />
+    <div className={cn('relative', fill && 'flex min-h-0 flex-1 flex-col')}>
+      <EditorContent
+        editor={editor}
+        className={fill ? 'flex min-h-0 flex-1 flex-col' : undefined}
+      />
       {name && <input type="hidden" name={name} value={value} />}
     </div>
   )
