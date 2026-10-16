@@ -78,6 +78,16 @@ export const ConnectStripe = z.object({
 })
 /** A custom app that posts events to Brigade. No credential: its triggers' URLs carry the trust. */
 export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
+/**
+ * An account of an App: its name, and where teammates may use it. mine: only in
+ * threads the member who connected it started; workspace: in every thread.
+ */
+export const UpdateConnection = z.object({
+  label: z.string().trim().min(1).max(80).optional(),
+  reach: z.enum(['mine', 'workspace']).optional(),
+})
+/** An App's tools that no teammate gets, on any of its accounts. */
+export const UpdateApp = z.object({ disabledTools: z.array(z.string().max(100)).max(200) })
 /** A trigger from the connection's catalog; a custom app's also says how its sender is verified. */
 export const CreateTrigger = z.object({
   connectionId: z.string(),

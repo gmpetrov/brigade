@@ -184,19 +184,39 @@ export async function seedWorkspace(users: Users) {
   // -------------------------------------------------------------------------
   // Connections, credentials and triggers. Secrets are placeholders.
   // -------------------------------------------------------------------------
+  // Each account belongs to its App: one per kind, and one per custom app.
+  const apps = new Map<string, string>()
   const connection = async (data: {
     kind: 'gmail' | 'stripe' | 'webhook'
     label: string
     externalAccount?: string
     secret?: unknown
+    by?: { id: string }
+    reach?: 'mine' | 'workspace'
   }) => {
-    const { secret, ...rest } = data
+    const { secret, by = ada, ...rest } = data
+    const id = randomUUID()
+    const key = data.kind === 'webhook' ? `custom:${id}` : data.kind
+    if (!apps.has(key)) {
+      const app = await prisma.app.create({
+        data: {
+          ...inWorkspace,
+          key,
+          name: data.kind === 'webhook' ? data.label : null,
+          createdByMemberId: by.id,
+          createdAt: days(27),
+        },
+      })
+      apps.set(key, app.id)
+    }
     return prisma.connection.create({
       data: {
         ...inWorkspace,
         ...rest,
+        id,
+        appId: apps.get(key)!,
         vaultSecretId: secret === undefined ? null : await sealSecret(db, scope, secret),
-        createdByMemberId: ada.id,
+        createdByMemberId: by.id,
         createdAt: days(27),
       },
     })
@@ -213,12 +233,22 @@ export async function seedWorkspace(users: Users) {
     externalAccount: 'Acme test account',
     secret: { apiKey: 'sk_test_sample' },
   })
+  // Carol's own mailbox: a second account of the Gmail App, used only in her threads.
+  const carolGmail = await connection({
+    kind: 'gmail',
+    label: 'carol@acme.test',
+    externalAccount: 'carol@acme.test',
+    secret: { accessToken: 'sample', refreshToken: 'sample', expiresAt: 0 },
+    by: carol,
+    reach: 'mine',
+  })
   const webhook = await connection({ kind: 'webhook', label: 'Status page' })
   await prisma.grant.createMany({
     data: [
       { ...inWorkspace, teammateId: sam.id, connectionId: gmail.id, scope: 'read_write' },
       { ...inWorkspace, teammateId: sam.id, connectionId: stripe.id, scope: 'read_write' },
       { ...inWorkspace, teammateId: maya.id, connectionId: gmail.id, scope: 'read' },
+      { ...inWorkspace, teammateId: maya.id, connectionId: carolGmail.id, scope: 'read' },
       { ...inWorkspace, teammateId: riley.id, connectionId: webhook.id, scope: 'read' },
     ],
   })

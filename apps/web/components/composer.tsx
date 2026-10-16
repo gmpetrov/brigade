@@ -53,7 +53,7 @@ type Option = MentionOption
 export const MENTION_GROUPS: { kind: MentionKind; title: string; max: number }[] = [
   { kind: 'teammate', title: 'Teammates', max: 5 },
   { kind: 'project', title: 'Projects', max: 5 },
-  { kind: 'connection', title: 'Connections', max: 5 },
+  { kind: 'connection', title: 'Apps', max: 5 },
   { kind: 'repository', title: 'Repositories', max: 5 },
   { kind: 'design-system', title: 'Design systems', max: 5 },
   { kind: 'design', title: 'Designs', max: 5 },

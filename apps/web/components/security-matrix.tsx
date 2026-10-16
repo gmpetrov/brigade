@@ -389,7 +389,7 @@ export function AccessMatrix({
             </tr>
 
             {section(
-              'Connections',
+              'Apps',
               <Link
                 href="/app/connections"
                 className="tracking-normal normal-case text-primary hover:underline"

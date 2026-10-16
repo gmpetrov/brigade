@@ -2331,7 +2331,7 @@ function AskView({
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="outline">
             <a href="/app/connections" target="_blank" rel="noreferrer">
-              Open Connections →
+              Open Apps →
             </a>
           </Button>
           <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>

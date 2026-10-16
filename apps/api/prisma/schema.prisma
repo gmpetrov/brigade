@@ -159,6 +159,7 @@ model Workspace {
   accounts            Account[]
   comments            Comment[]
   connections         Connection[]
+  apps                App[]
   vaultSecrets        VaultSecret[]
   credentials         Credential[]
   credentialGrants    CredentialGrant[]
@@ -762,11 +763,42 @@ enum ConnectionStatus {
   removed
 }
 
+/// Where a teammate may use an account. mine: only in threads the member who
+/// connected it started. workspace: in every thread.
+enum ConnectionReach {
+  mine
+  workspace
+}
+
+/// An App added to the workspace ("Apps" in the dashboard). Its accounts are its
+/// connections. key: a connector kind for built-in Apps, custom:<id> for a custom app.
+model App {
+  id                String       @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  key               String
+  /// A custom app's name. Built-in Apps take theirs from the catalog.
+  name              String?
+  /// Operations no teammate gets, on every account of the App.
+  disabledTools     String[]     @default([])
+  createdByMemberId String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  connections       Connection[]
+
+  @@unique([workspaceId, key])
+}
+
 model Connection {
   id                String           @id @default(cuid())
   organizationId    String
   workspaceId       String
   workspace         Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appId             String
+  /// An App keeps its removed accounts, for their call logs: it is never deleted on its own.
+  app               App              @relation(fields: [appId], references: [id], onDelete: NoAction)
+  reach             ConnectionReach  @default(workspace)
   kind              ConnectorKind
   label             String
   /// The external account, e.g. the mailbox address. Never a credential.
@@ -786,6 +818,7 @@ model Connection {
   attachments       Attachment[]
 
   @@index([workspaceId])
+  @@index([appId])
 }
 
 /// One encrypted secret. Decrypted only inside the API process.

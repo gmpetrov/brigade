@@ -542,6 +542,13 @@ export type EnumReviewVerdictWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
 }
 
+export type EnumConnectionReachFilter<$PrismaModel = never> = {
+  equals?: $Enums.ConnectionReach | Prisma.EnumConnectionReachFieldRefInput<$PrismaModel>
+  in?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel> | $Enums.ConnectionReach
+}
+
 export type EnumConnectorKindFilter<$PrismaModel = never> = {
   equals?: $Enums.ConnectorKind | Prisma.EnumConnectorKindFieldRefInput<$PrismaModel>
   in?: $Enums.ConnectorKind[] | Prisma.ListEnumConnectorKindFieldRefInput<$PrismaModel>
@@ -554,6 +561,16 @@ export type EnumConnectionStatusFilter<$PrismaModel = never> = {
   in?: $Enums.ConnectionStatus[] | Prisma.ListEnumConnectionStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.ConnectionStatus[] | Prisma.ListEnumConnectionStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumConnectionStatusFilter<$PrismaModel> | $Enums.ConnectionStatus
+}
+
+export type EnumConnectionReachWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ConnectionReach | Prisma.EnumConnectionReachFieldRefInput<$PrismaModel>
+  in?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumConnectionReachWithAggregatesFilter<$PrismaModel> | $Enums.ConnectionReach
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel>
 }
 
 export type EnumConnectorKindWithAggregatesFilter<$PrismaModel = never> = {
@@ -1328,6 +1345,13 @@ export type NestedEnumReviewVerdictWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumReviewVerdictFilter<$PrismaModel>
 }
 
+export type NestedEnumConnectionReachFilter<$PrismaModel = never> = {
+  equals?: $Enums.ConnectionReach | Prisma.EnumConnectionReachFieldRefInput<$PrismaModel>
+  in?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel> | $Enums.ConnectionReach
+}
+
 export type NestedEnumConnectorKindFilter<$PrismaModel = never> = {
   equals?: $Enums.ConnectorKind | Prisma.EnumConnectorKindFieldRefInput<$PrismaModel>
   in?: $Enums.ConnectorKind[] | Prisma.ListEnumConnectorKindFieldRefInput<$PrismaModel>
@@ -1340,6 +1364,16 @@ export type NestedEnumConnectionStatusFilter<$PrismaModel = never> = {
   in?: $Enums.ConnectionStatus[] | Prisma.ListEnumConnectionStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.ConnectionStatus[] | Prisma.ListEnumConnectionStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumConnectionStatusFilter<$PrismaModel> | $Enums.ConnectionStatus
+}
+
+export type NestedEnumConnectionReachWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ConnectionReach | Prisma.EnumConnectionReachFieldRefInput<$PrismaModel>
+  in?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ConnectionReach[] | Prisma.ListEnumConnectionReachFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumConnectionReachWithAggregatesFilter<$PrismaModel> | $Enums.ConnectionReach
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumConnectionReachFilter<$PrismaModel>
 }
 
 export type NestedEnumConnectorKindWithAggregatesFilter<$PrismaModel = never> = {

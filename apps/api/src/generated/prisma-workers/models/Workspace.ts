@@ -192,6 +192,7 @@ export type WorkspaceWhereInput = {
   accounts?: Prisma.AccountListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
+  apps?: Prisma.AppListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
   credentials?: Prisma.CredentialListRelationFilter
   credentialGrants?: Prisma.CredentialGrantListRelationFilter
@@ -239,6 +240,7 @@ export type WorkspaceOrderByWithRelationInput = {
   accounts?: Prisma.AccountOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
   connections?: Prisma.ConnectionOrderByRelationAggregateInput
+  apps?: Prisma.AppOrderByRelationAggregateInput
   vaultSecrets?: Prisma.VaultSecretOrderByRelationAggregateInput
   credentials?: Prisma.CredentialOrderByRelationAggregateInput
   credentialGrants?: Prisma.CredentialGrantOrderByRelationAggregateInput
@@ -289,6 +291,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   accounts?: Prisma.AccountListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   connections?: Prisma.ConnectionListRelationFilter
+  apps?: Prisma.AppListRelationFilter
   vaultSecrets?: Prisma.VaultSecretListRelationFilter
   credentials?: Prisma.CredentialListRelationFilter
   credentialGrants?: Prisma.CredentialGrantListRelationFilter
@@ -357,6 +360,7 @@ export type WorkspaceCreateInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -403,6 +407,7 @@ export type WorkspaceUncheckedCreateInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -449,6 +454,7 @@ export type WorkspaceUpdateInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -495,6 +501,7 @@ export type WorkspaceUncheckedUpdateInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -845,6 +852,20 @@ export type WorkspaceUpdateOneRequiredWithoutCommentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutCommentsInput, Prisma.WorkspaceUpdateWithoutCommentsInput>, Prisma.WorkspaceUncheckedUpdateWithoutCommentsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutAppsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutAppsInput, Prisma.WorkspaceUncheckedCreateWithoutAppsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutAppsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutAppsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutAppsInput, Prisma.WorkspaceUncheckedCreateWithoutAppsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutAppsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutAppsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutAppsInput, Prisma.WorkspaceUpdateWithoutAppsInput>, Prisma.WorkspaceUncheckedUpdateWithoutAppsInput>
+}
+
 export type WorkspaceCreateNestedOneWithoutConnectionsInput = {
   create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutConnectionsInput, Prisma.WorkspaceUncheckedCreateWithoutConnectionsInput>
   connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutConnectionsInput
@@ -1183,6 +1204,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -1228,6 +1250,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1310,6 +1333,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -1355,6 +1379,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1416,6 +1441,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -1461,6 +1487,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1506,6 +1533,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -1551,6 +1579,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1612,6 +1641,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -1657,6 +1687,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1702,6 +1733,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -1747,6 +1779,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1808,6 +1841,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -1853,6 +1887,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1899,6 +1934,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -1944,6 +1980,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2005,6 +2042,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -2050,6 +2088,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2095,6 +2134,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -2140,6 +2180,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2201,6 +2242,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -2246,6 +2288,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2290,6 +2333,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -2335,6 +2379,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2396,6 +2441,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -2441,6 +2487,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2487,6 +2534,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -2532,6 +2580,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2593,6 +2642,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -2638,6 +2688,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2683,6 +2734,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -2728,6 +2780,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2789,6 +2842,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -2834,6 +2888,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2879,6 +2934,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -2924,6 +2980,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2985,6 +3042,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -3030,6 +3088,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3074,6 +3133,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -3119,6 +3179,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3180,6 +3241,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -3225,6 +3287,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3270,6 +3333,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -3315,6 +3379,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3376,6 +3441,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -3421,6 +3487,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3466,6 +3533,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -3511,6 +3579,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3572,6 +3641,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -3617,6 +3687,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3663,6 +3734,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -3708,6 +3780,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3769,6 +3842,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -3814,6 +3888,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3859,6 +3934,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -3904,6 +3980,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3965,6 +4042,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -4010,6 +4088,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4054,6 +4133,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -4099,6 +4179,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4160,6 +4241,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -4204,6 +4286,207 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutAppsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutAppsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutAppsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutAppsInput, Prisma.WorkspaceUncheckedCreateWithoutAppsInput>
+}
+
+export type WorkspaceUpsertWithoutAppsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutAppsInput, Prisma.WorkspaceUncheckedUpdateWithoutAppsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutAppsInput, Prisma.WorkspaceUncheckedCreateWithoutAppsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutAppsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutAppsInput, Prisma.WorkspaceUncheckedUpdateWithoutAppsInput>
+}
+
+export type WorkspaceUpdateWithoutAppsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutAppsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4250,6 +4533,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -4295,6 +4579,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4356,6 +4641,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -4401,6 +4687,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4447,6 +4734,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
@@ -4492,6 +4780,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4553,6 +4842,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
@@ -4598,6 +4888,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4643,6 +4934,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
@@ -4688,6 +4980,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4749,6 +5042,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
@@ -4794,6 +5088,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4839,6 +5134,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
@@ -4884,6 +5180,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4945,6 +5242,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
@@ -4990,6 +5288,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5035,6 +5334,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -5080,6 +5380,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5141,6 +5442,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -5186,6 +5488,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5231,6 +5534,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -5276,6 +5580,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5337,6 +5642,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -5382,6 +5688,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5427,6 +5734,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -5472,6 +5780,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5533,6 +5842,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -5578,6 +5888,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5623,6 +5934,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -5668,6 +5980,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5729,6 +6042,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -5774,6 +6088,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5819,6 +6134,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -5864,6 +6180,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5925,6 +6242,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -5970,6 +6288,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6015,6 +6334,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -6060,6 +6380,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6121,6 +6442,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -6166,6 +6488,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6211,6 +6534,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -6256,6 +6580,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6317,6 +6642,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -6362,6 +6688,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6407,6 +6734,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -6452,6 +6780,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6513,6 +6842,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -6558,6 +6888,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6603,6 +6934,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -6648,6 +6980,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6709,6 +7042,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -6754,6 +7088,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6799,6 +7134,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -6844,6 +7180,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6905,6 +7242,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -6950,6 +7288,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6995,6 +7334,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -7040,6 +7380,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7101,6 +7442,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -7146,6 +7488,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7191,6 +7534,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -7236,6 +7580,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7297,6 +7642,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -7342,6 +7688,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7387,6 +7734,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -7432,6 +7780,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7493,6 +7842,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -7538,6 +7888,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7583,6 +7934,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -7628,6 +7980,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7689,6 +8042,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -7734,6 +8088,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7779,6 +8134,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -7824,6 +8180,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7885,6 +8242,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -7930,6 +8288,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7975,6 +8334,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -8020,6 +8380,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8081,6 +8442,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -8126,6 +8488,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8171,6 +8534,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -8216,6 +8580,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8277,6 +8642,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -8322,6 +8688,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8367,6 +8734,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -8412,6 +8780,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8473,6 +8842,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -8518,6 +8888,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8563,6 +8934,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
@@ -8608,6 +8980,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
   vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
   credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
   credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8669,6 +9042,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -8714,6 +9088,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8765,6 +9140,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
@@ -8810,6 +9186,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
   vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
   credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8863,6 +9240,7 @@ export type WorkspaceCountOutputType = {
   accounts: number
   comments: number
   connections: number
+  apps: number
   vaultSecrets: number
   credentials: number
   credentialGrants: number
@@ -8904,6 +9282,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   accounts?: boolean | WorkspaceCountOutputTypeCountAccountsArgs
   comments?: boolean | WorkspaceCountOutputTypeCountCommentsArgs
   connections?: boolean | WorkspaceCountOutputTypeCountConnectionsArgs
+  apps?: boolean | WorkspaceCountOutputTypeCountAppsArgs
   vaultSecrets?: boolean | WorkspaceCountOutputTypeCountVaultSecretsArgs
   credentials?: boolean | WorkspaceCountOutputTypeCountCredentialsArgs
   credentialGrants?: boolean | WorkspaceCountOutputTypeCountCredentialGrantsArgs
@@ -9006,6 +9385,13 @@ export type WorkspaceCountOutputTypeCountCommentsArgs<ExtArgs extends runtime.Ty
  */
 export type WorkspaceCountOutputTypeCountConnectionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ConnectionWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountAppsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AppWhereInput
 }
 
 /**
@@ -9228,6 +9614,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
+  apps?: boolean | Prisma.Workspace$appsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
   credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   credentialGrants?: boolean | Prisma.Workspace$credentialGrantsArgs<ExtArgs>
@@ -9298,6 +9685,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   accounts?: boolean | Prisma.Workspace$accountsArgs<ExtArgs>
   comments?: boolean | Prisma.Workspace$commentsArgs<ExtArgs>
   connections?: boolean | Prisma.Workspace$connectionsArgs<ExtArgs>
+  apps?: boolean | Prisma.Workspace$appsArgs<ExtArgs>
   vaultSecrets?: boolean | Prisma.Workspace$vaultSecretsArgs<ExtArgs>
   credentials?: boolean | Prisma.Workspace$credentialsArgs<ExtArgs>
   credentialGrants?: boolean | Prisma.Workspace$credentialGrantsArgs<ExtArgs>
@@ -9349,6 +9737,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     accounts: Prisma.$AccountPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
     connections: Prisma.$ConnectionPayload<ExtArgs>[]
+    apps: Prisma.$AppPayload<ExtArgs>[]
     vaultSecrets: Prisma.$VaultSecretPayload<ExtArgs>[]
     credentials: Prisma.$CredentialPayload<ExtArgs>[]
     credentialGrants: Prisma.$CredentialGrantPayload<ExtArgs>[]
@@ -9789,6 +10178,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   accounts<T extends Prisma.Workspace$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.Workspace$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   connections<T extends Prisma.Workspace$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  apps<T extends Prisma.Workspace$appsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$appsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AppPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   vaultSecrets<T extends Prisma.Workspace$vaultSecretsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$vaultSecretsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   credentials<T extends Prisma.Workspace$credentialsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$credentialsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CredentialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   credentialGrants<T extends Prisma.Workspace$credentialGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$credentialGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CredentialGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -10466,6 +10856,30 @@ export type Workspace$connectionsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.ConnectionScalarFieldEnum | Prisma.ConnectionScalarFieldEnum[]
+}
+
+/**
+ * Workspace.apps
+ */
+export type Workspace$appsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the App
+   */
+  select?: Prisma.AppSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the App
+   */
+  omit?: Prisma.AppOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AppInclude<ExtArgs> | null
+  where?: Prisma.AppWhereInput
+  orderBy?: Prisma.AppOrderByWithRelationInput | Prisma.AppOrderByWithRelationInput[]
+  cursor?: Prisma.AppWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AppScalarFieldEnum | Prisma.AppScalarFieldEnum[]
 }
 
 /**

@@ -232,7 +232,7 @@ export function Skills({ admin }: { admin: boolean }) {
           <p className="max-w-prose text-sm text-muted-foreground">
             How your teammates do certain work. A teammate reads a skill when the work matches its
             description, or when a message starts with its <span className="font-mono">/name</span>.
-            A skill gives no access: that stays with the connections above.
+            A skill gives no access: that stays with the Apps above.
           </p>
         </div>
         {admin && (

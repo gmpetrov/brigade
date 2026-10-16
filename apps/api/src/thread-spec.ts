@@ -1,5 +1,6 @@
 import { folderExceptions, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { usableIn } from './apps.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
 import type { ScopedDb } from './db.js'
@@ -88,7 +89,7 @@ export async function specFor(
   // Each a trip to the database, none waiting on another: asked together.
   const [
     [account, ...fallbacks],
-    grants,
+    granted,
     roster,
     rules,
     attachments,
@@ -107,7 +108,7 @@ export async function specFor(
     // The connections this teammate is granted, as tool specs. Never a credential.
     db.grant.findMany({
       where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
-      include: { connection: true },
+      include: { connection: { include: { app: { select: { disabledTools: true } } } } },
     }),
     teammate.kind === 'chief' ? chiefRoster(db) : [],
     folderRules(db),
@@ -131,6 +132,8 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
+  // A member's own account (reach mine) only in the threads they started.
+  const grants = granted.filter((g) => usableIn(g.connection, thread))
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
@@ -144,7 +147,7 @@ export async function specFor(
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,
-        operations: operationSpecs(g.connection.kind, g.scope),
+        operations: operationSpecs(g.connection.kind, g.scope, g.connection.app.disabledTools),
       })),
     account: accountRef(current),
     fallbacks: fallbacks.map(accountRef),

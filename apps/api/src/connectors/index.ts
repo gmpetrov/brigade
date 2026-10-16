@@ -47,12 +47,79 @@ export const triggerCatalog = () =>
     ]),
   )
 
-/** The operations a teammate may see for a grant: reads always, writes only with read_write. */
-export function operationSpecs(kind: ConnectorDefinition['kind'], scope: 'read' | 'read_write') {
+/**
+ * The built-in Apps, as the dashboard shows them. One App asks for one consent:
+ * Gmail and Google Calendar are two Apps, each with its own Google sign-in.
+ * personal: an account someone connects is theirs by default (reach mine).
+ */
+export const appCatalog: Record<
+  ConnectorKind,
+  {
+    name: string
+    description: string
+    developer: string | null
+    category: string
+    personal: boolean
+  }
+> = {
+  gmail: {
+    name: 'Gmail',
+    description: 'Search, read, draft and send email.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_calendar: {
+    name: 'Google Calendar',
+    description: 'Search events and schedule meetings.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  stripe: {
+    name: 'Stripe',
+    description: 'Look up customers, payments, invoices and subscriptions, and issue refunds.',
+    developer: 'Stripe',
+    category: 'Finance',
+    personal: false,
+  },
+  github: {
+    name: 'GitHub',
+    description: 'Repositories, issues and pull requests. Teammates also push code to them.',
+    developer: 'GitHub',
+    category: 'Developer tools',
+    personal: false,
+  },
+  webhook: {
+    name: 'Custom app',
+    description: 'Any app or service that can send a webhook. Each event starts a thread.',
+    developer: null,
+    category: 'Custom',
+    personal: false,
+  },
+}
+
+/** Every tool of a kind, for the App's tool switches. */
+export const toolCatalog = (kind: ConnectorKind) =>
+  Object.entries(connectors[kind]?.operations ?? {}).map(([name, o]) => ({
+    name,
+    description: o.description,
+    write: o.write,
+  }))
+
+/**
+ * The operations a teammate may see for a grant: reads always, writes only with
+ * read_write, and none the App turned off.
+ */
+export function operationSpecs(
+  kind: ConnectorDefinition['kind'],
+  scope: 'read' | 'read_write',
+  disabled: readonly string[] = [],
+) {
   const connector = connectors[kind]
   if (!connector) return []
   return Object.entries(connector.operations)
-    .filter(([, o]) => scope === 'read_write' || !o.write)
+    .filter(([name, o]) => (scope === 'read_write' || !o.write) && !disabled.includes(name))
     .map(([name, o]) => ({
       name,
       description: o.description,

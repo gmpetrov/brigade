@@ -74,6 +74,7 @@ export const ModelName = {
   PullRequest: 'PullRequest',
   PullRequestReview: 'PullRequestReview',
   Comment: 'Comment',
+  App: 'App',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
   Credential: 'Credential',
@@ -502,10 +503,27 @@ export const CommentScalarFieldEnum = {
 export type CommentScalarFieldEnum = (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum]
 
 
+export const AppScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  key: 'key',
+  name: 'name',
+  disabledTools: 'disabledTools',
+  createdByMemberId: 'createdByMemberId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AppScalarFieldEnum = (typeof AppScalarFieldEnum)[keyof typeof AppScalarFieldEnum]
+
+
 export const ConnectionScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
   workspaceId: 'workspaceId',
+  appId: 'appId',
+  reach: 'reach',
   kind: 'kind',
   label: 'label',
   externalAccount: 'externalAccount',
