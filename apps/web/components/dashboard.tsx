@@ -497,10 +497,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <Link
                     href="/app/connections"
                     title="Connect apps"
-                    className="group/apps bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
+                    aria-label="Connect apps"
+                    className="group/apps @container bg-card hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border text-[0.9375rem] font-medium outline-none focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none"
                   >
                     <Plug className="hidden size-4 group-data-[collapsible=icon]:block" />
-                    <span className="truncate group-data-[collapsible=icon]:hidden">
+                    {/* Only the logos when the label wouldn't fit whole. */}
+                    <span className="hidden whitespace-nowrap @[10.5rem]:inline group-data-[collapsible=icon]:hidden">
                       Connect apps
                     </span>
                     <span aria-hidden className="flex group-data-[collapsible=icon]:hidden">
