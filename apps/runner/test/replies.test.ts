@@ -89,7 +89,7 @@ test('a card never tells the teammate to write a reply it may have written', asy
     { toolCallId: 'c2', messages: [] },
   )) as { next: string }
   assert.match(choices.next, /if you have, your turn is over/)
-  assert.doesNotMatch(String(suggestRepliesTool.description), /summarized/)
+  assert.match(String(suggestRepliesTool.description), /do not write it again/)
 })
 
 test("every tool ends a turn for Claude Code: Brigade's by its MCP name, and its own", () => {

@@ -1,8 +1,31 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e30cd2940 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c3633d25e28 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
-@@ -1605,9 +1605,12 @@ async function runTurn(start, turn) {
+@@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+ 			id: block.id,
+ 			delta: event.delta.partial_json
+ 		});
++		// Brigade: a thinking block's signature says what it is, for the host to read at its end.
++		else if (block.kind === "thinking" && event.delta?.type === "signature_delta" && typeof event.delta.signature === "string") block.signature = (block.signature ?? "") + event.delta.signature;
+ 		return;
+ 	}
+ 	if (event.type === "content_block_stop") {
+@@ -1136,9 +1138,12 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
+ 			type: "text-end",
+ 			id: block.id
+ 		});
++		// Brigade: with its signature, which tells the server's summary of the text written
++		// between tool calls (narration) from reasoning.
+ 		else if (block.kind === "thinking") send({
+ 			type: "reasoning-end",
+-			id: block.id
++			id: block.id,
++			...block.signature ? { harnessMetadata: { "claude-code": { signature: block.signature } } } : {}
+ 		});
+ 		else send({
+ 			type: "tool-input-end",
+@@ -1605,9 +1610,12 @@ async function runTurn(start, turn) {
  			name: "harness-tools",
  			version: "1.0.0"
  		});
@@ -16,7 +39,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e
  		}, async (...handlerArgs) => {
  			const [input, extra] = handlerArgs;
  			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-@@ -1792,6 +1795,34 @@ async function runTurn(start, turn) {
+@@ -1792,6 +1800,34 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -51,7 +74,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1800,6 +1831,27 @@ async function runTurn(start, turn) {
+@@ -1800,6 +1836,27 @@ async function runTurn(start, turn) {
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
  			emitStreamEvent(msg);
@@ -79,7 +102,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,16 +1887,23 @@ async function runTurn(start, turn) {
+@@ -1835,16 +1892,23 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -106,7 +129,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..c0cfb405fd4cce879fc39804b164b98e
  				queryInput.close();
  				break;
  			}
-@@ -1857,6 +1916,7 @@ async function runTurn(start, turn) {
+@@ -1857,6 +1921,7 @@ async function runTurn(start, turn) {
  		return;
  	} finally {
  		gracefulAbort = void 0;

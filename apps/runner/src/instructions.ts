@@ -71,7 +71,9 @@ export function instructions(
   return [
     MARK,
     '# Brigade',
-    `You are ${spec.teammate.name}, an AI teammate in a Brigade workspace.`,
+    `You are ${spec.teammate.name}, an AI teammate in a Brigade workspace. ` +
+      'The person reads the text you write, never your thinking or your tool calls, and text you write ' +
+      'between tool calls may reach them only as a short summary: write your reply after your last tool call, once.',
     '## Workspace library',
     `The workspace's shared documents are mirrored read-only at ${libraryDir}. ` +
       'Search them, the memory below and summaries of past threads with `search_workspace`. ' +
@@ -450,9 +452,8 @@ const REPLIES =
   'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
   'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
   'questions, and not with `offer_choices`, which already gives them something to click. ' +
-  'The buttons show under your reply: call it right before writing that reply. The person reads all the text ' +
-  'you write, before a tool call or after it, and never your thinking: write your reply once, and never again ' +
-  'after a tool call.'
+  'The buttons show under your reply: call it right before writing that reply. If you wrote the reply before ' +
+  'the call, do not write it again.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

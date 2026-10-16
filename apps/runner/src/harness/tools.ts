@@ -318,13 +318,15 @@ export const openTicketTool = tool({
 
 /**
  * A card shows under the teammate's reply, whether it comes before or after it.
- * Its result never asks for the reply outright: the teammate knows whether it
- * wrote it, and one told to write it again did. A turn that ends with no reply
- * the person can read is asked for one once, by the runner (see `ReplyWatch`).
+ * It is best called right before the reply: text written before a tool call may
+ * come back only as the server's summary of it (narration). Its result never asks
+ * for the reply outright: the teammate knows whether it wrote it, and one told to
+ * write it again did. A turn that ends with no reply the person can read is asked
+ * for one once, by the runner (see `ReplyWatch`).
  */
 const UNDER_REPLY =
-  'It shows under your reply: call it right before writing that reply. If you wrote the reply already, ' +
-  'do not write it again.'
+  'It shows under your reply: call it right before writing that reply, as text written before a tool call ' +
+  'may reach the person only as a summary. If you wrote the reply already, do not write it again.'
 const SHOWN =
   'Shown under your reply. If you have not written that reply yet, write it now as text; if you have, ' +
   'your turn is over: write nothing more.'

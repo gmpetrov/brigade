@@ -2,6 +2,7 @@
 // this module sees an AI SDK type.
 import {
   Ask,
+  hasVisibleText,
   Question,
   type AgentEvent,
   type QuestionAnswer,
@@ -210,6 +211,51 @@ export function generatedImage(
   }
 }
 
+/**
+ * The kind of a thinking block a Claude signature names, read as Claude Code reads it:
+ * NARRATION for the server's summary of the text a model wrote between tool calls,
+ * "thinking" for its reasoning. Undefined when the signature does not say.
+ */
+export function blockKind(signature: string): string | undefined {
+  try {
+    const envelope = protobufField(Buffer.from(signature, 'base64'), 2)
+    const header = envelope && protobufField(envelope, 1)
+    return header && protobufField(header, 8)?.toString('utf8')
+  } catch {
+    return undefined
+  }
+}
+export const NARRATION = 'narration'
+
+/** The first length-delimited field of a protobuf message with this number. */
+function protobufField(bytes: Buffer, number: number): Buffer | undefined {
+  let at = 0
+  const varint = () => {
+    let value = 0
+    for (let shift = 0; shift < 50; shift += 7) {
+      const byte = bytes[at++]
+      if (byte === undefined) throw new Error('Truncated')
+      value += (byte & 0x7f) * 2 ** shift
+      if (byte < 0x80) return value
+    }
+    throw new Error('Varint too long')
+  }
+  while (at < bytes.length) {
+    const key = varint()
+    const wire = key % 8
+    if (wire === 0) varint()
+    else if (wire === 1) at += 8
+    else if (wire === 5) at += 4
+    else if (wire === 2) {
+      const length = varint()
+      if (at + length > bytes.length) throw new Error('Truncated')
+      if (Math.floor(key / 8) === number) return bytes.subarray(at, at + length)
+      at += length
+    } else throw new Error(`Wire type ${wire}`)
+  }
+  return undefined
+}
+
 const FILE_TOOLS = new Set([
   'write',
   'edit',
@@ -276,7 +322,17 @@ export class EventMapper {
       case 'reasoning-end': {
         const text = this.reasoning.get(part.id)
         this.reasoning.delete(part.id)
-        if (text) this.emit({ at, type: 'raw', source: 'reasoning', value: text })
+        if (!text) return
+        // What the teammate wrote between tool calls, which the server may send back
+        // summarized as a thinking block: the person reads it as the teammate's words.
+        const signature = part.providerMetadata?.['claude-code']?.signature
+        if (
+          typeof signature === 'string' &&
+          blockKind(signature) === NARRATION &&
+          hasVisibleText(text)
+        )
+          return this.emit({ at, type: 'message.done', id: part.id, text })
+        this.emit({ at, type: 'raw', source: 'reasoning', value: text })
         return
       }
       case 'tool-call': {
