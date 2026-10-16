@@ -165,15 +165,24 @@ export function TeammateAccess({
                 <ProviderTile kind={c.kind} small />
                 <span className="flex min-w-0 flex-[1_1_12rem] flex-col">
                   <span className="truncate text-sm font-semibold">{c.label}</span>
-                  {c.externalAccount && (
+                  {(c.externalAccount || c.reach === 'mine') && (
                     <span className="truncate text-xs text-muted-foreground">
-                      {c.externalAccount}
+                      {[
+                        c.externalAccount,
+                        c.reach === 'mine' &&
+                          (c.createdByMemberId === me.memberId
+                            ? 'only in your threads'
+                            : `only in ${connections.data?.members[c.createdByMemberId] ?? 'its owner'}'s threads`),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                   )}
                 </span>
                 <Select
                   value={scope}
-                  disabled={!editable}
+                  // Its owner or an admin decides who uses it.
+                  disabled={!editable && c.createdByMemberId !== me.memberId}
                   onValueChange={(v) => void setGrant(c.id, v as Scope)}
                 >
                   <SelectTrigger size="sm" aria-label={`${c.label} access`}>

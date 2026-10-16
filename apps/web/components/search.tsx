@@ -53,7 +53,7 @@ const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
   { kind: 'automation', label: 'Automations', icon: CalendarClock },
   { kind: 'file', label: 'Library', icon: FileText },
   { kind: 'memory', label: 'Memory', icon: Brain },
-  { kind: 'connection', label: 'Connections', icon: Plug },
+  { kind: 'connection', label: 'Apps', icon: Plug },
   { kind: 'trigger', label: 'Triggers', icon: Zap },
   { kind: 'credential', label: 'Secrets', icon: KeyRound },
   { kind: 'account', label: 'AI accounts', icon: UserRound },

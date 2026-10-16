@@ -27,7 +27,7 @@ import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
 import { browserMcpServer, ensureBrowser } from '../browsers.js'
-import { computerUseClient } from '../computer-use.js'
+import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
@@ -622,23 +622,31 @@ export class HarnessThread {
   }
 
   /**
-   * On a member's Mac with Brigade Computer Use installed: the teammate sees and
-   * uses its apps. Not on the workspace computer (teammates there have a browser).
+   * On a member's Mac: the teammate sees and uses its apps through Brigade Computer Use. Not on
+   * the workspace computer (teammates there have a browser). The tools stay on a Mac without the
+   * helper, answering that it's missing: a thread that used them can't resume without them.
    */
   private computerUse(): ComputerUse | undefined {
-    if (this.runAs) return
+    if (this.runAs || process.platform !== 'darwin') return
     const client = computerUseClient()
-    if (!client) return
     return {
       request: (method, params, signal) =>
-        client.request(
-          method,
-          {
-            ...params,
-            session: { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name },
-          },
-          signal,
-        ),
+        client
+          ? client.request(
+              method,
+              {
+                ...params,
+                session: { id: `${this.key}:${this.prompts}`, label: this.spec.teammate.name },
+              },
+              signal,
+            )
+          : Promise.reject(
+              new ComputerUseError(
+                'not_installed',
+                'Brigade Computer Use is not installed on this Mac. Ask the person to install Brigade.app ' +
+                  '(it includes it), then try again.',
+              ),
+            ),
       screenshotPath: () => {
         const path = `images/screen-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
         return { path, absolute: join(this.workDir, path) }

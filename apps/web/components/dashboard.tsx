@@ -137,7 +137,7 @@ const WORK_NAV = [
 
 /** The setup every project shares. */
 const SETTINGS_NAV = [
-  { href: '/app/connections', label: 'Connections', icon: Plug },
+  { href: '/app/connections', label: 'Apps', icon: Plug },
   { href: '/app/vault', label: 'Secrets', icon: KeyRound },
   { href: '/app/security', label: 'Security', icon: ShieldCheck },
   { href: '/app/accounts', label: 'AI Accounts', icon: UserRound },

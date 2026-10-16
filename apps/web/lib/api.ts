@@ -417,6 +417,10 @@ export const computerName = (c: { kind: string; name: string }) =>
 
 export type Connection = {
   id: string
+  appId: string
+  /** mine: used only in threads the member who connected it started. workspace: in every thread. */
+  reach: 'mine' | 'workspace'
+  createdByMemberId: string
   /** webhook: a custom app that posts events to Brigade. Inbound only. */
   kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
   label: string
@@ -434,7 +438,29 @@ export type Connection = {
     expiresAt: string | null
   }[]
 }
+/** An App added to the workspace. Its accounts are the connections with its id. */
+export type App = {
+  id: string
+  /** A connector kind for a built-in App, custom:<id> for a custom app. */
+  key: string
+  /** A custom app's name; built-in Apps take theirs from the catalog. */
+  name: string | null
+  disabledTools: string[]
+  createdByMemberId: string
+}
+/** A built-in App as the catalog describes it. */
+export type AppEntry = {
+  name: string
+  description: string
+  developer: string | null
+  category: string
+  tools: { name: string; description: string; write: boolean }[]
+}
 export type ConnectionsResponse = {
+  apps: App[]
+  catalog: Record<Connection['kind'], AppEntry>
+  /** Member names, by id: who connected each account. */
+  members: Record<string, string>
   available: Record<Connection['kind'], boolean>
   connections: Connection[]
 }

@@ -33,9 +33,6 @@ struct Settings {
     dashboard_url: Option<String>,
     /// Open at login was turned on once, on the first launch; after that it is the person's choice.
     login_set: bool,
-    /// The setup steps missing when the person last closed the checklist.
-    #[serde(default)]
-    setup_dismissed: Vec<String>,
     /// Keep screen awake, off until the person turns it on.
     #[serde(default)]
     keep_awake: bool,
@@ -337,7 +334,6 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let computer_use = setup::Helper::new(helper.clone());
     computer_use.restart();
     app.manage(computer_use);
-    app.manage(setup::Last::default());
     app.manage(Awake::default());
     if settings.keep_awake {
         keep_awake(app.handle(), true);
@@ -383,9 +379,13 @@ pub fn run() {
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
-        .run(|app, event| {
-            if let RunEvent::Exit = event {
-                app.state::<Arc<Supervisor>>().stop();
-            }
+        .run(|app, event| match event {
+            // Closing the setup checklist, its only window, isn't quitting: Brigade lives in the
+            // menu bar. Quit (and an update's restart) ask with a code and still exit.
+            RunEvent::ExitRequested {
+                code: None, api, ..
+            } => api.prevent_exit(),
+            RunEvent::Exit => app.state::<Arc<Supervisor>>().stop(),
+            _ => {}
         });
 }

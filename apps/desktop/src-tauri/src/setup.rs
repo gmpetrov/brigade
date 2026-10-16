@@ -1,7 +1,7 @@
 // The setup checklist: a small window listing what this Mac needs for Brigade,
 // each step checked live (page/setup.js asks every second or so) with the one
-// action that fixes it. It opens on launch when a step is missing, unless the
-// person closed it with those same steps missing, and from the menu.
+// action that fixes it. It opens on every launch while a step is missing, so a
+// new customer never has to find it in the menu, and from the menu.
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
@@ -10,12 +10,12 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::runner::{self, Status, Supervisor};
-use crate::{dashboard, load_settings, save_settings, Items};
+use crate::{dashboard, Items};
 
 const WINDOW: &str = "setup";
 const SCREEN_SETTINGS: &str =
@@ -231,16 +231,11 @@ fn missing(steps: &[Value]) -> Vec<String> {
         .collect()
 }
 
-/// Last checked, so closing the window can remember what was missing without checking again.
-#[derive(Default)]
-pub struct Last(Mutex<Vec<String>>);
-
 #[tauri::command(async)]
 pub fn setup_state(app: AppHandle) -> Value {
     let steps = steps(&app);
-    let missing = missing(&steps);
-    *app.state::<Last>().0.lock().unwrap() = missing.clone();
-    json!({ "steps": steps, "done": missing.is_empty() })
+    let done = missing(&steps).is_empty();
+    json!({ "steps": steps, "done": done })
 }
 
 #[tauri::command(async)]
@@ -323,28 +318,18 @@ pub fn show(app: &AppHandle) {
         .center()
         .focused(true)
         .build();
-    let Ok(window) = window else { return };
-    let _ = window.set_focus();
-    let app = app.clone();
-    window.on_window_event(move |event| {
-        if let WindowEvent::Destroyed = event {
-            // Closed with steps missing: don't open on its own again until something else is missing.
-            let mut settings = load_settings();
-            settings.setup_dismissed = app.state::<Last>().0.lock().unwrap().clone();
-            save_settings(&settings);
-        }
-    });
+    if let Ok(window) = window {
+        let _ = window.set_focus();
+    }
 }
 
-/// On launch: opens the checklist when a step is missing that the person hasn't already seen missing.
+/// On launch: opens the checklist when a step is missing. "Finish later" only closes it until the next launch.
 pub fn show_if_needed(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
         // Let the runner start before judging it.
         std::thread::sleep(Duration::from_secs(3));
-        let missing = missing(&steps(&app));
-        let dismissed = load_settings().setup_dismissed;
-        if missing.iter().any(|id| !dismissed.contains(id)) {
+        if !missing(&steps(&app)).is_empty() {
             let handle = app.clone();
             let _ = app.run_on_main_thread(move || show(&handle));
         }
