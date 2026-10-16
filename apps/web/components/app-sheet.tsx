@@ -177,6 +177,19 @@ export function AppSheet({
     })
 
   const skills = added ? (app?.skills ?? []) : []
+  const [addingSkills, setAddingSkills] = useState(false)
+  /** The skills that come with the App, when they did not come with its first account. */
+  const addSkills = () =>
+    run(async () => {
+      if (!app) return
+      setAddingSkills(true)
+      try {
+        await api(`/connections/apps/${app.id}/skills`, { body: {} })
+        await reload()
+      } finally {
+        setAddingSkills(false)
+      }
+    })
   const enabled = entry.tools.filter((t) => !app?.disabledTools.includes(t.name)).length
 
   return (
@@ -295,11 +308,24 @@ export function AppSheet({
 
         {(skills.length > 0 || entry.source) && (
           <Section title="Skills">
-            {skills.length === 0 ? (
+            {skills.length === 0 && !added ? (
               <p className="px-4 py-3 text-sm text-muted-foreground">
-                Its skills come with the first account: how to build and deploy on {name}, for the
-                teammates that have it.
+                Added with the App, from its source. Teammates that have {name} get them.
               </p>
+            ) : skills.length === 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Its skills aren&apos;t added yet.</span>
+                {managesApp && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={addingSkills}
+                    onClick={() => void addSkills()}
+                  >
+                    {addingSkills ? 'Adding…' : 'Add the skills'}
+                  </Button>
+                )}
+              </div>
             ) : (
               <Collapsible>
                 <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium">

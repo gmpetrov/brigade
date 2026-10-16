@@ -222,9 +222,14 @@ export const connections = new Hono<AppEnv>()
           { type: 'member', id: scope.memberId },
           { id: connection.appId, name: appCatalog[kind].name },
           repository,
-        ).catch((error) =>
-          console.error('app skills failed:', error instanceof Error ? error.message : error),
         )
+          .then(({ skipped }) => {
+            if (skipped.length)
+              console.warn(`app skills left out: ${skipped.map((s) => s.name).join(', ')}`)
+          })
+          .catch((error) =>
+            console.error('app skills failed:', error instanceof Error ? error.message : error),
+          )
     }
     return back(`connected=${connection.id}`)
   })
@@ -496,6 +501,45 @@ export const connections = new Hono<AppEnv>()
       data: { disabledTools },
     })
     return c.json({ ok: true })
+  })
+
+  /**
+   * Add (or update) the skills that come with an App, e.g. when they did not come
+   * with its first account. Says which were left out and why.
+   */
+  .post('/apps/:id/skills', async (c) => {
+    const { scope, db } = c.var
+    const app = await db.app.findFirst({
+      where: { id: c.req.param('id') },
+      include: { connections: { where: { status: { not: 'removed' } } } },
+    })
+    if (!app) throw new HTTPException(404, { message: 'App not found' })
+    requireAppManager(scope, app, app.connections)
+    const kind = (app.connections[0]?.kind ?? app.key) as ConnectorKind
+    const repository = appCatalog[kind]?.skills
+    if (!repository) throw new HTTPException(400, { message: 'This App has no skills' })
+    let result: Awaited<ReturnType<typeof installAppSkills>>
+    try {
+      result = await installAppSkills(
+        db,
+        scope,
+        { type: 'member', id: scope.memberId },
+        { id: app.id, name: appCatalog[kind].name },
+        repository,
+      )
+    } catch (error) {
+      throw new HTTPException(502, {
+        message: `The skills could not be read from ${repository}: ${error instanceof Error ? error.message : 'error'}`,
+      })
+    }
+    if (result.added === 0)
+      throw new HTTPException(409, {
+        message: `None of its skills could be added: ${result.skipped
+          .slice(0, 5)
+          .map((s) => `${s.name} (${s.problem})`)
+          .join(', ')}${result.skipped.length > 5 ? '…' : ''}`,
+      })
+    return c.json(result)
   })
 
   /** Remove an App: disconnect every account in it. The App stays for the call logs. */
