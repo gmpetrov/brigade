@@ -48,4 +48,4 @@ export const notifications = new Hono<AppEnv>()
     return c.body(null, 204)
   })
 
-  .post('/test', async (c) => c.json({ sent: await sendTest(c.var.userId) }))
+  .post('/test', async (c) => c.json(await sendTest(c.var.userId)))

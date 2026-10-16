@@ -465,8 +465,8 @@ async function settle(
       topic: topicOf(message.tag),
       urgency: due.some((i) => i.needs) || remind.length ? 'high' : 'normal',
     })
-    if (result === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
-    delivered ||= result === 'sent'
+    if (result.status === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
+    delivered ||= result.status === 'sent'
   }
   if (!delivered) return
 
@@ -525,12 +525,17 @@ export function compose(items: Item[], badge: number, close: string[]): PushMess
   }
 }
 
-/** A notification to check a device receives them, sent at once. */
+/**
+ * A notification to check a device receives them, sent at once to each of the
+ * user's devices: how many took it, and what the push services said of the others.
+ */
 export async function sendTest(userId: string) {
   const keys = vapid()
-  if (!keys) return 0
+  if (!keys)
+    return { devices: 0, sent: 0, errors: ['Notifications are not set up on this Brigade'] }
   const devices = await prisma.pushDevice.findMany({ where: { userId } })
   let sent = 0
+  const errors: string[] = []
   for (const device of devices) {
     const result = await sendPush(
       keys,
@@ -542,10 +547,11 @@ export async function sendTest(userId: string) {
         tag: 'brigade-test',
         close: [],
       } satisfies PushMessage,
-      { ttlSeconds: 60 },
+      { ttlSeconds: 60, urgency: 'high' },
     )
-    if (result === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
-    if (result === 'sent') sent++
+    if (result.status === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
+    if (result.status === 'sent') sent++
+    if (result.status === 'failed') errors.push(result.detail)
   }
-  return sent
+  return { devices: devices.length, sent, errors }
 }

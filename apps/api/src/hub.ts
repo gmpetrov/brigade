@@ -55,9 +55,16 @@ type BrowserConn = {
   scope: WorkspaceScope
   ws: WSContext
   sessions: Set<string>
-  /** The dashboard is in view (its last presence message; until one comes, it is). */
-  visible: boolean
+  /**
+   * Until when the dashboard is in view (Date.now()), from its presence messages: each
+   * holds for a while, and the dashboard repeats them while in view. 0: not in view, or
+   * a socket that never says (a thread's events, a terminal).
+   */
+  visibleUntil: number
 }
+
+/** How long one presence message holds: past it, a phone that suspended the app is not looking. */
+const PRESENCE_MS = 75_000
 
 const runners = new Map<string, RunnerConn>() // by computerId
 const browsers = new Set<BrowserConn>()
@@ -274,7 +281,6 @@ function broadcast(workspaceId: string, message: ApiToBrowser, sessionId?: strin
   }
 }
 
-/** Send to every open dashboard of one member, e.g. sign-in progress for their account. */
 /** When each member last had a dashboard in view, for a while after they leave it. */
 const lastLooked = new Map<string, number>()
 
@@ -283,14 +289,18 @@ const lastLooked = new Map<string, number>()
  * would notify them is already in front of them.
  */
 export function isLooking(memberId: string, withinMs: number) {
-  for (const b of browsers) if (b.scope.memberId === memberId && b.visible) return true
-  return Date.now() - (lastLooked.get(memberId) ?? 0) < withinMs
+  const now = Date.now()
+  for (const b of browsers) if (b.scope.memberId === memberId && b.visibleUntil > now) return true
+  return now - (lastLooked.get(memberId) ?? 0) < withinMs
 }
 
 const leftView = (conn: BrowserConn) => {
-  if (conn.visible) lastLooked.set(conn.scope.memberId, Date.now())
+  const now = Date.now()
+  if (conn.visibleUntil > now) lastLooked.set(conn.scope.memberId, now)
+  conn.visibleUntil = 0
 }
 
+/** Send to every open dashboard of one member, e.g. sign-in progress for their account. */
 export function sendToMember(memberId: string, message: ApiToBrowser) {
   for (const b of browsers) if (b.scope.memberId === memberId) send(b.ws, message)
 }
@@ -1147,7 +1157,7 @@ export function browserSocket(scope: WorkspaceScope) {
     scope,
     ws: undefined as unknown as WSContext,
     sessions: new Set(),
-    visible: true,
+    visibleUntil: 0,
   }
   return {
     onOpen(ws: WSContext) {
@@ -1160,8 +1170,8 @@ export function browserSocket(scope: WorkspaceScope) {
       const message = parsed.data
       if (message.type === 'unsubscribe') return void conn.sessions.delete(message.sessionId)
       if (message.type === 'presence') {
-        if (!message.visible) leftView(conn)
-        conn.visible = message.visible
+        if (message.visible) conn.visibleUntil = Date.now() + PRESENCE_MS
+        else leftView(conn)
         return
       }
       if (message.type === 'terminal.input' || message.type === 'terminal.close') {
