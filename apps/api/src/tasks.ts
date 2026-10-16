@@ -374,13 +374,23 @@ async function computerFor(db: ScopedDb, memberId: string, harness: 'claude_code
       })
     ).filter((c) => isOnline(c.id)),
   ]
-  for (const computer of candidates)
-    if ((await usableAccounts(db, { memberId, computerId: computer.id, provider: harness })).length)
-      return computer
+  // One with usage left first; else one whose accounts are out of usage, which a
+  // new turn tries again (the plan may have been upgraded since).
+  let fallback: (typeof candidates)[number] | undefined
+  for (const computer of candidates) {
+    const accounts = await usableAccounts(db, {
+      memberId,
+      computerId: computer.id,
+      provider: harness,
+    })
+    if (accounts.some((a) => !a.exhaustedUntil || a.exhaustedUntil <= new Date())) return computer
+    if (accounts.length) fallback ??= computer
+  }
+  if (fallback) return fallback
   const name = harness === 'codex' ? 'Codex' : 'Claude'
   throw new HTTPException(409, {
     message: candidates.length
-      ? `No ${name} account with usage left on the computers it could run on. Add one under Accounts, or wait for a reset.`
+      ? `No ${name} account of yours is ready on the computers it could run on. Add or sign in to one under Accounts.`
       : 'No computer is online to run it. Start your runner, or set up the cloud computer.',
   })
 }

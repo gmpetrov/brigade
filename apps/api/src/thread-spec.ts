@@ -74,7 +74,7 @@ export async function actingTeammate(
 
 export const noAccount = (harness: string) =>
   new HTTPException(409, {
-    message: `None of your ${harness === 'codex' ? 'Codex' : 'Claude'} accounts on this computer has usage left. Add one under Accounts, or wait for a reset.`,
+    message: `No ${harness === 'codex' ? 'Codex' : 'Claude'} account of yours on this computer is ready. Add or sign in to one under Accounts.`,
   })
 
 /**
