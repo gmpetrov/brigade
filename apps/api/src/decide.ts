@@ -262,6 +262,14 @@ async function grantApp(
   } catch {
     // not a URL
   }
+  // No URL in the ask: the server of the account the person picked in the ticket.
+  if (app.kind === 'mcp' && !key && connectionId)
+    key = (
+      await db.connection.findFirst({
+        where: { id: connectionId, kind: 'mcp' },
+        include: { app: true },
+      })
+    )?.app.key
   if (app.kind === 'mcp' && !key)
     throw new HTTPException(400, { message: 'The ticket does not say which MCP server' })
   const server = key ? await db.app.findFirst({ where: { key } }) : null
