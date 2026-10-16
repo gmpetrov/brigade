@@ -329,6 +329,28 @@ const WRITE_REPLY =
   'Shown under your reply. Now write your reply as text: it ends your turn, with no tool call after it.'
 
 /**
+ * A card called after the reply was already written (as text the person sees,
+ * since the last step of work) says so in its result, instead of asking for the
+ * reply: told to write it, the teammate writes its answer a second time.
+ */
+export function replyAware(t: Tool, replied: () => boolean): Tool {
+  return {
+    ...t,
+    execute: async (input, options) => {
+      const result = await t.execute!(input, options)
+      // The text reaches the runner on the stream, the call on its own path: give it a moment.
+      if (!replied()) await new Promise((resolve) => setTimeout(resolve, 300))
+      return replied()
+        ? {
+            ...result,
+            next: 'Shown under the reply you already wrote. Your turn is over: write nothing more, not even a summary.',
+          }
+        : result
+    },
+  }
+}
+
+/**
  * Replies for the person to send with one click, shown as buttons under the
  * reply. Like offer_choices it does not pause: the turn ends, and a click
  * sends the reply as the person's next message.
