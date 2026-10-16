@@ -70,14 +70,23 @@ export function AppAccessAsk({
   const { me } = useDashboard()
   const data = useApi<ConnectionsResponse>('/connections')
   const kind = ask.app.kind as Connection['kind']
-  // An MCP server, by the URL the teammate gave: its App once someone has added it.
+  // An MCP server, by the URL the teammate gave: its App once someone has added it. With no
+  // URL, the server added under the name it asked for, as the API finds it.
   const serverUrl = kind === 'mcp' ? ask.app.url : undefined
-  const server = serverUrl
-    ? data.data?.apps.find((a) => a.mcp && sameServer(a.mcp.url, serverUrl))
-    : undefined
+  const server =
+    kind !== 'mcp'
+      ? undefined
+      : serverUrl
+        ? data.data?.apps.find((a) => a.mcp && sameServer(a.mcp.url, serverUrl))
+        : data.data?.apps.find(
+            (a) => a.mcp && a.name?.toLowerCase() === ask.what.trim().toLowerCase(),
+          )
   const name = server?.name ?? (serverUrl ? ask.what : data.data?.catalog[kind]?.name) ?? ask.what
   const accounts = (data.data?.connections ?? []).filter(
-    (c) => c.kind === kind && c.status === 'active' && (!serverUrl || c.appId === server?.id),
+    (c) =>
+      c.kind === kind &&
+      c.status === 'active' &&
+      (!(serverUrl || server) || c.appId === server?.id),
   )
   // Those this person may give. Another member's own account is left out: it is used only in
   // their threads. The API checks again that the account is usable in this thread.
