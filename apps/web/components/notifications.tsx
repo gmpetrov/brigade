@@ -178,8 +178,18 @@ export function NotificationsDialog() {
 
   async function test() {
     setNote(undefined)
-    const { sent } = await api<{ sent: number }>('/notifications/test', { method: 'POST' })
-    setNote(sent ? 'Sent. It should show in a few seconds.' : 'No device received it.')
+    const { devices, sent, errors } = await api<{
+      devices: number
+      sent: number
+      errors: string[]
+    }>('/notifications/test', { method: 'POST' })
+    setNote(
+      sent
+        ? `Sent to ${sent} of your ${devices === 1 ? 'device' : `${devices} devices`}. It should show in a few seconds.${errors.length ? ` Not sent: ${errors.join('; ')}` : ''}`
+        : devices
+          ? `Not sent: ${errors.join('; ') || 'the push service refused it'}`
+          : 'Brigade has no device of yours: turn notifications off and on again here.',
+    )
   }
 
   async function choose(value: string) {

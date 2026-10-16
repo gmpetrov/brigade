@@ -11,7 +11,8 @@ export function useLive(onMessage: (message: ApiToBrowser) => void) {
     let socket: WebSocket | undefined
     let retry: ReturnType<typeof setTimeout> | undefined
     let stopped = false
-    // Whether the member is looking at this dashboard: notifications wait meanwhile.
+    // Whether the member is looking at this dashboard: notifications wait meanwhile. Each
+    // message holds for a little over a minute, so it is repeated while in view.
     const presence = () => {
       if (socket?.readyState !== WebSocket.OPEN) return
       const visible = document.visibilityState === 'visible' && document.hasFocus()
@@ -29,10 +30,12 @@ export function useLive(onMessage: (message: ApiToBrowser) => void) {
       }
     }
     connect()
+    const repeat = setInterval(presence, 30_000)
     document.addEventListener('visibilitychange', presence)
     window.addEventListener('focus', presence)
     window.addEventListener('blur', presence)
     return () => {
+      clearInterval(repeat)
       document.removeEventListener('visibilitychange', presence)
       window.removeEventListener('focus', presence)
       window.removeEventListener('blur', presence)
