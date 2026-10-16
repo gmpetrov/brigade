@@ -374,7 +374,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
                 </Button>
                 {cloud && !cloud.online && (
                   <p className="text-center text-xs text-muted-foreground">
-                    Your workspace computer is starting. Sign-in begins as soon as it is up, which
+                    Your cloud computer is starting. Sign-in begins as soon as it is up, which
                     takes a few minutes the first time.
                   </p>
                 )}
@@ -382,7 +382,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
             ) : preparing ? (
               <div className="flex flex-col items-center gap-2 py-2 text-center">
                 <LoaderCircle aria-hidden className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">Getting your workspace computer ready…</p>
+                <p className="text-sm font-medium">Getting your cloud computer ready…</p>
                 <p className="text-xs text-muted-foreground">
                   This takes a few minutes the first time. Sign-in opens here as soon as it is up.
                 </p>
@@ -390,7 +390,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
             ) : failed ? (
               <div className="flex flex-col gap-3">
                 <p className="text-sm text-muted-foreground">
-                  Your workspace computer could not be set up. Try again, or link your own machine
+                  Your cloud computer could not be set up. Try again, or link your own machine
                   below.
                 </p>
                 <Button
@@ -407,7 +407,7 @@ function ConnectAI({ onReady }: { onReady: () => Promise<Me | undefined> }) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                This Brigade has no workspace computer. Link your own machine below: its Claude or
+                This Brigade has no cloud computer. Link your own machine below: its Claude or
                 Codex login is used as is.
               </p>
             )}

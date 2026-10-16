@@ -112,7 +112,7 @@ export function usePreviewStart({
         })
         if (result.outcome !== 'waking' || !mounted.current) break
         if (Date.now() - since > WAKING_MAX_MS)
-          throw new Error('The workspace computer did not start. Try again in a minute.')
+          throw new Error('The cloud computer did not start. Try again in a minute.')
         setWaking(true)
         await new Promise((resolve) => setTimeout(resolve, WAKING_POLL_MS))
       }
@@ -210,7 +210,7 @@ function PreviewSetupDialog({
               &apos;s turns.{' '}
               {computer && !computer.cloud
                 ? `It runs on ${computer.name} and opens there only.`
-                : 'It runs on the workspace computer, and anyone with its link can open it while it runs.'}{' '}
+                : 'It runs on the cloud computer, and anyone with its link can open it while it runs.'}{' '}
               It stops after 30 minutes nobody uses it.
             </p>
           </div>

@@ -73,7 +73,7 @@ export const teammates = new Hono<AppEnv>()
     })
     if (!computer)
       throw new HTTPException(409, {
-        message: "This workspace has no workspace computer: its teammates run on members' machines",
+        message: "This workspace has no cloud computer: its teammates run on members' machines",
       })
     const view = await watchDesktop(computer)
     await audit({
@@ -96,7 +96,7 @@ export const teammates = new Hono<AppEnv>()
     })
     if (!computer)
       throw new HTTPException(409, {
-        message: 'Teammate browsers live on the workspace computer, and this workspace has none',
+        message: 'Teammate browsers live on the cloud computer, and this workspace has none',
       })
     await dispatch(computer, {
       type: 'browser.open',
