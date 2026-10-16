@@ -48,6 +48,7 @@ import {
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import {
   ASK_USER_TOOL,
+  alwaysLoaded,
   askUserTool,
   computerUseTools,
   connectorTools,
@@ -185,8 +186,9 @@ function createAgent(
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
-    [OFFER_CHOICES_TOOL]: offerChoicesTool,
-    [SUGGEST_REPLIES_TOOL]: suggestRepliesTool,
+    // Closing cards come right after the answer: loaded up front, not through tool search.
+    [OFFER_CHOICES_TOOL]: codex ? offerChoicesTool : alwaysLoaded(offerChoicesTool),
+    [SUGGEST_REPLIES_TOOL]: codex ? suggestRepliesTool : alwaysLoaded(suggestRepliesTool),
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
     ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),

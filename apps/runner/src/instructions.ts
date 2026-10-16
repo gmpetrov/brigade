@@ -449,7 +449,8 @@ const REPLIES =
   `and open a PR), call \`${SUGGEST_REPLIES_TOOL}\` last with the 1 to 3 answers they would most likely type, ` +
   'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
   'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
-  'questions, and not with `offer_choices`, which already gives them something to click.'
+  'questions, and not with `offer_choices`, which already gives them something to click. ' +
+  'The person sees your reply as you write it: after a tool call that follows it, never write it again.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =
