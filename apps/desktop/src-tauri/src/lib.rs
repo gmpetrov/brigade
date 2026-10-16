@@ -379,9 +379,13 @@ pub fn run() {
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
-        .run(|app, event| {
-            if let RunEvent::Exit = event {
-                app.state::<Arc<Supervisor>>().stop();
-            }
+        .run(|app, event| match event {
+            // Closing the setup checklist, its only window, isn't quitting: Brigade lives in the
+            // menu bar. Quit (and an update's restart) ask with a code and still exit.
+            RunEvent::ExitRequested {
+                code: None, api, ..
+            } => api.prevent_exit(),
+            RunEvent::Exit => app.state::<Arc<Supervisor>>().stop(),
+            _ => {}
         });
 }
