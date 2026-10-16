@@ -130,6 +130,16 @@ export class DemoRecorder {
     this.log('Resumed', true)
   }
 
+  /**
+   * The screen connected again, on a new canvas: steps and frames go on from it.
+   * The video stays on the old one, so it stops at the reconnect.
+   */
+  reconnected(canvas: HTMLCanvasElement) {
+    if (canvas === this.canvas || this.state === 'stopped') return
+    this.canvas = canvas
+    if (this.state === 'recording') this.log('The screen reconnected', true)
+  }
+
   /** Stop for good and hand over the video and the steps, with the person's note. */
   async finish(note: string): Promise<Demonstration> {
     this.endTyping()

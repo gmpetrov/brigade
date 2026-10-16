@@ -18,7 +18,9 @@ until the work calls for it.
 - **Teammates propose; an admin approves.** `propose_skill` reads a folder the teammate
   wrote and opens an `approval` ticket with the skill in its payload (`skillAction`). It
   does not wait: approving saves the skill (`decideSkillProposal`), for threads that start
-  after. A new proposal for the same name replaces an open one. Scripts in a skill are not
+  after. A new proposal for the same name replaces an open one. A new skill applies
+  everywhere, or with `onlyMe` (`teammateOnly` in the payload) to the proposing teammate's
+  threads only: what a person taught it. Scripts in a skill are not
   the risk (they run in the teammate's sandbox and get no credentials); behaviour is, so
   every proposal is approved, scripts or not.
 - **A skill gives no access.** Connections, credentials and grants stay where they are.
@@ -44,8 +46,15 @@ until the work calls for it.
   A manifest (`.brigade-skills.json`) names the folders Brigade wrote, so it replaces only
   those; a folder the teammate made keeps its name. Per thread, not in the teammate's
   home: threads of one teammate in different projects get different skills.
-- **Brigade's own instructions are skills too.** How to make designs, design systems and
-  previews (`brigade-designs`, `brigade-design-systems`, `brigade-previews`) left the
+- **Teach a task.** The composer's + opens the computer over the window with a recording
+  bar (`components/teach-task.tsx`). The dashboard records what it shows and logs what the
+  person does there (`lib/demo-recorder.ts`): nothing runs on the computer. Done sends
+  `/teach` (a hidden command) with the video and `demonstration.zip` (`steps.md`, a frame
+  per step; typed text only as a count). The teammate follows `brigade-teach` and proposes
+  the skill with `onlyMe`. Cloud computers only for now; a member's Mac comes next.
+- **Brigade's own instructions are skills too.** How to make designs, design systems,
+  previews and learning a task (`brigade-designs`, `brigade-design-systems`, `brigade-previews`,
+  `brigade-teach`) left the
   generated CLAUDE.md, which keeps a line saying when to read each. Names starting with
   `brigade-` are reserved, as are the names of Brigade's own commands (`/design`, `/visual`, `/image`).
 - **Import, never sync.** A `SKILL.md`, a `.zip` or `.skill` (one skill folder or many), or

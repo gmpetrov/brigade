@@ -109,25 +109,33 @@ export function TeachTask({
   // Not while the screen has the keyboard: its Escape goes to the computer (data-keyboard).
   useEscapeToClose(ref, close)
 
-  async function start() {
-    setError(undefined)
+  // Times the screen connected, counted again from 0 when control opens a new one.
+  const [connects, setConnects] = useState(0)
+  useEffect(() => setConnects(0), [mine])
+  // Recording starts once the screen shows with control (a stopped computer starts first).
+  useEffect(() => {
     const canvas = stage.current?.querySelector('canvas')
-    if (!stage.current || !canvas) {
-      setError('The screen is not connected yet. Try again in a moment.')
+    if (connects === 0 || !canvas || !stage.current) return
+    if (recorder.current) {
+      recorder.current.reconnected(canvas)
       return
     }
+    if (phase !== 'starting' || !mine) return
+    recorder.current = new DemoRecorder(stage.current, canvas)
+    setElapsed(0)
+    setPhase('recording')
+    canvas.focus({ preventScroll: true })
+  }, [connects, phase, mine])
+
+  async function start() {
+    setError(undefined)
     setPhase('starting')
+    if (mine) return
     try {
-      if (!mine) {
-        // Working: its turn stops first, so it doesn't move the mouse in the recording.
-        await api(`/threads/${thread.id}/takeover`, { body: { interrupt: working } })
-        took.current = true
-        onChange()
-      }
-      recorder.current = new DemoRecorder(stage.current, canvas)
-      setElapsed(0)
-      setPhase('recording')
-      canvas.focus({ preventScroll: true })
+      // Working: its turn stops first, so it doesn't move the mouse in the recording.
+      await api(`/threads/${thread.id}/takeover`, { body: { interrupt: working } })
+      took.current = true
+      onChange()
     } catch (e) {
       setError((e as Error).message)
       setPhase('ready')
@@ -187,16 +195,18 @@ export function TeachTask({
     ? 'Another member has control of this computer: teach a task once they hand it back.'
     : !canRecord()
       ? 'This browser can’t record the screen. Try Chrome, Edge or Firefox.'
-      : phase === 'ready' || phase === 'starting'
+      : phase === 'ready'
         ? `Record yourself doing a task. ${name} learns the steps and can do them again on its own.` +
           (working ? ` Starting stops what ${name} is doing.` : '')
-        : phase === 'recording'
-          ? `${name} is watching and learning`
-          : phase === 'paused'
-            ? `Paused: ${name} isn’t watching. Resume when you’re back on the task.`
-            : phase === 'sending'
-              ? `Sending the recording to ${name}…`
-              : null
+        : phase === 'starting'
+          ? `Getting ${name}’s computer ready…`
+          : phase === 'recording'
+            ? `${name} is watching and learning`
+            : phase === 'paused'
+              ? `Paused: ${name} isn’t watching. Resume when you’re back on the task.`
+              : phase === 'sending'
+                ? `Sending the recording to ${name}…`
+                : null
 
   return createPortal(
     <div
@@ -296,6 +306,9 @@ export function TeachTask({
         )}
       >
         <DesktopScreen
+          // Control opens the screen of a stopped computer: connect again once it is this member's.
+          key={mine ? 'control' : 'watch'}
+          onConnect={() => setConnects((n) => n + 1)}
           source={{ thread: thread.id }}
           teammateName={name}
           control={mine && (phase === 'recording' || phase === 'paused')}
