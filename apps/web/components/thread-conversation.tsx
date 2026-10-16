@@ -695,6 +695,7 @@ export function ThreadConversation({
       )}
       {teaching && t.computer.kind === 'cloud' && (
         <TeachTask
+          teammate={t.teammate}
           thread={t}
           memberId={me.memberId ?? ''}
           status={status ?? t.status}

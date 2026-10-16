@@ -137,6 +137,10 @@ export const TakeOver = z.object({ interrupt: z.boolean().default(false) })
 export const HandBack = z.object({ note: z.string().max(20_000).default('') })
 /** With text: put it on the desktop's clipboard. Without: read the clipboard. */
 export const DesktopClipboard = z.object({ text: z.string().max(CLIPBOARD_MAX).optional() })
+/** Teach a task holds the cloud computer: from a thread, which its own count of others leaves out. */
+export const TeachRecording = z.object({ threadId: z.string().optional() })
+/** Who records on the cloud computer and how many threads run there, for Teach a task. */
+export type TeachState = { recordingBy: string | null; running: number }
 export const SubmitLoginCode = z.object({
   code: z.string().trim().min(1).max(4000),
   /** The account's email, as the member gives it, for a sign-in that cannot tell (a Claude token). */

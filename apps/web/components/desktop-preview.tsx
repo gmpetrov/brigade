@@ -32,7 +32,7 @@ export function DesktopScreen({
 }: {
   /**
    * Whose view of the workspace computer: a thread's, which may take control, or
-   * a teammate's, to watch (the same screen).
+   * a teammate's, to watch or to record a task (the same screen).
    */
   source: { thread: string } | { teammate: string }
   teammateName: string
@@ -104,15 +104,14 @@ export function DesktopScreen({
     [retries],
   )
 
-  // Copy and paste come with control, which is a thread's.
+  // Copy and paste come with control: a thread's, or a teammate's while recording a task.
   const clipboard = useMemo(() => {
-    if (!threadId) return undefined
-    const path = `/threads/${threadId}/desktop/clipboard`
+    const path = `${base}/desktop/clipboard`
     return {
       set: (text: string) => api(path, { body: { text } }).then(() => undefined),
       get: () => api<{ text: string }>(path, { body: {} }).then((r) => r.text),
     }
-  }, [threadId])
+  }, [base])
 
   const reload = () => {
     setRetries(0)

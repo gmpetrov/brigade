@@ -1,10 +1,12 @@
 'use client'
 // Teach a task: the computer over the whole window, as "Open computer" shows it,
-// with a bar at the top to record the person doing a task there. Start takes
-// control; Pause leaves out what they do until Resume (a sign-in); Done asks
-// for an optional note, then sends the recording to the teammate as `/teach`,
-// which it learns as a skill of its own (the brigade-teach skill).
-import { ATTACHMENT_MAX } from '@brigade/contracts'
+// with a bar at the top to record the person doing a task there. Start holds the
+// cloud computer (one recording at a time) and, in a thread, takes control;
+// Pause leaves out what they do until Resume (a sign-in); Done asks for an
+// optional note, then sends the recording to the teammate as `/teach`, which it
+// learns as a skill of its own (the brigade-teach skill). From Home there is no
+// thread yet: it starts once the recording is sent, so a discarded one leaves none.
+import { ATTACHMENT_MAX, type TeachState } from '@brigade/contracts'
 import { Circle, Pause, Play, Send, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -13,12 +15,14 @@ import { DesktopScreen } from '@/components/desktop-preview'
 import { useEscapeToClose } from '@/components/side-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { api, uploadAttachment, type Thread } from '@/lib/api'
+import { api, uploadAttachment, useApi, type Thread } from '@/lib/api'
 import { canRecord, DemoRecorder } from '@/lib/demo-recorder'
 import { cn } from '@/lib/utils'
 
 /** Longest recording: its video stays under an attachment's 25 MB. */
 const MAX_MS = 10 * 60_000
+/** How often a recording renews its hold on the computer, well within the API's lease. */
+const RENEW_MS = 20_000
 
 type Phase = 'ready' | 'starting' | 'recording' | 'paused' | 'note' | 'sending'
 
@@ -28,6 +32,7 @@ const clock = (ms: number) => {
 }
 
 export function TeachTask({
+  teammate,
   thread,
   memberId,
   status,
@@ -35,11 +40,14 @@ export function TeachTask({
   onSend,
   onClose,
 }: {
-  thread: Thread
+  teammate: { id: string; name: string }
+  /** The thread it records from, whose teammate stops meanwhile. None from Home. */
+  thread?: Thread
   memberId: string
-  status: string
-  onChange: () => void
-  /** Send the message to the thread, with its files: as the composer sends one. */
+  /** The thread's status. */
+  status?: string
+  onChange?: () => void
+  /** Send the message with its files: to the thread, or as a new thread's first. */
   onSend: (text: string, attachmentIds: string[]) => Promise<void>
   onClose: () => void
 }) {
@@ -48,14 +56,20 @@ export function TeachTask({
   const recorder = useRef<DemoRecorder | null>(null)
   // Control taken for this recording: given back when it ends, however it ends.
   const took = useRef(false)
+  // The cloud computer held for this recording: let go when it ends, however it ends.
+  const [holding, setHolding] = useState(false)
+  const held = useRef(false)
   const [phase, setPhase] = useState<Phase>('ready')
   const [elapsed, setElapsed] = useState(0)
   const [note, setNote] = useState('')
   const [hint, setHint] = useState<string>()
   const [error, setError] = useState<string>()
-  const name = thread.teammate.name
-  const mine = !!memberId && thread.controlledByMemberId === memberId
-  const otherHasControl = !!thread.controlledByMemberId && !mine
+  const name = teammate.name
+  const teach = `/teammates/${teammate.id}/teach`
+  const state = useApi<TeachState>(thread ? `${teach}?threadId=${thread.id}` : teach)
+  const mine = thread ? !!memberId && thread.controlledByMemberId === memberId : holding
+  const otherHasControl = !!thread?.controlledByMemberId && !mine
+  const otherRecords = !holding ? state.data?.recordingBy : null
   const working = status === 'running' || status === 'starting'
   const recording = phase === 'recording' || phase === 'paused'
 
@@ -80,15 +94,37 @@ export function TeachTask({
     return () => clearTimeout(timer)
   }, [hint])
 
-  // Leaving the page drops the recording; never keep control for it.
-  useEffect(
-    () => () => {
-      recorder.current?.discard()
-      if (took.current)
-        void api(`/threads/${thread.id}/handback`, { body: { note: '' } }).catch(() => undefined)
-    },
-    [thread.id],
-  )
+  // While held, the computer stays this recording's: renewed until it ends.
+  useEffect(() => {
+    if (!holding) return
+    const renew = setInterval(
+      () => void api(teach, { body: { threadId: thread?.id } }).catch(() => undefined),
+      RENEW_MS,
+    )
+    return () => clearInterval(renew)
+  }, [holding, teach, thread?.id])
+
+  function letGo() {
+    if (!held.current) return
+    held.current = false
+    setHolding(false)
+    void api(`${teach}/end`, { method: 'POST' }).catch(() => undefined)
+  }
+
+  function handBack() {
+    if (!took.current || !thread) return Promise.resolve()
+    took.current = false
+    return api(`/threads/${thread.id}/handback`, { body: { note: '' } })
+  }
+
+  // Leaving the page drops the recording; never keep the computer or control for it.
+  const leave = useRef(() => {})
+  leave.current = () => {
+    recorder.current?.discard()
+    letGo()
+    void handBack().catch(() => undefined)
+  }
+  useEffect(() => () => leave.current(), [])
 
   function close() {
     if (
@@ -98,12 +134,10 @@ export function TeachTask({
       return
     recorder.current?.discard()
     recorder.current = null
-    if (took.current) {
-      took.current = false
-      void api(`/threads/${thread.id}/handback`, { body: { note: '' } })
-        .then(onChange)
-        .catch(() => undefined)
-    }
+    letGo()
+    void handBack()
+      .then(() => onChange?.())
+      .catch(() => undefined)
     onClose()
   }
   // Not while the screen has the keyboard: its Escape goes to the computer (data-keyboard).
@@ -130,13 +164,19 @@ export function TeachTask({
   async function start() {
     setError(undefined)
     setPhase('starting')
-    if (mine) return
     try {
+      // One recording at a time on the screen: the computer is this one's until it ends.
+      await api(teach, { body: { threadId: thread?.id } })
+      held.current = true
+      setHolding(true)
+      if (!thread || mine) return
       // Working: its turn stops first, so it doesn't move the mouse in the recording.
       await api(`/threads/${thread.id}/takeover`, { body: { interrupt: working } })
       took.current = true
-      onChange()
+      onChange?.()
     } catch (e) {
+      letGo()
+      void state.reload()
       setError((e as Error).message)
       setPhase('ready')
     }
@@ -175,15 +215,14 @@ export function TeachTask({
       // The steps are what the teammate learns from; the video is for people, when it fits.
       const files = demo.video.size <= ATTACHMENT_MAX ? [demo.video, demo.steps] : [demo.steps]
       const uploaded = await Promise.all(files.map((f) => uploadAttachment(f, () => undefined)))
-      if (took.current || mine) {
-        took.current = false
-        await api(`/threads/${thread.id}/handback`, { body: { note: '' } })
-      }
+      if (thread && mine) took.current = true
+      await handBack()
+      letGo()
       await onSend(
         ['/teach', note.trim()].filter(Boolean).join(' '),
         uploaded.map((u) => u.id),
       )
-      onChange()
+      onChange?.()
       onClose()
     } catch (e) {
       setError((e as Error).message)
@@ -191,22 +230,28 @@ export function TeachTask({
     }
   }
 
+  const others = state.data?.running ?? 0
   const message = otherHasControl
     ? 'Another member has control of this computer: teach a task once they hand it back.'
-    : !canRecord()
-      ? 'This browser can’t record the screen. Try Chrome, Edge or Firefox.'
-      : phase === 'ready'
-        ? `Record yourself doing a task. ${name} learns the steps and can do them again on its own.` +
-          (working ? ` Starting stops what ${name} is doing.` : '')
-        : phase === 'starting'
-          ? `Getting ${name}’s computer ready…`
-          : phase === 'recording'
-            ? `${name} is watching and learning`
-            : phase === 'paused'
-              ? `Paused: ${name} isn’t watching. Resume when you’re back on the task.`
-              : phase === 'sending'
-                ? `Sending the recording to ${name}…`
-                : null
+    : otherRecords
+      ? `${otherRecords} is recording a task on the cloud computer: try again once they’re done.`
+      : !canRecord()
+        ? 'This browser can’t record the screen. Try Chrome, Edge or Firefox.'
+        : phase === 'ready'
+          ? `Record yourself doing a task. ${name} learns the steps and can do them again on its own.` +
+            (working ? ` Starting stops what ${name} is doing.` : '') +
+            (others > 0
+              ? ` ${others === 1 ? 'Another thread is' : `${others} other threads are`} running: their teammates may use the screen meanwhile.`
+              : '')
+          : phase === 'starting'
+            ? `Getting ${name}’s computer ready…`
+            : phase === 'recording'
+              ? `${name} is watching and learning`
+              : phase === 'paused'
+                ? `Paused: ${name} isn’t watching. Resume when you’re back on the task.`
+                : phase === 'sending'
+                  ? `Sending the recording to ${name}…`
+                  : null
 
   return createPortal(
     <div
@@ -249,7 +294,7 @@ export function TeachTask({
           <Button
             size="sm"
             variant="destructive"
-            disabled={phase === 'starting' || otherHasControl || !canRecord()}
+            disabled={phase === 'starting' || otherHasControl || !!otherRecords || !canRecord()}
             onClick={() => void start()}
           >
             <Circle aria-hidden className="fill-current" />
@@ -310,7 +355,7 @@ export function TeachTask({
           // Control opens the screen of a stopped computer: connect again once it is this member's.
           key={mine ? 'control' : 'watch'}
           onConnect={() => setConnects((n) => n + 1)}
-          source={{ thread: thread.id }}
+          source={thread ? { thread: thread.id } : { teammate: teammate.id }}
           teammateName={name}
           control={mine && (phase === 'recording' || phase === 'paused')}
           mode="open"

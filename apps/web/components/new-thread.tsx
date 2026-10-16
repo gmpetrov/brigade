@@ -3,11 +3,18 @@ import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } fro
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AttachButton, UploadList, useFileDrop, useUploads } from '@/components/attachments'
+import {
+  AttachButton,
+  ComposerMenu,
+  UploadList,
+  useFileDrop,
+  useUploads,
+} from '@/components/attachments'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
+import { TeachTask } from '@/components/teach-task'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -42,6 +49,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 
 const quietSelect =
@@ -330,7 +338,7 @@ export function NewThread({
   layout?: 'card' | 'dialog'
 }) {
   const router = useRouter()
-  const { projects } = useDashboard()
+  const { me, projects } = useDashboard()
   const pickable = projects.filter((p) => !p.archivedAt)
   // A project page's own project first; else the one picked last, while it is still pickable.
   const [last, remember] = useLastProject()
@@ -352,6 +360,9 @@ export function NewThread({
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const drop = useFileDrop(files.add)
+  // Teach a task: recorded on the cloud computer, and the thread starts once it is sent.
+  const [teaching, setTeaching] = useState(false)
+  const phone = useIsMobile()
 
   const online = usableComputers(computers.data)
   const computer = online.find((c) => c.id === computerId) ?? online[0]
@@ -369,22 +380,25 @@ export function NewThread({
   const ready =
     (text.trim() || files.ids.length > 0) && !files.busy && !files.failed && computer && account
 
+  const create = (message: string, attachmentIds: string[]) =>
+    api<{ id: string }>('/threads', {
+      body: {
+        teammateId: teammate.id,
+        computerId: computer!.id,
+        accountId: account!.id,
+        text: message,
+        attachmentIds,
+        ...(projectId !== 'none' && { projectId }),
+      },
+    })
+
   async function start(e?: FormEvent) {
     e?.preventDefault()
     if (busy || !ready) return
     setBusy(true)
     setError(undefined)
     try {
-      const thread = await api<{ id: string }>('/threads', {
-        body: {
-          teammateId: teammate.id,
-          computerId: computer.id,
-          accountId: account.id,
-          text,
-          attachmentIds: files.ids,
-          ...(projectId !== 'none' && { projectId }),
-        },
-      })
+      const thread = await create(text, files.ids)
       files.clear()
       if (onStarted) {
         setText('')
@@ -396,6 +410,20 @@ export function NewThread({
       setBusy(false)
     }
   }
+
+  // The recording is the new thread's first message; what is written here stays for later.
+  async function sendRecording(message: string, attachmentIds: string[]) {
+    const thread = await create(message, attachmentIds)
+    if (onStarted) onStarted(thread)
+    else router.push(`/app/threads/${thread.id}`)
+  }
+  const teach = !computer
+    ? 'No computer is online'
+    : computer.kind !== 'cloud'
+      ? 'Not yet on threads that run on a member’s machine'
+      : !account
+        ? `No ${harnessLabel(teammate.harness)} account on the cloud computer`
+        : () => setTeaching(true)
 
   const link = 'font-medium text-primary hover:underline'
   let notice: React.ReactNode = null
@@ -519,6 +547,21 @@ export function NewThread({
       )}
     </>
   )
+  // The +, as in a thread; the paperclip on phones, where there is no teaching. The quick
+  // dialog keeps the paperclip too: its modal would keep the recording's computer from use.
+  const add = phone ? (
+    <AttachButton onFiles={files.add} />
+  ) : (
+    <ComposerMenu onFiles={files.add} teach={teach} />
+  )
+  const recorder = teaching && (
+    <TeachTask
+      teammate={teammate}
+      memberId={me.memberId ?? ''}
+      onSend={sendRecording}
+      onClose={() => setTeaching(false)}
+    />
+  )
   const send = (
     <Button size="sm" className="ml-auto" disabled={busy || !ready}>
       {busy ? 'Starting…' : 'Send'}
@@ -574,27 +617,31 @@ export function NewThread({
       </form>
     )
 
+  // The recording outside the form: its events would reach the form through the portal.
   return (
-    <form onSubmit={(e) => void start(e)} className="flex flex-col gap-2">
-      <Card
-        data-composer-frame
-        className={cn(
-          'relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring',
-          drop.dragging && 'border-primary ring-[3px] ring-primary/30',
-        )}
-        {...drop.props}
-      >
-        {uploads}
-        {composer}
-        <div className="flex flex-wrap items-center gap-1">
-          {teammatePicker}
-          <AttachButton onFiles={files.add} />
-          {projectPicker}
-          {where}
-          {send}
-        </div>
-      </Card>
-      {message}
-    </form>
+    <>
+      <form onSubmit={(e) => void start(e)} className="flex flex-col gap-2">
+        <Card
+          data-composer-frame
+          className={cn(
+            'relative gap-2 rounded-xl p-3 shadow-md focus-within:border-ring',
+            drop.dragging && 'border-primary ring-[3px] ring-primary/30',
+          )}
+          {...drop.props}
+        >
+          {uploads}
+          {composer}
+          <div className="flex flex-wrap items-center gap-1">
+            {add}
+            {teammatePicker}
+            {projectPicker}
+            {where}
+            {send}
+          </div>
+        </Card>
+        {message}
+      </form>
+      {recorder}
+    </>
   )
 }
