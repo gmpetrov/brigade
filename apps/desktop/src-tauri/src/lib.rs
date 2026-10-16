@@ -1,7 +1,8 @@
 // Brigade.app: a menu-bar app, no Dock icon. It installs, links and keeps
 // running the Brigade runner (runner.rs), ships Brigade Computer Use.app for
-// teammates to use this Mac's apps, starts at login and updates itself. Its one
-// window is the setup checklist (setup.rs).
+// teammates to use this Mac's apps, starts at login and updates itself. Its
+// windows are the setup checklist (setup.rs) and the screenshot draft (capture.rs).
+mod capture;
 mod runner;
 mod setup;
 
@@ -12,12 +13,13 @@ use std::time::Duration;
 
 use runner::{Status, Supervisor};
 use tauri::image::Image;
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, RunEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 use url::Url;
@@ -36,6 +38,9 @@ struct Settings {
     /// Keep screen awake, off until the person turns it on.
     #[serde(default)]
     keep_awake: bool,
+    /// The screenshot shortcut picked in the menu (capture::SHORTCUTS); None for the default.
+    #[serde(default)]
+    capture_shortcut: Option<String>,
 }
 
 fn settings_file() -> PathBuf {
@@ -221,6 +226,11 @@ fn on_menu(app: &AppHandle, id: &str) {
             let _ = app.opener().open_url(dashboard(), None::<&str>);
         }
         "setup" => setup::show(app),
+        "capture" => capture::take(app),
+        "capture-draft" => capture::show(app),
+        id if id.starts_with("shortcut:") => {
+            capture::choose_shortcut(app, &id["shortcut:".len()..])
+        }
         "restart-runner" => app.state::<Arc<Supervisor>>().start(),
         "awake" => {
             let on = app.state::<Arc<Items>>().awake.is_checked().unwrap_or(false);
@@ -295,6 +305,26 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .map(|dir| dir.join(HELPER))
         .ok()
         .filter(|p| p.exists());
+    let chosen = settings
+        .capture_shortcut
+        .clone()
+        .unwrap_or_else(|| capture::DEFAULT_SHORTCUT.into());
+    let shortcut_items = capture::SHORTCUTS
+        .iter()
+        .map(|(id, label)| {
+            CheckMenuItem::with_id(app, format!("shortcut:{id}"), *label, true, *id == chosen, None::<&str>)
+                .map(|item| (*id, item))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let shortcut_menu = Submenu::with_items(
+        app,
+        "Screenshot shortcut",
+        true,
+        &shortcut_items
+            .iter()
+            .map(|(_, item)| item as &dyn tauri::menu::IsMenuItem<Wry>)
+            .collect::<Vec<_>>(),
+    )?;
     let menu = Menu::with_items(
         app,
         &[
@@ -303,6 +333,10 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &MenuItem::with_id(app, "dashboard", "Open dashboard", true, None::<&str>)?,
             &connect,
             &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "capture", "Take a screenshot", true, None::<&str>)?,
+            &MenuItem::with_id(app, "capture-draft", "Open screenshot draft", true, None::<&str>)?,
+            &shortcut_menu,
             &PredefinedMenuItem::separator(app)?,
             &awake,
             &login,
@@ -335,6 +369,9 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     computer_use.restart();
     app.manage(computer_use);
     app.manage(Awake::default());
+    app.manage(capture::Capture::new(shortcut_items));
+    capture::apply_shortcut(app.handle(), &chosen);
+    capture::show_count(app.handle());
     if settings.keep_awake {
         keep_awake(app.handle(), true);
     }
@@ -369,18 +406,35 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_, _, _| {}))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _, event| {
+                    if event.state == ShortcutState::Pressed {
+                        capture::take(app);
+                    }
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![setup::setup_state, setup::setup_action])
+        .invoke_handler(tauri::generate_handler![
+            setup::setup_state,
+            setup::setup_action,
+            capture::capture_list,
+            capture::capture_read,
+            capture::capture_remove,
+            capture::capture_clear,
+            capture::capture_hide,
+        ])
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
         .run(|app, event| match event {
-            // Closing the setup checklist, its only window, isn't quitting: Brigade lives in the
+            // Closing the setup checklist, its one closable window, isn't quitting: Brigade lives in the
             // menu bar. Quit (and an update's restart) ask with a code and still exit.
             RunEvent::ExitRequested {
                 code: None, api, ..

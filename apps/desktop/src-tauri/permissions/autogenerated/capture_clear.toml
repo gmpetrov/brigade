@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-clear"
+description = "Enables the capture_clear command without any pre-configured scope."
+commands.allow = ["capture_clear"]
+
+[[permission]]
+identifier = "deny-capture-clear"
+description = "Denies the capture_clear command without any pre-configured scope."
+commands.deny = ["capture_clear"]

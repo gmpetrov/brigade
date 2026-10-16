@@ -70,6 +70,13 @@ func makeHandler(_ sessions: Sessions) -> Handler {
         ] as [String: Any]
       }
     }
+    // The person's own screenshot, from Brigade.app: no teammate turn behind it.
+    if method == "capture" {
+      guard let path = params["path"] as? String, path.hasPrefix("/") else {
+        throw HelperError("invalid_argument", "an absolute path is required")
+      }
+      return try await Capture.interactive(to: path)
+    }
     try await MainActor.run { try sessions.begin(params["session"] as? [String: Any]) }
     switch method {
     case "screenshot":
