@@ -635,7 +635,7 @@ export function ThreadConversation({
             t.controlledByMemberId && !mine
               ? 'Another member has control of this thread'
               : mine
-                ? `A shell on the workspace computer, as ${t.teammate.name}`
+                ? `A shell on the cloud computer, as ${t.teammate.name}`
                 : `Take control and open a shell, as ${t.teammate.name}. ${t.teammate.name} waits until you hand back`
           }
         >

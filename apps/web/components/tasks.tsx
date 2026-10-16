@@ -466,7 +466,7 @@ export function AssignDialog({
             <DialogDescription>
               {thread
                 ? `The new teammate joins the thread and picks up from ${task.teammate?.name ?? 'the previous one'}: it reads the conversation, your reason, and what was pushed or attached. It does not see the previous teammate's working folder.`
-                : 'The teammate starts on it right away, with the title and description as the first message of its thread, on the workspace computer or else your own.'}
+                : 'The teammate starts on it right away, with the title and description as the first message of its thread, on the cloud computer or else your own.'}
             </DialogDescription>
           </DialogHeader>
           <Field label="Give it to" htmlFor="reassign-teammate">

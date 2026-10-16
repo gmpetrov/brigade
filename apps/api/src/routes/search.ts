@@ -259,7 +259,7 @@ export const search = new Hono<AppEnv>()
         result({
           kind: 'computer',
           id: x.id,
-          title: x.kind === 'cloud' ? 'Workspace computer' : x.name,
+          title: x.kind === 'cloud' ? 'Cloud computer' : x.name,
           detail: x.kind === 'cloud' ? 'Cloud' : 'Your machine',
         }),
       ),

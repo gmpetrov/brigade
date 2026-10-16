@@ -38,7 +38,7 @@ export class Terminals {
   ) {}
 
   async start(terminalId: string, spec: ThreadSpec, memberId: string, cols: number, rows: number) {
-    if (!CLOUD) throw new Error('Takeover is only available on the workspace computer')
+    if (!CLOUD) throw new Error('Takeover is only available on the cloud computer')
     if (!/^[0-9a-f-]{36}$/.test(terminalId)) throw new Error('Invalid terminal id')
     const user = teammateUser(spec.teammate.id)
     await ensureUser(user)

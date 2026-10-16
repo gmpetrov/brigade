@@ -486,7 +486,7 @@ export function PreviewPanel({
                 </p>
                 {waking && (
                   <p className="max-w-xs">
-                    Starting the workspace computer first. It takes a minute or so; the preview
+                    Starting the cloud computer first. It takes a minute or so; the preview
                     starts once it is up.
                   </p>
                 )}

@@ -96,7 +96,7 @@ export default function Computers() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 id="workspace-computer" className="text-lg font-bold tracking-tight">
-                  Workspace computer
+                  Cloud computer
                 </h2>
                 {cloud && (
                   <StatusBadge
@@ -188,7 +188,7 @@ export default function Computers() {
                     disabled={busy}
                     onClick={() => void act(() => api('/computers/cloud', { method: 'POST' }))}
                   >
-                    Create the workspace computer
+                    Create the cloud computer
                   </Button>
                 </div>
               ) : (

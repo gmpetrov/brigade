@@ -413,7 +413,7 @@ export const usableComputers = (data: ComputersResponse | undefined) =>
   )
 
 export const computerName = (c: { kind: string; name: string }) =>
-  c.kind === 'cloud' ? 'Workspace computer' : c.name
+  c.kind === 'cloud' ? 'Cloud computer' : c.name
 
 export type Connection = {
   id: string

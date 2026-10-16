@@ -35,7 +35,7 @@ function live(id: string) {
 export async function watchDesktop(computer: { status: string; providerRef: unknown }) {
   if (computer.status !== 'running')
     throw new HTTPException(409, {
-      message: 'The workspace computer is not running. It starts with the next message.',
+      message: 'The cloud computer is not running. It starts with the next message.',
     })
   const url = await desktopUrl(computer)
   if (!url)
