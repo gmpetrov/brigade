@@ -15,7 +15,7 @@ import { previewImport, savePack } from './skills.js'
 /**
  * Import (or update) an App's skills. Skills whose names another pack or the
  * workspace already uses are left out; the rest are added as the App's pack.
- * Returns how many it holds.
+ * Returns how many it added, and those left out with why.
  */
 export async function installAppSkills(
   db: ScopedDb,
@@ -34,16 +34,19 @@ export async function installAppSkills(
     [root, source.path].filter(Boolean).join('/'),
   ).map((f) => ({ ...f, folder: f.folder.slice(root.length + 1) }))
   const preview = await previewImport(db, scope, githubSourceKey(source), app.name, found)
-  const skills = preview.skills
-    .filter((s) => s.status === 'new' || s.status === 'update' || s.status === 'same')
-    .map((s) => ({
-      name: s.name,
-      description: s.description,
-      instructions: s.instructions,
-      files: s.files,
-      enabled: s.enabled ?? true,
-    }))
-  if (skills.length === 0) return 0
+  const usable = (s: (typeof preview.skills)[number]) =>
+    s.status === 'new' || s.status === 'update' || s.status === 'same'
+  const skipped = preview.skills
+    .filter((s) => !usable(s))
+    .map((s) => ({ name: s.name || s.folder, problem: s.problem ?? s.status }))
+  const skills = preview.skills.filter(usable).map((s) => ({
+    name: s.name,
+    description: s.description,
+    instructions: s.instructions,
+    files: s.files,
+    enabled: s.enabled ?? true,
+  }))
+  if (skills.length === 0) return { added: 0, skipped }
   // Every thread may get them; threadSkills keeps them to teammates with the App.
   const pack = await savePack(db, scope, actor, {
     name: app.name,
@@ -54,5 +57,5 @@ export async function installAppSkills(
     skills,
   })
   await db.skillPack.updateMany({ where: { id: pack.id }, data: { appId: app.id } })
-  return skills.length
+  return { added: skills.length, skipped }
 }
