@@ -65,8 +65,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -149,6 +147,12 @@ export const SETTINGS_NAV = [
 
 export const NAV = [...WORK_NAV, ...SETTINGS_NAV]
 
+const THEMES = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+] as const
+
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?'
 
 /** A teammate's pebble, drawn from its id so it is the same everywhere; a teammate not
@@ -187,6 +191,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [creatingProject, setCreatingProject] = useState(false)
   const mac = useIsMac()
   const { theme = 'system', setTheme } = useTheme()
+  const ThemeIcon = THEMES.find((t) => t.value === theme)?.icon ?? Monitor
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth()
   // Tickets waiting on this member, refreshed as the member moves around.
   const tickets = useApi<Ticket[]>('/tickets')
@@ -439,20 +444,41 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                        Appearance
-                      </DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-                        <DropdownMenuRadioItem value="light">
-                          <Sun /> Light
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="dark">
-                          <Moon /> Dark
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="system">
-                          <Monitor /> System
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
+                      {/* Theme on one row: three icon segments, kept open on pick so the change shows. */}
+                      <div
+                        role="group"
+                        aria-label="Theme"
+                        className="flex items-center gap-2 px-2 py-1 text-sm"
+                      >
+                        <ThemeIcon className="text-muted-foreground size-4" />
+                        Theme
+                        <div className="bg-muted ml-auto flex gap-0.5 rounded-md p-0.5">
+                          {THEMES.map(({ value, label, icon: Icon }) => (
+                            <DropdownMenuItem
+                              key={value}
+                              role="menuitemradio"
+                              aria-checked={theme === value}
+                              aria-label={label}
+                              title={label}
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                setTheme(value)
+                              }}
+                              className={cn(
+                                'rounded-sm px-1.5 py-1',
+                                theme === value && 'bg-card shadow-xs',
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'size-3.5',
+                                  theme === value ? 'text-foreground' : 'text-muted-foreground',
+                                )}
+                              />
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={openNotifications}>
                         <Bell /> Notifications
