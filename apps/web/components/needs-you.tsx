@@ -9,7 +9,7 @@ import { PullCard } from '@/components/pull-card'
 import { QuestionCard, TicketCard } from '@/components/thread-view'
 import { TicketRow } from '@/components/ticket-row'
 import { Card } from '@/components/ui/card'
-import { api, type Me, type PullWaiting, type Ticket } from '@/lib/api'
+import { api, type PullWaiting, type Ticket } from '@/lib/api'
 
 /** Cards shown at once; the rest are a link away. */
 const SHOWN = 5
@@ -83,7 +83,7 @@ function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Pr
           }}
           canAnswer
           onAnswer={(answer: QuestionAnswer) =>
-            api(`/threads/${session.id}/answers`, { body: { questionId, answer } }).then(onDone)
+            api(`/tickets/${t.id}/answer`, { body: { answer } }).then(onDone)
           }
         />
       </div>
@@ -110,7 +110,7 @@ function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Pr
         askerId={asker}
         askerName={askerName}
         onAnswer={(answer: TicketAnswer) =>
-          api(`/threads/${session.id}/tickets`, { body: { requestId, answer } }).then(onDone)
+          api(`/tickets/${t.id}/answer`, { body: { answer } }).then(onDone)
         }
       />
     </div>
@@ -118,13 +118,12 @@ function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Pr
 }
 
 /**
- * Answered here, by a member who may prompt its thread: a question, or a ticket unless one
- * of its asks is done in the teammate's browser, which takes over its computer from the thread.
+ * Answered here: a question, or a ticket unless one of its asks is done in the teammate's
+ * browser, which takes over its computer from the thread.
  */
-const answersHere = (t: Ticket, me: Me) =>
+const answersHere = (t: Ticket) =>
   t.payload.source === 'harness' &&
   !!t.session &&
-  (t.session.startedByMemberId === me.memberId || !!t.session.othersMayPrompt) &&
   ((t.type === 'question' && !!t.payload.questions) ||
     (t.type === 'request' &&
       !!t.payload.asks &&
@@ -164,24 +163,27 @@ export function NeedsYou({
   const shownTickets = tickets.slice(0, SHOWN)
   const shownPulls = pulls.slice(0, Math.max(0, SHOWN - shownTickets.length))
   // Approvals, caps and logins keep their row, which has their buttons.
-  const rows = shownTickets.filter((t) => !answersHere(t, me))
+  const rows = shownTickets.filter((t) => !answersHere(t))
   const moreTickets = tickets.length - shownTickets.length
   const morePulls = pulls.length - shownPulls.length
 
   return (
-    <section aria-labelledby="needs-you" className="flex flex-col gap-3">
-      <h2 id="needs-you" className="flex items-baseline gap-2 text-lg font-bold">
+    // Yellow, as needs-you is in the sidebar: what blocks a teammate comes first.
+    <section
+      aria-labelledby="needs-you"
+      className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/5 p-4 sm:p-5"
+    >
+      <h2 id="needs-you" className="flex items-center gap-2 text-lg font-bold">
+        <span aria-hidden className="size-2 rounded-full bg-warning" />
         Waiting on you
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
           {tickets.length + pulls.length}
         </span>
       </h2>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
-      {shownTickets
-        .filter((t) => answersHere(t, me))
-        .map((t) => (
-          <HarnessTicket key={t.id} ticket={t} onDone={onChange} />
-        ))}
+      {shownTickets.filter(answersHere).map((t) => (
+        <HarnessTicket key={t.id} ticket={t} onDone={onChange} />
+      ))}
       {rows.length > 0 && (
         <Card className="gap-0 overflow-hidden py-0">
           <ul className="divide-y">
@@ -194,7 +196,7 @@ export function NeedsYou({
       {shownPulls.map((p) => (
         <div key={`${p.repository}#${p.number}`} className="flex flex-col gap-1.5">
           <From teammate={p.authorTeammate} thread={p.session} note={PULL_WAITS[p.reviewStatus]} />
-          <PullCard repository={p.repository} number={p.number} title={p.title} />
+          <PullCard repository={p.repository} number={p.number} title={p.title} open />
         </div>
       ))}
       {(moreTickets > 0 || morePulls > 0) && (
