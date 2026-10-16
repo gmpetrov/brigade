@@ -25,3 +25,14 @@ test('a new thread may start with an effort', () => {
   assert.equal(StartThread.parse({ ...base, effort: 'high' }).effort, 'high')
   assert.equal(StartThread.parse(base).effort, undefined)
 })
+
+test("Default sits on the model's own level, Medium when it is not known", async () => {
+  const { defaultEffort } = await import('../dist/models.js')
+  assert.equal(defaultEffort('claude_code', 'claude-opus-5-5'), 'medium')
+  assert.equal(defaultEffort('claude_code', 'claude-fable-5-1'), 'high')
+  // On Default, Claude Code runs the account's own model: not known here.
+  assert.equal(defaultEffort('claude_code', null), 'medium')
+  // On Default, Codex runs GPT-6.1 Sol.
+  assert.equal(defaultEffort('codex', null), 'medium')
+  assert.equal(defaultEffort('codex', 'gpt-6-astra'), 'medium')
+})

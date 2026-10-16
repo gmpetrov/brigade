@@ -24,7 +24,13 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { type Effort, mentionsToText, type ReplyTo } from '@brigade/contracts'
+import {
+  defaultEffort,
+  type Effort,
+  type HarnessId,
+  mentionsToText,
+  type ReplyTo,
+} from '@brigade/contracts'
 import Link from 'next/link'
 import {
   useEffect,
@@ -38,13 +44,12 @@ import {
 import {
   ComposerMenu,
   ComputerIcon,
-  EffortChip,
-  type EffortPick,
   UploadList,
   useFileDrop,
   useUploads,
   type MoveTarget,
 } from '@/components/attachments'
+import { EffortButton, type EffortPick } from '@/components/effort'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
@@ -408,6 +413,8 @@ export function ThreadConversation({
   const busy = current === 'running' || current === 'starting'
   const effort: EffortPick = {
     value: effortPicked ? effortPicked.value : t.effort,
+    // The starting teammate's model: where Default sits.
+    fallback: defaultEffort(t.teammate.harness as HarnessId, t.teammate.model),
     onPick: (value) => {
       setEffortPicked({ value })
       setEffortTurn(busy ? turnId : undefined)
@@ -418,6 +425,7 @@ export function ThreadConversation({
         .finally(() => setEffortPicked(undefined))
     },
   }
+  const effortLater = busy && !!turnId && effortTurn === turnId
   const people = t.teammates.length ? t.teammates.map((p) => p.teammate) : [t.teammate]
   // Who is answering now: the last turn that started, else whoever was asked last.
   const lastTurn = events.findLast((e) => e.event.type === 'turn.started')?.event.teammateId
@@ -1093,7 +1101,6 @@ export function ThreadConversation({
                       </span>
                     </div>
                   )}
-                  <EffortChip effort={effort} later={busy && !!turnId && effortTurn === turnId} />
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
@@ -1101,6 +1108,7 @@ export function ThreadConversation({
                       <ComposerMenu
                         onFiles={files.add}
                         effort={effort}
+                        effortLater={effortLater}
                         {...(phone
                           ? {}
                           : {
@@ -1134,6 +1142,7 @@ export function ThreadConversation({
                         placeholder="Type @ to mention, / for commands"
                       />
                     </div>
+                    <EffortButton effort={effort} later={effortLater} className="mb-1" />
                     {busy && (
                       <Button
                         type="button"
