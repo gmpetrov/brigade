@@ -301,8 +301,9 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   task: { id: string; title: string; completedAt: string | null } | null
   /** The project it works in: its brief, memory and folder come with each turn. */
   project: ProjectSummary | null
-  /** When its teammates asked to be prompted here again, soonest first. */
-  wakeups: { id: string; teammateId: string; note: string; wakeAt: string }[]
+  /** When its teammates asked to be prompted here again, soonest first. Missing from an
+   * API older than the dashboard, while a deploy reaches one before the other. */
+  wakeups?: { id: string; teammateId: string; note: string; wakeAt: string }[]
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'

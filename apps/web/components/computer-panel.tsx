@@ -312,7 +312,7 @@ function Wakeups({ thread, onChange }: { thread: Thread; onChange: () => void })
   return (
     <Section title="Wake-ups">
       <ul className="flex flex-col">
-        {thread.wakeups.map((w) => (
+        {(thread.wakeups ?? []).map((w) => (
           <li key={w.id} className="flex items-center gap-3 rounded-md px-2 py-1.5">
             <AlarmClock className="size-4 flex-none text-muted-foreground" aria-hidden />
             <span className="flex min-w-0 flex-1 flex-col">
@@ -412,7 +412,7 @@ export function ComputerPanel({
 
       <Section title="Details">{details}</Section>
 
-      {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
+      {!!thread.wakeups?.length && <Wakeups thread={thread} onChange={onChange} />}
 
       {outputs.length > 0 && (
         <Section title={`Outputs · ${outputs.length}`}>
