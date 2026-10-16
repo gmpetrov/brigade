@@ -66,33 +66,11 @@ const NAMESPACE = 'x-codex-namespace'
 
 /**
  * Marks a tool's input schema so the Claude Code bridge (patched) never defers it
- * behind tool search. A closing card loaded after the answer made the teammate
- * write its answer again once the tool was loaded.
+ * behind tool search: a card comes right before the answer, with no tool load between.
  */
 export function alwaysLoaded(t: Tool): Tool {
   const schema = asSchema(t.inputSchema).jsonSchema as Parameters<typeof jsonSchema>[0] & object
   return { ...t, inputSchema: jsonSchema({ ...schema, 'x-claude-always-load': true }) }
-}
-
-/**
- * A closing card (reply buttons, choices, a team) refuses to show before the
- * teammate wrote its reply after its last step of work: one that wrote its answer
- * only in its thinking would otherwise end on buttons with no reply above them.
- */
-export function afterReply(t: Tool, wrote: () => boolean): Tool {
-  return {
-    ...t,
-    execute: async (input, options) => {
-      // The text reaches the runner on the stream, the call on its own path: give it a moment.
-      if (!wrote()) await new Promise((resolve) => setTimeout(resolve, 500))
-      if (!wrote())
-        throw new Error(
-          'Nothing was shown: the person has seen no reply from you since your last step of work (your ' +
-            'thinking is not shown to them). Write your reply as text first, then call this again.',
-        )
-      return t.execute!(input, options)
-    },
-  }
 }
 
 export function connectorTools(
@@ -339,6 +317,18 @@ export const openTicketTool = tool({
 })
 
 /**
+ * Text a teammate writes before a tool call comes back summarized like its
+ * thinking (Claude Code's summarized display covers it), and the person never
+ * sees it as a reply. So a card is called right before the final reply, which
+ * the turn ends on; the thread shows the card under it.
+ */
+const BEFORE_REPLY =
+  'Call it right before your final reply, then write that reply as the last thing in your turn: the card ' +
+  'shows under it. Text you write before a tool call is summarized away, so never write the reply first.'
+const WRITE_REPLY =
+  'Shown under your reply. Now write your reply as text: it ends your turn, with no tool call after it.'
+
+/**
  * Replies for the person to send with one click, shown as buttons under the
  * reply. Like offer_choices it does not pause: the turn ends, and a click
  * sends the reply as the person's next message.
@@ -348,8 +338,9 @@ export const suggestRepliesTool = tool({
     'When your reply ends by proposing a next step ("Want me to send it?", "Build it and open a PR?"), ' +
     'give the person the 1 to 3 answers they would most likely type, as buttons they send with one click. ' +
     'Each is a short reply in their voice naming the action ("Send it", "Send to 5 first", "Build and merge", ' +
-    '"Not yet"), never a generic "Yes". Call it last; a click arrives as their next message, word for word. ' +
-    'Not for explanations, open questions or alternatives to compare (offer_choices).',
+    '"Not yet"), never a generic "Yes". A click arrives as their next message, word for word. ' +
+    'Not for explanations, open questions or alternatives to compare (offer_choices). ' +
+    BEFORE_REPLY,
   inputSchema: jsonSchema<SuggestedReplies>({
     type: 'object',
     properties: {
@@ -368,7 +359,7 @@ export const suggestRepliesTool = tool({
     if (!parsed.success) throw new Error(`Invalid replies: ${parsed.error.message}`)
     return {
       shown: parsed.data.replies.length,
-      next: 'Your reply is over: write nothing more, a click arrives as their next message.',
+      next: `${WRITE_REPLY} A click arrives as their next message.`,
     }
   },
 })
@@ -381,8 +372,9 @@ export const suggestRepliesTool = tool({
 export const offerChoicesTool = tool({
   description:
     'Show the person alternatives you made (designs, approaches, drafts) as cards they pick from with one click. ' +
-    'Call it last, after your reply describes them; their pick arrives as their next message ("Go with <label>"), ' +
-    'or they write their own. For a choice you cannot go on without, ask a question instead.',
+    'Their pick arrives as their next message ("Go with <label>"), or they write their own; your reply describes ' +
+    'them. For a choice you cannot go on without, ask a question instead. ' +
+    BEFORE_REPLY,
   inputSchema: jsonSchema<Choices>({
     type: 'object',
     properties: {
@@ -429,7 +421,7 @@ export const offerChoicesTool = tool({
       )
     return {
       shown: parsed.data.options.length,
-      next: 'Your reply is over: write nothing more, the pick arrives as their next message.',
+      next: `${WRITE_REPLY} The pick arrives as their next message.`,
     }
   },
 })
@@ -464,7 +456,7 @@ export const showWidgetTool = tool({
     return {
       shown: true,
       next:
-        'If it shows options, call offer_choices last, labels numbered and named as in the widget ("3 · Small square caps"): ' +
+        'If it shows options, call offer_choices right before your final reply, labels numbered and named as in the widget ("3 · Small square caps"): ' +
         'other teammates see the pick, never the widget.',
     }
   },
@@ -480,9 +472,10 @@ export const widgetGuideTool = tool({
 /** The chief's proposal of teammates, shown as a card a person edits and accepts. */
 export const proposeTeamTool = tool({
   description:
-    'Show the person the teammates you suggest as a card they can edit, then create with one click. Call it ' +
-    'last, after your reply describes the team. Their answer arrives as their next message: "Created the team: …" ' +
-    'naming the new teammates, or their own words to change it.',
+    'Show the person the teammates you suggest as a card they can edit, then create with one click; your reply ' +
+    'describes the team. Their answer arrives as their next message: "Created the team: …" naming the new ' +
+    'teammates, or their own words to change it. ' +
+    BEFORE_REPLY,
   inputSchema: jsonSchema<TeamProposal>({
     type: 'object',
     properties: {
@@ -540,7 +533,7 @@ export const proposeTeamTool = tool({
     if (new Set(names).size !== names.length) throw new Error('Give each teammate its own name')
     return {
       shown: parsed.data.teammates.length,
-      next: 'Your reply is over: write nothing more, the person edits the card and creates the team, or answers in their own words.',
+      next: `${WRITE_REPLY} The person edits the card and creates the team, or answers in their own words.`,
     }
   },
 })

@@ -22,7 +22,6 @@ import {
   type TicketAnswer,
   runModel,
   WIDGET_GUIDE_TOOL,
-  hasVisibleText,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import type { Tool } from 'ai'
@@ -50,7 +49,6 @@ import {
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import {
   ASK_USER_TOOL,
-  afterReply,
   alwaysLoaded,
   askUserTool,
   computerUseTools,
@@ -168,8 +166,6 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
-  /** The teammate wrote text the person sees since its last step of work. */
-  wrote: () => boolean,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -177,8 +173,8 @@ function createAgent(
   const settings = { auth: {}, mcpServers }
   const codex = spec.teammate.harness === 'codex'
   const harness = codex ? createCodex(settings) : createClaudeCode(settings)
-  // Closing cards come right after the answer: loaded up front, not through tool search.
-  const closing = (t: Tool) => (codex ? afterReply(t, wrote) : alwaysLoaded(afterReply(t, wrote)))
+  // Cards come right before the answer: loaded up front, not through tool search.
+  const closing = (t: Tool) => (codex ? t : alwaysLoaded(t))
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
     ...connectorTools(spec.connectors, callConnector, { defer: codex }),
@@ -266,8 +262,6 @@ export class HarnessThread {
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
-  /** The teammate wrote text the person sees since its last step of work (see afterReply). */
-  private wroteReply = false
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
   private readonly stateFile: string
@@ -494,19 +488,9 @@ export class HarnessThread {
     // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
     // How its stream ends then is no failure of the teammate's.
     const frozenUnder = () => attached !== undefined && this.live !== attached
-    this.wroteReply = false
     const mapper = new EventMapper((event) => {
       if (frozenUnder()) return
-      if (event.type === 'message.done') {
-        this.remember('assistant', event.text)
-        if (hasVisibleText(event.text)) this.wroteReply = true
-      }
-      // Work after the text (a command, a PR) needs a reply of its own; loading a tool or drawing does not.
-      if (
-        event.type === 'tool.started' &&
-        !ASIDE_TOOLS.has(event.toolName.replace(/^mcp__.+?__/, ''))
-      )
-        this.wroteReply = false
+      if (event.type === 'message.done') this.remember('assistant', event.text)
       this.emitEvent(event)
     }, this.toolCalls)
     try {
@@ -876,7 +860,6 @@ export class HarnessThread {
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
-      () => this.wroteReply,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
@@ -990,30 +973,6 @@ export class HarnessThread {
   }
 }
 
-/** Steps that are no work of their own: the reply written before them still answers. */
-const ASIDE_TOOLS = new Set([
-  'ToolSearch',
-  'tool_search',
-  'TodoWrite',
-  'update_plan',
-  SHOW_WIDGET_TOOL,
-  WIDGET_GUIDE_TOOL,
-  SUGGEST_REPLIES_TOOL,
-  OFFER_CHOICES_TOOL,
-  PROPOSE_TEAM_TOOL,
-])
-
-/**
- * Closing cards a turn ends on, with nothing written after them. Claude Code
- * otherwise sees no text after the last tool, asks for a visible reply, and
- * the teammate writes its whole answer again.
- */
-const TERMINAL_TOOLS = {
-  CLAUDE_CODE_TERMINAL_MCP_TOOLS: [SUGGEST_REPLIES_TOOL, OFFER_CHOICES_TOOL, PROPOSE_TEAM_TOOL]
-    .map((name) => `mcp__harness-tools__${name}`)
-    .join(','),
-}
-
 /**
  * The working directory and harness environment for an account: on a cloud
  * computer the teammate's own Linux user, home and private config directory.
@@ -1021,13 +980,12 @@ const TERMINAL_TOOLS = {
 async function prepare(workDir: string, account: AccountRef, sessionId: string, runAs?: string) {
   if (!runAs) {
     await mkdir(workDir, { recursive: true })
-    return harnessEnv({ ...TERMINAL_TOOLS, ...accountEnv(account) })
+    return harnessEnv(accountEnv(account))
   }
   await ensureUser(runAs)
   await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
   const home = teammateHome(runAs)
   return harnessEnv({
-    ...TERMINAL_TOOLS,
     ...(await linkAccount(runAs, account)),
     ...accountToken(account),
     ...(await containerEnv(runAs, sessionId)),
