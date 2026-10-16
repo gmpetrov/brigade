@@ -494,14 +494,16 @@ export function ThreadConversation({
         name: 'the other computer',
       },
     )
-  // A move with a message shows on the message itself.
+  // A move with a message shows on the message itself, unless it waits on the new computer.
   const moveStatus =
-    t.move && !pendingOut.some((o) => o.state === 'moving')
+    t.move && (t.move.waitingFor || !pendingOut.some((o) => o.state === 'moving'))
       ? t.move.phase === 'waiting'
         ? `Moves to ${movingTo} once this turn ends`
-        : t.move.phase === 'arriving'
-          ? `Moves to ${movingTo} once it is online`
-          : `Moving to ${movingTo}…`
+        : t.move.waitingFor === 'update'
+          ? `Moves to ${movingTo} once its runner has updated`
+          : t.move.waitingFor === 'online'
+            ? `Moves to ${movingTo} once it is online`
+            : `Moving to ${movingTo}…`
       : undefined
   // The computer's own page, the thread docked beside it.
   const showComputer = (shell = false) => openComputer(t.teammate.id, { threadId: id, shell })
