@@ -22,6 +22,8 @@ import {
   PROPOSE_SKILL_TOOL,
   SKILL_ENTRY,
   SkillContent,
+  SUGGESTED_REPLY_MAX,
+  SuggestedReplies,
   TeamProposal,
   Widget,
   WIDGET_GUIDE_TOOL,
@@ -286,6 +288,41 @@ export const openTicketTool = tool({
     },
     required: ['title', 'asks'],
   }),
+})
+
+/**
+ * Replies for the person to send with one click, shown as buttons under the
+ * reply. Like offer_choices it does not pause: the turn ends, and a click
+ * sends the reply as the person's next message.
+ */
+export const suggestRepliesTool = tool({
+  description:
+    'When your reply ends by proposing a next step ("Want me to send it?", "Build it and open a PR?"), ' +
+    'give the person the 1 to 3 answers they would most likely type, as buttons they send with one click. ' +
+    'Each is a short reply in their voice naming the action ("Send it", "Send to 5 first", "Build and merge", ' +
+    '"Not yet"), never a generic "Yes". Call it last; a click arrives as their next message, word for word. ' +
+    'Not for explanations, open questions or alternatives to compare (offer_choices).',
+  inputSchema: jsonSchema<SuggestedReplies>({
+    type: 'object',
+    properties: {
+      replies: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 3,
+        items: { type: 'string', maxLength: SUGGESTED_REPLY_MAX },
+        description: 'The likeliest first, e.g. ["Build it", "Build and merge"]',
+      },
+    },
+    required: ['replies'],
+  }),
+  execute: async (input) => {
+    const parsed = SuggestedReplies.safeParse(input)
+    if (!parsed.success) throw new Error(`Invalid replies: ${parsed.error.message}`)
+    return {
+      shown: parsed.data.replies.length,
+      next: 'End your reply: a click arrives as their next message.',
+    }
+  },
 })
 
 /**
