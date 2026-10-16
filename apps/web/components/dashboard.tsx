@@ -123,6 +123,9 @@ export function useDashboard() {
   return value
 }
 
+/** The dashboard, or null where a component also shows outside it. */
+export const useMaybeDashboard = () => useContext(DashboardContext)
+
 export { isAdmin }
 
 /** The work: what projects group. */

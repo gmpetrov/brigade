@@ -50,6 +50,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError, useApi } from '@/lib/api'
 import { API_URL } from '@/lib/config'
+import { ProjectIcon } from '@/components/projects'
 
 type Scope = { everywhere: boolean; teammateIds: string[]; projectIds: string[] }
 
@@ -771,6 +772,7 @@ function ScopeFields({
                           })
                         }
                       />
+                      <ProjectIcon project={p} className="size-4 text-[0.625rem]" />
                       {p.name}
                     </label>
                   </li>

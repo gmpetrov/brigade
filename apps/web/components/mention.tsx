@@ -9,7 +9,9 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { api, type Connection, type ConnectionsResponse, type Credential } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useMaybeDashboard } from '@/components/dashboard'
 import { useFileLinks } from '@/components/file-links'
+import { ProjectIcon } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 
 export type ConnectionKind = Connection['kind']
@@ -86,7 +88,7 @@ export function MentionChip({
         data-kind="project"
         className={cn(chip, 'hover:bg-accent', className)}
       >
-        <MentionIcon kind="project" />
+        <MentionIcon kind="project" id={mention.id} />
         {mention.label}
       </Link>
     )
@@ -118,11 +120,17 @@ export function MessageText({ text }: { text: string }) {
 
 export function MentionIcon({
   kind,
+  id,
   connectionKind,
 }: {
   kind: Mention['kind']
+  /** What is mentioned: a project shows its own logo or icon. */
+  id?: string
   connectionKind?: ConnectionKind
 }) {
+  const project = useMaybeDashboard()?.projects.find((p) => kind === 'project' && p.id === id)
+  if (project)
+    return <ProjectIcon project={project} className="size-3.5 rounded-[3px] text-[0.5rem]" />
   const common = { width: 14, height: 14, viewBox: '0 0 24 24', 'aria-hidden': true } as const
   const line = {
     ...common,

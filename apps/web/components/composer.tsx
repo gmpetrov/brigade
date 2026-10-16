@@ -225,7 +225,7 @@ function MentionMenu({ items, selected, query, onPick, onHover }: MenuProps) {
             }}
           >
             <span className="inline-flex text-muted-foreground group-aria-selected:text-primary">
-              <MentionIcon kind={o.kind} connectionKind={o.connectionKind} />
+              <MentionIcon kind={o.kind} id={o.id} connectionKind={o.connectionKind} />
             </span>
             <span className="min-w-0 flex-1 truncate">{o.label}</span>
             {o.hint && (
