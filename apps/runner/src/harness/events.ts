@@ -235,6 +235,8 @@ export class EventMapper {
   exhausted: { resetsAt: string | null } | undefined
   /** Calls of a pausing tool (open_ticket) with input nobody could answer. */
   rejected: { toolCallId: string; toolName: string; error: string }[] = []
+  /** Calls already shown as started: one repeated after its result must not show twice. */
+  private started = new Set<string>()
 
   /** Recognise an out-of-usage error from either harness. */
   static exhaustedBy(message: string): { resetsAt: string | null } | undefined {
@@ -278,7 +280,9 @@ export class EventMapper {
         return
       }
       case 'tool-call': {
-        if (this.toolCalls.has(part.toolCallId)) return // adapters may repeat a call around approvals
+        // Adapters may repeat a call around approvals, or after its result.
+        if (this.toolCalls.has(part.toolCallId) || this.started.has(part.toolCallId)) return
+        this.started.add(part.toolCallId)
         this.toolCalls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
         // The harness's own question tool: a person answers, then the turn continues.
         if (part.toolName === QUESTION_TOOL || part.toolName === ASK_USER_TOOL) {
