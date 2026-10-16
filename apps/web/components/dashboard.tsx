@@ -98,6 +98,7 @@ import {
   type Teammate,
   type Ticket,
 } from '@/lib/api'
+import { inCaptureWindow } from '@/lib/brigade-app'
 import { authClient } from '@/lib/auth-client'
 import { markSignedIn, markSignedOut } from '@/lib/signed-in'
 import { isMac, useIsMac } from '@/lib/platform'
@@ -237,6 +238,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useSettingsShortcut()
 
+  // Brigade.app's screenshot window shows its page alone; signing in there lands it back on it.
+  const capture = pathname === '/app/capture'
+  useEffect(() => {
+    if (pathname === '/app' && inCaptureWindow()) router.replace('/app/capture')
+  }, [pathname, router])
+
   if (!me.data?.activeWorkspaceId || !me.data.aiReady) return <AppLoader />
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
@@ -261,16 +268,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     router.replace('/sign-in')
   }
 
+  const dashboard = {
+    me: data,
+    teammates: teammates.data ?? [],
+    reloadTeammates: teammates.reload,
+    projects: projects.data ?? [],
+    reloadProjects,
+  }
+  if (capture)
+    return <DashboardContext.Provider value={dashboard}>{children}</DashboardContext.Provider>
+
   return (
-    <DashboardContext.Provider
-      value={{
-        me: data,
-        teammates: teammates.data ?? [],
-        reloadTeammates: teammates.reload,
-        projects: projects.data ?? [],
-        reloadProjects,
-      }}
-    >
+    <DashboardContext.Provider value={dashboard}>
       <DocumentPanelProvider>
         <ThreadPanelProvider>
           <SidebarProvider
