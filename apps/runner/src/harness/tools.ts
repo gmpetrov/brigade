@@ -76,8 +76,8 @@ export function alwaysLoaded(t: Tool): Tool {
 
 /**
  * A closing card (reply buttons, choices, a team) refuses to show before the
- * teammate wrote anything in its turn: one that wrote its answer only in its
- * thinking would otherwise end on buttons with no reply above them.
+ * teammate wrote its reply after its last step of work: one that wrote its answer
+ * only in its thinking would otherwise end on buttons with no reply above them.
  */
 export function afterReply(t: Tool, wrote: () => boolean): Tool {
   return {
@@ -87,8 +87,8 @@ export function afterReply(t: Tool, wrote: () => boolean): Tool {
       if (!wrote()) await new Promise((resolve) => setTimeout(resolve, 500))
       if (!wrote())
         throw new Error(
-          'Nothing was shown: the person has seen no reply from you in this turn (your thinking is not ' +
-            'shown to them). Write your reply as text first, then call this again.',
+          'Nothing was shown: the person has seen no reply from you since your last step of work (your ' +
+            'thinking is not shown to them). Write your reply as text first, then call this again.',
         )
       return t.execute!(input, options)
     },

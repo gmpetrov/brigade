@@ -78,6 +78,8 @@ export const pickedChoice = <O extends { label: string }>(options: O[], message:
  * buttons under its reply until anyone answers; a click sends the reply as is.
  */
 export const SUGGEST_REPLIES_TOOL = 'suggest_replies'
+/** Text a person can see: not only spaces or zero-width characters. */
+export const hasVisibleText = (text: string) => /[^\s\u200b-\u200d\u2060\ufeff]/.test(text)
 export const SUGGESTED_REPLY_MAX = 40
 export const SuggestedReplies = z.object({
   replies: z.array(z.string().trim().min(1).max(SUGGESTED_REPLY_MAX)).min(1).max(3),

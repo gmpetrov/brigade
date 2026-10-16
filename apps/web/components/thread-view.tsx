@@ -14,6 +14,7 @@ import {
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
   SUGGEST_REPLIES_TOOL,
+  hasVisibleText,
   SuggestedReplies,
   TeamProposal,
   Widget,
@@ -447,7 +448,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     )?.event
     const turnId = lastTurn?.type === 'turn.started' ? lastTurn.turnId : undefined
     return {
-      items,
+      // A message of only zero-width characters shows nothing: no empty bubble for it.
+      items: items.filter((i) => i.kind !== 'assistant' || hasVisibleText(i.text)),
       limits,
       queued: [...queued.values()],
       seen,
