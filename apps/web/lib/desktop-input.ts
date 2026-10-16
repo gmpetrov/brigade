@@ -19,12 +19,18 @@ import type RFB from '@novnc/novnc'
 
 export type DesktopClipboard = { set(text: string): Promise<void>; get(): Promise<string> }
 
-const XK = {
+export const XK = {
   Control_L: 0xffe3,
   Shift_L: 0xffe1,
   Insert: 0xff63,
   Return: 0xff0d,
   Tab: 0xff09,
+  BackSpace: 0xff08,
+  Escape: 0xff1b,
+  Left: 0xff51,
+  Up: 0xff52,
+  Right: 0xff53,
+  Down: 0xff54,
 }
 
 const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
@@ -32,14 +38,30 @@ const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userA
 /** Longest text typed key by key when the clipboard cannot carry it. */
 const MAX_TYPED = 4000
 
-function keysym(codePoint: number) {
+export function keysym(codePoint: number) {
   if (codePoint === 0x0a) return XK.Return
   if (codePoint === 0x09) return XK.Tab
   if (codePoint >= 0x20 && codePoint <= 0xff) return codePoint
   return 0x01000000 | codePoint // X11's Unicode keysyms; x11vnc adds them to the keymap
 }
 
-export function bridgeInput(rfb: RFB, container: HTMLElement, clipboard?: DesktopClipboard) {
+/** What a phone, with no copy and paste keys, does through buttons. */
+export type DesktopInput = {
+  /** Put this text on the desktop's clipboard and paste it there. */
+  paste(text: string): void
+  /** Copy the desktop's selection, then put its clipboard on this device's. Inside a click, as Safari requires. */
+  copy(): void
+  /** Type text key by key: what an on-screen keyboard sends. */
+  type(text: string): void
+  key(keysym: number): void
+  dispose(): void
+}
+
+export function bridgeInput(
+  rfb: RFB,
+  container: HTMLElement,
+  clipboard?: DesktopClipboard,
+): DesktopInput {
   const mac = isMac()
   let ctrlDown = false // a Mac's Cmd, held as Ctrl on the desktop
   let lastRemote = ''
@@ -190,7 +212,28 @@ export function bridgeInput(rfb: RFB, container: HTMLElement, clipboard?: Deskto
   document.addEventListener('paste', onPaste, true)
   rfb.addEventListener('clipboard', onClipboard)
 
-  return () => {
+  const type = (text: string) => {
+    if (!live()) return
+    for (const char of text) rfb.sendKey(keysym(char.codePointAt(0)!), null)
+  }
+
+  return {
+    paste: deliver,
+    copy() {
+      if (!live()) return
+      rfb.sendKey(XK.Control_L, 'ControlLeft', true)
+      rfb.sendKey(XK.Insert, 'Insert')
+      rfb.sendKey(XK.Control_L, 'ControlLeft', false)
+      startCopy()
+    },
+    type,
+    key: (sym) => {
+      if (live()) rfb.sendKey(sym, null)
+    },
+    dispose,
+  }
+
+  function dispose() {
     clearTimeout(pasteFallback)
     container.removeEventListener('keydown', onKeyDown, true)
     container.removeEventListener('keyup', onKeyUp, true)
