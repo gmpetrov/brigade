@@ -208,6 +208,16 @@ export async function specFor(
     skills,
     project,
     projects,
+    // Taken in once by the computer it moved to; older runners ignore it.
+    ...(thread.movedAt
+      ? {
+          moved: {
+            at: thread.movedAt.toISOString(),
+            from: thread.movedFrom ?? 'another computer',
+            seq: thread.movedSeq ?? 0,
+          },
+        }
+      : {}),
     // A GitHub grant also reaches its repositories through git, via the API's proxy.
     ...(github
       ? {

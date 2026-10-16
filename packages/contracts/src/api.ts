@@ -209,8 +209,12 @@ export const SendMessage = z
     pick: LibraryPath.optional(),
     /** The earlier message in the thread this one replies to, quoted for the teammate. */
     replyTo: ReplyTo.optional(),
+    /** Continue the thread on this computer: it moves there first, and this message goes with it. */
+    moveTo: z.string().min(1).max(64).optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
+/** Continue a thread on another computer without a message: its teammate picks up where it was. */
+export const MoveThread = z.object({ computerId: z.string().min(1).max(64) })
 /** Cancel a queued message, change its text, or steer it into the running turn. */
 export const QueuedMessageAction = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel') }),
@@ -297,6 +301,8 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     type: z.literal('thread.updated'),
     sessionId: z.string(),
     status: z.string(),
+    /** Its computer changed, or a move to another started or ended: fetch the thread again. */
+    moved: z.boolean().optional(),
   }),
   z.object({ type: z.literal('computer.updated'), computerId: z.string(), online: z.boolean() }),
   /** A task was created, changed or removed: refetch the board. */

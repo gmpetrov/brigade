@@ -395,6 +395,12 @@ model Session {
   archivedAt           DateTime?
   /// Highest contiguous event sequence number stored.
   lastSeq              Int                @default(0)
+  /// While it moves to another computer: where to, how far it got and the message that goes with it (src/move.ts).
+  move                 Json?
+  /// When it last came to its computer from another, from which (by name), and its last event then (ThreadSpec.moved).
+  movedAt              DateTime?
+  movedFrom            String?
+  movedSeq             Int?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   events               SessionEvent[]

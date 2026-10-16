@@ -10,6 +10,7 @@ import {
   mentionsToText,
   MESSAGE_COMMANDS,
   messageCommand,
+  MoveThread,
   skillCommand,
   PreviewAction,
   StartPreview,
@@ -55,6 +56,7 @@ import {
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
 import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
+import { movePublic, requestMove } from '../move.js'
 import {
   handBack,
   joinThread,
@@ -294,6 +296,8 @@ export const threads = new Hono<AppEnv>()
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
     return c.json({
       ...thread,
+      // Where it is going, not the message that goes with it.
+      move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
     })
@@ -551,7 +555,7 @@ export const threads = new Hono<AppEnv>()
       throw new HTTPException(409, {
         message: 'This thread is paused at a daily cap. An admin decides in Tickets.',
       })
-    const { text, attachmentIds, messageId, steer, pick, replyTo } = await parseBody(
+    const { text, attachmentIds, messageId, steer, pick, replyTo, moveTo } = await parseBody(
       c.req.raw,
       SendMessage,
     )
@@ -561,6 +565,22 @@ export const threads = new Hono<AppEnv>()
     const mentioned = await mentionedTeammates(db, text)
     const joined = mentioned.filter((id) => !thread.teammates.some((t) => t.teammateId === id))
     if (joined.length > 0) await joinThread(db, thread.id, joined)
+    // Continue on another computer: the message goes with the thread once it is there.
+    if (moveTo) {
+      await requestMove(db, scope, joined.length > 0 ? await loadThread(db, thread.id) : thread, moveTo, {
+        text,
+        memberId: scope.memberId,
+        ...(mentioned.length ? { teammateIds: mentioned } : {}),
+        attachmentIds,
+        ...(messageId ? { messageId } : {}),
+        ...(replyTo ? { replyTo } : {}),
+      })
+      if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
+      if (thread.archivedAt)
+        await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
+      await reopenOnMessage(scope, thread)
+      return c.json({ ok: true, paused: false, delivery: 'moving' })
+    }
     const outcome = await promptWithAttachments(
       db,
       scope,
@@ -598,6 +618,15 @@ export const threads = new Hono<AppEnv>()
       paused: outcome === 'paused',
       delivery: outcome === 'queued' ? 'starting' : outcome,
     })
+  })
+
+  /** Continue on another computer without a message: the teammate picks up where it was. */
+  .post('/:id/move', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    const { computerId } = await parseBody(c.req.raw, MoveThread)
+    await requestMove(db, scope, thread, computerId)
+    return c.json({ ok: true })
   })
 
   /** A message still queued: cancel it, change its text, or steer it into the running turn. */

@@ -136,6 +136,22 @@ export const ThreadSpec = z.object({
   project: ThreadProject.nullish(),
   /** The workspace's projects (not archived), so a mention of one can be followed. */
   projects: z.array(ProjectCatalogEntry).default([]),
+  /**
+   * The thread came to this computer from another (MOVE_PROTOCOL). Each arrival
+   * once: what this computer kept of the thread from before is out of date. Its
+   * folders come from their archives, its conversation from the API (the events
+   * up to `seq`), and its events go on numbered after `seq`.
+   */
+  moved: z
+    .object({
+      /** When it arrived: tells one arrival from the next. */
+      at: z.string(),
+      /** The computer it came from, by name. */
+      from: z.string(),
+      /** The thread's last event before it moved. */
+      seq: z.number().int().nonnegative(),
+    })
+    .nullish(),
 })
 export type ThreadSpec = z.infer<typeof ThreadSpec>
 
@@ -205,6 +221,13 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     /** An image's bytes, base64, when asked for one. */
     data: z.string().optional(),
     truncated: z.boolean().optional(),
+  }),
+  /** A thread handed over after thread.release: its folders archived and gone from here, or why not. */
+  z.object({
+    type: z.literal('thread.release.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
   }),
   /** The desktop's clipboard text after a desktop.clipboard command, or why it failed. */
   z.object({
@@ -445,6 +468,17 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
+  /**
+   * The thread moves to another computer (MOVE_PROTOCOL): park its teammates,
+   * archive their folders to the API's bucket, then forget it here. Answered
+   * with thread.release.result once every event of it is acknowledged.
+   */
+  z.object({
+    type: z.literal('thread.release'),
+    requestId: z.string(),
+    sessionId: z.string(),
+    teammateIds: z.array(z.string()).min(1).max(20),
+  }),
   /**
    * A repository got a push on GitHub: bring the teammates' caches of it up to
    * date, if this computer has any. Each token is fetch-only, for a few minutes.

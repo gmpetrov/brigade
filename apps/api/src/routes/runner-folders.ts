@@ -8,6 +8,7 @@
 //   POST   /runner/folders/<thread>/<teammate>/done    { size }  → checked in the bucket
 //   GET    the same, to put the folder back: redirects to a signed URL with R2
 //   DELETE the same, once it is back on disk
+//   GET    /runner/folders/<thread>/<teammate>/conversation  what was said up to its move to this computer
 import { Hono, type Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
@@ -22,7 +23,7 @@ import {
   presignPut,
   putObject,
 } from '../bucket.js'
-import { scoped } from '../db.js'
+import { prisma, scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 import { parseBody } from '../scope.js'
 
@@ -31,6 +32,8 @@ const ARCHIVE_MAX = 4 * 1024 ** 3
 /** Through the API, held in memory: only without R2, in development. */
 const THROUGH_API_MAX = 200 * 1024 * 1024
 const TYPE = 'application/gzip'
+/** As much conversation as the runner keeps for a handoff (harness TRANSCRIPT_CHARS). */
+const TRANSCRIPT_CHARS = 40_000
 
 const Size = z.object({ size: z.number().int().positive().max(ARCHIVE_MAX) })
 
@@ -120,6 +123,55 @@ export const runnerFolders = new Hono<{ Variables: { runner: Runner } }>()
     const bytes = await getObject(key)
     if (!bytes) throw new HTTPException(404, { message: 'No archive' })
     return c.body(bytes as Uint8Array<ArrayBuffer>, 200, { 'content-type': TYPE })
+  })
+
+  /**
+   * The thread moved here: what was said in it before, as the teammate's
+   * conversation, newest last and at most TRANSCRIPT_CHARS. Its new session
+   * starts from it (the harness's own stayed on the old computer).
+   */
+  .get(`${PATH}/conversation`, async (c) => {
+    const { folder } = await archiveOf(c)
+    const session = await scoped(c.var.runner).session.findFirst({
+      where: { id: folder.sessionId },
+      select: { teammateId: true, movedSeq: true },
+    })
+    if (session?.movedSeq == null) return c.json({ transcript: [] })
+    const [rows, seats] = await Promise.all([
+      prisma.sessionEvent.findMany({
+        where: {
+          sessionId: folder.sessionId,
+          seq: { lte: session.movedSeq },
+          type: { in: ['message.user', 'message.done'] },
+        },
+        orderBy: { seq: 'desc' },
+        take: 500,
+        select: { data: true },
+      }),
+      scoped(c.var.runner).threadTeammate.findMany({
+        where: { sessionId: folder.sessionId },
+        select: { teammate: { select: { id: true, name: true } } },
+      }),
+    ])
+    const names = new Map(seats.map((s) => [s.teammate.id, s.teammate.name]))
+    const transcript: { role: 'user' | 'assistant'; text: string }[] = []
+    let budget = TRANSCRIPT_CHARS
+    for (const { data } of rows) {
+      const event = data as { type: string; text?: string; teammateId?: string }
+      if (!event.text) continue
+      const by = event.type === 'message.done' ? (event.teammateId ?? session.teammateId) : null
+      const entry =
+        by === folder.teammateId
+          ? { role: 'assistant' as const, text: event.text }
+          : {
+              role: 'user' as const,
+              text: by ? `${names.get(by) ?? 'Another teammate'} (teammate): ${event.text}` : event.text,
+            }
+      if (transcript.length > 0 && entry.text.length > budget) break
+      transcript.unshift(entry)
+      budget -= entry.text.length
+    }
+    return c.json({ transcript })
   })
 
   .delete(PATH, async (c) => {
