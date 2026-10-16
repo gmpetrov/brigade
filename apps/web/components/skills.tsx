@@ -24,6 +24,7 @@ import {
 import { useRef, useState } from 'react'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ProviderTile, type ProviderKind } from '@/components/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -117,9 +118,16 @@ async function readImport(from: { file: File } | { url: string }): Promise<Skill
 const githubOwner = (source: string) =>
   /^https:\/\/(www\.)?github\.com\/([\w.-]+)/.exec(source)?.[2]
 
-/** A pack's picture: its GitHub owner's avatar, or a box. */
-function SourceImage({ source }: { source: string }) {
-  const owner = githubOwner(source)
+/** A pack's picture: its App's logo, else its GitHub owner's avatar, else a box. */
+function PackImage({ pack }: { pack: SkillPack }) {
+  if (pack.appKey)
+    return (
+      <ProviderTile
+        kind={(pack.appKey.startsWith('custom:') ? 'webhook' : pack.appKey) as ProviderKind}
+        small
+      />
+    )
+  const owner = githubOwner(pack.source)
   return (
     <Avatar className="size-8 rounded-lg" aria-hidden>
       {owner && <AvatarImage src={`https://github.com/${owner}.png?size=64`} alt="" />}
@@ -322,7 +330,7 @@ export function Skills({ admin }: { admin: boolean }) {
               return (
                 <div key={p.id} className="flex flex-col divide-y">
                   <div className="flex items-center gap-3 py-2.5 pr-3 pl-4">
-                    <SourceImage source={p.source} />
+                    <PackImage pack={p} />
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 flex-col text-left"
