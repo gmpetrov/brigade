@@ -6,7 +6,7 @@ mod runner;
 mod setup;
 
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -36,6 +36,9 @@ struct Settings {
     /// The setup steps missing when the person last closed the checklist.
     #[serde(default)]
     setup_dismissed: Vec<String>,
+    /// Keep screen awake, off until the person turns it on.
+    #[serde(default)]
+    keep_awake: bool,
 }
 
 fn settings_file() -> PathBuf {
@@ -68,6 +71,7 @@ struct Items {
     connect: MenuItem<Wry>,
     update: MenuItem<Wry>,
     login: CheckMenuItem<Wry>,
+    awake: CheckMenuItem<Wry>,
     /// An update is installed and waits for a restart.
     update_ready: Mutex<bool>,
 }
@@ -78,6 +82,26 @@ fn show_status(items: &Items, status: &Status) {
         Status::NotConnected => "Connect this computer…",
         _ => "Connect to another workspace…",
     });
+}
+
+/// `caffeinate` while Keep screen awake is on: the display, and so the Mac, stay
+/// awake for teammates to see and use it. -w ties it to this app, so it ends when Brigade quits.
+#[derive(Default)]
+struct Awake(Mutex<Option<Child>>);
+
+fn keep_awake(app: &AppHandle, on: bool) {
+    let awake = app.state::<Awake>();
+    let mut slot = awake.0.lock().unwrap();
+    if let Some(mut child) = slot.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    if on {
+        *slot = Command::new("caffeinate")
+            .args(["-d", "-i", "-w", &std::process::id().to_string()])
+            .spawn()
+            .ok();
+    }
 }
 
 fn alert(app: &AppHandle, title: &str, message: &str, kind: MessageDialogKind) {
@@ -201,6 +225,13 @@ fn on_menu(app: &AppHandle, id: &str) {
         }
         "setup" => setup::show(app),
         "restart-runner" => app.state::<Arc<Supervisor>>().start(),
+        "awake" => {
+            let on = app.state::<Arc<Items>>().awake.is_checked().unwrap_or(false);
+            let mut settings = load_settings();
+            settings.keep_awake = on;
+            save_settings(&settings);
+            keep_awake(app, on);
+        }
         "login" => {
             let launch = app.autolaunch();
             let _ = if launch.is_enabled().unwrap_or(false) {
@@ -245,6 +276,14 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let status = MenuItem::with_id(app, "status", "Starting…", false, None::<&str>)?;
     let connect = MenuItem::with_id(app, "connect", "Connect this computer…", true, None::<&str>)?;
     let update = MenuItem::with_id(app, "update", "Check for updates…", true, None::<&str>)?;
+    let awake = CheckMenuItem::with_id(
+        app,
+        "awake",
+        "Keep screen awake",
+        true,
+        settings.keep_awake,
+        None::<&str>,
+    )?;
     let login = CheckMenuItem::with_id(
         app,
         "login",
@@ -268,6 +307,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &connect,
             &MenuItem::with_id(app, "setup", "Set up Brigade…", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
+            &awake,
             &login,
             &update,
             &MenuItem::with_id(app, "restart-runner", "Restart runner", true, None::<&str>)?,
@@ -290,11 +330,16 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         connect,
         update,
         login,
+        awake,
         update_ready: Mutex::new(false),
     });
     app.manage(items.clone());
     app.manage(setup::Helper::new(helper.clone()));
     app.manage(setup::Last::default());
+    app.manage(Awake::default());
+    if settings.keep_awake {
+        keep_awake(app.handle(), true);
+    }
     let supervisor = Supervisor::new(helper, move |status| show_status(&items, status));
     app.manage(supervisor.clone());
     supervisor.start();
