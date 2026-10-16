@@ -24,6 +24,7 @@ export const tickets = new Hono<AppEnv>()
             title: true,
             origin: true,
             startedByMemberId: true,
+            othersMayPrompt: true,
             projectId: true,
             teammate: { select: { id: true, name: true } },
           },

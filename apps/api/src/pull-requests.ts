@@ -23,7 +23,7 @@ import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
-import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import type { WorkspaceScope } from './scope.js'
@@ -300,15 +300,45 @@ export async function listPulls(
   return { pulls: await withPreviews(db, pulls), repositories, errors }
 }
 
-/** Pull requests waiting on a person: approved but not set to merge, or stopped. */
+/**
+ * Open pull requests waiting on a person: one a teammate opened that nobody asked a
+ * teammate to review (a person reviews and merges it), approved but not set to merge,
+ * changes requested, or stopped. The sidebar, Home and Pull requests all count these.
+ */
+export const waitingOnPerson = {
+  state: 'open',
+  OR: [
+    { reviewStatus: 'none', sessionId: { not: null } },
+    { reviewStatus: { in: ['stuck', 'changes_requested'] } },
+    { reviewStatus: 'approved', autoMerge: false },
+  ],
+} satisfies Prisma.PullRequestWhereInput
+
+/** A thread status while its teammate is at work: its pull requests wait once it stops. */
+const AT_WORK: Prisma.SessionWhereInput['status'] = { in: ['starting', 'running'] }
+
+/**
+ * Those waiting on a person, newest first, with the thread that opened each. Not
+ * while that thread's teammate is still at work on it, as in the sidebar and on Tasks.
+ */
 export const needsAttention = (db: ScopedDb) =>
-  db.pullRequest.count({
+  db.pullRequest.findMany({
     where: {
-      state: 'open',
-      OR: [
-        { reviewStatus: { in: ['stuck', 'changes_requested'] } },
-        { reviewStatus: 'approved', autoMerge: false },
+      AND: [
+        waitingOnPerson,
+        { OR: [{ sessionId: null }, { session: { NOT: { status: AT_WORK } } }] },
       ],
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 50,
+    select: {
+      repository: true,
+      number: true,
+      title: true,
+      reviewStatus: true,
+      updatedAt: true,
+      session: { select: { id: true, title: true } },
+      authorTeammate: { select: { id: true, name: true } },
     },
   })
 
