@@ -481,11 +481,32 @@ async function* events(body: ReadableStream<Uint8Array>) {
   }
 }
 
+/** The JSON-RPC answer to request `id` in a body, if that is what it holds. */
+function rpcAnswer(text: string, id: number): RpcResponse | undefined {
+  try {
+    const message = JSON.parse(text) as RpcResponse | null
+    return message?.id === id && ('result' in message || 'error' in message) ? message : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** A server's answer: a JSON body, or the matching message of an event stream. */
 async function readRpc(response: Response, id: number): Promise<RpcResponse> {
   if (!response.ok) {
     const text = await response.text().catch(() => '')
-    throw new Error(redact(`${response.status}: ${text.slice(0, 300)}`))
+    // Why it was refused, when the server says (Google: a scope missing, an API not enabled).
+    // Without its scheme: redact() would take the word after "Bearer" for a token.
+    const challenge = response.headers.get('www-authenticate')?.replace(/^Bearer\s+/i, '')
+    const status = `${response.status}${challenge ? ` (${challenge})` : ''}`
+    // Google's servers answer with an error status and the JSON-RPC answer anyway (tools/list
+    // on a 401 or 403): the answer is what counts.
+    const message = rpcAnswer(text, id)
+    if (message) {
+      console.warn(redact(`MCP server answered ${status}; using its answer`))
+      return message
+    }
+    throw new Error(redact(`${status}: ${text.slice(0, 300)}`))
   }
   if ((response.headers.get('content-type') ?? '').includes('text/event-stream') && response.body) {
     for await (const { data } of events(response.body)) {
