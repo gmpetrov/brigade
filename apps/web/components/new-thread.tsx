@@ -313,7 +313,10 @@ export function NewThread({
   typeToFocus?: boolean
   /** In a card (a page, the threads panel), or the whole of a dialog. */
   layout?: 'card' | 'dialog'
-  /** The dialog is a whole window (Brigade.app's capture): the message grows to fill it. */
+  /**
+   * The dialog is a whole window with no title bar (Brigade.app's capture): the message grows
+   * to fill it, and its first row makes room for the window buttons and drags the window.
+   */
   fill?: boolean
 }) {
   const router = useRouter()
@@ -569,7 +572,15 @@ export function NewThread({
         )}
         {...drop.props}
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-1 px-3 py-2 text-sm text-muted-foreground">
+        <div
+          // A whole window has no title bar: its macOS buttons sit at the start of this row
+          // (capture.rs), and the row drags the window, its pickers aside.
+          data-tauri-drag-region={fill ? 'deep' : undefined}
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-1 px-3 py-2 text-sm text-muted-foreground',
+            fill && 'min-h-[52px] pl-[78px] select-none',
+          )}
+        >
           <span className="pl-1">New thread for</span>
           {teammatePicker ?? <span className="font-semibold text-foreground">{teammate.name}</span>}
           {projectPicker && (

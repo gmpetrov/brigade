@@ -204,6 +204,8 @@ fn allow(app: &AppHandle, origin: &str) {
         .permission("allow-capture-remove")
         .permission("allow-capture-clear")
         .permission("allow-capture-hide")
+        // The header drags the window (`data-tauri-drag-region`): it has no title bar.
+        .permission("core:window:allow-start-dragging")
         .permission("core:event:allow-listen")
         .permission("core:event:allow-unlisten");
     if app.add_capability(capability).is_ok() {
@@ -222,7 +224,7 @@ pub fn show(app: &AppHandle) {
         let _ = window.emit("capture-shown", ());
         return;
     }
-    let window = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::External(url))
+    let builder = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::External(url))
         .title("New thread")
         .inner_size(560.0, 400.0)
         .min_inner_size(420.0, 300.0)
@@ -235,8 +237,15 @@ pub fn show(app: &AppHandle) {
         // Tauri's own drop handler would take them first and the page would see nothing.
         .disable_drag_drop_handler()
         .center()
-        .focused(true)
-        .build();
+        .focused(true);
+    // No title bar: the window buttons sit at the start of the page's "New thread for…" row
+    // (about 52pt tall), which leaves room for them and drags the window.
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(16.0, 26.0));
+    let window = builder.build();
     if let Ok(window) = window {
         let handle = window.clone();
         window.on_window_event(move |event| {
