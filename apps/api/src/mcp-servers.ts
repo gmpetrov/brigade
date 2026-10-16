@@ -18,6 +18,11 @@ export type CustomMcp = {
   header?: string
   /** oauth: the client the member registered at the provider, when the server registers none. */
   client?: { id: string; secretId?: string }
+  /**
+   * The name was Brigade's guess (from the host), not the member's: the server's own
+   * replaces it once an account signs in, for servers that say it only then.
+   */
+  guessedName?: boolean
   /** What its tools' names start with, e.g. nevo for nevo_search. Kept when the App is renamed. */
   prefix: string
   /** Images to show for it, best first. */

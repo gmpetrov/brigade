@@ -238,8 +238,10 @@ export function AppSheet({
           )}
           <CloseButton label={`Close ${name}`} title="Close" onClick={onClose} />
         </div>
-        <DialogDescription className="text-base text-foreground">
-          {mcp?.description ?? entry.description}
+        <DialogDescription
+          className={cn('text-base text-foreground', mcp && !mcp.description && 'sr-only')}
+        >
+          {mcp ? (mcp.description ?? `The MCP server at ${host}.`) : entry.description}
         </DialogDescription>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         {waiting && (
@@ -414,6 +416,8 @@ export function AppSheet({
                 }
               />
             </>
+          ) : server ? (
+            <Info label="Category" value={entry.category} />
           ) : (
             <>
               <Info label="Developer" value={entry.developer ?? 'You'} />

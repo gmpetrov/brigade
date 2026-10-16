@@ -60,6 +60,8 @@ export function McpServerCard({
   const asked = useRef('')
   useEffect(() => {
     if (app) return
+    // Another server: a sign-in still open for the last one no longer counts.
+    setWaiting(undefined)
     const typed = url.trim()
     if (!/^https?:\/\/[^/\s]+\.?[^/\s]*/.test(typed)) {
       setInspection(undefined)
@@ -161,8 +163,8 @@ export function McpServerCard({
 
   const ready =
     !!signIn &&
+    // Still enabled while a sign-in window is open: closed by mistake, it opens again.
     !busy &&
-    !waiting &&
     (signIn !== 'api_key' || apiKey.trim().length > 0) &&
     (signIn !== 'oauth_client' || clientId.trim().length > 0)
   const button =

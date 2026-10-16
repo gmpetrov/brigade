@@ -24,14 +24,13 @@ type AccessReply = Extract<
   { type: 'access' }
 >
 
-/** App names for a ticket's heading, before the catalog has loaded. */
+/** App names for a ticket's heading, before the catalog has loaded. An MCP server goes by its ask's. */
 export const APP_NAMES: Record<string, string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
   stripe: 'Stripe',
   github: 'GitHub',
   cloudflare: 'Cloudflare',
-  mcp: 'MCP server',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */

@@ -157,7 +157,8 @@ async function createConnection(
       ...connection,
       id,
       appId: app.id,
-      reach: appCatalog[connection.kind].personal ? 'mine' : 'workspace',
+      // A server with nothing to sign in to is nobody's own account.
+      reach: appCatalog[connection.kind].personal && credential ? 'mine' : 'workspace',
       vaultSecretId,
       createdByMemberId: scope.memberId,
     } as never,
@@ -877,6 +878,10 @@ async function mcpApp(
     transport: inspection.transport,
     auth: inspection.signIn === 'none' ? 'none' : byKey ? 'api_key' : 'oauth',
     ...(byKey && input.header ? { header: input.header } : {}),
+    // The member kept the name Brigade guessed from the host: the server may say its own later.
+    ...(inspection.signIn !== 'none' && (!input.name || input.name === inspection.name)
+      ? { guessedName: true }
+      : {}),
     prefix,
     icons: inspection.icons,
     description: inspection.description,
@@ -937,9 +942,23 @@ async function refreshApp(
     ])
     const icons =
       info?.icon && !config.icons.includes(info.icon) ? [info.icon, ...config.icons] : config.icons
+    const { guessedName: _guessed, ...rest } = config
+    const named = config.guessedName && info?.name ? info.name.slice(0, 80) : null
+    if (named) {
+      // Its accounts were labelled with the guess too.
+      const app = await db.app.findFirst({ where: { id: appId } })
+      if (app?.name)
+        await db.connection.updateMany({
+          where: { appId, label: app.name },
+          data: { label: named },
+        })
+    }
     await db.app.updateMany({
       where: { id: appId },
-      data: { mcp: { ...config, icons, tools: catalogTools(config.prefix, tools) } },
+      data: {
+        ...(named ? { name: named } : {}),
+        mcp: { ...(named ? rest : config), icons, tools: catalogTools(config.prefix, tools) },
+      },
     })
   } catch (error) {
     console.warn('mcp tools not listed:', error instanceof Error ? error.message : error)

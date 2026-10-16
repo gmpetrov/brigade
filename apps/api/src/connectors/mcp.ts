@@ -700,6 +700,8 @@ type ServerInfo = {
 
 /** A readable name from a host: mcp.nevo.md → Nevo, api.acme-tools.com → Acme Tools. */
 export function nameFromHost(host: string) {
+  // An address is its own name.
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return host
   const parts = host
     .split('.')
     .filter((p) => !['mcp', 'api', 'www', 'server', 'remote'].includes(p))
@@ -715,8 +717,8 @@ export function nameFromHost(host: string) {
 function siteIcons(url: URL) {
   const hosts = [url.host]
   const parts = url.hostname.split('.')
-  if (parts.length > 2) hosts.push(parts.slice(-2).join('.'))
-  return hosts.map((h) => `https://${h}/favicon.ico`)
+  if (parts.length > 2 && !/^[\d.]+$/.test(url.hostname)) hosts.push(parts.slice(-2).join('.'))
+  return hosts.map((h) => `${url.protocol}//${h}/favicon.ico`)
 }
 
 /** What a server is and how its accounts sign in, from requests that need no account. */

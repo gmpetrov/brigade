@@ -78,6 +78,7 @@ test('a server gets a readable name from its host', () => {
   assert.equal(nameFromHost('mcp.cloudflare.com'), 'Cloudflare')
   assert.equal(nameFromHost('api.acme-tools.com'), 'Acme Tools')
   assert.equal(nameFromHost('localhost'), 'Localhost')
+  assert.equal(nameFromHost('127.0.0.1'), '127.0.0.1')
 })
 
 test("tool prefixes stay apart from other Apps' and the built-in kinds", () => {
