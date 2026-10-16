@@ -1,8 +1,9 @@
 // Remote MCP servers (Streamable HTTP, or the older HTTP+SSE) as connectors. The API
 // signs in with the server's own OAuth (MCP authorization: protected resource metadata,
-// then dynamic client registration, a client ID metadata document, or a client the
-// member registered; PKCE), or sends the key a member pasted, keeps the tokens in the
-// vault, and calls the server's tools for teammates. Tokens never leave the API.
+// then dynamic client registration, a client ID metadata document, Brigade's own client
+// where the provider registers none (Google), or a client the member registered; PKCE),
+// or sends the key a member pasted, keeps the tokens in the vault, and calls the server's
+// tools for teammates. Tokens never leave the API.
 import { createHash, randomBytes } from 'node:crypto'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
@@ -216,20 +217,31 @@ async function discover(server: McpServer) {
   return found
 }
 
+/** Google signs in to its MCP servers, but registers no clients: Brigade brings its own. */
+const isGoogle = (authServer: AuthServer) =>
+  authServer.issuer.replace(/\/$/, '') === 'https://accounts.google.com'
+const googleClient = (): McpOAuthClient | null =>
+  env.GOOGLE_MCP_CLIENT_ID && env.GOOGLE_MCP_CLIENT_SECRET
+    ? { clientId: env.GOOGLE_MCP_CLIENT_ID, clientSecret: env.GOOGLE_MCP_CLIENT_SECRET }
+    : null
+
 /** Whether Brigade can be a client of this authorization server with nothing from the member. */
 const registersItself = (authServer: AuthServer) =>
   Boolean(
     authServer.registration_endpoint ||
-    (authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://')),
+    (authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://')) ||
+    (isGoogle(authServer) && googleClient()),
   )
 
 /**
  * Brigade as a client of this authorization server: the member's own client when they
- * gave one; else registered once (dynamic client registration) and reused; else its
- * client ID metadata document.
+ * gave one; else Brigade's Google client for Google; else registered once (dynamic client
+ * registration) and reused; else its client ID metadata document.
  */
 async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<McpOAuthClient> {
   if (own) return own
+  const google = isGoogle(authServer) ? googleClient() : null
+  if (google) return google
   const redirectUri = mcpRedirectUri()
   const known = await prisma.mcpClient.findUnique({
     where: { issuer_redirectUri: { issuer: authServer.issuer, redirectUri } },
@@ -295,7 +307,10 @@ export async function mcpAuthUrl(
     ...new Set([
       ...scopes,
       ...(supported.includes('offline_access') ? ['offline_access'] : []),
-      ...(supported.includes('openid') && supported.includes('email') ? ['openid', 'email'] : []),
+      // Google's OAuth metadata lists no scopes, but it gives the email too.
+      ...((supported.includes('openid') && supported.includes('email')) || isGoogle(authServer)
+        ? ['openid', 'email']
+        : []),
     ]),
   ].join(' ')
   const params = new URLSearchParams({
@@ -307,6 +322,8 @@ export async function mcpAuthUrl(
     code_challenge_method: 'S256',
     resource,
     ...(scope ? { scope } : {}),
+    // Google gives a refresh token only when asked this way, not for offline_access.
+    ...(isGoogle(authServer) ? { access_type: 'offline', prompt: 'consent' } : {}),
   })
   return `${authServer.authorization_endpoint}?${params}`
 }
@@ -702,6 +719,9 @@ type ServerInfo = {
 export function nameFromHost(host: string) {
   // An address is its own name.
   if (/^[\d.]+$/.test(host) || host.includes(':')) return host
+  // Google's servers are each a service of googleapis.com: bigquery.googleapis.com → Google Bigquery.
+  const google = host.match(/^([^.]+)\.googleapis\.com$/)?.[1]
+  if (google) return `Google ${google[0]!.toUpperCase()}${google.slice(1)}`
   const parts = host
     .split('.')
     .filter((p) => !['mcp', 'api', 'www', 'server', 'remote'].includes(p))
@@ -781,9 +801,9 @@ export async function inspectMcp(raw: string): Promise<McpInspection> {
         `${url.host} does not answer as an MCP server at this address${said ? `: ${said}` : ''}`,
       )
     transport = 'sse'
-    if (stream.ok) return described({ ...fallback, transport }, plain)
+    if (stream.ok) return open({ ...fallback, transport }, plain)
   } else if (probe.ok) {
-    return described({ ...fallback, transport }, plain)
+    return open({ ...fallback, transport }, plain)
   }
 
   // Refused: the server's OAuth, if it has one, else a key.
@@ -793,6 +813,20 @@ export async function inspectMcp(raw: string): Promise<McpInspection> {
     ...fallback,
     transport,
     name: oauth.name || fallback.name,
+    signIn: registersItself(oauth.authServer) ? 'oauth' : 'oauth_client',
+  }
+}
+
+/**
+ * A server that answers without an account. Google's list their tools to anyone but
+ * want a sign-in to call one: their OAuth metadata says so, and they sign in like any other.
+ */
+async function open(base: Omit<McpInspection, 'signIn'>, fetch: Fetch): Promise<McpInspection> {
+  const [found, oauth] = await Promise.all([described(base, fetch), findAuthServer(base, '')])
+  if (!oauth) return found
+  return {
+    ...found,
+    name: oauth.name || base.name,
     signIn: registersItself(oauth.authServer) ? 'oauth' : 'oauth_client',
   }
 }

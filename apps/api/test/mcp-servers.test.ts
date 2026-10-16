@@ -78,6 +78,7 @@ test('a server gets a readable name from its host', () => {
   assert.equal(nameFromHost('mcp.cloudflare.com'), 'Cloudflare')
   assert.equal(nameFromHost('api.acme-tools.com'), 'Acme Tools')
   assert.equal(nameFromHost('localhost'), 'Localhost')
+  assert.equal(nameFromHost('bigquery.googleapis.com'), 'Google Bigquery')
   assert.equal(nameFromHost('127.0.0.1'), '127.0.0.1')
 })
 
@@ -171,6 +172,31 @@ test('a server with OAuth that registers no clients: the member gives one', asyn
     json(res, 401, {}, { 'www-authenticate': 'Bearer' })
   })
   assert.equal((await inspectMcp(`${origin}/mcp`)).signIn, 'oauth_client')
+})
+
+test('a server that lists its tools to anyone but signs in to call them: OAuth', async () => {
+  // As Google's: initialize and tools/list answer, tools/call wants a token.
+  const origin = await serve((req, res, body) => {
+    const base = `http://${req.headers.host}`
+    if (req.url === '/.well-known/oauth-protected-resource/mcp')
+      return json(res, 200, { resource: `${base}/mcp`, authorization_servers: [base] })
+    if (req.url === '/.well-known/oauth-authorization-server')
+      return json(res, 200, {
+        issuer: base,
+        authorization_endpoint: `${base}/authorize`,
+        token_endpoint: `${base}/token`,
+      })
+    if (req.method !== 'POST') return json(res, 404, {})
+    const message = JSON.parse(body)
+    if (message.id === undefined) return json(res, 202, {})
+    json(res, 200, { jsonrpc: '2.0', id: message.id, result: answer(message) })
+  })
+  const found = await inspectMcp(`${origin}/mcp`)
+  assert.equal(found.signIn, 'oauth_client')
+  assert.deepEqual(
+    found.tools?.map((t) => t.name),
+    ['search', 'save'],
+  )
 })
 
 test('a server that refuses without OAuth metadata: a key', async () => {
