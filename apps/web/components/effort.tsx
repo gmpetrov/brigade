@@ -232,16 +232,34 @@ export function EffortButton({
           {EFFORTS[index]!.label}
         </button>
       </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          side="top"
-          align="end"
-          sideOffset={6}
-          className="z-50 origin-(--radix-popover-content-transform-origin) rounded-xl border bg-popover p-3.5 text-popover-foreground shadow-md data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-        >
-          <EffortSlider effort={effort} later={later} />
-        </Popover.Content>
-      </Popover.Portal>
+      <EffortPanel effort={effort} later={later} align="end" />
     </Popover.Root>
+  )
+}
+
+/**
+ * The slider over the composer, in a Popover.Root: from the button next to send
+ * (`align` end), or from the + menu's Effort, anchored to the + (start), like Claude's.
+ */
+export function EffortPanel({
+  effort,
+  later,
+  align,
+}: {
+  effort: EffortPick
+  later?: boolean
+  align: 'start' | 'end'
+}) {
+  return (
+    <Popover.Portal>
+      <Popover.Content
+        side="top"
+        align={align}
+        sideOffset={6}
+        className="z-50 origin-(--radix-popover-content-transform-origin) rounded-xl border bg-popover p-3.5 text-popover-foreground shadow-md data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+      >
+        <EffortSlider effort={effort} {...(later ? { later } : {})} />
+      </Popover.Content>
+    </Popover.Portal>
   )
 }
