@@ -192,17 +192,26 @@ export async function deleteSkill(db: ScopedDb, scope: Scope, actor: Actor, id: 
 /**
  * The skills a thread gets: on, in a pack that is on (if any), and for every
  * thread or its teammate or project. A pack's scope is written onto its skills.
+ * A pack that came with an App only when the teammate can use one of its
+ * accounts in the thread (`apps`).
  */
 export async function threadSkills(
   db: ScopedDb,
   teammateId: string,
   projectId: string | null = null,
+  apps: ReadonlySet<string> = new Set(),
 ): Promise<ThreadSkill[]> {
   const rows = await db.skill.findMany({
     where: {
       enabled: true,
       AND: [
-        { OR: [{ packId: null }, { pack: { enabled: true } }] },
+        {
+          OR: [
+            { packId: null },
+            { pack: { enabled: true, appId: null } },
+            { pack: { enabled: true, appId: { in: [...apps] } } },
+          ],
+        },
         {
           OR: [
             { everywhere: true },

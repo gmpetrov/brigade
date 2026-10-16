@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { ConnectorDefinition, ConnectorKind, TriggerDefinition } from './types.js'
+import { cloudflare } from './cloudflare.js'
 import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
@@ -10,6 +11,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   google_calendar: googleCalendar,
   stripe,
   github,
+  cloudflare,
 }
 
 /**
@@ -36,15 +38,17 @@ export const triggersOf = (kind: ConnectorKind): Record<string, TriggerDefinitio
 /** The catalog as the dashboard shows it. */
 export const triggerCatalog = () =>
   Object.fromEntries(
-    (['gmail', 'google_calendar', 'stripe', 'github', 'webhook'] as const).map((kind) => [
-      kind,
-      Object.entries(triggersOf(kind)).map(([event, t]) => ({
-        event,
-        label: t.label,
-        description: t.description,
-        options: t.options ?? [],
-      })),
-    ]),
+    (['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare', 'webhook'] as const).map(
+      (kind) => [
+        kind,
+        Object.entries(triggersOf(kind)).map(([event, t]) => ({
+          event,
+          label: t.label,
+          description: t.description,
+          options: t.options ?? [],
+        })),
+      ],
+    ),
   )
 
 /**
@@ -60,6 +64,8 @@ export const appCatalog: Record<
     developer: string | null
     category: string
     personal: boolean
+    /** A GitHub repository of skills that comes with the App, imported with its first account. */
+    skills?: string
   }
 > = {
   gmail: {
@@ -90,6 +96,15 @@ export const appCatalog: Record<
     category: 'Developer tools',
     personal: false,
   },
+  cloudflare: {
+    name: 'Cloudflare',
+    description:
+      'Build, test and deploy on Cloudflare, with the Cloudflare MCP server and its platform skills.',
+    developer: 'Cloudflare',
+    category: 'Developer tools',
+    personal: false,
+    skills: 'https://github.com/cloudflare/skills',
+  },
   webhook: {
     name: 'Custom app',
     description: 'Any app or service that can send a webhook. Each event starts a thread.',
@@ -99,13 +114,27 @@ export const appCatalog: Record<
   },
 }
 
-/** Every tool of a kind, for the App's tool switches. */
-export const toolCatalog = (kind: ConnectorKind) =>
-  Object.entries(connectors[kind]?.operations ?? {}).map(([name, o]) => ({
+/**
+ * An MCP server's tool as teammates call it: the App's kind first, so `search`
+ * on Cloudflare is cloudflare_search and cannot clash with another App's.
+ */
+export const mcpToolName = (kind: ConnectorKind, tool: string) => `${kind}_${tool}`.slice(0, 64)
+
+/** Every tool of a kind, for the App's tool switches. An MCP server's are the ones Brigade knows. */
+export const toolCatalog = (kind: ConnectorKind) => {
+  const mcp = connectors[kind]?.mcp
+  if (mcp)
+    return Object.entries(mcp.tools).map(([name, t]) => ({
+      name: mcpToolName(kind, name),
+      description: t.description,
+      write: t.write,
+    }))
+  return Object.entries(connectors[kind]?.operations ?? {}).map(([name, o]) => ({
     name,
     description: o.description,
     write: o.write,
   }))
+}
 
 /**
  * The operations a teammate may see for a grant: reads always, writes only with

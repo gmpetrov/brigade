@@ -753,6 +753,22 @@ enum ConnectorKind {
   github
   /// A custom app that posts events to Brigade. Inbound only: no credential, no operations.
   webhook
+  /// Cloudflare's MCP server: its tools come from the server, through the API.
+  cloudflare
+}
+
+/// Brigade registered as an OAuth client of an MCP server's authorization server
+/// (dynamic client registration), once per server and callback URL.
+model McpClient {
+  id           String   @id @default(cuid())
+  issuer       String
+  redirectUri  String
+  clientId     String
+  /// Set only when the server gave the client a secret; Brigade asks for a public client.
+  clientSecret String?
+  createdAt    DateTime @default(now())
+
+  @@unique([issuer, redirectUri])
 }
 
 /// An external account and a reference to its vault secret.
@@ -786,6 +802,8 @@ model App {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   connections       Connection[]
+  /// The skills that come with it, imported when its first account connects.
+  skillPacks        SkillPack[]
 
   @@unique([workspaceId, key])
 }
@@ -1405,6 +1423,9 @@ model SkillPack {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   skills         Skill[]
+  /// Set when the pack came with an App: its skills load only for teammates with that App.
+  appId          String?
+  app            App?      @relation(fields: [appId], references: [id], onDelete: SetNull)
 
   @@unique([workspaceId, source])
   @@index([workspaceId])

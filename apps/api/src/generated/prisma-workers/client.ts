@@ -158,6 +158,12 @@ export type PullRequestReview = Prisma.PullRequestReviewModel
  */
 export type Comment = Prisma.CommentModel
 /**
+ * Model McpClient
+ * Brigade registered as an OAuth client of an MCP server's authorization server
+ * (dynamic client registration), once per server and callback URL.
+ */
+export type McpClient = Prisma.McpClientModel
+/**
  * Model App
  * An App added to the workspace ("Apps" in the dashboard). Its accounts are its
  * connections. key: a connector kind for built-in Apps, custom:<id> for a custom app.

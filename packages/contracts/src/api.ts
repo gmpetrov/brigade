@@ -68,6 +68,8 @@ export const ConnectGoogle = z.object({
   returnTo: ReturnTo.optional(),
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
+/** An App whose account signs in on its MCP server's own OAuth. */
+export const ConnectMcp = z.object({ kind: z.enum(['cloudflare']), returnTo: ReturnTo.optional() })
 /** A Stripe secret or restricted key, entered once in the dashboard and kept in the vault. */
 export const ConnectStripe = z.object({
   apiKey: z

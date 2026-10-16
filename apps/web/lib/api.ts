@@ -422,7 +422,7 @@ export type Connection = {
   reach: 'mine' | 'workspace'
   createdByMemberId: string
   /** webhook: a custom app that posts events to Brigade. Inbound only. */
-  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
+  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare'
   label: string
   externalAccount: string | null
   /** Where a person manages the account at the provider, e.g. a GitHub installation's settings. */
@@ -447,6 +447,8 @@ export type App = {
   name: string | null
   disabledTools: string[]
   createdByMemberId: string
+  /** The skills that came with it, for teammates that have it. */
+  skills: { name: string; description: string }[]
 }
 /** A built-in App as the catalog describes it. */
 export type AppEntry = {
@@ -455,6 +457,8 @@ export type AppEntry = {
   developer: string | null
   category: string
   tools: { name: string; description: string; write: boolean }[]
+  /** Where its skills come from, e.g. a GitHub repository. */
+  source: string | null
 }
 export type ConnectionsResponse = {
   apps: App[]

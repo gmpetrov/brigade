@@ -142,7 +142,8 @@ export const ConnectorKind = {
   google_calendar: 'google_calendar',
   stripe: 'stripe',
   github: 'github',
-  webhook: 'webhook'
+  webhook: 'webhook',
+  cloudflare: 'cloudflare'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]

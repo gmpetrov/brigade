@@ -213,6 +213,7 @@ export type AppWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"App"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connections?: Prisma.ConnectionListRelationFilter
+  skillPacks?: Prisma.SkillPackListRelationFilter
 }
 
 export type AppOrderByWithRelationInput = {
@@ -227,6 +228,7 @@ export type AppOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   connections?: Prisma.ConnectionOrderByRelationAggregateInput
+  skillPacks?: Prisma.SkillPackOrderByRelationAggregateInput
 }
 
 export type AppWhereUniqueInput = Prisma.AtLeast<{
@@ -245,6 +247,7 @@ export type AppWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"App"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connections?: Prisma.ConnectionListRelationFilter
+  skillPacks?: Prisma.SkillPackListRelationFilter
 }, "id" | "workspaceId_key">
 
 export type AppOrderByWithAggregationInput = {
@@ -288,6 +291,7 @@ export type AppCreateInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutAppsInput
   connections?: Prisma.ConnectionCreateNestedManyWithoutAppInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutAppInput
 }
 
 export type AppUncheckedCreateInput = {
@@ -301,6 +305,7 @@ export type AppUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutAppInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutAppInput
 }
 
 export type AppUpdateInput = {
@@ -314,6 +319,7 @@ export type AppUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAppsNestedInput
   connections?: Prisma.ConnectionUpdateManyWithoutAppNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutAppNestedInput
 }
 
 export type AppUncheckedUpdateInput = {
@@ -327,6 +333,7 @@ export type AppUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutAppNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutAppNestedInput
 }
 
 export type AppCreateManyInput = {
@@ -426,6 +433,11 @@ export type AppScalarRelationFilter = {
   isNot?: Prisma.AppWhereInput
 }
 
+export type AppNullableScalarRelationFilter = {
+  is?: Prisma.AppWhereInput | null
+  isNot?: Prisma.AppWhereInput | null
+}
+
 export type AppCreateNestedManyWithoutWorkspaceInput = {
   create?: Prisma.XOR<Prisma.AppCreateWithoutWorkspaceInput, Prisma.AppUncheckedCreateWithoutWorkspaceInput> | Prisma.AppCreateWithoutWorkspaceInput[] | Prisma.AppUncheckedCreateWithoutWorkspaceInput[]
   connectOrCreate?: Prisma.AppCreateOrConnectWithoutWorkspaceInput | Prisma.AppCreateOrConnectWithoutWorkspaceInput[]
@@ -491,6 +503,22 @@ export type AppUpdateOneRequiredWithoutConnectionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AppUpdateToOneWithWhereWithoutConnectionsInput, Prisma.AppUpdateWithoutConnectionsInput>, Prisma.AppUncheckedUpdateWithoutConnectionsInput>
 }
 
+export type AppCreateNestedOneWithoutSkillPacksInput = {
+  create?: Prisma.XOR<Prisma.AppCreateWithoutSkillPacksInput, Prisma.AppUncheckedCreateWithoutSkillPacksInput>
+  connectOrCreate?: Prisma.AppCreateOrConnectWithoutSkillPacksInput
+  connect?: Prisma.AppWhereUniqueInput
+}
+
+export type AppUpdateOneWithoutSkillPacksNestedInput = {
+  create?: Prisma.XOR<Prisma.AppCreateWithoutSkillPacksInput, Prisma.AppUncheckedCreateWithoutSkillPacksInput>
+  connectOrCreate?: Prisma.AppCreateOrConnectWithoutSkillPacksInput
+  upsert?: Prisma.AppUpsertWithoutSkillPacksInput
+  disconnect?: Prisma.AppWhereInput | boolean
+  delete?: Prisma.AppWhereInput | boolean
+  connect?: Prisma.AppWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AppUpdateToOneWithWhereWithoutSkillPacksInput, Prisma.AppUpdateWithoutSkillPacksInput>, Prisma.AppUncheckedUpdateWithoutSkillPacksInput>
+}
+
 export type AppCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -501,6 +529,7 @@ export type AppCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   connections?: Prisma.ConnectionCreateNestedManyWithoutAppInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutAppInput
 }
 
 export type AppUncheckedCreateWithoutWorkspaceInput = {
@@ -513,6 +542,7 @@ export type AppUncheckedCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutAppInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutAppInput
 }
 
 export type AppCreateOrConnectWithoutWorkspaceInput = {
@@ -566,6 +596,7 @@ export type AppCreateWithoutConnectionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutAppsInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutAppInput
 }
 
 export type AppUncheckedCreateWithoutConnectionsInput = {
@@ -578,6 +609,7 @@ export type AppUncheckedCreateWithoutConnectionsInput = {
   createdByMemberId: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutAppInput
 }
 
 export type AppCreateOrConnectWithoutConnectionsInput = {
@@ -606,6 +638,7 @@ export type AppUpdateWithoutConnectionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAppsNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutAppNestedInput
 }
 
 export type AppUncheckedUpdateWithoutConnectionsInput = {
@@ -618,6 +651,75 @@ export type AppUncheckedUpdateWithoutConnectionsInput = {
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutAppNestedInput
+}
+
+export type AppCreateWithoutSkillPacksInput = {
+  id?: string
+  organizationId: string
+  key: string
+  name?: string | null
+  disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutAppsInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutAppInput
+}
+
+export type AppUncheckedCreateWithoutSkillPacksInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  key: string
+  name?: string | null
+  disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutAppInput
+}
+
+export type AppCreateOrConnectWithoutSkillPacksInput = {
+  where: Prisma.AppWhereUniqueInput
+  create: Prisma.XOR<Prisma.AppCreateWithoutSkillPacksInput, Prisma.AppUncheckedCreateWithoutSkillPacksInput>
+}
+
+export type AppUpsertWithoutSkillPacksInput = {
+  update: Prisma.XOR<Prisma.AppUpdateWithoutSkillPacksInput, Prisma.AppUncheckedUpdateWithoutSkillPacksInput>
+  create: Prisma.XOR<Prisma.AppCreateWithoutSkillPacksInput, Prisma.AppUncheckedCreateWithoutSkillPacksInput>
+  where?: Prisma.AppWhereInput
+}
+
+export type AppUpdateToOneWithWhereWithoutSkillPacksInput = {
+  where?: Prisma.AppWhereInput
+  data: Prisma.XOR<Prisma.AppUpdateWithoutSkillPacksInput, Prisma.AppUncheckedUpdateWithoutSkillPacksInput>
+}
+
+export type AppUpdateWithoutSkillPacksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  key?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutAppsNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutAppNestedInput
+}
+
+export type AppUncheckedUpdateWithoutSkillPacksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  key?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutAppNestedInput
 }
 
 export type AppCreateManyWorkspaceInput = {
@@ -641,6 +743,7 @@ export type AppUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connections?: Prisma.ConnectionUpdateManyWithoutAppNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutAppNestedInput
 }
 
 export type AppUncheckedUpdateWithoutWorkspaceInput = {
@@ -653,6 +756,7 @@ export type AppUncheckedUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   connections?: Prisma.ConnectionUncheckedUpdateManyWithoutAppNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutAppNestedInput
 }
 
 export type AppUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -673,10 +777,12 @@ export type AppUncheckedUpdateManyWithoutWorkspaceInput = {
 
 export type AppCountOutputType = {
   connections: number
+  skillPacks: number
 }
 
 export type AppCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   connections?: boolean | AppCountOutputTypeCountConnectionsArgs
+  skillPacks?: boolean | AppCountOutputTypeCountSkillPacksArgs
 }
 
 /**
@@ -696,6 +802,13 @@ export type AppCountOutputTypeCountConnectionsArgs<ExtArgs extends runtime.Types
   where?: Prisma.ConnectionWhereInput
 }
 
+/**
+ * AppCountOutputType without action
+ */
+export type AppCountOutputTypeCountSkillPacksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SkillPackWhereInput
+}
+
 
 export type AppSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -709,6 +822,7 @@ export type AppSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   updatedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connections?: boolean | Prisma.App$connectionsArgs<ExtArgs>
+  skillPacks?: boolean | Prisma.App$skillPacksArgs<ExtArgs>
   _count?: boolean | Prisma.AppCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["app"]>
 
@@ -754,6 +868,7 @@ export type AppOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
 export type AppInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connections?: boolean | Prisma.App$connectionsArgs<ExtArgs>
+  skillPacks?: boolean | Prisma.App$skillPacksArgs<ExtArgs>
   _count?: boolean | Prisma.AppCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AppIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -768,6 +883,10 @@ export type $AppPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     connections: Prisma.$ConnectionPayload<ExtArgs>[]
+    /**
+     * The skills that come with it, imported when its first account connects.
+     */
+    skillPacks: Prisma.$SkillPackPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1181,6 +1300,7 @@ export interface Prisma__AppClient<T, Null = never, ExtArgs extends runtime.Type
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   connections<T extends Prisma.App$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.App$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  skillPacks<T extends Prisma.App$skillPacksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.App$skillPacksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SkillPackPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1641,6 +1761,30 @@ export type App$connectionsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.ConnectionScalarFieldEnum | Prisma.ConnectionScalarFieldEnum[]
+}
+
+/**
+ * App.skillPacks
+ */
+export type App$skillPacksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SkillPack
+   */
+  select?: Prisma.SkillPackSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SkillPack
+   */
+  omit?: Prisma.SkillPackOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SkillPackInclude<ExtArgs> | null
+  where?: Prisma.SkillPackWhereInput
+  orderBy?: Prisma.SkillPackOrderByWithRelationInput | Prisma.SkillPackOrderByWithRelationInput[]
+  cursor?: Prisma.SkillPackWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SkillPackScalarFieldEnum | Prisma.SkillPackScalarFieldEnum[]
 }
 
 /**

@@ -420,6 +420,7 @@ export const ModelName = {
   PullRequest: 'PullRequest',
   PullRequestReview: 'PullRequestReview',
   Comment: 'Comment',
+  McpClient: 'McpClient',
   App: 'App',
   Connection: 'Connection',
   VaultSecret: 'VaultSecret',
@@ -462,7 +463,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2165,6 +2166,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.CommentCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.CommentCountAggregateOutputType> | number
+        }
+      }
+    }
+    McpClient: {
+      payload: Prisma.$McpClientPayload<ExtArgs>
+      fields: Prisma.McpClientFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.McpClientFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.McpClientFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        findFirst: {
+          args: Prisma.McpClientFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.McpClientFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        findMany: {
+          args: Prisma.McpClientFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>[]
+        }
+        create: {
+          args: Prisma.McpClientCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        createMany: {
+          args: Prisma.McpClientCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.McpClientCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>[]
+        }
+        delete: {
+          args: Prisma.McpClientDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        update: {
+          args: Prisma.McpClientUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        deleteMany: {
+          args: Prisma.McpClientDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.McpClientUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.McpClientUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>[]
+        }
+        upsert: {
+          args: Prisma.McpClientUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$McpClientPayload>
+        }
+        aggregate: {
+          args: Prisma.McpClientAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMcpClient>
+        }
+        groupBy: {
+          args: Prisma.McpClientGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.McpClientGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.McpClientCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.McpClientCountAggregateOutputType> | number
         }
       }
     }
@@ -4589,6 +4664,18 @@ export const CommentScalarFieldEnum = {
 export type CommentScalarFieldEnum = (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum]
 
 
+export const McpClientScalarFieldEnum = {
+  id: 'id',
+  issuer: 'issuer',
+  redirectUri: 'redirectUri',
+  clientId: 'clientId',
+  clientSecret: 'clientSecret',
+  createdAt: 'createdAt'
+} as const
+
+export type McpClientScalarFieldEnum = (typeof McpClientScalarFieldEnum)[keyof typeof McpClientScalarFieldEnum]
+
+
 export const AppScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -4961,7 +5048,8 @@ export const SkillPackScalarFieldEnum = {
   createdByType: 'createdByType',
   createdById: 'createdById',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  appId: 'appId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
@@ -5795,6 +5883,7 @@ export type GlobalOmitConfig = {
   pullRequest?: Prisma.PullRequestOmit
   pullRequestReview?: Prisma.PullRequestReviewOmit
   comment?: Prisma.CommentOmit
+  mcpClient?: Prisma.McpClientOmit
   app?: Prisma.AppOmit
   connection?: Prisma.ConnectionOmit
   vaultSecret?: Prisma.VaultSecretOmit

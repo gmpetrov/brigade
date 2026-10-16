@@ -38,8 +38,11 @@ export * from './thread-history.js'
  * 20: skills in the spec (written into the harness's skills folder) and skill proposals.
  * 21: a skill's files by reference (`refs`), fetched from /runner/skill-files.
  * 22: wake-ups (set, list, cancel), sent as schedule.call operations.
+ * 23: connectors of any kind in the spec (an MCP App's, e.g. cloudflare), not only the first four.
  */
-export const PROTOCOL_VERSION = 22
+export const PROTOCOL_VERSION = 23
+/** Runners from this version on accept a connector kind they do not know, such as an MCP App's. */
+export const MCP_PROTOCOL = 23
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */
 export const RESUME_PROTOCOL = 16
 /**

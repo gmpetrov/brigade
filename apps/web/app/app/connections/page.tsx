@@ -24,6 +24,7 @@ const CONNECT_ERRORS: Record<string, string> = {
   forbidden: 'You are no longer in this workspace.',
   declined: 'Access was not granted.',
   google: 'Google did not complete the sign-in. Try again.',
+  mcp: 'The sign-in did not complete. Try again.',
   github: 'GitHub did not complete the sign-in. Try again.',
   github_requested:
     "Your request to install Brigade was sent to the GitHub organization's owners. Connect GitHub again once they approve it.",
@@ -32,7 +33,7 @@ const CONNECT_ERRORS: Record<string, string> = {
 }
 
 /** The built-in Apps, in the order the page offers them. A custom app can be added many times. */
-const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'stripe']
+const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'cloudflare', 'stripe']
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
 type Open = { kind: Kind; appId?: string }

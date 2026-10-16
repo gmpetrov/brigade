@@ -39,7 +39,8 @@ export type ConnectorContext = {
   readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
 }
 
-export type ConnectorKind = 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook'
+export type ConnectorKind =
+  'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }
@@ -104,9 +105,23 @@ export type ConnectorDefinition = {
   /**
    * google: OAuth tokens refreshed by the API. api_key: a key entered in the dashboard.
    * github_app: an installation of Brigade's GitHub App; tokens are minted per call.
+   * mcp: an MCP server's own OAuth (discovery, client registration, PKCE), refreshed by the API.
    */
-  auth: 'google' | 'api_key' | 'github_app'
+  auth: 'google' | 'api_key' | 'github_app' | 'mcp'
+  /** Written in Brigade. An MCP connector has none: its tools come from the server. */
   operations: Record<string, Operation>
+  /** A remote MCP server (Streamable HTTP) the API calls with the account's token. */
+  mcp?: McpServer
+}
+
+export type McpServer = {
+  url: string
+  /**
+   * The tools Brigade knows, by the server's names, for the App's tool switches before an
+   * account connects and to say which change something. A tool not listed is a write unless
+   * the server marks it readOnlyHint.
+   */
+  tools: Record<string, { description: string; write: boolean }>
 }
 
 export const op = <I extends z.ZodType>(o: Operation<I>) => o as unknown as Operation

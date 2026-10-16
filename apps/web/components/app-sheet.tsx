@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, EllipsisVertical, ExternalLink, Plus } from 'lucide-react'
+import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
@@ -95,10 +95,13 @@ export function AppSheet({
     }
   }
 
-  /** Google and GitHub sign in at the provider and come back to the Apps page. */
+  /** Google, GitHub and MCP Apps sign in at the provider and come back to the Apps page. */
   const connect = () =>
     run(async () => {
-      if (kind === 'gmail' || kind === 'google_calendar') {
+      if (kind === 'cloudflare') {
+        const { url } = await api<{ url: string }>('/connections/mcp', { body: { kind } })
+        window.location.href = url
+      } else if (kind === 'gmail' || kind === 'google_calendar') {
         const { url } = await api<{ url: string }>('/connections/google', { body: { kind } })
         window.location.href = url
       } else if (kind === 'github') {
@@ -148,6 +151,7 @@ export function AppSheet({
       await reload()
     })
 
+  const skills = added ? (app?.skills ?? []) : []
   const enabled = entry.tools.filter((t) => !app?.disabledTools.includes(t.name)).length
 
   return (
@@ -160,8 +164,20 @@ export function AppSheet({
           <ProviderTile kind={kind} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <DialogTitle className="text-xl font-bold tracking-tight">{name}</DialogTitle>
-            {entry.developer && (
-              <span className="text-sm text-muted-foreground">By {entry.developer}</span>
+            {(entry.developer || entry.source) && (
+              <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+                {entry.developer && <span>By {entry.developer}</span>}
+                {entry.source && (
+                  <a
+                    href={entry.source}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    View source <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                )}
+              </span>
             )}
           </div>
           {!added && !custom && (
@@ -243,6 +259,44 @@ export function AppSheet({
                 ))}
               </CollapsibleContent>
             </Collapsible>
+          </Section>
+        )}
+
+        {(skills.length > 0 || entry.source) && (
+          <Section title="Skills">
+            {skills.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-muted-foreground">
+                Its skills come with the first account: how to build and deploy on {name}, for the
+                teammates that have it.
+              </p>
+            ) : (
+              <Collapsible>
+                <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium">
+                  {skills.length} {skills.length === 1 ? 'skill' : 'skills'}, for the teammates that
+                  have it
+                  <ChevronDown
+                    className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                    aria-hidden
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex flex-col divide-y border-t">
+                  {skills.map((skill) => (
+                    <div key={skill.name} className="flex items-start gap-3 px-4 py-2.5 text-sm">
+                      <Package
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="font-medium">{skill.name}</span>
+                        <span className="line-clamp-2 text-muted-foreground">
+                          {skill.description}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </Section>
         )}
 
