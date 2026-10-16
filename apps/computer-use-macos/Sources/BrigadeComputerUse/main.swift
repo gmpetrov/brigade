@@ -61,10 +61,11 @@ func point(_ params: [String: Any], _ x: String = "x", _ y: String = "y") throws
 func makeHandler(_ sessions: Sessions) -> Handler {
   return { method, params in
     if method == "status" {
+      let screenRecording = await Permissions.hasScreenRecording()
       return await MainActor.run {
         [
           "version": version,
-          "screenRecording": Permissions.screenRecording,
+          "screenRecording": screenRecording,
           "accessibility": Permissions.accessibility,
         ] as [String: Any]
       }
