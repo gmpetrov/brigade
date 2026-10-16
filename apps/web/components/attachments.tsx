@@ -267,6 +267,8 @@ export function ComposerMenu({
   move?: { targets: MoveTarget[]; onPick: (target: MoveTarget) => void }
 }) {
   const input = useRef<HTMLInputElement>(null)
+  // A computer picked: the cursor goes to the message, not back to the +.
+  const picked = useRef(false)
   return (
     <>
       <DropdownMenu>
@@ -282,7 +284,16 @@ export function ComposerMenu({
             <Plus aria-hidden />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="top" className="min-w-52">
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          className="min-w-52"
+          onCloseAutoFocus={(e) => {
+            if (!picked.current) return
+            picked.current = false
+            e.preventDefault()
+          }}
+        >
           <DropdownMenuItem onSelect={() => input.current?.click()}>
             <Paperclip aria-hidden />
             Attach files
@@ -315,7 +326,10 @@ export function ComposerMenu({
                     <DropdownMenuItem
                       key={target.id}
                       disabled={target.current || !!target.unavailable}
-                      onSelect={() => move.onPick(target)}
+                      onSelect={() => {
+                        picked.current = true
+                        move.onPick(target)
+                      }}
                     >
                       <ComputerIcon cloud={target.cloud} />
                       <span className="min-w-0 flex-1 truncate">{target.name}</span>

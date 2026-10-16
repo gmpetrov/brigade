@@ -214,6 +214,7 @@ export async function specFor(
           moved: {
             at: thread.movedAt.toISOString(),
             from: thread.movedFrom ?? 'another computer',
+            to: thread.computer.kind === 'cloud' ? 'the cloud computer' : thread.computer.name,
             seq: thread.movedSeq ?? 0,
           },
         }

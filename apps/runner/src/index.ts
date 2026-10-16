@@ -345,8 +345,17 @@ async function start() {
   })
   // A thread that moved here: its events go on after the API's, and what this runner kept of it from before goes.
   const arrive = (spec: ThreadSpec) => {
-    if (spec.moved && outbox.arrive(spec.sessionId, spec.moved.at, spec.moved.seq))
-      threads.forget(spec.sessionId)
+    if (!spec.moved || !outbox.arrive(spec.sessionId, spec.moved.at, spec.moved.seq)) return
+    threads.forget(spec.sessionId)
+    // The thread says where it went, numbered after the API's last event.
+    connection.sendEvent(
+      outbox.push(spec.sessionId, {
+        at: new Date().toISOString(),
+        type: 'raw',
+        source: 'runner',
+        value: `Moved from ${spec.moved.from} to ${spec.moved.to ?? 'this computer'}.`,
+      }),
+    )
   }
   const arriveFolder = (spec: ThreadSpec) =>
     spec.moved

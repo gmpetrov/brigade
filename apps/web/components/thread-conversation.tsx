@@ -980,8 +980,8 @@ export function ThreadConversation({
                     {computerName(t.computer)} is offline
                   </p>
                   <p className="text-muted-foreground">
-                    {answering.name} can carry on on the cloud computer, from what is on GitHub.
-                    Files only on {computerName(t.computer)} stay there.
+                    {answering.name} can pick up on the cloud computer from what is on GitHub. Files
+                    only on {computerName(t.computer)} stay there.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button

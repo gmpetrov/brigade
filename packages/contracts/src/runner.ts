@@ -148,6 +148,8 @@ export const ThreadSpec = z.object({
       at: z.string(),
       /** The computer it came from, by name. */
       from: z.string(),
+      /** This computer, by name, as members see it. */
+      to: z.string().optional(),
       /** The thread's last event before it moved. */
       seq: z.number().int().nonnegative(),
     })
