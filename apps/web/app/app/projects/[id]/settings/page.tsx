@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
 import { useProject } from '@/components/project-shell'
-import { ProjectLogoPreview } from '@/components/projects'
+import { ProjectLogoPreview, shrinkLogo } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -120,10 +120,11 @@ export default function ProjectSettings() {
 
   function pickLogo(picked: File | undefined) {
     if (!picked) return
-    if (picked.size > 256 * 1024) return setError('A logo can be up to 256 KB')
     const reader = new FileReader()
-    reader.onload = () => {
-      setLogo(String(reader.result))
+    reader.onload = async () => {
+      const shrunk = await shrinkLogo(String(reader.result)).catch(() => null)
+      if (!shrunk) return setError('That image cannot be a logo: try a PNG or an SVG under 256 KB')
+      setLogo(shrunk)
       setError(undefined)
     }
     reader.readAsDataURL(picked)
@@ -134,7 +135,8 @@ export default function ProjectSettings() {
     setError(undefined)
     try {
       const info = await api<SiteInfo>('/projects/site', { body: { url: siteUrl(url) } })
-      if (info.logo) setLogo(info.logo)
+      const shrunk = info.logo ? await shrinkLogo(info.logo).catch(() => null) : null
+      if (shrunk) setLogo(shrunk)
       else setError(`${new URL(info.url).hostname} shows no logo`)
     } catch (e) {
       setError((e as Error).message)

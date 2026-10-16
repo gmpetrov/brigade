@@ -5,7 +5,12 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { PROJECT_SITE_TEXT_MAX, ProjectCatalogEntry, ThreadProject } from './projects.js'
+import {
+  PROJECT_LOGO_CANDIDATES_MAX,
+  PROJECT_SITE_TEXT_MAX,
+  ProjectCatalogEntry,
+  ThreadProject,
+} from './projects.js'
 import {
   PREVIEW_PORTS_MAX,
   PreviewAction,
@@ -336,13 +341,17 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     error: z.string().optional(),
     text: z.string().optional(),
   }),
-  /** The brief project.describe asked for, or why not. */
+  /** The brief, name and logo project.describe asked for, or why not. */
   z.object({
     type: z.literal('project.describe.result'),
     requestId: z.string(),
     ok: z.boolean(),
     error: z.string().optional(),
     brief: z.string().max(5000).optional(),
+    /** The project's name, as the site calls itself. */
+    name: z.string().max(80).optional(),
+    /** Which of the logos asked about is the site's own, by its place in the list. */
+    logo: z.number().int().min(0).max(PROJECT_LOGO_CANDIDATES_MAX).optional(),
   }),
   /**
    * A thread went quiet: what a short harness run took from it. The summary
@@ -496,6 +505,8 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     url: z.string().max(2000),
     /** The site's pages as text, already cut to size by the API. */
     text: z.string().max(PROJECT_SITE_TEXT_MAX),
+    /** The images the site offers as its logo, each said in words: where it is, its alt, its file. */
+    logos: z.array(z.string().max(300)).max(PROJECT_LOGO_CANDIDATES_MAX).default([]),
   }),
   /** The API now serves another runner bundle (sent to every connected runner). */
   z.object({ type: z.literal('update.available'), bundle: z.string() }),
