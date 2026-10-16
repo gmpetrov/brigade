@@ -5,7 +5,8 @@
 import { ATTACHMENT_MAX } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { readAttachment, storeAttachment } from '../attachments.js'
+import { readAttachment, servedFromBucket, storeAttachment } from '../attachments.js'
+import { attachmentKey, presignGet } from '../bucket.js'
 import { scoped } from '../db.js'
 import { authenticateRunner } from '../hub.js'
 import { actingTeammate } from '../thread-spec.js'
@@ -32,6 +33,14 @@ export const runnerAttachments = new Hono<{
       },
     })
     if (!row) throw new HTTPException(404, { message: 'File not found' })
+    // A large video: from the bucket's short-lived URL (fetch drops the token on the way there).
+    if (servedFromBucket(row)) {
+      const signed = await presignGet(attachmentKey(runner, row.id), {
+        contentType: 'application/octet-stream',
+        disposition: 'attachment',
+      })
+      return c.redirect(signed.url, 302)
+    }
     const bytes = await readAttachment(runner, row.id)
     return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
       'content-type': 'application/octet-stream',

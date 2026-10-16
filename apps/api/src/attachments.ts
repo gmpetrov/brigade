@@ -9,14 +9,24 @@ import {
   ATTACHMENTS_DIR,
   ATTACHMENTS_PER_MESSAGE,
   ATTACHMENTS_TOTAL_MAX,
+  isVideoType,
   safeFileName,
+  uploadMax,
   type AttachmentInfo,
   type AttachmentSource,
   type ThreadAttachmentRef,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
-import { attachmentKey, deleteObject, getObject, presignPut, putObject } from './bucket.js'
+import {
+  attachmentKey,
+  deleteObject,
+  getObject,
+  objectSize,
+  presignPut,
+  putObject,
+  streamObject,
+} from './bucket.js'
 import type { ConnectorContext, ExternalFile } from './connectors/types.js'
 import { prisma, Prisma, type Scope, type ScopedDb } from './db.js'
 import { contentTypeFor, extractText } from './library.js'
@@ -168,6 +178,8 @@ export async function startUpload(
   const name = safeFileName(input.name)
   // The type the bucket stores and the browser sends; checked against the bytes on completion.
   const contentType = contentTypeFor(name, input.contentType)
+  if (input.size > uploadMax(contentType))
+    throw new HTTPException(413, { message: 'Files can be up to 25 MB, videos up to 500 MB' })
   const row = await db.attachment.create({
     data: {
       name,
@@ -194,17 +206,51 @@ export async function finishUpload(db: ScopedDb, scope: Scope, id: string, membe
   if (row.status === 'ready') return row
   if (row.status !== 'pending')
     throw new HTTPException(409, { message: 'This upload cannot be completed' })
-  const bytes = await getObject(attachmentKey(scope, id))
+  const key = attachmentKey(scope, id)
+  const mismatch = async () => {
+    await deleteAttachment(db, scope, { type: 'member', id: memberId }, id)
+    return new HTTPException(400, {
+      message: 'The upload does not match the file; upload it again',
+    })
+  }
+  // A large video is never held whole: its size and hash are read as it streams by.
+  if (row.size > ATTACHMENT_MAX) {
+    const size = await objectSize(key)
+    if (size === null)
+      throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
+    if (size !== row.size || size > uploadMax(row.contentType)) throw await mismatch()
+    const hashed = await streamSha256(key)
+    if (!hashed || hashed.size !== row.size) throw await mismatch()
+    // No type is checked against video bytes (none shows inline from a sniff), and video has no text.
+    return db.attachment.update({
+      where: { id },
+      data: { sha256: hashed.sha256, text: '', status: 'ready' },
+    })
+  }
+  const bytes = await getObject(key)
   if (!bytes)
     throw new HTTPException(409, { message: 'The file has not reached storage; upload it again' })
-  if (bytes.byteLength !== row.size || bytes.byteLength > ATTACHMENT_MAX) {
-    await deleteAttachment(db, scope, { type: 'member', id: memberId }, id)
-    throw new HTTPException(400, { message: 'The upload does not match the file; upload it again' })
-  }
+  if (bytes.byteLength !== row.size) throw await mismatch()
   // The type the bytes bear out is the one recorded; the API serves files with it, not the bucket's.
   const fields = await inspect(row.name, bytes, row.contentType)
   return db.attachment.update({ where: { id }, data: { ...fields, status: 'ready' } })
 }
+
+/** The object's SHA-256 and size, read chunk by chunk. */
+async function streamSha256(key: string) {
+  const stream = await streamObject(key)
+  if (!stream) return null
+  const hash = createHash('sha256')
+  let size = 0
+  for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
+    hash.update(chunk)
+    size += chunk.byteLength
+  }
+  return { sha256: hash.digest('hex'), size }
+}
+
+/** A file the API does not read whole: its bytes go straight from the bucket. */
+export const servedFromBucket = (row: { size: number }) => row.size > ATTACHMENT_MAX
 
 /**
  * Remove abandoned uploads, across workspaces: pending ones whose browser went
@@ -297,9 +343,14 @@ export async function attachToThread(
   })
   if (rows.length !== ids.length)
     throw new HTTPException(400, { message: 'An attached file was not found or was already sent' })
-  const total = rows.reduce((sum, r) => sum + (r.status === 'ready' ? r.size : 0), 0)
+  const total = rows.reduce(
+    (sum, r) => sum + (r.status === 'ready' && !isVideoType(r.contentType) ? r.size : 0),
+    0,
+  )
   if (check && total > ATTACHMENTS_TOTAL_MAX)
-    throw new HTTPException(413, { message: 'One message can carry up to 50 MB of files' })
+    throw new HTTPException(413, {
+      message: 'One message can carry up to 50 MB of files, besides videos',
+    })
 
   const refs: ThreadAttachmentRef[] = []
   const created: string[] = []

@@ -4,8 +4,9 @@
 // a message came with show under it: images and videos open over the page,
 // other files in the file panel.
 import {
-  ATTACHMENT_MAX,
   ATTACHMENTS_PER_MESSAGE,
+  isVideoType,
+  uploadMax,
   type AttachmentInfo,
   type MessageAttachment,
 } from '@brigade/contracts'
@@ -101,8 +102,10 @@ export function useUploads() {
         const error =
           list.current.filter((u) => !u.error).length >= ATTACHMENTS_PER_MESSAGE
             ? `A message takes up to ${ATTACHMENTS_PER_MESSAGE} files`
-            : file.size > ATTACHMENT_MAX
-              ? 'Larger than 25 MB'
+            : file.size > uploadMax(file.type)
+              ? isVideoType(file.type)
+                ? 'Larger than 500 MB'
+                : 'Larger than 25 MB'
               : undefined
         commit([...list.current, error ? { ...upload, error } : upload])
         if (error) continue
