@@ -513,7 +513,8 @@ export async function repairCaches(
     }
     if (changed)
       await run('tee', [file], { runAs, input: Buffer.from(`${lines.join('\n')}\n`) }).catch(
-        (error) => console.warn(`could not point ${marker} at this computer's cache: ${message(error)}`),
+        (error) =>
+          console.warn(`could not point ${marker} at this computer's cache: ${message(error)}`),
       )
   }
 }

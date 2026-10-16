@@ -305,6 +305,12 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   project: ProjectSummary | null
   /** When its teammates asked to be prompted here again, soonest first. */
   wakeups: { id: string; teammateId: string; note: string; wakeAt: string }[]
+  /**
+   * While it moves to another computer: where to, and how far. waiting: once the
+   * turn running ends. releasing: its computer hands its files over. arriving:
+   * the new computer is offline; the message goes once it is back.
+   */
+  move: { to: string; phase: 'waiting' | 'releasing' | 'arriving'; since: string } | null
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'

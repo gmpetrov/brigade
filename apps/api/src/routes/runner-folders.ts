@@ -165,7 +165,9 @@ export const runnerFolders = new Hono<{ Variables: { runner: Runner } }>()
           ? { role: 'assistant' as const, text: event.text }
           : {
               role: 'user' as const,
-              text: by ? `${names.get(by) ?? 'Another teammate'} (teammate): ${event.text}` : event.text,
+              text: by
+                ? `${names.get(by) ?? 'Another teammate'} (teammate): ${event.text}`
+                : event.text,
             }
       if (transcript.length > 0 && entry.text.length > budget) break
       transcript.unshift(entry)

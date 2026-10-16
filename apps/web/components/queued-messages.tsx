@@ -14,8 +14,13 @@ export type Outgoing = {
   files: number
   /** The thread's last event when it was sent: a message without an id after it may be this one. */
   afterSeq: number
-  /** starting: the computer starts first. failed: the computer never said it got it. */
-  state: 'sending' | 'sent' | 'starting' | 'failed'
+  /**
+   * starting: the computer starts first. moving: the thread moves to another
+   * computer first (movingTo). failed: the computer never said it got it.
+   */
+  state: 'sending' | 'sent' | 'starting' | 'moving' | 'failed'
+  /** The computer it goes with the thread to, by name. */
+  movingTo?: string
 }
 
 /**
@@ -227,7 +232,12 @@ export function QueuedMessages({
               m.state === 'failed' && 'border-destructive/50',
             )}
           >
-            <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            {m.state === 'moving' ? (
+              // A status dot, not a spinner: the thread is on its way.
+              <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-hidden />
+            ) : (
+              <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            )}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
                 {mentionsToText(m.text) || `${m.files} file${m.files === 1 ? '' : 's'}`}
@@ -242,7 +252,9 @@ export function QueuedMessages({
                   ? 'Not delivered: the computer did not confirm it got this message.'
                   : m.state === 'starting'
                     ? 'Waiting for the computer to start…'
-                    : 'Sending…'}
+                    : m.state === 'moving'
+                      ? `Goes with the thread to ${m.movingTo ?? 'the other computer'}…`
+                      : 'Sending…'}
               </span>
             </div>
             {m.state === 'failed' && (

@@ -522,13 +522,9 @@ export function NewThread({
       )}
     </>
   )
-  // The +, as in a thread; the paperclip on phones, where there is no teaching. The quick
-  // dialog keeps the paperclip too: its modal would keep the recording's computer from use.
-  const add = phone ? (
-    <AttachButton onFiles={files.add} />
-  ) : (
-    <ComposerMenu onFiles={files.add} teach={teach} />
-  )
+  // The +, as in a thread, phones included, where there is no teaching. The quick dialog
+  // keeps the paperclip: its modal would keep the recording's computer from use.
+  const add = <ComposerMenu onFiles={files.add} {...(phone ? {} : { teach })} />
   const recorder = teaching && (
     <TeachTask
       teammate={teammate}

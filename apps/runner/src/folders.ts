@@ -268,7 +268,9 @@ export class Folders {
       this.state.restored = this.state.restored.filter((dir) => dir !== workDir)
       this.state.active[workDir] = Date.now()
       this.save()
-      console.log(`took in ${workDir}, moved from ${moved.from}${restored ? '' : ' without its files'}`)
+      console.log(
+        `took in ${workDir}, moved from ${moved.from}${restored ? '' : ' without its files'}`,
+      )
       if (restored)
         await this.options.archives
           .delete(name)

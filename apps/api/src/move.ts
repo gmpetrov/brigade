@@ -155,7 +155,11 @@ const steps = new Map<string, Promise<void>>()
  * for, when a turn ends, when the computer it leaves answers or goes offline,
  * and when the one it goes to comes online.
  */
-export function advanceMove(scope: Scope, sessionId: string, released?: { ok: boolean; error?: string }) {
+export function advanceMove(
+  scope: Scope,
+  sessionId: string,
+  released?: { ok: boolean; error?: string },
+) {
   const next = (steps.get(sessionId) ?? Promise.resolve())
     .then(() => step(scope, sessionId, released))
     .catch((error) => console.error(`thread ${sessionId}: move failed`, error))
@@ -186,7 +190,12 @@ async function step(scope: Scope, sessionId: string, released?: { ok: boolean; e
       await db.threadTeammate.findMany({ where: { sessionId }, select: { teammateId: true } })
     ).map((t) => t.teammateId)
     const requestId = randomUUID()
-    await save(db, sessionId, { ...move, phase: 'releasing', requestId, since: new Date().toISOString() })
+    await save(db, sessionId, {
+      ...move,
+      phase: 'releasing',
+      requestId,
+      since: new Date().toISOString(),
+    })
     const sent = sendToRunner(source.id, {
       type: 'thread.release',
       requestId,
@@ -219,7 +228,12 @@ async function step(scope: Scope, sessionId: string, released?: { ok: boolean; e
 async function arrive(
   db: ScopedDb,
   scope: Scope,
-  session: { id: string; computerId: string; lastSeq: number; computer: { kind: string; name: string } },
+  session: {
+    id: string
+    computerId: string
+    lastSeq: number
+    computer: { kind: string; name: string }
+  },
   move: Move,
   handedOver: boolean,
 ) {
@@ -305,11 +319,17 @@ export async function onReleased(
   result: { requestId: string; ok: boolean; error?: string },
 ) {
   const session = await prisma.session.findFirst({
-    where: { computerId: runner.computerId, move: { path: ['requestId'], equals: result.requestId } },
+    where: {
+      computerId: runner.computerId,
+      move: { path: ['requestId'], equals: result.requestId },
+    },
     select: { id: true, organizationId: true, workspaceId: true },
   })
   if (!session) return
-  await advanceMove(session, session.id, { ok: result.ok, ...(result.error ? { error: result.error } : {}) })
+  await advanceMove(session, session.id, {
+    ok: result.ok,
+    ...(result.error ? { error: result.error } : {}),
+  })
 }
 
 /**
