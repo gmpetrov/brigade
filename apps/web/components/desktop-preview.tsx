@@ -1,9 +1,16 @@
 'use client'
 import { Maximize2, Minimize2, RotateCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  KeyboardField,
+  TouchButtons,
+  useKeyboardInset,
+  useTouchScreen,
+} from '@/components/desktop-touch'
 import { api, ApiError } from '@/lib/api'
+import type { DesktopInput } from '@/lib/desktop-input'
 import { useRememberedFlag } from '@/lib/use-remembered'
 import { cn } from '@/lib/utils'
 import { DesktopView, type DesktopConnection } from './desktop-view'
@@ -18,7 +25,8 @@ const RETRIES = 5
  * The workspace computer's screen. In the details panel a thumbnail, view only,
  * that opens the computer on a click. Open, it fills its place: mouse and
  * keyboard once this member has taken over, its controls in a toolbar floating
- * over its foot.
+ * over its foot. On a touch screen, two fingers zoom, and with control the toolbar
+ * adds a keyboard and copy and paste.
  */
 export function DesktopScreen({
   source,
@@ -58,6 +66,13 @@ export function DesktopScreen({
   const [retries, setRetries] = useState(0)
 
   const [waiting, setWaiting] = useState<string>()
+  const [input, setInput] = useState<DesktopInput>()
+  const touch = useTouchScreen()
+  const keys = touch && mode === 'open' && control
+  const field = useRef<HTMLTextAreaElement>(null)
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const frame = useRef<HTMLElement>(null)
+  const inset = useKeyboardInset(frame, keyboardOpen)
 
   useEffect(() => {
     let live = true
@@ -123,7 +138,9 @@ export function DesktopScreen({
       connection={connection}
       control={mode === 'open' && control}
       focus={mode === 'open'}
+      zoom={mode === 'open'}
       clipboard={clipboard}
+      onInput={setInput}
       onConnect={() => {
         setRetries(0)
         onConnect?.()
@@ -169,16 +186,35 @@ export function DesktopScreen({
 
   return (
     <section
-      className="relative flex size-full min-h-0 items-center justify-center overflow-hidden bg-black"
+      ref={frame}
+      className="relative size-full min-h-0 overflow-hidden bg-black"
       aria-label={`${teammateName}'s screen`}
     >
-      {screen}
+      {keys && <KeyboardField input={input} fieldRef={field} onOpen={setKeyboardOpen} />}
+      {/* What the on-screen keyboard leaves visible: the screen and its toolbar stay above it. */}
+      <div
+        className="absolute inset-x-0 flex items-center justify-center"
+        style={{ top: inset.top, bottom: inset.bottom }}
+      >
+        {screen}
+      </div>
       <div
         role="toolbar"
         aria-label="Computer"
-        className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border bg-background/95 p-1.5 shadow-lg backdrop-blur"
+        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border bg-background/95 p-1.5 shadow-lg backdrop-blur"
+        style={{ bottom: inset.bottom + 16 }}
       >
         {toolbar}
+        {keys && (
+          <TouchButtons
+            input={input}
+            keyboardOpen={keyboardOpen}
+            onKeyboard={() => {
+              if (keyboardOpen) field.current?.blur()
+              else field.current?.focus({ preventScroll: true })
+            }}
+          />
+        )}
         <Button
           type="button"
           variant="ghost"
