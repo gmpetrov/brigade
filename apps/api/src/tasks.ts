@@ -25,7 +25,7 @@ import { joinThread, promptThread, startThread } from './work.js'
 /** What the board shows of a task and its thread. */
 const BOARD = {
   teammate: { select: { id: true, name: true, harness: true } },
-  project: { select: { id: true, name: true, icon: true } },
+  project: { select: { id: true, name: true, icon: true, logo: true } },
   createdBy: { select: { id: true, user: { select: { name: true } } } },
   session: {
     select: {

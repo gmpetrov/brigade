@@ -147,7 +147,7 @@ const ASKED =
   'In case your conversation came back without it, this is the latest message you were answering:'
 
 /** The teammate's model for the harness; none leaves Claude Code on the account's own. */
-function withModel(teammate: ThreadSpec['teammate']) {
+function withModel(teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>) {
   const model = runModel(teammate.harness, teammate.model)
   return model ? { model } : {}
 }
@@ -1072,10 +1072,19 @@ const resolvePath = (workDir: string, file: string) =>
 
 /**
  * One short harness run outside any thread, with no tools: a prompt in, its
- * final text out. Used to take memory from a thread that went quiet, and to name a new one.
+ * final text out. Used to take memory from a thread that went quiet, to name a
+ * new one, and to write a new project's brief from its website.
  */
 export async function runOnce(input: {
-  spec: ThreadSpec
+  /** A thread's spec, or for a run of no thread an id to name it by, the account and harness. */
+  spec: Pick<ThreadSpec, 'sessionId' | 'account'> & {
+    teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>
+  }
+  /**
+   * Not even the harness's built-in tools (reading files, search): for a prompt
+   * that holds text from outside, such as a website, which could ask for them.
+   */
+  noTools?: boolean
   workDir: string
   runAs?: string
   prompt: string
@@ -1092,6 +1101,7 @@ export async function runOnce(input: {
   const agent = new HarnessAgent({
     harness: codex ? createCodex(settings) : createClaudeCode(settings),
     tools: {},
+    ...(input.noTools ? { activeTools: [] } : {}),
     ...(input.model ? { model: input.model } : withModel(spec.teammate)),
     // Nothing to do but answer; Codex cannot ask, so it gets an empty directory.
     permissionMode: codex ? 'allow-all' : 'allow-reads',

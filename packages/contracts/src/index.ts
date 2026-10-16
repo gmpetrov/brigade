@@ -39,8 +39,11 @@ export * from './thread-history.js'
  * 21: a skill's files by reference (`refs`), fetched from /runner/skill-files.
  * 22: wake-ups (set, list, cancel), sent as schedule.call operations.
  * 23: connectors of any kind in the spec (an MCP App's, e.g. cloudflare), not only the first four.
+ * 24: a new project's brief from its website (project.describe).
  */
-export const PROTOCOL_VERSION = 23
+export const PROTOCOL_VERSION = 24
+/** Runners from this version on write a project's brief from its website (project.describe). */
+export const DESCRIBE_PROTOCOL = 24
 /** Runners from this version on accept a connector kind they do not know, such as an MCP App's. */
 export const MCP_PROTOCOL = 23
 /** Runners from this version on continue turns and messages a restart lost (welcome's resume, requeue). */

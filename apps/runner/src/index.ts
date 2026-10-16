@@ -26,6 +26,7 @@ import {
 import { Accounts, machineLogins } from './accounts.js'
 import { Attachments } from './attachments.js'
 import { Connection } from './connection.js'
+import { describeProject } from './describe.js'
 import { readThreadFile } from './files.js'
 import { Folders, type FolderName } from './folders.js'
 import { Library } from './library.js'
@@ -477,6 +478,8 @@ async function start() {
             error: error instanceof Error ? error.message : String(error),
           })
         }
+      case 'project.describe':
+        return describeProject(message).then((result) => connection.send(result))
       case 'repos.changed':
         return prefetch(message.repository, message.fetch)
       case 'library.changed':
