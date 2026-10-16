@@ -308,9 +308,15 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   /**
    * While it moves to another computer: where to, and how far. waiting: once the
    * turn running ends. releasing: its computer hands its files over. arriving:
-   * the new computer is offline; the message goes once it is back.
+   * the message goes once the new computer is online (waitingFor) and its runner
+   * new enough to take the thread in (it updates itself once idle).
    */
-  move: { to: string; phase: 'waiting' | 'releasing' | 'arriving'; since: string } | null
+  move: {
+    to: string
+    phase: 'waiting' | 'releasing' | 'arriving'
+    since: string
+    waitingFor?: 'online' | 'update'
+  } | null
 }
 
 export type { TaskColumn, TaskPriority } from '@brigade/contracts'

@@ -3,7 +3,9 @@
 // thread (Session.move) so a restart of the API picks it up where it was:
 //   waiting    the thread's turn runs on its computer: it moves once the turn ends
 //   releasing  its computer archives the teammates' folders to the bucket and forgets it
-//   arriving   it is on the new computer, which gets the message once it is online
+//   arriving   it is on the new computer, which gets the message once its runner is
+//              online and new enough to take a thread in (MOVE_PROTOCOL): an older one
+//              updates itself once idle, and connects again
 // The new computer takes the thread in once per arrival (ThreadSpec.moved): its
 // folders from the archives, its conversation from the thread's events, its
 // event numbers after the last one. A computer offline when the thread leaves
@@ -14,6 +16,7 @@ import { HTTPException } from 'hono/http-exception'
 import { attachToThread } from './attachments.js'
 import { audit } from './audit.js'
 import { Prisma, prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { wake } from './cloud.js'
 import { broadcastThreadMove, isOnline, runnerProtocol, sendToRunner } from './hub.js'
 import { usableAccounts } from './routes/accounts.js'
 import { loadThread, type LoadedThread } from './thread-spec.js'
@@ -40,6 +43,8 @@ export type Move = {
   requestId?: string
   /** When the current step started. */
   since: string
+  /** Arriving: what the new computer's runner is waited for, to come online or to update. */
+  waitingFor?: 'online' | 'update'
 }
 
 /** Archiving a large folder takes a while; past this, the thread moves without what was not handed over. */
@@ -86,11 +91,7 @@ async function checkTarget(db: ScopedDb, thread: LoadedThread, computerId: strin
         message: `No ${provider === 'codex' ? 'Codex' : 'Claude'} account of yours on ${label(computer)} is ready. Add or sign in to one under Accounts.`,
       })
   }
-  const protocol = runnerProtocol(computerId)
-  if (protocol !== undefined && protocol < MOVE_PROTOCOL)
-    throw new HTTPException(409, {
-      message: `The runner on ${label(computer)} is too old to take a thread in. Update it.`,
-    })
+  // A runner too old to take a thread in is no reason to refuse: the thread waits for its update (deliver).
   return computer
 }
 
@@ -278,9 +279,27 @@ async function arrive(
   await deliver(db, scope, session.id, arriving)
 }
 
-/** Send the move's message (or a nudge to carry on) to the thread on its new computer. */
+/**
+ * Send the move's message (or a nudge to carry on) to the thread on its new
+ * computer, once its runner is there and new enough. Never queued for a
+ * runner that is not connected: a cloud computer's queue goes to its runner
+ * as it connects, before an old one updates, and an old runner would take the
+ * thread in as if it had always been there (its events numbered from its own
+ * count, which the API drops, and none of the thread's conversation).
+ */
 async function deliver(db: ScopedDb, scope: Scope, sessionId: string, move: Move) {
   const thread = await loadThread(db, sessionId)
+  const protocol = runnerProtocol(thread.computerId)
+  const waitingFor = protocol === undefined ? 'online' : protocol < MOVE_PROTOCOL ? 'update' : null
+  if (waitingFor) {
+    // A stopped cloud computer starts; the move goes on when its runner connects (movesOn).
+    if (waitingFor === 'online' && thread.computer.kind === 'cloud') wake(thread.computerId)
+    if (move.waitingFor !== waitingFor) {
+      await save(db, sessionId, { ...move, waitingFor })
+      broadcastThreadMove(scope.workspaceId, sessionId, thread.status)
+    }
+    return
+  }
   const outcome = await promptThread(
     db,
     scope,
@@ -296,12 +315,13 @@ async function deliver(db: ScopedDb, scope: Scope, sessionId: string, move: Move
         }
       : // Nobody wrote anything: the teammate is told the thread so far and carries on.
         { text: '', memberId: null, handoff: true },
+    { moving: true },
   ).catch((error: unknown) => {
     // No account there any more, say: the thread stays there, without the message.
     console.warn(`thread ${sessionId}: the moved message did not go: ${String(error)}`)
     return 'failed' as const
   })
-  // A member's machine still offline: it goes when its runner connects (movesArriving).
+  // Gone offline just now: it goes when its runner connects again (movesOn).
   if (outcome === 'offline') return
   await save(db, sessionId, null)
   broadcastThreadMove(scope.workspaceId, sessionId, outcome === 'paused' ? 'paused' : thread.status)
@@ -351,5 +371,12 @@ export async function movesOn(computerId: string, sessionId?: string) {
 /** What a member sees of a move in progress: where to, and how far. */
 export function movePublic(value: unknown) {
   const move = moveOf(value)
-  return move ? { to: move.to, phase: move.phase, since: move.since } : null
+  return move
+    ? {
+        to: move.to,
+        phase: move.phase,
+        since: move.since,
+        ...(move.waitingFor ? { waitingFor: move.waitingFor } : {}),
+      }
+    : null
 }

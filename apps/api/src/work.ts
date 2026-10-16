@@ -78,8 +78,16 @@ export async function promptThread(
     skipCaps?: boolean
     /** A new thread's title from its first message: the runner suggests a better one. */
     nameThread?: string
+    /** The message a move takes along (src/move.ts), sent once the thread is on its new computer. */
+    moving?: boolean
   } = {},
 ): Promise<'sent' | 'queued' | 'offline' | 'paused'> {
+  // Moving, the thread is on neither computer for good: what is sent now could be lost on
+  // the old one, or reach the new one before its runner can take the thread in.
+  if (thread.move && !options.moving)
+    throw new HTTPException(409, {
+      message: 'This thread is moving to another computer. Send this once it is there.',
+    })
   const ids = prompt.teammateIds?.length ? prompt.teammateIds : [currentTeammate(thread).id]
   const responders = ids.map((id) => teammateIn(thread, id))
   if (prompt.attachments?.length) {
