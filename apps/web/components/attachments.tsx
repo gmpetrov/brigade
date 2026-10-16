@@ -23,8 +23,9 @@ import {
   Plus,
   X,
 } from 'lucide-react'
+import { Popover } from 'radix-ui'
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
-import { EffortBars, type EffortPick, EffortSlider } from '@/components/effort'
+import { EffortBars, EffortPanel, type EffortPick } from '@/components/effort'
 import { useFileLinks } from '@/components/file-links'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -277,21 +278,26 @@ export function ComposerMenu({
   const input = useRef<HTMLInputElement>(null)
   // A computer picked: the cursor goes to the message, not back to the +.
   const picked = useRef(false)
+  // Effort's slider opens over the composer from the +, once the menu has closed.
+  const [effortOpen, setEffortOpen] = useState(false)
+  const index = effort ? EFFORTS.findIndex((e) => e.id === (effort.value ?? effort.fallback)) : -1
   return (
-    <>
+    <Popover.Root open={effortOpen} onOpenChange={setEffortOpen}>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="rounded-full [&_svg:not([class*='size-'])]:size-5"
-            aria-label="Add files and more"
-            title="Add files and more"
-          >
-            <Plus aria-hidden />
-          </Button>
-        </DropdownMenuTrigger>
+        <Popover.Anchor asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full [&_svg:not([class*='size-'])]:size-5"
+              aria-label="Add files and more"
+              title="Add files and more"
+            >
+              <Plus aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+        </Popover.Anchor>
         <DropdownMenuContent
           align="start"
           side="top"
@@ -359,25 +365,23 @@ export function ComposerMenu({
           {effort && (
             <>
               {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <EffortBars
-                    index={EFFORTS.findIndex((e) => e.id === (effort.value ?? effort.fallback))}
-                    className="mr-0.5"
-                  />
-                  Effort
-                  <span className="ml-auto pl-3 text-xs text-muted-foreground">
-                    {EFFORTS.find((e) => e.id === (effort.value ?? effort.fallback))?.label}
-                  </span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="p-3.5">
-                  <EffortSlider effort={effort} {...(effortLater ? { later: true } : {})} />
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+              <DropdownMenuItem
+                onSelect={() => {
+                  picked.current = true
+                  setEffortOpen(true)
+                }}
+              >
+                <EffortBars index={index} className="mr-0.5" />
+                Effort
+                <span className="ml-auto pl-3 text-xs text-muted-foreground">
+                  {EFFORTS[index]?.label}
+                </span>
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {effort && <EffortPanel effort={effort} later={!!effortLater} align="start" />}
       <input
         ref={input}
         type="file"
@@ -388,7 +392,7 @@ export function ComposerMenu({
           e.target.value = ''
         }}
       />
-    </>
+    </Popover.Root>
   )
 }
 
