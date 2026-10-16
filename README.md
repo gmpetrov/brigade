@@ -456,8 +456,10 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   computer. Every request is checked again: the thread on that computer, the teammate in it, a grant whose
   installation reaches the repository (public repositories outside any installation are readable anonymously, so
   dependencies keep working). Pushes need a `read_write` grant and a policy other than `deny`, count toward the write
-  cap, and may only update branches under `brigade/`; anything else is refused the way GitHub refuses a protected
-  branch (`! [remote rejected]`). Propose changes with `github_create_pull_request`, which asks as usual. Each clone or
+  cap, and may only update branches under `brigade/` or create a tag (never move or delete one) whose commit is
+  already on the default branch, checked with GitHub's compare API, so a lightweight tag (an annotated tag's object
+  isn't on GitHub before the push); anything else is refused the way GitHub refuses a protected branch
+  (`! [remote rejected]`). Propose changes with `github_create_pull_request`, which asks as usual. Each clone or
   fetch (`git_fetch`) and push (`git_push`) is a `ConnectionCall`. The runner passes git its settings as
   `GIT_CONFIG_*` environment, never a file: the token as an `extraHeader` for the proxy URL only, and on the workspace
   computer `github.com` URLs rewritten to the proxy and the teammate as commit author. Each teammate keeps a bare

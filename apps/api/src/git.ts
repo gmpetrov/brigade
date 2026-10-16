@@ -1,7 +1,8 @@
 // Git for teammates, through the API (spec hard constraint 4: the GitHub
 // credential never leaves this process). A thread's spec carries a token for
 // this proxy, limited to that thread and teammate; each request is checked
-// against the teammate's GitHub grants, and pushes only reach brigade/ branches.
+// against the teammate's GitHub grants, and pushes only reach brigade/ branches
+// and new tags on commits already on the default branch (git-refs.ts).
 import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto'
 import type { GitAccess, PermissionPolicy } from '@brigade/contracts'
 import { writeCapReached } from './caps.js'
@@ -14,12 +15,10 @@ import {
   type GitHubCredential,
 } from './connectors/github-app.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
+import { onDefaultBranch, pushRule } from './git-refs.js'
 import { openSecret } from './vault.js'
 
-/** Teammates push only to branches under this prefix; a pull request takes them further. */
-export const PUSH_PREFIX = 'refs/heads/brigade/'
-/** Where the runner backs up uncommitted work when a thread goes idle. */
-export const BACKUP_PREFIX = 'refs/heads/brigade/wip/'
+export { BACKUP_PREFIX, PUSH_PREFIX } from './git-refs.js'
 
 /** Long enough for a harness session that stays live for days; each request is checked anyway. */
 const TOKEN_DAYS = 7
@@ -322,11 +321,44 @@ export function pushRefusal(request: GitRequest) {
   return null
 }
 
+/**
+ * Why a new tag is refused, or null: its commit must already be on the default branch, so a
+ * release is never cut from unmerged work. An annotated tag's object isn't on GitHub before
+ * the push, so it can't be checked: those are refused, and a lightweight tag works the same.
+ */
+async function tagRefusal(request: GitRequest, sha: string) {
+  if (!request.via) return 'this repository is read-only'
+  const token = await installationToken(request.via.installationId)
+  const headers = { ...githubHeaders, authorization: `Bearer ${token}` }
+  const repo = await fetch(`${GITHUB_API}/repos/${request.fullName}`, { headers })
+  if (!repo.ok) return `GitHub answered ${repo.status} for ${request.fullName}`
+  const branch = ((await repo.json()) as { default_branch: string }).default_branch
+  const compare = await fetch(
+    `${GITHUB_API}/repos/${request.fullName}/compare/${encodeURIComponent(branch)}...${sha}`,
+    { headers },
+  )
+  if (compare.status === 404 || compare.status === 422)
+    return `push a lightweight tag (git tag NAME, without -a) on a commit already on ${branch}`
+  if (!compare.ok) return `GitHub answered ${compare.status} comparing with ${branch}`
+  const { status } = (await compare.json()) as { status?: string }
+  return onDefaultBranch(status)
+    ? null
+    : `tags go on commits already on ${branch}: merge the pull request first`
+}
+
 /** Why one pushed ref is refused, or null. */
-export async function refRefusal(request: GitRequest, ref: string, backup: boolean) {
-  if (!ref.startsWith(PUSH_PREFIX) || ref.includes('..'))
-    return 'teammates push only to branches under brigade/; open a pull request for the rest'
+export async function refRefusal(
+  request: GitRequest,
+  command: { old: string; new: string; ref: string },
+  backup: boolean,
+) {
+  const rule = pushRule(command)
+  if (rule.kind === 'refused') return rule.reason
   if (backup || !request.via) return null
+  if (rule.kind === 'tag') {
+    const refused = await tagRefusal(request, command.new)
+    if (refused) return refused
+  }
   const cap = await writeCapReached(request.db, request.teammate, request.via.connectionId)
   return cap ? `${request.teammate.name} reached its cap of ${cap.limit} write calls today` : null
 }

@@ -17,6 +17,7 @@ import {
   upstreamAuthorization,
   type GitRequest,
 } from '../git.js'
+import { refLabel } from '../git-refs.js'
 
 const NAME = /^[A-Za-z0-9_.-]{1,100}$/
 const SERVICES = new Set(['git-upload-pack', 'git-receive-pack'])
@@ -123,12 +124,10 @@ async function receivePack(c: Context) {
   const backup = push.commands.every((command) => command.ref.startsWith(BACKUP_PREFIX))
   const reasons = new Map<string, string>()
   for (const command of push.commands) {
-    const reason = await refRefusal(request, command.ref, backup)
+    const reason = await refRefusal(request, command, backup)
     if (reason) reasons.set(command.ref, reason)
   }
-  const target = `${request.fullName}: ${push.commands
-    .map((command) => command.ref.replace(/^refs\/heads\//, ''))
-    .join(', ')}`
+  const target = `${request.fullName}: ${push.commands.map((command) => refLabel(command.ref)).join(', ')}`
   const operation = backup ? 'git_backup' : 'git_push'
 
   if (reasons.size > 0) {
