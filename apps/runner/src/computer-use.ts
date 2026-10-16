@@ -29,11 +29,16 @@ export class ComputerUseError extends Error {
   }
 }
 
-/** The installed helper app, on macOS only: $BRIGADE_COMPUTER_USE_APP, ~/Applications or /Applications. */
+/**
+ * The installed helper app, on macOS only: $BRIGADE_COMPUTER_USE_APP (Brigade.app sets it), the
+ * one inside Brigade.app (for a runner started in a terminal), ~/Applications or /Applications.
+ */
 export function computerUseApp(): string | undefined {
   if (process.platform !== 'darwin') return
   const candidates = [
     process.env.BRIGADE_COMPUTER_USE_APP,
+    join('/Applications/Brigade.app/Contents/Resources', COMPUTER_USE_APP),
+    join(homedir(), 'Applications/Brigade.app/Contents/Resources', COMPUTER_USE_APP),
     join(homedir(), 'Applications', COMPUTER_USE_APP),
     join('/Applications', COMPUTER_USE_APP),
   ]
