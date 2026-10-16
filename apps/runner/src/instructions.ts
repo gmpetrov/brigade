@@ -168,7 +168,7 @@ function chief(spec: ThreadSpec) {
       'Find out what they are building (for whom, how far along), what takes their time, and the tools the work ' +
       'lives in (a GitHub repository, Gmail, Google Calendar, Stripe). Ask one or two questions at a time, three ' +
       'rounds at most; when they give a website or repository, look at it instead of asking about it.',
-    `Then describe the team you suggest in a few lines and call \`${PROPOSE_TEAM_TOOL}\` last. Propose two or ` +
+    `Then call \`${PROPOSE_TEAM_TOOL}\` and describe the team you suggest in a few lines after it. Propose two or ` +
       'three teammates, five at most, each only for work their answers call for. For one person building a company, ' +
       'think of a builder (the product and its code, on GitHub), growth (content, launches, outreach) and ' +
       'operations (the inbox, customers, billing). Give each a short first name (never ' +
@@ -268,8 +268,8 @@ function designSkills(spec: ThreadSpec, libraryDir: string): ThreadSkill[] {
     'Variants of a small detail (a button, a label, an icon) to pick from are a widget, not designs. ' +
       'When you offer alternatives (several directions to choose from), make each its own design folder, check it ' +
       `and save it into one options folder for the design they are for: \`acme/pricing${DESIGN_OPTIONS_SUFFIX}/a-bold${DESIGN_SUFFIX}\`, ` +
-      `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Describe them in your reply, then call \`offer_choices\` last, ` +
-      'with one option per design and its library path in `design`: the person picks one by its picture. Their pick ' +
+      `\`acme/pricing${DESIGN_OPTIONS_SUFFIX}/b-calm${DESIGN_SUFFIX}\`. Call \`offer_choices\` with one option per design ` +
+      'and its library path in `design` (the person picks one by its picture), then describe them in your reply. Their pick ' +
       `arrives as their next message, and by then it has become the design (\`acme/pricing${DESIGN_SUFFIX}\`, replacing ` +
       'any design there) and the other options are in the trash: go on from that path. When they answer in their own ' +
       `words instead (mix two, change one), save new options into the same folder and offer them again, or save the ` +
@@ -439,19 +439,20 @@ const VISUALS =
   `When seeing beats reading (variants of a small UI change, a flow, numbers that make a shape), draw it in your reply with \`${SHOW_WIDGET_TOOL}\`. ` +
   `Read \`${WIDGET_GUIDE_TOOL}\` before your first one in a thread. A widget is not kept: what someone will keep, comment on or build from is a design. ` +
   'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
-  'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
+  'call `offer_choices` right before your final reply, with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
   'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
 
 /** Suggested replies: one-click answers when a reply proposes a next step. */
 const REPLIES =
   '## Suggested replies\n\n' +
   'When your reply ends by proposing a next step for the person to approve (send the email, post it, build it ' +
-  `and open a PR), call \`${SUGGEST_REPLIES_TOOL}\` last with the 1 to 3 answers they would most likely type, ` +
+  `and open a PR), call \`${SUGGEST_REPLIES_TOOL}\` with the 1 to 3 answers they would most likely type, ` +
   'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
   'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
   'questions, and not with `offer_choices`, which already gives them something to click. ' +
-  'The person sees only the text you write, never your thinking: write your reply as text before you call it, ' +
-  'and once written, never write it again after a tool call.'
+  'Call it right before your final reply, then write the reply as the last thing in your turn: the buttons show ' +
+  'under it. Text written before a tool call comes back summarized like your thinking, and the person never ' +
+  'sees it as your reply.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =
