@@ -931,6 +931,7 @@ export function ThreadConversation({
                         onChange={setText}
                         onSubmit={() => void send().catch(() => undefined)}
                         rows={1}
+                        typeToFocus
                         placeholder="Type @ to mention, / for commands"
                       />
                     </div>

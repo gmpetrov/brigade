@@ -562,6 +562,7 @@ export function ExpandedComputer({
     <div
       ref={ref}
       className="fixed inset-0 z-50 bg-black"
+      data-overlay
       aria-label={`${thread.teammate.name}'s computer`}
       role="region"
     >

@@ -303,6 +303,7 @@ export function NewThread({
   draft,
   onStarted,
   autoFocus,
+  typeToFocus,
   projectId: initialProject,
   layout = 'card',
 }: {
@@ -323,6 +324,8 @@ export function NewThread({
   onStarted?: (thread: { id: string }) => void
   /** Puts the cursor in the message as soon as the box appears. */
   autoFocus?: boolean
+  /** The page's main message box: typing with nothing focused lands in it (Composer). */
+  typeToFocus?: boolean
   /** In a card (a page, the threads panel), or the whole of a dialog. */
   layout?: 'card' | 'dialog'
 }) {
@@ -430,6 +433,7 @@ export function NewThread({
       onSubmit={() => void start()}
       disabled={busy}
       autoFocus={autoFocus}
+      typeToFocus={typeToFocus}
       placeholder={
         placeholder ?? `What should ${teammate.name} do? Type @ to mention, / for commands`
       }
