@@ -9,6 +9,11 @@ export type HarnessModel = {
   /** As the vendor names it in its own picker. */
   label: string
   description: string
+  /**
+   * The effort the CLI runs it at when Brigade sends none, from the vendor's docs
+   * (Claude Code's model config, OpenAI's model guide). Unset where they don't say.
+   */
+  effort?: Effort
 }
 
 export const HARNESS_MODELS = {
@@ -17,21 +22,25 @@ export const HARNESS_MODELS = {
       id: 'claude-opus-5-5',
       label: 'Opus 5.5',
       description: 'Most capable Opus for complex, agentic work.',
+      effort: 'medium',
     },
     {
       id: 'claude-fable-5-1',
       label: 'Fable 5.1',
       description: 'Anthropic’s most capable model, for the hardest long tasks.',
+      effort: 'high',
     },
     {
       id: 'claude-sonnet-5-5',
       label: 'Sonnet 5.5',
       description: 'Fast and capable for everyday coding and agent work.',
+      effort: 'medium',
     },
     {
       id: 'claude-haiku-5-5',
       label: 'Haiku 5.5',
       description: 'Fastest and cheapest, for simple tasks.',
+      effort: 'medium',
     },
   ],
   codex: [
@@ -39,6 +48,7 @@ export const HARNESS_MODELS = {
       id: 'gpt-6.1-sol',
       label: 'GPT-6.1 Sol',
       description: 'Latest workhorse model for coding and everyday work.',
+      effort: 'medium',
     },
     {
       id: 'gpt-6-astra',
@@ -91,3 +101,13 @@ export const EFFORTS = [
 /** An effort's name, or Default for none. */
 export const effortLabel = (effort: Effort | null) =>
   EFFORTS.find((e) => e.id === effort)?.label ?? 'Default'
+
+/**
+ * The effort a thread with none runs at, for the slider's Default mark: the model's own,
+ * else Medium, the level of today's models (and a guess for the account's own model).
+ */
+export const defaultEffort = (harness: HarnessId, model: string | null): Effort => {
+  const id = runModel(harness, model)
+  const models: readonly HarnessModel[] = HARNESS_MODELS[harness]
+  return models.find((m) => m.id === id)?.effort ?? 'medium'
+}

@@ -3,17 +3,16 @@ import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } fro
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { Effort } from '@brigade/contracts'
+import { defaultEffort, type Effort } from '@brigade/contracts'
 import {
   AttachButton,
   ComposerMenu,
-  EffortChip,
-  type EffortPick,
   UploadList,
   useFileDrop,
   useUploads,
 } from '@/components/attachments'
 import { Composer } from '@/components/composer'
+import { EffortButton, type EffortPick } from '@/components/effort'
 import { TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { StatusDot } from '@/components/status-badge'
 import { ProjectIcon } from '@/components/projects'
@@ -364,7 +363,11 @@ export function NewThread({
     setEffort: setEffortValue,
     files,
   } = draft ?? own
-  const effort: EffortPick = { value: effortValue, onPick: setEffortValue }
+  const effort: EffortPick = {
+    value: effortValue,
+    fallback: defaultEffort(teammate.harness, teammate.model),
+    onPick: setEffortValue,
+  }
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const drop = useFileDrop(files.add)
@@ -461,12 +464,7 @@ export function NewThread({
   const form = useRef<HTMLFormElement>(null)
   const focusMessage = () =>
     form.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus()
-  const uploads = (
-    <>
-      <EffortChip effort={effort} />
-      <UploadList uploads={files.uploads} onRemove={files.remove} />
-    </>
-  )
+  const uploads = <UploadList uploads={files.uploads} onRemove={files.remove} />
   const composer = (
     <Composer
       bare
@@ -656,7 +654,10 @@ export function NewThread({
             {teammatePicker}
             {projectPicker}
             {where}
-            {send}
+            <div className="ml-auto flex items-center gap-1">
+              <EffortButton effort={effort} />
+              {send}
+            </div>
           </div>
         </Card>
         {message}
