@@ -9,9 +9,11 @@ import {
   ArrowDown,
   CalendarClock,
   CircleStop,
+  Cloud,
   CloudUpload,
   CornerDownLeft,
   FolderKanban,
+  Laptop,
   Reply,
   ListOrdered,
   LoaderCircle,
@@ -63,9 +65,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   api,
+  computerName,
   preload,
   teammateModelLabel,
   useApi,
+  type ComputersResponse,
   type ProjectSummary,
   type Teammate,
   type Thread,
@@ -83,6 +87,8 @@ export type ThreadHeading = {
   project: Pick<ProjectSummary, 'id' | 'name' | 'icon'> | null
   status: string
   private: boolean
+  /** Where it runs: the workspace computer, or a member's own machine. */
+  computer: { kind: string; name: string }
   /** The live connection to its events holds. */
   connected: boolean
   /** Who has the computer: this member, another one, or the teammate. */
@@ -128,6 +134,7 @@ export function ThreadConversation({
 }) {
   const { me, projects } = useDashboard()
   const thread = useApi<Thread>(`/threads/${id}`)
+  const computers = useApi<ComputersResponse>('/computers')
   // Keyed by the thread: when it started loading, for its placeholder's delays.
   const [openedAt] = useState(() => Date.now())
   const [status, setStatus] = useState<string>()
@@ -321,6 +328,7 @@ export function ThreadConversation({
       teammateIds: t.teammates.length ? t.teammates.map((p) => p.teammate.id) : [t.teammate.id],
       title: t.title,
       project: t.project,
+      computer: { kind: t.computer.kind, name: t.computer.name },
       status: status ?? t.status,
       private: t.private,
       connected,
@@ -491,12 +499,36 @@ export function ThreadConversation({
   // computer (with Preview, the shell and the run log), its details, then what it made.
   // One row per fact, an icon for its kind: who is in it, its project, its task, who started it.
   const fact = 'flex min-w-0 items-center gap-2.5'
+  const computerOnline = computers.data?.computers.find((c) => c.id === t.computer.id)?.online
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
     <div className="flex flex-col gap-2 text-sm">
       <div className={fact}>
         <UsersRound aria-label="Teammates" className={factIcon} />
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{peopleLinks}</div>
+      </div>
+      {/* Where it runs: a member's machine says whether its runner is there. */}
+      <div className={fact}>
+        {t.computer.kind === 'cloud' ? (
+          <Cloud aria-label="Computer" className={factIcon} />
+        ) : (
+          <Laptop aria-label="Computer" className={factIcon} />
+        )}
+        <span className="min-w-0 truncate" title={computerName(t.computer)}>
+          {computerName(t.computer)}
+        </span>
+        {t.computer.kind !== 'cloud' && computerOnline !== undefined && (
+          <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
+            <span
+              aria-hidden
+              className={cn(
+                'size-1.5 rounded-full',
+                computerOnline ? 'bg-success' : 'bg-muted-foreground/50',
+              )}
+            />
+            {computerOnline ? 'online' : 'offline'}
+          </span>
+        )}
       </div>
       {/* The menu stays away while there is no project to move it to. */}
       {(t.project || projects.some((p) => !p.archivedAt)) && (

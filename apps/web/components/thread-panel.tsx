@@ -10,7 +10,15 @@
 // open it there; docking it again goes back to the page you were on.
 // ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
-import { ArrowLeft, ChevronRight, LoaderCircle, Maximize2, MessagesSquare, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronRight,
+  Laptop,
+  LoaderCircle,
+  Maximize2,
+  MessagesSquare,
+  X,
+} from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -547,6 +555,7 @@ export function ThreadPanel() {
               label={shown.title}
               threadId={shown.id}
               heading
+              machine={shown.computer.kind === 'cloud' ? undefined : shown.computer.name}
               details={`${lead?.name ?? 'the teammate'}'s computer, routines and more`}
               reconnecting={!shown.connected}
             />
@@ -720,6 +729,7 @@ function DetailsPill({
   label,
   threadId,
   heading = false,
+  machine,
   details,
   reconnecting = false,
 }: {
@@ -730,6 +740,8 @@ function DetailsPill({
   threadId?: string
   /** The label is the page's heading. */
   heading?: boolean
+  /** The member's machine the thread runs on. Unset on the workspace computer, the default. */
+  machine?: string
   /** What the details show, for its label. */
   details: string
   reconnecting?: boolean
@@ -764,6 +776,12 @@ function DetailsPill({
       <Label className="max-w-72 min-w-0 truncate" title={label}>
         {threadId ? <StreamedTitle threadId={threadId} text={label} /> : label}
       </Label>
+      {machine && (
+        <span title={`Runs on ${machine}`} className="-ml-0.5 flex shrink-0">
+          <Laptop aria-hidden className="size-4 text-muted-foreground" />
+          <span className="sr-only">, runs on {machine}</span>
+        </span>
+      )}
       {reconnecting && <Reconnecting />}
       {/* The pill grows to show it on hover and while open; always there on touch screens,
           which have no hover. */}
