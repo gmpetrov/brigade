@@ -282,6 +282,7 @@ async function start() {
       ...threadFolder(teammateId, sessionId),
     }),
     stateFile: join(paths.state, 'previews.json'),
+    busy: (sessionId) => threads.inUse(sessionId),
   })
   const threads = new Threads({
     concurrency: Number(values.concurrency),

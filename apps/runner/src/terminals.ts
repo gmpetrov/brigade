@@ -65,8 +65,9 @@ export class Terminals {
       // A person in control pushes as the teammate would: through Brigade, to brigade/ branches.
       ...gitEnv(spec.git),
     })
-    // `script` gives the shell a real terminal without a native module.
-    const shell = `stty cols ${cols} rows ${rows} 2>/dev/null; cd ${quote(dir)} && exec bash --login`
+    // `script` gives the shell a real terminal without a native module. The shell takes back
+    // the usual OOM score from the runner's low one, as a turn does.
+    const shell = `{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; stty cols ${cols} rows ${rows} 2>/dev/null; cd ${quote(dir)} && exec bash --login`
     const child = spawn(
       'sudo',
       ['-n', '-E', '-u', user, '--', 'script', '-qfc', shell, '/dev/null'],

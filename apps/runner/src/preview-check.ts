@@ -6,7 +6,7 @@
 //   node preview-check.js '<json: { url, paths, out }>'
 // Prints the result as JSON.
 import { existsSync } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium, type Page } from 'playwright-core'
 
@@ -213,6 +213,9 @@ async function main(input: Input): Promise<CheckResult> {
   const executablePath = CHROMES.find((p) => p && existsSync(p))
   if (!executablePath) throw new Error('No Chrome on this computer to check the preview')
   await mkdir(input.out, { recursive: true })
+  // On a cloud computer, the usual OOM score rather than the runner's low one, as a turn's.
+  if (process.platform === 'linux')
+    await writeFile('/proc/self/oom_score_adj', '0').catch(() => undefined)
   const base = new URL(input.url)
   const browser = await chromium.launch({
     executablePath,

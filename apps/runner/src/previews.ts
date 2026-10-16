@@ -11,6 +11,10 @@
 //
 // It expires a while after anyone last used it (a teammate's preview tool, a
 // person viewing it), so a forgotten dev server does not keep the computer up.
+// On a cloud computer it runs in a cgroup of its own (preview-cgroup.ts): frozen
+// after a few minutes without use, its thread's containers paused, until the
+// next request; stopped hours later, or sooner when the computer runs short; and
+// killed alone, with the reason, when it takes too much memory.
 //
 // A person starts one too, from the dashboard, without a turn: again as it last
 // started (remembered across restarts of the runner), or from the saved setup
@@ -23,6 +27,7 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { createConnection } from 'node:net'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -39,6 +44,14 @@ import {
 import { HOME } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import type { CheckResult } from './preview-check.js'
+import { pauseFor, unpause } from './containers.js'
+import {
+  oomReason,
+  PressureWatch,
+  PreviewCgroups,
+  type Ooms,
+  type PreviewCgroup,
+} from './preview-cgroup.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
 import { containerEnv, teammateHome } from './teammates.js'
 
@@ -46,6 +59,16 @@ const run = promisify(execFile)
 
 /** A preview nobody used for this long stops. */
 const TTL_MS = Number(process.env.BRIGADE_PREVIEW_TTL_MS) || 30 * 60_000
+/**
+ * In a cgroup of its own (a cloud computer), a preview nobody used for this
+ * long is frozen instead, its memory given back, until the next request; it
+ * stops after FROZEN_TTL_MS, or sooner when the computer runs short.
+ */
+const FREEZE_MS = Number(process.env.BRIGADE_PREVIEW_FREEZE_MS) || 5 * 60_000
+const FROZEN_TTL_MS = Number(process.env.BRIGADE_PREVIEW_FROZEN_TTL_MS) || 4 * 60 * 60_000
+/** Frozen previews stop, longest unused first, while swap is this full or memory this short. */
+const SWAP_FULL = 0.8
+const MEMORY_SHORT = 0.1
 /** How long a teammate's start_preview waits for the port, unless it says. */
 export const PREVIEW_START_MS = 120_000
 export const PREVIEW_START_MAX_MS = 600_000
@@ -157,6 +180,19 @@ type Preview = {
   dir: string
   /** The process group to stop. */
   group?: number
+  /** Its own cgroup, on a cloud computer: what it may use, and how it is frozen. */
+  cgroup?: PreviewCgroup
+  /** The kernel's OOM counts of its cgroup when this run started. */
+  ooms?: Ooms
+  /** Frozen while nobody uses it; the next request thaws it. */
+  frozen?: boolean
+  /**
+   * Its thread's containers, paused while it is frozen and nobody works in the
+   * thread; none to pause makes it empty, so they are looked for once.
+   */
+  pausedContainers?: string[]
+  /** Freezing and thawing, one after the other. */
+  pausing: Promise<unknown>
   /** Its credentials' env files, copied for as long as it runs (a turn's own go when it parks). */
   envFiles: string[]
   /** Where those copies are, removed when it ends. */
@@ -198,6 +234,8 @@ const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 export class Previews {
   private previews = new Map<string, Preview>()
   private readonly timer: NodeJS.Timeout
+  /** Where previews get cgroups of their own; null where the runner's cgroup is not delegated to it. */
+  private readonly cgroups = PreviewCgroups.open()
 
   constructor(
     private readonly options: {
@@ -220,10 +258,16 @@ export class Previews {
       seat: (sessionId: string, teammateId: string) => Seat
       /** Where how each thread's preview last started is kept. */
       stateFile: string
+      /** A turn or a person works in the thread: its containers are not paused. */
+      busy?: (sessionId: string) => boolean
     },
   ) {
     this.timer = setInterval(() => this.expire(), 60_000)
     this.timer.unref()
+    this.pressureTimer = setInterval(() => void this.watchPressure(), 5_000)
+    this.pressureTimer.unref()
+    this.pausedFile = join(dirname(options.stateFile), 'paused-containers.json')
+    void this.unpauseLeftovers()
     try {
       const saved = JSON.parse(readFileSync(options.stateFile, 'utf8')) as [string, LastStart][]
       this.lastStarts = new Map(saved)
@@ -233,10 +277,14 @@ export class Previews {
   }
 
   private lastStarts = new Map<string, LastStart>()
+  private readonly pressureTimer: NodeJS.Timeout
+  private readonly pressure = new PressureWatch<Preview>()
+  /** Containers paused for frozen previews, by user: unpaused at the next start should the runner stop first. */
+  private readonly pausedFile: string
 
-  /** Previews running or starting. */
+  /** Previews running or starting, frozen ones aside: nobody is using those. */
   get count() {
-    return this.previews.size
+    return [...this.previews.values()].filter((p) => !p.frozen).length
   }
 
   /** The thread's preview is running or starting. */
@@ -447,6 +495,8 @@ export class Previews {
     const preview = this.previews.get(sessionId)
     if (!preview) return false
     preview.stopping = { status, reason }
+    // A frozen process only gets to its SIGTERM handler once thawed.
+    await this.thaw(preview)
     this.kill(preview, 'TERM')
     const killed = await Promise.race([preview.exited.then(() => true), sleep(5000)])
     if (!killed) {
@@ -621,6 +671,8 @@ export class Previews {
       onUse: () => {
         if (preview) preview.lastUsed = Date.now()
       },
+      // A request to a frozen preview thaws it first.
+      wake: () => (preview?.frozen ? this.thaw(preview) : undefined),
     }
     const proxy = new PreviewProxy(proxyOptions)
     let origin: string
@@ -679,10 +731,20 @@ export class Previews {
       }
     }
     const commit = checkout ? await commitOf(dir, seat.runAs) : null
+    const previewId = randomUUID()
+    // Its own cgroup where the runner has them; without one it runs as before.
+    const cgroup = await (
+      await this.cgroups
+    )
+      ?.create(`${seat.sessionId}-${previewId.slice(0, 8)}`)
+      .catch((error: unknown) => {
+        console.warn(`preview without a cgroup: ${String(error)}`)
+        return undefined
+      })
 
     preview = {
       info: {
-        previewId: randomUUID(),
+        previewId,
         status: 'starting',
         command,
         cwd,
@@ -699,6 +761,8 @@ export class Previews {
       env,
       dir,
       proxy,
+      ...(cgroup ? { cgroup } : {}),
+      pausing: Promise.resolve(),
       envFiles: kept.files,
       ...(kept.dir ? { keptDir: kept.dir } : {}),
       variables: Object.keys(variables.env),
@@ -742,8 +806,13 @@ export class Previews {
 
   /** Run the preview's command (again), as the teammate; its setup first unless it restarts. */
   private launch(preview: Preview, withSetup: boolean) {
-    // The wrapper prints its pid first, to find its group.
-    const script = 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1"'
+    const { cgroup } = preview
+    // The wrapper prints its pid first, to find its group. With a cgroup of its own it then
+    // waits to be moved in, so that all it starts is in there, and offers itself first to the
+    // kernel's OOM killer should the whole computer run out.
+    const script = cgroup
+      ? 'cd -- "$0" || exit 1; echo "$$"; read -r _; { echo 500 >/proc/self/oom_score_adj; } 2>/dev/null; exec sh -c "$1" </dev/null'
+      : 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1" </dev/null'
     const { runAs } = preview.seat
     const { setup } = preview.input
     const { envFiles } = preview
@@ -763,7 +832,8 @@ export class Previews {
     const options = {
       cwd: '/',
       env: preview.env,
-      stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'],
+      // stdin: the wrapper's go once it is in its cgroup (ended at once without one); the app's is /dev/null.
+      stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
       detached: true,
     }
     const child = runAs
@@ -779,6 +849,8 @@ export class Previews {
       child.once('error', () => done(null))
       child.once('close', (code) => done(code))
     })
+    child.stdin.on('error', () => undefined)
+    if (!cgroup) child.stdin.end()
 
     let pidLine = true
     child.stdout.on('data', (data: Buffer) => {
@@ -787,19 +859,25 @@ export class Previews {
         const newline = text.indexOf('\n')
         if (newline < 0) return
         pidLine = false
-        void this.findGroup(preview, Number(text.slice(0, newline)))
+        const pid = Number(text.slice(0, newline))
+        if (cgroup) void this.enter(preview, cgroup, pid).finally(() => child.stdin.end('\n'))
+        void this.findGroup(preview, pid)
         text = text.slice(newline + 1)
       }
       this.append(preview, text)
     })
     child.stderr.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
-    void preview.exited.then((code) => {
+    void preview.exited.then(async (code) => {
+      // Killed for memory: say so rather than the bare exit code.
+      const budget = (await this.cgroups)?.budget
+      const oom = cgroup && budget && oomReason(preview.ooms, await cgroup.ooms(), budget)
       if (this.previews.get(preview.seat.sessionId) !== preview || preview.child !== child) return
       if (preview.stopping)
         return this.ended(preview, preview.stopping.status, preview.stopping.reason)
-      const how = code === null ? 'could not start' : `exited with code ${code}`
+      const how = oom || (code === null ? 'could not start' : `exited with code ${code}`)
       const ran = preview.info.status === 'running' || preview.restarting
-      if (ran && this.restartAfterExit(preview, how)) return
+      // Not after the kernel killed it for memory: started again at once, it would need it again.
+      if (ran && !oom && this.restartAfterExit(preview, how)) return
       this.ended(preview, 'failed', ran ? `The app stopped: it ${how}` : `The command ${how}`)
     })
   }
@@ -873,7 +951,149 @@ export class Previews {
     if (preview.stopping) this.kill(preview, 'TERM')
   }
 
+  /** Move the wrapper into the preview's cgroup, before it starts the command. */
+  private async enter(preview: Preview, cgroup: PreviewCgroup, pid: number) {
+    try {
+      preview.ooms = await cgroup.ooms()
+      await cgroup.attach(pid)
+    } catch (error) {
+      this.append(preview, `[preview] Runs without its own cgroup: ${String(error)}\n`)
+    }
+  }
+
+  /** Nobody used it for a while: its processes stop where they are, and its memory goes to swap. */
+  private freeze(preview: Preview) {
+    const { cgroup } = preview
+    if (!cgroup || preview.frozen || preview.info.status !== 'running' || preview.stopping) return
+    preview.frozen = true
+    return this.pause(preview, async () => {
+      await cgroup.freeze()
+      const freed = await cgroup.reclaim()
+      this.append(
+        preview,
+        `[preview] Paused after ${Math.round(FREEZE_MS / 60_000)} minutes without use ` +
+          `(${Math.round(freed / 1024 ** 2)} MB given back); the next request resumes it\n`,
+      )
+      await this.pauseContainers(preview)
+    })
+  }
+
+  /**
+   * Resumed, for a request or to stop it. Resolves once the app runs again; its
+   * containers follow (an app that queries its database meanwhile waits a little).
+   */
+  private thaw(preview: Preview) {
+    if (!preview.frozen) return preview.pausing
+    preview.frozen = false
+    const thawed = this.pause(preview, async () => {
+      await preview.cgroup?.thaw()
+      this.append(preview, '[preview] Resumed\n')
+    })
+    void this.pause(preview, () => this.unpauseContainers(preview))
+    return thawed
+  }
+
+  /**
+   * A turn or a person is about to work in the thread: the containers its frozen
+   * preview paused (its database, say) run again. The preview itself stays frozen.
+   */
+  threadBusy(sessionId: string) {
+    const preview = this.previews.get(sessionId)
+    if (preview?.pausedContainers) return this.pause(preview, () => this.unpauseContainers(preview))
+  }
+
+  /** The thread's containers, on a cloud computer, while nobody works in it. */
+  private async pauseContainers(preview: Preview) {
+    const { runAs, sessionId } = preview.seat
+    if (!runAs || !preview.frozen || preview.pausedContainers || this.options.busy?.(sessionId))
+      return
+    const ids = await pauseFor(runAs, sessionId).catch((error: unknown) => {
+      this.append(preview, `[preview] Could not pause the thread's containers: ${String(error)}\n`)
+      return []
+    })
+    preview.pausedContainers = ids
+    if (ids.length === 0) return
+    this.savePaused()
+    this.append(preview, `[preview] Paused ${ids.length} of the thread's containers\n`)
+  }
+
+  private async unpauseContainers(preview: Preview) {
+    const ids = preview.pausedContainers
+    delete preview.pausedContainers
+    if (!ids?.length || !preview.seat.runAs) return
+    await unpause(preview.seat.runAs, ids).catch((error: unknown) => {
+      this.append(preview, `[preview] Could not resume the thread's containers: ${String(error)}\n`)
+    })
+    this.savePaused()
+  }
+
+  private savePaused() {
+    const paused: [string, string[]][] = []
+    for (const p of this.previews.values())
+      if (p.seat.runAs && p.pausedContainers?.length)
+        paused.push([p.seat.runAs, p.pausedContainers])
+    try {
+      writeFileSync(this.pausedFile, JSON.stringify(paused), { mode: 0o600 })
+    } catch (error) {
+      console.warn(`could not save the paused containers: ${String(error)}`)
+    }
+  }
+
+  /** Containers paused for previews of a runner that stopped before it could resume them. */
+  private async unpauseLeftovers() {
+    let paused: [string, string[]][]
+    try {
+      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as [string, string[]][]
+    } catch {
+      return
+    }
+    for (const [user, ids] of paused)
+      await unpause(user, ids).catch((error: unknown) =>
+        console.warn(`could not resume the containers of ${user}: ${String(error)}`),
+      )
+    this.savePaused()
+  }
+
+  /**
+   * Stop a preview stalled on memory for a while (PressureWatch), at once and
+   * with the reason: it would only grow slower and slow everything else.
+   */
+  private async watchPressure() {
+    const running = [...this.previews.values()].filter((p) => p.cgroup && !p.frozen && !p.stopping)
+    if (running.length === 0) return
+    const readings = await Promise.all(
+      running.map(async (p) => ({
+        key: p,
+        pressure: await p.cgroup!.pressure(),
+        memory: await p.cgroup!.current(),
+      })),
+    )
+    const stalled = this.pressure.observe(readings, Date.now())
+    if (!stalled || stalled.stopping || this.previews.get(stalled.seat.sessionId) !== stalled)
+      return
+    const memory = readings.find((r) => r.key === stalled)!.memory
+    const status = stalled.info.status === 'running' ? 'The app stopped' : 'The command stopped'
+    stalled.stopping = {
+      status: 'failed',
+      reason:
+        `${status}: it was stuck waiting for memory for ${Math.round(this.pressure.duration / 1000)} s, ` +
+        `with ${(memory / 1024 ** 3).toFixed(1)} GB in use`,
+    }
+    this.append(stalled, `[preview] ${stalled.stopping.reason}\n`)
+    this.kill(stalled, 'KILL')
+  }
+
+  /** Freezing and thawing in the order they were asked for: a request may come while it freezes. */
+  private pause(preview: Preview, change: () => Promise<void>) {
+    preview.pausing = preview.pausing.then(change).catch((error: unknown) => {
+      this.append(preview, `[preview] Could not pause or resume it: ${String(error)}\n`)
+    })
+    return preview.pausing
+  }
+
   private kill(preview: Preview, signal: 'TERM' | 'KILL') {
+    // Whatever left its process group too (a daemon, a setsid'd child) is still in its cgroup.
+    if (signal === 'KILL') void preview.cgroup?.kill()
     const group = preview.group
     if (!group) {
       preview.child?.kill(signal === 'TERM' ? 'SIGTERM' : 'SIGKILL')
@@ -929,6 +1149,9 @@ export class Previews {
     }
     this.report(preview)
     if (preview.keptDir) void dropEnvFiles(preview.seat, preview.keptDir)
+    void preview.cgroup?.remove()
+    if (preview.pausedContainers?.length)
+      void this.pause(preview, () => this.unpauseContainers(preview))
   }
 
   private report(preview: Preview) {
@@ -943,12 +1166,27 @@ export class Previews {
   private expire() {
     const now = Date.now()
     for (const [sessionId, preview] of this.previews) {
-      if (now - preview.lastUsed >= TTL_MS)
-        void this.stop(
-          sessionId,
-          `Stopped after ${Math.round(TTL_MS / 60_000)} minutes without use`,
-        )
+      const ttl = preview.cgroup ? FROZEN_TTL_MS : TTL_MS
+      if (now - preview.lastUsed >= ttl)
+        void this.stop(sessionId, `Stopped after ${Math.round(ttl / 60_000)} minutes without use`)
+      else if (now - preview.lastUsed >= FREEZE_MS) void this.freeze(preview)
+      // Frozen while a turn worked in its thread: its containers once the turn is over.
+      if (preview.frozen && !preview.pausedContainers)
+        void this.pause(preview, () => this.pauseContainers(preview))
     }
+    void this.makeRoom()
+  }
+
+  /** The computer runs short of memory or swap: stop the frozen preview unused longest. */
+  private async makeRoom() {
+    const frozen = [...this.previews.values()].filter((p) => p.frozen)
+    if (!frozen.length) return
+    const meminfo = await readFile('/proc/meminfo', 'utf8').catch(() => '')
+    const kB = (key: string) => Number(new RegExp(`^${key}:\\s+(\\d+)`, 'm').exec(meminfo)?.[1])
+    const swapUsed = kB('SwapTotal') > 0 ? 1 - kB('SwapFree') / kB('SwapTotal') : 0
+    if (swapUsed < SWAP_FULL && kB('MemAvailable') / kB('MemTotal') > MEMORY_SHORT) return
+    const oldest = frozen.reduce((a, b) => (b.lastUsed < a.lastUsed ? b : a))
+    await this.stop(oldest.seat.sessionId, 'Stopped to make room for other previews')
   }
 }
 

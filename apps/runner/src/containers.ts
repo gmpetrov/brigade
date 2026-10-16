@@ -10,6 +10,7 @@ import { composeProject, teammateHome } from './teammates.js'
 type Container = {
   id: string
   running: boolean
+  paused: boolean
   /** Its thread, if any: the thread's id (its folder's name), or its Compose project. */
   thread?: string
   volumes: string[]
@@ -17,7 +18,7 @@ type Container = {
 
 export type Inspected = {
   Id: string
-  State?: { Running?: boolean }
+  State?: { Running?: boolean; Paused?: boolean }
   Config?: { Labels?: Record<string, string> | null }
   Mounts?: { Type?: string; Source?: string; Name?: string }[] | null
 }
@@ -68,6 +69,7 @@ export function describe(c: Inspected, root: string): Container {
   return {
     id: c.Id,
     running: Boolean(c.State?.Running),
+    paused: Boolean(c.State?.Paused),
     ...(thread ? { thread } : {}),
     volumes: mounts.filter((m) => m.Type === 'volume' && m.Name).map((m) => m.Name!),
   }
@@ -99,6 +101,31 @@ export async function stopQuiet(
     console.log(`stopped ${ids.length} container(s) of quiet thread ${sessionId} for ${user}`)
   }
   return stopped
+}
+
+/**
+ * Pause the running containers of a thread whose preview is frozen (its
+ * database, say): no CPU, and the kernel can take back their memory. Resolves
+ * to their ids, for unpause.
+ */
+export async function pauseFor(user: string, sessionId: string): Promise<string[]> {
+  const dockerCli = await docker(user)
+  if (!dockerCli) return []
+  const ids = (await containers(dockerCli, user, false))
+    .filter((c) => !c.paused && ofThread(c, sessionId))
+    .map((c) => c.id)
+  if (ids.length > 0) await dockerCli('pause', ...ids)
+  return ids
+}
+
+/** Run containers pauseFor paused again; those gone or no longer paused are left as they are. */
+export async function unpause(user: string, ids: string[]) {
+  const dockerCli = await docker(user)
+  if (!dockerCli || ids.length === 0) return
+  await dockerCli('unpause', ...ids).catch(async () => {
+    // One of them is gone or running: the others, one by one.
+    for (const id of ids) await dockerCli('unpause', id).catch(() => undefined)
+  })
 }
 
 /**

@@ -418,6 +418,7 @@ export class Threads {
     const thread = this.thread(spec.sessionId)
     if (thread.takeover) return
     thread.takeover = { memberId, since: Date.now() }
+    void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
     // Queued messages do not run while a person has control: say so, rather than drop them silently.
     for (const message of thread.messages.values())
@@ -630,6 +631,8 @@ export class Threads {
         try {
           if (spec.moved) await this.options.folders.arrive(name, spec.moved)
           await this.options.folders.ready(name)
+          // Containers a frozen preview paused: the turn may need them.
+          await this.options.previews.threadBusy(spec.sessionId)
         } catch (error) {
           this.options.emit(spec.sessionId, {
             at: new Date().toISOString(),

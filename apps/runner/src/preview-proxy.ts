@@ -28,6 +28,8 @@ export type PreviewProxyOptions = {
   state: () => ProxyState
   /** Someone used the preview. */
   onUse: () => void
+  /** Before a request goes through: a promise while the app is woken (thawed), else nothing. */
+  wake?: () => Promise<unknown> | undefined
 }
 
 /** A Set-Cookie value a browser keeps in a cross-site frame: Secure, SameSite=None, partitioned, host-only. */
@@ -86,8 +88,22 @@ export class PreviewProxy {
   private lastUse = 0
 
   constructor(private readonly options: PreviewProxyOptions) {
-    this.server = http.createServer((req, res) => this.request(req, res))
-    this.server.on('upgrade', (req, socket, head) => this.upgrade(req, socket as net.Socket, head))
+    // A frozen app is thawed first; the request waits in its socket meanwhile. Its idle
+    // connections are dropped: thawed, the app closes them at once (their keep-alive
+    // timeouts all passed while it was frozen), under the request sent on one.
+    const woken = (go: () => void) => {
+      const waking = this.options.wake?.()
+      if (!waking) return go()
+      void waking.finally(() => {
+        for (const free of Object.values(this.agent.freeSockets))
+          for (const s of free ?? []) s.destroy()
+        go()
+      })
+    }
+    this.server = http.createServer((req, res) => woken(() => this.request(req, res)))
+    this.server.on('upgrade', (req, socket, head) =>
+      woken(() => this.upgrade(req, socket as net.Socket, head)),
+    )
     this.server.on('connection', (socket) => {
       this.sockets.add(socket)
       socket.once('close', () => this.sockets.delete(socket))
@@ -180,6 +196,12 @@ export class PreviewProxy {
       upstream.write(`${lines.join('\r\n')}\r\n\r\n`)
       if (head.length) upstream.write(head)
       upstream.pipe(socket).pipe(upstream)
+      // What the person sends on it is use, and wakes a frozen app; what the app sends
+      // (a dev server's pings) is not, so a tab left open lets it freeze.
+      socket.on('data', () => {
+        this.used()
+        void this.options.wake?.()
+      })
     })
     upstream.on('error', () => socket.destroy())
     socket.on('error', () => upstream.destroy())

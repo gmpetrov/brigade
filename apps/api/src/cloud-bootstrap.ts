@@ -170,7 +170,58 @@ sudo tee /etc/systemd/system/brigade-runner.service.d/stop.conf >/dev/null <<'UN
 KillMode=mixed
 TimeoutStopSec=60
 UNIT
+# Previews in cgroups of their own (the runner's preview-cgroup.ts): the runner's cgroup is
+# delegated to it, and it starts in runner/ beside them. When memory runs out, a preview goes
+# before the runner or a turn: the runner and its harnesses inherit a low OOM score, and each
+# preview raises its own. A process the kernel kills no longer stops the whole service (and
+# every turn with it), as the default OOMPolicy=stop did. Taken up at the runner's next start.
+sudo tee /etc/systemd/system/brigade-runner.service.d/cgroups.conf >/dev/null <<'UNIT'
+[Service]
+Delegate=memory cpu pids
+DelegateSubgroup=runner
+OOMScoreAdjust=-500
+OOMPolicy=continue
+UNIT
+# Swap for frozen previews (the runner's previews.ts gives their memory back to it): twice the
+# memory, 8 to 16 GiB, where the disk has room for it and 10 GiB more. Made at each boot: a
+# resume brings back neither files at the root nor fstab lines, so it costs nothing at stop or
+# resume. Used before the image's own /swapfile.
+sudo tee /usr/local/sbin/brigade-swap >/dev/null <<'SWAP'
+#!/bin/sh
+set -eu
+F=/brigade.swap
+swapon --show=NAME --noheadings | grep -qx "$F" && exit 0
+GIB=$(awk '/^MemTotal:/ { print int($2 / 1048576 + 0.5) * 2 }' /proc/meminfo)
+[ "$GIB" -ge 8 ] || GIB=8
+[ "$GIB" -le 16 ] || GIB=16
+if [ "$(stat -c %s "$F" 2>/dev/null || echo 0)" -ne $((GIB * 1073741824)) ]; then
+  rm -f "$F"
+  FREE=$(df --output=avail -B1G / | tail -1 | tr -dc 0-9)
+  [ "$FREE" -ge $((GIB + 10)) ] || { echo "no room for $GIB GiB of swap"; exit 0; }
+  fallocate -l "$GIB"G "$F"
+fi
+chmod 600 "$F"
+mkswap "$F" >/dev/null
+swapon --priority 10 "$F"
+SWAP
+sudo chmod 755 /usr/local/sbin/brigade-swap
+sudo tee /etc/systemd/system/brigade-swap.service >/dev/null <<'UNIT'
+[Unit]
+Description=Swap for Brigade's frozen previews
+After=local-fs.target
+Before=brigade-runner.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/brigade-swap
+
+[Install]
+WantedBy=multi-user.target
+UNIT
 sudo systemctl daemon-reload
+sudo systemctl enable brigade-swap.service 2>/dev/null
+sudo systemctl restart brigade-swap.service
 `
 
 /** Identifies the current setup; the runner reports the one last applied. */

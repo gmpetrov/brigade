@@ -57,7 +57,10 @@ export function createLocalSandboxSession(options: {
     stdin: 'ignore' | 'pipe' = 'ignore',
   ) =>
     runAs
-      ? // sudo -E passes the environment without putting it on the command line.
+      ? // sudo -E passes the environment without putting it on the command line. On a cloud
+        // computer the runner's service gives it a low OOM score (cgroups.conf in the API's
+        // setup): a turn takes back the usual one, so when memory runs out, a turn that grows
+        // goes before the desktop and the teammates' Docker, and the runner stays.
         spawnChild(
           'sudo',
           [
@@ -68,7 +71,7 @@ export function createLocalSandboxSession(options: {
             '--',
             'sh',
             '-c',
-            'cd -- "$0" && exec sh -c "$1"',
+            '{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; cd -- "$0" && exec sh -c "$1"',
             cwd,
             command,
           ],
