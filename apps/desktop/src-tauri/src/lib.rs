@@ -268,6 +268,61 @@ fn on_menu(app: &AppHandle, id: &str) {
     }
 }
 
+/// The app menu, live while one of Brigade's windows (the screenshot draft, the setup
+/// checklist) is in front. Tauri's default one quits on ⌘Q, runner and all; here ⌘Q closes
+/// only that window, and Brigade stays in the menu bar. Edit keeps copy and paste working.
+fn app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    Menu::with_items(
+        app,
+        &[
+            &Submenu::with_items(
+                app,
+                "Brigade",
+                true,
+                &[&MenuItem::with_id(
+                    app,
+                    "close-window",
+                    "Close Window",
+                    true,
+                    Some("cmd+q"),
+                )?],
+            )?,
+            &Submenu::with_items(
+                app,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, None)?,
+                    &PredefinedMenuItem::redo(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::cut(app, None)?,
+                    &PredefinedMenuItem::copy(app, None)?,
+                    &PredefinedMenuItem::paste(app, None)?,
+                    &PredefinedMenuItem::select_all(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "Window",
+                true,
+                &[
+                    &PredefinedMenuItem::minimize(app, None)?,
+                    &PredefinedMenuItem::close_window(app, None)?,
+                ],
+            )?,
+        ],
+    )
+}
+
+/// ⌘Q from the app menu: the window in front closes (the draft only hides, see capture.rs).
+fn close_front_window(app: &AppHandle) {
+    for window in app.webview_windows().into_values() {
+        if window.is_focused().unwrap_or(false) {
+            let _ = window.close();
+        }
+    }
+}
+
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -430,6 +485,13 @@ pub fn run() {
             capture::capture_clear,
             capture::capture_hide,
         ])
+        .menu(app_menu)
+        // Every menu's events come here too, the tray's included: only the app menu's own.
+        .on_menu_event(|app, event| {
+            if event.id.as_ref() == "close-window" {
+                close_front_window(app);
+            }
+        })
         .setup(setup)
         .build(tauri::generate_context!())
         .expect("Brigade could not start")
