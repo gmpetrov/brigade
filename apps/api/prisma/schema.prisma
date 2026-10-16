@@ -1503,6 +1503,11 @@ model Project {
   name                   String
   /// One letter or an emoji, shown in the sidebar. Unset: the name's first letter.
   icon                   String?
+  /// Its logo in the bucket (projectLogoKey), shown instead of the icon: "<version>.<type>",
+  /// e.g. "k2x9f1.png". Unset: none.
+  logo                   String?
+  /// The website the project is about, if it has one.
+  url                    String?
   /// Given to every thread in the project: what it is, its stack, who it is for.
   brief                  String              @default("")
   /// Its library folder, e.g. "Projects/Acme web". Files belong to it by path.

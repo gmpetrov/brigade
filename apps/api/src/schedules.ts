@@ -42,7 +42,7 @@ const LIST = {
   teammate: { select: { id: true, name: true, harness: true, archivedAt: true } },
   owner: { select: { id: true, user: { select: { name: true } } } },
   createdByTeammate: { select: { id: true, name: true } },
-  project: { select: { id: true, name: true, icon: true } },
+  project: { select: { id: true, name: true, icon: true, logo: true } },
   sessions: {
     orderBy: { createdAt: 'desc' as const },
     take: 1,

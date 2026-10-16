@@ -283,7 +283,7 @@ export const threads = new Hono<AppEnv>()
         },
         attachments: { include: { attachment: true }, orderBy: { createdAt: 'asc' } },
         task: { select: { id: true, title: true, completedAt: true } },
-        project: { select: { id: true, name: true, icon: true, archivedAt: true } },
+        project: { select: { id: true, name: true, icon: true, logo: true, archivedAt: true } },
         wakeups: {
           where: { status: 'pending' },
           select: { id: true, teammateId: true, note: true, wakeAt: true },

@@ -56,7 +56,7 @@ export const triggers = new Hono<AppEnv>()
       where: projectWhere(c.req.query('project')),
       include: {
         teammate: { select: { id: true, name: true } },
-        project: { select: { id: true, name: true, icon: true } },
+        project: { select: { id: true, name: true, icon: true, logo: true } },
       },
       orderBy: { createdAt: 'asc' },
     })

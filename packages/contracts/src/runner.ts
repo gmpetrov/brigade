@@ -5,7 +5,7 @@ import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
-import { ProjectCatalogEntry, ThreadProject } from './projects.js'
+import { PROJECT_SITE_TEXT_MAX, ProjectCatalogEntry, ThreadProject } from './projects.js'
 import {
   PREVIEW_PORTS_MAX,
   PreviewAction,
@@ -336,6 +336,14 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     error: z.string().optional(),
     text: z.string().optional(),
   }),
+  /** The brief project.describe asked for, or why not. */
+  z.object({
+    type: z.literal('project.describe.result'),
+    requestId: z.string(),
+    ok: z.boolean(),
+    error: z.string().optional(),
+    brief: z.string().max(5000).optional(),
+  }),
   /**
    * A thread went quiet: what a short harness run took from it. The summary
    * replaces the thread's; the edits apply to the memory files.
@@ -477,6 +485,18 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** A thread's preview output, for a person viewing it. */
   z.object({ type: z.literal('preview.logs'), requestId: z.string(), sessionId: z.string() }),
+  /**
+   * Write a new project's brief from its website's text: a short run on a
+   * member's account with the harness's small model, and no tools at all.
+   */
+  z.object({
+    type: z.literal('project.describe'),
+    requestId: z.string(),
+    account: AccountRef,
+    url: z.string().max(2000),
+    /** The site's pages as text, already cut to size by the API. */
+    text: z.string().max(PROJECT_SITE_TEXT_MAX),
+  }),
   /** The API now serves another runner bundle (sent to every connected runner). */
   z.object({ type: z.literal('update.available'), bundle: z.string() }),
   z.object({

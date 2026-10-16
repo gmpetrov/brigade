@@ -1,10 +1,12 @@
 'use client'
+import { projectLogoPath, siteUrl, type SiteInfo } from '@brigade/contracts'
 import { Archive, ArchiveRestore, Brain, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
 import { useProject } from '@/components/project-shell'
+import { ProjectLogoPreview } from '@/components/projects'
 import { ProviderLogo } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { api, useApi, type ConnectionsResponse } from '@/lib/api'
+import { API_URL } from '@/lib/config'
 
 function Section({
   title,
@@ -44,6 +47,11 @@ export default function ProjectSettings() {
   const [name, setName] = useState(project.name)
   const [icon, setIcon] = useState(project.icon ?? '')
   const [brief, setBrief] = useState(project.brief)
+  const [url, setUrl] = useState(project.url ?? '')
+  /** Unset: as it is. Null: back to the icon. A data URL: a new logo. */
+  const [logo, setLogo] = useState<string | null>()
+  const [fetchingLogo, setFetchingLogo] = useState(false)
+  const file = useRef<HTMLInputElement>(null)
   const [folder, setFolder] = useState(project.folder ?? '')
   const [preferred, setPreferred] = useState(project.preferredConnections.map((c) => c.id))
   const [saved, setSaved] = useState(false)
@@ -56,6 +64,8 @@ export default function ProjectSettings() {
     name !== project.name ||
     icon !== (project.icon ?? '') ||
     brief !== project.brief ||
+    url !== (project.url ?? '') ||
+    logo !== undefined ||
     folder !== (project.folder ?? '') ||
     preferred.join() !== project.preferredConnections.map((c) => c.id).join()
   useEffect(() => {
@@ -63,6 +73,7 @@ export default function ProjectSettings() {
     setName(project.name)
     setIcon(project.icon ?? '')
     setBrief(project.brief)
+    setUrl(project.url ?? '')
     setFolder(project.folder ?? '')
     setPreferred(project.preferredConnections.map((c) => c.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the project changes
@@ -94,13 +105,51 @@ export default function ProjectSettings() {
           name: name.trim(),
           icon: icon.trim() || null,
           brief: brief.trim(),
+          url: url.trim() ? siteUrl(url) : null,
+          ...(logo !== undefined && { logo }),
           folder: folder.trim() || null,
           preferredConnectionIds: preferred,
         },
       }),
     )
-    if (ok) setSaved(true)
+    if (ok) {
+      setLogo(undefined)
+      setSaved(true)
+    }
   }
+
+  function pickLogo(picked: File | undefined) {
+    if (!picked) return
+    if (picked.size > 256 * 1024) return setError('A logo can be up to 256 KB')
+    const reader = new FileReader()
+    reader.onload = () => {
+      setLogo(String(reader.result))
+      setError(undefined)
+    }
+    reader.readAsDataURL(picked)
+  }
+
+  async function logoFromSite() {
+    setFetchingLogo(true)
+    setError(undefined)
+    try {
+      const info = await api<SiteInfo>('/projects/site', { body: { url: siteUrl(url) } })
+      if (info.logo) setLogo(info.logo)
+      else setError(`${new URL(info.url).hostname} shows no logo`)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setFetchingLogo(false)
+    }
+  }
+
+  /** What shows now: the new logo, none, or the saved one. */
+  const shownLogo =
+    logo !== undefined
+      ? logo
+      : project.logo
+        ? `${API_URL}/api${projectLogoPath({ id: project.id, logo: project.logo })}`
+        : null
 
   const usable = (connections.data?.connections ?? []).filter(
     (c) => c.status !== 'removed' && c.kind !== 'webhook',
@@ -131,6 +180,56 @@ export default function ProjectSettings() {
                 onChange={(e) => setIcon(e.target.value)}
                 placeholder={name.trim().charAt(0).toUpperCase()}
                 maxLength={8}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="project-url">Website</Label>
+            <Input
+              id="project-url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="acme.com"
+              inputMode="url"
+              maxLength={2000}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Logo</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              {shownLogo ? (
+                <ProjectLogoPreview logo={shownLogo} onRemove={() => setLogo(null)} />
+              ) : (
+                <span className="text-sm text-muted-foreground">None: the icon shows instead.</span>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => file.current?.click()}
+              >
+                Upload
+              </Button>
+              {url.trim() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={fetchingLogo}
+                  onClick={() => void logoFromSite()}
+                >
+                  {fetchingLogo ? 'Reading the site…' : 'Take it from the website'}
+                </Button>
+              )}
+              <input
+                ref={file}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/svg+xml"
+                className="hidden"
+                onChange={(e) => {
+                  pickLogo(e.target.files?.[0])
+                  e.target.value = ''
+                }}
               />
             </div>
           </div>

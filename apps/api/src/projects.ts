@@ -2,8 +2,11 @@
 // tasks, schedules and triggers carry a projectId; a project owns a library
 // folder and links repositories by name. Everything else is reached through
 // those. Organizing and context only: no permissions, no caps.
+import { randomUUID } from 'node:crypto'
 import {
   PreviewRecipe,
+  PROJECT_LOGO_MAX,
+  PROJECT_LOGO_TYPES,
   projectFolder,
   type ProjectCatalogEntry,
   type ProjectSummary,
@@ -11,23 +14,77 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
+import { deleteObject, getObject, projectLogoKey, putObject } from './bucket.js'
 import { projectWorkingSeconds } from './caps.js'
 import { prisma, type ScopedDb } from './db.js'
 import { workspaceRepositories } from './git.js'
 import { broadcastProjects } from './hub.js'
 import { createFolder } from './library-folders.js'
 import { readMemory } from './library.js'
+import { imageType } from './project-sites.js'
 import type { WorkspaceScope } from './scope.js'
 
-const SUMMARY = { id: true, name: true, icon: true, archivedAt: true } as const
+const SUMMARY = { id: true, name: true, icon: true, logo: true, archivedAt: true } as const
 
-const summary = (p: { id: string; name: string; icon: string | null; archivedAt: Date | null }) =>
+const summary = (p: {
+  id: string
+  name: string
+  icon: string | null
+  logo: string | null
+  archivedAt: Date | null
+}) =>
   ({
     id: p.id,
     name: p.name,
     icon: p.icon,
+    logo: p.logo,
     archivedAt: p.archivedAt?.toISOString() ?? null,
   }) satisfies ProjectSummary
+
+// ---------------------------------------------------------------------------
+// Logos
+// ---------------------------------------------------------------------------
+
+const LOGO_EXTENSIONS: Record<(typeof PROJECT_LOGO_TYPES)[number], string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/x-icon': 'ico',
+  'image/svg+xml': 'svg',
+}
+
+/**
+ * Keep a logo the dashboard sent as a data URL: its bytes decide its type,
+ * whatever the URL says. Returns what the project's `logo` holds.
+ */
+async function storeLogo(scope: WorkspaceScope, projectId: string, dataUrl: string) {
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+  if (bytes.byteLength > PROJECT_LOGO_MAX)
+    throw new HTTPException(413, { message: 'A logo can be up to 256 KB' })
+  const type = imageType(bytes) as keyof typeof LOGO_EXTENSIONS | null
+  if (!type || !(type in LOGO_EXTENSIONS))
+    throw new HTTPException(400, { message: 'A logo is a PNG, JPEG, GIF, WebP, ICO or SVG image' })
+  await putObject(projectLogoKey(scope, projectId), bytes, type)
+  return `${randomUUID().slice(0, 8)}.${LOGO_EXTENSIONS[type]}`
+}
+
+const removeLogo = (scope: WorkspaceScope, projectId: string) =>
+  deleteObject(projectLogoKey(scope, projectId)).catch((error: unknown) =>
+    console.warn(`project ${projectId}: logo not deleted: ${String(error)}`),
+  )
+
+/** A project's logo, for the dashboard to show. Any member may see it. */
+export async function projectLogo(db: ScopedDb, scope: WorkspaceScope, id: string) {
+  const project = await db.project.findFirst({ where: { id }, select: { logo: true } })
+  if (!project?.logo) throw new HTTPException(404, { message: 'No logo' })
+  const extension = project.logo.split('.').pop()
+  const type = Object.entries(LOGO_EXTENSIONS).find(([, e]) => e === extension)?.[0]
+  const bytes = await getObject(projectLogoKey(scope, id))
+  if (!bytes || !type) throw new HTTPException(404, { message: 'No logo' })
+  return { bytes, type }
+}
 
 const byMember = (scope: WorkspaceScope): Actor => ({ type: 'member', id: scope.memberId })
 
@@ -104,6 +161,7 @@ export async function getProject(db: ScopedDb, scope: WorkspaceScope, id: string
   return {
     ...summary(project),
     brief: project.brief,
+    url: project.url,
     folder: project.folder,
     preferredConnections: connections,
     repositories: project.repositories.map(({ repository }) => {
@@ -157,6 +215,8 @@ export async function createProject(
     name: string
     icon?: string | null
     brief: string
+    url?: string | null
+    logo?: string | null
     folder?: string | null
     repositories: string[]
   },
@@ -169,12 +229,22 @@ export async function createProject(
         name: input.name,
         icon: input.icon ?? null,
         brief: input.brief,
+        url: input.url ?? null,
         folder,
       } as never,
     })
     .catch((error: unknown) => {
       throw nameTaken(error)
     })
+  // A logo that will not keep leaves the project with its letter, not unmade.
+  if (input.logo) {
+    const logo = await storeLogo(scope, project.id, input.logo).catch((error: unknown) => {
+      console.warn(`project ${project.id}: logo not kept: ${String(error)}`)
+      return null
+    })
+    if (logo)
+      project.logo = (await db.project.update({ where: { id: project.id }, data: { logo } })).logo
+  }
   if (repositories.length)
     await db.projectRepository.createMany({
       data: repositories.map((repository) => ({ projectId: project.id, repository })) as never,
@@ -200,12 +270,22 @@ export async function updateProject(
     name?: string
     icon?: string | null
     brief?: string
+    url?: string | null
+    logo?: string | null
     folder?: string | null
     preferredConnectionIds?: string[]
   },
 ) {
   const project = await db.project.findFirst({ where: { id } })
   if (!project) throw new HTTPException(404, { message: 'Project not found' })
+  // A new logo replaces the old one's bytes; null takes it away.
+  const logo =
+    input.logo === undefined
+      ? undefined
+      : input.logo === null
+        ? null
+        : await storeLogo(scope, id, input.logo)
+  if (logo === null && project.logo) await removeLogo(scope, id)
   if (input.preferredConnectionIds) {
     const found = await db.connection.count({
       where: { id: { in: input.preferredConnectionIds }, status: { not: 'removed' } },
@@ -220,6 +300,8 @@ export async function updateProject(
         ...(input.name !== undefined && { name: input.name }),
         ...(input.icon !== undefined && { icon: input.icon }),
         ...(input.brief !== undefined && { brief: input.brief }),
+        ...(input.url !== undefined && { url: input.url }),
+        ...(logo !== undefined && { logo }),
         ...(input.folder !== undefined && { folder: input.folder }),
         ...(input.preferredConnectionIds && {
           preferredConnectionIds: [...new Set(input.preferredConnectionIds)],
@@ -320,6 +402,7 @@ export async function deleteProject(db: ScopedDb, scope: WorkspaceScope, id: str
   const project = await db.project.findFirst({ where: { id }, select: SUMMARY })
   if (!project) throw new HTTPException(404, { message: 'Project not found' })
   await db.project.delete({ where: { id } })
+  if (project.logo) await removeLogo(scope, id)
   await audit({
     ...scope,
     actor: byMember(scope),

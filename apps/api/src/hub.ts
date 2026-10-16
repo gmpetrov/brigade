@@ -28,6 +28,7 @@ import {
   settlePreviewLogs,
   settlePreviewStart,
 } from './app-previews.js'
+import { settleDescribe } from './project-sites.js'
 import { endLogin, loginById, loginsOnComputer } from './logins.js'
 import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
@@ -689,6 +690,8 @@ export function runnerSocket(runner: {
     }
 
     if (message.type === 'preview.logs.result') return settlePreviewLogs(runner.computerId, message)
+    if (message.type === 'project.describe.result')
+      return settleDescribe(runner.computerId, message)
     if (message.type === 'preview.start.result')
       return settlePreviewStart(runner.computerId, message)
 

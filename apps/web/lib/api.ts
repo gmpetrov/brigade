@@ -785,11 +785,13 @@ export type RepositoryOption = { repository: string; private: boolean; connectio
 export type { ProjectSummary }
 
 /** A project as rows that belong to one name it. */
-export type ProjectRef = { id: string; name: string; icon: string | null }
+export type ProjectRef = { id: string; name: string; icon: string | null; logo?: string | null }
 
 /** A project page's data: its repositories with their saved previews, and its week. */
 export type ProjectDetail = ProjectSummary & {
   brief: string
+  /** The website the project is about. */
+  url: string | null
   folder: string | null
   preferredConnections: { id: string; label: string; kind: string }[]
   repositories: {

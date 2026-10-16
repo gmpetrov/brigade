@@ -31,6 +31,8 @@ export type ProjectMinAggregateOutputType = {
   workspaceId: string | null
   name: string | null
   icon: string | null
+  logo: string | null
+  url: string | null
   brief: string | null
   folder: string | null
   archivedAt: Date | null
@@ -44,6 +46,8 @@ export type ProjectMaxAggregateOutputType = {
   workspaceId: string | null
   name: string | null
   icon: string | null
+  logo: string | null
+  url: string | null
   brief: string | null
   folder: string | null
   archivedAt: Date | null
@@ -57,6 +61,8 @@ export type ProjectCountAggregateOutputType = {
   workspaceId: number
   name: number
   icon: number
+  logo: number
+  url: number
   brief: number
   folder: number
   preferredConnectionIds: number
@@ -73,6 +79,8 @@ export type ProjectMinAggregateInputType = {
   workspaceId?: true
   name?: true
   icon?: true
+  logo?: true
+  url?: true
   brief?: true
   folder?: true
   archivedAt?: true
@@ -86,6 +94,8 @@ export type ProjectMaxAggregateInputType = {
   workspaceId?: true
   name?: true
   icon?: true
+  logo?: true
+  url?: true
   brief?: true
   folder?: true
   archivedAt?: true
@@ -99,6 +109,8 @@ export type ProjectCountAggregateInputType = {
   workspaceId?: true
   name?: true
   icon?: true
+  logo?: true
+  url?: true
   brief?: true
   folder?: true
   preferredConnectionIds?: true
@@ -186,6 +198,8 @@ export type ProjectGroupByOutputType = {
   workspaceId: string
   name: string
   icon: string | null
+  logo: string | null
+  url: string | null
   brief: string
   folder: string | null
   preferredConnectionIds: string[]
@@ -221,6 +235,8 @@ export type ProjectWhereInput = {
   workspaceId?: Prisma.StringFilter<"Project"> | string
   name?: Prisma.StringFilter<"Project"> | string
   icon?: Prisma.StringNullableFilter<"Project"> | string | null
+  logo?: Prisma.StringNullableFilter<"Project"> | string | null
+  url?: Prisma.StringNullableFilter<"Project"> | string | null
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
@@ -242,6 +258,8 @@ export type ProjectOrderByWithRelationInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
+  logo?: Prisma.SortOrderInput | Prisma.SortOrder
+  url?: Prisma.SortOrderInput | Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrderInput | Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
@@ -267,6 +285,8 @@ export type ProjectWhereUniqueInput = Prisma.AtLeast<{
   workspaceId?: Prisma.StringFilter<"Project"> | string
   name?: Prisma.StringFilter<"Project"> | string
   icon?: Prisma.StringNullableFilter<"Project"> | string | null
+  logo?: Prisma.StringNullableFilter<"Project"> | string | null
+  url?: Prisma.StringNullableFilter<"Project"> | string | null
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
@@ -288,6 +308,8 @@ export type ProjectOrderByWithAggregationInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
+  logo?: Prisma.SortOrderInput | Prisma.SortOrder
+  url?: Prisma.SortOrderInput | Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrderInput | Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
@@ -308,6 +330,8 @@ export type ProjectScalarWhereWithAggregatesInput = {
   workspaceId?: Prisma.StringWithAggregatesFilter<"Project"> | string
   name?: Prisma.StringWithAggregatesFilter<"Project"> | string
   icon?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
+  logo?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
+  url?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
   brief?: Prisma.StringWithAggregatesFilter<"Project"> | string
   folder?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
@@ -321,6 +345,8 @@ export type ProjectCreateInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -342,6 +368,8 @@ export type ProjectUncheckedCreateInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -361,6 +389,8 @@ export type ProjectUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -382,6 +412,8 @@ export type ProjectUncheckedUpdateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -402,6 +434,8 @@ export type ProjectCreateManyInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -415,6 +449,8 @@ export type ProjectUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -429,6 +465,8 @@ export type ProjectUncheckedUpdateManyInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -463,6 +501,8 @@ export type ProjectCountOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  url?: Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
@@ -477,6 +517,8 @@ export type ProjectMaxOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  url?: Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
@@ -490,6 +532,8 @@ export type ProjectMinOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  logo?: Prisma.SortOrder
+  url?: Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
@@ -652,6 +696,8 @@ export type ProjectCreateWithoutWorkspaceInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -671,6 +717,8 @@ export type ProjectUncheckedCreateWithoutWorkspaceInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -720,6 +768,8 @@ export type ProjectScalarWhereInput = {
   workspaceId?: Prisma.StringFilter<"Project"> | string
   name?: Prisma.StringFilter<"Project"> | string
   icon?: Prisma.StringNullableFilter<"Project"> | string | null
+  logo?: Prisma.StringNullableFilter<"Project"> | string | null
+  url?: Prisma.StringNullableFilter<"Project"> | string | null
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
@@ -733,6 +783,8 @@ export type ProjectCreateWithoutSessionsInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -753,6 +805,8 @@ export type ProjectUncheckedCreateWithoutSessionsInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -787,6 +841,8 @@ export type ProjectUpdateWithoutSessionsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -807,6 +863,8 @@ export type ProjectUncheckedUpdateWithoutSessionsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -825,6 +883,8 @@ export type ProjectCreateWithoutTasksInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -845,6 +905,8 @@ export type ProjectUncheckedCreateWithoutTasksInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -879,6 +941,8 @@ export type ProjectUpdateWithoutTasksInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -899,6 +963,8 @@ export type ProjectUncheckedUpdateWithoutTasksInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -917,6 +983,8 @@ export type ProjectCreateWithoutSchedulesInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -937,6 +1005,8 @@ export type ProjectUncheckedCreateWithoutSchedulesInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -971,6 +1041,8 @@ export type ProjectUpdateWithoutSchedulesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -991,6 +1063,8 @@ export type ProjectUncheckedUpdateWithoutSchedulesInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1009,6 +1083,8 @@ export type ProjectCreateWithoutTriggersInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1029,6 +1105,8 @@ export type ProjectUncheckedCreateWithoutTriggersInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1063,6 +1141,8 @@ export type ProjectUpdateWithoutTriggersInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1083,6 +1163,8 @@ export type ProjectUncheckedUpdateWithoutTriggersInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1101,6 +1183,8 @@ export type ProjectCreateWithoutDocumentsInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1121,6 +1205,8 @@ export type ProjectUncheckedCreateWithoutDocumentsInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1155,6 +1241,8 @@ export type ProjectUpdateWithoutDocumentsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1175,6 +1263,8 @@ export type ProjectUncheckedUpdateWithoutDocumentsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1193,6 +1283,8 @@ export type ProjectCreateWithoutRepositoriesInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1213,6 +1305,8 @@ export type ProjectUncheckedCreateWithoutRepositoriesInput = {
   workspaceId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1247,6 +1341,8 @@ export type ProjectUpdateWithoutRepositoriesInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1267,6 +1363,8 @@ export type ProjectUncheckedUpdateWithoutRepositoriesInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1285,6 +1383,8 @@ export type ProjectCreateManyWorkspaceInput = {
   organizationId: string
   name: string
   icon?: string | null
+  logo?: string | null
+  url?: string | null
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
@@ -1298,6 +1398,8 @@ export type ProjectUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1317,6 +1419,8 @@ export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1336,6 +1440,8 @@ export type ProjectUncheckedUpdateManyWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
@@ -1426,6 +1532,8 @@ export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   workspaceId?: boolean
   name?: boolean
   icon?: boolean
+  logo?: boolean
+  url?: boolean
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
@@ -1448,6 +1556,8 @@ export type ProjectSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   workspaceId?: boolean
   name?: boolean
   icon?: boolean
+  logo?: boolean
+  url?: boolean
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
@@ -1463,6 +1573,8 @@ export type ProjectSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   workspaceId?: boolean
   name?: boolean
   icon?: boolean
+  logo?: boolean
+  url?: boolean
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
@@ -1478,6 +1590,8 @@ export type ProjectSelectScalar = {
   workspaceId?: boolean
   name?: boolean
   icon?: boolean
+  logo?: boolean
+  url?: boolean
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
@@ -1486,7 +1600,7 @@ export type ProjectSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "icon" | "brief" | "folder" | "preferredConnectionIds" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
+export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "icon" | "logo" | "url" | "brief" | "folder" | "preferredConnectionIds" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
 export type ProjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   repositories?: boolean | Prisma.Project$repositoriesArgs<ExtArgs>
@@ -1524,6 +1638,15 @@ export type $ProjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * One letter or an emoji, shown in the sidebar. Unset: the name's first letter.
      */
     icon: string | null
+    /**
+     * Its logo in the bucket (projectLogoKey), shown instead of the icon: "<version>.<type>",
+     * e.g. "k2x9f1.png". Unset: none.
+     */
+    logo: string | null
+    /**
+     * The website the project is about, if it has one.
+     */
+    url: string | null
     /**
      * Given to every thread in the project: what it is, its stack, who it is for.
      */
@@ -1974,6 +2097,8 @@ export interface ProjectFieldRefs {
   readonly workspaceId: Prisma.FieldRef<"Project", 'String'>
   readonly name: Prisma.FieldRef<"Project", 'String'>
   readonly icon: Prisma.FieldRef<"Project", 'String'>
+  readonly logo: Prisma.FieldRef<"Project", 'String'>
+  readonly url: Prisma.FieldRef<"Project", 'String'>
   readonly brief: Prisma.FieldRef<"Project", 'String'>
   readonly folder: Prisma.FieldRef<"Project", 'String'>
   readonly preferredConnectionIds: Prisma.FieldRef<"Project", 'String[]'>

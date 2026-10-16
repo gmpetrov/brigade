@@ -935,6 +935,8 @@ export const ProjectScalarFieldEnum = {
   workspaceId: 'workspaceId',
   name: 'name',
   icon: 'icon',
+  logo: 'logo',
+  url: 'url',
   brief: 'brief',
   folder: 'folder',
   preferredConnectionIds: 'preferredConnectionIds',

@@ -212,6 +212,23 @@ it. Saved previews leave the Computers page: `<SavedPreviews />` comes out of
 The new-thread and new-task forms have a project picker, never required. It defaults to
 the project the person is in, else "No project".
 
+## From a website
+
+A new project may start from its website. The dialog reads it once the address settles:
+
+- **Name, description and logo** come from the HTML, read by the API (`src/project-sites.ts`):
+  `og:site_name`, else the title's first part; the meta description; the icon closest to
+  192 px among `apple-touch-icon`, the manifest's icons and `<link rel="icon">`, else
+  `/favicon.ico`. Only public HTTPS addresses, every redirect checked, a size cap per page.
+- **The brief** is written by the member's own account, never another's: the API sends the
+  site's text (home page, plus `/about` or `/pricing` when linked) to a runner where the member
+  has an account with usage left (`project.describe`, protocol 24). The run uses the harness's
+  small model with no tools at all, since the text is a stranger's. With no such account or
+  computer online, the dialog uses the site's description and says why.
+- **The logo** is kept in the bucket (`project-logos/<projectId>`) and shown instead of the
+  icon everywhere; settings can upload another, take it from the website again, or remove it.
+  Deleting the project deletes it.
+
 ## API
 
 - `GET/POST /api/projects`, `GET/PATCH /api/projects/:id`, archive and unarchive.
