@@ -22,6 +22,7 @@ import {
   type TicketAnswer,
   runModel,
   WIDGET_GUIDE_TOOL,
+  hasVisibleText,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
 import type { Tool } from 'ai'
@@ -167,7 +168,7 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
-  /** The teammate wrote text the person sees in this turn. */
+  /** The teammate wrote text the person sees since its last step of work. */
   wrote: () => boolean,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
@@ -265,7 +266,7 @@ export class HarnessThread {
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
-  /** The teammate wrote text the person sees in the current turn (see afterReply). */
+  /** The teammate wrote text the person sees since its last step of work (see afterReply). */
   private wroteReply = false
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
@@ -498,8 +499,14 @@ export class HarnessThread {
       if (frozenUnder()) return
       if (event.type === 'message.done') {
         this.remember('assistant', event.text)
-        if (event.text.trim()) this.wroteReply = true
+        if (hasVisibleText(event.text)) this.wroteReply = true
       }
+      // Work after the text (a command, a PR) needs a reply of its own; loading a tool or drawing does not.
+      if (
+        event.type === 'tool.started' &&
+        !ASIDE_TOOLS.has(event.toolName.replace(/^mcp__.+?__/, ''))
+      )
+        this.wroteReply = false
       this.emitEvent(event)
     }, this.toolCalls)
     try {
@@ -982,6 +989,19 @@ export class HarnessThread {
     this.emitEvent({ ...event, at: new Date().toISOString() } as AgentEvent)
   }
 }
+
+/** Steps that are no work of their own: the reply written before them still answers. */
+const ASIDE_TOOLS = new Set([
+  'ToolSearch',
+  'tool_search',
+  'TodoWrite',
+  'update_plan',
+  SHOW_WIDGET_TOOL,
+  WIDGET_GUIDE_TOOL,
+  SUGGEST_REPLIES_TOOL,
+  OFFER_CHOICES_TOOL,
+  PROPOSE_TEAM_TOOL,
+])
 
 /**
  * Closing cards a turn ends on, with nothing written after them. Claude Code
