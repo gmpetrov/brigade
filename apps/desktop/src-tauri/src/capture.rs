@@ -143,6 +143,14 @@ pub fn take(app: &AppHandle) {
             .map_or(0, |d| d.as_millis());
         let name = format!("{millis}.png");
         let path = dir().join(&name);
+        // The draft's window stays above everything: out of the way of what is captured.
+        let window = app.get_webview_window(WINDOW);
+        let was_open = window
+            .as_ref()
+            .is_some_and(|w| w.is_visible().unwrap_or(false));
+        if let Some(window) = &window {
+            let _ = window.hide();
+        }
         let result = app.state::<Helper>().call(
             "capture",
             json!({ "path": path.to_string_lossy() }),
@@ -150,7 +158,11 @@ pub fn take(app: &AppHandle) {
         );
         app.state::<Capture>().taking.store(false, Ordering::SeqCst);
         match result {
-            Ok(reply) if reply["cancelled"] == true => {}
+            Ok(reply) if reply["cancelled"] == true => {
+                if let Some(window) = window.filter(|_| was_open) {
+                    bring_up(&window);
+                }
+            }
             Ok(_) => {
                 show_count(&app);
                 let handle = app.clone();
@@ -159,12 +171,20 @@ pub fn take(app: &AppHandle) {
                     let _ = handle.emit_to(WINDOW, "capture-added", &name);
                 });
             }
-            Err(error) => alert(
-                &app,
-                "Could not take a screenshot",
-                &error,
-                MessageDialogKind::Error,
-            ),
+            Err(error) => {
+                // The helper's own words are for a teammate; the person turns it on in setup.
+                let message = if error.starts_with("Screen Recording is off") {
+                    "Brigade Computer Use needs Screen Recording to take screenshots. Open Set up Brigade… in Brigade's menu to turn it on.".to_owned()
+                } else {
+                    error
+                };
+                alert(
+                    &app,
+                    "Could not take a screenshot",
+                    &message,
+                    MessageDialogKind::Error,
+                );
+            }
         }
     });
 }
