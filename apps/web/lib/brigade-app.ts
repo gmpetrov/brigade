@@ -20,7 +20,11 @@ export function inCaptureWindow() {
 /** The draft's captures, by file name (their time in milliseconds), oldest first. */
 export const captures = {
   list: () => invoke<string[]>('capture_list'),
-  read: (name: string) => invoke<ArrayBuffer>('capture_read', { name }),
+  /** Its PNG bytes. To a page from a site, as this one, macOS's Tauri sends them as an array of numbers. */
+  read: async (name: string) => {
+    const bytes = await invoke<ArrayBuffer | number[]>('capture_read', { name })
+    return bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : Uint8Array.from(bytes)
+  },
   remove: (name: string) => invoke<void>('capture_remove', { name }),
   /** Sent: the draft starts over. */
   clear: () => invoke<void>('capture_clear'),
