@@ -47,6 +47,30 @@ export default function AppsPage() {
 }
 
 function Apps() {
+  const params = useSearchParams()
+  // Back from a provider in the sign-in window: the page that opened it shows the account.
+  if (params.get('popup')) return <SignedIn error={params.get('error')} />
+  return <AppsList />
+}
+
+/** The sign-in window's last page: closes itself, or says to. */
+function SignedIn({ error }: { error: string | null }) {
+  useEffect(() => {
+    if (!error) window.close()
+  }, [error])
+  return (
+    <div className="flex flex-col gap-2 py-16 text-center">
+      <p className="font-semibold">{error ? 'The account was not connected.' : 'Connected.'}</p>
+      <p className="text-sm text-muted-foreground">
+        {error
+          ? (CONNECT_ERRORS[error] ?? `(${error})`)
+          : 'You can close this window and go back to Brigade.'}
+      </p>
+    </div>
+  )
+}
+
+function AppsList() {
   const { me } = useDashboard()
   const params = useSearchParams()
   const router = useRouter()

@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
@@ -43,6 +43,7 @@ import {
   type Trigger,
   type TriggerCatalog,
 } from '@/lib/api'
+import { openSignIn } from '@/lib/sign-in-window'
 import { cn } from '@/lib/utils'
 
 type Kind = Connection['kind']
@@ -95,20 +96,44 @@ export function AppSheet({
     }
   }
 
-  /** Google, GitHub and MCP Apps sign in at the provider and come back to the Apps page. */
+  /**
+   * Google, GitHub and MCP Apps sign in at the provider, in a window of its own:
+   * the sheet stays open and shows the account once it has connected.
+   */
+  const route =
+    custom || kind === 'stripe'
+      ? null
+      : kind === 'cloudflare'
+        ? 'mcp'
+        : kind === 'github'
+          ? 'github'
+          : 'google'
   const connect = () =>
     run(async () => {
-      if (kind === 'cloudflare') {
-        const { url } = await api<{ url: string }>('/connections/mcp', { body: { kind } })
-        window.location.href = url
-      } else if (kind === 'gmail' || kind === 'google_calendar') {
-        const { url } = await api<{ url: string }>('/connections/google', { body: { kind } })
-        window.location.href = url
-      } else if (kind === 'github') {
-        const { url } = await api<{ url: string }>('/connections/github', { body: {} })
-        window.location.href = url
-      } else setAdding(true)
+      if (!route) return setAdding(true)
+      const before = accounts.length
+      const inWindow = await openSignIn(async (returnTo) => {
+        const { url } = await api<{ url: string }>(`/connections/${route}`, {
+          body: {
+            ...(route === 'github' ? {} : { kind }),
+            ...(returnTo ? { returnTo } : {}),
+          },
+        })
+        return url
+      })
+      if (inWindow) setWaiting({ before, since: Date.now() })
     })
+  // While the sign-in window is open: look for the new account every few seconds, for a while.
+  const [waiting, setWaiting] = useState<{ before: number; since: number }>()
+  useEffect(() => {
+    if (!waiting) return
+    if (accounts.length > waiting.before) return setWaiting(undefined)
+    const timer = setInterval(() => {
+      if (Date.now() - waiting.since > 10 * 60_000) setWaiting(undefined)
+      else void reload()
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [waiting, accounts.length, reload])
 
   const connectStripe = (form: FormData) =>
     run(async () => {
@@ -191,6 +216,12 @@ export function AppSheet({
           {entry.description}
         </DialogDescription>
         {error && <p className="text-sm text-destructive-text">{error}</p>}
+        {waiting && (
+          <p className="text-sm text-muted-foreground">
+            Finish signing in in the window that opened. The account shows here once it is
+            connected.
+          </p>
+        )}
         {!data.available[kind] && <Unavailable kind={kind} />}
 
         {(added || adding) && (
