@@ -397,6 +397,8 @@ export function CommandChip({ command, className }: { command: string; className
 }
 
 function CommandMenu({ items, selected, query, onPick, onHover }: MenuProps<CommandOption>) {
+  // Only a moving pointer selects: rows scrolling under a still one (arrow keys) do not.
+  const pointer = useRef('')
   if (!items.length)
     return (
       <div className={menuClass}>
@@ -426,7 +428,15 @@ function CommandMenu({ items, selected, query, onPick, onHover }: MenuProps<Comm
                 e.preventDefault()
                 onPick(o)
               }}
-              onMouseMove={() => i !== selected && onHover(i)}
+              onMouseMove={(e) => {
+                const at = `${e.clientX},${e.clientY}`
+                if (at === pointer.current) return
+                pointer.current = at
+                if (i !== selected) onHover(i)
+              }}
+              ref={(el) => {
+                if (i === selected) el?.scrollIntoView({ block: 'nearest' })
+              }}
             >
               <Icon
                 aria-hidden
