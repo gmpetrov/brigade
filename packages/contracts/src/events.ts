@@ -73,6 +73,18 @@ export const pickedChoice = <O extends { label: string }>(options: O[], message:
   )
 
 /**
+ * Replies a teammate writes for the person after proposing a next step (its
+ * suggest_replies tool), such as "Send it" or "Build and merge". They show as
+ * buttons under its reply until anyone answers; a click sends the reply as is.
+ */
+export const SUGGEST_REPLIES_TOOL = 'suggest_replies'
+export const SUGGESTED_REPLY_MAX = 40
+export const SuggestedReplies = z.object({
+  replies: z.array(z.string().trim().min(1).max(SUGGESTED_REPLY_MAX)).min(1).max(3),
+})
+export type SuggestedReplies = z.infer<typeof SuggestedReplies>
+
+/**
  * A visual a teammate draws in the thread (its show_widget tool): options side
  * by side, a diagram, a chart. Throwaway HTML kept in the thread's history, not
  * the library; picking among options it shows goes through offer_choices.

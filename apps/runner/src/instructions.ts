@@ -19,6 +19,7 @@ import {
   BUILTIN_SKILL_PREFIX,
   PROPOSE_SKILL_TOOL,
   SHOW_WIDGET_TOOL,
+  SUGGEST_REPLIES_TOOL,
   type ThreadSkill,
   type ThreadSpec,
   WIDGET_GUIDE_TOOL,
@@ -85,6 +86,7 @@ export function instructions(
     projects(spec),
     spec.teammate.kind === 'chief' && chief(spec),
     VISUALS,
+    REPLIES,
     designs(spec),
     spec.git && code(spec),
     PREVIEWS,
@@ -439,6 +441,15 @@ const VISUALS =
   'Your reply still says what matters: other teammates read the reply and never the widget. When a widget shows options, ' +
   'call `offer_choices` last with labels numbered and named as in the widget ("3 · Small square caps"), so a pick reads on its own. ' +
   'A person can choose for you: a message that says they asked for a visual (/visual) or a design (/design) gets that one.'
+
+/** Suggested replies: one-click answers when a reply proposes a next step. */
+const REPLIES =
+  '## Suggested replies\n\n' +
+  'When your reply ends by proposing a next step for the person to approve (send the email, post it, build it ' +
+  `and open a PR), call \`${SUGGEST_REPLIES_TOOL}\` last with the 1 to 3 answers they would most likely type, ` +
+  'naming the action ("Send it", "Send to 5 first", "Build and merge", "Not yet"). They show as buttons; a click ' +
+  'is their next message, word for word, and counts as them asking for it. Not after explanations or open ' +
+  'questions, and not with `offer_choices`, which already gives them something to click.'
 
 /** Previews: the app a teammate builds, run for people to try when they ask. */
 const PREVIEWS =

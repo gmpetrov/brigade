@@ -13,6 +13,8 @@ import {
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
+  SUGGEST_REPLIES_TOOL,
+  SuggestedReplies,
   TeamProposal,
   Widget,
   type LibraryFile,
@@ -593,6 +595,13 @@ function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
   return Choices.safeParse(item.input).data ?? null
 }
 
+/** The replies a suggest_replies call put up, once it went through. */
+function suggestedReplies(item: Extract<Item, { kind: 'tool' }>) {
+  if (bareToolName(item.toolName) !== SUGGEST_REPLIES_TOOL) return null
+  if (!item.finished || item.isError) return null
+  return SuggestedReplies.safeParse(item.input).data ?? null
+}
+
 /** The visual a show_widget call drew, once it went through. */
 function shownWidget(item: Extract<Item, { kind: 'tool' }>) {
   if (bareToolName(item.toolName) !== SHOW_WIDGET_TOOL) return null
@@ -669,6 +678,7 @@ const isActivity = (item: Item): item is ActivityItem =>
   item.kind === 'file' ||
   (item.kind === 'tool' &&
     !offeredChoices(item) &&
+    !suggestedReplies(item) &&
     !shownWidget(item) &&
     !proposedTeam(item) &&
     !(item.finished && !item.isError && openedPull(item)))
@@ -1385,6 +1395,13 @@ export function ThreadItems({
           return (
             <ChoicesCard key={item.key} choices={choices} reply={reply?.text} onChoose={onChoose} />
           )
+        }
+        const replies = suggestedReplies(item)
+        if (replies) {
+          // Gone once anyone answered, with a click or their own words.
+          const answered = items.slice(i + 1).some((it) => it.kind === 'user')
+          if (answered || !onChoose) return null
+          return <SuggestedReplyButtons key={item.key} replies={replies} onSend={onChoose} />
         }
         const widget = shownWidget(item)
         if (widget) return <WidgetCard key={item.key} widget={widget} />
@@ -2608,5 +2625,49 @@ function ChoicesCard({
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </Card>
+  )
+}
+
+/** Answers a teammate suggested under its reply: a click sends one as the person's message. */
+function SuggestedReplyButtons({
+  replies,
+  onSend,
+}: {
+  replies: SuggestedReplies
+  onSend: (text: string) => Promise<void>
+}) {
+  const [sending, setSending] = useState<string>()
+  const [error, setError] = useState<string>()
+
+  async function send(reply: string) {
+    setSending(reply)
+    setError(undefined)
+    try {
+      await onSend(reply)
+    } catch (e) {
+      setError((e as Error).message)
+      setSending(undefined)
+    }
+  }
+
+  return (
+    <div className="flex flex-col -mt-2 gap-1.5 pl-11">
+      <div className="flex flex-wrap gap-2">
+        {replies.replies.map((reply) => (
+          <Button
+            key={reply}
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            disabled={sending !== undefined}
+            onClick={() => void send(reply)}
+          >
+            {reply}
+          </Button>
+        ))}
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
   )
 }
