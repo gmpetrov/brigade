@@ -8,6 +8,7 @@ import {
   HandBack,
   InterruptThread,
   mentionsToText,
+  MESSAGE_COMMANDS,
   messageCommand,
   skillCommand,
   PreviewAction,
@@ -498,7 +499,12 @@ export const threads = new Hono<AppEnv>()
       computer,
       memberId: scope.memberId,
       accountId: input.accountId ?? null,
-      title: firstLine || (await attachedTitle(db, input.attachmentIds)),
+      // A recording sent from Home without a note: what the thread is for, not its files' names.
+      title:
+        firstLine ||
+        (messageCommand(input.text)?.command === 'teach'
+          ? MESSAGE_COMMANDS.teach.label
+          : await attachedTitle(db, input.attachmentIds)),
       text: input.text,
       attachmentIds: input.attachmentIds,
       projectId,
@@ -894,8 +900,7 @@ export const threads = new Hono<AppEnv>()
     const thread = await loadThread(db, c.req.param('id'))
     if (thread.computer.kind !== 'cloud') {
       throw new HTTPException(409, {
-        message:
-          'On your own machine, just use your machine. Takeover is for the cloud computer.',
+        message: 'On your own machine, just use your machine. Takeover is for the cloud computer.',
       })
     }
     if (thread.controlledByMemberId && thread.controlledByMemberId !== scope.memberId) {

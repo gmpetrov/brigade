@@ -2,20 +2,26 @@ import { randomUUID } from 'node:crypto'
 import {
   CreateTeam,
   CreateTeammate,
+  DesktopClipboard,
   isHarnessModel,
   OpenBrowser,
   UpdateTeammate,
   SetGrant,
+  TeachRecording,
+  type TeachState,
 } from '@brigade/contracts'
-import { dispatch } from '../hub.js'
+import { desktopClipboard, dispatch } from '../hub.js'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { requireAccountManager } from '../apps.js'
 import { audit } from '../audit.js'
+import { ensureRunning } from '../cloud.js'
+import type { ScopedDb } from '../db.js'
 import { watchDesktop } from '../desktop-proxy.js'
 import { refuseChiefName } from '../chief.js'
 import { deleteTriggers, resync } from './triggers.js'
 import { usageToday } from '../caps.js'
+import { endRecording, holdRecording, recorder } from '../teaching.js'
 import { teammateTimeline } from '../timeline.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -55,26 +61,18 @@ export const teammates = new Hono<AppEnv>()
   })
 
   /**
-   * Open a window of the teammate's browser on the workspace computer, e.g. to
-   * sign it in to a site. The person then uses the computer's desktop.
-   */
-  /**
    * The workspace computer's desktop, from a teammate: the screen its threads run
-   * on, its own browser among them. To watch; taking control is a thread's.
+   * on, its own browser among them. To watch, or to record a task on it (Teach a
+   * task), which wakes a stopped computer as a thread's control does.
    */
   .post('/:id/desktop', async (c) => {
     const { scope, db } = c.var
-    const teammate = await db.teammate.findFirst({
-      where: { id: c.req.param('id'), archivedAt: null },
-    })
-    if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
-    const computer = await db.computer.findFirst({
-      where: { kind: 'cloud', status: { notIn: ['destroyed', 'error'] } },
-    })
-    if (!computer)
-      throw new HTTPException(409, {
-        message: "This workspace has no cloud computer: its teammates run on members' machines",
-      })
+    const { teammate, computer } = await teammateComputer(db, c.req.param('id'))
+    if (computer.status !== 'running' && recorder(computer.id) === scope.memberId) {
+      await ensureRunning(computer.id)
+      // 503: the dashboard asks again until the computer is up.
+      throw new HTTPException(503, { message: 'Starting the cloud computer…' })
+    }
     const view = await watchDesktop(computer)
     await audit({
       ...scope,
@@ -84,6 +82,58 @@ export const teammates = new Hono<AppEnv>()
     })
     return c.json(view)
   })
+
+  /** Copy and paste through the desktop view, while this member records a task on it. */
+  .post('/:id/desktop/clipboard', async (c) => {
+    const { scope, db } = c.var
+    const { computer } = await teammateComputer(db, c.req.param('id'))
+    if (recorder(computer.id) !== scope.memberId)
+      throw new HTTPException(409, { message: 'Start recording to use the desktop clipboard' })
+    const { text } = await parseBody(c.req.raw, DesktopClipboard)
+    try {
+      return c.json({ text: await desktopClipboard(computer.id, text) })
+    } catch (error) {
+      throw new HTTPException(503, { message: (error as Error).message })
+    }
+  })
+
+  /**
+   * Before Teach a task records: who records on the cloud computer already, and how
+   * many threads run there (their teammates may use the screen meanwhile).
+   */
+  .get('/:id/teach', async (c) => {
+    const { db } = c.var
+    const { computer } = await teammateComputer(db, c.req.param('id'))
+    return c.json(await teachState(db, computer.id, c.var.scope.memberId, c.req.query('threadId')))
+  })
+
+  /**
+   * Teach a task holds the cloud computer while it records, renewed by the dashboard
+   * until it ends. No thread is needed: a recording from Home starts its thread once sent.
+   */
+  .post('/:id/teach', async (c) => {
+    const { scope, db } = c.var
+    const { computer } = await teammateComputer(db, c.req.param('id'))
+    const { threadId } = await parseBody(c.req.raw, TeachRecording)
+    const other = holdRecording(computer.id, scope.memberId)
+    if (other)
+      throw new HTTPException(409, {
+        message: `${await memberName(db, other)} is recording a task on the cloud computer. Try again once they’re done.`,
+      })
+    void ensureRunning(computer.id).catch(() => undefined)
+    return c.json(await teachState(db, computer.id, scope.memberId, threadId))
+  })
+  .post('/:id/teach/end', async (c) => {
+    const { scope, db } = c.var
+    const { computer } = await teammateComputer(db, c.req.param('id'))
+    endRecording(computer.id, scope.memberId)
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Open a window of the teammate's browser on the workspace computer, e.g. to
+   * sign it in to a site. The person then uses the computer's desktop.
+   */
   .post('/:id/browser', async (c) => {
     const { scope, db } = c.var
     const teammate = await db.teammate.findFirst({
@@ -294,3 +344,41 @@ export const teammates = new Hono<AppEnv>()
     })
     return c.body(null, 204)
   })
+
+/** The teammate, and the workspace's cloud computer its threads run on. */
+async function teammateComputer(db: ScopedDb, id: string) {
+  const teammate = await db.teammate.findFirst({ where: { id, archivedAt: null } })
+  if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+  const computer = await db.computer.findFirst({
+    where: { kind: 'cloud', status: { notIn: ['destroyed', 'error'] } },
+  })
+  if (!computer)
+    throw new HTTPException(409, {
+      message: "This workspace has no cloud computer: its teammates run on members' machines",
+    })
+  return { teammate, computer }
+}
+
+async function memberName(db: ScopedDb, memberId: string) {
+  const member = await db.member.findFirst({
+    where: { id: memberId },
+    select: { user: { select: { name: true } } },
+  })
+  return member?.user.name || 'Another member'
+}
+
+/** Who else records on the computer, and how many threads run there besides this one. */
+async function teachState(db: ScopedDb, computerId: string, memberId: string, threadId?: string) {
+  const by = recorder(computerId)
+  const running = await db.session.count({
+    where: {
+      computerId,
+      status: { in: ['starting', 'running'] },
+      ...(threadId && { id: { not: threadId } }),
+    },
+  })
+  return {
+    recordingBy: by && by !== memberId ? await memberName(db, by) : null,
+    running,
+  } satisfies TeachState
+}
