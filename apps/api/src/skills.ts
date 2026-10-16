@@ -247,10 +247,11 @@ export async function threadSkills(
 // Packs: skills imported together, with one scope and one switch
 // ---------------------------------------------------------------------------
 
-export const toPack = (row: PackRow): SkillPack => ({
+export const toPack = (row: PackRow & { app?: { key: string } | null }): SkillPack => ({
   id: row.id,
   name: row.name,
   source: row.source,
+  appKey: row.app?.key ?? null,
   everywhere: row.everywhere,
   teammateIds: row.teammateIds,
   projectIds: row.projectIds,
@@ -259,7 +260,8 @@ export const toPack = (row: PackRow): SkillPack => ({
   updatedAt: row.updatedAt.toISOString(),
 })
 
-export const listPacks = (db: ScopedDb) => db.skillPack.findMany({ orderBy: { name: 'asc' } })
+export const listPacks = (db: ScopedDb) =>
+  db.skillPack.findMany({ orderBy: { name: 'asc' }, include: { app: { select: { key: true } } } })
 
 const sameFiles = (a: SkillFileRef[], b: SkillFileRef[]) =>
   a.length === b.length && a.every((f) => b.some((g) => g.path === f.path && g.sha256 === f.sha256))

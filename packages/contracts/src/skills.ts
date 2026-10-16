@@ -124,6 +124,8 @@ export const SkillPack = z.object({
   name: z.string(),
   /** Where it came from: a GitHub address, or `file:<name>` for an upload. */
   source: z.string(),
+  /** The App it came with: its key, a connector kind for a built-in App. */
+  appKey: z.string().nullable().default(null),
   everywhere: z.boolean(),
   teammateIds: z.array(z.string()),
   projectIds: z.array(z.string()),
