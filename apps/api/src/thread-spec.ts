@@ -2,6 +2,7 @@ import { folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contra
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { runnerProtocol } from './hub.js'
+import { customMcp } from './mcp-servers.js'
 import { isMcp, mcpOperationSpecs } from './mcp-tools.js'
 import { threadAttachments } from './attachments.js'
 import { chiefRoster } from './chief.js'
@@ -109,7 +110,9 @@ export async function specFor(
     // The connections this teammate is granted, as tool specs. Never a credential.
     db.grant.findMany({
       where: { teammateId: teammate.id, connection: { status: { not: 'removed' } } },
-      include: { connection: { include: { app: { select: { disabledTools: true } } } } },
+      include: {
+        connection: { include: { app: { select: { disabledTools: true, mcp: true } } } },
+      },
     }),
     teammate.kind === 'chief' ? chiefRoster(db) : [],
     folderRules(db),
@@ -142,12 +145,15 @@ export async function specFor(
   const scope = { organizationId: thread.organizationId, workspaceId: thread.workspaceId }
   const specs = await Promise.all(
     grants
-      .filter((g) => connectors[g.connection.kind])
+      .filter((g) => connectors[g.connection.kind] || g.connection.kind === 'mcp')
       .filter((g) => !isMcp(g.connection.kind) || (protocol ?? MCP_PROTOCOL) >= MCP_PROTOCOL)
       .map(async (g) => ({
         connectionId: g.connection.id,
-        // Only kinds with operations get here; a custom app's webhook connection has none.
-        kind: g.connection.kind as Exclude<typeof g.connection.kind, 'webhook'>,
+        // Only kinds with operations get here; a custom app's webhook connection has none. A
+        // server added by its URL goes by its tools' prefix, so two of them stay apart.
+        kind:
+          customMcp(g.connection.app)?.prefix ??
+          (g.connection.kind as Exclude<typeof g.connection.kind, 'webhook'>),
         label: g.connection.label,
         externalAccount: g.connection.externalAccount,
         scope: g.scope,

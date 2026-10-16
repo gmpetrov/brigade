@@ -422,7 +422,7 @@ export type Connection = {
   reach: 'mine' | 'workspace'
   createdByMemberId: string
   /** webhook: a custom app that posts events to Brigade. Inbound only. */
-  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare'
+  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare' | 'mcp'
   label: string
   externalAccount: string | null
   /** Where a person manages the account at the provider, e.g. a GitHub installation's settings. */
@@ -445,11 +445,28 @@ export type App = {
   key: string
   /** A custom app's name; built-in Apps take theirs from the catalog. */
   name: string | null
+  /** An MCP server added by its URL: where it is and how its accounts sign in. */
+  mcp: McpServerApp | null
   disabledTools: string[]
   createdByMemberId: string
   /** The skills that came with it, for teammates that have it. */
   skills: { name: string; description: string }[]
 }
+/** An MCP server added by its URL, as its App keeps it. Never a secret. */
+export type McpServerApp = {
+  url: string
+  auth: 'oauth' | 'api_key' | 'none'
+  transport: 'streamable' | 'sse'
+  /** api_key: the header its key goes in; null for Authorization, as a Bearer token. */
+  header: string | null
+  /** oauth: the client ID a member registered at the provider, for servers that register none. */
+  clientId: string | null
+  icons: string[]
+  description: string | null
+  /** The tools its server last listed, named as teammates call them. */
+  tools: { name: string; description: string; write: boolean }[]
+}
+export type { McpInspection } from '@brigade/contracts'
 /** A built-in App as the catalog describes it. */
 export type AppEntry = {
   name: string

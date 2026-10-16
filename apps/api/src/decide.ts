@@ -15,6 +15,7 @@ import { usableIn } from './apps.js'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
 import { appCatalog } from './connectors/index.js'
+import { mcpAppKey } from './mcp-servers.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped, type ScopedDb } from './db.js'
@@ -251,14 +252,26 @@ async function grantApp(
   scope: WorkspaceScope,
   thread: { startedByMemberId: string },
   teammateId: string,
-  app: { kind: string; scope: 'read' | 'read_write' },
+  app: { kind: string; scope: 'read' | 'read_write'; url?: string },
   connectionId: string | undefined,
 ) {
-  const entry = appCatalog[app.kind as ConnectorKind]
+  // An MCP server added by its URL: the App for that URL, whatever its name.
+  let key: string | undefined
+  try {
+    key = app.kind === 'mcp' && app.url ? mcpAppKey(app.url) : undefined
+  } catch {
+    // not a URL
+  }
+  if (app.kind === 'mcp' && !key)
+    throw new HTTPException(400, { message: 'The ticket does not say which MCP server' })
+  const server = key ? await db.app.findFirst({ where: { key } }) : null
+  const entry = key
+    ? { name: server?.name ?? 'the MCP server' }
+    : appCatalog[app.kind as ConnectorKind]
   if (!entry || app.kind === 'webhook')
     throw new HTTPException(400, { message: `${app.kind} is not an App teammates can use` })
   const accounts = await db.connection.findMany({
-    where: { kind: app.kind as ConnectorKind, status: 'active' },
+    where: { kind: app.kind as ConnectorKind, status: 'active', ...(key ? { app: { key } } : {}) },
   })
   if (accounts.length === 0)
     throw new HTTPException(409, { message: `Connect ${entry.name} first` })

@@ -32,7 +32,10 @@ const CONNECT_ERRORS: Record<string, string> = {
     'Your GitHub account cannot reach that installation. Sign in to GitHub as someone who can, and try again.',
 }
 
-/** The built-in Apps, in the order the page offers them. A custom app can be added many times. */
+/**
+ * The built-in Apps, in the order the page offers them. An MCP server and a custom app
+ * can be added many times.
+ */
 const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'cloudflare', 'stripe']
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
@@ -158,15 +161,18 @@ function AppsList() {
                     <AppTile
                       key={app.id}
                       kind={kind}
+                      icons={app.mcp?.icons}
                       name={app.name ?? data.data!.catalog[kind].name}
                       detail={
                         reconnect
                           ? 'Reconnect needed'
                           : kind === 'webhook'
                             ? 'Custom app'
-                            : accounts.length === 1
-                              ? (accounts[0]!.externalAccount ?? accounts[0]!.label)
-                              : `${accounts.length} accounts`
+                            : app.mcp?.auth === 'none'
+                              ? new URL(app.mcp.url).host
+                              : accounts.length === 1
+                                ? (accounts[0]!.externalAccount ?? accounts[0]!.label)
+                                : `${accounts.length} accounts`
                       }
                       warn={reconnect}
                       onClick={() => setOpen({ kind, appId: app.id })}
@@ -182,7 +188,7 @@ function AppsList() {
               Add an App
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[...offered, 'webhook' as const].map((kind) => (
+              {[...offered, 'mcp' as const, 'webhook' as const].map((kind) => (
                 <AppTile
                   key={kind}
                   kind={kind}
@@ -208,6 +214,7 @@ function AppsList() {
           catalog={catalog.data}
           reload={reload}
           onClose={close}
+          onAdded={(appId) => setOpen({ kind: 'mcp', appId })}
         />
       )}
     </div>
@@ -216,12 +223,14 @@ function AppsList() {
 
 function AppTile({
   kind,
+  icons,
   name,
   detail,
   warn,
   onClick,
 }: {
   kind: Kind
+  icons?: string[]
   name: string
   detail: string
   warn?: boolean
@@ -234,7 +243,7 @@ function AppTile({
         onClick={onClick}
         className="flex items-center gap-4 rounded-xl p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <ProviderTile kind={kind} />
+        <ProviderTile kind={kind} icons={icons} />
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate font-semibold">{name}</span>
           <span

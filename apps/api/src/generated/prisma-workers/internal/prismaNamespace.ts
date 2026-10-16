@@ -4682,6 +4682,7 @@ export const AppScalarFieldEnum = {
   workspaceId: 'workspaceId',
   key: 'key',
   name: 'name',
+  mcp: 'mcp',
   disabledTools: 'disabledTools',
   createdByMemberId: 'createdByMemberId',
   createdAt: 'createdAt',

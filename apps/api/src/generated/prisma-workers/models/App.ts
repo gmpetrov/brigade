@@ -15,7 +15,8 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 /**
  * Model App
  * An App added to the workspace ("Apps" in the dashboard). Its accounts are its
- * connections. key: a connector kind for built-in Apps, custom:<id> for a custom app.
+ * connections. key: a connector kind for built-in Apps, custom:<id> for a custom app,
+ * mcp:<hash of its URL> for an MCP server added by its URL.
  */
 export type AppModel = runtime.Types.Result.DefaultSelection<Prisma.$AppPayload>
 
@@ -53,6 +54,7 @@ export type AppCountAggregateOutputType = {
   workspaceId: number
   key: number
   name: number
+  mcp: number
   disabledTools: number
   createdByMemberId: number
   createdAt: number
@@ -89,6 +91,7 @@ export type AppCountAggregateInputType = {
   workspaceId?: true
   key?: true
   name?: true
+  mcp?: true
   disabledTools?: true
   createdByMemberId?: true
   createdAt?: true
@@ -174,6 +177,7 @@ export type AppGroupByOutputType = {
   workspaceId: string
   key: string
   name: string | null
+  mcp: runtime.JsonValue | null
   disabledTools: string[]
   createdByMemberId: string
   createdAt: Date
@@ -207,6 +211,7 @@ export type AppWhereInput = {
   workspaceId?: Prisma.StringFilter<"App"> | string
   key?: Prisma.StringFilter<"App"> | string
   name?: Prisma.StringNullableFilter<"App"> | string | null
+  mcp?: Prisma.JsonNullableFilter<"App">
   disabledTools?: Prisma.StringNullableListFilter<"App">
   createdByMemberId?: Prisma.StringFilter<"App"> | string
   createdAt?: Prisma.DateTimeFilter<"App"> | Date | string
@@ -222,6 +227,7 @@ export type AppOrderByWithRelationInput = {
   workspaceId?: Prisma.SortOrder
   key?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
+  mcp?: Prisma.SortOrderInput | Prisma.SortOrder
   disabledTools?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -241,6 +247,7 @@ export type AppWhereUniqueInput = Prisma.AtLeast<{
   workspaceId?: Prisma.StringFilter<"App"> | string
   key?: Prisma.StringFilter<"App"> | string
   name?: Prisma.StringNullableFilter<"App"> | string | null
+  mcp?: Prisma.JsonNullableFilter<"App">
   disabledTools?: Prisma.StringNullableListFilter<"App">
   createdByMemberId?: Prisma.StringFilter<"App"> | string
   createdAt?: Prisma.DateTimeFilter<"App"> | Date | string
@@ -256,6 +263,7 @@ export type AppOrderByWithAggregationInput = {
   workspaceId?: Prisma.SortOrder
   key?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
+  mcp?: Prisma.SortOrderInput | Prisma.SortOrder
   disabledTools?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -274,6 +282,7 @@ export type AppScalarWhereWithAggregatesInput = {
   workspaceId?: Prisma.StringWithAggregatesFilter<"App"> | string
   key?: Prisma.StringWithAggregatesFilter<"App"> | string
   name?: Prisma.StringNullableWithAggregatesFilter<"App"> | string | null
+  mcp?: Prisma.JsonNullableWithAggregatesFilter<"App">
   disabledTools?: Prisma.StringNullableListFilter<"App">
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"App"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"App"> | Date | string
@@ -285,6 +294,7 @@ export type AppCreateInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -300,6 +310,7 @@ export type AppUncheckedCreateInput = {
   workspaceId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -313,6 +324,7 @@ export type AppUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -328,6 +340,7 @@ export type AppUncheckedUpdateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -342,6 +355,7 @@ export type AppCreateManyInput = {
   workspaceId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -353,6 +367,7 @@ export type AppUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -365,6 +380,7 @@ export type AppUncheckedUpdateManyInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -400,6 +416,7 @@ export type AppCountOrderByAggregateInput = {
   workspaceId?: Prisma.SortOrder
   key?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  mcp?: Prisma.SortOrder
   disabledTools?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -524,6 +541,7 @@ export type AppCreateWithoutWorkspaceInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -537,6 +555,7 @@ export type AppUncheckedCreateWithoutWorkspaceInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -580,6 +599,7 @@ export type AppScalarWhereInput = {
   workspaceId?: Prisma.StringFilter<"App"> | string
   key?: Prisma.StringFilter<"App"> | string
   name?: Prisma.StringNullableFilter<"App"> | string | null
+  mcp?: Prisma.JsonNullableFilter<"App">
   disabledTools?: Prisma.StringNullableListFilter<"App">
   createdByMemberId?: Prisma.StringFilter<"App"> | string
   createdAt?: Prisma.DateTimeFilter<"App"> | Date | string
@@ -591,6 +611,7 @@ export type AppCreateWithoutConnectionsInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -605,6 +626,7 @@ export type AppUncheckedCreateWithoutConnectionsInput = {
   workspaceId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -633,6 +655,7 @@ export type AppUpdateWithoutConnectionsInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -647,6 +670,7 @@ export type AppUncheckedUpdateWithoutConnectionsInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -659,6 +683,7 @@ export type AppCreateWithoutSkillPacksInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -673,6 +698,7 @@ export type AppUncheckedCreateWithoutSkillPacksInput = {
   workspaceId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -701,6 +727,7 @@ export type AppUpdateWithoutSkillPacksInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -715,6 +742,7 @@ export type AppUncheckedUpdateWithoutSkillPacksInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -727,6 +755,7 @@ export type AppCreateManyWorkspaceInput = {
   organizationId: string
   key: string
   name?: string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppCreatedisabledToolsInput | string[]
   createdByMemberId: string
   createdAt?: Date | string
@@ -738,6 +767,7 @@ export type AppUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -751,6 +781,7 @@ export type AppUncheckedUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -764,6 +795,7 @@ export type AppUncheckedUpdateManyWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   key?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcp?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   disabledTools?: Prisma.AppUpdatedisabledToolsInput | string[]
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -816,6 +848,7 @@ export type AppSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   workspaceId?: boolean
   key?: boolean
   name?: boolean
+  mcp?: boolean
   disabledTools?: boolean
   createdByMemberId?: boolean
   createdAt?: boolean
@@ -832,6 +865,7 @@ export type AppSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extension
   workspaceId?: boolean
   key?: boolean
   name?: boolean
+  mcp?: boolean
   disabledTools?: boolean
   createdByMemberId?: boolean
   createdAt?: boolean
@@ -845,6 +879,7 @@ export type AppSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extension
   workspaceId?: boolean
   key?: boolean
   name?: boolean
+  mcp?: boolean
   disabledTools?: boolean
   createdByMemberId?: boolean
   createdAt?: boolean
@@ -858,13 +893,14 @@ export type AppSelectScalar = {
   workspaceId?: boolean
   key?: boolean
   name?: boolean
+  mcp?: boolean
   disabledTools?: boolean
   createdByMemberId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type AppOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "key" | "name" | "disabledTools" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["app"]>
+export type AppOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "key" | "name" | "mcp" | "disabledTools" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["app"]>
 export type AppInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connections?: boolean | Prisma.App$connectionsArgs<ExtArgs>
@@ -897,6 +933,11 @@ export type $AppPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
      * A custom app's name. Built-in Apps take theirs from the catalog.
      */
     name: string | null
+    /**
+     * An MCP server added by its URL: where it is, how its accounts sign in, the prefix of
+     * its tools' names and the tools it last listed (see src/mcp-servers.ts). Never a secret.
+     */
+    mcp: runtime.JsonValue | null
     /**
      * Operations no teammate gets, on every account of the App.
      */
@@ -1335,6 +1376,7 @@ export interface AppFieldRefs {
   readonly workspaceId: Prisma.FieldRef<"App", 'String'>
   readonly key: Prisma.FieldRef<"App", 'String'>
   readonly name: Prisma.FieldRef<"App", 'String'>
+  readonly mcp: Prisma.FieldRef<"App", 'Json'>
   readonly disabledTools: Prisma.FieldRef<"App", 'String[]'>
   readonly createdByMemberId: Prisma.FieldRef<"App", 'String'>
   readonly createdAt: Prisma.FieldRef<"App", 'DateTime'>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
 import { useDashboard } from '@/components/dashboard'
+import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,6 +31,19 @@ export const APP_NAMES: Record<string, string> = {
   stripe: 'Stripe',
   github: 'GitHub',
   cloudflare: 'Cloudflare',
+  mcp: 'MCP server',
+}
+
+/** The same MCP server however its URL was typed, as the API compares them. */
+const sameServer = (a: string, b: string) => {
+  try {
+    const [x, y] = [new URL(a.trim()), new URL(b.trim())]
+    x.hash = ''
+    y.hash = ''
+    return x.href.replace(/\/$/, '') === y.href.replace(/\/$/, '')
+  } catch {
+    return false
+  }
 }
 
 /** Where each App signs in; Stripe takes a key on the Apps page. */
@@ -57,9 +71,14 @@ export function AppAccessAsk({
   const { me } = useDashboard()
   const data = useApi<ConnectionsResponse>('/connections')
   const kind = ask.app.kind as Connection['kind']
-  const name = data.data?.catalog[kind]?.name ?? ask.what
+  // An MCP server, by the URL the teammate gave: its App once someone has added it.
+  const serverUrl = kind === 'mcp' ? ask.app.url : undefined
+  const server = serverUrl
+    ? data.data?.apps.find((a) => a.mcp && sameServer(a.mcp.url, serverUrl))
+    : undefined
+  const name = server?.name ?? (serverUrl ? ask.what : data.data?.catalog[kind]?.name) ?? ask.what
   const accounts = (data.data?.connections ?? []).filter(
-    (c) => c.kind === kind && c.status === 'active',
+    (c) => c.kind === kind && c.status === 'active' && (!serverUrl || c.appId === server?.id),
   )
   // Those this person may give. Another member's own account is left out: it is used only in
   // their threads. The API checks again that the account is usable in this thread.
@@ -112,7 +131,9 @@ export function AppAccessAsk({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <ProviderTile kind={kind} small />
+        {!(serverUrl && accounts.length === 0) && (
+          <ProviderTile kind={kind} icons={server?.mcp?.icons} small />
+        )}
         {givable.length > 0 ? (
           <>
             {givable.length > 1 && (
@@ -134,6 +155,18 @@ export function AppAccessAsk({
             </Button>
             {decline}
           </>
+        ) : accounts.length === 0 && serverUrl ? (
+          // Not added yet: the server's card, here in the ticket, then the access with it.
+          <div className="flex w-full max-w-md flex-col gap-2">
+            <McpServerCard
+              url={serverUrl}
+              connections={data.data.connections}
+              reload={data.reload}
+              action={`Connect and give ${askerName} ${access} access`}
+              onConnected={({ connectionId }) => give(connectionId)}
+            />
+            <div>{decline}</div>
+          </div>
         ) : accounts.length === 0 && SIGN_IN[kind] ? (
           <>
             <Button
