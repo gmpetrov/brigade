@@ -1,10 +1,16 @@
 'use client'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Cloud, Laptop, Play, Monitor, Terminal, TriangleAlert } from 'lucide-react'
+import { Cloud, EllipsisVertical, Laptop, Terminal } from 'lucide-react'
 import { isAdmin, timeAgo, useDashboard } from '@/components/dashboard'
-import { StatusBadge, type StatusTone } from '@/components/status-badge'
+import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { api, useApi, type Computer, type ComputersResponse } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
@@ -14,14 +20,14 @@ type LinkCode = { code: string; expiresAt: string; command: string; appLink?: st
 /** Brigade.app for macOS (apps/desktop), from the latest GitHub release. */
 const MAC_APP_URL = 'https://github.com/gmpetrov/brigade/releases/latest/download/Brigade.dmg'
 
-const STATUS: Record<Computer['status'], { label: string; tone: StatusTone }> = {
-  pending: { label: 'waiting for its runner', tone: 'neutral' },
-  creating: { label: 'setting up', tone: 'warning' },
-  starting: { label: 'starting', tone: 'warning' },
-  running: { label: 'running', tone: 'success' },
-  stopped: { label: 'stopped, starts on demand', tone: 'neutral' },
-  error: { label: 'error', tone: 'destructive' },
-  destroyed: { label: 'removed', tone: 'neutral' },
+const STATUS: Record<Computer['status'], string> = {
+  pending: 'Waiting for its runner',
+  creating: 'Setting up',
+  starting: 'Starting',
+  running: 'Running · sleeps when idle',
+  stopped: 'Stopped · starts on the next message',
+  error: 'Error',
+  destroyed: 'Removed',
 }
 
 function Tile({ children, className }: { children: ReactNode; className?: string }) {
@@ -80,6 +86,20 @@ export default function Computers() {
   const cloud = all.find((c) => c.kind === 'cloud')
   const mine = all.filter((c) => c.kind === 'member_machine')
 
+  // Start and Stop, out of the way.
+  const menuItems: { label: string; onSelect: () => void; danger?: boolean }[] = []
+  if (cloud?.status === 'stopped')
+    menuItems.push({
+      label: 'Start',
+      onSelect: () => void act(() => api(`/computers/${cloud.id}/start`, { method: 'POST' })),
+    })
+  if (cloud?.status === 'running' && isAdmin(me))
+    menuItems.push({
+      label: 'Stop',
+      danger: true,
+      onSelect: () => void act(() => api(`/computers/${cloud.id}/stop`, { method: 'POST' })),
+    })
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
@@ -89,95 +109,58 @@ export default function Computers() {
 
       <section aria-labelledby="workspace-computer">
         <Card className="gap-4 p-5">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-4">
             <Tile className="bg-primary/15 text-primary">
               <Cloud />
             </Tile>
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 id="workspace-computer" className="text-lg font-bold tracking-tight">
-                  Cloud computer
-                </h2>
-                {cloud && (
-                  <StatusBadge
-                    status={cloud.status}
-                    tone={STATUS[cloud.status].tone}
-                    label={STATUS[cloud.status].label}
-                  />
-                )}
-              </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <h2 id="workspace-computer" className="text-lg font-bold tracking-tight">
+                Cloud computer
+              </h2>
               {cloud && (
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span
                     aria-hidden
                     className={cn(
-                      'size-2 rounded-full',
-                      cloud.online ? 'bg-success' : 'bg-muted-foreground/40',
+                      'size-2 shrink-0 rounded-full',
+                      cloud.status === 'running' && cloud.online
+                        ? 'bg-primary'
+                        : cloud.status === 'error'
+                          ? 'bg-destructive'
+                          : 'bg-muted-foreground/40',
                     )}
                   />
-                  {cloud.online ? 'Connected' : 'Not connected'}
+                  {cloud.status === 'running' && !cloud.online
+                    ? 'Running · not connected'
+                    : STATUS[cloud.status]}
                 </span>
               )}
             </div>
-            {cloud && (
-              <div className="flex flex-wrap items-center gap-2">
-                {cloud.status === 'stopped' && (
+            {cloud && menuItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="icon-sm"
                     disabled={busy}
-                    onClick={() =>
-                      void act(() => api(`/computers/${cloud.id}/start`, { method: 'POST' }))
-                    }
+                    aria-label="Cloud computer options"
                   >
-                    <Play />
-                    Start
+                    <EllipsisVertical aria-hidden />
                   </Button>
-                )}
-                {cloud.status === 'running' && (
-                  <Button
-                    disabled={busy}
-                    onClick={() =>
-                      void act(async () => {
-                        const { url } = await api<{ url: string }>(
-                          `/computers/${cloud.id}/desktop`,
-                          { method: 'POST' },
-                        )
-                        window.open(url, '_blank', 'noopener')
-                      })
-                    }
-                  >
-                    <Monitor />
-                    Open desktop
-                  </Button>
-                )}
-                {isAdmin(me) && cloud.status === 'running' && (
-                  <Button
-                    variant="danger"
-                    disabled={busy}
-                    onClick={() =>
-                      void act(() => api(`/computers/${cloud.id}/stop`, { method: 'POST' }))
-                    }
-                  >
-                    Stop
-                  </Button>
-                )}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  {menuItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.label}
+                      variant={item.danger ? 'destructive' : 'default'}
+                      onSelect={item.onSelect}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            The workspace&apos;s own cloud computer. Any member can run threads on it. It stops
-            after a while with nothing to do, and starts again on the next message.
-          </p>
-          <div className="flex gap-3 rounded-lg bg-warning/15 p-4 text-sm">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-            <p>
-              A workspace is one trust zone: its teammates are separated by Linux user, which is
-              weaker than separate machines,{' '}
-              <strong className="font-semibold">
-                so keep sensitive work in its own workspace.
-              </strong>
-            </p>
           </div>
 
           {!cloud &&
