@@ -142,7 +142,9 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   bytes in the bucket, up to 25 MB, its type checked against its bytes. With R2 the browser uploads straight to the
   bucket: the API signs a PUT URL for 10 minutes that takes exactly the declared size and type (the bucket's CORS
   rule must allow the dashboard's origins, method `PUT`, header `content-type`), then reads the file back to check
-  it. Without R2 uploads go through the API. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
+  it. A member's video can be up to 500 MB, outside a message's 50 MB total: the API never holds it whole (its size
+  from the bucket, its SHA-256 as it streams by), and the dashboard and the runner get it from a signed bucket URL
+  the API redirects to; the runner writes it to its cache as it arrives. Without R2 uploads go through the API. Unfinished uploads go after an hour, unsent ones after a day. `ThreadAttachment` puts it in a thread at
   `attachments/<name>` (`-2` on a clash). The thread's spec lists all of them; before each turn the runner copies the
   ones a teammate's folder lacks, once (its edits stay), never executable, and the prompt says where they are.
   Programs and installers are not taken from outside, and small inline images (signatures) are left out; a file not

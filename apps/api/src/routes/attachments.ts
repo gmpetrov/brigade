@@ -11,11 +11,12 @@ import {
   deleteAttachment,
   finishUpload,
   readAttachment,
+  servedFromBucket,
   startUpload,
   storeAttachment,
   toInfo,
 } from '../attachments.js'
-import { directUploads } from '../bucket.js'
+import { attachmentKey, directUploads, presignGet } from '../bucket.js'
 import { byteRange } from '../byte-range.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -101,8 +102,18 @@ export const attachments = new Hono<AppEnv>()
       },
     })
     if (!row) throw new HTTPException(404, { message: 'File not found' })
-    const bytes = await readAttachment(scope, row.id)
     const inline = c.req.query('download') === undefined && INLINE.test(row.contentType)
+    if (servedFromBucket(row)) {
+      // A large video: from the bucket's short-lived URL, which answers ranges itself.
+      const signed = await presignGet(attachmentKey(scope, row.id), {
+        contentType: row.contentType,
+        disposition: `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(row.name)}`,
+      })
+      // The signed URL works a little longer than the browser keeps this.
+      c.header('cache-control', `private, max-age=${signed.seconds - 60}`)
+      return c.redirect(signed.url, 302)
+    }
+    const bytes = await readAttachment(scope, row.id)
     const headers = {
       'content-type': row.contentType.startsWith('text/')
         ? `${row.contentType}; charset=utf-8`

@@ -5,9 +5,18 @@ import { z } from 'zod'
 
 /** Largest file a thread takes, uploaded or from a connection (Gmail's own limit). */
 export const ATTACHMENT_MAX = 25 * 1024 * 1024
+/**
+ * Largest video a member uploads (a phone's screen recording): straight to the
+ * bucket, never read whole by the API. Not counted in a message's total.
+ */
+export const VIDEO_ATTACHMENT_MAX = 500 * 1024 * 1024
+export const isVideoType = (contentType: string) => contentType.startsWith('video/')
+/** Largest file of this type a member may upload. */
+export const uploadMax = (contentType: string) =>
+  isVideoType(contentType) ? VIDEO_ATTACHMENT_MAX : ATTACHMENT_MAX
 /** Most files one message carries. */
 export const ATTACHMENTS_PER_MESSAGE = 10
-/** Most bytes one message or event carries, all files together. */
+/** Most bytes one message or event carries, all files together but videos. */
 export const ATTACHMENTS_TOTAL_MAX = 50 * 1024 * 1024
 /** The folder attachments go in, inside a teammate's working folder. */
 export const ATTACHMENTS_DIR = 'attachments'
@@ -64,7 +73,8 @@ export type MessageAttachment = z.infer<typeof MessageAttachment>
 /** A member starts an upload: what the file is, before its bytes. */
 export const StartUpload = z.object({
   name: z.string().trim().min(1).max(500),
-  size: z.number().int().min(0).max(ATTACHMENT_MAX, 'Files can be up to 25 MB'),
+  // By type: StartUpload's caller checks uploadMax.
+  size: z.number().int().min(0).max(VIDEO_ATTACHMENT_MAX, 'Files can be up to 500 MB'),
   contentType: z.string().max(200).default(''),
 })
 

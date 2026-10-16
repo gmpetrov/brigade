@@ -1,8 +1,10 @@
 // The one bucket (Cloudflare R2, through its S3 API). Every key starts with
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
+import { createReadStream } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { Readable } from 'node:stream'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
 import type { Scope } from './db.js'
@@ -186,6 +188,19 @@ export async function getObject(key: string): Promise<Uint8Array | null> {
   if (response.status === 404) return null
   if (!response.ok) throw new Error(`bucket get failed: ${response.status}`)
   return new Uint8Array(await response.arrayBuffer())
+}
+
+/** The object's bytes as they arrive, or null when it is gone: for files too large to hold. */
+export async function streamObject(key: string): Promise<ReadableStream<Uint8Array> | null> {
+  if (!r2) {
+    const file = join(env.BUCKET_DIR, key)
+    if (!(await stat(file).catch(() => null))) return null
+    return Readable.toWeb(createReadStream(file)) as ReadableStream<Uint8Array>
+  }
+  const response = await r2.client.fetch(url(key))
+  if (response.status === 404) return null
+  if (!response.ok || !response.body) throw new Error(`bucket get failed: ${response.status}`)
+  return response.body
 }
 
 export async function deleteObject(key: string) {

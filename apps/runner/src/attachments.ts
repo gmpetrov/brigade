@@ -5,8 +5,22 @@
 // fetched the same way, by their SHA-256, and cached alike.
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { createReadStream, createWriteStream } from 'node:fs'
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import type { ReadableStream } from 'node:stream/web'
 import { ATTACHMENTS_DIR, type ThreadAttachmentRef } from '@brigade/contracts'
 import { HOME, paths, type RunnerConfig } from './config.js'
 import { ensureUser } from './teammates.js'
@@ -47,7 +61,7 @@ export class Attachments {
         continue
       }
       try {
-        await writeAs(target, await this.bytes(ref), folder.runAs)
+        await writeAs(target, await this.cached(ref), folder.runAs)
         index[ref.path] = ref.id
         changed = true
       } catch (error) {
@@ -82,21 +96,40 @@ export class Attachments {
     return body.id
   }
 
-  /** The file's bytes, from the cache or the API, checked against its SHA-256. */
-  private async bytes(ref: ThreadAttachmentRef) {
+  /**
+   * The file in the cache, fetched from the API if it lacks it, checked against
+   * its SHA-256. Written as it arrives: a video can be hundreds of MB.
+   */
+  private async cached(ref: ThreadAttachmentRef) {
     const cached = join(CACHE_DIR, ref.id)
-    const hit = await readFile(cached).catch(() => null)
-    if (hit && sha256(hit) === ref.sha256) return hit
+    if ((await fileSha256(cached)) === ref.sha256) return cached
+    // A large file comes as a redirect to the bucket, where fetch does not send the token.
     const response = await fetch(
       new URL(`/runner/attachments/${encodeURIComponent(ref.id)}`, this.config.apiUrl),
       { headers: { authorization: `Bearer ${this.config.token}` } },
     )
-    if (!response.ok) throw new Error(`the API refused it (${response.status})`)
-    const bytes = Buffer.from(await response.arrayBuffer())
-    if (sha256(bytes) !== ref.sha256) throw new Error('it changed on the way; try again')
+    if (!response.ok || !response.body) throw new Error(`the API refused it (${response.status})`)
     await mkdir(CACHE_DIR, { recursive: true, mode: 0o700 })
-    await writeFile(cached, bytes, { mode: 0o600 })
-    return bytes
+    const partial = `${cached}.part`
+    const hash = createHash('sha256')
+    try {
+      await pipeline(
+        Readable.fromWeb(response.body as ReadableStream<Uint8Array>),
+        async function* (chunks: AsyncIterable<Buffer>) {
+          for await (const chunk of chunks) {
+            hash.update(chunk)
+            yield chunk
+          }
+        },
+        createWriteStream(partial, { mode: 0o600 }),
+      )
+      if (hash.digest('hex') !== ref.sha256) throw new Error('it changed on the way; try again')
+      await rename(partial, cached)
+    } catch (error) {
+      await rm(partial, { force: true })
+      throw error
+    }
+    return cached
   }
 
   /** A skill's file, by its SHA-256: from the cache, or the API (once per computer). */
@@ -130,6 +163,17 @@ export class Attachments {
 
 const sha256 = (data: Uint8Array) => createHash('sha256').update(data).digest('hex')
 
+/** A file's SHA-256, read in chunks; null when it is missing. */
+async function fileSha256(file: string) {
+  const hash = createHash('sha256')
+  try {
+    for await (const chunk of createReadStream(file)) hash.update(chunk as Buffer)
+  } catch {
+    return null
+  }
+  return hash.digest('hex')
+}
+
 /** The path inside the working folder's attachments folder, or undefined if it would leave it. */
 function inside(workDir: string, path: string) {
   const target = resolve(workDir, path)
@@ -137,11 +181,12 @@ function inside(workDir: string, path: string) {
   return rel && !rel.startsWith('..') && !isAbsolute(rel) ? target : undefined
 }
 
-/** Write a file readable by its owner and group, never executable; as `runAs` when given. */
-async function writeAs(target: string, bytes: Uint8Array, runAs?: string) {
+/** Copy a cached file there, readable by its owner and group, never executable; as `runAs` when given. */
+async function writeAs(target: string, source: string, runAs?: string) {
   if (!runAs) {
     await mkdir(dirname(target), { recursive: true })
-    await writeFile(target, bytes, { mode: 0o644 })
+    await copyFile(source, target)
+    await chmod(target, 0o644)
     return
   }
   await new Promise<void>((done, fail) => {
@@ -165,6 +210,11 @@ async function writeAs(target: string, bytes: Uint8Array, runAs?: string) {
     )
     // sudo that fails (an unknown user, say) exits without reading: its close says why.
     child.stdin.on('error', () => undefined)
-    child.stdin.end(bytes)
+    const input = createReadStream(source)
+    input.once('error', (error) => {
+      child.kill()
+      fail(error)
+    })
+    input.pipe(child.stdin)
   })
 }
