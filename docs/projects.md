@@ -214,20 +214,26 @@ the project the person is in, else "No project".
 
 ## From a website
 
-A new project may start from its website. The dialog reads it once the address settles:
+A new project may start from its website. The dialog shows only the address first; once it is
+given (pasted, Continue or Enter), each step shows as it runs (reading the site, finding its
+logos, writing its name and brief), and the fields appear filled in, to edit. They are not there
+while they are being filled, so nothing typed is lost; "Fill it in myself" stops waiting.
 
-- **Name, description and logo** come from the HTML, read by the API (`src/project-sites.ts`):
-  `og:site_name`, else the title's first part; the meta description; the icon closest to
-  192 px among `apple-touch-icon`, the manifest's icons and `<link rel="icon">`, else
-  `/favicon.ico`. Only public HTTPS addresses, every redirect checked, a size cap per page.
-- **The brief** is written by the member's own account, never another's: the API sends the
-  site's text (home page, plus `/about` or `/pricing` when linked) to a runner where the member
-  has an account with usage left (`project.describe`, protocol 24). The run uses the harness's
-  small model with no tools at all, since the text is a stranger's. With no such account or
-  computer online, the dialog uses the site's description and says why.
-- **The logo** is kept in the bucket (`project-logos/<projectId>`) and shown instead of the
-  icon everywhere; settings can upload another, take it from the website again, or remove it.
-  Deleting the project deletes it.
+- **A first guess** comes from the HTML, read by the API (`src/project-sites.ts`): the name from
+  `og:site_name` or the title, the meta description, and the logos the site offers, best first:
+  `apple-touch-icon`, the manifest's icons, `<link rel="icon">`, the `<img>` and `<svg>` named
+  "logo" or linking to the home page, `og:image`, `/favicon.ico`. Only public HTTPS addresses,
+  every redirect checked, a size cap per read.
+- **The name, the brief and the logo** come from the member's own account, never another's: the
+  API sends the site's text (home page, plus `/about` or `/pricing` when linked) and each logo
+  said in words (where it is, its alt, its file) to a runner where the member has an account with
+  usage left (`project.describe`, protocol 24). The run uses the harness's small model with no
+  tools at all, since the text is a stranger's, and answers in JSON. With no such account or
+  computer online, the first guess and the site's description fill in, and the dialog says why.
+- **The logo** is shrunk by the dashboard to 256 px at most (some sites serve a 2 MB PNG for a
+  28 px logo), kept in the bucket (`project-logos/<projectId>`) and shown instead of the icon
+  everywhere; settings can upload another, take it from the website again, or remove it. Deleting
+  the project deletes it.
 
 ## API
 
