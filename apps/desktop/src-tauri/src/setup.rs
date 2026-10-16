@@ -45,6 +45,16 @@ impl Helper {
         }
     }
 
+    /// Quits a helper still running from before this launch, e.g. from the copy an update or a
+    /// reinstall replaced, so the next request starts the one inside this Brigade.app with a fresh
+    /// view of its permissions. It holds no state worth keeping; the runner starts it on demand.
+    pub fn restart(&self) {
+        let _ = Command::new("pkill")
+            .args(["-x", "brigade-computer-use"])
+            .stderr(Stdio::null())
+            .status();
+    }
+
     fn ask(&self) -> Option<Value> {
         let dir = PathBuf::from(std::env::var_os("HOME")?).join(".brigade/computer-use");
         let token = std::fs::read_to_string(dir.join("token")).ok()?;
