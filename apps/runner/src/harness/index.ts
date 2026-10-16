@@ -24,6 +24,7 @@ import {
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { execFile } from 'node:child_process'
+import type { Tool } from 'ai'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
@@ -48,6 +49,7 @@ import {
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
 import {
   ASK_USER_TOOL,
+  afterReply,
   alwaysLoaded,
   askUserTool,
   computerUseTools,
@@ -165,6 +167,8 @@ function createAgent(
   preview: PreviewTools,
   makeImage: ImageMaker | undefined,
   computer: ComputerUse | undefined,
+  /** The teammate wrote text the person sees in this turn. */
+  wrote: () => boolean,
 ) {
   // auth {}: the adapter adds no credential of its own. The vendor CLI uses the
   // account's token from the environment if it has one, else the login in its
@@ -172,6 +176,8 @@ function createAgent(
   const settings = { auth: {}, mcpServers }
   const codex = spec.teammate.harness === 'codex'
   const harness = codex ? createCodex(settings) : createClaudeCode(settings)
+  // Closing cards come right after the answer: loaded up front, not through tool search.
+  const closing = (t: Tool) => (codex ? afterReply(t, wrote) : alwaysLoaded(afterReply(t, wrote)))
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
     ...connectorTools(spec.connectors, callConnector, { defer: codex }),
@@ -186,12 +192,11 @@ function createAgent(
     // Claude Code asks with its own question tool; Codex's adapter has none.
     ...(codex ? { [ASK_USER_TOOL]: askUserTool } : {}),
     [OPEN_TICKET_TOOL]: openTicketTool,
-    // Closing cards come right after the answer: loaded up front, not through tool search.
-    [OFFER_CHOICES_TOOL]: codex ? offerChoicesTool : alwaysLoaded(offerChoicesTool),
-    [SUGGEST_REPLIES_TOOL]: codex ? suggestRepliesTool : alwaysLoaded(suggestRepliesTool),
+    [OFFER_CHOICES_TOOL]: closing(offerChoicesTool),
+    [SUGGEST_REPLIES_TOOL]: closing(suggestRepliesTool),
     [SHOW_WIDGET_TOOL]: showWidgetTool,
     [WIDGET_GUIDE_TOOL]: widgetGuideTool,
-    ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: proposeTeamTool } : {}),
+    ...(spec.teammate.kind === 'chief' ? { [PROPOSE_TEAM_TOOL]: closing(proposeTeamTool) } : {}),
   }
   return new HarnessAgent({
     harness,
@@ -260,6 +265,8 @@ export class HarnessThread {
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
+  /** The teammate wrote text the person sees in the current turn (see afterReply). */
+  private wroteReply = false
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
   private readonly stateFile: string
@@ -486,9 +493,13 @@ export class HarnessThread {
     // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
     // How its stream ends then is no failure of the teammate's.
     const frozenUnder = () => attached !== undefined && this.live !== attached
+    this.wroteReply = false
     const mapper = new EventMapper((event) => {
       if (frozenUnder()) return
-      if (event.type === 'message.done') this.remember('assistant', event.text)
+      if (event.type === 'message.done') {
+        this.remember('assistant', event.text)
+        if (event.text.trim()) this.wroteReply = true
+      }
       this.emitEvent(event)
     }, this.toolCalls)
     try {
@@ -858,6 +869,7 @@ export class HarnessThread {
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
+      () => this.wroteReply,
     )
     const sandbox = createLocalSandboxSession({
       id: this.key,
