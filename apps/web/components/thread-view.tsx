@@ -1485,7 +1485,7 @@ export function ThreadItems({
       }
       case 'approval':
         return (
-          <Card key={item.key} className="gap-3 border-warning/50 px-5 py-4">
+          <Card key={item.key} className="min-w-0 gap-3 border-warning/50 px-5 py-4 wrap-anywhere">
             <CardLabel className="text-warning">
               <ShieldAlert aria-hidden />
               Approval needed
