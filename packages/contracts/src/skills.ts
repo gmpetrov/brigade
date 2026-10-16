@@ -205,7 +205,15 @@ export const Skill = z.object({
   /** Teammates get it: its switch, and its pack's, are on. */
   active: z.boolean(),
   /** Who wrote or last changed it: a member, or a teammate whose proposal a person approved. */
-  updatedBy: z.object({ type: z.enum(['member', 'teammate']), name: z.string() }).nullable(),
+  updatedBy: z
+    .object({
+      type: z.enum(['member', 'teammate']),
+      id: z.string(),
+      name: z.string(),
+      /** A member's photo, from their sign-in. */
+      image: z.string().nullable().default(null),
+    })
+    .nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })

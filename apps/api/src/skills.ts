@@ -85,6 +85,12 @@ export async function toSkills(db: ScopedDb, rows: Row[]): Promise<Skill[]> {
     db,
     rows.map((r) => ({ type: r.updatedByType, id: r.updatedById })),
   )
+  const photos = await db.member.findMany({
+    where: {
+      id: { in: rows.flatMap((r) => (r.updatedByType === 'member' && r.updatedById) || []) },
+    },
+    select: { id: true, user: { select: { image: true } } },
+  })
   return rows.map((row) => {
     const by = name(row.updatedByType, row.updatedById)
     const pack = packs.find((p) => p.id === row.packId)
@@ -102,7 +108,12 @@ export async function toSkills(db: ScopedDb, rows: Row[]): Promise<Skill[]> {
       active: row.enabled && (pack?.enabled ?? true),
       updatedBy:
         by && (by.type === 'member' || by.type === 'teammate')
-          ? { type: by.type, name: by.name }
+          ? {
+              type: by.type,
+              id: by.id,
+              name: by.name,
+              image: photos.find((m) => m.id === by.id)?.user.image ?? null,
+            }
           : null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
