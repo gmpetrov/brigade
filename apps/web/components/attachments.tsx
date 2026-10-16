@@ -8,6 +8,9 @@ import {
   isVideoType,
   uploadMax,
   type AttachmentInfo,
+  type Effort,
+  EFFORTS,
+  effortLabel,
   type MessageAttachment,
 } from '@brigade/contracts'
 import {
@@ -17,6 +20,7 @@ import {
   CircleDot,
   Cloud,
   FileText,
+  Gauge,
   Laptop,
   Paperclip,
   Play,
@@ -254,20 +258,26 @@ export function ComputerIcon({ cloud, className }: { cloud: boolean; className?:
   )
 }
 
+/** The thread's effort and a change to it: picked in the + menu, shown as a chip until reset. */
+export type EffortPick = { value: Effort | null; onPick: (effort: Effort | null) => void }
+
 /**
  * The composer's +, like Claude's: attach files, teach the teammate a task by
- * recording it on its computer, or continue the thread on another computer.
- * `teach` is unset where teaching is not offered (phones), and a reason where
- * it is not possible yet; `move` is unset where the thread cannot move.
+ * recording it on its computer, continue the thread on another computer, or
+ * change how hard its teammates think. `teach` is unset where teaching is not
+ * offered (phones), and a reason where it is not possible yet; `move` is unset
+ * where the thread cannot move.
  */
 export function ComposerMenu({
   onFiles,
   teach,
   move,
+  effort,
 }: {
   onFiles: (files: File[]) => void
   teach?: (() => void) | string
   move?: { targets: MoveTarget[]; onPick: (target: MoveTarget) => void }
+  effort?: EffortPick
 }) {
   const input = useRef<HTMLInputElement>(null)
   // A computer picked: the cursor goes to the message, not back to the +.
@@ -351,6 +361,34 @@ export function ComposerMenu({
               </DropdownMenuSub>
             </>
           )}
+          {effort && (
+            <>
+              {!(move && move.targets.length > 1) && <DropdownMenuSeparator />}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Gauge aria-hidden />
+                  Effort
+                  <span className="ml-auto pl-3 text-xs text-muted-foreground">
+                    {effortLabel(effort.value)}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="min-w-40">
+                  {[{ id: null, label: 'Default' }, ...EFFORTS].map((e) => (
+                    <DropdownMenuItem
+                      key={e.id ?? 'default'}
+                      onSelect={() => {
+                        picked.current = true
+                        if (e.id !== effort.value) effort.onPick(e.id)
+                      }}
+                    >
+                      {e.label}
+                      {e.id === effort.value && <Check aria-label="Chosen" className="ml-auto" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <input
@@ -364,6 +402,40 @@ export function ComposerMenu({
         }}
       />
     </>
+  )
+}
+
+/**
+ * A chosen effort, over the message like Continue on…: × goes back to the default.
+ * `later` while a turn runs: the change waits for the next one.
+ */
+export function EffortChip({ effort, later }: { effort: EffortPick; later?: boolean }) {
+  if (!effort.value) return null
+  const label = `${effortLabel(effort.value)} effort`
+  return (
+    <div className="flex items-center gap-1 pl-1">
+      <span
+        className="flex min-w-0 items-center gap-1.5 rounded-full border border-primary/40 py-0.5 pr-1 pl-2.5 text-sm text-primary"
+        title={later ? `${label} from the next turn` : label}
+      >
+        <Gauge aria-hidden className="size-3.5 shrink-0" />
+        <span className="min-w-0 truncate">
+          {label}
+          {later && <span className="text-muted-foreground"> · next turn</span>}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0 rounded-full"
+          onClick={() => effort.onPick(null)}
+          aria-label="Back to the default effort"
+          title="Back to the default effort"
+        >
+          <X aria-hidden />
+        </Button>
+      </span>
+    </div>
   )
 }
 

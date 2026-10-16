@@ -4,7 +4,7 @@ import { AttachmentIds } from './attachments.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
 import { LibraryAccess, LibraryPath } from './library.js'
 import { isHarnessModel } from './models.js'
-import { CLIPBOARD_MAX, HarnessId } from './runner.js'
+import { CLIPBOARD_MAX, Effort, HarnessId } from './runner.js'
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),
@@ -164,6 +164,8 @@ export const StartThread = z
     attachmentIds: AttachmentIds,
     /** The project the thread works in. */
     projectId: z.string().nullish(),
+    /** How hard its teammates think; omit for the harness's default. */
+    effort: Effort.nullish(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
 
@@ -213,6 +215,12 @@ export const SendMessage = z
     moveTo: z.string().min(1).max(64).optional(),
   })
   .refine(hasContent, { path: ['text'], message: 'Write a message or attach a file' })
+/** Change a thread: its effort from the next turn on (null: the default); who may prompt and private, by its starter only. */
+export const UpdateThread = z.object({
+  effort: Effort.nullable().optional(),
+  othersMayPrompt: z.boolean().optional(),
+  private: z.boolean().optional(),
+})
 /** Continue a thread on another computer without a message: its teammate picks up where it was. */
 export const MoveThread = z.object({ computerId: z.string().min(1).max(64) })
 /** Cancel a queued message, change its text, or steer it into the running turn. */

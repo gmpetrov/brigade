@@ -20,6 +20,7 @@ import {
   SendMessage,
   SetProject,
   StartThread,
+  UpdateThread,
   type ThreadFile,
   type ThreadSpec,
   type ApiToRunner,
@@ -512,6 +513,7 @@ export const threads = new Hono<AppEnv>()
       text: input.text,
       attachmentIds: input.attachmentIds,
       projectId,
+      effort: input.effort ?? null,
     })
     if (outcome === 'offline') {
       throw new HTTPException(409, {
@@ -1082,18 +1084,22 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
-  /** Only the starter changes who may prompt on their subscription. */
+  /**
+   * Only the starter changes who may prompt on their subscription and whether it is
+   * private; who may write in it changes its effort, which the next turn runs with.
+   */
   .patch('/:id', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    if (thread.startedByMemberId !== scope.memberId)
+    const input = await parseBody(c.req.raw, UpdateThread)
+    if (
+      (input.othersMayPrompt !== undefined || input.private !== undefined) &&
+      thread.startedByMemberId !== scope.memberId
+    )
       throw new HTTPException(403, {
         message: 'Only the member who started this thread can change it',
       })
-    const input = await parseBody(
-      c.req.raw,
-      z.object({ othersMayPrompt: z.boolean().optional(), private: z.boolean().optional() }),
-    )
+    if (input.effort !== undefined) mayPrompt(thread, scope.memberId)
     await db.session.updateMany({ where: { id: thread.id }, data: input })
     await audit({
       ...scope,

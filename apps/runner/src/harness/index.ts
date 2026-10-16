@@ -181,7 +181,11 @@ function createAgent(
   // config directory.
   const settings = { auth: {}, mcpServers }
   const codex = spec.teammate.harness === 'codex'
-  const harness = codex ? createCodex(settings) : createClaudeCode(settings)
+  // The thread's effort; none leaves each CLI on its own default.
+  const effort = spec.effort ?? undefined
+  const harness = codex
+    ? createCodex({ ...settings, ...(effort ? { reasoningEffort: effort } : {}) })
+    : createClaudeCode({ ...settings, ...(effort ? { effort } : {}) })
   // Cards come right before the answer: loaded up front, not through tool search.
   const closing = (t: Tool) => (codex ? t : alwaysLoaded(t))
   const tools = {
@@ -229,15 +233,16 @@ type Live = {
   sandbox: ReturnType<typeof createLocalSandboxSession>
   account: AccountRef
   credentials: ThreadCredentials
-  /** The connector tools the agent was made with (connectorsKey). */
-  connectors: string
+  /** The connector tools and effort the agent was made with (agentKey). */
+  made: string
 }
 
-/** Which connector tools a spec gives: an agent made with others is out of date. */
-const connectorsKey = (spec: ThreadSpec) =>
-  JSON.stringify(
+/** Which connector tools and effort a spec gives: an agent made with others is out of date. */
+const agentKey = (spec: ThreadSpec) =>
+  JSON.stringify([
+    spec.effort ?? null,
     spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
-  )
+  ])
 
 type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
 
@@ -532,11 +537,12 @@ export class HarnessThread {
     }, this.toolCalls)
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
-      // teammate's page between turns): the harness stops and resumes with an agent that has
-      // them. A new message while a turn is still unfinished leaves that turn as it is.
+      // teammate's page between turns), or the thread's effort did: the harness stops and
+      // resumes with an agent made anew. A new message while a turn is still unfinished
+      // leaves that turn as it is.
       if (
         this.live &&
-        this.live.connectors !== connectorsKey(this.spec) &&
+        this.live.made !== agentKey(this.spec) &&
         ((input.kind !== 'prompt' && input.kind !== 'resume') ||
           !this.live.session.hasUnfinishedTurn())
       )
@@ -960,7 +966,7 @@ export class HarnessThread {
       sandbox,
       account,
       credentials,
-      connectors: connectorsKey(this.spec),
+      made: agentKey(this.spec),
     }
     this.saved = { transcript: [], ...this.saved, accountId: account.id }
     return this.live

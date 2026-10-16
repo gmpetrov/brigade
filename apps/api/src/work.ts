@@ -1,7 +1,12 @@
 // Starting a teammate's next turn. Members' messages, triggers and approved
 // caps all come through here, so caps are checked in one place.
 import { randomUUID } from 'node:crypto'
-import { mentionedIds, type ReplyTo, type ThreadAttachmentRef } from '@brigade/contracts'
+import {
+  type Effort,
+  mentionedIds,
+  type ReplyTo,
+  type ThreadAttachmentRef,
+} from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { attachToThread, detach } from './attachments.js'
 import { audit } from './audit.js'
@@ -307,6 +312,8 @@ export async function startThread(
     taskId?: string
     /** The project it works in; its context comes with the first turn. */
     projectId?: string | null
+    /** How hard its teammates think; none: the harness's default. */
+    effort?: Effort | null
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -332,6 +339,7 @@ export async function startThread(
       title: input.title.slice(0, 120),
       ...(input.taskId ? { taskId: input.taskId } : {}),
       ...(input.projectId ? { projectId: input.projectId } : {}),
+      ...(input.effort ? { effort: input.effort } : {}),
       ...(input.origin?.kind === 'trigger'
         ? {
             origin: 'trigger',

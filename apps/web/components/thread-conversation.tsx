@@ -24,7 +24,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { mentionsToText, type ReplyTo } from '@brigade/contracts'
+import { type Effort, mentionsToText, type ReplyTo } from '@brigade/contracts'
 import Link from 'next/link'
 import {
   useEffect,
@@ -38,6 +38,8 @@ import {
 import {
   ComposerMenu,
   ComputerIcon,
+  EffortChip,
+  type EffortPick,
   UploadList,
   useFileDrop,
   useUploads,
@@ -181,6 +183,14 @@ export function ThreadConversation({
   // The computer the next message moves the thread to, as a chip above it (+ › Continue on…).
   const [moveTo, setMoveTo] = useState<MoveTarget>()
   useEffect(() => setMoveTo(undefined), [id])
+  // The effort just picked, until the thread comes back with it.
+  const [effortPicked, setEffortPicked] = useState<{ value: Effort | null }>()
+  // The turn running when it was picked: that turn keeps the effort it started with.
+  const [effortTurn, setEffortTurn] = useState<string>()
+  useEffect(() => {
+    setEffortPicked(undefined)
+    setEffortTurn(undefined)
+  }, [id])
   // Its machine went offline: Wait keeps the card offering the cloud computer away.
   const [waitForMachine, setWaitForMachine] = useState(false)
   useEffect(() => setWaitForMachine(false), [id])
@@ -396,6 +406,18 @@ export function ThreadConversation({
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
+  const effort: EffortPick = {
+    value: effortPicked ? effortPicked.value : t.effort,
+    onPick: (value) => {
+      setEffortPicked({ value })
+      setEffortTurn(busy ? turnId : undefined)
+      setError(undefined)
+      api(`/threads/${id}`, { method: 'PATCH', body: { effort: value } })
+        .then(() => thread.reload())
+        .catch((e: Error) => setError(e.message))
+        .finally(() => setEffortPicked(undefined))
+    },
+  }
   const people = t.teammates.length ? t.teammates.map((p) => p.teammate) : [t.teammate]
   // Who is answering now: the last turn that started, else whoever was asked last.
   const lastTurn = events.findLast((e) => e.event.type === 'turn.started')?.event.teammateId
@@ -1071,12 +1093,14 @@ export function ThreadConversation({
                       </span>
                     </div>
                   )}
+                  <EffortChip effort={effort} later={busy && !!turnId && effortTurn === turnId} />
                   <UploadList uploads={files.uploads} onRemove={files.remove} />
                   <div className="flex items-end gap-1">
                     <div className="mb-1">
                       {/* The + on phones too: teaching needs a desktop, so not there. */}
                       <ComposerMenu
                         onFiles={files.add}
+                        effort={effort}
                         {...(phone
                           ? {}
                           : {

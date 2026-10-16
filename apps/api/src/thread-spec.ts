@@ -1,4 +1,4 @@
-import { folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
+import { Effort, folderExceptions, MCP_PROTOCOL, type ThreadSpec } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { runnerProtocol } from './hub.js'
@@ -194,6 +194,7 @@ export async function specFor(
       kind: teammate.kind,
     },
     permissionMode: permissionMode(thread.computer.kind),
+    effort: Effort.nullable().catch(null).parse(thread.effort),
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
     roster,

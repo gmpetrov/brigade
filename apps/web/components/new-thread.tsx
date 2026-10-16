@@ -3,9 +3,12 @@ import { ArrowRight, Check, ChevronDown, FolderKanban, List, Monitor, Plus } fro
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import type { Effort } from '@brigade/contracts'
 import {
   AttachButton,
   ComposerMenu,
+  EffortChip,
+  type EffortPick,
   UploadList,
   useFileDrop,
   useUploads,
@@ -270,8 +273,20 @@ export function useThreadDraft() {
   const [text, setText] = useState('')
   const [computerId, setComputerId] = useState<string>()
   const [accountId, setAccountId] = useState<string>()
+  // How hard its teammates think, from the + menu; null: the harness's default.
+  const [effort, setEffort] = useState<Effort | null>(null)
   const files = useUploads()
-  return { text, setText, computerId, setComputerId, accountId, setAccountId, files }
+  return {
+    text,
+    setText,
+    computerId,
+    setComputerId,
+    accountId,
+    setAccountId,
+    effort,
+    setEffort,
+    files,
+  }
 }
 
 export type ThreadDraft = ReturnType<typeof useThreadDraft>
@@ -338,7 +353,18 @@ export function NewThread({
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
   const own = useThreadDraft()
-  const { text, setText, computerId, setComputerId, accountId, setAccountId, files } = draft ?? own
+  const {
+    text,
+    setText,
+    computerId,
+    setComputerId,
+    accountId,
+    setAccountId,
+    effort: effortValue,
+    setEffort: setEffortValue,
+    files,
+  } = draft ?? own
+  const effort: EffortPick = { value: effortValue, onPick: setEffortValue }
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const drop = useFileDrop(files.add)
@@ -371,6 +397,7 @@ export function NewThread({
         text: message,
         attachmentIds,
         ...(projectId !== 'none' && { projectId }),
+        ...(effortValue && { effort: effortValue }),
       },
     })
 
@@ -384,6 +411,7 @@ export function NewThread({
       files.clear()
       if (onStarted) {
         setText('')
+        setEffortValue(null)
         setBusy(false)
         onStarted(thread)
       } else router.push(`/app/threads/${thread.id}`)
@@ -433,7 +461,12 @@ export function NewThread({
   const form = useRef<HTMLFormElement>(null)
   const focusMessage = () =>
     form.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus()
-  const uploads = <UploadList uploads={files.uploads} onRemove={files.remove} />
+  const uploads = (
+    <>
+      <EffortChip effort={effort} />
+      <UploadList uploads={files.uploads} onRemove={files.remove} />
+    </>
+  )
   const composer = (
     <Composer
       bare
@@ -531,7 +564,7 @@ export function NewThread({
   )
   // The +, as in a thread, phones included, where there is no teaching. The quick dialog
   // keeps the paperclip: its modal would keep the recording's computer from use.
-  const add = <ComposerMenu onFiles={files.add} {...(phone ? {} : { teach })} />
+  const add = <ComposerMenu onFiles={files.add} effort={effort} {...(phone ? {} : { teach })} />
   const recorder = teaching && (
     <TeachTask
       teammate={teammate}
