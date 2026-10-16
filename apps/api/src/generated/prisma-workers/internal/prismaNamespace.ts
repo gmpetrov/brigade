@@ -4249,6 +4249,7 @@ export const ComputerScalarFieldEnum = {
   name: 'name',
   providerRef: 'providerRef',
   size: 'size',
+  machineId: 'machineId',
   status: 'status',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

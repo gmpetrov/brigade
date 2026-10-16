@@ -432,7 +432,11 @@ export function runnerSocket(runner: {
       })
       const computer = await prisma.computer.update({
         where: { id: runner.computerId },
-        data: { status: 'running' },
+        data: {
+          status: 'running',
+          // Runners linked before machine IDs say theirs here, so a later link finds this computer.
+          ...(message.machineId ? { machineId: message.machineId } : {}),
+        },
       })
       // A cloud computer set up by an older bootstrap gets the current root setup.
       if (computer.kind === 'cloud')

@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { readFileSync, unlinkSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Everything the runner keeps on this computer lives here. */
@@ -23,6 +24,57 @@ export const VERSION = (() => {
 export const CLOUD = process.env.BRIGADE_CLOUD === '1' || process.argv.includes('--cloud')
 /** Account login directories. Shared with teammate users on a cloud computer. */
 export const ACCOUNTS_DIR = process.env.BRIGADE_ACCOUNTS_DIR ?? join(HOME, 'accounts')
+
+/** The OS's own ID of this machine, read from the output of the command that shows it. */
+export function parseMachineId(platform: NodeJS.Platform, output: string): string | undefined {
+  const id =
+    platform === 'darwin'
+      ? /"IOPlatformUUID"\s*=\s*"([^"]+)"/.exec(output)?.[1]
+      : platform === 'win32'
+        ? /MachineGuid\s+REG_SZ\s+(\S+)/.exec(output)?.[1]
+        : output.trim().split('\n')[0]?.trim()
+  return id || undefined
+}
+
+function platformMachineId(): string | undefined {
+  try {
+    if (process.platform === 'darwin')
+      return parseMachineId(
+        'darwin',
+        execFileSync('ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'], { encoding: 'utf8' }),
+      )
+    if (process.platform === 'win32')
+      return parseMachineId(
+        'win32',
+        execFileSync(
+          'reg',
+          ['query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'],
+          { encoding: 'utf8' },
+        ),
+      )
+    for (const file of ['/etc/machine-id', '/var/lib/dbus/machine-id']) {
+      try {
+        const id = parseMachineId(process.platform, readFileSync(file, 'utf8'))
+        if (id) return id
+      } catch {}
+    }
+  } catch {}
+  return undefined
+}
+
+/**
+ * This machine and runner home, hashed: linking again from the same place keeps its computer
+ * even when runner.json is gone, while another machine, or another BRIGADE_HOME with its own
+ * thread folders, is a computer of its own. Unset when the OS does not say.
+ */
+export function machineId(): string | undefined {
+  const id = platformMachineId()
+  return id
+    ? createHash('sha256')
+        .update(`brigade-machine\n${id}\n${resolve(HOME)}`)
+        .digest('hex')
+    : undefined
+}
 
 export type RunnerConfig = {
   apiUrl: string

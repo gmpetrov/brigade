@@ -18,6 +18,7 @@ import {
   CLOUD,
   HOME,
   loadConfig,
+  machineId,
   paths,
   saveConfig,
   VERSION,
@@ -31,7 +32,7 @@ import { Library } from './library.js'
 import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
-import { stripApiKeys } from './harness/index.js'
+import { stripApiKeys, usePersonPath } from './harness/index.js'
 import { Outbox } from './outbox.js'
 import { Previews } from './previews.js'
 import { Threads, threadFolder } from './threads.js'
@@ -40,6 +41,7 @@ import { Updater } from './updater.js'
 
 // Brigade sets no API key anywhere; harnesses use this computer's subscription logins.
 stripApiKeys()
+if (!CLOUD) usePersonPath()
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -84,6 +86,7 @@ async function link(code: string | undefined) {
       name: values.name,
       platform: `${process.platform}-${process.arch}`,
       version: VERSION,
+      ...(CLOUD ? {} : { machineId: machineId() }),
       ...(previous && previous.apiUrl === values.api ? { computerId: previous.computerId } : {}),
     }),
   })
@@ -512,7 +515,7 @@ async function start() {
   // cloud computer, which root setup it has. Each connect also refreshes the library.
   const hello = async () => {
     void library.sync()
-    if (!CLOUD) return { machineLogins: await machineLogins() }
+    if (!CLOUD) return { machineLogins: await machineLogins(), machineId: machineId() }
     const setup = await readFile('/var/lib/brigade/setup', 'utf8').catch(() => '')
     return setup.trim() ? { setup: setup.trim() } : {}
   }
