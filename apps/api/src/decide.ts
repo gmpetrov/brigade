@@ -11,10 +11,13 @@ import {
   type TicketAnswer,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { usableIn } from './apps.js'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
+import { appCatalog } from './connectors/index.js'
+import type { ConnectorKind } from './connectors/types.js'
 import { mayManage, type CredentialAction } from './credentials.js'
-import { scoped } from './db.js'
+import { scoped, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { decideSkillProposal } from './skills.js'
@@ -115,6 +118,11 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
   const asker = teammateIn(thread, payload.teammateId)
   // Changes sent on to another teammate: [teammate id, what to tell it].
   const handoffs: [string, string][] = []
+  // App access granted from the ticket, given once every answer checks out.
+  const grants: {
+    app: NonNullable<Extract<Ask, { type: 'access' }>['app']>
+    connectionId?: string
+  }[] = []
   if (answer.action === 'answered') {
     const asks = payload.asks ?? []
     for (const id of Object.keys(answer.replies))
@@ -152,6 +160,11 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
         if (saved !== reply.set.length)
           throw new HTTPException(400, { message: 'Save the variables before answering' })
       }
+      if (ask.type === 'access' && reply.type === 'access' && ask.app && reply.granted)
+        grants.push({
+          app: ask.app,
+          ...(reply.connectionId ? { connectionId: reply.connectionId } : {}),
+        })
       if (ask.type === 'access' && reply.type === 'access' && reply.credential) {
         // A credential the person picked or just saved: one of this workspace's vault.
         const ids = mentionedIds(reply.credential, 'credential')
@@ -186,6 +199,9 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
     throw new HTTPException(409, {
       message: 'Another member has control of this thread. It can be answered once they hand back.',
     })
+  // Before the answer goes out, so the spec it carries has the App's tools.
+  for (const grant of grants)
+    await grantApp(db, scope, thread, asker.id, grant.app, grant.connectionId)
   const sent = await dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
@@ -222,6 +238,65 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
     })
   }
   return { ok: true as const }
+}
+
+/**
+ * Give the teammate that asked access to one of an App's accounts, from its
+ * ticket. The account must be one the person may give (theirs, or any for an
+ * owner or admin) and usable in this thread; an existing read and write grant
+ * stays.
+ */
+async function grantApp(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  thread: { startedByMemberId: string },
+  teammateId: string,
+  app: { kind: string; scope: 'read' | 'read_write' },
+  connectionId: string | undefined,
+) {
+  const entry = appCatalog[app.kind as ConnectorKind]
+  if (!entry || app.kind === 'webhook')
+    throw new HTTPException(400, { message: `${app.kind} is not an App teammates can use` })
+  const accounts = await db.connection.findMany({
+    where: { kind: app.kind as ConnectorKind, status: 'active' },
+  })
+  if (accounts.length === 0)
+    throw new HTTPException(409, { message: `Connect ${entry.name} first` })
+  const admin = scope.role === 'owner' || scope.role === 'admin'
+  const givable = accounts.filter((c) => admin || c.createdByMemberId === scope.memberId)
+  if (givable.length === 0)
+    throw new HTTPException(403, {
+      message: `Only the member who connected ${entry.name}, or an owner or admin, can give access to it`,
+    })
+  const usable = givable.filter((c) => usableIn(c, thread))
+  const named = connectionId ? givable.find((c) => c.id === connectionId) : undefined
+  if (named && !usableIn(named, thread))
+    throw new HTTPException(409, {
+      message: `${named.externalAccount ?? named.label} is kept to its owner's threads. Open it to every thread first, from Apps.`,
+    })
+  if (usable.length === 0)
+    throw new HTTPException(409, {
+      message: `This ${entry.name} account is kept to its owner's threads. Open it to every thread first, from Apps.`,
+    })
+  const account = connectionId
+    ? usable.find((c) => c.id === connectionId)
+    : usable.length === 1
+      ? usable[0]
+      : undefined
+  if (!account) throw new HTTPException(400, { message: `Pick the ${entry.name} account to give` })
+  const existing = await db.grant.findFirst({ where: { teammateId, connectionId: account.id } })
+  if (existing?.scope === 'read_write' || existing?.scope === app.scope) return
+  await db.grant.deleteMany({ where: { teammateId, connectionId: account.id } })
+  await db.grant.create({
+    data: { teammateId, connectionId: account.id, scope: app.scope } as never,
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'grant.set',
+    target: { type: 'teammate', id: teammateId },
+    data: { connectionId: account.id, scope: app.scope, from: 'ticket' },
+  })
 }
 
 /** An answer made only of credential mentions: it names vault entries, not secrets. */

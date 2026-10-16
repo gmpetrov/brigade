@@ -172,6 +172,11 @@ export const Ask = z.discriminatedUnion('type', [
     what: z.string(),
     reason: z.string().optional(),
     /**
+     * A connection: the App and the access the teammate needs. Granting gives it
+     * that access to one of the App's accounts, from the ticket.
+     */
+    app: z.object({ kind: z.string().max(40), scope: z.enum(['read', 'read_write']) }).optional(),
+    /**
      * A credential: what the teammate knows of it, so a person can save it to
      * the vault from the ticket. Only fills in the form; never a secret.
      */
@@ -242,6 +247,8 @@ export const AskReply = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('access'),
     granted: z.boolean(),
+    /** An App's account to grant, when it has several the person may give. */
+    connectionId: z.string().max(100).optional(),
     /** A credential granted from the vault, as its mention: the teammate may use it in this thread. */
     credential: z.string().max(1000).optional(),
   }),

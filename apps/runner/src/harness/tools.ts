@@ -223,6 +223,19 @@ export const openTicketTool = tool({
               description: 'access: which service or credential, e.g. "Stripe"',
             },
             reason: { type: 'string', description: 'access: what you need it for' },
+            app: {
+              type: 'object',
+              description:
+                'access to an App (kind connection): which, and the access you need. The person grants it from the ticket, or connects the App there first. Ask read_write only when you must send or change something there',
+              properties: {
+                kind: {
+                  type: 'string',
+                  enum: ['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare'],
+                },
+                scope: { type: 'string', enum: ['read', 'read_write'] },
+              },
+              required: ['kind', 'scope'],
+            },
             credential: {
               type: 'object',
               description:

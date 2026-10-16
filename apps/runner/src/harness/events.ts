@@ -84,6 +84,10 @@ export function ticketAsks(input: unknown): { title: string; asks: Ask[] } | und
     raw.asks.map((a, i) => ({
       ...a,
       id: a.id || `a${i + 1}`,
+      // An App ask names it by kind: that is enough for what it is.
+      ...(!a.what && (a.app as { kind?: string } | undefined)?.kind
+        ? { what: (a.app as { kind: string }).kind }
+        : {}),
       ...(Array.isArray(a.options)
         ? {
             options: (a.options as { id?: string }[]).map((o, j) => ({
@@ -134,6 +138,13 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
           {
             ask: `Access to ${ask.what}`,
             granted: reply.granted,
+            ...(reply.granted && ask.app
+              ? {
+                  note:
+                    `The person gave you ${ask.app.scope === 'read' ? 'read' : 'read and write'} access to ${ask.what} from the ticket. ` +
+                    `Its tools (${ask.app.kind}_…) are yours in this thread from now on: carry on with them.`,
+                }
+              : {}),
             ...(reply.granted && reply.credential
               ? {
                   credential: reply.credential,

@@ -51,6 +51,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
+import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
@@ -2149,6 +2150,7 @@ export function TicketCard({
   const answered = item.answer?.action === 'answered' ? item.answer.replies : undefined
   const done = Boolean(item.answer)
   const disabled = !canAnswer || busy || done
+  const soleAccess = item.asks.length === 1 && item.asks[0]!.type === 'access'
 
   return (
     <Card className="gap-4 border-primary/40 px-5 py-4">
@@ -2182,22 +2184,27 @@ export function TicketCard({
         </div>
       ))}
       {done ? null : canAnswer ? (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          {item.asks.length > 1 && (
-            <span className="text-sm text-muted-foreground">
-              {Object.keys(replies).length} of {item.asks.length} answered
-            </span>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => void send({ action: 'declined' })}
-          >
-            Decline ticket
-          </Button>
-          {error && <span className="text-sm text-destructive-text">{error}</span>}
-        </div>
+        // A single access ask has a Decline of its own: no second one below it.
+        soleAccess && !error ? null : (
+          <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+            {item.asks.length > 1 && (
+              <span className="text-sm text-muted-foreground">
+                {Object.keys(replies).length} of {item.asks.length} answered
+              </span>
+            )}
+            {!soleAccess && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => void send({ action: 'declined' })}
+              >
+                Decline ticket
+              </Button>
+            )}
+            {error && <span className="text-sm text-destructive-text">{error}</span>}
+          </div>
+        )
       ) : (
         <p className="text-sm text-muted-foreground">
           Only the member who started this thread can answer.
@@ -2263,7 +2270,7 @@ function AskView({
     ask.type === 'approval' || ask.type === 'action'
       ? ask.title
       : ask.type === 'access'
-        ? `Access to ${ask.what}`
+        ? `Access to ${ask.app ? (APP_NAMES[ask.app.kind] ?? ask.what) : ask.what}`
         : ask.type === 'variables'
           ? `Values for the preview of ${ask.repository}`
           : ask.question
@@ -2445,9 +2452,12 @@ function AskView({
         </div>
       ) : ask.type === 'variables' ? (
         <VariablesAsk ask={ask} askerName={askerName} onReply={onReply} />
+      ) : ask.type === 'access' && ask.app ? (
+        <AppAccessAsk ask={{ ...ask, app: ask.app }} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' && ask.kind === 'credential' ? (
         <CredentialAccess ask={ask} askerName={askerName} onReply={onReply} />
       ) : ask.type === 'access' ? (
+        // A connection asked for in words: given by hand on the Apps page.
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="outline">
             <a href="/app/connections" target="_blank" rel="noreferrer">
@@ -2455,14 +2465,14 @@ function AskView({
             </a>
           </Button>
           <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>
-            Mark granted
+            I&apos;ve given access
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => onReply({ type: 'access', granted: false })}
           >
-            Can&apos;t grant
+            Decline
           </Button>
         </div>
       ) : ask.type === 'action' && ask.browser && takeover ? (
