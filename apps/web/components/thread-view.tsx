@@ -160,6 +160,12 @@ export type Item =
 
 export type Limits = NonNullable<Extract<AgentEvent, { type: 'usage.updated' }>['limits']>
 
+/** An agent a teammate started in the background (Claude Code's Agent tool), while it runs. */
+export type BackgroundAgent = { id: string; description: string; steps: number }
+
+/** Claude Code's task types that are agents at work, not shells or watchers. */
+const AGENT_TASKS = new Set(['local_agent', 'remote_agent', 'local_workflow'])
+
 /** A message waiting to be read, shown above the composer rather than in the thread. */
 export type QueuedMessage = {
   messageId: string
@@ -188,6 +194,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     let turnTeammate: string | undefined
     let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
+    // The running turn's background agents, by task id: Claude Code sends every one still running at each change.
+    let background = new Map<string, BackgroundAgent>()
     let shown = true
     const add = (item: Item) => {
       if (shown || ASKS.has(item.kind)) items.push(item)
@@ -359,6 +367,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             at: Date.parse(e.at),
           })
           turnStartedAt = undefined
+          background = new Map()
           break
         case 'error':
           add({ kind: 'error', key: `e${seq}`, message: e.message })
@@ -368,6 +377,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             add({ kind: 'thinking', key: `r${seq}`, text: e.value })
           else if (e.source === 'runner' && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value })
+          else if (e.source === 'harness') background = backgroundAgents(background, e.value)
           break
         case 'account.switched':
           add({
@@ -431,8 +441,40 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
       (e) => e.event.type === 'turn.started' || e.event.type === 'turn.completed',
     )?.event
     const turnId = lastTurn?.type === 'turn.started' ? lastTurn.turnId : undefined
-    return { items, limits, queued: [...queued.values()], seen, turnId }
+    return {
+      items,
+      limits,
+      queued: [...queued.values()],
+      seen,
+      turnId,
+      background: [...background.values()],
+    }
   }, [events, firstSeq])
+}
+
+/** The background agents after one of Claude Code's task messages. */
+function backgroundAgents(agents: Map<string, BackgroundAgent>, value: unknown) {
+  const msg = value as {
+    type?: string
+    subtype?: string
+    task_id?: string
+    tasks?: { task_id: string; task_type: string; description: string; ambient?: boolean }[]
+    usage?: { tool_uses?: number }
+  } | null
+  if (msg?.type !== 'system') return agents
+  if (msg.subtype === 'background_tasks_changed' && Array.isArray(msg.tasks))
+    return new Map(
+      msg.tasks
+        .filter((t) => !t.ambient && AGENT_TASKS.has(t.task_type))
+        .map((t) => [
+          t.task_id,
+          { id: t.task_id, description: t.description, steps: agents.get(t.task_id)?.steps ?? 0 },
+        ]),
+    )
+  const agent = msg.task_id ? agents.get(msg.task_id) : undefined
+  if (msg.subtype === 'task_progress' && agent && typeof msg.usage?.tool_uses === 'number')
+    agent.steps = msg.usage.tool_uses
+  return agents
 }
 
 const clipText = (text: string, max: number) =>
@@ -1103,6 +1145,32 @@ function WorkingFor({ since }: { since: number }) {
   )
 }
 
+/** The agents a teammate left working in the background: its turn goes on until they report back. */
+function BackgroundAgents({ agents }: { agents: BackgroundAgent[] }) {
+  return (
+    <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+      <span>
+        {agents.length === 1 ? 'An agent is' : `${agents.length} agents are`} working in the
+        background
+      </span>
+      <ul className="flex flex-col gap-1 pl-1">
+        {agents.map((agent) => (
+          <li key={agent.id} className="flex min-w-0 items-center gap-2">
+            <span
+              className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
+              aria-hidden
+            />
+            <span className="min-w-0 truncate text-foreground/80">{agent.description}</span>
+            {agent.steps > 0 && (
+              <span className="flex-none text-xs">{plural(agent.steps, '1 step', 'steps')}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /**
  * Between a message and the first thing its teammate does: a line saying how far it got,
  * where the answer will show. It counts up past the first seconds.
@@ -1154,6 +1222,7 @@ export function ThreadItems({
   onOpenPreview,
   working = false,
   starting = false,
+  background = [],
 }: {
   threadId: string
   items: Item[]
@@ -1177,6 +1246,8 @@ export function ThreadItems({
   working?: boolean
   /** The thread's computer is starting for that turn. */
   starting?: boolean
+  /** Agents the running turn left working in the background. */
+  background?: BackgroundAgent[]
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -1578,6 +1649,7 @@ export function ThreadItems({
       ) : (
         working && nodes.running !== undefined && <WorkingFor since={nodes.running} />
       )}
+      {working && background.length > 0 && <BackgroundAgents agents={background} />}
     </div>
   )
 }

@@ -147,7 +147,7 @@ export function ThreadConversation({
     loaded: eventsLoaded,
     reconnect,
   } = useThreadEvents(id, setStatus)
-  const { items, queued, seen, turnId } = useThreadItems(events, firstSeq)
+  const { items, queued, seen, turnId, background } = useThreadItems(events, firstSeq)
   const outputs = useThreadOutputs(events)
   const preview = useCheckedPreview(id, useThreadPreview(events))
   // Preview is offered once there is something to preview: a preview it had, or code it checked out.
@@ -773,6 +773,7 @@ export function ThreadConversation({
                     canApprove={t.mayPrompt}
                     working={busy}
                     starting={current === 'starting'}
+                    background={background}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     onApproval={(approvalId, approved, always) =>
                       void call('/approvals', {
