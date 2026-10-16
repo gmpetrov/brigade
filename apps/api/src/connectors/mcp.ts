@@ -5,6 +5,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
+import { mcpOutput } from './mcp-output.js'
 import { redact, type McpServer } from './types.js'
 
 /** An MCP account's tokens and the client they were issued to. Kept in the vault. */
@@ -310,16 +311,12 @@ export async function listMcpTools(fetch: Fetch, url: string): Promise<McpTool[]
 /** Call one tool. Its text comes back as the output; an error result throws. */
 export async function callMcpTool(fetch: Fetch, url: string, name: string, args: unknown) {
   const request = await session(fetch, url)
-  const result = (await request('tools/call', { name, arguments: args ?? {} })) as {
-    content?: { type: string; text?: string }[]
-    structuredContent?: unknown
-    isError?: boolean
-  }
-  const text = (result.content ?? [])
-    .map((c) => (c.type === 'text' ? (c.text ?? '') : `[${c.type}]`))
-    .join('\n')
+  const result = (await request('tools/call', { name, arguments: args ?? {} })) as Parameters<
+    typeof mcpOutput
+  >[0]
+  const { output, text } = mcpOutput(result)
   if (result.isError) throw new Error(redact(text || 'The tool failed'))
-  return result.structuredContent ?? text
+  return output
 }
 
 /** Whether a tool changes something: Brigade's list first, then the server's hint. */
