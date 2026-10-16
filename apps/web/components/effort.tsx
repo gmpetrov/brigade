@@ -38,6 +38,8 @@ export function EffortSlider({ effort, later }: { effort: EffortPick; later?: bo
   const committed = level(effort)
   // Where the handle is while dragging; picked when it is let go.
   const [dragged, setDragged] = useState<number>()
+  // The ? opens a line on what effort is.
+  const [help, setHelp] = useState(false)
   const index = dragged ?? committed
   const track = useRef<HTMLDivElement>(null)
   const card = useRef<HTMLDivElement>(null)
@@ -134,13 +136,26 @@ export function EffortSlider({ effort, later }: { effort: EffortPick; later?: bo
             </svg>
           )}
         </span>
-        <span
-          className="ml-auto text-muted-foreground"
-          title="How hard teammates think. Higher is slower and uses more of your plan. It applies to every teammate in the thread."
+        <button
+          type="button"
+          className={cn(
+            'ml-auto rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
+            help && 'text-foreground',
+          )}
+          aria-label="What is effort?"
+          aria-expanded={help}
+          onClick={() => setHelp((h) => !h)}
         >
           <CircleHelp aria-hidden className="size-4" />
-        </span>
+        </button>
       </div>
+      {help && (
+        <p className="effort-help mt-2 text-xs leading-relaxed text-muted-foreground">
+          How hard teammates think before they answer. Higher is slower and uses more of your plan;
+          lower is faster. Default is the model’s own level. It applies to every teammate in this
+          thread, from its next turn.
+        </p>
+      )}
       <div className="mt-3 mb-1.5 flex justify-between text-xs text-muted-foreground">
         <span>Faster</span>
         <span className={cn(max && 'text-primary')}>Smarter</span>

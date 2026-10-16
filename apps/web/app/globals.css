@@ -626,6 +626,9 @@
     background: color-mix(in oklab, var(--primary) 50%, white);
     animation: effort-ember 1.2s ease-out forwards;
   }
+  .effort-help {
+    animation: effort-name 0.2s ease-out;
+  }
   /* Level bars: one per level, lit up to the thread's; at Max they bounce. */
   .effort-bars {
     display: inline-flex;
@@ -770,6 +773,7 @@
     .effort-handle,
     .effort-name,
     .effort-name-max,
+    .effort-help,
     .effort-bolt,
     .effort-jolt,
     .effort-bars i {
