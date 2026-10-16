@@ -34,7 +34,16 @@ export function EffortBars({ index, className }: { index: number; className?: st
 }
 
 /** The slider. `later`: a turn is running, which keeps the effort it started with. */
-export function EffortSlider({ effort, later }: { effort: EffortPick; later?: boolean }) {
+export function EffortSlider({
+  effort,
+  later,
+  autoFocus,
+}: {
+  effort: EffortPick
+  later?: boolean
+  /** Focus the track on mount, so the arrows move it at once (in the + menu). */
+  autoFocus?: boolean
+}) {
   const committed = level(effort)
   // Where the handle is while dragging; picked when it is let go.
   const [dragged, setDragged] = useState<number>()
@@ -42,6 +51,9 @@ export function EffortSlider({ effort, later }: { effort: EffortPick; later?: bo
   const [help, setHelp] = useState(false)
   const index = dragged ?? committed
   const track = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (autoFocus) track.current?.focus()
+  }, [autoFocus])
   const card = useRef<HTMLDivElement>(null)
   const max = index === MAX
   const onDefault = EFFORTS[index]!.id === effort.fallback
@@ -252,10 +264,7 @@ export function EffortButton({
   )
 }
 
-/**
- * The slider over the composer, in a Popover.Root: from the button next to send
- * (`align` end), or from the + menu's Effort, anchored to the + (start), like Claude's.
- */
+/** The slider over the composer, in a Popover.Root: from the button next to send. */
 export function EffortPanel({
   effort,
   later,
