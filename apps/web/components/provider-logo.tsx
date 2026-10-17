@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils'
 export type ProviderKind = Connection['kind']
 
 /**
- * Each service's own mark: Google's 2020 Gmail and Calendar icons, Stripe's
- * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's
- * square N, Supabase's bolt, GitHub's Invertocat (in the text color, so it reads in both themes), and a
+ * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
+ * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's square N, Supabase's
+ * bolt, GitHub's Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -75,6 +75,63 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#f6821f"
           d="M52.688 13.028c-.22 0-.437.008-.654.015a.3.3 0 0 0-.102.024.37.37 0 0 0-.236.255l-.93 3.249c-.401 1.397-.252 2.687.422 3.634.618.876 1.646 1.39 2.894 1.45l5.045.306a.45.45 0 0 1 .435.41.5.5 0 0 1-.025.223.64.64 0 0 1-.547.426l-5.242.306c-2.848.132-5.912 2.456-6.987 5.29l-.378 1a.28.28 0 0 0 .248.382h18.054a.48.48 0 0 0 .464-.35c.32-1.153.482-2.344.48-3.54 0-7.22-5.79-13.072-12.933-13.072M44.807 29.578l.334-1.175c.402-1.397.253-2.687-.42-3.634-.62-.876-1.647-1.39-2.896-1.45l-23.665-.306a.47.47 0 0 1-.374-.199.5.5 0 0 1-.052-.434.64.64 0 0 1 .552-.426l23.886-.306c2.836-.131 5.9-2.456 6.975-5.29l1.362-3.6a.9.9 0 0 0 .04-.477C48.997 5.259 42.789 0 35.367 0c-6.842 0-12.647 4.462-14.73 10.665a6.92 6.92 0 0 0-4.911-1.374c-3.28.33-5.92 3.002-6.246 6.318a7.2 7.2 0 0 0 .18 2.472C4.3 18.241 0 22.679 0 28.133q0 .74.106 1.453a.46.46 0 0 0 .457.402h43.704a.57.57 0 0 0 .54-.418"
+        />
+      </svg>
+    )
+  if (kind === 'google_drive')
+    return (
+      <svg viewBox="0 0 87.3 78" {...common}>
+        <path
+          fill="#0066da"
+          d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
+        />
+        <path
+          fill="#00ac47"
+          d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z"
+        />
+        <path
+          fill="#ea4335"
+          d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z"
+        />
+        <path
+          fill="#00832d"
+          d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z"
+        />
+        <path
+          fill="#2684fc"
+          d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"
+        />
+        <path
+          fill="#ffba00"
+          d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"
+        />
+      </svg>
+    )
+  if (kind === 'google_docs')
+    return (
+      <svg viewBox="0 0 47 65" {...common}>
+        <path
+          fill="#4285f4"
+          d="M29.375 0H4.406A4.406 4.406 0 0 0 0 4.406v56.188A4.406 4.406 0 0 0 4.406 65h38.188A4.406 4.406 0 0 0 47 60.594V17.625L29.375 0z"
+        />
+        <path fill="#a1c2fa" d="M29.375 0v13.219a4.406 4.406 0 0 0 4.406 4.406H47L29.375 0z" />
+        <path
+          fill="#f1f1f1"
+          d="M11.75 47.531h23.5v-2.937h-23.5v2.937zm0 5.875h17.625v-2.937H11.75v2.937zm0-20.562v2.937h23.5v-2.937h-23.5zm0 8.812h23.5v-2.937h-23.5v2.937z"
+        />
+      </svg>
+    )
+  if (kind === 'google_sheets')
+    return (
+      <svg viewBox="0 0 47 65" {...common}>
+        <path
+          fill="#0f9d58"
+          d="M29.375 0H4.406A4.406 4.406 0 0 0 0 4.406v56.188A4.406 4.406 0 0 0 4.406 65h38.188A4.406 4.406 0 0 0 47 60.594V17.625L29.375 0z"
+        />
+        <path fill="#87ceac" d="M29.375 0v13.219a4.406 4.406 0 0 0 4.406 4.406H47L29.375 0z" />
+        <path
+          fill="#f1f1f1"
+          d="M11.75 31.719v20.562h23.5V31.719h-23.5zm10.281 17.625h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm10.282 11.75h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672z"
         />
       </svg>
     )

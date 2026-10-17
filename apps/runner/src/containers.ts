@@ -1,11 +1,24 @@
-// Teammates' containers on a cloud computer, by thread. Each teammate runs its
-// own rootless Docker, shared by its threads; a container belongs to the
-// thread whose Compose project it is in (composeProject), whose folder its
-// Compose file is in, or whose folder it mounts. Containers of a thread gone
-// quiet are stopped; those of a thread whose folder is archived are removed,
-// volumes too; when the disk fills up, what no container uses is pruned.
+// Teammates' containers on a cloud computer, by thread. In a thread with its
+// own network (thread-net.ts), each teammate has a rootless Docker of its own
+// there: all its containers are the thread's. Otherwise each teammate runs one
+// rootless Docker, shared by its threads (and where those containers stay until
+// the computer restarts); a container belongs to the thread whose Compose
+// project it is in (composeProject), whose folder its Compose file is in, or
+// whose folder it mounts. Containers of a thread gone quiet are stopped (its
+// own Docker with them); those of a thread whose folder is archived are
+// removed, volumes too; when the disk fills up, what no container uses is pruned.
 import { run } from './repos.js'
 import { composeProject, teammateHome } from './teammates.js'
+import {
+  dockerSocket,
+  freezeThreadDocker,
+  runningThreadDockers,
+  stopThreadDocker,
+  takeDown,
+} from './thread-net.js'
+
+/** What pauseFor paused when the thread has a Docker of its own: all of it, frozen. */
+const WHOLE_DOCKER = '*'
 
 type Container = {
   id: string
@@ -33,12 +46,23 @@ async function docker(user: string) {
     () => false,
   )
   if (!up) return null
-  const env = { XDG_RUNTIME_DIR: `/run/user/${uid}`, DOCKER_HOST: `unix://${socket}` }
-  return (...args: string[]) =>
+  return cli(user, { XDG_RUNTIME_DIR: `/run/user/${uid}`, DOCKER_HOST: `unix://${socket}` })
+}
+
+type DockerCli = (...args: string[]) => Promise<string>
+
+/** The teammate's Docker in a thread, when it is running: never started just to look. */
+async function threadDocker(user: string, sessionId: string): Promise<DockerCli | null> {
+  if (!(await runningThreadDockers(user)).includes(sessionId)) return null
+  return cli(user, { DOCKER_HOST: `unix://${dockerSocket(sessionId, user)}` })
+}
+
+const cli =
+  (user: string, env: Record<string, string>): DockerCli =>
+  (...args) =>
     run('docker', args, { runAs: user, env, timeout: 5 * 60_000 }).then((out) =>
       out.toString().trim(),
     )
-}
 
 /** The teammate's containers (running ones only, unless `all`), each with its thread. */
 async function containers(
@@ -81,23 +105,40 @@ const ofThread = (container: Container, sessionId: string) =>
 
 /**
  * Stop the running containers of the threads `quiet` says may lose them.
- * Resolves to those threads, by the id `quiet` was asked about.
+ * Resolves to those threads, by the id `quiet` was asked about. A thread's own
+ * Docker with no container at all stops as soon as nobody works in the thread
+ * (`idle`): each costs some memory, and starts again at the thread's next turn.
  */
 export async function stopQuiet(
   user: string,
   sessionIds: string[],
   quiet: (sessionId: string) => boolean,
+  idle: (sessionId: string) => boolean = () => false,
 ): Promise<string[]> {
-  const dockerCli = await docker(user)
-  if (!dockerCli) return []
-  const running = await containers(dockerCli, user, false)
   const stopped: string[] = []
+  // A quiet thread's own Docker stops, its containers with it.
+  for (const sessionId of await runningThreadDockers(user)) {
+    if (!sessionIds.includes(sessionId)) continue
+    if (quiet(sessionId)) {
+      await stopThreadDocker(sessionId, user)
+      stopped.push(sessionId)
+      console.log(`stopped the Docker of quiet thread ${sessionId} for ${user}`)
+    } else if (idle(sessionId)) {
+      const own = await threadDocker(user, sessionId)
+      if (own && !(await own('ps', '-aq'))) await stopThreadDocker(sessionId, user)
+    }
+  }
+  // Its own namespaces too (thread-net.ts), once none of its processes is left.
+  for (const sessionId of sessionIds) if (quiet(sessionId)) await takeDown(sessionId)
+  const dockerCli = await docker(user)
+  if (!dockerCli) return stopped
+  const running = await containers(dockerCli, user, false)
   for (const sessionId of sessionIds) {
     if (!quiet(sessionId)) continue
     const ids = running.filter((c) => ofThread(c, sessionId)).map((c) => c.id)
     if (ids.length === 0) continue
     await dockerCli('stop', ...ids)
-    stopped.push(sessionId)
+    if (!stopped.includes(sessionId)) stopped.push(sessionId)
     console.log(`stopped ${ids.length} container(s) of quiet thread ${sessionId} for ${user}`)
   }
   return stopped
@@ -109,6 +150,11 @@ export async function stopQuiet(
  * to their ids, for unpause.
  */
 export async function pauseFor(user: string, sessionId: string): Promise<string[]> {
+  // The thread's own Docker: frozen whole, the daemon too (docker pause needs cgroups it lacks).
+  if (await threadDocker(user, sessionId)) {
+    await freezeThreadDocker(sessionId, user, true)
+    return [WHOLE_DOCKER]
+  }
   const dockerCli = await docker(user)
   if (!dockerCli) return []
   const ids = (await containers(dockerCli, user, false))
@@ -119,7 +165,8 @@ export async function pauseFor(user: string, sessionId: string): Promise<string[
 }
 
 /** Run containers pauseFor paused again; those gone or no longer paused are left as they are. */
-export async function unpause(user: string, ids: string[]) {
+export async function unpause(user: string, sessionId: string, ids: string[]) {
+  if (ids.includes(WHOLE_DOCKER)) return freezeThreadDocker(sessionId, user, false)
   const dockerCli = await docker(user)
   if (!dockerCli || ids.length === 0) return
   await dockerCli('unpause', ...ids).catch(async () => {
@@ -133,6 +180,14 @@ export async function unpause(user: string, ids: string[]) {
  * its folder is archived, and the teammate sets them up again when it is back.
  */
 export async function removeFor(user: string, sessionId: string) {
+  // Its own Docker: stopped, and all it kept deleted.
+  await stopThreadDocker(sessionId, user, true).catch((error: { stderr?: string } & Error) =>
+    console.warn(
+      `could not delete the Docker of ${sessionId} for ${user}: ${(error.stderr || error.message).trim()}`,
+    ),
+  )
+  // Its namespaces and its /tmp, unless another teammate still works in the thread.
+  await takeDown(sessionId, true)
   const dockerCli = await docker(user)
   if (!dockerCli) return
   const mine = (await containers(dockerCli, user, true)).filter((c) => ofThread(c, sessionId))
@@ -157,9 +212,22 @@ export async function removeFor(user: string, sessionId: string) {
  * cache no container uses. Stopped containers keep theirs.
  */
 export async function prune(user: string) {
-  const dockerCli = await docker(user)
-  if (!dockerCli) return
-  const report = await dockerCli('system', 'prune', '--all', '--force', '--volumes')
-  const freed = report.match(/Total reclaimed space: (.+)$/m)?.[1]
-  if (freed) console.log(`pruned ${user}'s Docker: ${freed}`)
+  const dockers: [string, DockerCli | null][] = [
+    ...(await Promise.all(
+      (await runningThreadDockers(user)).map(
+        async (sessionId) =>
+          [`${user}'s Docker in ${sessionId}`, await threadDocker(user, sessionId)] as [
+            string,
+            DockerCli | null,
+          ],
+      ),
+    )),
+    [`${user}'s Docker`, await docker(user)],
+  ]
+  for (const [name, dockerCli] of dockers) {
+    if (!dockerCli) continue
+    const report = await dockerCli('system', 'prune', '--all', '--force', '--volumes')
+    const freed = report.match(/Total reclaimed space: (.+)$/m)?.[1]
+    if (freed) console.log(`pruned ${name}: ${freed}`)
+  }
 }

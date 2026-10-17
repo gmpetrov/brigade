@@ -41,6 +41,8 @@ import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
 import { Outbox } from './outbox.js'
+import { MemoryGuard } from './memory-guard.js'
+import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
 import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
@@ -331,6 +333,36 @@ async function start() {
     memoryUpdate: (update) => connection.send(update),
     title: (update) => connection.send(update),
   })
+  // On a cloud computer, the computer running out of memory as a whole: a preview or a turn is
+  // stopped, with the reason, before it stops answering at all.
+  if (CLOUD && process.env.BRIGADE_MEMORY_GUARD !== '0') {
+    new MemoryGuard({
+      candidates: async () => [
+        ...(await previews.memoryCandidates()),
+        ...(await Promise.all(
+          ((await runnerCgroups())?.turns ?? []).map(async (turn) => {
+            const memory = await turn.cgroup.resident()
+            return {
+              kind: 'turn' as const,
+              memory,
+              stop: async (why: string) => {
+                await turn.cgroup.kill()
+                if (turn.thread)
+                  connection.sendEvent(
+                    outbox.push(turn.thread, {
+                      at: new Date().toISOString(),
+                      type: 'raw',
+                      source: 'runner',
+                      value: `The teammate's session in this thread was stopped to give the computer memory back: ${why}, and it held the most (${(memory / 1024 ** 3).toFixed(1)} GB). Send a message to go on.`,
+                    }),
+                  )
+              },
+            }
+          }),
+        )),
+      ],
+    }).start()
+  }
   const accounts = new Accounts({
     prompt: (loginId, prompt) =>
       connection.send({ type: 'account.login.prompt', loginId, ...prompt }),

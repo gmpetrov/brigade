@@ -39,6 +39,9 @@ const CONNECT_ERRORS: Record<string, string> = {
 const BUILT_IN: Kind[] = [
   'gmail',
   'google_calendar',
+  'google_drive',
+  'google_docs',
+  'google_sheets',
   'github',
   'cloudflare',
   'google_cloud',
@@ -60,12 +63,12 @@ export default function AppsPage() {
 
 function Apps() {
   const params = useSearchParams()
-  // Back from a provider in the sign-in window: the page that opened it shows the account.
+  // Back from a provider in the sign-in tab: the page that opened it shows the account.
   if (params.get('popup')) return <SignedIn error={params.get('error')} />
   return <AppsList />
 }
 
-/** The sign-in window's last page: closes itself, or says to. */
+/** The sign-in tab's last page: closes itself, or says to. */
 function SignedIn({ error }: { error: string | null }) {
   useEffect(() => {
     if (!error) window.close()
@@ -76,7 +79,7 @@ function SignedIn({ error }: { error: string | null }) {
       <p className="text-sm text-muted-foreground">
         {error
           ? (CONNECT_ERRORS[error] ?? `(${error})`)
-          : 'You can close this window and go back to Brigade.'}
+          : 'You can close this tab and go back to Brigade.'}
       </p>
     </div>
   )

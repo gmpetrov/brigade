@@ -50,8 +50,18 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   something is there; it looks again for 8 seconds, for a CAPTCHA or slow data),
   script errors, the page's own 5xx requests, a screenshot; plus the lines the
   app logged meanwhile that look like errors. Console errors (hydration
-  warnings) are warnings, not failures. `check_preview` runs it again. A page meant to look
-  empty is saved with `save_preview({ reason })` after the teammate looked at it.
+  warnings) are warnings, not failures. `check_preview` runs it again, only when
+  the person asks, after a crash or restart, or once after fixing what the last
+  check found: not after each edit while the person tries it, since they see it.
+  A page meant to look empty is saved with `save_preview({ reason })` after the
+  teammate looked at it.
+- **A check always ends.** While the proxy serves its waiting page, the check
+  asks for the page without opening it (opened, it reloads itself and
+  interrupts the check's navigation), and opens it once the app answers. Calls
+  into a page Playwright gives no timeout (`evaluate`, `title`, closing) get 2
+  seconds: a page whose server never answered stays mid-navigation, and they
+  waited for it until the runner killed the check after 3 to 5 minutes, with no
+  result. An app that never answers fails after about 90 seconds and says so.
 - **Set up in `start_preview`, saved per repository.** What a preview needs goes
   in the tool, not the teammate's shell, so it can be kept: `setup` (install,
   `docker compose up -d`, migrate, seed; its own `sh -e`, run on each start but

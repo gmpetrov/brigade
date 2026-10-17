@@ -18,6 +18,8 @@ export const PORTS_PREFIX = '/__ports/'
 export type ProxyState = 'starting' | 'restarting' | 'running' | 'down'
 
 export type PreviewProxyOptions = {
+  /** Where the app listens: the computer's loopback, or its thread's own (its address). */
+  host?: string
   /** The app's port: everything not under PORTS_PREFIX. */
   port: number
   /** Its other ports, served under PORTS_PREFIX. */
@@ -148,7 +150,7 @@ export class PreviewProxy {
       return void res.writeHead(404, { 'content-type': 'text/plain' }).end('No such port')
     const upstream = http.request(
       {
-        host: '127.0.0.1',
+        host: this.options.host ?? '127.0.0.1',
         port: target.port,
         path: target.path,
         method: req.method,
@@ -189,7 +191,7 @@ export class PreviewProxy {
     this.used()
     const target = route(req.url ?? '/', this.options)
     if (!target) return void socket.destroy()
-    const upstream = net.connect(target.port, '127.0.0.1', () => {
+    const upstream = net.connect(target.port, this.options.host ?? '127.0.0.1', () => {
       const lines = [`${req.method} ${target.path} HTTP/${req.httpVersion}`]
       for (let i = 0; i < req.rawHeaders.length; i += 2)
         lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`)

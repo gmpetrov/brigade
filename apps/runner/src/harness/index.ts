@@ -32,7 +32,15 @@ import { builtinSkills, instructions, writeInstructions } from '../instructions.
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { containerEnv, ensureUser, linkAccount, teammateHome } from '../teammates.js'
-import { answerAfterRestart, closeTurn } from './closed-turn.js'
+import {
+  answerAfterRestart,
+  approvalAfterRestart,
+  closeTurn,
+  sameCall,
+  waitingOn,
+  type WaitingApproval,
+  type WaitingCall,
+} from './closed-turn.js'
 import { harnessEnv } from './env.js'
 import {
   askUserQuestions,
@@ -45,6 +53,7 @@ import {
   ticketResult,
 } from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
+import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
 import {
   ASK_USER_TOOL,
@@ -139,11 +148,20 @@ type SavedState = {
   inTurn?: boolean
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
   recoveries?: number
+  /**
+   * The calls the last turn stopped on, waiting for a person (a ticket, a question): their
+   * answer still reads right if the process stops without parking, which keeps no turn.
+   */
+  waiting?: WaitingCall[]
+  /** The built-in tool calls the last turn stopped on, waiting to be approved, for the same reason. */
+  approvals?: WaitingApproval[]
 }
 
 const TRANSCRIPT_CHARS = 40_000
 /** A turn cut off by this many restarts in a row is not continued again: it may be what stops the computer. */
 const MAX_RECOVERIES = 3
+/** The tools whose turn waits on a person's answer. */
+const PERSON_TOOLS = new Set([OPEN_TICKET_TOOL, QUESTION_TOOL, ASK_USER_TOOL])
 /** What a teammate is told when the computer stopped without warning during its turn. */
 const RESTARTED =
   "Brigade's computer restarted while you were working on this thread, so your last turn stopped partway. " +
@@ -274,6 +292,8 @@ export class HarnessThread {
   private live: Live | undefined
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
+  /** Built-in tool calls waiting for a person's approval, by approval id. */
+  private readonly approvals = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
@@ -377,6 +397,17 @@ export class HarnessThread {
         // never started (no usage) may have kept nothing: the next starts from it again.
         if (result?.status === 'idle' || result?.status === 'waiting') delete this.saved.arrivedFrom
         this.saved.inTurn = false
+        if (result?.status === 'waiting') {
+          this.saved.waiting = waitingOn(this.toolCalls, PERSON_TOOLS)
+          this.saved.approvals = [...this.approvals].map(([approvalId, call]) => ({
+            approvalId,
+            ...call,
+          }))
+        } else if (result?.status === 'idle') {
+          delete this.saved.waiting
+          delete this.saved.approvals
+          this.approvals.clear()
+        }
         if (result?.status === 'idle') this.saved.recoveries = 0
         await this.persist().catch((error) =>
           console.warn(`could not save thread state: ${errorMessage(error)}`),
@@ -524,8 +555,19 @@ export class HarnessThread {
     // Parked during the turn: the runner is stopping, and the turn, frozen, goes on after the restart.
     // How its stream ends then is no failure of the teammate's.
     const frozenUnder = () => attached !== undefined && this.live !== attached
+    // A call approved while its turn was lost, made again: approved without asking twice.
+    let approvedAgain: { toolName: string; input: unknown } | undefined
+    const autoApproved: string[] = []
     const mapper = new EventMapper((event) => {
       if (frozenUnder()) return
+      if (event.type === 'approval.requested') {
+        if (approvedAgain && sameCall(approvedAgain, event)) {
+          approvedAgain = undefined
+          autoApproved.push(event.approvalId)
+          return
+        }
+        this.approvals.set(event.approvalId, { toolName: event.toolName, input: event.input })
+      }
       if (event.type === 'message.done') this.remember('assistant', event.text)
       this.replies.see(event)
       this.emitEvent(event)
@@ -544,9 +586,13 @@ export class HarnessThread {
         await this.park()
       // An answer for a turn whose session stopped since (just above, or with the runner):
       // that turn is closed, and the answer comes as a new message (closed-turn.ts).
-      const closed =
-        !this.live && (input.kind === 'answer' || input.kind === 'ticket') && this.closeTurn()
+      // An approval too: continued, the call it approved comes back interrupted, never run.
+      const answer = input.kind === 'answer' || input.kind === 'ticket' || input.kind === 'approval'
+      let closed = !this.live && answer && this.closeTurn()
       const live = (attached = await this.attach())
+      // Or nothing kept the turn at all (the process stopped without parking): the session has
+      // no turn to continue, and the answer comes as a new message just the same.
+      if (answer && !live.session.hasUnfinishedTurn()) closed = true
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
           mapper.map(part)
@@ -582,45 +628,71 @@ export class HarnessThread {
       let result =
         held || text === ''
           ? undefined
-          : closed && (input.kind === 'answer' || input.kind === 'ticket')
+          : closed && input.kind === 'approval'
             ? await live.agent.stream({
                 session: live.session,
-                prompt: answerAfterRestart(
-                  input.kind === 'answer'
-                    ? this.answerResult(input.questionId, input.answer)
-                    : this.ticketResult(input.requestId, input.answer),
-                ),
+                prompt: (() => {
+                  const call = this.approvals.get(input.approvalId)
+                  this.approvals.delete(input.approvalId)
+                  if (input.approved) approvedAgain = call
+                  return approvalAfterRestart(call, input.approved, input.reason)
+                })(),
                 abortSignal: signal,
               })
-            : input.kind === 'prompt' || input.kind === 'resume'
+            : closed && (input.kind === 'answer' || input.kind === 'ticket')
               ? await live.agent.stream({
                   session: live.session,
-                  prompt: text!,
+                  prompt: answerAfterRestart(
+                    input.kind === 'answer'
+                      ? this.answerResult(input.questionId, input.answer)
+                      : this.ticketResult(input.requestId, input.answer),
+                  ),
                   abortSignal: signal,
                 })
-              : input.kind === 'answer' || input.kind === 'ticket'
-                ? await live.agent.continueStream({
+              : input.kind === 'prompt' || input.kind === 'resume'
+                ? await live.agent.stream({
                     session: live.session,
+                    prompt: text!,
                     abortSignal: signal,
-                    toolResultContinuations: [
-                      input.kind === 'answer'
-                        ? this.answerResult(input.questionId, input.answer)
-                        : this.ticketResult(input.requestId, input.answer),
-                    ],
                   })
-                : await live.agent.continueStream({
-                    session: live.session,
-                    abortSignal: signal,
-                    toolApprovalContinuations: [
-                      {
-                        type: 'tool-approval-response',
-                        approvalId: input.approvalId,
-                        approved: input.approved,
-                        ...(input.reason ? { reason: input.reason } : {}),
-                      },
-                    ],
-                  })
+                : input.kind === 'answer' || input.kind === 'ticket'
+                  ? await live.agent.continueStream({
+                      session: live.session,
+                      abortSignal: signal,
+                      toolResultContinuations: [
+                        input.kind === 'answer'
+                          ? this.answerResult(input.questionId, input.answer)
+                          : this.ticketResult(input.requestId, input.answer),
+                      ],
+                    })
+                  : await live.agent.continueStream({
+                      session: live.session,
+                      abortSignal: signal,
+                      toolApprovalContinuations: [
+                        {
+                          type: 'tool-approval-response',
+                          approvalId: input.approvalId,
+                          approved: input.approved,
+                          ...(input.reason ? { reason: input.reason } : {}),
+                        },
+                      ],
+                    })
+      if (input.kind === 'approval' && !closed) this.approvals.delete(input.approvalId)
       if (result) await consume(result.fullStream)
+      // The call approved while its turn was lost, made again: approved as the person did.
+      while (autoApproved.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
+        const approved = autoApproved.splice(0)
+        result = await live.agent.continueStream({
+          session: live.session,
+          abortSignal: signal,
+          toolApprovalContinuations: approved.map((approvalId) => ({
+            type: 'tool-approval-response' as const,
+            approvalId,
+            approved: true,
+          })),
+        })
+        await consume(result.fullStream)
+      }
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
@@ -797,6 +869,8 @@ export class HarnessThread {
     if (!closed) return false
     for (const { toolCallId, ...call } of closed.waiting)
       if (!this.toolCalls.has(toolCallId)) this.toolCalls.set(toolCallId, call)
+    for (const { approvalId, ...call } of closed.approvals)
+      if (!this.approvals.has(approvalId)) this.approvals.set(approvalId, call)
     this.saved = { ...this.saved, resume: closed.resume }
     return true
   }
@@ -898,11 +972,18 @@ export class HarnessThread {
     // Why it did not start goes to the teammate too, which tells the person.
     let browserError: string | undefined
     const browser = this.runAs
-      ? await ensureBrowser(this.spec.teammate).catch((error) => {
-          browserError = errorMessage(error)
-          console.warn(`no browser for ${this.runAs}: ${browserError}`)
-          return null
-        })
+      ? await ensureBrowser(this.spec.teammate)
+          .then(async (port) => {
+            // In the thread's own network, its loopback is its own: the browser's port is bridged in.
+            const net = await threadNet(this.spec.sessionId)
+            if (net) await bridgeBrowser(net, this.runAs!)
+            return port
+          })
+          .catch((error) => {
+            browserError = errorMessage(error)
+            console.warn(`no browser for ${this.runAs}: ${browserError}`)
+            return null
+          })
       : null
     const tabsFile =
       browser && this.runAs
@@ -975,7 +1056,7 @@ export class HarnessThread {
       port: await freePort(),
       // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch).
       env: this.spec.teammate.harness === 'codex' ? env : { ...env, ...terminalTools(tools) },
-      ...(this.runAs ? { runAs: this.runAs } : {}),
+      ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
     })
     const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
     const session = await agent.createSession({
@@ -1049,6 +1130,10 @@ export class HarnessThread {
       },
       () => undefined,
     )
+    for (const { toolCallId, ...call } of this.saved?.waiting ?? [])
+      if (!this.toolCalls.has(toolCallId)) this.toolCalls.set(toolCallId, call)
+    for (const { approvalId, ...call } of this.saved?.approvals ?? [])
+      if (!this.approvals.has(approvalId)) this.approvals.set(approvalId, call)
   }
 
   /**
@@ -1225,7 +1310,7 @@ export async function runOnce(input: {
     workingDirectory: workDir,
     port: await freePort(),
     env,
-    ...(runAs ? { runAs } : {}),
+    ...(runAs ? { runAs, thread: spec.sessionId } : {}),
   })
   const session = await agent.createSession({
     sessionId: `${spec.sessionId}-${purpose}-${Date.now()}`,
@@ -1281,7 +1366,7 @@ export async function generateImage(input: {
     workingDirectory: dir,
     port: await freePort(),
     env,
-    ...(runAs ? { runAs } : {}),
+    ...(runAs ? { runAs, thread: input.sessionId } : {}),
   })
   const session = await agent.createSession({
     sessionId: `${input.sessionId}-image-${Date.now()}`,

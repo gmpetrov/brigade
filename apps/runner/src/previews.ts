@@ -30,6 +30,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { createConnection } from 'node:net'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
+import type { Writable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import {
@@ -48,11 +49,13 @@ import { pauseFor, unpause } from './containers.js'
 import {
   oomReason,
   PressureWatch,
-  PreviewCgroups,
+  runnerCgroups,
   type Ooms,
   type PreviewCgroup,
 } from './preview-cgroup.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
+import type { Candidate } from './memory-guard.js'
+import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { containerEnv, teammateHome } from './teammates.js'
 
 const run = promisify(execFile)
@@ -180,6 +183,8 @@ type Preview = {
   dir: string
   /** The process group to stop. */
   group?: number
+  /** Its thread's own network, on a cloud computer: where it runs and is reached. */
+  net?: ThreadNet
   /** Its own cgroup, on a cloud computer: what it may use, and how it is frozen. */
   cgroup?: PreviewCgroup
   /** The kernel's OOM counts of its cgroup when this run started. */
@@ -212,10 +217,10 @@ type Preview = {
 // eslint-disable-next-line no-control-regex
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\r/g
 
-/** Whether something answers on a local port. */
-function answers(port: number, timeoutMs = 1000) {
+/** Whether something answers on a local port: the computer's, or a thread's own (its address). */
+function answers(port: number, host = '127.0.0.1', timeoutMs = 1000) {
   return new Promise<boolean>((done) => {
-    const socket = createConnection({ host: '127.0.0.1', port })
+    const socket = createConnection({ host, port })
     const finish = (ok: boolean) => {
       socket.destroy()
       done(ok)
@@ -232,7 +237,7 @@ export class Previews {
   private previews = new Map<string, Preview>()
   private readonly timer: NodeJS.Timeout
   /** Where previews get cgroups of their own; null where the runner's cgroup is not delegated to it. */
-  private readonly cgroups = PreviewCgroups.open()
+  private readonly cgroups = runnerCgroups()
 
   constructor(
     private readonly options: {
@@ -625,11 +630,15 @@ export class Previews {
   ) {
     // One preview per thread: a new one replaces it, which frees its ports.
     await this.stop(seat.sessionId, PREVIEW_REPLACED)
+    // In the thread's own network (thread-net.ts), its ports are its own: another thread's
+    // preview of the same app does not take them.
+    const net = seat.runAs ? await threadNet(seat.sessionId) : null
+    const host = net?.address
     const others = (input.ports ?? []).filter((p) => p !== input.port)
     // Taken (another thread's preview of the same app): a command reading $PORT gets a free one.
-    if (PORT_VARIABLE.test(command) && (await answers(input.port))) {
+    if (PORT_VARIABLE.test(command) && (await answers(input.port, host))) {
       for (let port = input.port + 1; port < input.port + 100 && port <= 65535; port++) {
-        if (others.includes(port) || (await answers(port))) continue
+        if (others.includes(port) || (await answers(port, host))) continue
         input = { ...input, port }
         break
       }
@@ -637,15 +646,15 @@ export class Previews {
     const ports = [...new Set(others.filter((p) => p !== input.port))]
     const all = [input.port, ...ports]
     for (const port of all) {
-      if (!(await answers(port))) continue
-      const owner = [...this.previews.values()].find((p) =>
-        [p.info.port, ...p.info.ports].includes(port),
-      )
+      if (!(await answers(port, host))) continue
+      const owner = net
+        ? undefined
+        : [...this.previews.values()].find((p) => [p.info.port, ...p.info.ports].includes(port))
       throw new Error(
         owner
           ? `Port ${port} is in use by another thread's preview${owner.info.repository ? ` of ${owner.info.repository}` : ''}. ` +
               'Stop that preview, or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.'
-          : `Port ${port} is already in use on this computer, by a process you started. Stop that process, ` +
+          : `Port ${port} is already in use ${net ? 'in this thread' : 'on this computer'}, by a process you started. Stop that process, ` +
               'or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.',
       )
     }
@@ -657,6 +666,7 @@ export class Previews {
     // The proxy is what people reach: its port is the one hosted, the app's other ports are paths on it.
     let preview: Preview | undefined
     const proxyOptions = {
+      ...(host ? { host } : {}),
       port: input.port,
       ports,
       crossSiteCookies: false,
@@ -758,6 +768,7 @@ export class Previews {
       env,
       dir,
       proxy,
+      ...(net ? { net } : {}),
       ...(cgroup ? { cgroup } : {}),
       pausing: Promise.resolve(),
       envFiles: kept.files,
@@ -804,12 +815,11 @@ export class Previews {
   /** Run the preview's command (again), as the teammate; its setup first unless it restarts. */
   private launch(preview: Preview, withSetup: boolean) {
     const { cgroup } = preview
-    // The wrapper prints its pid first, to find its group. With a cgroup of its own it then
-    // waits to be moved in, so that all it starts is in there, and offers itself first to the
-    // kernel's OOM killer should the whole computer run out.
+    // With a cgroup of its own, it offers itself first to the kernel's OOM killer should the
+    // whole computer run out.
     const script = cgroup
-      ? 'cd -- "$0" || exit 1; echo "$$"; read -r _; { echo 500 >/proc/self/oom_score_adj; } 2>/dev/null; exec sh -c "$1" </dev/null'
-      : 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1" </dev/null'
+      ? 'cd -- "$0" || exit 1; { echo 500 >/proc/self/oom_score_adj; } 2>/dev/null; exec sh -c "$1" </dev/null'
+      : 'cd -- "$0" || exit 1; exec sh -c "$1" </dev/null'
     const { runAs } = preview.seat
     const { setup } = preview.input
     const { envFiles } = preview
@@ -826,44 +836,40 @@ export class Previews {
         : []),
       preview.info.command,
     ].join('\n')
-    const options = {
-      cwd: '/',
-      env: preview.env,
-      // stdin: the wrapper's go once it is in its cgroup (ended at once without one); the app's is /dev/null.
-      stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
-      detached: true,
-    }
-    const child = runAs
-      ? spawn(
-          'sudo',
-          ['-n', '-E', '-u', runAs, '--', 'sh', '-c', script, preview.dir, command],
-          options,
-        )
-      : spawn('sh', ['-c', script, preview.dir, command], options)
+    const as = runAs ? asTeammate(runAs, preview.net ?? null) : { file: 'sh', args: [] }
+    const argv = [...as.args, ...(runAs ? ['sh'] : []), '-c', script, preview.dir, command]
+    // With a cgroup of its own, a shell first waits on fd 3 until the runner moved it in, then
+    // becomes the command: all it starts is in there from the start. Its pid is the computer's
+    // whatever namespaces the app runs in (thread-net.ts), and, detached, it leads the process
+    // group that sudo keeps for the app: the one to stop.
+    const child = cgroup
+      ? spawn('sh', ['-c', 'read -r _ <&3; exec "$@"', 'sh', as.file, ...argv], {
+          cwd: '/',
+          env: preview.env,
+          stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
+          detached: true,
+        })
+      : spawn(as.file, argv, {
+          cwd: '/',
+          env: preview.env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: true,
+        })
     preview.child = child
-    delete preview.group
+    preview.group = child.pid
     preview.exited = new Promise((done) => {
       child.once('error', () => done(null))
       child.once('close', (code) => done(code))
     })
-    child.stdin.on('error', () => undefined)
-    if (!cgroup) child.stdin.end()
-
-    let pidLine = true
-    child.stdout.on('data', (data: Buffer) => {
-      let text = data.toString('utf8')
-      if (pidLine) {
-        const newline = text.indexOf('\n')
-        if (newline < 0) return
-        pidLine = false
-        const pid = Number(text.slice(0, newline))
-        if (cgroup) void this.enter(preview, cgroup, pid).finally(() => child.stdin.end('\n'))
-        void this.findGroup(preview, pid)
-        text = text.slice(newline + 1)
-      }
-      this.append(preview, text)
-    })
-    child.stderr.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
+    const gate = child.stdio[3] as Writable | undefined
+    if (gate) {
+      gate.on('error', () => undefined)
+      void (child.pid ? this.enter(preview, cgroup!, child.pid) : Promise.resolve()).finally(() =>
+        gate.end('\n'),
+      )
+    }
+    child.stdout!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
+    child.stderr!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
     void preview.exited.then(async (code) => {
       // Killed for memory: say so rather than the bare exit code.
       const budget = (await this.cgroups)?.budget
@@ -909,7 +915,7 @@ export class Previews {
     const { sessionId } = preview.seat
     const deadline = Date.now() + waitMs
     while (this.previews.get(sessionId) === preview && preview.info.status === 'starting') {
-      if (await answers(preview.input.port)) {
+      if (await answers(preview.input.port, preview.net?.address)) {
         preview.restarting = false
         const { reason: _reason, step: _step, ...info } = preview.info
         preview.info = { ...info, status: 'running' }
@@ -932,23 +938,7 @@ export class Previews {
     }
   }
 
-  private async findGroup(preview: Preview, pid: number) {
-    if (!Number.isInteger(pid) || pid <= 0) return
-    if (!preview.seat.runAs) {
-      // Detached: the wrapper leads its own group.
-      preview.group = pid
-      return
-    }
-    // Under sudo the wrapper is in sudo's group, or its own session when sudo uses a pty.
-    const { stdout } = await run('ps', ['-o', 'pgid=', '-p', String(pid)], { cwd: '/' }).catch(
-      () => ({ stdout: '' }),
-    )
-    const group = Number(stdout.trim())
-    preview.group = group > 0 ? group : pid
-    if (preview.stopping) this.kill(preview, 'TERM')
-  }
-
-  /** Move the wrapper into the preview's cgroup, before it starts the command. */
+  /** Move the waiting shell into the preview's cgroup, before it becomes the command. */
   private async enter(preview: Preview, cgroup: PreviewCgroup, pid: number) {
     try {
       preview.ooms = await cgroup.ooms()
@@ -1014,24 +1004,29 @@ export class Previews {
     if (ids.length === 0) return
     preview.pausedContainers = ids
     this.savePaused()
-    this.append(preview, `[preview] Paused ${ids.length} of the thread's containers\n`)
+    this.append(
+      preview,
+      ids[0] === '*'
+        ? "[preview] Paused the thread's Docker, its containers with it\n"
+        : `[preview] Paused ${ids.length} of the thread's containers\n`,
+    )
   }
 
   private async unpauseContainers(preview: Preview) {
     const ids = preview.pausedContainers
     delete preview.pausedContainers
     if (!ids?.length || !preview.seat.runAs) return
-    await unpause(preview.seat.runAs, ids).catch((error: unknown) => {
+    await unpause(preview.seat.runAs, preview.seat.sessionId, ids).catch((error: unknown) => {
       this.append(preview, `[preview] Could not resume the thread's containers: ${String(error)}\n`)
     })
     this.savePaused()
   }
 
   private savePaused() {
-    const paused: [string, string[]][] = []
+    const paused: [string, string, string[]][] = []
     for (const p of this.previews.values())
       if (p.seat.runAs && p.pausedContainers?.length)
-        paused.push([p.seat.runAs, p.pausedContainers])
+        paused.push([p.seat.runAs, p.seat.sessionId, p.pausedContainers])
     try {
       writeFileSync(this.pausedFile, JSON.stringify(paused), { mode: 0o600 })
     } catch (error) {
@@ -1041,16 +1036,19 @@ export class Previews {
 
   /** Containers paused for previews of a runner that stopped before it could resume them. */
   private async unpauseLeftovers() {
-    let paused: [string, string[]][]
+    // [user, thread, ids]; [user, ids] from before threads had their own Docker.
+    let paused: ([string, string, string[]] | [string, string[]])[]
     try {
-      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as [string, string[]][]
+      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as typeof paused
     } catch {
       return
     }
-    for (const [user, ids] of paused)
-      await unpause(user, ids).catch((error: unknown) =>
+    for (const entry of paused) {
+      const [user, sessionId, ids] = entry.length === 3 ? entry : [entry[0], '', entry[1]]
+      await unpause(user, sessionId, ids).catch((error: unknown) =>
         console.warn(`could not resume the containers of ${user}: ${String(error)}`),
       )
+    }
     this.savePaused()
   }
 
@@ -1072,15 +1070,45 @@ export class Previews {
     if (!stalled || stalled.stopping || this.previews.get(stalled.seat.sessionId) !== stalled)
       return
     const memory = readings.find((r) => r.key === stalled)!.memory
-    const status = stalled.info.status === 'running' ? 'The app stopped' : 'The command stopped'
-    stalled.stopping = {
-      status: 'failed',
-      reason:
-        `${status}: it was stuck waiting for memory for ${Math.round(this.pressure.duration / 1000)} s, ` +
+    this.killNow(
+      stalled,
+      `it was stuck waiting for memory for ${Math.round(this.pressure.duration / 1000)} s, ` +
         `with ${(memory / 1024 ** 3).toFixed(1)} GB in use`,
+    )
+  }
+
+  /**
+   * For the computer's memory guard (memory-guard.ts): the previews in cgroups,
+   * what they hold in memory, and how to stop one at once.
+   */
+  async memoryCandidates(): Promise<Candidate[]> {
+    const candidates: Candidate[] = []
+    for (const preview of this.previews.values()) {
+      if (!preview.cgroup || preview.stopping) continue
+      const memory = await preview.cgroup.resident()
+      candidates.push({
+        kind: preview.frozen ? 'frozen' : 'preview',
+        memory,
+        lastUsed: preview.lastUsed,
+        stop: async (why) =>
+          this.killNow(
+            preview,
+            preview.frozen
+              ? `${why}, and it was the paused preview unused longest`
+              : `${why}, and it held the most memory (${(memory / 1024 ** 3).toFixed(1)} GB)`,
+          ),
+      })
     }
-    this.append(stalled, `[preview] ${stalled.stopping.reason}\n`)
-    this.kill(stalled, 'KILL')
+    return candidates
+  }
+
+  /** Killed now, all of it (a frozen one too), reported as failed for `why`. */
+  private killNow(preview: Preview, why: string) {
+    if (preview.stopping || this.previews.get(preview.seat.sessionId) !== preview) return
+    const status = preview.info.status === 'running' ? 'The app stopped' : 'The command stopped'
+    preview.stopping = { status: 'failed', reason: `${status}: ${why}` }
+    this.append(preview, `[preview] ${preview.stopping.reason}\n`)
+    this.kill(preview, 'KILL')
   }
 
   /** Freezing and thawing in the order they were asked for: a request may come while it freezes. */

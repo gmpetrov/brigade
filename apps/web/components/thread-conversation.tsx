@@ -154,10 +154,19 @@ export function ThreadConversation({
   const thread = useApi<Thread>(`/threads/${id}`)
   const computers = useApi<ComputersResponse>('/computers')
   const accounts = useApi<Account[]>('/accounts')
+  // Since when its updates have not reached Brigade, as the thread and then the API say.
+  const [eventsWaitingSince, setEventsWaitingSince] = useState<string | null>()
+  useEffect(() => setEventsWaitingSince(undefined), [id])
   // The thread moved, or a computer came or went: where it runs, and where it could, change.
   useLive((message) => {
     if (message.type === 'thread.updated' && message.sessionId === id && message.moved)
       void thread.reload()
+    if (
+      message.type === 'thread.updated' &&
+      message.sessionId === id &&
+      message.eventsWaitingSince !== undefined
+    )
+      setEventsWaitingSince(message.eventsWaitingSince)
     if (message.type === 'computer.updated') void computers.reload()
   })
   // Keyed by the thread: when it started loading, for its placeholder's delays.
@@ -362,6 +371,7 @@ export function ThreadConversation({
   }, [firstSeq])
   useEffect(() => {
     if (thread.data) setStatus(thread.data.status)
+    if (thread.data) setEventsWaitingSince(thread.data.eventsWaitingSince)
   }, [thread.data])
   useEffect(() => {
     const t = thread.data
@@ -927,6 +937,7 @@ export function ThreadConversation({
                     working={busy}
                     starting={current === 'starting'}
                     background={background}
+                    eventsWaitingSince={eventsWaitingSince}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     onApproval={(approvalId, approved, always) =>
                       void call('/approvals', {

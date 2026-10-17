@@ -48,7 +48,7 @@ export type AccountRef = z.infer<typeof AccountRef>
 /** A connection the teammate is granted, as tools. Never its credential. */
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
-  /** gmail, google_calendar, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
+  /** gmail, google_calendar, google_drive, google_docs, google_sheets, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
   kind: z.string(),
   label: z.string(),
   externalAccount: z.string().nullable(),
@@ -192,6 +192,14 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       .optional(),
   }),
   z.object({ type: z.literal('events'), events: z.array(SequencedEvent) }),
+  /**
+   * The threads whose events the API has not acknowledged for minutes, with since when (the
+   * oldest one's time), sent when that list changes: their pages say so. From protocol 26.
+   */
+  z.object({
+    type: z.literal('events.waiting'),
+    threads: z.array(z.object({ sessionId: z.string(), since: z.iso.datetime() })).max(1000),
+  }),
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
   z.object({ type: z.literal('command.failed'), commandId: z.string(), error: z.string() }),

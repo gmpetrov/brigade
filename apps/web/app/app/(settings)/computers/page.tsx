@@ -29,6 +29,13 @@ const STATUS: Record<Computer['status'], string> = {
   destroyed: 'Removed',
 }
 
+/** "Online", and whether its runner is up to date ("Update waiting": it updates once idle). */
+function online(c: Computer) {
+  if (c.runnerUpdate === 'current') return 'Online · Up to date'
+  if (c.runnerUpdate === 'waiting') return 'Online · Update waiting'
+  return 'Online'
+}
+
 function Tile({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span
@@ -133,7 +140,7 @@ export default function Computers() {
               status(
                 !!cloudOnline,
                 cloudOnline
-                  ? 'Online'
+                  ? online(cloud)
                   : cloud.status === 'running'
                     ? 'Not connected'
                     : STATUS[cloud.status],
@@ -201,7 +208,7 @@ export default function Computers() {
               {status(
                 c.online,
                 c.online
-                  ? 'Online'
+                  ? online(c)
                   : c.runner?.lastSeenAt
                     ? `Last seen ${timeAgo(c.runner.lastSeenAt)}`
                     : 'Offline',

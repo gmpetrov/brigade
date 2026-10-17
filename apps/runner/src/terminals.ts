@@ -9,6 +9,7 @@ import { CLOUD } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import { gitEnv } from './repos.js'
 import { containerEnv, ensureUser, teammateHome, teammateUser } from './teammates.js'
+import { asTeammate, threadNet } from './thread-net.js'
 
 const execFileAsync = promisify(execFile)
 /** Commands as a teammate run from /, since the runner's own directory is not theirs to enter. */
@@ -68,15 +69,13 @@ export class Terminals {
     // `script` gives the shell a real terminal without a native module. The shell takes back
     // the usual OOM score from the runner's low one, as a turn does.
     const shell = `{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; stty cols ${cols} rows ${rows} 2>/dev/null; cd ${quote(dir)} && exec bash --login`
-    const child = spawn(
-      'sudo',
-      ['-n', '-E', '-u', user, '--', 'script', '-qfc', shell, '/dev/null'],
-      {
-        cwd: '/',
-        env,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    )
+    // In the thread's own network, as its teammates' commands are (thread-net.ts).
+    const as = asTeammate(user, await threadNet(spec.sessionId))
+    const child = spawn(as.file, [...as.args, 'script', '-qfc', shell, '/dev/null'], {
+      cwd: '/',
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
     const terminal: Terminal = { child, user, history, sessionId: spec.sessionId, memberId }
     this.open.set(terminalId, terminal)
     child.stdout!.on('data', (d: Buffer) => this.send.output(terminalId, d.toString('utf8')))

@@ -64,7 +64,7 @@ export const ReturnTo = z
   .max(300)
   .regex(/^\/app\/[\w\-/?=&.%]*$/, 'A dashboard path')
 export const ConnectGoogle = z.object({
-  kind: z.enum(['gmail', 'google_calendar']),
+  kind: z.enum(['gmail', 'google_calendar', 'google_drive', 'google_docs', 'google_sheets']),
   returnTo: ReturnTo.optional(),
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
@@ -314,6 +314,11 @@ export const ApiToBrowser = z.discriminatedUnion('type', [
     status: z.string(),
     /** Its computer changed, or a move to another started or ended: fetch the thread again. */
     moved: z.boolean().optional(),
+    /**
+     * Since when its events have not reached Brigade (the runner keeps sending them); null once
+     * they do again. Unset: unchanged.
+     */
+    eventsWaitingSince: z.iso.datetime().nullable().optional(),
   }),
   z.object({ type: z.literal('computer.updated'), computerId: z.string(), online: z.boolean() }),
   /** A task was created, changed or removed: refetch the board. */

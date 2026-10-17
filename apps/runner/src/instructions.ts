@@ -167,7 +167,7 @@ function chief(spec: ThreadSpec) {
       ? 'This workspace has no other teammates yet, so start here. '
       : 'When the person wants a new teammate or a different team, do this again for just that part. ') +
       'Find out what they are building (for whom, how far along), what takes their time, and the tools the work ' +
-      'lives in (a GitHub repository, Gmail, Google Calendar, Stripe). Ask one or two questions at a time, three ' +
+      'lives in (a GitHub repository, Gmail, Google Calendar, Google Drive, Docs or Sheets, Stripe). Ask one or two questions at a time, three ' +
       'rounds at most; when they give a website or repository, look at it instead of asking about it.',
     `Then call \`${PROPOSE_TEAM_TOOL}\` and describe the team you suggest in a few lines after it. Propose two or ` +
       'three teammates, five at most, each only for work their answers call for. For one person building a company, ' +
@@ -471,9 +471,9 @@ const PREVIEWS =
   'you edit when it is a dev server: do not start it again for each change. ' +
   'While the person tries it and asks for tweaks (a style, a copy, a layout change), keep the loop quick: ' +
   'edit, then reply as soon as it is saved, since their preview already shows it. Do not run tests, a ' +
-  'typecheck, a build or check_preview for each tweak; at most check_preview the one page you changed when ' +
-  'you are unsure it still renders. Run the full checks once, before you commit or push, or when a change ' +
-  'reaches data, routes or the server. ' +
+  'typecheck, a build or check_preview for each tweak. Run check_preview only when the person asks, when ' +
+  'the preview crashed or restarted, or once after fixing what its last check found. Run the full checks ' +
+  'once, before you commit or push, or when a change reaches data, routes or the server. ' +
   'Before you start, set up, check or save one, read the `brigade-previews` skill.'
 
 /** How to start, check and save a preview: Brigade's skill for it. */
@@ -496,8 +496,8 @@ const PREVIEW_SKILL: ThreadSkill = {
     "person has, such as a third-party API key, are the repository's preview variables: ask for them in one ticket " +
     '(a `variables` ask; read .env.example for what the app needs), never in words. Each start gives them to the ' +
     'app, over `env`; you see their names, never their values, and people start it without you. ' +
-    'start_preview opens those pages as a person would: fix what it finds and run `check_preview` until they pass ' +
-    'before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
+    'start_preview opens those pages as a person would: fix what it finds, run `check_preview` once on the pages ' +
+    'that failed before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
     'without you. If it fails, read `preview_logs`. ' +
     'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
     "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +

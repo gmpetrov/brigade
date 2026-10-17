@@ -28,6 +28,9 @@ type AccessReply = Extract<
 export const APP_NAMES: Record<string, string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
+  google_drive: 'Google Drive',
+  google_docs: 'Google Docs',
+  google_sheets: 'Google Sheets',
   stripe: 'Stripe',
   github: 'GitHub',
   cloudflare: 'Cloudflare',
@@ -52,6 +55,9 @@ const sameServer = (a: string, b: string) => {
 const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> = {
   gmail: 'google',
   google_calendar: 'google',
+  google_drive: 'google',
+  google_docs: 'google',
+  google_sheets: 'google',
   github: 'github',
   cloudflare: 'mcp',
   google_cloud: 'mcp',
@@ -216,7 +222,7 @@ export function AppAccessAsk({
       </div>
       {waiting && (
         <p className="text-sm text-muted-foreground">
-          Finish signing in in the window that opened. {askerName} gets {access} access as soon as{' '}
+          Finish signing in in the tab that opened. {askerName} gets {access} access as soon as{' '}
           {name} is connected.
         </p>
       )}

@@ -6,6 +6,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { AccountRef } from '@brigade/contracts'
 import { ACCOUNTS_DIR } from './config.js'
+import { threadDocker, threadNet, type ThreadNet } from './thread-net.js'
 
 const run = promisify(execFile)
 const HELPER = '/usr/local/sbin/brigade-teammate'
@@ -54,8 +55,24 @@ export const composeProject = (sessionId: string) =>
  * (see dockerEnv), with the thread's Compose project.
  */
 export async function containerEnv(user: string, sessionId: string) {
-  const env = await dockerEnv(user)
+  const net = await threadNet(sessionId)
+  const env = net ? await threadDockerEnv(net, user) : await dockerEnv(user)
   return env.DOCKER_HOST ? { ...env, COMPOSE_PROJECT_NAME: composeProject(sessionId) } : env
+}
+
+/**
+ * In a thread with its own network, the teammate's Docker of that thread (see
+ * thread-net.ts): what its containers publish is the thread's. {} without one,
+ * or when it did not start (said in the runner's log).
+ */
+async function threadDockerEnv(net: ThreadNet, user: string): Promise<Record<string, string>> {
+  const socket = await threadDocker(net, user).catch((error: { stderr?: string } & Error) => {
+    console.warn(
+      `no Docker for ${user} in ${net.thread}: ${(error.stderr || error.message).trim()}`,
+    )
+    return null
+  })
+  return socket ? { DOCKER_HOST: `unix://${socket}` } : {}
 }
 
 /**
