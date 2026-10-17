@@ -31,4 +31,4 @@ done) &
 PREVIEW_URL=$URL PREVIEW_SIGN_IN=${PREVIEW_SIGN_IN-ada@example.com} node "$HERE/proxy.mjs" &
 
 # The proxy or the embedded database stopping ends the preview.
-wait -n
+wait_any
