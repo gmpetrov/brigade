@@ -69,7 +69,10 @@ export const ConnectGoogle = z.object({
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
 /** An App whose account signs in on its MCP server's own OAuth. */
-export const ConnectMcp = z.object({ kind: z.enum(['cloudflare']), returnTo: ReturnTo.optional() })
+export const ConnectMcp = z.object({
+  kind: z.enum(['cloudflare', 'google_cloud']),
+  returnTo: ReturnTo.optional(),
+})
 /** An MCP server's address, to see what it is and how its accounts sign in. */
 export const InspectMcp = z.object({ url: z.string().trim().min(1).max(500) })
 /**

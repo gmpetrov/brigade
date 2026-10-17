@@ -36,7 +36,14 @@ const CONNECT_ERRORS: Record<string, string> = {
  * The built-in Apps, in the order the page offers them. An MCP server and a custom app
  * can be added many times.
  */
-const BUILT_IN: Kind[] = ['gmail', 'google_calendar', 'github', 'cloudflare', 'stripe']
+const BUILT_IN: Kind[] = [
+  'gmail',
+  'google_calendar',
+  'github',
+  'cloudflare',
+  'google_cloud',
+  'stripe',
+]
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */
 type Open = { kind: Kind; appId?: string }

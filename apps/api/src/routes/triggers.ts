@@ -20,6 +20,7 @@ const KINDS: ConnectorKind[] = [
   'stripe',
   'github',
   'cloudflare',
+  'google_cloud',
   'mcp',
   'webhook',
 ]

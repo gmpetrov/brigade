@@ -4,6 +4,7 @@ import { cloudflare } from './cloudflare.js'
 import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
+import { googleCloud } from './google-cloud.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -12,6 +13,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   stripe,
   github,
   cloudflare,
+  google_cloud: googleCloud,
 }
 
 /**
@@ -38,17 +40,26 @@ export const triggersOf = (kind: ConnectorKind): Record<string, TriggerDefinitio
 /** The catalog as the dashboard shows it. */
 export const triggerCatalog = () =>
   Object.fromEntries(
-    (['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare', 'mcp', 'webhook'] as const).map(
-      (kind) => [
-        kind,
-        Object.entries(triggersOf(kind)).map(([event, t]) => ({
-          event,
-          label: t.label,
-          description: t.description,
-          options: t.options ?? [],
-        })),
-      ],
-    ),
+    (
+      [
+        'gmail',
+        'google_calendar',
+        'stripe',
+        'github',
+        'cloudflare',
+        'google_cloud',
+        'mcp',
+        'webhook',
+      ] as const
+    ).map((kind) => [
+      kind,
+      Object.entries(triggersOf(kind)).map(([event, t]) => ({
+        event,
+        label: t.label,
+        description: t.description,
+        options: t.options ?? [],
+      })),
+    ]),
   )
 
 /**
@@ -104,6 +115,15 @@ export const appCatalog: Record<
     category: 'Developer tools',
     personal: false,
     skills: 'https://github.com/cloudflare/skills',
+  },
+  google_cloud: {
+    name: 'Google Cloud',
+    description:
+      'Run gcloud and bq commands on your Google Cloud projects, with Google’s Cloud CLI MCP server.',
+    developer: 'Google',
+    category: 'Developer tools',
+    // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
   },
   mcp: {
     name: 'MCP server',

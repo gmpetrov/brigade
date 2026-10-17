@@ -110,7 +110,7 @@ export function AppSheet({
   const route =
     custom || server || kind === 'stripe'
       ? null
-      : kind === 'cloudflare'
+      : kind === 'cloudflare' || kind === 'google_cloud'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
@@ -251,6 +251,20 @@ export function AppSheet({
           </p>
         )}
         {!data.available[kind] && <Unavailable kind={kind} />}
+        {kind === 'google_cloud' && data.available[kind] && (
+          <p className="text-sm text-muted-foreground">
+            Each command runs in a project of yours with the{' '}
+            <a
+              href="https://console.cloud.google.com/apis/library/cloudcli.googleapis.com"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Cloud CLI Execution API
+            </a>{' '}
+            enabled, and each Google product it uses needs its own API enabled there too.
+          </p>
+        )}
 
         {server && !added && (
           <Section title="Server">
@@ -736,6 +750,14 @@ function Unavailable({ kind }: { kind: Kind }) {
         Needs Google OAuth configured on this Brigade server (
         <span className="font-mono text-xs">GOOGLE_CLIENT_ID</span> and{' '}
         <span className="font-mono text-xs">GOOGLE_CLIENT_SECRET</span>).
+      </p>
+    )
+  if (kind === 'google_cloud')
+    return (
+      <p className="text-sm text-muted-foreground">
+        Needs Brigade&apos;s Google client for agents configured on this Brigade server (
+        <span className="font-mono text-xs">GOOGLE_MCP_CLIENT_ID</span> and{' '}
+        <span className="font-mono text-xs">GOOGLE_MCP_CLIENT_SECRET</span>).
       </p>
     )
   if (kind === 'github')
