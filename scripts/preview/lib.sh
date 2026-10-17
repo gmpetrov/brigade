@@ -67,3 +67,16 @@ start_db() {
   fi
   wait_for_db
 }
+
+# Returns when one of this shell's background jobs stops. Like `wait -n`, which
+# macOS's bash 3.2 does not have.
+wait_any() {
+  local pids
+  pids=$(jobs -p)
+  while true; do
+    for pid in $pids; do
+      kill -0 "$pid" 2>/dev/null || return 0
+    done
+    sleep 2
+  done
+}

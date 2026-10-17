@@ -34,4 +34,4 @@ fi
 PREVIEW_URL=$URL PREVIEW_SIGN_IN=${PREVIEW_SIGN_IN-ada@example.com} node "$HERE/proxy.mjs" &
 
 # Any of them stopping ends the preview, which the runner starts again.
-wait -n
+wait_any
