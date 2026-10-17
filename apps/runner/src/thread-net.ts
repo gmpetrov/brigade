@@ -9,6 +9,13 @@
 // proxy and the harness's bridge. Where there is no helper yet (a computer
 // whose setup is older, a member's machine), threads share the computer's
 // network as before.
+//
+// Where the helper can, the same processes also share the thread's own /tmp,
+// /var/tmp and /dev/shm, processes and IPC (its holder): two threads' apps use
+// the same socket and lock files (PostgreSQL's /tmp/.s.PGSQL.5433, say) without
+// colliding, and one's `pkill node` leaves the other's alone. A quiet thread's
+// namespaces are taken down once none of its processes is left (takeDown), and
+// come back at the same address with its next command.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { CLOUD } from './config.js'
@@ -16,11 +23,16 @@ import { CLOUD } from './config.js'
 const run = promisify(execFile)
 export const THREAD_HELPER = '/usr/local/sbin/brigade-thread'
 
-/** A thread's network: its namespace's name for the helper, and its address the host reaches. */
-export type ThreadNet = { thread: string; address: string }
+/**
+ * A thread's network: its namespace's name for the helper, its address the host
+ * reaches, and whether its /tmp, processes and IPC are its own too.
+ */
+export type ThreadNet = { thread: string; address: string; isolated?: boolean }
 
 const ENABLED = CLOUD && process.env.BRIGADE_THREAD_NETWORK !== '0'
 const nets = new Map<string, Promise<ThreadNet | null>>()
+/** Threads whose namespaces were taken down since they were last used. */
+const down = new Set<string>()
 
 /**
  * The thread's network, made if needed; null where threads have none (see
@@ -30,10 +42,15 @@ const nets = new Map<string, Promise<ThreadNet | null>>()
  */
 export function threadNet(sessionId: string): Promise<ThreadNet | null> {
   if (!ENABLED) return Promise.resolve(null)
+  down.delete(sessionId)
   let net = nets.get(sessionId)
   if (!net) {
     net = run('sudo', ['-n', THREAD_HELPER, 'up', sessionId], { cwd: '/', timeout: 30_000 }).then(
-      ({ stdout }) => ({ thread: sessionId, address: stdout.trim() }),
+      async ({ stdout }) => ({
+        thread: sessionId,
+        address: stdout.trim(),
+        isolated: await isolate(sessionId),
+      }),
       (error: { stderr?: string } & Error) => {
         console.warn(
           `thread ${sessionId} runs on the computer's network: ${(error.stderr || error.message).trim()}`,
@@ -46,14 +63,56 @@ export function threadNet(sessionId: string): Promise<ThreadNet | null> {
   return net
 }
 
+/** Its holder, started: false with an older helper (the setup arrives after the runner) or when it failed. */
+function isolate(sessionId: string) {
+  return run('sudo', ['-n', THREAD_HELPER, 'isolate', sessionId], {
+    cwd: '/',
+    timeout: 30_000,
+  }).then(
+    () => true,
+    (error: { stderr?: string } & Error) => {
+      console.warn(
+        `thread ${sessionId} shares /tmp and processes: ${(error.stderr || error.message).trim()}`,
+      )
+      return false
+    },
+  )
+}
+
 /**
- * How to run a command as a teammate: in its thread's namespace when the
- * thread has one, else as today. Both keep the runner's environment (-E).
+ * How to run a command as a teammate: in its thread's namespaces when the
+ * thread has them, else as today. All keep the runner's environment (-E).
  */
 export function asTeammate(runAs: string, net: ThreadNet | null) {
-  return net
-    ? { file: 'sudo', args: ['-n', '-E', THREAD_HELPER, 'run', net.thread, runAs] }
-    : { file: 'sudo', args: ['-n', '-E', '-u', runAs, '--'] }
+  if (!net) return { file: 'sudo', args: ['-n', '-E', '-u', runAs, '--'] }
+  const how = net.isolated ? 'enter' : 'run'
+  return { file: 'sudo', args: ['-n', '-E', THREAD_HELPER, how, net.thread, runAs] }
+}
+
+/**
+ * Take down a quiet thread's namespaces, keeping its address, once none of its
+ * processes is left; with purge (its folder is deleted), its /tmp too. True
+ * when they are down; false while something of the thread still runs (another
+ * teammate's, say), with an older helper, or when it failed.
+ */
+export async function takeDown(sessionId: string, purge = false) {
+  if (!ENABLED) return false
+  if (down.has(sessionId) && !purge) return true
+  try {
+    await run('sudo', ['-n', THREAD_HELPER, 'down', sessionId, ...(purge ? ['purge'] : [])], {
+      cwd: '/',
+      timeout: 60_000,
+    })
+  } catch (error) {
+    const { code, stderr } = error as { code?: number; stderr?: string }
+    // 3: some of its processes are left; an older helper has no `down`.
+    if (code !== 3 && !stderr?.includes('unknown command'))
+      console.warn(`could not take down thread ${sessionId}: ${(stderr || String(error)).trim()}`)
+    return false
+  }
+  nets.delete(sessionId)
+  down.add(sessionId)
+  return true
 }
 
 /**

@@ -7,6 +7,14 @@ test("a teammate's command runs in its thread's network when the thread has one"
     file: 'sudo',
     args: ['-n', '-E', '/usr/local/sbin/brigade-thread', 'run', 'cmthread1', 'bt-ada'],
   })
+  // With its own /tmp, processes and IPC too: in all of its namespaces.
+  assert.deepEqual(
+    asTeammate('bt-ada', { thread: 'cmthread1', address: '10.231.0.6', isolated: true }),
+    {
+      file: 'sudo',
+      args: ['-n', '-E', '/usr/local/sbin/brigade-thread', 'enter', 'cmthread1', 'bt-ada'],
+    },
+  )
   // Without one, as before: the teammate's user on the computer's network.
   assert.deepEqual(asTeammate('bt-ada', null), {
     file: 'sudo',

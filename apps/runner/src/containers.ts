@@ -14,6 +14,7 @@ import {
   freezeThreadDocker,
   runningThreadDockers,
   stopThreadDocker,
+  takeDown,
 } from './thread-net.js'
 
 /** What pauseFor paused when the thread has a Docker of its own: all of it, frozen. */
@@ -127,6 +128,8 @@ export async function stopQuiet(
       if (own && !(await own('ps', '-aq'))) await stopThreadDocker(sessionId, user)
     }
   }
+  // Its own namespaces too (thread-net.ts), once none of its processes is left.
+  for (const sessionId of sessionIds) if (quiet(sessionId)) await takeDown(sessionId)
   const dockerCli = await docker(user)
   if (!dockerCli) return stopped
   const running = await containers(dockerCli, user, false)
@@ -183,6 +186,8 @@ export async function removeFor(user: string, sessionId: string) {
       `could not delete the Docker of ${sessionId} for ${user}: ${(error.stderr || error.message).trim()}`,
     ),
   )
+  // Its namespaces and its /tmp, unless another teammate still works in the thread.
+  await takeDown(sessionId, true)
   const dockerCli = await docker(user)
   if (!dockerCli) return
   const mine = (await containers(dockerCli, user, true)).filter((c) => ofThread(c, sessionId))

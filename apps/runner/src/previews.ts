@@ -30,6 +30,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { createConnection } from 'node:net'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
+import type { Writable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import {
@@ -814,12 +815,11 @@ export class Previews {
   /** Run the preview's command (again), as the teammate; its setup first unless it restarts. */
   private launch(preview: Preview, withSetup: boolean) {
     const { cgroup } = preview
-    // The wrapper prints its pid first, to find its group. With a cgroup of its own it then
-    // waits to be moved in, so that all it starts is in there, and offers itself first to the
-    // kernel's OOM killer should the whole computer run out.
+    // With a cgroup of its own, it offers itself first to the kernel's OOM killer should the
+    // whole computer run out.
     const script = cgroup
-      ? 'cd -- "$0" || exit 1; echo "$$"; read -r _; { echo 500 >/proc/self/oom_score_adj; } 2>/dev/null; exec sh -c "$1" </dev/null'
-      : 'cd -- "$0" || exit 1; echo "$$"; exec sh -c "$1" </dev/null'
+      ? 'cd -- "$0" || exit 1; { echo 500 >/proc/self/oom_score_adj; } 2>/dev/null; exec sh -c "$1" </dev/null'
+      : 'cd -- "$0" || exit 1; exec sh -c "$1" </dev/null'
     const { runAs } = preview.seat
     const { setup } = preview.input
     const { envFiles } = preview
@@ -836,51 +836,40 @@ export class Previews {
         : []),
       preview.info.command,
     ].join('\n')
-    const options = {
-      cwd: '/',
-      env: preview.env,
-      // stdin: the wrapper's go once it is in its cgroup (ended at once without one); the app's is /dev/null.
-      stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
-      detached: true,
-    }
-    const child = runAs
-      ? spawn(
-          asTeammate(runAs, preview.net ?? null).file,
-          [
-            ...asTeammate(runAs, preview.net ?? null).args,
-            'sh',
-            '-c',
-            script,
-            preview.dir,
-            command,
-          ],
-          options,
-        )
-      : spawn('sh', ['-c', script, preview.dir, command], options)
+    const as = runAs ? asTeammate(runAs, preview.net ?? null) : { file: 'sh', args: [] }
+    const argv = [...as.args, ...(runAs ? ['sh'] : []), '-c', script, preview.dir, command]
+    // With a cgroup of its own, a shell first waits on fd 3 until the runner moved it in, then
+    // becomes the command: all it starts is in there from the start. Its pid is the computer's
+    // whatever namespaces the app runs in (thread-net.ts), and, detached, it leads the process
+    // group that sudo keeps for the app: the one to stop.
+    const child = cgroup
+      ? spawn('sh', ['-c', 'read -r _ <&3; exec "$@"', 'sh', as.file, ...argv], {
+          cwd: '/',
+          env: preview.env,
+          stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
+          detached: true,
+        })
+      : spawn(as.file, argv, {
+          cwd: '/',
+          env: preview.env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: true,
+        })
     preview.child = child
-    delete preview.group
+    preview.group = child.pid
     preview.exited = new Promise((done) => {
       child.once('error', () => done(null))
       child.once('close', (code) => done(code))
     })
-    child.stdin.on('error', () => undefined)
-    if (!cgroup) child.stdin.end()
-
-    let pidLine = true
-    child.stdout.on('data', (data: Buffer) => {
-      let text = data.toString('utf8')
-      if (pidLine) {
-        const newline = text.indexOf('\n')
-        if (newline < 0) return
-        pidLine = false
-        const pid = Number(text.slice(0, newline))
-        if (cgroup) void this.enter(preview, cgroup, pid).finally(() => child.stdin.end('\n'))
-        void this.findGroup(preview, pid)
-        text = text.slice(newline + 1)
-      }
-      this.append(preview, text)
-    })
-    child.stderr.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
+    const gate = child.stdio[3] as Writable | undefined
+    if (gate) {
+      gate.on('error', () => undefined)
+      void (child.pid ? this.enter(preview, cgroup!, child.pid) : Promise.resolve()).finally(() =>
+        gate.end('\n'),
+      )
+    }
+    child.stdout!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
+    child.stderr!.on('data', (data: Buffer) => this.append(preview, data.toString('utf8')))
     void preview.exited.then(async (code) => {
       // Killed for memory: say so rather than the bare exit code.
       const budget = (await this.cgroups)?.budget
@@ -949,23 +938,7 @@ export class Previews {
     }
   }
 
-  private async findGroup(preview: Preview, pid: number) {
-    if (!Number.isInteger(pid) || pid <= 0) return
-    if (!preview.seat.runAs) {
-      // Detached: the wrapper leads its own group.
-      preview.group = pid
-      return
-    }
-    // Under sudo the wrapper is in sudo's group, or its own session when sudo uses a pty.
-    const { stdout } = await run('ps', ['-o', 'pgid=', '-p', String(pid)], { cwd: '/' }).catch(
-      () => ({ stdout: '' }),
-    )
-    const group = Number(stdout.trim())
-    preview.group = group > 0 ? group : pid
-    if (preview.stopping) this.kill(preview, 'TERM')
-  }
-
-  /** Move the wrapper into the preview's cgroup, before it starts the command. */
+  /** Move the waiting shell into the preview's cgroup, before it becomes the command. */
   private async enter(preview: Preview, cgroup: PreviewCgroup, pid: number) {
     try {
       preview.ooms = await cgroup.ooms()

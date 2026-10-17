@@ -124,11 +124,13 @@ esac
 `
 
 /**
- * Root helper for each thread's own network: a network namespace per thread,
- * where its teammates' processes run (their commands, its preview, a person's
- * terminal), with a rootless Docker per teammate in it. Two threads can then
- * use the same ports, their containers' published ones too, without seeing
- * each other. The runner calls it through sudo; `run` keeps the runner's
+ * Root helper for each thread's own namespaces: a network per thread, where its
+ * teammates' processes run (their commands, its preview, a person's terminal),
+ * with a rootless Docker per teammate in it; and, joined by the same processes,
+ * its own /tmp, /var/tmp and /dev/shm, processes and IPC (its holder). Two
+ * threads can then use the same ports, their containers' published ones too,
+ * and the same socket and lock files, without seeing or stopping each other.
+ * The runner calls it through sudo; `run` and `enter` keep the runner's
  * environment (sudoers SETENV), as `sudo -E -u <teammate>` does.
  */
 export const THREAD_HELPER = `#!/bin/sh
@@ -142,10 +144,13 @@ STATE=/run/brigade-threads
 # loopback address the namespaces reach through their default route.
 DNS=10.231.255.254
 RESOLVED_FILE=/etc/systemd/resolved.conf.d/brigade-threads.conf
+# A thread's own /tmp and /var/tmp, on disk: kept while it is quiet, deleted with its folder.
+TMPS=/var/lib/brigade/thread-tmp
 # 10.231.0.0/16 in /30s: thread n is 10.231.x.(y+2) in its namespace, .(y+1) on the host's side.
 addr() { B=$(($1 * 4)); echo "10.231.$((B / 256)).$((B % 256 + $2))"; }
 index() { cat "$STATE/$1" 2>/dev/null || fail "no network for thread $1"; }
 netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/run/netns/bt-$1"; }
+lock() { install -d -m 755 "$STATE"; exec 9>"$STATE/.lock"; flock 9; }
 # Threads reach the internet (masqueraded) and the host's DNS resolver, never each other.
 host_rules() {
   ip addr add "$DNS/32" dev lo 2>/dev/null || true
@@ -172,46 +177,109 @@ host_rules() {
   done
 }
 
+# The thread's network namespace and its pair of interfaces. Its address stays the thread's while
+# it is taken down (down), so that the runner's stays right when it comes back.
+make_net() {
+  I=$(cat "$STATE/$1" 2>/dev/null || true)
+  if [ -z "$I" ] || [ -e "/sys/class/net/btn$I" ]; then
+    I=1
+    while [ -e "/sys/class/net/btn$I" ] || grep -qsx "$I" "$STATE"/*; do I=$((I + 1)); done
+  fi
+  [ "$I" -lt 16383 ] || fail "no address left"
+  H=$(addr "$I" 1)
+  G=$(addr "$I" 2)
+  N="bt-$1"
+  ip netns del "$N" 2>/dev/null || true
+  ip netns add "$N"
+  ip link add "btn$I" type veth peer name "btp$I"
+  ip link set "btp$I" netns "$N"
+  ip addr add "$H/30" dev "btn$I"
+  sysctl -qw "net.ipv4.conf.btn$I.route_localnet=1"
+  ip link set "btn$I" up
+  ip -n "$N" link set lo up
+  ip -n "$N" link set "btp$I" name eth0
+  ip -n "$N" addr add "$G/30" dev eth0
+  ip -n "$N" link set eth0 up
+  ip -n "$N" route add default via "$H"
+  ip netns exec "$N" sysctl -qw net.ipv4.conf.eth0.route_localnet=1
+  # What the host sends to its address reaches its loopback: an app listening on localhost
+  # answers the runner (its preview's proxy, the harness's bridge).
+  ip netns exec "$N" iptables -t nat -A PREROUTING -i eth0 -d "$G" -p tcp -j DNAT --to-destination 127.0.0.1
+  # /etc/resolv.conf names systemd-resolved's stub (127.0.0.53), which is the host's.
+  for P in udp tcp; do
+    ip netns exec "$N" iptables -t nat -A OUTPUT -d 127.0.0.53 -p $P --dport 53 -j DNAT --to-destination "$DNS"
+  done
+  ip netns exec "$N" iptables -t nat -A POSTROUTING -o eth0 -s 127.0.0.0/8 -j SNAT --to-source "$G"
+  echo "$I" >"$STATE/$1"
+}
+# The thread's holder: pid 1 of its own mount, PID and IPC namespaces, in its network, which its
+# teammates' processes join (enter). Its pid, while it is still that thread's.
+holder() {
+  [ -f "$STATE/$1.holder" ] && read -r U P <"$STATE/$1.holder" || return 1
+  [ "$(awk '/^PPid:/ { print $2 }' "/proc/$P/status" 2>/dev/null)" = "$U" ] &&
+    [ "$(stat -L -c %i "/proc/$P/ns/net" 2>/dev/null)" = "$(stat -L -c %i "/run/netns/bt-$1" 2>/dev/null)" ] ||
+    return 1
+  echo "$P"
+}
+# A unit of its own, as the thread's Docker: it outlives the runner's restarts. Ready once its /tmp
+# is the thread's.
+start_holder() {
+  T="$TMPS/$1"
+  UNIT="brigade-thread-$1"
+  install -d -m 755 "$TMPS" "$T"
+  install -d -m 1777 "$T/tmp" "$T/var-tmp"
+  systemctl stop "$UNIT" 2>/dev/null || true
+  systemctl reset-failed "$UNIT" 2>/dev/null || true
+  systemd-run --quiet --unit="$UNIT" --collect -p KillSignal=SIGKILL -p NetworkNamespacePath="/run/netns/bt-$1" \\
+    unshare --mount --pid --ipc --fork --mount-proc --propagation private -- "$0" holder "$1"
+  I=0
+  while [ "$I" -lt 50 ]; do
+    U=$(systemctl show -p MainPID --value "$UNIT")
+    P=$(cut -d' ' -f1 "/proc/$U/task/$U/children" 2>/dev/null || true)
+    if [ -n "$P" ] && [ "$(stat -c %i "/proc/$P/root/tmp" 2>/dev/null)" = "$(stat -c %i "$T/tmp")" ]; then
+      echo "$U $P" >"$STATE/$1.holder"
+      return 0
+    fi
+    sleep 0.1
+    I=$((I + 1))
+  done
+  systemctl stop "$UNIT" 2>/dev/null || true
+  return 1
+}
+
 case "\${1:-}" in
   up) # <thread>: its network namespace, made if needed; prints its address there
     thread_ok "$2"
-    install -d -m 755 "$STATE"
-    exec 9>"$STATE/.lock"
-    flock 9
+    lock
     host_rules
-    if [ -f "$STATE/$2" ] && [ -e "/run/netns/bt-$2" ]; then
-      addr "$(index "$2")" 2
-      exit 0
-    fi
-    I=1
-    while [ -e "/sys/class/net/btn$I" ] || grep -qsx "$I" "$STATE"/*; do I=$((I + 1)); done
-    [ "$I" -lt 16383 ] || fail "no address left"
-    H=$(addr "$I" 1)
-    G=$(addr "$I" 2)
-    N="bt-$2"
-    ip netns del "$N" 2>/dev/null || true
-    ip netns add "$N"
-    ip link add "btn$I" type veth peer name "btp$I"
-    ip link set "btp$I" netns "$N"
-    ip addr add "$H/30" dev "btn$I"
-    sysctl -qw "net.ipv4.conf.btn$I.route_localnet=1"
-    ip link set "btn$I" up
-    ip -n "$N" link set lo up
-    ip -n "$N" link set "btp$I" name eth0
-    ip -n "$N" addr add "$G/30" dev eth0
-    ip -n "$N" link set eth0 up
-    ip -n "$N" route add default via "$H"
-    ip netns exec "$N" sysctl -qw net.ipv4.conf.eth0.route_localnet=1
-    # What the host sends to its address reaches its loopback: an app listening on localhost
-    # answers the runner (its preview's proxy, the harness's bridge).
-    ip netns exec "$N" iptables -t nat -A PREROUTING -i eth0 -d "$G" -p tcp -j DNAT --to-destination 127.0.0.1
-    # /etc/resolv.conf names systemd-resolved's stub (127.0.0.53), which is the host's.
-    for P in udp tcp; do
-      ip netns exec "$N" iptables -t nat -A OUTPUT -d 127.0.0.53 -p $P --dport 53 -j DNAT --to-destination "$DNS"
+    [ -f "$STATE/$2" ] && [ -e "/run/netns/bt-$2" ] || make_net "$2"
+    addr "$(index "$2")" 2
+    ;;
+  isolate) # <thread>: after up, its holder, started if needed: its /tmp, processes and IPC its own
+    thread_ok "$2"
+    netns "$2" >/dev/null
+    lock
+    holder "$2" >/dev/null || start_holder "$2" || fail "the holder of thread $2 did not start"
+    ;;
+  holder) # <thread>: the holder itself (start_holder), pid 1 of the thread's new namespaces
+    [ $$ -eq 1 ] || fail "not in new namespaces"
+    thread_ok "$2"
+    # A new mount namespace has all of the host's: the threads' network pins too, two of each, one
+    # on the /run/netns bind mount and one under it. Dropped: the bind mount with its own, then
+    # those it covered.
+    umount -l /run/netns 2>/dev/null || true
+    awk '$5 ~ "^/run/netns/" { print $5 }' /proc/self/mountinfo | while read -r M; do
+      umount -l "$M" 2>/dev/null || true
     done
-    ip netns exec "$N" iptables -t nat -A POSTROUTING -o eth0 -s 127.0.0.0/8 -j SNAT --to-source "$G"
-    echo "$I" >"$STATE/$2"
-    echo "$G"
+    mount --bind "$TMPS/$2/tmp" /tmp
+    mount --bind "$TMPS/$2/var-tmp" /var/tmp
+    mount -t tmpfs -o nosuid,nodev,mode=1777 tmpfs /dev/shm
+    # It reaps what the thread's processes leave behind. Its unit's SIGKILL ends them all.
+    trap '' TERM INT HUP
+    while :; do
+      sleep 2147483647 &
+      wait $! || true
+    done
     ;;
   run) # <thread> <user> <command>...: the command as the teammate, in the thread's namespace
     thread_ok "$2"
@@ -222,6 +290,51 @@ case "\${1:-}" in
     # sudo set USER and LOGNAME to its target, this helper's root: the teammate's, as with sudo -u.
     exec nsenter --net="$N" -- setpriv --reuid="$U" --regid="$U" --init-groups --inh-caps=-all -- \\
       env USER="$U" LOGNAME="$U" "$@"
+    ;;
+  enter) # <thread> <user> <command>...: as run, in all the thread's namespaces (isolate), made again
+    # if a quiet thread's were taken down (down)
+    thread_ok "$2"
+    user_ok "$3"
+    if ! P=$(holder "$2"); then
+      lock
+      host_rules
+      [ -f "$STATE/$2" ] && [ -e "/run/netns/bt-$2" ] || make_net "$2"
+      P=$(holder "$2") || { start_holder "$2" && P=$(holder "$2"); } || fail "the holder of thread $2 did not start"
+      exec 9>&-
+    fi
+    U=$3
+    shift 3
+    exec nsenter --target "$P" --net --mount --ipc --pid -- \\
+      setpriv --reuid="$U" --regid="$U" --init-groups --inh-caps=-all -- env USER="$U" LOGNAME="$U" "$@"
+    ;;
+  down) # <thread> [purge]: its holder and network taken down when none of its processes is left (exit
+    # 3 otherwise), its address kept; with purge (its folder is gone), its address and /tmp too
+    thread_ok "$2"
+    lock
+    N="bt-$2"
+    if [ -e "/run/netns/$N" ]; then
+      # Aside meanwhile: a command entering now waits for the lock, and finds it gone.
+      [ ! -f "$STATE/$2.holder" ] || mv "$STATE/$2.holder" "$STATE/$2.holder.down"
+      U=""
+      P=""
+      [ ! -f "$STATE/$2.holder.down" ] || read -r U P <"$STATE/$2.holder.down"
+      for Q in $(ip netns pids "$N"); do
+        [ "$Q" = "$U" ] || [ "$Q" = "$P" ] && continue
+        # The holder's own sleep, which it waits on
+        [ "$(awk '/^PPid:/ { print $2 }' "/proc/$Q/status" 2>/dev/null)" = "$P" ] &&
+          [ "$(tr '\\0' ' ' <"/proc/$Q/cmdline" 2>/dev/null)" = "sleep 2147483647 " ] && continue
+        [ ! -f "$STATE/$2.holder.down" ] || mv "$STATE/$2.holder.down" "$STATE/$2.holder"
+        echo "brigade-thread: thread $2 still runs processes" >&2
+        exit 3
+      done
+      systemctl stop "brigade-thread-$2" 2>/dev/null || true
+      ip netns del "$N"
+    fi
+    rm -f "$STATE/$2.holder" "$STATE/$2.holder.down"
+    if [ "\${3:-}" = purge ]; then
+      rm -f "$STATE/$2"
+      rm -rf "\${TMPS:?}/$2"
+    fi
     ;;
   docker) # <thread> <user>: the teammate's rootless Docker in the thread's namespace, started if
     # needed (its published ports are the thread's); prints its socket. Nothing without Docker.

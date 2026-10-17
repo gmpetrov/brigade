@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -56,4 +56,64 @@ test("the thread helper restarts systemd-resolved when the threads' listener is 
   }
   assert.equal(restarts(''), true)
   assert.equal(restarts('UNCONN 0 0 10.231.255.254:53 0.0.0.0:*'), false)
+})
+
+test("the thread helper's holder runs only as pid 1 of new namespaces", () => {
+  const result = spawnSync('sh', ['-c', THREAD_HELPER, 'brigade-thread', 'holder', 'cmthread1'], {
+    encoding: 'utf8',
+  })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /not in new namespaces/)
+})
+
+test('the thread helper takes a thread down only when none of its processes is left', () => {
+  // In a folder of its own: its state, /tmp and network pins there, and what it calls stubbed:
+  // ip lists PIDS in the thread's network, and logs the rest with systemctl's calls.
+  const dir = mkdtempSync(join(tmpdir(), 'thread-down-'))
+  const helper = THREAD_HELPER.replace('STATE=/run/brigade-threads', `STATE=${dir}/state`)
+    .replace('TMPS=/var/lib/brigade/thread-tmp', `TMPS=${dir}/tmp`)
+    .replaceAll('/run/netns/', `${dir}/netns/`)
+  const bin = join(dir, 'bin')
+  mkdirSync(bin)
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  stub('flock', 'exit 0')
+  stub('ip', 'if [ "$1 $2" = "netns pids" ]; then echo $PIDS; else echo "ip $*" >>"$LOG"; fi')
+  stub('systemctl', 'echo "systemctl $*" >>"$LOG"')
+  const down = (pids: string, ...more: string[]) => {
+    const log = join(dir, 'log')
+    writeFileSync(log, '')
+    const result = spawnSync('sh', ['-c', helper, 'brigade-thread', 'down', 'cmthread1', ...more], {
+      env: { PATH: `${bin}:/usr/bin:/bin`, LOG: log, PIDS: pids },
+      encoding: 'utf8',
+    })
+    return { status: result.status, log: readFileSync(log, 'utf8') }
+  }
+  mkdirSync(join(dir, 'state'))
+  mkdirSync(join(dir, 'netns'))
+  mkdirSync(join(dir, 'tmp', 'cmthread1', 'tmp'), { recursive: true })
+  writeFileSync(join(dir, 'netns', 'bt-cmthread1'), '')
+  writeFileSync(join(dir, 'state', 'cmthread1'), '7\n')
+  writeFileSync(join(dir, 'state', 'cmthread1.holder'), '100 101\n')
+
+  // A process of its own besides the holder's two: refused, nothing changed.
+  const busy = down('100 101 555')
+  assert.equal(busy.status, 3)
+  assert.equal(busy.log, '')
+  assert.equal(readFileSync(join(dir, 'state', 'cmthread1.holder'), 'utf8'), '100 101\n')
+
+  // None left: the holder stopped, the network deleted, its address kept for when it comes back.
+  const idle = down('100 101')
+  assert.equal(idle.status, 0)
+  assert.match(idle.log, /systemctl stop brigade-thread-cmthread1/)
+  assert.match(idle.log, /ip netns del bt-cmthread1/)
+  assert.equal(existsSync(join(dir, 'state', 'cmthread1.holder')), false)
+  assert.equal(readFileSync(join(dir, 'state', 'cmthread1'), 'utf8'), '7\n')
+  assert.equal(existsSync(join(dir, 'tmp', 'cmthread1')), true)
+
+  // Its folder gone (purge): its address and /tmp too.
+  writeFileSync(join(dir, 'netns', 'bt-cmthread1'), '')
+  assert.equal(down('', 'purge').status, 0)
+  assert.equal(existsSync(join(dir, 'state', 'cmthread1')), false)
+  assert.equal(existsSync(join(dir, 'tmp', 'cmthread1')), false)
 })
