@@ -14,7 +14,7 @@ import {
 } from '@brigade/contracts'
 import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
-import { storableJson } from './storable-json.js'
+import { readableEvents, storableForms, storableJson } from './storable-json.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureSetup, touch, wake } from './cloud.js'
@@ -37,6 +37,7 @@ import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
 import { movesOn, onReleased } from './move.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
+import type { Session } from './generated/prisma/client.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
 import type { WorkspaceScope } from './scope.js'
 
@@ -375,6 +376,8 @@ export function runnerSocket(runner: {
   let conn: RunnerConn | undefined
   // Serialise event batches so sequence bookkeeping stays simple.
   let queue = Promise.resolve()
+  // Threads whose events are tried again soon (advanceLater), by id.
+  const retries = new Map<string, ReturnType<typeof setTimeout>>()
 
   return {
     onMessage(raw: unknown, ws: WSContext) {
@@ -385,8 +388,14 @@ export function runnerSocket(runner: {
         .catch((error) => console.error('runner message failed', error))
     },
     onClose() {
+      for (const timer of retries.values()) clearTimeout(timer)
       if (conn && runners.get(runner.computerId) === conn) {
         runners.delete(runner.computerId)
+        // Its threads' events wait on it now, as its computer shows: it says again once back.
+        const waited = [...eventsWaiting].filter(([, w]) => w.computerId === runner.computerId)
+        for (const [id] of waited) eventsWaiting.delete(id)
+        if (waited.length)
+          void broadcastEventsWaiting(waited.map(([id]) => id)).catch(console.error)
         broadcast(runner.workspaceId, {
           type: 'computer.updated',
           computerId: runner.computerId,
@@ -404,6 +413,8 @@ export function runnerSocket(runner: {
     if (!parsed.success) {
       const issue = parsed.error.issues[0]
       console.warn('bad runner message', issue)
+      const events = conn && readableEvents(json)
+      if (events) return storeAll(events, ws)
       // A call the runner waits on is answered, or the teammate's tool would wait forever.
       if (typeof json?.callId === 'string')
         send(ws, {
@@ -530,18 +541,9 @@ export function runnerSocket(runner: {
     // Heard, which is all it says (onMessage).
     if (message.type === 'heartbeat') return
 
-    if (message.type === 'events') {
-      const bySession = Map.groupBy(message.events, (e) => e.sessionId)
-      // One thread's events failing to store must not hold back the others' in the batch.
-      for (const [sessionId, events] of bySession)
-        await storeEvents(sessionId, events, ws).catch((error) =>
-          console.error(
-            `runner ${runner.id}: could not store events of thread ${sessionId}`,
-            error,
-          ),
-        )
-      return
-    }
+    if (message.type === 'events.waiting') return noteEventsWaiting(message.threads)
+
+    if (message.type === 'events') return storeAll(message.events, ws)
 
     if (message.type === 'account.login.prompt' || message.type === 'account.login.done') {
       const login = loginById(message.loginId)
@@ -736,6 +738,14 @@ export function runnerSocket(runner: {
       console.warn(`runner ${runner.id}: command ${message.commandId} failed: ${message.error}`)
   }
 
+  async function storeAll(events: SequencedEvent[], ws: WSContext) {
+    // One thread's events failing to store must not hold back the others' in the batch.
+    for (const [sessionId, ofThread] of Map.groupBy(events, (e) => e.sessionId))
+      await storeEvents(sessionId, ofThread, ws).catch((error) =>
+        console.error(`runner ${runner.id}: could not store events of thread ${sessionId}`, error),
+      )
+  }
+
   async function storeEvents(sessionId: string, events: SequencedEvent[], ws: WSContext) {
     touch(runner.computerId)
     // A runner may only write events for threads on its own computer.
@@ -744,24 +754,63 @@ export function runnerSocket(runner: {
     })
     if (!session)
       return console.warn(`runner ${runner.id} sent events for a thread it does not run`)
+    await insertEvents(session, events)
+    await advance(session, ws)
+  }
 
-    await prisma.sessionEvent.createMany({
-      data: events.map((e) => ({
-        organizationId: session.organizationId,
-        workspaceId: session.workspaceId,
-        sessionId,
-        seq: e.seq,
-        type: e.event.type,
-        // A NUL in a tool's output would fail the whole batch, and every later event of the thread with it.
-        data: storableJson(e.event) as unknown as Prisma.InputJsonValue,
-        at: new Date(e.event.at),
-      })),
-      skipDuplicates: true,
+  /**
+   * Store a thread's events. One the database refuses is stored in a lesser form
+   * (storableForms), never left out: lastSeq only moves over a contiguous run, so
+   * every event after it would wait on it, and the thread with them.
+   */
+  async function insertEvents(
+    session: { id: string; organizationId: string; workspaceId: string },
+    events: SequencedEvent[],
+  ) {
+    const rows = (seq: number, event: AgentEvent) => ({
+      organizationId: session.organizationId,
+      workspaceId: session.workspaceId,
+      sessionId: session.id,
+      seq,
+      type: event.type,
+      data: event as unknown as Prisma.InputJsonValue,
+      at: new Date(event.at),
     })
+    const all = events.map((e) => rows(e.seq, storableJson(e.event)))
+    const refused = await prisma.sessionEvent.createMany({ data: all, skipDuplicates: true }).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    if (!refused) return
+    // One at a time, to find which: a database that is down refuses them all, and the error goes on.
+    for (const { seq, event } of events) {
+      const forms = storableForms(event)
+      for (const [i, form] of forms.entries()) {
+        const error = await prisma.sessionEvent
+          .createMany({ data: [rows(seq, form)], skipDuplicates: true })
+          .then(
+            () => undefined,
+            (error: unknown) => error,
+          )
+        if (!error) break
+        if (i === forms.length - 1) throw error
+        console.error(
+          `thread ${session.id}: event ${seq} (${event.type}) refused, storing it ${i ? 'as missing' : 'cut short'}`,
+          error,
+        )
+      }
+    }
+  }
 
-    // Advance lastSeq over the contiguous run of stored events.
+  /**
+   * Move lastSeq over the contiguous run of stored events, once what they open or
+   * close (tickets, accounts) is done: should that fail, or the API stop halfway,
+   * it is done again from the stored events, so a ticket the thread waits on is
+   * never lost. Tried again here as well, for a runner that sends nothing more.
+   */
+  async function advance(session: Session, ws: WSContext) {
     const stored = await prisma.sessionEvent.findMany({
-      where: { sessionId, seq: { gt: session.lastSeq } },
+      where: { sessionId: session.id, seq: { gt: session.lastSeq } },
       orderBy: { seq: 'asc' },
       select: { seq: true, data: true },
     })
@@ -770,27 +819,140 @@ export function runnerSocket(runner: {
     for (const row of stored) {
       if (row.seq !== lastSeq + 1) break
       lastSeq = row.seq
-      fresh.push({ sessionId, seq: row.seq, event: row.data as unknown as SequencedEvent['event'] })
+      fresh.push({
+        sessionId: session.id,
+        seq: row.seq,
+        event: row.data as unknown as SequencedEvent['event'],
+      })
     }
     if (lastSeq !== session.lastSeq) {
+      if (!(await noteEvents(session, fresh))) return advanceLater(session.id, ws)
       const status = fresh.reduce<SessionStatus>(
         (current, e) => statusAfter(current, e.event),
         session.status,
       )
-      await prisma.session.update({ where: { id: sessionId }, data: { lastSeq, status } })
-      broadcast(session.workspaceId, { type: 'events', events: fresh }, sessionId)
-      if (status !== session.status) broadcastThreadStatus(session.workspaceId, sessionId, status)
+      await prisma.session.update({ where: { id: session.id }, data: { lastSeq, status } })
+      broadcast(session.workspaceId, { type: 'events', events: fresh }, session.id)
+      if (status !== session.status) broadcastThreadStatus(session.workspaceId, session.id, status)
       // A move waiting on the turn goes once it ends.
       if (status !== session.status && session.move)
-        void movesOn(runner.computerId, sessionId).catch(console.error)
-      await noteAccountState(session, fresh)
-      await noteAccountSwitches(session, fresh)
-      await noteTickets(session, fresh)
+        void movesOn(runner.computerId, session.id).catch(console.error)
       // Not awaited: a review loop may call GitHub and prompt the next teammate.
       void noteTurnsEnded(session, fresh).catch(console.error)
     }
-    send(ws, { type: 'ack', sessionId, seq: lastSeq })
+    send(ws, { type: 'ack', sessionId: session.id, seq: lastSeq })
   }
+
+  /** The thread's events once more, after a while: what they open or close failed to be done. */
+  function advanceLater(sessionId: string, ws: WSContext) {
+    if (retries.has(sessionId)) return
+    const timer = setTimeout(() => {
+      retries.delete(sessionId)
+      queue = queue
+        .then(async () => {
+          const session = await prisma.session.findFirst({
+            where: { id: sessionId, computerId: runner.computerId },
+          })
+          if (session) await advance(session, ws)
+        })
+        .catch((error) =>
+          console.error(`thread ${sessionId}: could not try its events again`, error),
+        )
+    }, NOTE_RETRY_MS)
+    timer.unref?.()
+    retries.set(sessionId, timer)
+  }
+
+  /**
+   * The runner's threads whose events have waited for minutes, as it says: their pages
+   * say so instead of showing them at work, and the API logs it. A thread it no longer
+   * lists got through.
+   */
+  async function noteEventsWaiting(threads: { sessionId: string; since: string }[]) {
+    const listed = new Map(threads.map((t) => [t.sessionId, t.since]))
+    const gone = [...eventsWaiting]
+      .filter(([id, w]) => w.computerId === runner.computerId && !listed.has(id))
+      .map(([id]) => id)
+    for (const id of gone) eventsWaiting.delete(id)
+    const fresh = [...listed].filter(([id, since]) => eventsWaiting.get(id)?.since !== since)
+    // Only its own threads: a thread that moved away is not this runner's to report.
+    const own = fresh.length
+      ? await prisma.session.findMany({
+          where: { id: { in: fresh.map(([id]) => id) }, computerId: runner.computerId },
+          select: { id: true },
+        })
+      : []
+    for (const [id, since] of fresh) {
+      if (!own.some((s) => s.id === id)) continue
+      eventsWaiting.set(id, { computerId: runner.computerId, since })
+      console.error(`runner ${runner.id}: thread ${id}'s events unacknowledged since ${since}`)
+    }
+    await broadcastEventsWaiting([...gone, ...own.map((s) => s.id)])
+  }
+}
+
+/** What a run of events opens or closes, tried again this long after it failed. */
+const NOTE_RETRY_MS = 15_000
+/** How long it keeps failing before the thread goes on without it. */
+const NOTE_GIVE_UP_MS = 2 * 60_000
+/** When it first failed, by thread and the run's first event. */
+const noteFailures = new Map<string, number>()
+
+/**
+ * Open and close what a run of events asks for: tickets, account states. Each step
+ * is safe to do again. False when it should be tried again; after NOTE_GIVE_UP_MS
+ * of failures it is given up on, logged, rather than hold the thread back forever.
+ */
+async function noteEvents(session: Session, events: SequencedEvent[]) {
+  const failed: unknown[] = []
+  for (const note of [noteAccountState, noteAccountSwitches, noteTickets])
+    await note(session, events).catch((error: unknown) => failed.push(error))
+  const key = `${session.id}:${events[0]!.seq}`
+  const since = noteFailures.get(key)
+  if (!failed.length) {
+    noteFailures.delete(key)
+    return true
+  }
+  const range = `${events[0]!.seq}-${events.at(-1)!.seq}`
+  if (since !== undefined && Date.now() - since >= NOTE_GIVE_UP_MS) {
+    noteFailures.delete(key)
+    console.error(
+      `thread ${session.id}: gave up on the tickets and accounts of events ${range}`,
+      ...failed,
+    )
+    return true
+  }
+  if (since === undefined) noteFailures.set(key, Date.now())
+  console.error(
+    `thread ${session.id}: tickets and accounts of events ${range} failed, trying again`,
+    ...failed,
+  )
+  return false
+}
+
+/**
+ * Threads whose runner says their events have not been acknowledged for minutes,
+ * with since when: their pages say so (thread routes, thread.updated).
+ */
+const eventsWaiting = new Map<string, { computerId: string; since: string }>()
+
+/** Since when a thread's events have not reached Brigade, or null. */
+export const eventsWaitingSince = (sessionId: string) => eventsWaiting.get(sessionId)?.since ?? null
+
+/** Tell dashboards whether these threads' events wait now. */
+async function broadcastEventsWaiting(ids: string[]) {
+  if (!ids.length) return
+  const sessions = await prisma.session.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, workspaceId: true, status: true },
+  })
+  for (const s of sessions)
+    broadcast(s.workspaceId, {
+      type: 'thread.updated',
+      sessionId: s.id,
+      status: s.status,
+      eventsWaitingSince: eventsWaitingSince(s.id),
+    })
 }
 
 /** How far back a message may still be queued on a runner. */
@@ -913,7 +1075,12 @@ async function noteAccountSwitches(
         where: { id: session.id },
         data: { accountId: event.toAccountId },
       })
-    } else {
+    } else if (
+      // Noted again (noteEvents): its pause has its ticket already.
+      !(await db.ticket.count({
+        where: { sessionId: session.id, type: 'usage_limit', status: 'open' },
+      }))
+    ) {
       await db.ticket.create({
         data: {
           organizationId: session.organizationId,
@@ -1005,7 +1172,18 @@ async function noteOneAccount(
     where: { id: accountId, workspaceId: session.workspaceId },
   })
   if (!before) return
-  if (authFailed && before.status !== 'needs_sign_in') {
+  if (
+    authFailed &&
+    before.status !== 'needs_sign_in' &&
+    // Noted again (noteEvents): its ticket may be there already.
+    !(await prisma.ticket.count({
+      where: {
+        type: 'sign_in',
+        status: 'open',
+        payload: { path: ['accountId'], equals: accountId },
+      },
+    }))
+  ) {
     // An expired login is a ticket for the member who owns the account.
     await scoped(session).ticket.create({
       data: {
@@ -1048,7 +1226,7 @@ async function noteTickets(
     if (event.type === 'approval.requested') {
       // Connector writes already have their ticket; its id is the approval id.
       const exists = await db.ticket.count({ where: { id: event.approvalId } })
-      if (exists) continue
+      if (exists || (await asked(session.id, 'approvalId', event.approvalId))) continue
       const teammate = await eventTeammate(session, event)
       const input = JSON.stringify(event.input ?? null)
       await db.ticket.create({
@@ -1082,6 +1260,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'question.asked') {
+      if (await asked(session.id, 'questionId', event.questionId)) continue
       const teammate = await eventTeammate(session, event)
       const first = event.questions[0]?.question ?? 'a question'
       await db.ticket.create({
@@ -1100,6 +1279,7 @@ async function noteTickets(
         },
       })
     } else if (event.type === 'ticket.opened') {
+      if (await asked(session.id, 'requestId', event.requestId)) continue
       const teammate = await eventTeammate(session, event)
       const title = event.title.length > 160 ? `${event.title.slice(0, 157)}...` : event.title
       await db.ticket.create({
@@ -1154,6 +1334,18 @@ async function noteTickets(
       })
     }
   }
+}
+
+/** The thread has a ticket for this ask already: its events are noted again (noteEvents). */
+async function asked(
+  sessionId: string,
+  key: 'approvalId' | 'questionId' | 'requestId',
+  id: string,
+) {
+  const tickets = await prisma.ticket.count({
+    where: { sessionId, payload: { path: [key], equals: id } },
+  })
+  return tickets > 0
 }
 
 /** The teammate whose harness produced an event: one in the thread, else the starting one. */

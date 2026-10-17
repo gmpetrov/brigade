@@ -50,6 +50,7 @@ import {
   broadcastThreadStatus,
   desktopClipboard,
   dispatch,
+  eventsWaitingSince,
   readThreadFile,
   runnerProtocol,
   sendToRunner,
@@ -256,6 +257,7 @@ export const threads = new Hono<AppEnv>()
           unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
+          eventsWaitingSince: eventsWaitingSince(row.id),
         }
       }),
     )
@@ -301,6 +303,7 @@ export const threads = new Hono<AppEnv>()
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
+      eventsWaitingSince: eventsWaitingSince(thread.id),
     })
   })
 

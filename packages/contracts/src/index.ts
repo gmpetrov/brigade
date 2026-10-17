@@ -42,8 +42,9 @@ export * from './thread-history.js'
  * 23: connectors of any kind in the spec (an MCP App's, e.g. cloudflare), not only the first four.
  * 24: a new project's brief from its website (project.describe).
  * 25: threads move between computers (thread.release, the spec's `moved`).
+ * 26: unacknowledged events are sent again after a while, and threads whose events wait are reported (events.waiting).
  */
-export const PROTOCOL_VERSION = 25
+export const PROTOCOL_VERSION = 26
 /** Runners from this version on hand a thread's folders over to another computer, and take one in (moved). */
 export const MOVE_PROTOCOL = 25
 /** Runners from this version on write a project's brief from its website (project.describe). */

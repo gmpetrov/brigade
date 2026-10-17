@@ -12,7 +12,13 @@ import {
 import { join } from 'node:path'
 import type { AgentEvent, SequencedEvent } from '@brigade/contracts'
 
-type Stream = { lastSeq: number; acked: number; pending: SequencedEvent[] }
+type Stream = {
+  lastSeq: number
+  acked: number
+  pending: SequencedEvent[]
+  /** When each pending event was buffered, by seq: by this runner, or when it read them back. */
+  bufferedAt: Map<number, number>
+}
 
 export class Outbox {
   private streams = new Map<string, Stream>()
@@ -28,7 +34,8 @@ export class Outbox {
     this.arrivals = this.readJson<Record<string, string>>(this.arrivalsFile) ?? {}
     const acked = this.readJson<Record<string, number>>(this.metaFile) ?? {}
     for (const [sessionId, seq] of Object.entries(acked))
-      this.streams.set(sessionId, { lastSeq: seq, acked: seq, pending: [] })
+      this.streams.set(sessionId, { lastSeq: seq, acked: seq, pending: [], bufferedAt: new Map() })
+    const now = Date.now()
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.jsonl'))) {
       const sessionId = file.slice(0, -'.jsonl'.length)
       const stream = this.stream(sessionId)
@@ -41,7 +48,10 @@ export class Outbox {
           continue
         }
         stream.lastSeq = Math.max(stream.lastSeq, event.seq)
-        if (event.seq > stream.acked) stream.pending.push(event)
+        if (event.seq > stream.acked) {
+          stream.pending.push(event)
+          stream.bufferedAt.set(event.seq, now)
+        }
       }
       // Rewritten without it, or the next event appended would join that line and be lost too.
       if (torn)
@@ -54,6 +64,7 @@ export class Outbox {
     const stream = this.stream(sessionId)
     const sequenced = { sessionId, seq: ++stream.lastSeq, event }
     stream.pending.push(sequenced)
+    stream.bufferedAt.set(sequenced.seq, Date.now())
     appendFileSync(this.file(sessionId), JSON.stringify(sequenced) + '\n', { mode: 0o600 })
     return sequenced
   }
@@ -63,6 +74,8 @@ export class Outbox {
     if (!stream || seq <= stream.acked) return
     stream.acked = seq
     stream.pending = stream.pending.filter((e) => e.seq > seq)
+    for (const buffered of stream.bufferedAt.keys())
+      if (buffered <= seq) stream.bufferedAt.delete(buffered)
     if (stream.pending.length === 0) rmSync(this.file(sessionId), { force: true })
     else
       writeAtomic(
@@ -84,6 +97,7 @@ export class Outbox {
     if (this.arrivals[sessionId] === at) return false
     const stream = this.stream(sessionId)
     stream.pending = []
+    stream.bufferedAt.clear()
     stream.lastSeq = stream.acked = seq
     rmSync(this.file(sessionId), { force: true })
     writeAtomic(
@@ -110,6 +124,21 @@ export class Outbox {
     return this.streams.get(sessionId)?.pending.map((e) => e.event) ?? []
   }
 
+  /**
+   * The threads whose oldest unacknowledged event was buffered more than `ms` ago:
+   * since when, and their unacknowledged events in order.
+   */
+  waiting(ms: number, now = Date.now()) {
+    const waiting: { sessionId: string; since: number; events: SequencedEvent[] }[] = []
+    for (const [sessionId, stream] of this.streams) {
+      const oldest = stream.pending[0]
+      const since = oldest && (stream.bufferedAt.get(oldest.seq) ?? now)
+      if (since !== undefined && now - since > ms)
+        waiting.push({ sessionId, since, events: stream.pending })
+    }
+    return waiting
+  }
+
   /** Every event the API has not acknowledged yet, in order per thread. */
   unacknowledged(): SequencedEvent[] {
     return [...this.streams.values()].flatMap((s) => s.pending)
@@ -117,7 +146,11 @@ export class Outbox {
 
   private stream(sessionId: string) {
     let stream = this.streams.get(sessionId)
-    if (!stream) this.streams.set(sessionId, (stream = { lastSeq: 0, acked: 0, pending: [] }))
+    if (!stream)
+      this.streams.set(
+        sessionId,
+        (stream = { lastSeq: 0, acked: 0, pending: [], bufferedAt: new Map() }),
+      )
     return stream
   }
 
