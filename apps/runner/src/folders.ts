@@ -16,7 +16,8 @@
 // A member's machine is theirs: nothing is archived away from it, and no share
 // of its disk is Brigade's to fill. There a thread quiet for days loses its
 // dependency and build folders whatever the disk, and one quiet for hours once
-// the disk runs short; the teammate is told the same way.
+// the disk runs short; the teammate is told the same way. Its preview's archive
+// script runs first, and its Compose project's containers and volumes go too.
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -24,7 +25,8 @@ import { finished } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
 import type { GitAccess } from '@brigade/contracts'
 import { CLOUD, HOME } from './config.js'
-import { prune, removeFor, stopQuiet } from './containers.js'
+import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.js'
+import { COPIED } from './repo-settings.js'
 import { owners, repairCaches, run } from './repos.js'
 import { teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
@@ -89,6 +91,11 @@ const TRIMMED =
   'Note from Brigade: to free disk on this computer while this thread was quiet, its dependency and build folders ' +
   '(node_modules, .next, dist and the like, where git ignores them) were removed. Your files, checkouts, ' +
   'uncommitted work and local databases are as you left them: reinstall or rebuild what you need before running anything.'
+const MEMBER_TRIMMED =
+  'Note from Brigade: to free this computer while this thread was quiet, its dependency and build folders ' +
+  '(node_modules, .next, dist and the like, where git ignores them) were removed, and so were the containers and ' +
+  "Docker volumes of this thread's Compose project, if it had any (its local databases among them). Your files, " +
+  'checkouts and uncommitted work are as you left them: reinstall, rebuild or start again what you need before running anything.'
 const UPGRADED =
   'Note from Brigade: while this thread was quiet, the node_modules folders an older pnpm made in its checkouts ' +
   'were removed: pnpm 10 installing over them would keep the copies of packages they hold. Your files, checkouts, ' +
@@ -178,6 +185,11 @@ export class Folders {
       archives: FolderArchives
       /** The thread has a turn, a person in control, a parked-but-live session or a preview. */
       inUse: (sessionId: string) => boolean
+      /**
+       * Before a thread's containers go: its folder is archived or handed over, or trimmed on a
+       * member's machine. Runs its preview's archive script, which frees what its setup made.
+       */
+      quiet?: (name: FolderName) => Promise<unknown>
       stateFile: string
       /** Where archives are written on their way to and from the bucket. */
       tempDir: string
@@ -308,8 +320,10 @@ export class Folders {
     const { workDir, runAs } = threadFolder(name.teammateId, name.sessionId)
     await this.exclusive(workDir, async () => {
       if (!(await exists(workDir, runAs))) return
+      await this.quiet(name)
       // Its containers first: one writing into the folder would change it while it is packed.
       if (runAs) await removeFor(runAs, name.sessionId)
+      else if (!CLOUD) await removeMemberProject(name.sessionId)
       const file = await this.tempFile()
       try {
         const size = await pack(workDir, file, runAs)
@@ -360,7 +374,7 @@ export class Folders {
     this.save()
     // Put back says it all, and trimmed says node_modules too.
     if (restored) return RESTORED
-    return [trimmed ? TRIMMED : upgraded && UPGRADED, stopped && STOPPED]
+    return [trimmed ? (CLOUD ? TRIMMED : MEMBER_TRIMMED) : upgraded && UPGRADED, stopped && STOPPED]
       .filter(Boolean)
       .join('\n\n')
   }
@@ -546,6 +560,11 @@ export class Folders {
       if (used() || !(await exists(workDir, runAs))) return
       const paths = await regenerable(workDir, runAs)
       if (used()) return
+      // On a member's machine, its containers too: nothing else frees them there.
+      if (!CLOUD) {
+        await this.quiet(name)
+        await removeMemberProject(name.sessionId)
+      }
       if (paths.length > 0) await run('rm', ['-rf', '--', ...paths], { runAs })
       this.state.trimmedAt[workDir] = Date.now()
       if (paths.length > 0 && !this.state.trimmed.includes(workDir))
@@ -556,6 +575,15 @@ export class Folders {
           `trimmed ${workDir} to free disk: ${paths.map((p) => relativeTo(workDir, p)).join(', ')}`,
         )
     })
+  }
+
+  /** The thread's archive script, run; what fails is said in the log, and the rest goes on. */
+  private async quiet(name: FolderName) {
+    await this.options
+      .quiet?.(name)
+      .catch((error) =>
+        console.warn(`archive script of ${name.sessionId} failed: ${String(error)}`),
+      )
   }
 
   /** Remove the node_modules an older pnpm made in the folder, in place. */
@@ -592,6 +620,7 @@ export class Folders {
       // Used since it was picked (a file read, say), or gone.
       const used = () => this.used(name, workDir, MIN_QUIET_MS)
       if (used() || !(await exists(workDir, runAs))) return
+      await this.quiet(name)
       // Its containers first: one writing into the folder would change it while it is packed.
       if (runAs) await removeFor(runAs, name.sessionId)
       const file = await this.tempFile()
@@ -835,6 +864,14 @@ export async function pack(workDir: string, file: string, runAs?: string): Promi
   for (const repo of repos) {
     const git = (...args: string[]) => list(['git', '-C', repo, ...args])
     const deleted = new Set(await git('ls-files', '-z', '--deleted'))
+    // Copied from the member's own clone (.worktreeinclude): theirs, never sent to another computer.
+    const copied = (
+      await run('cat', [`${repo}/.git/${COPIED}`], { runAs }).catch(() => Buffer.alloc(0))
+    )
+      .toString()
+      .split('\n')
+      .filter(Boolean)
+    const theirs = (path: string) => copied.some((c) => path === c || path.startsWith(`${c}/`))
     const kept = [
       ...(await git('ls-files', '-z', '--cached', '--others', '--exclude-standard')),
       // Ignored files (.env) stay; ignored folders (node_modules, dist, .venv, target) go.
@@ -842,7 +879,8 @@ export async function pack(workDir: string, file: string, runAs?: string): Promi
         await git('ls-files', '-z', '--others', '--ignored', '--exclude-standard', '--directory')
       ).filter((path) => !path.endsWith('/')),
     ]
-    for (const path of kept) if (!deleted.has(path)) files.add(relative(`${repo}/${path}`))
+    for (const path of kept)
+      if (!deleted.has(path) && !theirs(path)) files.add(relative(`${repo}/${path}`))
     for (const path of await list(['find', `${repo}/.git`, ...kinds, '-print0']))
       files.add(relative(path))
   }

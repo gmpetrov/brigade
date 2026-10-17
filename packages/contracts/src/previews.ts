@@ -146,6 +146,16 @@ export const PreviewRecipe = z.object({
   timeoutSeconds: z.number().int().min(10).max(600).optional(),
   /** Saved once its check passed (not with a reason): a later start checks it with the shorter waits. */
   passed: z.boolean().optional(),
+  /**
+   * Run in `cwd` when the thread goes quiet or leaves the computer: frees what
+   * setup made outside the checkout (its containers, a database it created).
+   */
+  archive: z.string().max(4000).optional(),
+  /**
+   * False when the repository's people want none of Brigade's files in it:
+   * saved here only, never written to .brigade/settings.toml in the checkout.
+   */
+  inRepository: z.boolean().optional(),
 })
 export type PreviewRecipe = z.infer<typeof PreviewRecipe>
 

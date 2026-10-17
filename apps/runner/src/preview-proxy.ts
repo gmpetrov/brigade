@@ -20,6 +20,8 @@ export type ProxyState = 'starting' | 'restarting' | 'running' | 'down'
 export type PreviewProxyOptions = {
   /** Where the app listens: the computer's loopback, or its thread's own (its address). */
   host?: string
+  /** Where people reach the proxy: all the computer's addresses (default), or its loopback only. */
+  bind?: string
   /** The app's port: everything not under PORTS_PREFIX. */
   port: number
   /** Its other ports, served under PORTS_PREFIX. */
@@ -119,7 +121,7 @@ export class PreviewProxy {
       const ok = await new Promise<boolean>((done) => {
         const fail = () => done(false)
         this.server.once('error', fail)
-        this.server.listen(port, '0.0.0.0', () => {
+        this.server.listen(port, this.options.bind ?? '0.0.0.0', () => {
           this.server.off('error', fail)
           done(true)
         })

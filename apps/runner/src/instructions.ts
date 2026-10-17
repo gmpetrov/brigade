@@ -23,6 +23,7 @@ import {
   type ThreadSpec,
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
+import { CLOUD } from './config.js'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
@@ -486,19 +487,35 @@ const PREVIEW_SKILL: ThreadSkill = {
     '# Previews\n\n' +
     'Start one only when the person asks to try the app, or asks you to build something for them to try in a browser. ' +
     'To start one in a checkout, first try `start_preview({ repository })`: a repository set up before starts ' +
-    'as it was saved. Otherwise set it up in start_preview itself, not in your shell, so it can be saved: ' +
-    '`setup` (install; `docker compose up -d` for its database, cache or mail: you have your own Docker; ' +
-    'migrate; seed sample data so pages show something), a `command` that takes its port from $PORT (e.g. ' +
-    '"pnpm dev --port $PORT"), so it gets a free one when another preview has it, `env` ' +
+    "as its checkout's .brigade/settings.toml says (that branch's), else as saved in Brigade. Otherwise start from " +
+    'what the repository has for other tools (orca.yaml, .conductor/settings.toml, conductor.json: their setup and ' +
+    'run scripts) and its README, and set it up in start_preview itself, not in your shell, so it can be saved: ' +
+    '`setup` (install; `docker compose up -d` for its database, cache or mail' +
+    (CLOUD
+      ? ': you have your own Docker; '
+      : ": Docker is the member's own, and this thread has its own Compose project (COMPOSE_PROJECT_NAME), but the " +
+        "member's containers or another thread's may hold the ports a Compose file publishes: publish this thread's " +
+        "on free ones (the file's port variables, or an override file) and never stop or remove containers that are " +
+        "not this thread's; ") +
+    'migrate; seed sample data so pages show something), a `command` that takes its port and address from $PORT ' +
+    'and $HOST (e.g. "pnpm dev --port $PORT --host $HOST"), so it gets a free port when another preview has it, ' +
+    '`archive` when setup makes something outside the checkout (it runs once the thread goes quiet), `env` ' +
     '(${BRIGADE_PREVIEW_URL} for its own address in auth, callback and API URLs; random values for secrets it only ' +
     'needs locally; the always-pass test keys CAPTCHA providers publish), and `paths`: the home page, sign-in and ' +
     'the pages you changed. Run its database and other services yourself rather than asking for one. Values only a ' +
     "person has, such as a third-party API key, are the repository's preview variables: ask for them in one ticket " +
     '(a `variables` ask; read .env.example for what the app needs), never in words. Each start gives them to the ' +
     'app, over `env`; you see their names, never their values, and people start it without you. ' +
+    (CLOUD
+      ? ''
+      : "On a member's computer, the files the repository's .worktreeinclude lists (one path per line, such as " +
+        ".env.local) come into your checkout from the member's own clone when it starts: when the app needs a " +
+        'setting the member has, ask them before you add a file to it. ') +
     'start_preview opens those pages as a person would: fix what it finds, run `check_preview` once on the pages ' +
     'that failed before saying it is ready, then `save_preview`: from then on anyone starts it with Preview in one step, ' +
-    'without you. If it fails, read `preview_logs`. ' +
+    'without you. It also writes .brigade/settings.toml in the checkout: commit it, the first time in a pull ' +
+    "request of its own unless the person wants it in this one (`inRepository: false` if the repository's people " +
+    "want none of Brigade's files). If it fails, read `preview_logs`. " +
     'People reach it at one address: its other ports (an API) are paths on it, at `BRIGADE_PREVIEW_URL_<port>`, and ' +
     "its cookies are adapted so signing in works in the thread's preview pane. Signing in with Google or GitHub, " +
     'and Safari, need it opened in a new tab (a button on the pane). ' +

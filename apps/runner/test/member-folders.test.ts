@@ -1,8 +1,9 @@
 // Thread folders on a member's own machine: those of threads quiet for days lose
-// their dependency and build folders; the rest stays as it is.
+// their dependency and build folders, and their Compose project's containers in
+// the member's Docker, once their preview's archive script ran; the rest stays.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdir, mkdtemp, rm, stat, utimes, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -10,6 +11,18 @@ import { test } from 'node:test'
 const home = await mkdtemp(join(tmpdir(), 'brigade-member-folders-'))
 process.env.BRIGADE_HOME = home
 delete process.env.BRIGADE_CLOUD
+// The member's Docker, as a script: what it was asked, and a container, volume and network of
+// thread "quiet"'s Compose project.
+const bin = join(home, 'bin')
+const dockerLog = join(home, 'docker.log')
+await mkdir(bin, { recursive: true })
+await writeFile(
+  join(bin, 'docker'),
+  `#!/bin/sh\necho "$*" >> '${dockerLog}'\n` +
+    'case "$*" in *"project=tquiet"*) case "$1" in ps) echo c1 ;; volume) echo tquiet_db ;; network) echo tquiet_default ;; esac ;; esac\n',
+)
+await chmod(join(bin, 'docker'), 0o755)
+process.env.PATH = `${bin}:${process.env.PATH}`
 const { Folders } = await import('../src/folders.js')
 const { threadFolder } = await import('../src/threads.js')
 
@@ -76,10 +89,24 @@ test('a thread quiet for days loses what a reinstall makes again, and its teamma
       delete: async () => undefined,
     },
     inUse: (sessionId) => sessionId === 'busy',
+    quiet: async (name) => {
+      archived.push(name.sessionId)
+    },
     stateFile,
     tempDir: join(home, 'tmp'),
   })
+  const archived: string[] = []
   await folders.check()
+  assert.deepEqual(archived, ['quiet'])
+  const asked = (await readFile(dockerLog, 'utf8')).trim().split('\n')
+  assert.deepEqual(asked, [
+    'ps -aq --filter label=com.docker.compose.project=tquiet',
+    'rm --force --volumes c1',
+    'volume ls -q --filter label=com.docker.compose.project=tquiet',
+    'volume rm tquiet_db',
+    'network ls -q --filter label=com.docker.compose.project=tquiet',
+    'network rm tquiet_default',
+  ])
 
   assert.equal(await exists(join(quiet.app, 'node_modules')), false)
   assert.equal(await exists(join(quiet.app, 'dist')), false)

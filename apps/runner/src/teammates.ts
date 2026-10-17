@@ -44,8 +44,10 @@ const containers = new Map<string, Promise<Record<string, string>>>()
 
 /**
  * Docker Compose names a project after its folder, so every thread's checkout
- * of a repository would share one: its containers and its database volume.
- * One project per thread instead.
+ * of a repository would share one: its containers and its database volume. On
+ * a member's machine, so would the member's own clone, named the same: a
+ * `docker compose down -v` in a thread would delete their database. One
+ * project per thread instead.
  */
 export const composeProject = (sessionId: string) =>
   `t${sessionId.toLowerCase().replace(/[^a-z0-9]/g, '')}`

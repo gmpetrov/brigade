@@ -21,6 +21,12 @@
 // of a repository checked out in the thread. Then the runner checks its pages
 // itself, as a teammate's start_preview does.
 //
+// A repository's setup is in its checkout's .brigade/settings.toml when it has
+// one (repo-settings.ts), so each branch starts as its code needs; else in the
+// recipe saved in Brigade. Saving writes both. On a member's machine, the app
+// listens on the loopback only, and gets the files the repository's
+// .worktreeinclude names from the member's own clone (its .env).
+//
 // Each start reads the repository's preview variables, which people set, from
 // the API: they go into the app's environment over the start's own settings,
 // never into what the teammate reads; a secret's value is hidden in the log.
@@ -42,7 +48,7 @@ import {
   type PreviewRecipe,
   type PreviewStartOutcome,
 } from '@brigade/contracts'
-import { HOME } from './config.js'
+import { CLOUD, HOME } from './config.js'
 import { harnessEnv } from './harness/env.js'
 import type { CheckResult } from './preview-check.js'
 import { pauseFor, unpause } from './containers.js'
@@ -57,7 +63,15 @@ import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
 import type { Candidate } from './memory-guard.js'
 import { processGroups } from './process-groups.js'
 import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
-import { containerEnv, teammateHome } from './teammates.js'
+import { composeProject, containerEnv, teammateHome } from './teammates.js'
+import {
+  copyIncluded,
+  otherSetups,
+  readRepoPreview,
+  repositoryFromRemote,
+  sameStart,
+  writeRepoPreview,
+} from './repo-settings.js'
 
 const run = promisify(execFile)
 
@@ -88,6 +102,8 @@ const PROXY_BASE = 20_000
 const REPOSITORY_PROXY_BASE = 30_000
 /** Setup (install, migrate) comes before the app answers: wait longer for it. */
 const SETUP_START_MS = 600_000
+/** Longest a recipe's archive script runs. */
+const ARCHIVE_MS = 5 * 60_000
 /** ${BRIGADE_PREVIEW_URL} and ${BRIGADE_PREVIEW_URL_<port>} in a recipe's env. */
 const PLACEHOLDER = /\$\{BRIGADE_PREVIEW_URL(?:_(\d+))?\}/g
 /** The page checker, beside this file (preview-check.ts). */
@@ -133,10 +149,22 @@ export type PreviewStart = {
   repository?: string
   /** Started from a saved recipe whose check passed: its first check uses the shorter waits. */
   passed?: boolean
+  /** Run in cwd when the thread goes quiet: frees what setup made outside the checkout. */
+  archive?: string
 }
 
-/** A saved recipe, and where its repository is checked out in the teammate's directory. */
-export type SavedPreview = { recipe: PreviewRecipe; checkout: string }
+/**
+ * A repository's recipe, where its repository is checked out in the teammate's
+ * directory, and where it came from: the checkout's settings files, or Brigade.
+ */
+export type SavedPreview = { recipe: PreviewRecipe; checkout: string; from: string[] | 'brigade' }
+
+/** What saving wrote: the recipe in Brigade, and the checkout's settings file unless its people want none. */
+export type SavedRecipe = {
+  repository: string
+  recipe: PreviewRecipe
+  file?: { file: string; changed: boolean; local: boolean }
+}
 
 /** A check of the preview's pages, and what the app logged meanwhile that looks like an error. */
 export type PreviewCheck = CheckResult & { serverErrors: string[] }
@@ -146,10 +174,15 @@ export type PreviewControl = {
   start(input: PreviewStart, signal?: AbortSignal): Promise<PreviewResult>
   /** Open these paths as a person would and say what is wrong with them. */
   check(paths: string[], signal?: AbortSignal): Promise<PreviewCheck>
-  /** Save the running preview as its repository's recipe: once its check passed, or with why what it found is expected. */
-  save(reason?: string): Promise<{ repository: string; recipe: PreviewRecipe }>
-  /** A repository's saved recipe, and its checkout here; null when none is saved. */
+  /**
+   * Save the running preview as its repository's recipe: once its check passed, or with why what
+   * it found is expected. `inRepository` false keeps it out of the checkout's files.
+   */
+  save(reason?: string, inRepository?: boolean): Promise<SavedRecipe>
+  /** A repository's recipe for its checkout here; null when it has none. */
   saved(repository: string): Promise<SavedPreview | null>
+  /** Setups the repository's checkout here has for other tools (orca.yaml, …), to start from. */
+  otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
   logs(lines?: number): { status: PreviewInfo['status'] | 'none'; logs: string }
 }
@@ -325,8 +358,14 @@ export class Previews {
     return {
       start: (input, signal) => this.start(seat, input, signal),
       check: (paths, signal) => this.check(seat, paths, signal),
-      save: (reason) => this.save(seat, reason),
+      save: (reason, inRepository) => this.save(seat, reason, inRepository),
       saved: (repository) => this.saved(seat, repository),
+      otherSetups: async (repository) => {
+        const checkout = (await checkouts(seat.workDir, seat.runAs)).find(
+          (c) => c.repository === repository.toLowerCase(),
+        )
+        return checkout ? otherSetups(join(seat.workDir, checkout.name), seat.runAs) : []
+      },
       stop: async () => ({
         stopped: await this.stop(seat.sessionId, 'Stopped by the teammate'),
       }),
@@ -436,8 +475,12 @@ export class Previews {
     return preview?.info.status === 'running' && preview.checked === true
   }
 
-  /** The running preview as its repository's recipe, saved through the API. Only once its check passed. */
-  async save(seat: Seat, reason?: string) {
+  /**
+   * The running preview as its repository's recipe, saved through the API and
+   * in its checkout's .brigade/settings.toml, unless the repository's people
+   * want none of Brigade's files (as said before, or now). Only once its check passed.
+   */
+  async save(seat: Seat, reason?: string, inRepository?: boolean): Promise<SavedRecipe> {
     const preview = this.previews.get(seat.sessionId)
     if (!preview || preview.info.status !== 'running')
       throw new Error('No preview is running: start it with start_preview first')
@@ -462,28 +505,71 @@ export class Previews {
       paths: input.paths?.length ? input.paths : ['/'],
       ...(input.timeoutMs ? { timeoutSeconds: Math.round(input.timeoutMs / 1000) } : {}),
       ...(preview.checked ? { passed: true } : {}),
+      ...(input.archive?.trim() ? { archive: input.archive } : {}),
     }
+    const before = await this.recipe(seat, found.repository).catch(() => null)
+    if ((inRepository ?? before?.inRepository) === false) recipe.inRepository = false
     await this.options.recipes(seat.sessionId, seat.teammateId, {
       name: 'save',
       repository: found.repository,
       recipe,
     })
-    return { repository: found.repository, recipe }
+    if (recipe.inRepository === false) return { repository: found.repository, recipe }
+    const file = await writeRepoPreview(found.root, recipe, seat.runAs)
+    return { repository: found.repository, recipe, file }
   }
 
-  /** A repository's saved recipe, and the directory it is checked out in here. */
+  /** A repository's recipe for its checkout here, and the directory it is checked out in. */
   async saved(seat: Seat, name: string): Promise<SavedPreview | null> {
     const repository = name.toLowerCase()
-    const recipe = await this.recipe(seat, repository)
-    if (!recipe) return null
     const checkout = (await checkouts(seat.workDir, seat.runAs)).find(
       (c) => c.repository === repository,
     )?.name
-    if (!checkout)
+    if (!checkout) {
+      if (!(await this.recipe(seat, repository))) return null
       throw new Error(
         `${repository} has a saved preview, but it is not checked out here: check it out with checkout_repository first`,
       )
-    return { recipe, checkout }
+    }
+    const found = await this.recipeFor(seat, repository, checkout)
+    if (found.error)
+      throw new Error(
+        `${found.error}. Fix it in ${checkout}, or start the preview with its command and port.`,
+      )
+    return found.recipe ? { recipe: found.recipe, checkout, from: found.from } : null
+  }
+
+  /**
+   * A repository's recipe for a checkout of it here: what its branch's
+   * .brigade/ settings say, with the vault credentials saved in Brigade (the
+   * workspace's, not the repository's); else the recipe saved in Brigade.
+   * `error`: its settings could not be read, said for the teammate to fix.
+   */
+  private async recipeFor(
+    seat: Seat,
+    repository: string,
+    checkout: string,
+  ): Promise<{ recipe?: PreviewRecipe; from: string[] | 'brigade'; error?: string }> {
+    const [inRepository, saved] = await Promise.all([
+      readRepoPreview(join(seat.workDir, checkout), seat.runAs),
+      this.recipe(seat, repository).catch((error: unknown) => {
+        console.warn(`could not read the saved preview of ${repository}: ${String(error)}`)
+        return null
+      }),
+    ])
+    if (!inRepository.found) return saved ? { recipe: saved, from: 'brigade' } : { from: 'brigade' }
+    if ('error' in inRepository)
+      return { ...(saved ? { recipe: saved } : {}), from: 'brigade', error: inRepository.error }
+    const recipe = inRepository.recipe
+    return {
+      recipe: {
+        ...recipe,
+        credentials: saved?.credentials ?? [],
+        // Its check passed as saved: the same start needs no longer waits.
+        ...(saved?.passed && sameStart(saved, recipe) ? { passed: true } : {}),
+      },
+      from: inRepository.files,
+    }
   }
 
   /** Start the preview again, as it was started. */
@@ -513,6 +599,52 @@ export class Previews {
 
   async stopAll(reason: string) {
     await Promise.all([...this.previews.keys()].map((id) => this.stop(id, reason)))
+  }
+
+  /**
+   * The thread went quiet, or leaves this computer: its preview stops, and the
+   * archive script it last started with runs, as the teammate, with the
+   * preview's settings and variables, to free what its setup made outside the
+   * checkout. Rejects with what it printed when it fails.
+   */
+  async archive(sessionId: string) {
+    await this.stop(sessionId, 'The thread went quiet')
+    const last = this.lastStarts.get(sessionId)
+    const script = last?.input.archive?.trim()
+    if (!last || !script) return
+    const { seat, input } = last
+    const dir = resolve(seat.workDir, input.cwd ?? '.')
+    const variables = last.repository
+      ? await this.variables(seat, last.repository).catch(() => ({ env: {} }))
+      : { env: {} }
+    const env = harnessEnv({
+      ...(seat.runAs
+        ? {
+            ...(await containerEnv(seat.runAs, seat.sessionId)),
+            HOME: teammateHome(seat.runAs),
+            USER: seat.runAs,
+            LOGNAME: seat.runAs,
+          }
+        : { COMPOSE_PROJECT_NAME: composeProject(seat.sessionId) }),
+      ...input.env,
+      ...variables.env,
+    })
+    const as = seat.runAs ? asTeammate(seat.runAs, await threadNet(sessionId)) : null
+    const [file, args] = as
+      ? [as.file, [...as.args, 'sh', '-c', 'cd -- "$0" && exec sh -c "$1"', dir, script]]
+      : ['sh', ['-c', script]]
+    try {
+      await run(file, args, {
+        cwd: as ? '/' : dir,
+        env,
+        timeout: ARCHIVE_MS,
+        maxBuffer: 4 * 1024 * 1024,
+      })
+      console.log(`ran the archive script of ${sessionId}'s preview`)
+    } catch (error) {
+      const { stdout = '', stderr = '' } = error as { stdout?: string; stderr?: string }
+      throw new Error(`${String(error)}\n${`${stdout}${stderr}`.slice(-2000)}`)
+    }
   }
 
   private async start(seat: Seat, input: PreviewStart, signal?: AbortSignal) {
@@ -558,7 +690,8 @@ export class Previews {
       for (const checkout of await checkouts(seat.workDir, seat.runAs)) {
         if (wanted && checkout.repository !== wanted) continue
         if (!found.includes(checkout.repository)) found.push(checkout.repository)
-        const recipe = await this.recipe(seat, checkout.repository)
+        const { recipe, error } = await this.recipeFor(seat, checkout.repository, checkout.name)
+        if (error) console.warn(`${checkout.repository} in ${seat.workDir}: ${error}`)
         if (!recipe) continue
         if (recipe.credentials.length) return needsTeammate(checkout.repository)
         await this.startInBackground(seat, fromRecipe(recipe, checkout.name, checkout.repository))
@@ -661,6 +794,11 @@ export class Previews {
     }
 
     const checkout = await repositoryOf(dir, seat.runAs)
+    // The member's .env and the like, which their own clone has (.worktreeinclude).
+    if (!CLOUD && checkout)
+      await copyIncluded(checkout.root, checkout.repository).catch((error: unknown) =>
+        console.warn(`could not copy the files .worktreeinclude names: ${String(error)}`),
+      )
     const repository = input.repository?.toLowerCase() ?? checkout?.repository
     const variables = repository ? await this.variables(seat, repository) : { env: {}, secrets: [] }
 
@@ -668,6 +806,8 @@ export class Previews {
     let preview: Preview | undefined
     const proxyOptions = {
       ...(host ? { host } : {}),
+      // On a member's machine, people open it there only: nobody else on its network reaches it.
+      ...(CLOUD ? {} : { bind: '127.0.0.1' }),
       port: input.port,
       ports,
       crossSiteCookies: false,
@@ -714,10 +854,11 @@ export class Previews {
             USER: seat.runAs,
             LOGNAME: seat.runAs,
           }
-        : {}),
+        : { COMPOSE_PROJECT_NAME: composeProject(seat.sessionId) }),
       PORT: String(input.port),
-      // Reachable from the proxy whatever address it binds; 0.0.0.0 also suits a member's machine.
-      HOST: '0.0.0.0',
+      // On a cloud computer, reachable from the proxy whatever address it binds. On a member's
+      // machine, the proxy is on the loopback too, and nobody else on its network needs the app.
+      HOST: CLOUD ? '0.0.0.0' : '127.0.0.1',
       BRIGADE_PREVIEW_URL: origins[input.port]!,
       ...Object.fromEntries(all.map((p) => [`BRIGADE_PREVIEW_URL_${p}`, origins[p]!])),
       // People's variables over the start's own settings.
@@ -1314,12 +1455,6 @@ async function keepOutOfGit(dir: string, file: string, runAs: string | undefined
   ).catch(() => undefined)
 }
 
-/** owner/name from a remote URL: GitHub's, or the API's git proxy, which ends the same way. */
-export function repositoryFromRemote(url: string) {
-  const match = /[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(url.trim())
-  return match ? `${match[1]}/${match[2]}`.toLowerCase() : null
-}
-
 /** The checkout a directory is in: its root and its repository (from origin). */
 async function repositoryOf(dir: string, runAs: string | undefined) {
   try {
@@ -1381,6 +1516,7 @@ function fromRecipe(recipe: PreviewRecipe, checkout: string, repository: string)
     paths: recipe.paths,
     repository,
     ...(recipe.passed ? { passed: true } : {}),
+    ...(recipe.archive?.trim() ? { archive: recipe.archive } : {}),
   }
 }
 

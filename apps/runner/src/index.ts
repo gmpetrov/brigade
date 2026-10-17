@@ -241,6 +241,7 @@ async function start() {
       },
     },
     inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
+    quiet: (name) => previews.archive(name.sessionId),
     stateFile: join(paths.state, 'folders.json'),
     tempDir: join(paths.state, 'folder-archives'),
   })

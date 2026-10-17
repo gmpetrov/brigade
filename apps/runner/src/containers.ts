@@ -208,6 +208,28 @@ export async function removeFor(user: string, sessionId: string) {
 }
 
 /**
+ * On a member's machine, a quiet thread's containers in the member's own
+ * Docker: those of its Compose project (composeProject), removed with their
+ * volumes and networks; its setup makes them again. Never starts Docker to look.
+ */
+export async function removeMemberProject(sessionId: string) {
+  const project = composeProject(sessionId)
+  const dockerCli = (...args: string[]) =>
+    run('docker', args, { timeout: 5 * 60_000 }).then((out) => out.toString().trim())
+  const label = `label=com.docker.compose.project=${project}`
+  // No Docker here, or it is not running: nothing of the thread's runs either.
+  const ids = await dockerCli('ps', '-aq', '--filter', label).catch(() => null)
+  if (ids === null) return
+  if (ids) await dockerCli('rm', '--force', '--volumes', ...ids.split('\n'))
+  for (const kind of ['volume', 'network'])
+    for (const id of (await dockerCli(kind, 'ls', '-q', '--filter', label).catch(() => ''))
+      .split('\n')
+      .filter(Boolean))
+      await dockerCli(kind, 'rm', id).catch(() => undefined)
+  if (ids) console.log(`removed the containers of quiet thread ${sessionId} (${project})`)
+}
+
+/**
  * Free disk in the teammate's Docker: images, networks, volumes and build
  * cache no container uses. Stopped containers keep theirs.
  */

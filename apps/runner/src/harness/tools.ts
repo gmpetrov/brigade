@@ -1466,6 +1466,7 @@ export type PreviewTools = {
       paths?: string[]
       repository?: string
       passed?: boolean
+      archive?: string
     },
     signal?: AbortSignal,
   ): Promise<{
@@ -1492,7 +1493,14 @@ export type PreviewTools = {
     }[]
     serverErrors: string[]
   }>
-  save(reason?: string): Promise<{ repository: string; recipe: unknown }>
+  save(
+    reason?: string,
+    inRepository?: boolean,
+  ): Promise<{
+    repository: string
+    recipe: unknown
+    file?: { file: string; changed: boolean; local: boolean }
+  }>
   saved(repository: string): Promise<{
     recipe: {
       setup?: string
@@ -1506,9 +1514,14 @@ export type PreviewTools = {
       paths: string[]
       timeoutSeconds?: number
       passed?: boolean
+      archive?: string
     }
     checkout: string
+    /** The checkout's settings files it came from, or Brigade, where it was saved. */
+    from: string[] | 'brigade'
   } | null>
+  /** Setups the repository's checkout has for other tools (orca.yaml, …). */
+  otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
   logs(lines?: number): { status: string; logs: string }
 }
@@ -1525,6 +1538,7 @@ type PreviewInput = {
   credentials?: string[]
   paths?: string[]
   repository?: string
+  archive?: string
 }
 
 const NOT_READY =
@@ -1564,9 +1578,11 @@ export function previewTools(
         'has one preview, and starting another replaces it. Waits until the port answers, then opens `paths` (default "/") with Chrome as a ' +
         'person would and reports what is wrong with each: its status, a blank page, script errors, server errors, ' +
         'with screenshots. Fix those before telling anyone it is ready. ' +
-        'For a repository with a saved preview, pass only `repository` (owner/name): it starts as it was saved, ' +
-        'setup included. Try that first in a checkout; save yours with save_preview once its check passes. ' +
-        'The app must listen on 0.0.0.0 (or all interfaces), not only localhost, on `port`: PORT and HOST are set. ' +
+        "For a repository set up before, pass only `repository` (owner/name): it starts as its checkout's " +
+        ".brigade/settings.toml says (that branch's), else as saved in Brigade, setup included. Try that first in a " +
+        'checkout; save yours with save_preview once its check passes. ' +
+        'The app must listen on HOST and `port` (PORT), both set: HOST is 0.0.0.0 on a cloud computer and 127.0.0.1 ' +
+        "on a member's own, where nobody else on its network should reach it. " +
         'Write the command with $PORT (e.g. "pnpm dev --port $PORT"): when another preview has `port`, it gets a free one. ' +
         'People reach it through a proxy at one public address, in BRIGADE_PREVIEW_URL; the other `ports` are paths on it ' +
         "(/__ports/<port>/), each port's address in BRIGADE_PREVIEW_URL_<port>. Put what the app needs in `env`, " +
@@ -1589,7 +1605,7 @@ export function previewTools(
           command: {
             type: 'string',
             description:
-              'Starts the app and keeps running, e.g. "pnpm dev --port $PORT --host 0.0.0.0"',
+              'Starts the app and keeps running, e.g. "pnpm dev --port $PORT --host $HOST"',
           },
           cwd: {
             type: 'string',
@@ -1639,19 +1655,34 @@ export function previewTools(
             description:
               'How long to wait for the port to answer (default 120, 600 with setup; up to 600)',
           },
+          archive: {
+            type: 'string',
+            description:
+              'Shell commands run in cwd once the thread goes quiet, to free what setup made outside the ' +
+              'checkout: e.g. "docker compose down -v", or dropping a database it created elsewhere',
+          },
         },
       }),
       execute: async (args, { abortSignal, toolCallId }) => {
         let input = args
         let passed = false
+        let from: string[] | undefined
         if (args.repository && !args.command) {
           const saved = await previews.saved(args.repository)
-          if (!saved)
+          if (!saved) {
+            const others = await previews.otherSetups(args.repository).catch(() => [])
             return {
               status: 'none',
-              note: `${args.repository} has no saved preview. Set it up (setup, env, command), start it, and once its check passes, save it with save_preview.`,
+              note:
+                `${args.repository} has no preview set up: no .brigade/settings.toml in its checkout, none saved in Brigade. ` +
+                (others.length
+                  ? `Start from the setup and run scripts in its ${others.join(', ')}, and its README. `
+                  : '') +
+                'Set it up (setup, env, command), start it, and once its check passes, save it with save_preview.',
             }
+          }
           const { recipe, checkout } = saved
+          if (saved.from !== 'brigade') from = saved.from
           passed = recipe.passed === true
           input = {
             ...recipe,
@@ -1686,11 +1717,13 @@ export function previewTools(
             paths,
             ...(input.repository ? { repository: input.repository } : {}),
             ...(passed ? { passed } : {}),
+            ...(input.archive?.trim() ? { archive: input.archive } : {}),
           },
           abortSignal,
         )
-        if (result.status !== 'running') return result
-        return { ...result, check: await checked(previews, paths, abortSignal) }
+        const started = { ...result, ...(from ? { from } : {}) }
+        if (result.status !== 'running') return started
+        return { ...started, check: await checked(previews, paths, abortSignal) }
       },
     }),
     check_preview: tool({
@@ -1716,26 +1749,45 @@ export function previewTools(
     }),
     save_preview: tool({
       description:
-        "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check) as its " +
+        "Save how this thread's preview starts (setup, env, credentials, command, ports, pages to check, archive) as its " +
         "repository's preview, so a later thread starts it in one step with start_preview({ repository }). " +
         'Only once its check passes, unless what it found is expected: then look at the screenshots and give the ' +
         '`reason` (e.g. "/admin redirects to sign-in"). Saving again replaces it. Secrets go in the repository\'s ' +
-        'preview variables (a variables ask in open_ticket), never in env: they are kept beside it, not in it.',
-      inputSchema: jsonSchema<{ reason?: string }>({
+        'preview variables (a variables ask in open_ticket), never in env: they are kept beside it, not in it. ' +
+        'It is saved in Brigade and written to .brigade/settings.toml in the checkout, so each branch has its own ' +
+        "and people review it as code: commit it. When the repository's people want none of Brigade's files in it, " +
+        'save with `inRepository: false`: kept in Brigade only, for later saves too.',
+      inputSchema: jsonSchema<{ reason?: string; inRepository?: boolean }>({
         type: 'object',
         properties: {
           reason: {
             type: 'string',
             description: 'Why what the last check found is expected, when it did not pass',
           },
+          inRepository: {
+            type: 'boolean',
+            description:
+              "false when the repository's people want none of Brigade's files in it; true to write the file again after that",
+          },
         },
       }),
       execute: async (input) => {
-        const { repository } = await previews.save(input.reason)
+        const { repository, file } = await previews.save(input.reason, input.inRepository)
+        const where = !file
+          ? "It is kept in Brigade only, not in the repository's files."
+          : file.changed
+            ? `It is in ${file.file} in the checkout too: commit it. The first time, in a pull request of its own ` +
+              '("Add a Brigade preview") unless the person wants it in this one; later changes go with the code that needs them.'
+            : `${file.file} in the checkout already says the same.`
+        const local = file?.local
+          ? " The checkout also has .brigade/settings.local.toml, a person's own settings, which were part of this " +
+            'start: keep in settings.toml only what the team needs.'
+          : ''
         return {
           saved: true,
           repository,
-          note: `Later threads start it with start_preview({ repository: "${repository}" }). Mention in your reply that it is saved.`,
+          ...(file ? { file: file.file, changed: file.changed } : {}),
+          note: `Later threads start it with start_preview({ repository: "${repository}" }). ${where}${local} Mention in your reply that it is saved.`,
         }
       },
     }),

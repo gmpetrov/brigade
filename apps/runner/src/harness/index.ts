@@ -31,7 +31,14 @@ import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
-import { containerEnv, ensureUser, linkAccount, teammateHome } from '../teammates.js'
+import { copyIncluded } from '../repo-settings.js'
+import {
+  composeProject,
+  containerEnv,
+  ensureUser,
+  linkAccount,
+  teammateHome,
+} from '../teammates.js'
 import {
   answerAfterRestart,
   approvalAfterRestart,
@@ -1035,15 +1042,27 @@ export class HarnessThread {
         renderDesign: (folder, options) =>
           renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
       },
-      (request) =>
-        checkout({
+      async (request) => {
+        const result = await checkout({
           // The latest spec: its git token is the freshest.
           spec: this.spec,
           workDir: this.workDir,
           request,
           bundles: this.context.bundles,
           ...(this.runAs ? { runAs: this.runAs } : {}),
-        }),
+        })
+        // On a member's machine, the member's .env and the like, from their own clone.
+        const copied = this.runAs
+          ? []
+          : await copyIncluded(result.directory, request.repository).catch(() => [])
+        return copied.length
+          ? {
+              ...result,
+              copied,
+              copiedNote: `From the member's own clone, as the repository's .worktreeinclude says: ${copied.join(', ')}. They are theirs: keep them out of commits.`,
+            }
+          : result
+      },
       this.context.callTask,
       this.context.callSchedule,
       this.context.preview,
@@ -1174,7 +1193,7 @@ export class HarnessThread {
 async function prepare(workDir: string, account: AccountRef, sessionId: string, runAs?: string) {
   if (!runAs) {
     await mkdir(workDir, { recursive: true })
-    return harnessEnv(accountEnv(account))
+    return harnessEnv({ ...accountEnv(account), COMPOSE_PROJECT_NAME: composeProject(sessionId) })
   }
   await ensureUser(runAs)
   await execFileAsync('sudo', ['-n', '-u', runAs, 'mkdir', '-p', workDir], { cwd: '/' })
