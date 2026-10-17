@@ -32,7 +32,7 @@ export const supabase: ConnectorDefinition = {
       list_migrations: { description: 'List the migrations applied to a database.', write: false },
       apply_migration: { description: 'Apply a schema migration to a database.', write: true },
       execute_sql: { description: 'Run SQL on a project’s database, read or write.', write: true },
-      get_logs: { description: 'Read a project’s logs, by service.', write: false },
+      query_logs: { description: 'Read a project’s logs, by service.', write: false },
       get_advisors: {
         description: 'Security and performance advice on a project’s database.',
         write: false,
