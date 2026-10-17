@@ -49,7 +49,10 @@ const file = (f: DriveFile) => ({
   id: f.id,
   name: f.name,
   mimeType: f.mimeType,
-  ...(f.size ? { size: Number(f.size) } : {}),
+  // Docs, Sheets and Slides have no size of their own: Drive says 1 or 1024.
+  ...(f.size && !f.mimeType?.startsWith('application/vnd.google-apps.')
+    ? { size: Number(f.size) }
+    : {}),
   modified: f.modifiedTime,
   modifiedBy: f.lastModifyingUser?.emailAddress,
   owner: f.owners?.[0]?.emailAddress,
