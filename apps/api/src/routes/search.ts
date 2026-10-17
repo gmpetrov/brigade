@@ -25,6 +25,7 @@ const result = (
 const CONNECTION_KIND: Record<string, string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
+  google_drive: 'Google Drive',
   stripe: 'Stripe',
   github: 'GitHub',
   webhook: 'Custom app',

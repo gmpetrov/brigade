@@ -5,11 +5,13 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { googleDrive } from './google-drive.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
   google_calendar: googleCalendar,
+  google_drive: googleDrive,
   stripe,
   github,
   cloudflare,
@@ -44,6 +46,7 @@ export const triggerCatalog = () =>
       [
         'gmail',
         'google_calendar',
+        'google_drive',
         'stripe',
         'github',
         'cloudflare',
@@ -64,7 +67,7 @@ export const triggerCatalog = () =>
 
 /**
  * The built-in Apps, as the dashboard shows them. One App asks for one consent:
- * Gmail and Google Calendar are two Apps, each with its own Google sign-in.
+ * Gmail, Google Calendar and Google Drive are three Apps, each with its own Google sign-in.
  * personal: an account someone connects is theirs by default (reach mine).
  */
 export const appCatalog: Record<
@@ -89,6 +92,13 @@ export const appCatalog: Record<
   google_calendar: {
     name: 'Google Calendar',
     description: 'Search events and schedule meetings.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_drive: {
+    name: 'Google Drive',
+    description: 'Search, read and write files in Drive, Google Docs and Google Sheets.',
     developer: 'Google',
     category: 'Productivity',
     personal: true,

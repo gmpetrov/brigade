@@ -439,6 +439,7 @@ export type Connection = {
   kind:
     | 'gmail'
     | 'google_calendar'
+    | 'google_drive'
     | 'stripe'
     | 'github'
     | 'webhook'

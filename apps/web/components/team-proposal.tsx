@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 const KIND_LABEL: Record<ProposedConnection['kind'], string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
+  google_drive: 'Google Drive',
   stripe: 'Stripe',
   github: 'GitHub',
 }

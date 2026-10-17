@@ -757,6 +757,8 @@ model Comment {
 enum ConnectorKind {
   gmail
   google_calendar
+  /// Google Drive, with Google Docs and Sheets, on the same Google sign-in as Gmail.
+  google_drive
   stripe
   github
   /// A custom app that posts events to Brigade. Inbound only: no credential, no operations.

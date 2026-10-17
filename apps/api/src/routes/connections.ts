@@ -82,7 +82,8 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  kind:
+    'gmail' | 'google_calendar' | 'google_drive' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -187,7 +188,8 @@ export const connections = new Hono<AppEnv>()
     if (typeof taken === 'string') return back(`error=${taken}`)
     const { grant, scope } = taken
     back = (query: string) => c.redirect(backTo(grant.returnTo, query))
-    if (grant.kind !== 'gmail' && grant.kind !== 'google_calendar') return back('error=forbidden')
+    if (grant.kind !== 'gmail' && grant.kind !== 'google_calendar' && grant.kind !== 'google_drive')
+      return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
 
     let credential: GoogleCredential
@@ -383,6 +385,7 @@ export const connections = new Hono<AppEnv>()
       available: {
         gmail: googleConfigured(),
         google_calendar: googleConfigured(),
+        google_drive: googleConfigured(),
         stripe: true,
         github: githubConfigured(),
         cloudflare: true,
