@@ -453,6 +453,7 @@ export type Connection = {
     | 'google_cloud'
     | 'neon'
     | 'supabase'
+    | 'atlassian'
     | 'mcp'
   label: string
   externalAccount: string | null

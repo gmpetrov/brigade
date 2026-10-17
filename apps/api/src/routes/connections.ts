@@ -84,7 +84,15 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: GoogleKind | 'github' | 'cloudflare' | 'google_cloud' | 'neon' | 'supabase' | 'mcp'
+  kind:
+    | GoogleKind
+    | 'github'
+    | 'cloudflare'
+    | 'google_cloud'
+    | 'neon'
+    | 'supabase'
+    | 'atlassian'
+    | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -394,6 +402,7 @@ export const connections = new Hono<AppEnv>()
         google_cloud: googleMcpConfigured(),
         neon: true,
         supabase: true,
+        atlassian: true,
         mcp: true,
         webhook: true,
       },

@@ -7,6 +7,7 @@ import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
 import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
 import { neon } from './neon.js'
+import { atlassian } from './atlassian.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
 
@@ -22,6 +23,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   google_cloud: googleCloud,
   neon,
   supabase,
+  atlassian,
 }
 
 /**
@@ -61,6 +63,7 @@ export const triggerCatalog = () =>
         'google_cloud',
         'neon',
         'supabase',
+        'atlassian',
         'mcp',
         'webhook',
       ] as const
@@ -175,6 +178,16 @@ export const appCatalog: Record<
     developer: 'Supabase',
     category: 'Developer tools',
     personal: true,
+  },
+  atlassian: {
+    name: 'Atlassian',
+    description:
+      'Search, create and update Jira issues and Confluence pages, with Atlassian’s Rovo MCP server.',
+    developer: 'Atlassian',
+    category: 'Productivity',
+    // An Atlassian sign-in is someone's own account, with their own access to each site.
+    personal: true,
+    skills: 'https://github.com/atlassian/atlassian-mcp-server',
   },
   mcp: {
     name: 'MCP server',
