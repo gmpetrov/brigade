@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { ProjectFilter, ProjectTag } from '@/components/projects'
 import { COLUMNS, NewTaskDialog, PriorityBadge, priorityRank, TaskSheet } from '@/components/tasks'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, projectQuery, useApi, type Task } from '@/lib/api'
@@ -34,6 +35,31 @@ function progress(task: Task) {
   return `Updated ${timeAgo(task.thread.updatedAt)}`
 }
 
+/** Who added a task: the teammate that created it, else the member. */
+function AddedBy({ task }: { task: Task }) {
+  const teammate = task.createdByTeammate
+  const name = teammate?.name ?? task.createdBy.user.name
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      {teammate ? (
+        <TeammateAvatar teammate={teammate} className="size-4 shrink-0" />
+      ) : (
+        <Avatar className="size-4 shrink-0" aria-hidden>
+          {task.createdBy.user.image && (
+            <AvatarImage src={task.createdBy.user.image} alt="" referrerPolicy="no-referrer" />
+          )}
+          <AvatarFallback className="bg-accent text-[9px] font-semibold text-accent-foreground">
+            {name.trim().charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      <span className="truncate">
+        Added by {name} · {timeAgo(task.createdAt)}
+      </span>
+    </span>
+  )
+}
+
 function TaskCard({
   task,
   onOpen,
@@ -44,6 +70,8 @@ function TaskCard({
   showProject: boolean
 }) {
   const status = task.thread?.status
+  // Only in Backlog: nobody is on it yet, so who added it is what matters.
+  const backlog = task.column === 'backlog' && !task.archivedAt && !task.trashedAt
   return (
     <li>
       <button
@@ -65,6 +93,7 @@ function TaskCard({
               <StatusBadge status={status} />
             )}
         </span>
+        {backlog && <AddedBy task={task} />}
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {task.teammate ? (
             <>
@@ -74,7 +103,7 @@ function TaskCard({
           ) : (
             <span className="truncate">Unassigned</span>
           )}
-          <span className="ml-auto shrink-0">{progress(task)}</span>
+          {!backlog && <span className="ml-auto shrink-0">{progress(task)}</span>}
         </span>
       </button>
     </li>

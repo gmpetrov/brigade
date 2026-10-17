@@ -35,6 +35,7 @@ export type TaskMinAggregateOutputType = {
   priority: $Enums.TaskPriority | null
   teammateId: string | null
   createdByMemberId: string | null
+  createdByTeammateId: string | null
   summary: string | null
   completedAt: Date | null
   archivedAt: Date | null
@@ -53,6 +54,7 @@ export type TaskMaxAggregateOutputType = {
   priority: $Enums.TaskPriority | null
   teammateId: string | null
   createdByMemberId: string | null
+  createdByTeammateId: string | null
   summary: string | null
   completedAt: Date | null
   archivedAt: Date | null
@@ -71,6 +73,7 @@ export type TaskCountAggregateOutputType = {
   priority: number
   teammateId: number
   createdByMemberId: number
+  createdByTeammateId: number
   summary: number
   deliverables: number
   completedAt: number
@@ -92,6 +95,7 @@ export type TaskMinAggregateInputType = {
   priority?: true
   teammateId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   summary?: true
   completedAt?: true
   archivedAt?: true
@@ -110,6 +114,7 @@ export type TaskMaxAggregateInputType = {
   priority?: true
   teammateId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   summary?: true
   completedAt?: true
   archivedAt?: true
@@ -128,6 +133,7 @@ export type TaskCountAggregateInputType = {
   priority?: true
   teammateId?: true
   createdByMemberId?: true
+  createdByTeammateId?: true
   summary?: true
   deliverables?: true
   completedAt?: true
@@ -220,6 +226,7 @@ export type TaskGroupByOutputType = {
   priority: $Enums.TaskPriority
   teammateId: string | null
   createdByMemberId: string
+  createdByTeammateId: string | null
   summary: string | null
   deliverables: runtime.JsonValue
   completedAt: Date | null
@@ -260,6 +267,7 @@ export type TaskWhereInput = {
   priority?: Prisma.EnumTaskPriorityFilter<"Task"> | $Enums.TaskPriority
   teammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Task"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
@@ -271,6 +279,7 @@ export type TaskWhereInput = {
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   createdBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
+  createdByTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
 }
@@ -284,6 +293,7 @@ export type TaskOrderByWithRelationInput = {
   priority?: Prisma.SortOrder
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -295,6 +305,7 @@ export type TaskOrderByWithRelationInput = {
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
   createdBy?: Prisma.MemberOrderByWithRelationInput
+  createdByTeammate?: Prisma.TeammateOrderByWithRelationInput
   project?: Prisma.ProjectOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
 }
@@ -311,6 +322,7 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   priority?: Prisma.EnumTaskPriorityFilter<"Task"> | $Enums.TaskPriority
   teammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Task"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
@@ -322,6 +334,7 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   createdBy?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
+  createdByTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
 }, "id">
@@ -335,6 +348,7 @@ export type TaskOrderByWithAggregationInput = {
   priority?: Prisma.SortOrder
   teammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -360,6 +374,7 @@ export type TaskScalarWhereWithAggregatesInput = {
   priority?: Prisma.EnumTaskPriorityWithAggregatesFilter<"Task"> | $Enums.TaskPriority
   teammateId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Task"> | string
+  createdByTeammateId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   summary?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   deliverables?: Prisma.JsonWithAggregatesFilter<"Task">
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
@@ -386,6 +401,7 @@ export type TaskCreateInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
   createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
   session?: Prisma.SessionCreateNestedOneWithoutTaskInput
 }
@@ -399,6 +415,7 @@ export type TaskUncheckedCreateInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -426,6 +443,7 @@ export type TaskUpdateInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
   createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
   session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
 }
@@ -439,6 +457,7 @@ export type TaskUncheckedUpdateInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -459,6 +478,7 @@ export type TaskCreateManyInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -493,6 +513,7 @@ export type TaskUncheckedUpdateManyInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -527,6 +548,7 @@ export type TaskCountOrderByAggregateInput = {
   priority?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   deliverables?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
@@ -546,6 +568,7 @@ export type TaskMaxOrderByAggregateInput = {
   priority?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
@@ -564,6 +587,7 @@ export type TaskMinOrderByAggregateInput = {
   priority?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
+  createdByTeammateId?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
@@ -664,10 +688,24 @@ export type TaskCreateNestedManyWithoutTeammateInput = {
   connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
 }
 
+export type TaskCreateNestedManyWithoutCreatedByTeammateInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.TaskCreateWithoutCreatedByTeammateInput[] | Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput | Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.TaskCreateManyCreatedByTeammateInputEnvelope
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+}
+
 export type TaskUncheckedCreateNestedManyWithoutTeammateInput = {
   create?: Prisma.XOR<Prisma.TaskCreateWithoutTeammateInput, Prisma.TaskUncheckedCreateWithoutTeammateInput> | Prisma.TaskCreateWithoutTeammateInput[] | Prisma.TaskUncheckedCreateWithoutTeammateInput[]
   connectOrCreate?: Prisma.TaskCreateOrConnectWithoutTeammateInput | Prisma.TaskCreateOrConnectWithoutTeammateInput[]
   createMany?: Prisma.TaskCreateManyTeammateInputEnvelope
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+}
+
+export type TaskUncheckedCreateNestedManyWithoutCreatedByTeammateInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.TaskCreateWithoutCreatedByTeammateInput[] | Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput | Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.TaskCreateManyCreatedByTeammateInputEnvelope
   connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
 }
 
@@ -685,6 +723,20 @@ export type TaskUpdateManyWithoutTeammateNestedInput = {
   deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
 }
 
+export type TaskUpdateManyWithoutCreatedByTeammateNestedInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.TaskCreateWithoutCreatedByTeammateInput[] | Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput | Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput[]
+  upsert?: Prisma.TaskUpsertWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.TaskUpsertWithWhereUniqueWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.TaskCreateManyCreatedByTeammateInputEnvelope
+  set?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  disconnect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  delete?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  update?: Prisma.TaskUpdateWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.TaskUpdateWithWhereUniqueWithoutCreatedByTeammateInput[]
+  updateMany?: Prisma.TaskUpdateManyWithWhereWithoutCreatedByTeammateInput | Prisma.TaskUpdateManyWithWhereWithoutCreatedByTeammateInput[]
+  deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
+}
+
 export type TaskUncheckedUpdateManyWithoutTeammateNestedInput = {
   create?: Prisma.XOR<Prisma.TaskCreateWithoutTeammateInput, Prisma.TaskUncheckedCreateWithoutTeammateInput> | Prisma.TaskCreateWithoutTeammateInput[] | Prisma.TaskUncheckedCreateWithoutTeammateInput[]
   connectOrCreate?: Prisma.TaskCreateOrConnectWithoutTeammateInput | Prisma.TaskCreateOrConnectWithoutTeammateInput[]
@@ -696,6 +748,20 @@ export type TaskUncheckedUpdateManyWithoutTeammateNestedInput = {
   connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
   update?: Prisma.TaskUpdateWithWhereUniqueWithoutTeammateInput | Prisma.TaskUpdateWithWhereUniqueWithoutTeammateInput[]
   updateMany?: Prisma.TaskUpdateManyWithWhereWithoutTeammateInput | Prisma.TaskUpdateManyWithWhereWithoutTeammateInput[]
+  deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
+}
+
+export type TaskUncheckedUpdateManyWithoutCreatedByTeammateNestedInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput> | Prisma.TaskCreateWithoutCreatedByTeammateInput[] | Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput | Prisma.TaskCreateOrConnectWithoutCreatedByTeammateInput[]
+  upsert?: Prisma.TaskUpsertWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.TaskUpsertWithWhereUniqueWithoutCreatedByTeammateInput[]
+  createMany?: Prisma.TaskCreateManyCreatedByTeammateInputEnvelope
+  set?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  disconnect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  delete?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  update?: Prisma.TaskUpdateWithWhereUniqueWithoutCreatedByTeammateInput | Prisma.TaskUpdateWithWhereUniqueWithoutCreatedByTeammateInput[]
+  updateMany?: Prisma.TaskUpdateManyWithWhereWithoutCreatedByTeammateInput | Prisma.TaskUpdateManyWithWhereWithoutCreatedByTeammateInput[]
   deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
 }
 
@@ -776,6 +842,7 @@ export type TaskCreateWithoutCreatedByInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
   session?: Prisma.SessionCreateNestedOneWithoutTaskInput
 }
@@ -788,6 +855,7 @@ export type TaskUncheckedCreateWithoutCreatedByInput = {
   description?: string
   priority?: $Enums.TaskPriority
   teammateId?: string | null
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -837,6 +905,7 @@ export type TaskScalarWhereInput = {
   priority?: Prisma.EnumTaskPriorityFilter<"Task"> | $Enums.TaskPriority
   teammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Task"> | string
+  createdByTeammateId?: Prisma.StringNullableFilter<"Task"> | string | null
   summary?: Prisma.StringNullableFilter<"Task"> | string | null
   deliverables?: Prisma.JsonFilter<"Task">
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
@@ -862,6 +931,7 @@ export type TaskCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
   createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
   session?: Prisma.SessionCreateNestedOneWithoutTaskInput
 }
@@ -874,6 +944,7 @@ export type TaskUncheckedCreateWithoutWorkspaceInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -926,6 +997,7 @@ export type TaskCreateWithoutTeammateInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
   createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
   session?: Prisma.SessionCreateNestedOneWithoutTaskInput
 }
@@ -938,6 +1010,7 @@ export type TaskUncheckedCreateWithoutTeammateInput = {
   description?: string
   priority?: $Enums.TaskPriority
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -959,6 +1032,56 @@ export type TaskCreateManyTeammateInputEnvelope = {
   skipDuplicates?: boolean
 }
 
+export type TaskCreateWithoutCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  title: string
+  description?: string
+  priority?: $Enums.TaskPriority
+  summary?: string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Date | string | null
+  archivedAt?: Date | string | null
+  trashedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
+  teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
+  createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
+  session?: Prisma.SessionCreateNestedOneWithoutTaskInput
+}
+
+export type TaskUncheckedCreateWithoutCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  title: string
+  description?: string
+  priority?: $Enums.TaskPriority
+  teammateId?: string | null
+  createdByMemberId: string
+  summary?: string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Date | string | null
+  archivedAt?: Date | string | null
+  trashedAt?: Date | string | null
+  projectId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  session?: Prisma.SessionUncheckedCreateNestedOneWithoutTaskInput
+}
+
+export type TaskCreateOrConnectWithoutCreatedByTeammateInput = {
+  where: Prisma.TaskWhereUniqueInput
+  create: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput>
+}
+
+export type TaskCreateManyCreatedByTeammateInputEnvelope = {
+  data: Prisma.TaskCreateManyCreatedByTeammateInput | Prisma.TaskCreateManyCreatedByTeammateInput[]
+  skipDuplicates?: boolean
+}
+
 export type TaskUpsertWithWhereUniqueWithoutTeammateInput = {
   where: Prisma.TaskWhereUniqueInput
   update: Prisma.XOR<Prisma.TaskUpdateWithoutTeammateInput, Prisma.TaskUncheckedUpdateWithoutTeammateInput>
@@ -973,6 +1096,22 @@ export type TaskUpdateWithWhereUniqueWithoutTeammateInput = {
 export type TaskUpdateManyWithWhereWithoutTeammateInput = {
   where: Prisma.TaskScalarWhereInput
   data: Prisma.XOR<Prisma.TaskUpdateManyMutationInput, Prisma.TaskUncheckedUpdateManyWithoutTeammateInput>
+}
+
+export type TaskUpsertWithWhereUniqueWithoutCreatedByTeammateInput = {
+  where: Prisma.TaskWhereUniqueInput
+  update: Prisma.XOR<Prisma.TaskUpdateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedUpdateWithoutCreatedByTeammateInput>
+  create: Prisma.XOR<Prisma.TaskCreateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedCreateWithoutCreatedByTeammateInput>
+}
+
+export type TaskUpdateWithWhereUniqueWithoutCreatedByTeammateInput = {
+  where: Prisma.TaskWhereUniqueInput
+  data: Prisma.XOR<Prisma.TaskUpdateWithoutCreatedByTeammateInput, Prisma.TaskUncheckedUpdateWithoutCreatedByTeammateInput>
+}
+
+export type TaskUpdateManyWithWhereWithoutCreatedByTeammateInput = {
+  where: Prisma.TaskScalarWhereInput
+  data: Prisma.XOR<Prisma.TaskUpdateManyMutationInput, Prisma.TaskUncheckedUpdateManyWithoutCreatedByTeammateInput>
 }
 
 export type TaskCreateWithoutSessionInput = {
@@ -991,6 +1130,7 @@ export type TaskCreateWithoutSessionInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
   createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutTasksInput
 }
 
@@ -1003,6 +1143,7 @@ export type TaskUncheckedCreateWithoutSessionInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -1045,6 +1186,7 @@ export type TaskUpdateWithoutSessionInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
   createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
 }
 
@@ -1057,6 +1199,7 @@ export type TaskUncheckedUpdateWithoutSessionInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1083,6 +1226,7 @@ export type TaskCreateWithoutProjectInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTasksInput
   teammate?: Prisma.TeammateCreateNestedOneWithoutTasksInput
   createdBy: Prisma.MemberCreateNestedOneWithoutTasksInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutTasksCreatedInput
   session?: Prisma.SessionCreateNestedOneWithoutTaskInput
 }
 
@@ -1095,6 +1239,7 @@ export type TaskUncheckedCreateWithoutProjectInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -1139,6 +1284,7 @@ export type TaskCreateManyCreatedByInput = {
   description?: string
   priority?: $Enums.TaskPriority
   teammateId?: string | null
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -1164,6 +1310,7 @@ export type TaskUpdateWithoutCreatedByInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
   session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
 }
@@ -1176,6 +1323,7 @@ export type TaskUncheckedUpdateWithoutCreatedByInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1195,6 +1343,7 @@ export type TaskUncheckedUpdateManyWithoutCreatedByInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1213,6 +1362,7 @@ export type TaskCreateManyWorkspaceInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -1238,6 +1388,7 @@ export type TaskUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
   createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
   session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
 }
@@ -1250,6 +1401,7 @@ export type TaskUncheckedUpdateWithoutWorkspaceInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1269,6 +1421,7 @@ export type TaskUncheckedUpdateManyWithoutWorkspaceInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1286,6 +1439,26 @@ export type TaskCreateManyTeammateInput = {
   title: string
   description?: string
   priority?: $Enums.TaskPriority
+  createdByMemberId: string
+  createdByTeammateId?: string | null
+  summary?: string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Date | string | null
+  archivedAt?: Date | string | null
+  trashedAt?: Date | string | null
+  projectId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TaskCreateManyCreatedByTeammateInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  title: string
+  description?: string
+  priority?: $Enums.TaskPriority
+  teammateId?: string | null
   createdByMemberId: string
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -1312,6 +1485,7 @@ export type TaskUpdateWithoutTeammateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
   createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
   session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
 }
@@ -1324,6 +1498,7 @@ export type TaskUncheckedUpdateWithoutTeammateInput = {
   description?: Prisma.StringFieldUpdateOperationsInput | string
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1342,6 +1517,66 @@ export type TaskUncheckedUpdateManyWithoutTeammateInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trashedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TaskUpdateWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trashedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
+  teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
+  createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutTasksNestedInput
+  session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
+}
+
+export type TaskUncheckedUpdateWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trashedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  session?: Prisma.SessionUncheckedUpdateOneWithoutTaskNestedInput
+}
+
+export type TaskUncheckedUpdateManyWithoutCreatedByTeammateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
+  teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -1362,6 +1597,7 @@ export type TaskCreateManyProjectInput = {
   priority?: $Enums.TaskPriority
   teammateId?: string | null
   createdByMemberId: string
+  createdByTeammateId?: string | null
   summary?: string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Date | string | null
@@ -1387,6 +1623,7 @@ export type TaskUpdateWithoutProjectInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTasksNestedInput
   teammate?: Prisma.TeammateUpdateOneWithoutTasksNestedInput
   createdBy?: Prisma.MemberUpdateOneRequiredWithoutTasksNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutTasksCreatedNestedInput
   session?: Prisma.SessionUpdateOneWithoutTaskNestedInput
 }
 
@@ -1399,6 +1636,7 @@ export type TaskUncheckedUpdateWithoutProjectInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1418,6 +1656,7 @@ export type TaskUncheckedUpdateManyWithoutProjectInput = {
   priority?: Prisma.EnumTaskPriorityFieldUpdateOperationsInput | $Enums.TaskPriority
   teammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deliverables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1438,6 +1677,7 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   priority?: boolean
   teammateId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
@@ -1449,6 +1689,7 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
   session?: boolean | Prisma.Task$sessionArgs<ExtArgs>
 }, ExtArgs["result"]["task"]>
@@ -1462,6 +1703,7 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   priority?: boolean
   teammateId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
@@ -1473,6 +1715,7 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
 }, ExtArgs["result"]["task"]>
 
@@ -1485,6 +1728,7 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   priority?: boolean
   teammateId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
@@ -1496,6 +1740,7 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
 }, ExtArgs["result"]["task"]>
 
@@ -1508,6 +1753,7 @@ export type TaskSelectScalar = {
   priority?: boolean
   teammateId?: boolean
   createdByMemberId?: boolean
+  createdByTeammateId?: boolean
   summary?: boolean
   deliverables?: boolean
   completedAt?: boolean
@@ -1518,11 +1764,12 @@ export type TaskSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "title" | "description" | "priority" | "teammateId" | "createdByMemberId" | "summary" | "deliverables" | "completedAt" | "archivedAt" | "trashedAt" | "projectId" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
+export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "title" | "description" | "priority" | "teammateId" | "createdByMemberId" | "createdByTeammateId" | "summary" | "deliverables" | "completedAt" | "archivedAt" | "trashedAt" | "projectId" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
 export type TaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
   session?: boolean | Prisma.Task$sessionArgs<ExtArgs>
 }
@@ -1530,12 +1777,14 @@ export type TaskIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
 }
 export type TaskIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.Task$teammateArgs<ExtArgs>
   createdBy?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
+  createdByTeammate?: boolean | Prisma.Task$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Task$projectArgs<ExtArgs>
 }
 
@@ -1545,6 +1794,7 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     teammate: Prisma.$TeammatePayload<ExtArgs> | null
     createdBy: Prisma.$MemberPayload<ExtArgs>
+    createdByTeammate: Prisma.$TeammatePayload<ExtArgs> | null
     project: Prisma.$ProjectPayload<ExtArgs> | null
     session: Prisma.$SessionPayload<ExtArgs> | null
   }
@@ -1563,6 +1813,10 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      * Who asked: the member, or the thread's starter when a teammate created it.
      */
     createdByMemberId: string
+    /**
+     * Set when a teammate created it, with its task tools.
+     */
+    createdByTeammateId: string | null
     /**
      * What was done, from whoever marked it done.
      */
@@ -1983,6 +2237,7 @@ export interface Prisma__TaskClient<T, Null = never, ExtArgs extends runtime.Typ
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   teammate<T extends Prisma.Task$teammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$teammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   createdBy<T extends Prisma.MemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MemberDefaultArgs<ExtArgs>>): Prisma.Prisma__MemberClient<runtime.Types.Result.GetResult<Prisma.$MemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  createdByTeammate<T extends Prisma.Task$createdByTeammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$createdByTeammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   project<T extends Prisma.Task$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.Task$sessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$sessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
@@ -2022,6 +2277,7 @@ export interface TaskFieldRefs {
   readonly priority: Prisma.FieldRef<"Task", 'TaskPriority'>
   readonly teammateId: Prisma.FieldRef<"Task", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Task", 'String'>
+  readonly createdByTeammateId: Prisma.FieldRef<"Task", 'String'>
   readonly summary: Prisma.FieldRef<"Task", 'String'>
   readonly deliverables: Prisma.FieldRef<"Task", 'Json'>
   readonly completedAt: Prisma.FieldRef<"Task", 'DateTime'>
@@ -2434,6 +2690,25 @@ export type TaskDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
  * Task.teammate
  */
 export type Task$teammateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Teammate
+   */
+  select?: Prisma.TeammateSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Teammate
+   */
+  omit?: Prisma.TeammateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeammateInclude<ExtArgs> | null
+  where?: Prisma.TeammateWhereInput
+}
+
+/**
+ * Task.createdByTeammate
+ */
+export type Task$createdByTeammateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the Teammate
    */

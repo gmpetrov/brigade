@@ -4508,6 +4508,7 @@ export const TaskScalarFieldEnum = {
   priority: 'priority',
   teammateId: 'teammateId',
   createdByMemberId: 'createdByMemberId',
+  createdByTeammateId: 'createdByTeammateId',
   summary: 'summary',
   deliverables: 'deliverables',
   completedAt: 'completedAt',
