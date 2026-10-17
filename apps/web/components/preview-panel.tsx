@@ -434,20 +434,6 @@ export function PreviewPanel({
               allow="clipboard-read; clipboard-write; fullscreen"
               referrerPolicy="no-referrer"
             />
-            {!view.local && (
-              // Some sign-ins refuse a frame on another site (Google, GitHub), and Safari keeps no cookies there.
-              <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">
-                Signing in does not work here?{' '}
-                <a
-                  href={view.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  Open it in a new tab
-                </a>
-              </p>
-            )}
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
