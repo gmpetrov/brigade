@@ -168,11 +168,21 @@ export type Item =
 
 export type Limits = NonNullable<Extract<AgentEvent, { type: 'usage.updated' }>['limits']>
 
-/** An agent a teammate started in the background (Claude Code's Agent tool), while it runs. */
-export type BackgroundAgent = { id: string; description: string; steps: number }
+/**
+ * Work a teammate started in the background, while it runs: an agent (Claude Code's
+ * Agent tool, a workflow) or a command (a shell, a Monitor watching one).
+ */
+export type BackgroundTask = {
+  id: string
+  kind: 'agent' | 'command'
+  description: string
+  steps: number
+}
 
-/** Claude Code's task types that are agents at work, not shells or watchers. */
+/** Claude Code's task types that are agents at work. */
 const AGENT_TASKS = new Set(['local_agent', 'remote_agent', 'local_workflow'])
+/** And those that are commands: its turn waits for them too. */
+const COMMAND_TASKS = new Set(['local_bash', 'monitor_mcp'])
 
 /** A message waiting to be read, shown above the composer rather than in the thread. */
 export type QueuedMessage = {
@@ -202,8 +212,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
     let turnTeammate: string | undefined
     let turnStartedAt: number | undefined
     let lastPreview: { previewId: string; status: string } | undefined
-    // The running turn's background agents, by task id: Claude Code sends every one still running at each change.
-    let background = new Map<string, BackgroundAgent>()
+    // The running turn's background work, by task id: Claude Code sends every one still running at each change.
+    let background = new Map<string, BackgroundTask>()
     let shown = true
     const add = (item: Item) => {
       if (shown || ASKS.has(item.kind)) items.push(item)
@@ -387,7 +397,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             add({ kind: 'thinking', key: `r${seq}`, text: e.value })
           else if (e.source === 'runner' && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value })
-          else if (e.source === 'harness') background = backgroundAgents(background, e.value)
+          else if (e.source === 'harness') background = backgroundTasks(background, e.value)
           break
         case 'account.switched':
           add({
@@ -463,8 +473,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
   }, [events, firstSeq])
 }
 
-/** The background agents after one of Claude Code's task messages. */
-function backgroundAgents(agents: Map<string, BackgroundAgent>, value: unknown) {
+/** The background work after one of Claude Code's task messages. */
+function backgroundTasks(tasks: Map<string, BackgroundTask>, value: unknown) {
   const msg = value as {
     type?: string
     subtype?: string
@@ -472,20 +482,27 @@ function backgroundAgents(agents: Map<string, BackgroundAgent>, value: unknown) 
     tasks?: { task_id: string; task_type: string; description: string; ambient?: boolean }[]
     usage?: { tool_uses?: number }
   } | null
-  if (msg?.type !== 'system') return agents
+  if (msg?.type !== 'system') return tasks
   if (msg.subtype === 'background_tasks_changed' && Array.isArray(msg.tasks))
     return new Map(
       msg.tasks
-        .filter((t) => !t.ambient && AGENT_TASKS.has(t.task_type))
-        .map((t) => [
+        .filter(
+          (t) => !t.ambient && (AGENT_TASKS.has(t.task_type) || COMMAND_TASKS.has(t.task_type)),
+        )
+        .map((t): [string, BackgroundTask] => [
           t.task_id,
-          { id: t.task_id, description: t.description, steps: agents.get(t.task_id)?.steps ?? 0 },
+          {
+            id: t.task_id,
+            kind: AGENT_TASKS.has(t.task_type) ? 'agent' : 'command',
+            description: t.description,
+            steps: tasks.get(t.task_id)?.steps ?? 0,
+          },
         ]),
     )
-  const agent = msg.task_id ? agents.get(msg.task_id) : undefined
-  if (msg.subtype === 'task_progress' && agent && typeof msg.usage?.tool_uses === 'number')
-    agent.steps = msg.usage.tool_uses
-  return agents
+  const task = msg.task_id ? tasks.get(msg.task_id) : undefined
+  if (msg.subtype === 'task_progress' && task && typeof msg.usage?.tool_uses === 'number')
+    task.steps = msg.usage.tool_uses
+  return tasks
 }
 
 const clipText = (text: string, max: number) =>
@@ -1231,24 +1248,32 @@ function EventsWaiting({ since }: { since: string }) {
   )
 }
 
-/** The agents a teammate left working in the background: its turn goes on until they report back. */
-function BackgroundAgents({ agents }: { agents: BackgroundAgent[] }) {
+/** The work a teammate left running in the background: its turn goes on until it reports back. */
+function BackgroundTasks({ tasks }: { tasks: BackgroundTask[] }) {
+  const agents = tasks.filter((t) => t.kind === 'agent').length
+  const heading =
+    tasks.length === 1
+      ? agents
+        ? 'An agent is working in the background'
+        : 'A command is running in the background'
+      : agents === tasks.length
+        ? `${tasks.length} agents are working in the background`
+        : agents === 0
+          ? `${tasks.length} commands are running in the background`
+          : `${tasks.length} tasks are running in the background`
   return (
     <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-      <span>
-        {agents.length === 1 ? 'An agent is' : `${agents.length} agents are`} working in the
-        background
-      </span>
+      <span>{heading}</span>
       <ul className="flex flex-col gap-1 pl-1">
-        {agents.map((agent) => (
-          <li key={agent.id} className="flex min-w-0 items-center gap-2">
+        {tasks.map((task) => (
+          <li key={task.id} className="flex min-w-0 items-center gap-2">
             <span
               className="size-1.5 flex-none animate-pulse rounded-full bg-primary"
               aria-hidden
             />
-            <span className="min-w-0 truncate text-foreground/80">{agent.description}</span>
-            {agent.steps > 0 && (
-              <span className="flex-none text-xs">{plural(agent.steps, '1 step', 'steps')}</span>
+            <span className="min-w-0 truncate text-foreground/80">{task.description}</span>
+            {task.steps > 0 && (
+              <span className="flex-none text-xs">{plural(task.steps, '1 step', 'steps')}</span>
             )}
           </li>
         ))}
@@ -1334,7 +1359,7 @@ export function ThreadItems({
   /** The thread's computer is starting for that turn. */
   starting?: boolean
   /** Agents the running turn left working in the background. */
-  background?: BackgroundAgent[]
+  background?: BackgroundTask[]
   /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
   eventsWaitingSince?: string | null
 }) {
@@ -1756,7 +1781,7 @@ export function ThreadItems({
       ) : (
         working && nodes.running !== undefined && <WorkingFor since={nodes.running} />
       )}
-      {working && background.length > 0 && <BackgroundAgents agents={background} />}
+      {working && background.length > 0 && <BackgroundTasks tasks={background} />}
     </div>
   )
 }
