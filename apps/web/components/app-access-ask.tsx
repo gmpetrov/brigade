@@ -218,7 +218,7 @@ export function AppAccessAsk({
       </div>
       {waiting && (
         <p className="text-sm text-muted-foreground">
-          Finish signing in in the window that opened. {askerName} gets {access} access as soon as{' '}
+          Finish signing in in the tab that opened. {askerName} gets {access} access as soon as{' '}
           {name} is connected.
         </p>
       )}

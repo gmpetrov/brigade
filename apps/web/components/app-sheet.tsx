@@ -130,7 +130,7 @@ export function AppSheet({
       })
       if (inWindow) setWaiting({ before, since: Date.now() })
     })
-  // While the sign-in window is open: look for the new account every few seconds, for a while.
+  // While the sign-in tab is open: look for the new account every few seconds, for a while.
   const [waiting, setWaiting] = useState<{ before: number; since: number }>()
   useEffect(() => {
     if (!waiting) return
@@ -246,8 +246,7 @@ export function AppSheet({
         {error && <p className="text-sm text-destructive-text">{error}</p>}
         {waiting && (
           <p className="text-sm text-muted-foreground">
-            Finish signing in in the window that opened. The account shows here once it is
-            connected.
+            Finish signing in in the tab that opened. The account shows here once it is connected.
           </p>
         )}
         {!data.available[kind] && <Unavailable kind={kind} />}
