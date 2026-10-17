@@ -40,6 +40,8 @@ const BUILT_IN: Kind[] = [
   'gmail',
   'google_calendar',
   'google_drive',
+  'google_docs',
+  'google_sheets',
   'github',
   'cloudflare',
   'google_cloud',

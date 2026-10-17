@@ -238,6 +238,8 @@ export const openTicketTool = tool({
                     'gmail',
                     'google_calendar',
                     'google_drive',
+                    'google_docs',
+                    'google_sheets',
                     'stripe',
                     'github',
                     'cloudflare',
@@ -416,7 +418,15 @@ export const proposeTeamTool = tool({
                 properties: {
                   kind: {
                     type: 'string',
-                    enum: ['gmail', 'google_calendar', 'google_drive', 'stripe', 'github'],
+                    enum: [
+                      'gmail',
+                      'google_calendar',
+                      'google_drive',
+                      'google_docs',
+                      'google_sheets',
+                      'stripe',
+                      'github',
+                    ],
                   },
                   scope: {
                     type: 'string',

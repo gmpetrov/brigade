@@ -1,10 +1,7 @@
 // Google OAuth for connections. Tokens go straight into the vault.
 import { env } from '../config.js'
 
-/** The Apps that sign in with Brigade's Google client. */
-export type GoogleKind = 'gmail' | 'google_calendar' | 'google_drive'
-
-export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
+export const GOOGLE_SCOPES: Record<'gmail' | 'google_calendar', string[]> = {
   gmail: [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.send',
@@ -14,8 +11,6 @@ export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
     'https://www.googleapis.com/auth/calendar.freebusy',
   ],
-  // Every file the account can open, to search, read and edit them; Docs and Sheets take it too.
-  google_drive: ['https://www.googleapis.com/auth/drive'],
 }
 
 export type GoogleCredential = {
@@ -30,7 +25,7 @@ export const googleMcpConfigured = () =>
   Boolean(env.GOOGLE_MCP_CLIENT_ID && env.GOOGLE_MCP_CLIENT_SECRET)
 export const googleRedirectUri = () => `${env.API_URL}/api/connections/oauth/google/callback`
 
-export function googleAuthUrl(kind: GoogleKind, state: string) {
+export function googleAuthUrl(kind: 'gmail' | 'google_calendar', state: string) {
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
     redirect_uri: googleRedirectUri(),
@@ -95,22 +90,13 @@ export async function revokeGoogle(credential: GoogleCredential) {
 }
 
 /** The account a credential belongs to, to show which one a connection is. Never the credential. */
-export async function googleAccount(kind: GoogleKind, accessToken: string) {
+export async function googleAccount(kind: 'gmail' | 'google_calendar', accessToken: string) {
   const headers = { authorization: `Bearer ${accessToken}` }
   if (kind === 'gmail') {
     const profile = (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
       headers,
     }).then((r) => r.json())) as { emailAddress?: string }
     return profile.emailAddress ?? null
-  }
-  if (kind === 'google_drive') {
-    const about = (await fetch(
-      'https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)',
-      {
-        headers,
-      },
-    ).then((r) => r.json())) as { user?: { emailAddress?: string } }
-    return about.user?.emailAddress ?? null
   }
   // The primary calendar's id is the account's address.
   const primary = (await fetch(

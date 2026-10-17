@@ -64,13 +64,13 @@ export const ReturnTo = z
   .max(300)
   .regex(/^\/app\/[\w\-/?=&.%]*$/, 'A dashboard path')
 export const ConnectGoogle = z.object({
-  kind: z.enum(['gmail', 'google_calendar', 'google_drive']),
+  kind: z.enum(['gmail', 'google_calendar']),
   returnTo: ReturnTo.optional(),
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
 /** An App whose account signs in on its MCP server's own OAuth. */
 export const ConnectMcp = z.object({
-  kind: z.enum(['cloudflare', 'google_cloud']),
+  kind: z.enum(['cloudflare', 'google_cloud', 'google_drive', 'google_docs', 'google_sheets']),
   returnTo: ReturnTo.optional(),
 })
 /** An MCP server's address, to see what it is and how its accounts sign in. */
