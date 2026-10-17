@@ -39,14 +39,22 @@ test('a turn frozen mid-run, waiting on nobody, is left to go on', () => {
   assert.equal(closeTurn(frozen), undefined)
 })
 
-test('no turn, or no conversation to resume, is left as it is', () => {
+test('no turn is left as it is', () => {
   assert.equal(closeTurn(undefined), undefined)
   assert.equal(closeTurn({ ...waiting, continueFrom: undefined }), undefined)
-  const unnamed = {
+})
+
+test("a thread's first turn, with no conversation id yet, resumes the folder's newest one", () => {
+  const first = {
     ...waiting,
     continueFrom: { ...waiting.continueFrom, data: { bridge: waiting.continueFrom.data.bridge } },
   }
-  assert.equal(closeTurn(unnamed), undefined)
+  assert.deepEqual(closeTurn(first)?.resume, {
+    type: 'resume-session',
+    harnessId: 'claude-code',
+    specificationVersion: 'harness-v1',
+    data: {},
+  })
 })
 
 test('the answer names the call it answers', () => {

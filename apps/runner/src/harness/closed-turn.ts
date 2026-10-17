@@ -10,7 +10,7 @@ export type WaitingCall = { toolCallId: string; toolName: string; input: unknown
 /**
  * The saved session without the turn it waited in, resumed in the same conversation
  * under a new bridge, and the calls that turn waited on. Undefined when it was not
- * waiting on a person (a turn frozen mid-run goes on as it was) or names no conversation.
+ * waiting on a person (a turn frozen mid-run goes on as it was).
  */
 export function closeTurn(
   resume: unknown,
@@ -18,10 +18,10 @@ export function closeTurn(
   const from = (resume as { continueFrom?: Record<string, unknown> } | undefined)?.continueFrom
   const data = from?.data as { claudeSessionId?: unknown; bridge?: unknown } | undefined
   const pending = from?.pendingToolResults
-  if (!from || typeof data?.claudeSessionId !== 'string' || !Array.isArray(pending)) return
-  if (pending.length === 0) return
-  // The bridge it ran under stopped with the session.
-  const { bridge: _bridge, ...rest } = data
+  if (!from || !Array.isArray(pending) || pending.length === 0) return
+  // The bridge it ran under stopped with the session. A thread's first turn has no
+  // conversation id yet: Claude Code then continues the newest one in the thread's folder.
+  const { bridge: _bridge, ...rest } = data ?? {}
   return {
     resume: {
       type: 'resume-session',
