@@ -26,7 +26,8 @@ import { joinThread, promptThread, startThread } from './work.js'
 const BOARD = {
   teammate: { select: { id: true, name: true, harness: true } },
   project: { select: { id: true, name: true, icon: true, logo: true } },
-  createdBy: { select: { id: true, user: { select: { name: true } } } },
+  createdBy: { select: { id: true, user: { select: { name: true, image: true } } } },
+  createdByTeammate: { select: { id: true, name: true } },
   session: {
     select: {
       id: true,
@@ -800,6 +801,7 @@ export async function handleTaskCall(
             priority: op.priority,
             teammateId: teammate.id,
             createdByMemberId: session.startedByMemberId,
+            createdByTeammateId: teammate.id,
             projectId: session.projectId,
           } as never,
         })
@@ -824,6 +826,7 @@ export async function handleTaskCall(
           description: op.description,
           priority: op.priority,
           createdByMemberId: session.startedByMemberId,
+          createdByTeammateId: teammate.id,
           projectId: session.projectId,
         } as never,
       })

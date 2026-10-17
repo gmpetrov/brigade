@@ -362,8 +362,11 @@ export type Task = {
   teammate: { id: string; name: string; harness: Teammate['harness'] } | null
   projectId: string | null
   project: ProjectRef | null
-  createdBy: { id: string; user: { name: string } }
+  /** Who asked: the member, or the thread's starter when a teammate created it. */
+  createdBy: { id: string; user: { name: string; image: string | null } }
   createdByMemberId: string
+  /** The teammate that created it with its task tools, if one did. */
+  createdByTeammate: { id: string; name: string } | null
   summary: string | null
   deliverables: { label: string; url: string }[]
   completedAt: string | null

@@ -299,6 +299,7 @@ model Teammate {
   pullRequestsReviewing PullRequest[]        @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
   tasks                 Task[]
+  tasksCreated          Task[]               @relation("TaskCreatedByTeammate")
   schedules             Schedule[]
   schedulesCreated      Schedule[]           @relation("ScheduleCreatedByTeammate")
   wakeups               Wakeup[]
@@ -464,6 +465,9 @@ model Task {
   /// Who asked: the member, or the thread's starter when a teammate created it.
   createdByMemberId String
   createdBy         Member       @relation(fields: [createdByMemberId], references: [id], onDelete: Cascade)
+  /// Set when a teammate created it, with its task tools.
+  createdByTeammateId String?
+  createdByTeammate   Teammate?  @relation("TaskCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
   /// What was done, from whoever marked it done.
   summary           String?
   /// Links to what it produced: [{ label, url }].

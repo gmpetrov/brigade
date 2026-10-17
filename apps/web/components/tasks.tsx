@@ -603,7 +603,10 @@ export function TaskSheet({
                 )}
                 <span aria-hidden>·</span>
                 <span>
-                  asked by {task.createdBy.user.name} {timeAgo(task.createdAt)}
+                  {task.createdByTeammate
+                    ? `added by ${task.createdByTeammate.name} for ${task.createdBy.user.name}`
+                    : `asked by ${task.createdBy.user.name}`}{' '}
+                  {timeAgo(task.createdAt)}
                 </span>
               </SheetDescription>
             </SheetHeader>
