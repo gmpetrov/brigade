@@ -138,9 +138,10 @@ fail() { echo "brigade-thread: $1" >&2; exit 2; }
 user_ok() { echo "$1" | grep -Eq '^bt-[a-z0-9]{1,28}$' && id "$1" >/dev/null 2>&1 || fail "bad user"; }
 thread_ok() { echo "$1" | grep -Eq '^[A-Za-z0-9_-]{1,64}$' || fail "bad thread"; }
 STATE=/run/brigade-threads
-# systemd-resolved answers there too (DNSStubListenerExtra, from the setup): the host's
+# systemd-resolved answers there too (DNSStubListenerExtra, from the setup's file): the host's
 # loopback address the namespaces reach through their default route.
 DNS=10.231.255.254
+RESOLVED_FILE=/etc/systemd/resolved.conf.d/brigade-threads.conf
 # 10.231.0.0/16 in /30s: thread n is 10.231.x.(y+2) in its namespace, .(y+1) on the host's side.
 addr() { B=$(($1 * 4)); echo "10.231.$((B / 256)).$((B % 256 + $2))"; }
 index() { cat "$STATE/$1" 2>/dev/null || fail "no network for thread $1"; }
@@ -148,6 +149,13 @@ netns() { [ -e "/run/netns/bt-$1" ] || fail "no network for thread $1"; echo "/r
 # Threads reach the internet (masqueraded) and the host's DNS resolver, never each other.
 host_rules() {
   ip addr add "$DNS/32" dev lo 2>/dev/null || true
+  # systemd-resolved reads its listener there (the setup's file) only when it starts: a resumed
+  # computer's runs from before the file came back, and no thread resolves a name. Restarted,
+  # it reads it.
+  if [ -f "$RESOLVED_FILE" ] && systemctl is-active --quiet systemd-resolved &&
+    [ -z "$(ss -Hlnu src "$DNS" sport = :53)" ]; then
+    systemctl restart systemd-resolved
+  fi
   iptables -N BRIGADE-THREADS 2>/dev/null || true
   iptables -C FORWARD -j BRIGADE-THREADS 2>/dev/null || iptables -I FORWARD 1 -j BRIGADE-THREADS
   if ! iptables -C BRIGADE-THREADS -i 'btn+' -o 'btn+' -j DROP 2>/dev/null; then
@@ -325,6 +333,9 @@ if [ -d /etc/systemd/resolved.conf.d ] || systemctl is-active --quiet systemd-re
     sudo install -d /etc/systemd/resolved.conf.d
     echo "$RESOLVED" | sudo tee /etc/systemd/resolved.conf.d/brigade-threads.conf >/dev/null
     sudo systemctl try-restart systemd-resolved
+  # Running without that listener (a resumed computer's, see the thread helper): restarted too.
+  elif systemctl is-active --quiet systemd-resolved && [ -z "$(ss -Hlnu src 10.231.255.254 sport = :53)" ]; then
+    sudo systemctl restart systemd-resolved
   fi
 fi
 # Containers for teammates: each runs its own rootless Docker (the helper's \`containers\`),
