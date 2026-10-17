@@ -14,8 +14,7 @@ export const notion: ConnectorDefinition = {
   operations: {},
   mcp: {
     url: 'https://mcp.notion.com/mcp',
-    // notion-get-self answers with the bot user Brigade signed in as; its owner is the
-    // member, and the workspace the person picked on Notion's consent page.
+    // One sign-in reaches one Notion workspace: an account shows as its name.
     account: { tool: 'notion-get-self', name: notionAccountName },
     tools: {
       'notion-search': {
@@ -58,6 +57,8 @@ export const notion: ConnectorDefinition = {
         description: 'Change a database’s properties, name or description.',
         write: true,
       },
+      'notion-delete-pages': { description: 'Move pages to the trash.', write: true },
+      'notion-delete-databases': { description: 'Move databases to the trash.', write: true },
       'notion-create-comment': {
         description: 'Comment on a page or reply in a discussion.',
         write: true,
@@ -66,23 +67,12 @@ export const notion: ConnectorDefinition = {
   },
 }
 
-/** The Notion account as a row shows it: its owner's email, else the workspace's name. */
+/**
+ * The Notion account as a row shows it: the workspace picked on Notion's consent page, as
+ * notion-get-self gives it ({ workspace: { name }, user: { email } }), else the member's email.
+ */
 export function notionAccountName(output: unknown): string | null {
-  const self = output as {
-    email?: unknown
-    name?: unknown
-    bot?: {
-      workspace_name?: unknown
-      owner?: { user?: { name?: unknown; person?: { email?: unknown } } }
-    }
-  } | null
-  const user = self?.bot?.owner?.user
-  const found = [
-    user?.person?.email,
-    self?.email,
-    self?.bot?.workspace_name,
-    user?.name,
-    self?.name,
-  ]
+  const self = output as { workspace?: { name?: unknown }; user?: { email?: unknown } } | null
+  const found = [self?.workspace?.name, self?.user?.email]
   return (found.find((v) => typeof v === 'string' && v.length > 0) as string | undefined) ?? null
 }

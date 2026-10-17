@@ -98,13 +98,10 @@ test('a tool already named for its server keeps one prefix', () => {
   assert.equal(mcpToolName('cloudflare', 'execute'), 'cloudflare_execute')
 })
 
-test("a Notion account shows as its owner's email, else its workspace", () => {
-  const owner = { type: 'user', user: { name: 'Ada', person: { email: 'ada@acme.com' } } }
-  assert.equal(notionAccountName({ bot: { owner, workspace_name: 'Acme' } }), 'ada@acme.com')
-  assert.equal(
-    notionAccountName({ bot: { owner: { type: 'workspace' }, workspace_name: 'Acme' } }),
-    'Acme',
-  )
+test('a Notion account shows as its workspace, else its email', () => {
+  const user = { type: 'person', name: 'Ada', email: 'ada@acme.com' }
+  assert.equal(notionAccountName({ workspace: { name: 'Acme' }, user }), 'Acme')
+  assert.equal(notionAccountName({ workspace: {}, user }), 'ada@acme.com')
   assert.equal(notionAccountName({}), null)
 })
 
