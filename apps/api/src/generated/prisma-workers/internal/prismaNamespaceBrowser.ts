@@ -320,6 +320,12 @@ export const SessionScalarFieldEnum = {
   othersMayPrompt: 'othersMayPrompt',
   controlledByMemberId: 'controlledByMemberId',
   origin: 'origin',
+  parentId: 'parentId',
+  parentTeammateId: 'parentTeammateId',
+  awaited: 'awaited',
+  awaitUntil: 'awaitUntil',
+  report: 'report',
+  reportDeliveredAt: 'reportDeliveredAt',
   triggerId: 'triggerId',
   conversationKey: 'conversationKey',
   scheduleId: 'scheduleId',
@@ -377,6 +383,7 @@ export const ScheduleScalarFieldEnum = {
   nextRunAt: 'nextRunAt',
   lastError: 'lastError',
   projectId: 'projectId',
+  parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -391,6 +398,7 @@ export const WakeupScalarFieldEnum = {
   sessionId: 'sessionId',
   teammateId: 'teammateId',
   note: 'note',
+  kind: 'kind',
   wakeAt: 'wakeAt',
   status: 'status',
   firedAt: 'firedAt',

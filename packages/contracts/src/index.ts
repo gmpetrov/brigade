@@ -3,6 +3,7 @@ export * from './api.js'
 export * from './attachments.js'
 export * from './cards.js'
 export * from './chief.js'
+export * from './children.js'
 export * from './commands.js'
 export * from './credentials.js'
 export * from './design.js'
@@ -43,8 +44,10 @@ export * from './thread-history.js'
  * 24: a new project's brief from its website (project.describe).
  * 25: threads move between computers (thread.release, the spec's `moved`).
  * 26: unacknowledged events are sent again after a while, and threads whose events wait are reported (events.waiting).
+ * 27: child threads (start_child, list_children, read_child, cancel_child and report as schedule.call operations;
+ *     the spec's `parent`), and message_thread (a task.call comment to a thread).
  */
-export const PROTOCOL_VERSION = 26
+export const PROTOCOL_VERSION = 27
 /** Runners from this version on hand a thread's folders over to another computer, and take one in (moved). */
 export const MOVE_PROTOCOL = 25
 /** Runners from this version on write a project's brief from its website (project.describe). */

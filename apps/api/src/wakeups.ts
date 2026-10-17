@@ -16,6 +16,7 @@ import { broadcastThreadStatus } from './hub.js'
 import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
+import { settleOverdueChildren } from './children.js'
 import { promptThread } from './work.js'
 
 type WakeupOperation = Extract<
@@ -38,7 +39,7 @@ const changed = (scope: Scope, session: { id: string; status: string }) =>
  * Wake-ups fired in the thread since a person last wrote in it. A wake-up's own
  * prompt has no member, so a teammate checking again and again counts up.
  */
-async function firedInARow(db: ScopedDb, sessionId: string) {
+export async function firedInARow(db: ScopedDb, sessionId: string) {
   const messages = await db.sessionEvent.findMany({
     where: { sessionId, type: 'message.user' },
     orderBy: { seq: 'desc' },
@@ -72,7 +73,7 @@ export async function handleWakeup(
     local: `${localTime(w.wakeAt, timezone)} (${timezone})`,
   })
   const pending = await db.wakeup.findMany({
-    where: { sessionId: session.id, teammateId: teammate.id, status: 'pending' },
+    where: { sessionId: session.id, teammateId: teammate.id, status: 'pending', kind: 'wakeup' },
     orderBy: { wakeAt: 'asc' },
   })
 
@@ -127,7 +128,7 @@ async function cancel(
   actor: Actor,
 ) {
   const { count } = await db.wakeup.updateMany({
-    where: { id, sessionId: session.id, status: 'pending' },
+    where: { id, sessionId: session.id, status: 'pending', kind: 'wakeup' },
     data: { status: 'cancelled' },
   })
   if (!count) return false
@@ -178,6 +179,7 @@ async function fire(wakeup: {
   sessionId: string
   teammateId: string
   note: string
+  kind: 'wakeup' | 'report'
   wakeAt: Date
   createdAt: Date
 }) {
@@ -195,17 +197,23 @@ async function fire(wakeup: {
   }
   // A person has the computer: it waits until they hand back, as the teammate does.
   if (thread.controlledByMemberId) return
-  // The teammate left the thread or was archived: nobody to wake.
+  // The teammate left the thread or was archived: nobody to wake. Children's reports go to whoever is there.
   const seat = thread.teammates.find((t) => t.teammateId === wakeup.teammateId)
-  if (!seat || seat.teammate.archivedAt) {
+  const report = wakeup.kind === 'report'
+  if ((!seat || seat.teammate.archivedAt) && !report) {
     await settle('missed')
     return changed(scope, thread)
   }
   if (!(await settle('fired'))) return
+  // Archived meanwhile, the thread comes back with the reports, as with a new message.
+  if (report && thread.archivedAt)
+    await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
   const outcome = await promptThread(db, scope, thread, {
-    text: prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId)),
+    text: report
+      ? wakeup.note
+      : prompt(wakeup, now, await memberTimezone(db, thread.startedByMemberId)),
     memberId: null,
-    teammateIds: [wakeup.teammateId],
+    ...(seat && !seat.teammate.archivedAt ? { teammateIds: [wakeup.teammateId] } : {}),
   }).catch((error: unknown) => {
     console.error(`wake-up ${wakeup.id}: could not prompt`, error)
     return 'offline' as const
@@ -220,6 +228,15 @@ async function fire(wakeup: {
   }
   // paused: a cap ticket holds the prompt and sends it when allowed.
   changed(scope, thread)
+}
+
+/** A children's report, fired as soon as it is made (src/children.ts); it waits like any wake-up when it cannot go. */
+export async function fireReport(id: string) {
+  const wakeup = await prisma.wakeup.findFirst({ where: { id, status: 'pending' } })
+  if (wakeup)
+    await fire(wakeup).catch((error: unknown) =>
+      console.error(`report ${wakeup.id}: could not fire`, error),
+    )
 }
 
 let ticking = false
@@ -238,6 +255,8 @@ export async function fireDueWakeups() {
       await fire(wakeup).catch((error: unknown) =>
         console.error(`wake-up ${wakeup.id}: could not fire`, error),
       )
+    // Children whose parent's wait ran out: it hears what is done.
+    await settleOverdueChildren()
   } finally {
     ticking = false
   }

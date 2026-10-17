@@ -361,6 +361,7 @@ enum SessionOrigin {
   member
   trigger
   schedule
+  child
 }
 
 model Session {
@@ -385,13 +386,29 @@ model Session {
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
   /// member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
+  /// child: a teammate started it from its parent thread (start_child).
   origin               SessionOrigin      @default(member)
+  /// The thread it was started from (start_child, or a schedule's run that reports there): out of the
+  /// sidebar, shown in its parent, which its report wakes (src/children.ts). One level only.
+  parentId             String?
+  parent               Session?           @relation("SessionChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children             Session[]          @relation("SessionChildren")
+  /// The parent's teammate that started it, the one its report wakes.
+  parentTeammateId     String?
+  /// Its parent waits for its report, with the others it waits for; false for a schedule's run.
+  awaited              Boolean            @default(false)
+  /// Past this, an awaited child no longer holds its parent back: the parent is told what is done.
+  awaitUntil           DateTime?
+  /// Its report, once its turn ended: { status: nothing | report | needs_person | failed | cancelled, summary, at }.
+  report               Json?
+  /// When its report reached the parent (or was settled without waking it). A new turn clears both.
+  reportDeliveredAt    DateTime?
   triggerId            String?
   trigger              Trigger?           @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
   conversationKey      String?
   scheduleId           String?
-  schedule             Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  schedule             Schedule?          @relation("ScheduleRuns", fields: [scheduleId], references: [id], onDelete: SetNull)
   /// Set while archived: out of the sidebar for everyone. A new message brings it back.
   archivedAt           DateTime?
   /// Highest contiguous event sequence number stored.
@@ -430,12 +447,15 @@ model Session {
   project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Times a teammate set to be prompted here again.
   wakeups              Wakeup[]
+  /// Schedules whose runs report here, as its children.
+  reportingSchedules   Schedule[]         @relation("ScheduleParent")
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
   @@index([teammateId])
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
+  @@index([parentId, createdAt])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
@@ -452,37 +472,37 @@ enum TaskPriority {
 /// progress; the column comes from the thread (none: backlog) and completedAt.
 /// Assigning a teammate starts the thread, so a task has a teammate once it has one.
 model Task {
-  id                String       @id @default(cuid())
-  organizationId    String
-  workspaceId       String
-  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  title             String
-  description       String       @default("")
-  priority          TaskPriority @default(medium)
+  id                  String       @id @default(cuid())
+  organizationId      String
+  workspaceId         String
+  workspace           Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title               String
+  description         String       @default("")
+  priority            TaskPriority @default(medium)
   /// The teammate doing it. Unset in the backlog: nobody is on it yet.
-  teammateId        String?
-  teammate          Teammate?    @relation(fields: [teammateId], references: [id], onDelete: SetNull)
+  teammateId          String?
+  teammate            Teammate?    @relation(fields: [teammateId], references: [id], onDelete: SetNull)
   /// Who asked: the member, or the thread's starter when a teammate created it.
-  createdByMemberId String
-  createdBy         Member       @relation(fields: [createdByMemberId], references: [id], onDelete: Cascade)
+  createdByMemberId   String
+  createdBy           Member       @relation(fields: [createdByMemberId], references: [id], onDelete: Cascade)
   /// Set when a teammate created it, with its task tools.
   createdByTeammateId String?
-  createdByTeammate   Teammate?  @relation("TaskCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
+  createdByTeammate   Teammate?    @relation("TaskCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
   /// What was done, from whoever marked it done.
-  summary           String?
+  summary             String?
   /// Links to what it produced: [{ label, url }].
-  deliverables      Json         @default("[]")
-  completedAt       DateTime?
+  deliverables        Json         @default("[]")
+  completedAt         DateTime?
   /// Off the board: a done task put away. Reopening it brings it back.
-  archivedAt        DateTime?
+  archivedAt          DateTime?
   /// In the Trash: off the board, from any column. Restoring it brings it back.
-  trashedAt         DateTime?
+  trashedAt           DateTime?
   /// The project it belongs to; its thread starts there.
-  projectId         String?
-  project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  session           Session?
+  projectId           String?
+  project             Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  session             Session?
 
   @@index([workspaceId, completedAt])
   @@index([workspaceId, archivedAt])
@@ -521,13 +541,22 @@ model Schedule {
   /// Its runs start in this project.
   projectId           String?
   project             Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// Set when made from a thread to report there: each run is a child of that thread (src/children.ts).
+  parentSessionId     String?
+  parentSession       Session?  @relation("ScheduleParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  sessions            Session[]
+  sessions            Session[] @relation("ScheduleRuns")
 
   @@index([nextRunAt])
   @@index([workspaceId])
   @@index([teammateId])
+}
+
+/// wakeup: a teammate's own (set_wakeup). report: its children's reports, brought back to it (src/children.ts).
+enum WakeupKind {
+  wakeup
+  report
 }
 
 enum WakeupStatus {
@@ -549,8 +578,9 @@ model Wakeup {
   session        Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   teammateId     String
   teammate       Teammate     @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  /// What to check, in the teammate's words: the prompt it gets back.
+  /// What to check, in the teammate's words: the prompt it gets back. For a report, the prompt itself.
   note           String
+  kind           WakeupKind   @default(wakeup)
   wakeAt         DateTime
   status         WakeupStatus @default(pending)
   firedAt        DateTime?

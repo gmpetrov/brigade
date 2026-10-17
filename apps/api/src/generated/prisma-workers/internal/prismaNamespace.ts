@@ -4480,6 +4480,12 @@ export const SessionScalarFieldEnum = {
   othersMayPrompt: 'othersMayPrompt',
   controlledByMemberId: 'controlledByMemberId',
   origin: 'origin',
+  parentId: 'parentId',
+  parentTeammateId: 'parentTeammateId',
+  awaited: 'awaited',
+  awaitUntil: 'awaitUntil',
+  report: 'report',
+  reportDeliveredAt: 'reportDeliveredAt',
   triggerId: 'triggerId',
   conversationKey: 'conversationKey',
   scheduleId: 'scheduleId',
@@ -4537,6 +4543,7 @@ export const ScheduleScalarFieldEnum = {
   nextRunAt: 'nextRunAt',
   lastError: 'lastError',
   projectId: 'projectId',
+  parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -4551,6 +4558,7 @@ export const WakeupScalarFieldEnum = {
   sessionId: 'sessionId',
   teammateId: 'teammateId',
   note: 'note',
+  kind: 'kind',
   wakeAt: 'wakeAt',
   status: 'status',
   firedAt: 'firedAt',
@@ -5394,6 +5402,20 @@ export type EnumTaskPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'TaskPriority[]'
  */
 export type ListEnumTaskPriorityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TaskPriority[]'>
+    
+
+
+/**
+ * Reference to a field of type 'WakeupKind'
+ */
+export type EnumWakeupKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupKind'>
+    
+
+
+/**
+ * Reference to a field of type 'WakeupKind[]'
+ */
+export type ListEnumWakeupKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WakeupKind[]'>
     
 
 

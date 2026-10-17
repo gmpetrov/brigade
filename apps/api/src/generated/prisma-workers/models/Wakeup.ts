@@ -32,6 +32,7 @@ export type WakeupMinAggregateOutputType = {
   sessionId: string | null
   teammateId: string | null
   note: string | null
+  kind: $Enums.WakeupKind | null
   wakeAt: Date | null
   status: $Enums.WakeupStatus | null
   firedAt: Date | null
@@ -45,6 +46,7 @@ export type WakeupMaxAggregateOutputType = {
   sessionId: string | null
   teammateId: string | null
   note: string | null
+  kind: $Enums.WakeupKind | null
   wakeAt: Date | null
   status: $Enums.WakeupStatus | null
   firedAt: Date | null
@@ -58,6 +60,7 @@ export type WakeupCountAggregateOutputType = {
   sessionId: number
   teammateId: number
   note: number
+  kind: number
   wakeAt: number
   status: number
   firedAt: number
@@ -73,6 +76,7 @@ export type WakeupMinAggregateInputType = {
   sessionId?: true
   teammateId?: true
   note?: true
+  kind?: true
   wakeAt?: true
   status?: true
   firedAt?: true
@@ -86,6 +90,7 @@ export type WakeupMaxAggregateInputType = {
   sessionId?: true
   teammateId?: true
   note?: true
+  kind?: true
   wakeAt?: true
   status?: true
   firedAt?: true
@@ -99,6 +104,7 @@ export type WakeupCountAggregateInputType = {
   sessionId?: true
   teammateId?: true
   note?: true
+  kind?: true
   wakeAt?: true
   status?: true
   firedAt?: true
@@ -185,6 +191,7 @@ export type WakeupGroupByOutputType = {
   sessionId: string
   teammateId: string
   note: string
+  kind: $Enums.WakeupKind
   wakeAt: Date
   status: $Enums.WakeupStatus
   firedAt: Date | null
@@ -219,6 +226,7 @@ export type WakeupWhereInput = {
   sessionId?: Prisma.StringFilter<"Wakeup"> | string
   teammateId?: Prisma.StringFilter<"Wakeup"> | string
   note?: Prisma.StringFilter<"Wakeup"> | string
+  kind?: Prisma.EnumWakeupKindFilter<"Wakeup"> | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFilter<"Wakeup"> | Date | string
   status?: Prisma.EnumWakeupStatusFilter<"Wakeup"> | $Enums.WakeupStatus
   firedAt?: Prisma.DateTimeNullableFilter<"Wakeup"> | Date | string | null
@@ -235,6 +243,7 @@ export type WakeupOrderByWithRelationInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  kind?: Prisma.SortOrder
   wakeAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   firedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -254,6 +263,7 @@ export type WakeupWhereUniqueInput = Prisma.AtLeast<{
   sessionId?: Prisma.StringFilter<"Wakeup"> | string
   teammateId?: Prisma.StringFilter<"Wakeup"> | string
   note?: Prisma.StringFilter<"Wakeup"> | string
+  kind?: Prisma.EnumWakeupKindFilter<"Wakeup"> | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFilter<"Wakeup"> | Date | string
   status?: Prisma.EnumWakeupStatusFilter<"Wakeup"> | $Enums.WakeupStatus
   firedAt?: Prisma.DateTimeNullableFilter<"Wakeup"> | Date | string | null
@@ -270,6 +280,7 @@ export type WakeupOrderByWithAggregationInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  kind?: Prisma.SortOrder
   wakeAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   firedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -289,6 +300,7 @@ export type WakeupScalarWhereWithAggregatesInput = {
   sessionId?: Prisma.StringWithAggregatesFilter<"Wakeup"> | string
   teammateId?: Prisma.StringWithAggregatesFilter<"Wakeup"> | string
   note?: Prisma.StringWithAggregatesFilter<"Wakeup"> | string
+  kind?: Prisma.EnumWakeupKindWithAggregatesFilter<"Wakeup"> | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeWithAggregatesFilter<"Wakeup"> | Date | string
   status?: Prisma.EnumWakeupStatusWithAggregatesFilter<"Wakeup"> | $Enums.WakeupStatus
   firedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Wakeup"> | Date | string | null
@@ -299,6 +311,7 @@ export type WakeupCreateInput = {
   id?: string
   organizationId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -315,6 +328,7 @@ export type WakeupUncheckedCreateInput = {
   sessionId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -325,6 +339,7 @@ export type WakeupUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -341,6 +356,7 @@ export type WakeupUncheckedUpdateInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -354,6 +370,7 @@ export type WakeupCreateManyInput = {
   sessionId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -364,6 +381,7 @@ export type WakeupUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -377,6 +395,7 @@ export type WakeupUncheckedUpdateManyInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -400,6 +419,7 @@ export type WakeupCountOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  kind?: Prisma.SortOrder
   wakeAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   firedAt?: Prisma.SortOrder
@@ -413,6 +433,7 @@ export type WakeupMaxOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  kind?: Prisma.SortOrder
   wakeAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   firedAt?: Prisma.SortOrder
@@ -426,6 +447,7 @@ export type WakeupMinOrderByAggregateInput = {
   sessionId?: Prisma.SortOrder
   teammateId?: Prisma.SortOrder
   note?: Prisma.SortOrder
+  kind?: Prisma.SortOrder
   wakeAt?: Prisma.SortOrder
   status?: Prisma.SortOrder
   firedAt?: Prisma.SortOrder
@@ -558,6 +580,10 @@ export type WakeupUncheckedUpdateManyWithoutSessionNestedInput = {
   deleteMany?: Prisma.WakeupScalarWhereInput | Prisma.WakeupScalarWhereInput[]
 }
 
+export type EnumWakeupKindFieldUpdateOperationsInput = {
+  set?: $Enums.WakeupKind
+}
+
 export type EnumWakeupStatusFieldUpdateOperationsInput = {
   set?: $Enums.WakeupStatus
 }
@@ -566,6 +592,7 @@ export type WakeupCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -580,6 +607,7 @@ export type WakeupUncheckedCreateWithoutWorkspaceInput = {
   sessionId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -622,6 +650,7 @@ export type WakeupScalarWhereInput = {
   sessionId?: Prisma.StringFilter<"Wakeup"> | string
   teammateId?: Prisma.StringFilter<"Wakeup"> | string
   note?: Prisma.StringFilter<"Wakeup"> | string
+  kind?: Prisma.EnumWakeupKindFilter<"Wakeup"> | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFilter<"Wakeup"> | Date | string
   status?: Prisma.EnumWakeupStatusFilter<"Wakeup"> | $Enums.WakeupStatus
   firedAt?: Prisma.DateTimeNullableFilter<"Wakeup"> | Date | string | null
@@ -632,6 +661,7 @@ export type WakeupCreateWithoutTeammateInput = {
   id?: string
   organizationId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -646,6 +676,7 @@ export type WakeupUncheckedCreateWithoutTeammateInput = {
   workspaceId: string
   sessionId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -682,6 +713,7 @@ export type WakeupCreateWithoutSessionInput = {
   id?: string
   organizationId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -696,6 +728,7 @@ export type WakeupUncheckedCreateWithoutSessionInput = {
   workspaceId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -734,6 +767,7 @@ export type WakeupCreateManyWorkspaceInput = {
   sessionId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -744,6 +778,7 @@ export type WakeupUpdateWithoutWorkspaceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -758,6 +793,7 @@ export type WakeupUncheckedUpdateWithoutWorkspaceInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -770,6 +806,7 @@ export type WakeupUncheckedUpdateManyWithoutWorkspaceInput = {
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -782,6 +819,7 @@ export type WakeupCreateManyTeammateInput = {
   workspaceId: string
   sessionId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -792,6 +830,7 @@ export type WakeupUpdateWithoutTeammateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -806,6 +845,7 @@ export type WakeupUncheckedUpdateWithoutTeammateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -818,6 +858,7 @@ export type WakeupUncheckedUpdateManyWithoutTeammateInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -830,6 +871,7 @@ export type WakeupCreateManySessionInput = {
   workspaceId: string
   teammateId: string
   note: string
+  kind?: $Enums.WakeupKind
   wakeAt: Date | string
   status?: $Enums.WakeupStatus
   firedAt?: Date | string | null
@@ -840,6 +882,7 @@ export type WakeupUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -854,6 +897,7 @@ export type WakeupUncheckedUpdateWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -866,6 +910,7 @@ export type WakeupUncheckedUpdateManyWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   teammateId?: Prisma.StringFieldUpdateOperationsInput | string
   note?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumWakeupKindFieldUpdateOperationsInput | $Enums.WakeupKind
   wakeAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.EnumWakeupStatusFieldUpdateOperationsInput | $Enums.WakeupStatus
   firedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -881,6 +926,7 @@ export type WakeupSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   sessionId?: boolean
   teammateId?: boolean
   note?: boolean
+  kind?: boolean
   wakeAt?: boolean
   status?: boolean
   firedAt?: boolean
@@ -897,6 +943,7 @@ export type WakeupSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   sessionId?: boolean
   teammateId?: boolean
   note?: boolean
+  kind?: boolean
   wakeAt?: boolean
   status?: boolean
   firedAt?: boolean
@@ -913,6 +960,7 @@ export type WakeupSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   sessionId?: boolean
   teammateId?: boolean
   note?: boolean
+  kind?: boolean
   wakeAt?: boolean
   status?: boolean
   firedAt?: boolean
@@ -929,13 +977,14 @@ export type WakeupSelectScalar = {
   sessionId?: boolean
   teammateId?: boolean
   note?: boolean
+  kind?: boolean
   wakeAt?: boolean
   status?: boolean
   firedAt?: boolean
   createdAt?: boolean
 }
 
-export type WakeupOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "teammateId" | "note" | "wakeAt" | "status" | "firedAt" | "createdAt", ExtArgs["result"]["wakeup"]>
+export type WakeupOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "teammateId" | "note" | "kind" | "wakeAt" | "status" | "firedAt" | "createdAt", ExtArgs["result"]["wakeup"]>
 export type WakeupInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -966,9 +1015,10 @@ export type $WakeupPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     sessionId: string
     teammateId: string
     /**
-     * What to check, in the teammate's words: the prompt it gets back.
+     * What to check, in the teammate's words: the prompt it gets back. For a report, the prompt itself.
      */
     note: string
+    kind: $Enums.WakeupKind
     wakeAt: Date
     status: $Enums.WakeupStatus
     firedAt: Date | null
@@ -1405,6 +1455,7 @@ export interface WakeupFieldRefs {
   readonly sessionId: Prisma.FieldRef<"Wakeup", 'String'>
   readonly teammateId: Prisma.FieldRef<"Wakeup", 'String'>
   readonly note: Prisma.FieldRef<"Wakeup", 'String'>
+  readonly kind: Prisma.FieldRef<"Wakeup", 'WakeupKind'>
   readonly wakeAt: Prisma.FieldRef<"Wakeup", 'DateTime'>
   readonly status: Prisma.FieldRef<"Wakeup", 'WakeupStatus'>
   readonly firedAt: Prisma.FieldRef<"Wakeup", 'DateTime'>

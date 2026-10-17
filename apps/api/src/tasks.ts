@@ -14,6 +14,7 @@ import {
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
+import { messageChild } from './children.js'
 import { scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastTask, dispatch, isOnline } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
@@ -848,6 +849,12 @@ export async function handleTaskCall(
           note: `Created, but ${assignee.name} could not start, so it waits in Backlog: ${error.message}`,
         })
       }
+    }
+
+    // message_thread to a child of this thread: it carries on, and this thread waits for its report.
+    if (op.name === 'comment' && op.threadId) {
+      const output = await messageChild(db, scope, session, teammate, op.threadId, op.text)
+      return 'error' in output ? fail(output.error) : done(output)
     }
 
     if (op.name === 'complete' && !op.taskId) {
