@@ -53,9 +53,7 @@ function AddedBy({ task }: { task: Task }) {
           </AvatarFallback>
         </Avatar>
       )}
-      <span className="truncate">
-        Added by {name} · {timeAgo(task.createdAt)}
-      </span>
+      <span className="truncate">Added by {name}</span>
     </span>
   )
 }
