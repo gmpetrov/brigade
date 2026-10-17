@@ -238,6 +238,12 @@ const agentKey = (spec: ThreadSpec) =>
     spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
   ])
 
+/** A person's answer, given as a new message once the tools it brought are loaded (closeTurn). */
+const afterReload = (result: { toolName: string; output: { value: unknown } }) =>
+  `Your tools were reloaded with what the person just gave you, which cut off your ${result.toolName} call above: ` +
+  `it shows as interrupted, but the person answered it. Their answer:\n\n${JSON.stringify(result.output.value)}\n\n` +
+  'Carry on from there, without asking again.'
+
 type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
 
 /**
@@ -532,15 +538,18 @@ export class HarnessThread {
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
       // teammate's page between turns), or the thread's effort did: the harness stops and
-      // resumes with an agent made anew. A new message while a turn is still unfinished
-      // leaves that turn as it is.
+      // resumes with an agent made anew; an answer the turn waited on then comes as a new
+      // message (closeTurn). A new message while a turn is still unfinished leaves that turn as it is.
+      let reloaded = false
       if (
         this.live &&
         this.live.made !== agentKey(this.spec) &&
         ((input.kind !== 'prompt' && input.kind !== 'resume') ||
           !this.live.session.hasUnfinishedTurn())
-      )
+      ) {
         await this.park()
+        reloaded = (input.kind === 'answer' || input.kind === 'ticket') && this.closeTurn()
+      }
       const live = (attached = await this.attach())
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
@@ -577,34 +586,44 @@ export class HarnessThread {
       let result =
         held || text === ''
           ? undefined
-          : input.kind === 'prompt' || input.kind === 'resume'
+          : reloaded && (input.kind === 'answer' || input.kind === 'ticket')
             ? await live.agent.stream({
                 session: live.session,
-                prompt: text!,
+                prompt: afterReload(
+                  input.kind === 'answer'
+                    ? this.answerResult(input.questionId, input.answer)
+                    : this.ticketResult(input.requestId, input.answer),
+                ),
                 abortSignal: signal,
               })
-            : input.kind === 'answer' || input.kind === 'ticket'
-              ? await live.agent.continueStream({
+            : input.kind === 'prompt' || input.kind === 'resume'
+              ? await live.agent.stream({
                   session: live.session,
+                  prompt: text!,
                   abortSignal: signal,
-                  toolResultContinuations: [
-                    input.kind === 'answer'
-                      ? this.answerResult(input.questionId, input.answer)
-                      : this.ticketResult(input.requestId, input.answer),
-                  ],
                 })
-              : await live.agent.continueStream({
-                  session: live.session,
-                  abortSignal: signal,
-                  toolApprovalContinuations: [
-                    {
-                      type: 'tool-approval-response',
-                      approvalId: input.approvalId,
-                      approved: input.approved,
-                      ...(input.reason ? { reason: input.reason } : {}),
-                    },
-                  ],
-                })
+              : input.kind === 'answer' || input.kind === 'ticket'
+                ? await live.agent.continueStream({
+                    session: live.session,
+                    abortSignal: signal,
+                    toolResultContinuations: [
+                      input.kind === 'answer'
+                        ? this.answerResult(input.questionId, input.answer)
+                        : this.ticketResult(input.requestId, input.answer),
+                    ],
+                  })
+                : await live.agent.continueStream({
+                    session: live.session,
+                    abortSignal: signal,
+                    toolApprovalContinuations: [
+                      {
+                        type: 'tool-approval-response',
+                        approvalId: input.approvalId,
+                        approved: input.approved,
+                        ...(input.reason ? { reason: input.reason } : {}),
+                      },
+                    ],
+                  })
       if (result) await consume(result.fullStream)
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
@@ -769,6 +788,35 @@ export class HarnessThread {
         value: (questions ? askUserResult(questions, answer) : answer) as never,
       },
     }
+  }
+
+  /**
+   * Parked to reload its tools while a turn waits on a person: end that turn instead,
+   * so the session resumes with nothing to continue. Claude Code hands a continued
+   * turn's tool result only to the process that made the call, and keeps the tools
+   * that turn started with: the answer goes in a new message instead (afterReload),
+   * which also brings the new tools. False when the saved state can't be resumed so.
+   */
+  private closeTurn() {
+    if (this.spec.teammate.harness === 'codex') return false
+    const resume = this.saved?.resume as
+      | { continueFrom?: { harnessId?: string; specificationVersion?: string; data?: unknown } }
+      | undefined
+    const from = resume?.continueFrom
+    const data = from?.data as { claudeSessionId?: string; bridge?: unknown } | undefined
+    if (!from || !data?.claudeSessionId) return false
+    // The bridge it ran under stopped with the park: the conversation resumes in a new one.
+    const { bridge: _bridge, ...rest } = data
+    this.saved = {
+      ...this.saved!,
+      resume: {
+        type: 'resume-session',
+        harnessId: from.harnessId,
+        specificationVersion: from.specificationVersion,
+        data: rest,
+      },
+    }
+    return true
   }
 
   /** A person's answer as the result of the open_ticket call that opened the ticket. */
