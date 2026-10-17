@@ -1678,11 +1678,11 @@ export function previewTools(
     }),
     check_preview: tool({
       description:
-        "Open the running preview's pages with Chrome as a person would, again: after you fixed what its last " +
-        "check found, or for other pages. Reports each one's status, whether it is blank, script and server " +
-        'errors, with screenshots to read. Not after each small edit while the person tries it: the preview ' +
-        'reloads by itself. When you need one then, pass only the page you changed; once a check passed, ' +
-        'it waits less for pages to settle.',
+        "Open the running preview's pages with Chrome as a person would, again. Only when the person asks, " +
+        'when the preview crashed or restarted, or once after you fixed what its last check found. Reports each ' +
+        "page's status, whether it is blank, script and server errors, with screenshots to read. Not after " +
+        'edits while the person tries it: the preview reloads by itself and they see it. Pass only the pages ' +
+        'you need; once a check passed, it waits less for pages to settle.',
       inputSchema: jsonSchema<{ paths?: string[] }>({
         type: 'object',
         properties: {

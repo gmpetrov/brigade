@@ -51,6 +51,19 @@ const LOAD_MS = 90_000
 const WAITING = /reloads by itself/
 /** No visible text and nothing drawn: a blank page. (Sparse pages with a frame are judged on their body.) */
 const MIN_TEXT = 1
+/** At most this for a call into the page. */
+const CALL_MS = 2_000
+
+/**
+ * A call into the page, or `fallback` after `ms`: Playwright gives some calls
+ * no timeout, and a page whose server never answered stays mid-navigation,
+ * where `evaluate` and `title` wait for it forever.
+ */
+const within = <T>(ms: number, promise: Promise<T>, fallback: T) =>
+  Promise.race([
+    promise.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(resolve, ms, fallback).unref()),
+  ])
 
 const slug = (path: string) =>
   path
@@ -149,34 +162,43 @@ async function checkPage(
   })
 
   const target = new URL(path, base)
-  let status = 0
   const deadline = Date.now() + LOAD_MS
-  // The proxy's waiting page while the app compiles or restarts: load again until the app answers.
+  // The proxy's waiting page while the app compiles or restarts: ask for the page
+  // without opening it until the app answers. Opened, it reloads itself, and
+  // that interrupts the check's own navigation.
   for (;;) {
-    const response = await page
-      .goto(target.href, { waitUntil: 'load', timeout: Math.max(5_000, deadline - Date.now()) })
-      .catch((error: Error) => {
-        problems.push(`did not load: ${error.message.split('\n')[0]}`)
-        return null
+    const answer = await page.request
+      .get(target.href, {
+        headers: { accept: 'text/html' },
+        timeout: Math.max(5_000, deadline - Date.now()),
       })
-    status = response?.status() ?? 0
-    const html = response && status === 503 ? await response.text().catch(() => '') : ''
-    if (!WAITING.test(html) || Date.now() > deadline) break
+      .catch(() => null)
+    const waiting =
+      answer?.status() === 503 && WAITING.test(await within(CALL_MS, answer.text(), ''))
+    if ((waiting || !answer) && Date.now() > deadline)
+      problems.push(`the app did not answer within ${LOAD_MS / 1000} seconds`)
+    if (!waiting || Date.now() > deadline) break
     await page.waitForTimeout(2_000)
   }
+  const response = await page
+    .goto(target.href, { waitUntil: 'load', timeout: Math.max(5_000, deadline - Date.now()) })
+    .catch((error: Error) => {
+      problems.push(`did not load: ${error.message.split('\n')[0]}`)
+      return null
+    })
+  const status = response?.status() ?? 0
   if (status >= 400) problems.push(`the page answered ${status}`)
   type Visible = { text: number; drawn: boolean; body: number; framed: boolean }
-  const look = () =>
-    page
-      .evaluate(VISIBLE)
-      .catch(() => ({ text: 0, drawn: false, body: 0, framed: false })) as Promise<Visible>
+  const nothing: Visible = { text: 0, drawn: false, body: 0, framed: false }
+  const look = () => within(CALL_MS, page.evaluate(VISIBLE) as Promise<Visible>, nothing)
   const shows = (v: Visible) => (v.text >= MIN_TEXT || v.drawn) && !(v.framed && v.body === 0)
   // Client-rendered pages draw after their data arrives: look until what it shows holds still.
   const loaded = Date.now()
   let visible = await look()
   let seen = JSON.stringify(visible)
   let since = loaded
-  while (Date.now() - loaded < waits.max) {
+  // A page that never loaded has nothing to wait for.
+  while (status > 0 && Date.now() - loaded < waits.max) {
     const now = Date.now()
     if (now - loaded >= waits.min && now - since >= waits.stable && shows(visible)) break
     await page.waitForTimeout(LOOK_MS)
@@ -195,13 +217,13 @@ async function checkPage(
     )
 
   const screenshot = join(out, `${slug(path)}.png`)
-  await page.screenshot({ path: screenshot }).catch(() => undefined)
+  await page.screenshot({ path: screenshot, timeout: 10_000 }).catch(() => undefined)
   const final = new URL(page.url())
   return {
     path,
     status,
     finalPath: final.origin === origin ? final.pathname + (final.search ? '?…' : '') : final.origin,
-    title: (await page.title().catch(() => '')).slice(0, 200),
+    title: (await within(CALL_MS, page.title(), '')).slice(0, 200),
     ok: problems.length === 0,
     problems: [...new Set(problems)].slice(0, 10),
     warnings: [...warnings].slice(0, 10),
@@ -244,12 +266,12 @@ async function main(input: Input): Promise<CheckResult> {
           input.out,
           WAITS[input.quick ? 'quick' : 'full'],
         )
-        await page.close()
+        await within(CALL_MS, page.close(), undefined)
       }
     }
     await Promise.all(Array.from({ length: Math.min(AT_ONCE, input.paths.length) }, tab))
   } finally {
-    await browser.close()
+    await within(10_000, browser.close(), undefined)
   }
   return { ok: pages.every((p) => p.ok), pages }
 }
@@ -257,7 +279,8 @@ async function main(input: Input): Promise<CheckResult> {
 const raw = process.argv[2]
 if (raw) {
   main(JSON.parse(raw) as Input).then(
-    (result) => process.stdout.write(JSON.stringify(result)),
+    // Then exit: a Chrome that did not close must not keep the result from the runner.
+    (result) => process.stdout.write(JSON.stringify(result), () => process.exit(0)),
     (error: unknown) => {
       process.stderr.write(error instanceof Error ? error.message : String(error))
       process.exit(1)
