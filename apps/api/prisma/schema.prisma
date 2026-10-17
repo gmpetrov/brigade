@@ -361,6 +361,7 @@ enum SessionOrigin {
   member
   trigger
   schedule
+  child
 }
 
 model Session {
@@ -385,7 +386,16 @@ model Session {
   /// Set while a member has taken over the thread; the teammate does not act meanwhile.
   controlledByMemberId String?
   /// member: a member's message. trigger: an outside event. schedule: a schedule's instructions, at its time.
+  /// child: a teammate started it from its parent thread (start_child).
   origin               SessionOrigin      @default(member)
+  /// The thread a teammate started this one from: out of the sidebar, shown in its parent. One level only.
+  parentId             String?
+  parent               Session?           @relation("SessionChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children             Session[]          @relation("SessionChildren")
+  /// Its parent waits for its report (delegation); false for a schedule's run.
+  awaited              Boolean            @default(false)
+  /// Its report once it finished: { status: nothing | report | needs_person | failed, summary, at }.
+  report               Json?
   triggerId            String?
   trigger              Trigger?           @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
@@ -436,6 +446,7 @@ model Session {
   @@index([teammateId])
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
+  @@index([parentId, createdAt])
 }
 
 /// One AgentEvent with its sequence number. Append-only.

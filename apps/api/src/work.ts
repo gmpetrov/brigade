@@ -289,8 +289,8 @@ export async function handoffThread(
 
 /**
  * A new thread with a fresh context, on the starting member's accounts. For a
- * trigger, the member who set it up; for a schedule, its owner. Throws when
- * they have no usable account.
+ * trigger, the member who set it up; for a schedule, its owner; for a child,
+ * its parent's starter. Throws when they have no usable account.
  */
 export async function startThread(
   db: ScopedDb,
@@ -306,6 +306,14 @@ export async function startThread(
     origin?:
       | { kind: 'trigger'; triggerId: string; conversationKey?: string }
       | { kind: 'schedule'; scheduleId: string }
+      | {
+          kind: 'child'
+          /** The thread it starts from, whose access it keeps (src/children.ts). */
+          parent: { id: string; private: boolean; othersMayPrompt: boolean }
+          /** The teammate that started it. */
+          byTeammateId: string
+          awaited: boolean
+        }
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
     /** The task this thread works on, linked before its first turn so the teammate knows. */
@@ -348,7 +356,16 @@ export async function startThread(
           }
         : input.origin?.kind === 'schedule'
           ? { origin: 'schedule', scheduleId: input.origin.scheduleId }
-          : {}),
+          : input.origin?.kind === 'child'
+            ? {
+                origin: 'child',
+                parentId: input.origin.parent.id,
+                awaited: input.origin.awaited,
+                // Who may see, write in and remember it is its parent's.
+                private: input.origin.parent.private,
+                othersMayPrompt: input.origin.parent.othersMayPrompt,
+              }
+            : {}),
     } as never,
   })
   // Each step below is a trip to the database: what does not wait on another goes with it.
@@ -371,7 +388,9 @@ export async function startThread(
       ? { type: 'member', id: input.memberId }
       : input.origin.kind === 'trigger'
         ? { type: 'system', id: `trigger:${input.origin.triggerId}` }
-        : { type: 'system', id: `schedule:${input.origin.scheduleId}` },
+        : input.origin.kind === 'schedule'
+          ? { type: 'system', id: `schedule:${input.origin.scheduleId}` }
+          : { type: 'teammate', id: input.origin.byTeammateId },
     action: 'thread.started',
     target: { type: 'thread', id: created.id },
     data: {
@@ -380,6 +399,7 @@ export async function startThread(
       accountId: account.id,
       ...(input.origin?.kind === 'trigger' ? { triggerId: input.origin.triggerId } : {}),
       ...(input.origin?.kind === 'schedule' ? { scheduleId: input.origin.scheduleId } : {}),
+      ...(input.origin?.kind === 'child' ? { parentId: input.origin.parent.id } : {}),
     },
   })
   const [, thread] = await Promise.all([started, loadThread(db, created.id)])
