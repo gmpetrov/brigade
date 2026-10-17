@@ -22,6 +22,16 @@ const BATCH = 200
 const HEARTBEAT_MS = 30_000
 /** An upgrade that has not answered in this long is given up and retried. */
 const HANDSHAKE_MS = 15_000
+/**
+ * Events the API has not acknowledged in this long are sent again: one it failed to
+ * store, or lost on the way, would otherwise wait for the next reconnect, and every
+ * event of the thread after it with it.
+ */
+const RESEND_MS = 30_000
+/** Not after this long: the thread most likely left this computer. Sent again on reconnect only. */
+const RESEND_FOR_MS = 24 * 60 * 60_000
+/** Events unacknowledged this long make their thread's page say so (events.waiting). */
+const WAITING_MS = 3 * 60_000
 
 type Result = Extract<ApiToRunner, { type: 'connector.result' }>
 
@@ -38,6 +48,10 @@ export class Connection {
   private ready = false
   private backoff = 1000
   private closed = false
+  /** When each thread's events were last sent. */
+  private sentAt = new Map<string, number>()
+  /** The threads this connection last told the API wait, with since when (events.waiting). */
+  private reported = new Map<string, string>()
 
   constructor(
     private readonly config: RunnerConfig,
@@ -70,6 +84,7 @@ export class Connection {
         answered = false
         ws.ping()
         this.send({ type: 'heartbeat' })
+        this.checkWaiting()
       }, HEARTBEAT_MS)
       const extra = await this.hello().catch(() => ({}))
       this.send({
@@ -88,6 +103,8 @@ export class Connection {
       if (message.type === 'welcome') {
         console.log(`connected to ${this.config.apiUrl} (workspace "${this.config.workspaceName}")`)
         this.ready = true
+        // What it was told before, it forgot with the old connection.
+        this.reported = new Map()
         this.flush()
         this.onCommand(message)
         this.onBundle(message.bundle, false)
@@ -147,14 +164,46 @@ export class Connection {
 
   /** Replay everything the API has not acknowledged. */
   private flush() {
-    const events = this.outbox.unacknowledged()
+    this.sendEvents(this.outbox.unacknowledged())
+  }
+
+  private sendEvents(events: SequencedEvent[], now = Date.now()) {
+    for (const e of events) this.sentAt.set(e.sessionId, now)
     for (let i = 0; i < events.length; i += BATCH)
       this.send({ type: 'events', events: events.slice(i, i + BATCH) })
   }
 
   /** Send one new event now if connected; otherwise it waits in the outbox for replay. */
   sendEvent(event: SequencedEvent) {
-    if (this.ready) this.send({ type: 'events', events: [event] })
+    if (this.ready) this.sendEvents([event])
+  }
+
+  /**
+   * Send again what the API has not acknowledged for a while, and tell it which
+   * threads' events have waited for minutes, when that changes: a thread must never
+   * look at work for hours while nothing of it gets through.
+   */
+  private checkWaiting(now = Date.now()) {
+    if (!this.ready) return
+    for (const { sessionId, since, events } of this.outbox.waiting(RESEND_MS, now)) {
+      if (now - since > RESEND_FOR_MS) continue
+      if (now - (this.sentAt.get(sessionId) ?? 0) < RESEND_MS) continue
+      console.warn(
+        `thread ${sessionId}: ${events.length} events unacknowledged for ${Math.round((now - since) / 1000)} s, sending them again`,
+      )
+      this.sendEvents(events, now)
+    }
+    const waiting = this.outbox
+      .waiting(WAITING_MS, now)
+      .slice(0, 1000)
+      .map(({ sessionId, since }) => ({ sessionId, since: new Date(since).toISOString() }))
+    if (
+      waiting.length === this.reported.size &&
+      waiting.every((w) => this.reported.get(w.sessionId) === w.since)
+    )
+      return
+    this.reported = new Map(waiting.map((w) => [w.sessionId, w.since]))
+    this.send({ type: 'events.waiting', threads: waiting })
   }
 
   /**

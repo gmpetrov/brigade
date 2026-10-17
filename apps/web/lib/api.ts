@@ -277,6 +277,8 @@ export type ThreadSummary = {
   archivedAt?: string | null
   /** Others than its starter may write in it, so rename and archive it. */
   othersMayPrompt?: boolean
+  /** Since when its events have not reached Brigade: its computer keeps sending them. */
+  eventsWaitingSince?: string | null
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {
