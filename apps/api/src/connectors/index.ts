@@ -5,6 +5,7 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { notion } from './notion.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -14,6 +15,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  notion,
 }
 
 /**
@@ -48,6 +50,7 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'notion',
         'mcp',
         'webhook',
       ] as const
@@ -125,6 +128,14 @@ export const appCatalog: Record<
     // A Google sign-in is someone's own account, as for Gmail.
     personal: true,
   },
+  notion: {
+    name: 'Notion',
+    description: 'Search, read and write your team’s docs and wikis, with Notion’s own MCP server.',
+    developer: 'Notion',
+    category: 'Productivity',
+    // A Notion sign-in reaches what its member can see, private pages included.
+    personal: true,
+  },
   mcp: {
     name: 'MCP server',
     description:
@@ -146,9 +157,11 @@ export const appCatalog: Record<
 /**
  * An MCP server's tool as teammates call it: the App's kind first (or, for a server
  * added by its URL, its prefix), so `search` on Cloudflare is cloudflare_search and
- * cannot clash with another App's.
+ * cannot clash with another App's. A tool already named for its server (Notion's
+ * notion-search) keeps one prefix: notion_search, not notion_notion-search.
  */
-export const mcpToolName = (prefix: string, tool: string) => `${prefix}_${tool}`.slice(0, 64)
+export const mcpToolName = (prefix: string, tool: string) =>
+  `${prefix}_${tool.replace(new RegExp(`^${prefix}[-_]`), '')}`.slice(0, 64)
 
 /** Every tool of a kind, for the App's tool switches. An MCP server's are the ones Brigade knows. */
 export const toolCatalog = (kind: ConnectorKind) => {

@@ -47,6 +47,7 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'notion'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -129,6 +130,8 @@ export type McpServer = {
    * the server marks it readOnlyHint.
    */
   tools: Record<string, { description: string; write: boolean }>
+  /** The tool that says who an account signed in as, to show it. Default: whoami. */
+  whoami?: string
   /**
    * How an account signs in. oauth (the default): the server's own OAuth. api_key: a key the
    * member pastes, sent in `header`. none: the server asks for nothing.

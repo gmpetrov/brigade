@@ -444,6 +444,7 @@ export type Connection = {
     | 'webhook'
     | 'cloudflare'
     | 'google_cloud'
+    | 'notion'
     | 'mcp'
   label: string
   externalAccount: string | null

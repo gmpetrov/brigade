@@ -10,6 +10,7 @@ process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { idTokenEmail, inspectMcp, listMcpTools, callMcpTool, nameFromHost, privateAddress } =
   await import('../src/connectors/mcp.js')
 const { mcpAppKey, toolPrefix } = await import('../src/mcp-servers.js')
+const { mcpToolName } = await import('../src/connectors/index.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
 const servers: ReturnType<typeof createServer>[] = []
@@ -88,6 +89,12 @@ test("tool prefixes stay apart from other Apps' and the built-in kinds", () => {
   assert.equal(toolPrefix('Notes', ['notes', 'notes_2']), 'notes_3')
   assert.equal(toolPrefix('Cloudflare', []), 'cloudflare_2')
   assert.equal(toolPrefix('!!!', []), 'mcp')
+})
+
+test('a tool already named for its server keeps one prefix', () => {
+  assert.equal(mcpToolName('notion', 'notion-search'), 'notion_search')
+  assert.equal(mcpToolName('notion', 'search'), 'notion_search')
+  assert.equal(mcpToolName('cloudflare', 'execute'), 'cloudflare_execute')
 })
 
 test('one App per server, however its URL was typed', () => {
