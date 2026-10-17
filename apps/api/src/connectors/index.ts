@@ -4,6 +4,7 @@ import { cloudflare } from './cloudflare.js'
 import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
+import { googleAnalytics } from './google-analytics.js'
 import { googleCloud } from './google-cloud.js'
 import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
 import { neon } from './neon.js'
@@ -12,6 +13,7 @@ import { notion } from './notion.js'
 import { linear } from './linear.js'
 import { mixpanel } from './mixpanel.js'
 import { resend } from './resend.js'
+import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
 
@@ -21,6 +23,8 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   google_drive: googleDrive,
   google_docs: googleDocs,
   google_sheets: googleSheets,
+  google_search_console: googleSearchConsole,
+  google_analytics: googleAnalytics,
   stripe,
   github,
   cloudflare,
@@ -65,6 +69,8 @@ export const triggerCatalog = () =>
         'google_drive',
         'google_docs',
         'google_sheets',
+        'google_search_console',
+        'google_analytics',
         'stripe',
         'github',
         'cloudflare',
@@ -92,7 +98,8 @@ export const triggerCatalog = () =>
 
 /**
  * The built-in Apps, as the dashboard shows them. One App asks for one consent:
- * Gmail, Google Calendar, Drive, Docs and Sheets are five Apps, each with its own Google sign-in.
+ * Gmail, Google Calendar, Drive, Docs, Sheets, Search Console and Analytics are Apps of their
+ * own, each with its own Google sign-in.
  * personal: an account someone connects is theirs by default (reach mine).
  */
 export const appCatalog: Record<
@@ -140,6 +147,21 @@ export const appCatalog: Record<
     description: 'Read and update spreadsheets, add rows and create new ones.',
     developer: 'Google',
     category: 'Productivity',
+    personal: true,
+  },
+  google_search_console: {
+    name: 'Google Search Console',
+    description:
+      'Search clicks, impressions and positions by query and page, index status of URLs, and sitemaps.',
+    developer: 'Google',
+    category: 'Marketing',
+    personal: true,
+  },
+  google_analytics: {
+    name: 'Google Analytics',
+    description: 'GA4 reports on traffic, sources, pages and conversions, and realtime activity.',
+    developer: 'Google',
+    category: 'Marketing',
     personal: true,
   },
   stripe: {

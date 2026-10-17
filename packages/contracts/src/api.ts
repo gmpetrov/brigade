@@ -64,7 +64,15 @@ export const ReturnTo = z
   .max(300)
   .regex(/^\/app\/[\w\-/?=&.%]*$/, 'A dashboard path')
 export const ConnectGoogle = z.object({
-  kind: z.enum(['gmail', 'google_calendar', 'google_drive', 'google_docs', 'google_sheets']),
+  kind: z.enum([
+    'gmail',
+    'google_calendar',
+    'google_drive',
+    'google_docs',
+    'google_sheets',
+    'google_search_console',
+    'google_analytics',
+  ]),
   returnTo: ReturnTo.optional(),
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
