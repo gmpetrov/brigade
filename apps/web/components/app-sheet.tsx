@@ -110,7 +110,7 @@ export function AppSheet({
   const route =
     custom || server || kind === 'stripe'
       ? null
-      : kind === 'cloudflare' || kind === 'google_cloud'
+      : kind === 'cloudflare' || kind === 'google_cloud' || kind === 'linear'
         ? 'mcp'
         : kind === 'github'
           ? 'github'

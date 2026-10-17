@@ -765,6 +765,8 @@ enum ConnectorKind {
   cloudflare
   /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
   google_cloud
+  /// Linear, through Linear's own MCP server and its OAuth.
+  linear
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }

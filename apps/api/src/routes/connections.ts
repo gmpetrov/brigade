@@ -82,7 +82,7 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'linear' | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -387,6 +387,7 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        linear: true,
         mcp: true,
         webhook: true,
       },

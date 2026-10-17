@@ -47,6 +47,7 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'linear'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */

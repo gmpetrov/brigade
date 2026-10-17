@@ -8,7 +8,7 @@ export type ProviderKind = Connection['kind']
 
 /**
  * Each service's own mark: Google's 2020 Gmail and Calendar icons, Stripe's
- * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, GitHub's Invertocat (in the text color, so it reads in both themes), and a
+ * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Linear's mark in its indigo, GitHub's Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -95,6 +95,15 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#fbbc05"
           d="M71.87 61.43C31.94 61.66-.24 94.23 0 134.16a72.3 72.3 0 0 0 28.22 56.88l32.25-32.25c-13.99-6.32-20.21-22.79-13.89-36.78s22.79-20.21 36.78-13.89a27.8 27.8 0 0 1 13.89 13.89l32.25-32.25a72.2 72.2 0 0 0-57.63-28.34"
+        />
+      </svg>
+    )
+  if (kind === 'linear')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path
+          fill="#5e6ad2"
+          d="M2.886 4.18A11.982 11.982 0 0 1 11.99 0C18.624 0 24 5.376 24 12.009c0 3.64-1.62 6.903-4.18 9.105L2.887 4.18ZM1.817 5.626l16.556 16.556c-.524.33-1.075.62-1.65.866L.951 7.277c.247-.575.537-1.126.866-1.65ZM.322 9.163l14.515 14.515c-.71.172-1.443.282-2.195.322L0 11.358a12 12 0 0 1 .322-2.195Zm-.17 4.862 9.823 9.824a12.02 12.02 0 0 1-9.824-9.824Z"
         />
       </svg>
     )

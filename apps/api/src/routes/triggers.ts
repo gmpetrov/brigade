@@ -21,6 +21,7 @@ const KINDS: ConnectorKind[] = [
   'github',
   'cloudflare',
   'google_cloud',
+  'linear',
   'mcp',
   'webhook',
 ]

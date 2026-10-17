@@ -5,6 +5,7 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { linear } from './linear.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -14,6 +15,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  linear,
 }
 
 /**
@@ -48,6 +50,7 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'linear',
         'mcp',
         'webhook',
       ] as const
@@ -123,6 +126,15 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  linear: {
+    name: 'Linear',
+    description:
+      'Find, create and update issues, projects and comments, with Linear’s MCP server. With GitHub, teammates take a ticket and open its pull request.',
+    developer: 'Linear',
+    category: 'Productivity',
+    // A Linear sign-in is someone's own account, kept to their threads until they share it.
     personal: true,
   },
   mcp: {
