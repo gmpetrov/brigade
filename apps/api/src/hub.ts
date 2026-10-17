@@ -77,6 +77,11 @@ export function isOnline(computerId: string) {
   return runners.has(computerId)
 }
 
+/** SHA-256 of the bundle the computer's connected runner was installed from; none offline or from source. */
+export function connectedBundle(computerId: string) {
+  return runners.get(computerId)?.bundle
+}
+
 /**
  * Forget a computer's runner connection: its computer stopped (src/cloud.ts's stopComputer),
  * or the runner went silent (watchRunners). Such a connection dies without closing: kept, it

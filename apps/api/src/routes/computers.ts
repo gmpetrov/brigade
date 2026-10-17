@@ -12,9 +12,20 @@ import {
 } from '../cloud.js'
 import { env } from '../config.js'
 import { prisma } from '../db.js'
-import { hashToken, isOnline } from '../hub.js'
+import { connectedBundle, hashToken, isOnline } from '../hub.js'
 import { issueLinkCode, redeemLinkCode } from '../link-codes.js'
 import { parseBody, requireRole, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import { runnerBundle } from './runner-install.js'
+
+/**
+ * Whether a connected runner runs the bundle this API serves (`current`) or will
+ * update to it once no turn is running (`waiting`). Null when either is unknown:
+ * offline, started from source, or no bundle built.
+ */
+export function runnerUpdate(served: string | null, installed: string | undefined) {
+  if (!served || !installed) return null
+  return installed === served ? ('current' as const) : ('waiting' as const)
+}
 
 /** Dashboard routes: list computers, link a machine, manage the workspace computer. */
 export const computers = new Hono<AppEnv>()
@@ -30,11 +41,13 @@ export const computers = new Hono<AppEnv>()
       include: { runner: { select: { version: true, platform: true, lastSeenAt: true } } },
       orderBy: { createdAt: 'asc' },
     })
+    const served = await runnerBundle()
     return c.json({
       cloudAvailable: cloudAvailable(),
       computers: rows.map(({ providerRef: _ref, ...row }) => ({
         ...row,
         online: isOnline(row.id),
+        runnerUpdate: runnerUpdate(served, connectedBundle(row.id)),
       })),
     })
   })
