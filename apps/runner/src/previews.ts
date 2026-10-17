@@ -53,6 +53,7 @@ import {
   type PreviewCgroup,
 } from './preview-cgroup.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
+import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { containerEnv, teammateHome } from './teammates.js'
 
 const run = promisify(execFile)
@@ -180,6 +181,8 @@ type Preview = {
   dir: string
   /** The process group to stop. */
   group?: number
+  /** Its thread's own network, on a cloud computer: where it runs and is reached. */
+  net?: ThreadNet
   /** Its own cgroup, on a cloud computer: what it may use, and how it is frozen. */
   cgroup?: PreviewCgroup
   /** The kernel's OOM counts of its cgroup when this run started. */
@@ -212,10 +215,10 @@ type Preview = {
 // eslint-disable-next-line no-control-regex
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\r/g
 
-/** Whether something answers on a local port. */
-function answers(port: number, timeoutMs = 1000) {
+/** Whether something answers on a local port: the computer's, or a thread's own (its address). */
+function answers(port: number, host = '127.0.0.1', timeoutMs = 1000) {
   return new Promise<boolean>((done) => {
-    const socket = createConnection({ host: '127.0.0.1', port })
+    const socket = createConnection({ host, port })
     const finish = (ok: boolean) => {
       socket.destroy()
       done(ok)
@@ -625,11 +628,15 @@ export class Previews {
   ) {
     // One preview per thread: a new one replaces it, which frees its ports.
     await this.stop(seat.sessionId, PREVIEW_REPLACED)
+    // In the thread's own network (thread-net.ts), its ports are its own: another thread's
+    // preview of the same app does not take them.
+    const net = seat.runAs ? await threadNet(seat.sessionId) : null
+    const host = net?.address
     const others = (input.ports ?? []).filter((p) => p !== input.port)
     // Taken (another thread's preview of the same app): a command reading $PORT gets a free one.
-    if (PORT_VARIABLE.test(command) && (await answers(input.port))) {
+    if (PORT_VARIABLE.test(command) && (await answers(input.port, host))) {
       for (let port = input.port + 1; port < input.port + 100 && port <= 65535; port++) {
-        if (others.includes(port) || (await answers(port))) continue
+        if (others.includes(port) || (await answers(port, host))) continue
         input = { ...input, port }
         break
       }
@@ -637,15 +644,15 @@ export class Previews {
     const ports = [...new Set(others.filter((p) => p !== input.port))]
     const all = [input.port, ...ports]
     for (const port of all) {
-      if (!(await answers(port))) continue
-      const owner = [...this.previews.values()].find((p) =>
-        [p.info.port, ...p.info.ports].includes(port),
-      )
+      if (!(await answers(port, host))) continue
+      const owner = net
+        ? undefined
+        : [...this.previews.values()].find((p) => [p.info.port, ...p.info.ports].includes(port))
       throw new Error(
         owner
           ? `Port ${port} is in use by another thread's preview${owner.info.repository ? ` of ${owner.info.repository}` : ''}. ` +
               'Stop that preview, or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.'
-          : `Port ${port} is already in use on this computer, by a process you started. Stop that process, ` +
+          : `Port ${port} is already in use ${net ? 'in this thread' : 'on this computer'}, by a process you started. Stop that process, ` +
               'or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.',
       )
     }
@@ -657,6 +664,7 @@ export class Previews {
     // The proxy is what people reach: its port is the one hosted, the app's other ports are paths on it.
     let preview: Preview | undefined
     const proxyOptions = {
+      ...(host ? { host } : {}),
       port: input.port,
       ports,
       crossSiteCookies: false,
@@ -758,6 +766,7 @@ export class Previews {
       env,
       dir,
       proxy,
+      ...(net ? { net } : {}),
       ...(cgroup ? { cgroup } : {}),
       pausing: Promise.resolve(),
       envFiles: kept.files,
@@ -835,8 +844,15 @@ export class Previews {
     }
     const child = runAs
       ? spawn(
-          'sudo',
-          ['-n', '-E', '-u', runAs, '--', 'sh', '-c', script, preview.dir, command],
+          asTeammate(runAs, preview.net ?? null).file,
+          [
+            ...asTeammate(runAs, preview.net ?? null).args,
+            'sh',
+            '-c',
+            script,
+            preview.dir,
+            command,
+          ],
           options,
         )
       : spawn('sh', ['-c', script, preview.dir, command], options)
@@ -909,7 +925,7 @@ export class Previews {
     const { sessionId } = preview.seat
     const deadline = Date.now() + waitMs
     while (this.previews.get(sessionId) === preview && preview.info.status === 'starting') {
-      if (await answers(preview.input.port)) {
+      if (await answers(preview.input.port, preview.net?.address)) {
         preview.restarting = false
         const { reason: _reason, step: _step, ...info } = preview.info
         preview.info = { ...info, status: 'running' }
@@ -1014,24 +1030,29 @@ export class Previews {
     if (ids.length === 0) return
     preview.pausedContainers = ids
     this.savePaused()
-    this.append(preview, `[preview] Paused ${ids.length} of the thread's containers\n`)
+    this.append(
+      preview,
+      ids[0] === '*'
+        ? "[preview] Paused the thread's Docker, its containers with it\n"
+        : `[preview] Paused ${ids.length} of the thread's containers\n`,
+    )
   }
 
   private async unpauseContainers(preview: Preview) {
     const ids = preview.pausedContainers
     delete preview.pausedContainers
     if (!ids?.length || !preview.seat.runAs) return
-    await unpause(preview.seat.runAs, ids).catch((error: unknown) => {
+    await unpause(preview.seat.runAs, preview.seat.sessionId, ids).catch((error: unknown) => {
       this.append(preview, `[preview] Could not resume the thread's containers: ${String(error)}\n`)
     })
     this.savePaused()
   }
 
   private savePaused() {
-    const paused: [string, string[]][] = []
+    const paused: [string, string, string[]][] = []
     for (const p of this.previews.values())
       if (p.seat.runAs && p.pausedContainers?.length)
-        paused.push([p.seat.runAs, p.pausedContainers])
+        paused.push([p.seat.runAs, p.seat.sessionId, p.pausedContainers])
     try {
       writeFileSync(this.pausedFile, JSON.stringify(paused), { mode: 0o600 })
     } catch (error) {
@@ -1041,16 +1062,19 @@ export class Previews {
 
   /** Containers paused for previews of a runner that stopped before it could resume them. */
   private async unpauseLeftovers() {
-    let paused: [string, string[]][]
+    // [user, thread, ids]; [user, ids] from before threads had their own Docker.
+    let paused: ([string, string, string[]] | [string, string[]])[]
     try {
-      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as [string, string[]][]
+      paused = JSON.parse(await readFile(this.pausedFile, 'utf8')) as typeof paused
     } catch {
       return
     }
-    for (const [user, ids] of paused)
-      await unpause(user, ids).catch((error: unknown) =>
+    for (const entry of paused) {
+      const [user, sessionId, ids] = entry.length === 3 ? entry : [entry[0], '', entry[1]]
+      await unpause(user, sessionId, ids).catch((error: unknown) =>
         console.warn(`could not resume the containers of ${user}: ${String(error)}`),
       )
+    }
     this.savePaused()
   }
 

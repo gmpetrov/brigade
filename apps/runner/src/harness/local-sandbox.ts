@@ -1,5 +1,6 @@
 // A sandbox provider that runs on the same machine as the runner and exposes
-// the harness bridge on localhost. The computer itself is the sandbox.
+// the harness bridge on localhost (on a cloud computer, the thread's own: see
+// thread-net.ts). The computer itself is the sandbox.
 import { spawn as spawnChild, type ChildProcess } from 'node:child_process'
 import { createReadStream } from 'node:fs'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
@@ -7,6 +8,7 @@ import { createServer } from 'node:net'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { Readable } from 'node:stream'
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
+import { asTeammate, threadNet, type ThreadNet } from '../thread-net.js'
 
 type SandboxSession = ReturnType<HarnessV1NetworkSandboxSession['restricted']>
 type ProcessOptions = Parameters<SandboxSession['spawn']>[0]
@@ -30,10 +32,13 @@ export function createLocalSandboxSession(options: {
   env: Record<string, string>
   /** Run every process and file operation as this Linux user (a teammate on a cloud computer). */
   runAs?: string
+  /** With runAs: the thread, whose own network its processes run in where it has one (thread-net.ts). */
+  thread?: string
 }): HarnessV1NetworkSandboxSession {
   const children = new Set<ChildProcess>()
   const at = (path: string) => (isAbsolute(path) ? path : resolve(options.workingDirectory, path))
   const runAs = options.runAs
+  const net = runAs && options.thread ? threadNet(options.thread) : Promise.resolve(null)
 
   /** Stop a process group. sudo's group is killed as the teammate user, who owns it. */
   function killGroup(pid: number) {
@@ -54,6 +59,7 @@ export function createLocalSandboxSession(options: {
     command: string,
     cwd: string,
     env: Record<string, string>,
+    thread: ThreadNet | null,
     stdin: 'ignore' | 'pipe' = 'ignore',
   ) =>
     runAs
@@ -62,13 +68,9 @@ export function createLocalSandboxSession(options: {
         // setup): a turn takes back the usual one, so when memory runs out, a turn that grows
         // goes before the desktop and the teammates' Docker, and the runner stays.
         spawnChild(
-          'sudo',
+          asTeammate(runAs, thread).file,
           [
-            '-n',
-            '-E',
-            '-u',
-            runAs,
-            '--',
+            ...asTeammate(runAs, thread).args,
             'sh',
             '-c',
             '{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; cd -- "$0" && exec sh -c "$1"',
@@ -94,6 +96,7 @@ export function createLocalSandboxSession(options: {
       command,
       workingDirectory ? at(workingDirectory) : options.workingDirectory,
       { ...options.env, ...env },
+      await net,
     )
     children.add(child)
     const exited = new Promise<{ exitCode: number }>((done, fail) => {
@@ -202,8 +205,9 @@ export function createLocalSandboxSession(options: {
     },
   }
 
-  const endpoint = (port: number, protocol: 'http' | 'https' | 'ws' = 'http') =>
-    `${protocol === 'ws' ? 'ws' : 'http'}://127.0.0.1:${port}`
+  // In the thread's own network, its loopback is at the thread's address.
+  const endpoint = async (port: number, protocol: 'http' | 'https' | 'ws' = 'http') =>
+    `${protocol === 'ws' ? 'ws' : 'http'}://${(await net)?.address ?? '127.0.0.1'}:${port}`
 
   const stop = async () => {
     for (const child of children) if (child.pid) killGroup(child.pid)
@@ -214,7 +218,7 @@ export function createLocalSandboxSession(options: {
     id: options.id,
     defaultWorkingDirectory: options.workingDirectory,
     ports: [options.port],
-    getPortEndpoint: async ({ port, protocol }) => ({ url: endpoint(port, protocol) }),
+    getPortEndpoint: async ({ port, protocol }) => ({ url: await endpoint(port, protocol) }),
     getPortUrl: async ({ port, protocol }) => endpoint(port, protocol),
     stop,
     destroy: stop,

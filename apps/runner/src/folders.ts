@@ -377,6 +377,7 @@ export class Folders {
           runAs,
           mine.map((c) => c.name.sessionId),
           (sessionId) => mine.some((c) => c.name.sessionId === sessionId && quiet(c)),
+          (sessionId) => !this.options.inUse(sessionId),
         ).catch((error) => {
           console.warn(`could not stop quiet containers for ${runAs}: ${String(error)}`)
           return []
