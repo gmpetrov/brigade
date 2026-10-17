@@ -32,7 +32,14 @@ export async function installAppSkills(
     `${source.repo}.zip`,
     bytes,
     [root, source.path].filter(Boolean).join('/'),
-  ).map((f) => ({ ...f, folder: f.folder.slice(root.length + 1) }))
+  )
+    .map((f) => ({ ...f, folder: f.folder.slice(root.length + 1) }))
+    // A repository may keep an older copy of a skill deeper down (Atlassian's skills/v1):
+    // of skills with the same name, only the shallowest is the App's.
+    .filter((f, _, all) => {
+      const depth = (s: typeof f) => s.folder.split('/').length
+      return !all.some((o) => o.name === f.name && depth(o) < depth(f))
+    })
   const preview = await previewImport(db, scope, githubSourceKey(source), app.name, found)
   const usable = (s: (typeof preview.skills)[number]) =>
     s.status === 'new' || s.status === 'update' || s.status === 'same'

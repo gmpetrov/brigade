@@ -1,5 +1,5 @@
 'use client'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Plug, Webhook } from 'lucide-react'
 import type { Connection } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -8,7 +8,7 @@ export type ProviderKind = Connection['kind']
 
 /**
  * Each service's own mark: Google's 2020 Gmail and Calendar icons, Stripe's
- * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, GitHub's Invertocat (in the text color, so it reads in both themes), and a
+ * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Atlassian's two-part A, GitHub's Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -77,6 +77,7 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         />
       </svg>
     )
+  if (kind === 'atlassian') return <AtlassianLogo className={common.className} />
   if (kind === 'google_cloud')
     return (
       <svg viewBox="0 0 256 206" {...common}>
@@ -168,5 +169,35 @@ function ServerIcon({
       className={cn(className, 'rounded-sm object-contain')}
       onError={() => setFailed((n) => n + 1)}
     />
+  )
+}
+
+/** Atlassian's mark, its left stroke in the brand gradient (an id of its own per logo). */
+function AtlassianLogo({ className }: { className: string }) {
+  const gradient = `atlassian${useId().replace(/\W/g, '')}`
+  return (
+    <svg viewBox="0 0 17.6 17.9" aria-hidden className={className}>
+      <defs>
+        <linearGradient
+          id={gradient}
+          x1="7.668"
+          y1="9.543"
+          x2="3.068"
+          y2="17.511"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" stopColor="#0052cc" />
+          <stop offset="0.923" stopColor="#2684ff" />
+        </linearGradient>
+      </defs>
+      <path
+        fill={`url(#${gradient})`}
+        d="M5.3 8.2c-.2-.2-.5-.3-.7-.1-.1 0-.1.1-.2.2L.1 17c-.1.3 0 .6.2.7.1 0 .2.1.2.1h6.1c.2 0 .4-.1.5-.3C8.4 14.8 7.6 10.7 5.3 8.2z"
+      />
+      <path
+        fill="#2684ff"
+        d="M8.5.3C6.3 3.7 6 8 7.8 11.6l2.9 5.9c.1.2.3.3.5.3h6.1c.3 0 .5-.2.5-.5 0-.1 0-.2-.1-.2 0 0-8.2-16.3-8.4-16.7C9.2 0 8.9-.1 8.7 0c-.1.1-.2.2-.2.3z"
+      />
+    </svg>
   )
 }

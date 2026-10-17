@@ -5,6 +5,7 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { atlassian } from './atlassian.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -14,6 +15,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  atlassian,
 }
 
 /**
@@ -48,6 +50,7 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'atlassian',
         'mcp',
         'webhook',
       ] as const
@@ -124,6 +127,16 @@ export const appCatalog: Record<
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
     personal: true,
+  },
+  atlassian: {
+    name: 'Atlassian',
+    description:
+      'Search, create and update Jira issues and Confluence pages, with Atlassian’s Rovo MCP server.',
+    developer: 'Atlassian',
+    category: 'Productivity',
+    // An Atlassian sign-in is someone's own account, with their own access to each site.
+    personal: true,
+    skills: 'https://github.com/atlassian/atlassian-mcp-server',
   },
   mcp: {
     name: 'MCP server',

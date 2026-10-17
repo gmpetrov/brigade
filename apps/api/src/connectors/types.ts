@@ -47,6 +47,7 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'atlassian'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -140,6 +141,10 @@ export type McpServer = {
   client?: { id: string; secretId?: string }
   /** api_key: the header the key goes in. Default: Authorization, as a Bearer token. */
   header?: string
+  /** oauth: the scopes to ask for, when not all those the server lists. */
+  scopes?: string[]
+  /** The tool that says who signed in (an email or a name). Default: whoami. */
+  whoami?: string
 }
 
 export type McpAuth = 'oauth' | 'api_key' | 'none'
