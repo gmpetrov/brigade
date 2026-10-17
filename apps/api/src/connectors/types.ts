@@ -147,10 +147,11 @@ export type McpServer = {
   /** api_key: the header the key goes in. Default: Authorization, as a Bearer token. */
   header?: string
   /**
-   * Which account signed in, for a server with no whoami tool: a tool to call (no input) and
-   * the name to show from its output, such as the account's organization.
+   * Which account signed in, for a server with no whoami tool: a tool to call (no input), or
+   * a URL to GET with the same token, and the name to show from its output, such as the
+   * account's organization.
    */
-  account?: { tool: string; name: (output: unknown) => string | null }
+  account?: ({ tool: string } | { url: string }) & { name: (output: unknown) => string | null }
   /** oauth: the scopes to ask for, when not all those the server lists. */
   scopes?: string[]
 }
