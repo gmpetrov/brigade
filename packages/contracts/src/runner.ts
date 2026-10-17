@@ -192,6 +192,14 @@ export const RunnerToApi = z.discriminatedUnion('type', [
       .optional(),
   }),
   z.object({ type: z.literal('events'), events: z.array(SequencedEvent) }),
+  /**
+   * The threads whose events the API has not acknowledged for minutes, with since when (the
+   * oldest one's time), sent when that list changes: their pages say so. From protocol 26.
+   */
+  z.object({
+    type: z.literal('events.waiting'),
+    threads: z.array(z.object({ sessionId: z.string(), since: z.iso.datetime() })).max(1000),
+  }),
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
   z.object({ type: z.literal('command.failed'), commandId: z.string(), error: z.string() }),

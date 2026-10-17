@@ -1210,6 +1210,27 @@ function WorkingFor({ since }: { since: number }) {
   )
 }
 
+/**
+ * Its updates stopped reaching Brigade (its computer keeps sending them): said plainly,
+ * for a thread must never look at work for hours while nothing of it comes through.
+ */
+function EventsWaiting({ since }: { since: string }) {
+  const at = new Date(since)
+  const when =
+    at.toDateString() === new Date().toDateString()
+      ? at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      : at.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  return (
+    <div
+      role="status"
+      className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive-text"
+    >
+      Updates from this thread have not reached Brigade since {when}. Its computer keeps sending
+      them.
+    </div>
+  )
+}
+
 /** The agents a teammate left working in the background: its turn goes on until they report back. */
 function BackgroundAgents({ agents }: { agents: BackgroundAgent[] }) {
   return (
@@ -1288,6 +1309,7 @@ export function ThreadItems({
   working = false,
   starting = false,
   background = [],
+  eventsWaitingSince,
 }: {
   threadId: string
   items: Item[]
@@ -1313,6 +1335,8 @@ export function ThreadItems({
   starting?: boolean
   /** Agents the running turn left working in the background. */
   background?: BackgroundAgent[]
+  /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
+  eventsWaitingSince?: string | null
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -1721,7 +1745,9 @@ export function ThreadItems({
   return (
     <div className="flex flex-col gap-4">
       {show(nodes)}
-      {waitingFor ? (
+      {eventsWaitingSince ? (
+        <EventsWaiting since={eventsWaitingSince} />
+      ) : waitingFor ? (
         <Answering
           teammate={waitingFor}
           phase={waiting ? 'thinking' : starting ? 'starting' : 'reading'}

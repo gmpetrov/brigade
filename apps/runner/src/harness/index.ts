@@ -45,6 +45,7 @@ import {
   ticketResult,
 } from './events.js'
 import { createLocalSandboxSession, freePort } from './local-sandbox.js'
+import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
 import {
   ASK_USER_TOOL,
@@ -898,11 +899,18 @@ export class HarnessThread {
     // Why it did not start goes to the teammate too, which tells the person.
     let browserError: string | undefined
     const browser = this.runAs
-      ? await ensureBrowser(this.spec.teammate).catch((error) => {
-          browserError = errorMessage(error)
-          console.warn(`no browser for ${this.runAs}: ${browserError}`)
-          return null
-        })
+      ? await ensureBrowser(this.spec.teammate)
+          .then(async (port) => {
+            // In the thread's own network, its loopback is its own: the browser's port is bridged in.
+            const net = await threadNet(this.spec.sessionId)
+            if (net) await bridgeBrowser(net, this.runAs!)
+            return port
+          })
+          .catch((error) => {
+            browserError = errorMessage(error)
+            console.warn(`no browser for ${this.runAs}: ${browserError}`)
+            return null
+          })
       : null
     const tabsFile =
       browser && this.runAs
@@ -975,7 +983,7 @@ export class HarnessThread {
       port: await freePort(),
       // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch).
       env: this.spec.teammate.harness === 'codex' ? env : { ...env, ...terminalTools(tools) },
-      ...(this.runAs ? { runAs: this.runAs } : {}),
+      ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
     })
     const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
     const session = await agent.createSession({
@@ -1225,7 +1233,7 @@ export async function runOnce(input: {
     workingDirectory: workDir,
     port: await freePort(),
     env,
-    ...(runAs ? { runAs } : {}),
+    ...(runAs ? { runAs, thread: spec.sessionId } : {}),
   })
   const session = await agent.createSession({
     sessionId: `${spec.sessionId}-${purpose}-${Date.now()}`,
@@ -1281,7 +1289,7 @@ export async function generateImage(input: {
     workingDirectory: dir,
     port: await freePort(),
     env,
-    ...(runAs ? { runAs } : {}),
+    ...(runAs ? { runAs, thread: input.sessionId } : {}),
   })
   const session = await agent.createSession({
     sessionId: `${input.sessionId}-image-${Date.now()}`,

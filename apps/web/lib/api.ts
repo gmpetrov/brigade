@@ -246,6 +246,8 @@ export type Computer = {
   status: 'pending' | 'creating' | 'starting' | 'running' | 'stopped' | 'error' | 'destroyed'
   online: boolean
   runner: { version: string | null; platform: string | null; lastSeenAt: string | null } | null
+  /** Whether its connected runner runs the bundle the API serves, or updates to it once idle. */
+  runnerUpdate: 'current' | 'waiting' | null
 }
 
 export type ThreadSummary = {
@@ -275,6 +277,8 @@ export type ThreadSummary = {
   archivedAt?: string | null
   /** Others than its starter may write in it, so rename and archive it. */
   othersMayPrompt?: boolean
+  /** Since when its events have not reached Brigade: its computer keeps sending them. */
+  eventsWaitingSince?: string | null
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {

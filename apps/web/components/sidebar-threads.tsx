@@ -65,21 +65,24 @@ const LABELS: Record<string, string> = {
 
 /**
  * A thread's status as a dot, its word on hover: violet while a teammate works, orange when
- * it waits on a person, red when it failed. Otherwise grey: filled while a reply is unread,
- * a ring once read.
+ * it waits on a person, red when it failed or its updates stopped reaching Brigade (stuck).
+ * Otherwise grey: filled while a reply is unread, a ring once read.
  */
 export function ThreadStatusIcon({
   status,
   unread = false,
+  stuck = false,
   className,
 }: {
   status: string
   unread?: boolean
+  stuck?: boolean
   className?: string
 }) {
   const group = groupOf(status)
-  const label =
-    (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
+  const label = stuck
+    ? 'updates not arriving'
+    : (LABELS[status] ?? status) + (group === 'rest' ? (unread ? ', unread' : ', read') : '')
   return (
     <span
       role="img"
@@ -87,7 +90,9 @@ export function ThreadStatusIcon({
       title={label}
       className={cn('flex size-4 shrink-0 items-center justify-center', className)}
     >
-      {group === 'working' ? (
+      {stuck ? (
+        <span className="bg-destructive size-2 rounded-full" />
+      ) : group === 'working' ? (
         <span className="bg-primary ring-primary/25 size-2 rounded-full ring-[3px]" />
       ) : group === 'waiting' ? (
         <span className="bg-warning ring-warning/25 size-2 rounded-full ring-[3px]" />
@@ -384,7 +389,9 @@ export function SidebarWork({
         thread={t}
         href={href}
         active={threadId === t.id && (expanded || pathname === href)}
-        icon={<ThreadStatusIcon status={t.status} unread={t.unread} />}
+        icon={
+          <ThreadStatusIcon status={t.status} unread={t.unread} stuck={!!t.eventsWaitingSince} />
+        }
         trailing={trailing(t, group)}
         memberId={memberId}
         admin={admin}
@@ -486,6 +493,7 @@ export function SidebarWork({
                         <ThreadStatusIcon
                           status={t.status}
                           unread={t.unread}
+                          stuck={!!t.eventsWaitingSince}
                           className="absolute -right-1.5 -bottom-1.5 size-3"
                         />
                       )}
