@@ -81,10 +81,11 @@ export const pulls = new Hono<AppEnv>()
     return c.json(await pullDetail(c.var.db, c.var.scope, repo, number))
   })
 
-  /** Without the diff, checks or reviews: for the pull request's card in a thread. */
+  /** Without the diff or reviews, and checks only with `?checks=1`: for the pull request's card in a thread. */
   .get('/:owner/:name/:number/state', async (c) => {
     const { repo, number } = target(c.req.param())
-    return c.json(await pullState(c.var.db, c.var.scope, repo, number))
+    const checks = c.req.query('checks') === '1'
+    return c.json(await pullState(c.var.db, c.var.scope, repo, number, { checks }))
   })
 
   .post('/:owner/:name/:number/review', async (c) => {

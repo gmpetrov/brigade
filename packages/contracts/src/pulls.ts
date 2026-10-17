@@ -107,6 +107,9 @@ export type PullRequestState = PullRequestSummary & {
   mergeable: boolean | null
   /** GitHub's mergeable_state: clean, blocked, behind, dirty, unstable, unknown, draft. */
   mergeableState: string
+  mergedAt: string | null
+  /** Its head commit's checks, when asked for (`?checks=1`) and it is open; else empty. */
+  checks: CheckRun[]
 }
 
 export type PullRequestDetail = PullRequestSummary & {
