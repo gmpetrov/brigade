@@ -17,6 +17,8 @@ import { deleteSecret, sealSecret } from '../vault.js'
 const KINDS: ConnectorKind[] = [
   'gmail',
   'google_calendar',
+  'google_search_console',
+  'google_analytics',
   'stripe',
   'github',
   'cloudflare',

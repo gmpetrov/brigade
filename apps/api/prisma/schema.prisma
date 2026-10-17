@@ -767,6 +767,9 @@ enum ConnectorKind {
   google_cloud
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
+  /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.
+  google_search_console
+  google_analytics
 }
 
 /// Brigade registered as an OAuth client of an MCP server's authorization server

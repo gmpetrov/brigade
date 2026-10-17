@@ -39,6 +39,8 @@ const CONNECT_ERRORS: Record<string, string> = {
 const BUILT_IN: Kind[] = [
   'gmail',
   'google_calendar',
+  'google_search_console',
+  'google_analytics',
   'github',
   'cloudflare',
   'google_cloud',

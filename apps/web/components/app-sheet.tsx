@@ -744,7 +744,12 @@ function CustomAppForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
 
 /** What the server is missing for an App that needs its own setup. */
 function Unavailable({ kind }: { kind: Kind }) {
-  if (kind === 'gmail' || kind === 'google_calendar')
+  if (
+    kind === 'gmail' ||
+    kind === 'google_calendar' ||
+    kind === 'google_search_console' ||
+    kind === 'google_analytics'
+  )
     return (
       <p className="text-sm text-muted-foreground">
         Needs Google OAuth configured on this Brigade server (

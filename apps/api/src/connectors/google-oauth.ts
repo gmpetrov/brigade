@@ -1,7 +1,21 @@
 // Google OAuth for connections. Tokens go straight into the vault.
 import { env } from '../config.js'
 
-export const GOOGLE_SCOPES: Record<'gmail' | 'google_calendar', string[]> = {
+/** The Apps whose accounts sign in with Brigade's Google client, each with its own consent. */
+export type GoogleKind = 'gmail' | 'google_calendar' | 'google_search_console' | 'google_analytics'
+export const GOOGLE_KINDS: GoogleKind[] = [
+  'gmail',
+  'google_calendar',
+  'google_search_console',
+  'google_analytics',
+]
+export const isGoogleKind = (kind: string): kind is GoogleKind =>
+  (GOOGLE_KINDS as string[]).includes(kind)
+
+// Neither Search Console nor Analytics says whose account it is: the address comes from userinfo.
+const EMAIL = 'https://www.googleapis.com/auth/userinfo.email'
+
+export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
   gmail: [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.send',
@@ -11,6 +25,9 @@ export const GOOGLE_SCOPES: Record<'gmail' | 'google_calendar', string[]> = {
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
     'https://www.googleapis.com/auth/calendar.freebusy',
   ],
+  // webmasters, not webmasters.readonly: submitting sitemaps and adding properties write.
+  google_search_console: ['https://www.googleapis.com/auth/webmasters', EMAIL],
+  google_analytics: ['https://www.googleapis.com/auth/analytics.readonly', EMAIL],
 }
 
 export type GoogleCredential = {
@@ -25,7 +42,7 @@ export const googleMcpConfigured = () =>
   Boolean(env.GOOGLE_MCP_CLIENT_ID && env.GOOGLE_MCP_CLIENT_SECRET)
 export const googleRedirectUri = () => `${env.API_URL}/api/connections/oauth/google/callback`
 
-export function googleAuthUrl(kind: 'gmail' | 'google_calendar', state: string) {
+export function googleAuthUrl(kind: GoogleKind, state: string) {
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
     redirect_uri: googleRedirectUri(),
@@ -90,8 +107,14 @@ export async function revokeGoogle(credential: GoogleCredential) {
 }
 
 /** The account a credential belongs to, to show which one a connection is. Never the credential. */
-export async function googleAccount(kind: 'gmail' | 'google_calendar', accessToken: string) {
+export async function googleAccount(kind: GoogleKind, accessToken: string) {
   const headers = { authorization: `Bearer ${accessToken}` }
+  if (kind === 'google_search_console' || kind === 'google_analytics') {
+    const user = (await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers,
+    }).then((r) => r.json())) as { email?: string }
+    return user.email ?? null
+  }
   if (kind === 'gmail') {
     const profile = (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
       headers,

@@ -145,7 +145,9 @@ export const ConnectorKind = {
   webhook: 'webhook',
   cloudflare: 'cloudflare',
   google_cloud: 'google_cloud',
-  mcp: 'mcp'
+  mcp: 'mcp',
+  google_search_console: 'google_search_console',
+  google_analytics: 'google_analytics'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]

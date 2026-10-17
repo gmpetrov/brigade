@@ -42,6 +42,8 @@ export type ConnectorContext = {
 export type ConnectorKind =
   | 'gmail'
   | 'google_calendar'
+  | 'google_search_console'
+  | 'google_analytics'
   | 'stripe'
   | 'github'
   | 'webhook'

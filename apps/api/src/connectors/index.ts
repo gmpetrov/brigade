@@ -4,12 +4,16 @@ import { cloudflare } from './cloudflare.js'
 import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
+import { googleAnalytics } from './google-analytics.js'
 import { googleCloud } from './google-cloud.js'
+import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
   google_calendar: googleCalendar,
+  google_search_console: googleSearchConsole,
+  google_analytics: googleAnalytics,
   stripe,
   github,
   cloudflare,
@@ -44,6 +48,8 @@ export const triggerCatalog = () =>
       [
         'gmail',
         'google_calendar',
+        'google_search_console',
+        'google_analytics',
         'stripe',
         'github',
         'cloudflare',
@@ -64,7 +70,8 @@ export const triggerCatalog = () =>
 
 /**
  * The built-in Apps, as the dashboard shows them. One App asks for one consent:
- * Gmail and Google Calendar are two Apps, each with its own Google sign-in.
+ * Gmail, Google Calendar, Search Console and Analytics are Apps of their own, each with
+ * its own Google sign-in.
  * personal: an account someone connects is theirs by default (reach mine).
  */
 export const appCatalog: Record<
@@ -91,6 +98,21 @@ export const appCatalog: Record<
     description: 'Search events and schedule meetings.',
     developer: 'Google',
     category: 'Productivity',
+    personal: true,
+  },
+  google_search_console: {
+    name: 'Google Search Console',
+    description:
+      'Search clicks, impressions and positions by query and page, index status of URLs, and sitemaps.',
+    developer: 'Google',
+    category: 'Marketing',
+    personal: true,
+  },
+  google_analytics: {
+    name: 'Google Analytics',
+    description: 'GA4 reports on traffic, sources, pages and conversions, and realtime activity.',
+    developer: 'Google',
+    category: 'Marketing',
     personal: true,
   },
   stripe: {

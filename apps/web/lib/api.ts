@@ -439,6 +439,8 @@ export type Connection = {
   kind:
     | 'gmail'
     | 'google_calendar'
+    | 'google_search_console'
+    | 'google_analytics'
     | 'stripe'
     | 'github'
     | 'webhook'
