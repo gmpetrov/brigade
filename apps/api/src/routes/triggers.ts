@@ -26,6 +26,7 @@ const KINDS: ConnectorKind[] = [
   'google_cloud',
   'neon',
   'supabase',
+  'atlassian',
   'mcp',
   'webhook',
 ]

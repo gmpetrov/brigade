@@ -37,6 +37,7 @@ export const APP_NAMES: Record<string, string> = {
   google_cloud: 'Google Cloud',
   neon: 'Neon',
   supabase: 'Supabase',
+  atlassian: 'Atlassian',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -63,6 +64,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   google_cloud: 'mcp',
   neon: 'mcp',
   supabase: 'mcp',
+  atlassian: 'mcp',
 }
 
 /**

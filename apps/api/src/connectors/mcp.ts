@@ -298,7 +298,9 @@ export async function mcpAuthUrl(
   verifier: string,
   own?: McpOAuthClient,
 ) {
-  const { authServer, resource, scopes } = await discover(server)
+  const found = await discover(server)
+  const { authServer, resource } = found
+  const scopes = server.scopes ?? found.scopes
   const { clientId } = await client(authServer, own)
   const supported = authServer.scopes_supported ?? []
   // A refresh token too, where the server needs asking for one; and who signed in, to show

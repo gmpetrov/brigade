@@ -773,6 +773,8 @@ enum ConnectorKind {
   neon
   /// Supabase, through Supabase's MCP server and its own OAuth.
   supabase
+  /// Atlassian (Jira and Confluence), through Atlassian's Rovo MCP server.
+  atlassian
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }

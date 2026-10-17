@@ -47,6 +47,7 @@ const BUILT_IN: Kind[] = [
   'google_cloud',
   'neon',
   'supabase',
+  'atlassian',
   'stripe',
 ]
 

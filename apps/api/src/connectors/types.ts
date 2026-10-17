@@ -52,6 +52,7 @@ export type ConnectorKind =
   | 'google_cloud'
   | 'neon'
   | 'supabase'
+  | 'atlassian'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -150,6 +151,8 @@ export type McpServer = {
    * the name to show from its output, such as the account's organization.
    */
   account?: { tool: string; name: (output: unknown) => string | null }
+  /** oauth: the scopes to ask for, when not all those the server lists. */
+  scopes?: string[]
 }
 
 /**

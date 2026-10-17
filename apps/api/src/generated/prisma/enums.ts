@@ -150,6 +150,7 @@ export const ConnectorKind = {
   google_cloud: 'google_cloud',
   neon: 'neon',
   supabase: 'supabase',
+  atlassian: 'atlassian',
   mcp: 'mcp'
 } as const
 
