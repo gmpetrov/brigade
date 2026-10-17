@@ -43,8 +43,11 @@ export * from './thread-history.js'
  * 24: a new project's brief from its website (project.describe).
  * 25: threads move between computers (thread.release, the spec's `moved`).
  * 26: unacknowledged events are sent again after a while, and threads whose events wait are reported (events.waiting).
+ * 27: notes from outside a turn (thread.note), such as a pull request merged from its card.
  */
-export const PROTOCOL_VERSION = 26
+export const PROTOCOL_VERSION = 27
+/** Runners from this version on take thread.note. */
+export const NOTE_PROTOCOL = 27
 /** Runners from this version on hand a thread's folders over to another computer, and take one in (moved). */
 export const MOVE_PROTOCOL = 25
 /** Runners from this version on write a project's brief from its website (project.describe). */

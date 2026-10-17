@@ -85,12 +85,15 @@ export function PullCard({
   number,
   title,
   open,
+  mergeElsewhere,
 }: {
   repository: string
   number: number
   title: string | null
   /** Known to be open (Home's waiting ones): Merge shows even when GitHub's state doesn't load. */
   open?: boolean
+  /** A teammate's merge button under it does the merging: the card shows where it stands instead. */
+  mergeElsewhere?: boolean
 }) {
   const { me } = useDashboard()
   const { pull, busy, error, merge, resolve } = usePull(repository, number)
@@ -125,7 +128,7 @@ export function PullCard({
           </a>
         </Button>
       )
-    if (resolving(p)) return <PullStatus pull={p} />
+    if (resolving(p) || (mergeElsewhere && mergeable)) return <PullStatus pull={p} />
     return mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
   }
 

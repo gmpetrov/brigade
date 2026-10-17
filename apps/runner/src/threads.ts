@@ -13,6 +13,7 @@ import {
   commandPrompt,
   mentionedIds,
   MessageAttachment,
+  THREAD_NOTE_SOURCE,
   turnAnswer,
   visibleChars,
   type AgentEvent,
@@ -28,6 +29,9 @@ import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
 import type { Previews } from './previews.js'
 import { memoryPrompt, parseMemory } from './memory.js'
+import { MARKS_RULE, said, type LogEntry } from './said.js'
+import { beyondShown, pickLines, recalledBlock } from './recall.js'
+import { MEMORY_CHARS, memoryBody } from './instructions.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
@@ -96,6 +100,8 @@ type Seat = {
   turn: (TurnEntry & { text?: string })[]
   /** The running turn only waits on work started in the background: a new message goes straight in. */
   waiting: boolean
+  /** Memory lines already brought into this harness session (recall.ts). */
+  recalled: Set<string>
 }
 
 /** The bridge's word on whether the turn only waits on background work, from a harness event. */
@@ -137,7 +143,7 @@ type Message = {
 type Log = {
   /** Index of entries[0] since the thread began; older entries are dropped. */
   start: number
-  entries: { by: string | null; name: string; text: string }[]
+  entries: LogEntry[]
   /** Per teammate: the index up to which it has been told. */
   seen: Record<string, number>
   /** The index up to which memory was taken, and the thread's summary then. */
@@ -659,12 +665,11 @@ export class Threads {
           input === 'prompt'
             ? {
                 kind: 'prompt' as const,
-                text: [
-                  await this.options.folders.takeNote(name, spec.git),
-                  await this.catchUp(spec, upTo),
-                ]
-                  .filter(Boolean)
-                  .join('\n\n'),
+                text: await (async () => {
+                  const note = await this.options.folders.takeNote(name, spec.git)
+                  const told = await this.catchUp(spec, upTo)
+                  return [note, this.recall(spec, seat, told), told].filter(Boolean).join('\n\n')
+                })(),
               }
             : input.kind === 'lost'
               ? await this.pickUp(spec, seat, input)
@@ -1073,20 +1078,23 @@ export class Threads {
     if (onlyNew && unseen.length === 0) return ''
     const others = spec.teammates.filter((t) => t.id !== me).map((t) => t.name)
     const last = unseen.at(-1)
-    if ((known || others.length === 0) && unseen.length === 1 && last?.by === null) return last.text
+    // A person's message alone, to a teammate that knows the thread: as they wrote it.
+    if ((known || others.length === 0) && unseen.length === 1 && last?.by === null && !last.note)
+      return last.text
 
     let budget = CATCH_UP_CHARS
     const lines: string[] = []
     for (const e of [...unseen].reverse()) {
-      const line = `${e.name}${e.by ? ' (teammate)' : ''}: ${e.text}`
-      if (lines.length > 0 && line.length > budget) break
-      lines.unshift(line.length > budget ? `${line.slice(0, budget)}…` : line)
-      budget -= line.length
+      const clipped = e.text.length > budget ? { ...e, text: `${e.text.slice(0, budget)}…` } : e
+      if (lines.length > 0 && e.text.length > budget) break
+      lines.unshift(said(clipped))
+      budget -= e.text.length
     }
     return [
       others.length > 0 &&
         `You are ${spec.teammate.name}, one of the AI teammates in this thread, with ${others.join(', ')}. Each of you works in your own session and directory; here is what was said since your last turn. ` +
           `To have a teammate answer after you, mention them as @Name in your reply; mention one only when you need them to act now.`,
+      lines.length > 0 && MARKS_RULE,
       lines.length > 0 && lines.join('\n\n'),
       `Reply to the latest message as ${spec.teammate.name}.`,
     ]
@@ -1115,6 +1123,42 @@ export class Threads {
     thread.log = log
     void this.saveLog(spec.sessionId)
     return log.then((l) => l.start + l.entries.length)
+  }
+
+  /**
+   * Memory the instructions file had no room for, picked for this turn's message.
+   * Nothing while every memory fits there.
+   */
+  private recall(spec: ThreadSpec, seat: Seat, message: string) {
+    const memory = this.options.context.memoryFor(spec.teammate.id)
+    const left = [memory.workspace, spec.project?.memory ?? '', memory.teammate].flatMap((text) =>
+      beyondShown(memoryBody(text), MEMORY_CHARS),
+    )
+    return left.length ? recalledBlock(pickLines(left, message, seat.recalled)) : ''
+  }
+
+  /**
+   * Something that happened outside a turn (thread.note): a line in the thread,
+   * and what each teammate is told at the start of its next turn.
+   */
+  async noteFromOutside(sessionId: string, text: string) {
+    this.options.emit(sessionId, {
+      at: new Date().toISOString(),
+      type: 'raw',
+      source: THREAD_NOTE_SOURCE,
+      value: text,
+    })
+    const thread = this.thread(sessionId)
+    thread.log = thread.log.then((log) => {
+      log.entries.push({ by: null, name: 'Brigade', text, note: true })
+      const drop = log.entries.length - LOG_ENTRIES
+      if (drop > 0) {
+        log.entries.splice(0, drop)
+        log.start += drop
+      }
+      return log
+    })
+    await this.saveLog(sessionId)
   }
 
   private logFile = (sessionId: string) => join(paths.state, `${sessionId}.team.json`)
@@ -1217,7 +1261,14 @@ export class Threads {
         },
         user,
       )
-      seat = { harness, folder, parkTimer: undefined, turn: [], waiting: false }
+      seat = {
+        harness,
+        folder,
+        parkTimer: undefined,
+        turn: [],
+        waiting: false,
+        recalled: new Set(),
+      }
       thread.harnesses.set(teammateId, seat)
     }
     return seat

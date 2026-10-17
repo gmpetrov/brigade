@@ -465,6 +465,9 @@ export const ThreadPrompt = z.object({
 })
 export type ThreadPrompt = z.infer<typeof ThreadPrompt>
 
+/** A raw event's source for a thread.note: settles what was asked before it, as a reply does. */
+export const THREAD_NOTE_SOURCE = 'note'
+
 export const ApiToRunner = z.discriminatedUnion('type', [
   /** bundle: the SHA-256 of the runner bundle the API serves; a runner with another one updates. */
   z.object({
@@ -487,6 +490,17 @@ export const ApiToRunner = z.discriminatedUnion('type', [
   }),
   /** The library or memory changed: fetch the manifest again. */
   z.object({ type: z.literal('library.changed') }),
+  /**
+   * Something happened in the thread outside a turn (NOTE_PROTOCOL), shown as a raw
+   * event from THREAD_NOTE_SOURCE, e.g. its pull
+   * request was merged from its card: a line in the thread, and what each teammate
+   * is told at the start of its next turn.
+   */
+  z.object({
+    type: z.literal('thread.note'),
+    sessionId: z.string(),
+    text: z.string().min(1).max(2000),
+  }),
   /**
    * The thread moves to another computer (MOVE_PROTOCOL): park its teammates,
    * archive their folders to the API's bucket, then forget it here. Answered

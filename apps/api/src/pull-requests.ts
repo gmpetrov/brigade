@@ -28,6 +28,7 @@ import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
+import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
 import { joinThread, promptThread, startThread } from './work.js'
 
@@ -184,6 +185,7 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
   if (closed && row.state !== state && row.sessionId) {
     await settleOnMerge(scope, row.sessionId)
     await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
+    await noteInThread(db, row.sessionId, await pullNote(row, state))
   }
 }
 
@@ -1340,6 +1342,8 @@ async function recordMerge(
   if (row.sessionId) {
     await settleOnMerge(scope, row.sessionId)
     await stopThreadPreview(db, row.sessionId, 'Stopped: the pull request was merged')
+    const by = actor.type === 'member' ? actor.id : undefined
+    await noteInThread(db, row.sessionId, await pullNote(row, 'merged', by))
   }
 }
 

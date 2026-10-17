@@ -15,8 +15,11 @@ import {
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
   SUGGEST_REPLIES_TOOL,
+  THREAD_NOTE_SOURCE,
   hasVisibleText,
   SuggestedReplies,
+  safeChoices,
+  safeReplies,
   TeamProposal,
   turnAnswer,
   visibleChars,
@@ -66,6 +69,7 @@ import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
+import { PullMergeButton } from '@/components/pull-action'
 import { PullCard } from '@/components/pull-card'
 import { StatusBadge } from '@/components/status-badge'
 import { TeamProposalCard } from '@/components/team-proposal'
@@ -152,7 +156,8 @@ export type Item =
   | { kind: 'start'; key: string; at: number; teammateId?: string }
   | { kind: 'turn'; key: string; finishReason: string; startedAt?: number; at: number }
   | { kind: 'error'; key: string; message: string }
-  | { kind: 'note'; key: string; text: string }
+  /** settles: something happened that the buttons asked before it no longer fit (thread.note). */
+  | { kind: 'note'; key: string; text: string; settles?: true }
   /** A person at the computer: taking over, handing back, a command in the shell. */
   | { kind: 'control'; key: string; change: 'took' | 'handed' | 'command'; command?: string }
   | {
@@ -397,6 +402,8 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             add({ kind: 'thinking', key: `r${seq}`, text: e.value })
           else if (e.source === 'runner' && typeof e.value === 'string')
             add({ kind: 'note', key: `n${seq}`, text: e.value })
+          else if (e.source === THREAD_NOTE_SOURCE && typeof e.value === 'string')
+            add({ kind: 'note', key: `n${seq}`, text: e.value, settles: true })
           else if (e.source === 'harness') background = backgroundTasks(background, e.value)
           break
         case 'account.switched':
@@ -618,14 +625,14 @@ function proposedTeam(item: Extract<Item, { kind: 'tool' }>) {
 function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
   if (item.toolName.replace(/^mcp__.+?__/, '') !== OFFER_CHOICES_TOOL) return null
   if (!item.finished || item.isError) return null
-  return Choices.safeParse(item.input).data ?? null
+  return safeChoices(item.input)
 }
 
 /** The replies a suggest_replies call put up, once it went through. */
 function suggestedReplies(item: Extract<Item, { kind: 'tool' }>) {
   if (bareToolName(item.toolName) !== SUGGEST_REPLIES_TOOL) return null
   if (!item.finished || item.isError) return null
-  return SuggestedReplies.safeParse(item.input).data ?? null
+  return safeReplies(item.input)
 }
 
 /** The visual a show_widget call drew, once it went through. */
@@ -1335,6 +1342,7 @@ export function ThreadItems({
   starting = false,
   background = [],
   eventsWaitingSince,
+  drafting = false,
 }: {
   threadId: string
   items: Item[]
@@ -1362,11 +1370,46 @@ export function ThreadItems({
   background?: BackgroundTask[]
   /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
   eventsWaitingSince?: string | null
+  /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
+  drafting?: boolean
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
   const skillNames = useSkillCommands().map((s) => s.name)
   // A card closing the running turn waits for it to end: under a reply still being written it reads too early.
+  // A teammate's buttons stay until anyone answers, with a click or their own words, or
+  // until what they were for happened another way (a note: its pull request merged from
+  // the card). Only the latest set shows, and none while the person writes: their words win.
+  const repliesOpen = (i: number) =>
+    !drafting &&
+    !!onChoose &&
+    !items
+      .slice(i + 1)
+      .some(
+        (it) =>
+          it.kind === 'user' ||
+          (it.kind === 'note' && it.settles) ||
+          (it.kind === 'tool' && suggestedReplies(it)),
+      )
+  /** The pull request opened last before item i: the one a button's merge merges. */
+  const pullBefore = (i: number) => {
+    for (let j = i - 1; j >= 0; j--) {
+      const it = items[j]!
+      const opened = it.kind === 'tool' && it.finished && !it.isError ? openedPull(it) : null
+      if (opened) return opened
+    }
+    return null
+  }
+  /** A button after the card at i merges its pull request: the card leaves merging to it. */
+  const mergeOffered = (i: number, pull: { repository: string; number: number }) =>
+    items.some((it, k) => {
+      if (k <= i || it.kind !== 'tool') return false
+      if (!suggestedReplies(it)?.actions?.some((a) => a.action === 'merge')) return false
+      const target = pullBefore(k)
+      return (
+        target?.repository === pull.repository && target.number === pull.number && repliesOpen(k)
+      )
+    })
   const closingTurn = (i: number) =>
     working &&
     !items.slice(i + 1).some((it) => it.kind === 'turn' || (it.kind === 'user' && !it.steeredTo))
@@ -1508,13 +1551,15 @@ export function ThreadItems({
         }
         const replies = suggestedReplies(item)
         if (replies) {
-          // Gone once anyone answered, with a click or their own words.
-          // Only the latest set shows: a teammate that suggested twice offers the last one.
-          const later = items
-            .slice(i + 1)
-            .some((it) => it.kind === 'user' || (it.kind === 'tool' && suggestedReplies(it)))
-          if (later || !onChoose) return null
-          return <SuggestedReplyButtons key={item.key} replies={replies} onSend={onChoose} />
+          if (!repliesOpen(i) || !onChoose) return null
+          return (
+            <SuggestedReplyButtons
+              key={item.key}
+              replies={replies}
+              pull={pullBefore(i)}
+              onSend={onChoose}
+            />
+          )
         }
         const widget = shownWidget(item)
         if (widget) return <WidgetCard key={item.key} widget={widget} />
@@ -1526,6 +1571,7 @@ export function ThreadItems({
               repository={opened.repository}
               number={opened.number}
               title={opened.title}
+              mergeElsewhere={mergeOffered(i, opened)}
             />
           )
         return (
@@ -2755,9 +2801,12 @@ function ChoicesCard({
 /** Answers a teammate suggested under its reply: a click sends one as the person's message. */
 function SuggestedReplyButtons({
   replies,
+  pull,
   onSend,
 }: {
   replies: SuggestedReplies
+  /** The pull request opened last in the thread: what a merge button merges. */
+  pull: { repository: string; number: number } | null
   onSend: (text: string) => Promise<void>
 }) {
   const [sending, setSending] = useState<string>()
@@ -2777,6 +2826,15 @@ function SuggestedReplyButtons({
   return (
     <div className="flex flex-col -mt-2 gap-1.5 pl-11">
       <div className="flex flex-wrap gap-2">
+        {pull &&
+          replies.actions?.map((a) => (
+            <PullMergeButton
+              key={`${a.action}:${a.label}`}
+              repository={pull.repository}
+              number={pull.number}
+              label={a.label}
+            />
+          ))}
         {replies.replies.map((reply) => (
           <Button
             key={reply}

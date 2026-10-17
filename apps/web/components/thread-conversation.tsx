@@ -933,6 +933,7 @@ export function ThreadConversation({
                     items={items}
                     teammate={t.teammate}
                     teammates={people}
+                    drafting={text.trim() !== ''}
                     canApprove={t.mayPrompt}
                     working={busy}
                     starting={current === 'starting'}
