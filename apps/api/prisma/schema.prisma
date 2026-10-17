@@ -779,6 +779,8 @@ enum ConnectorKind {
   supabase
   /// Atlassian (Jira and Confluence), through Atlassian's Rovo MCP server.
   atlassian
+  /// Notion's MCP server: its tools come from the server, through the API.
+  notion
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }

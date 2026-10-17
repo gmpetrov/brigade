@@ -10,6 +10,8 @@ process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { idTokenEmail, inspectMcp, listMcpTools, callMcpTool, nameFromHost, privateAddress } =
   await import('../src/connectors/mcp.js')
 const { mcpAppKey, toolPrefix } = await import('../src/mcp-servers.js')
+const { mcpToolName } = await import('../src/connectors/index.js')
+const { notionAccountName } = await import('../src/connectors/notion.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
 const servers: ReturnType<typeof createServer>[] = []
@@ -88,6 +90,22 @@ test("tool prefixes stay apart from other Apps' and the built-in kinds", () => {
   assert.equal(toolPrefix('Notes', ['notes', 'notes_2']), 'notes_3')
   assert.equal(toolPrefix('Cloudflare', []), 'cloudflare_2')
   assert.equal(toolPrefix('!!!', []), 'mcp')
+})
+
+test('a tool already named for its server keeps one prefix', () => {
+  assert.equal(mcpToolName('notion', 'notion-search'), 'notion_search')
+  assert.equal(mcpToolName('notion', 'search'), 'notion_search')
+  assert.equal(mcpToolName('cloudflare', 'execute'), 'cloudflare_execute')
+})
+
+test("a Notion account shows as its owner's email, else its workspace", () => {
+  const owner = { type: 'user', user: { name: 'Ada', person: { email: 'ada@acme.com' } } }
+  assert.equal(notionAccountName({ bot: { owner, workspace_name: 'Acme' } }), 'ada@acme.com')
+  assert.equal(
+    notionAccountName({ bot: { owner: { type: 'workspace' }, workspace_name: 'Acme' } }),
+    'Acme',
+  )
+  assert.equal(notionAccountName({}), null)
 })
 
 test('one App per server, however its URL was typed', () => {

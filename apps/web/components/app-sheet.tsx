@@ -115,7 +115,8 @@ export function AppSheet({
           kind === 'google_cloud' ||
           kind === 'neon' ||
           kind === 'supabase' ||
-          kind === 'atlassian'
+          kind === 'atlassian' ||
+          kind === 'notion'
         ? 'mcp'
         : kind === 'github'
           ? 'github'

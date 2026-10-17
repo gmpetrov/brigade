@@ -457,6 +457,7 @@ export type Connection = {
     | 'neon'
     | 'supabase'
     | 'atlassian'
+    | 'notion'
     | 'mcp'
   label: string
   externalAccount: string | null

@@ -247,6 +247,7 @@ export const openTicketTool = tool({
                     'neon',
                     'supabase',
                     'atlassian',
+                    'notion',
                     'mcp',
                   ],
                 },
