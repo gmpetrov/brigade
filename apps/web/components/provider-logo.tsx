@@ -9,8 +9,8 @@ export type ProviderKind = Connection['kind']
 /**
  * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
  * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's square N, Supabase's
- * bolt, Atlassian's two-part A, GitHub's Invertocat (in the text color, so it reads in both
- * themes), and a
+ * bolt, Atlassian's two-part A, Notion's black-on-white cube, GitHub's Invertocat (in the text
+ * color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -206,6 +206,20 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#3ecf8e"
           d="M45.32 2.07c2.86-3.6 8.66-1.63 8.72 2.97l.44 67.25H9.83c-8.19 0-12.76-9.46-7.67-15.87z"
+        />
+      </svg>
+    )
+  if (kind === 'notion')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* The cube is white in both themes, as in Notion's own mark. */}
+        <path
+          fill="#fff"
+          d="M1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"
+        />
+        <path
+          fill="#000"
+          d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"
         />
       </svg>
     )

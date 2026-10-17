@@ -27,6 +27,7 @@ const KINDS: ConnectorKind[] = [
   'neon',
   'supabase',
   'atlassian',
+  'notion',
   'mcp',
   'webhook',
 ]

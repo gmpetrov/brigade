@@ -48,6 +48,7 @@ const BUILT_IN: Kind[] = [
   'neon',
   'supabase',
   'atlassian',
+  'notion',
   'stripe',
 ]
 

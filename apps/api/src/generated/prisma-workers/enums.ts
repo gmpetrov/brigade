@@ -151,6 +151,7 @@ export const ConnectorKind = {
   neon: 'neon',
   supabase: 'supabase',
   atlassian: 'atlassian',
+  notion: 'notion',
   mcp: 'mcp'
 } as const
 

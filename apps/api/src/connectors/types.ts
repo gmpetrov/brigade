@@ -53,6 +53,7 @@ export type ConnectorKind =
   | 'neon'
   | 'supabase'
   | 'atlassian'
+  | 'notion'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
