@@ -6,7 +6,9 @@ import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
 import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
+import { neon } from './neon.js'
 import { stripe } from './stripe.js'
+import { supabase } from './supabase.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
@@ -18,6 +20,8 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  neon,
+  supabase,
 }
 
 /**
@@ -55,6 +59,8 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'neon',
+        'supabase',
         'mcp',
         'webhook',
       ] as const
@@ -151,6 +157,23 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  neon: {
+    name: 'Neon',
+    description:
+      'Manage Neon Postgres projects and branches, and query their databases, with Neon’s MCP server.',
+    developer: 'Neon',
+    category: 'Developer tools',
+    // A Neon sign-in reaches every database of the account: kept to its member's threads.
+    personal: true,
+  },
+  supabase: {
+    name: 'Supabase',
+    description:
+      'Manage Supabase projects, query their databases and deploy Edge Functions, with Supabase’s MCP server.',
+    developer: 'Supabase',
+    category: 'Developer tools',
     personal: true,
   },
   mcp: {

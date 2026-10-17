@@ -8,7 +8,8 @@ export type ProviderKind = Connection['kind']
 
 /**
  * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
- * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, GitHub's Invertocat (in the text color, so it reads in both themes), and a
+ * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's square N, Supabase's
+ * bolt, GitHub's Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -152,6 +153,57 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#fbbc05"
           d="M71.87 61.43C31.94 61.66-.24 94.23 0 134.16a72.3 72.3 0 0 0 28.22 56.88l32.25-32.25c-13.99-6.32-20.21-22.79-13.89-36.78s22.79-20.21 36.78-13.89a27.8 27.8 0 0 1 13.89 13.89l32.25-32.25a72.2 72.2 0 0 0-57.63-28.34"
+        />
+      </svg>
+    )
+  if (kind === 'neon')
+    return (
+      <svg viewBox="18 17.5 144 145" {...common}>
+        <path
+          className="fill-[#37c38f] dark:fill-[#34d59a]"
+          d="M162 17.5406V162.5L105.812 113.897V162.5H18V17.5L162 17.5406ZM35.6515 144.901H88.1606V75.278L144.349 124.843V35.1348L35.6515 35.1037V144.901Z"
+        />
+      </svg>
+    )
+  if (kind === 'supabase')
+    return (
+      <svg viewBox="0 0 109 113" {...common}>
+        <defs>
+          <linearGradient
+            id="supabase-logo-a"
+            x1="53.97"
+            y1="54.97"
+            x2="94.16"
+            y2="71.83"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#249361" />
+            <stop offset="1" stopColor="#3ecf8e" />
+          </linearGradient>
+          <linearGradient
+            id="supabase-logo-b"
+            x1="36.16"
+            y1="30.58"
+            x2="54.48"
+            y2="65.08"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop />
+            <stop offset="1" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          fill="url(#supabase-logo-a)"
+          d="M63.71 110.28c-2.86 3.6-8.66 1.63-8.73-2.97l-1-67.25h45.22c8.19 0 12.76 9.46 7.67 15.87z"
+        />
+        <path
+          fill="url(#supabase-logo-b)"
+          fillOpacity="0.2"
+          d="M63.71 110.28c-2.86 3.6-8.66 1.63-8.73-2.97l-1-67.25h45.22c8.19 0 12.76 9.46 7.67 15.87z"
+        />
+        <path
+          fill="#3ecf8e"
+          d="M45.32 2.07c2.86-3.6 8.66-1.63 8.72 2.97l.44 67.25H9.83c-8.19 0-12.76-9.46-7.67-15.87z"
         />
       </svg>
     )

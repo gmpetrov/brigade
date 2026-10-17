@@ -50,6 +50,8 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'neon'
+  | 'supabase'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -143,6 +145,27 @@ export type McpServer = {
   client?: { id: string; secretId?: string }
   /** api_key: the header the key goes in. Default: Authorization, as a Bearer token. */
   header?: string
+  /**
+   * Which account signed in, for a server with no whoami tool: a tool to call (no input) and
+   * the name to show from its output, such as the account's organization.
+   */
+  account?: { tool: string; name: (output: unknown) => string | null }
+}
+
+/**
+ * The account's organizations as a name, from a list_organizations tool's output (an array,
+ * or an object holding one): the only one, or the first with how many more.
+ */
+export function organizationsName(output: unknown) {
+  const list = Array.isArray(output)
+    ? output
+    : (output as { organizations?: unknown } | null)?.organizations
+  if (!Array.isArray(list)) return null
+  const names = list
+    .map((o) => (o as { name?: unknown } | null)?.name)
+    .filter((n): n is string => typeof n === 'string' && n.length > 0)
+  if (!names.length) return null
+  return names.length === 1 ? names[0]! : `${names[0]} +${names.length - 1}`
 }
 
 export type McpAuth = 'oauth' | 'api_key' | 'none'
@@ -156,11 +179,15 @@ export class ConnectorError extends Error {}
  * Nothing that looks like a key or token leaves the API, even masked.
  */
 export function redact(text: string) {
-  return text
-    .replace(/\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9*]+/g, '[redacted key]')
-    .replace(/\bya29\.[\w-]+/g, '[redacted token]')
-    .replace(/\b(gh[pousr]_[A-Za-z0-9]+|github_pat_\w+)/g, '[redacted token]')
-    .replace(/\bBearer\s+[\w.*-]+/gi, 'Bearer [redacted]')
+  return (
+    text
+      .replace(/\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9*]+/g, '[redacted key]')
+      // Neon API keys, Supabase access tokens and OAuth client secrets.
+      .replace(/\b(napi|sbp|sba)_[A-Za-z0-9]+/g, '[redacted key]')
+      .replace(/\bya29\.[\w-]+/g, '[redacted token]')
+      .replace(/\b(gh[pousr]_[A-Za-z0-9]+|github_pat_\w+)/g, '[redacted token]')
+      .replace(/\bBearer\s+[\w.*-]+/gi, 'Bearer [redacted]')
+  )
 }
 
 /** Fetch JSON from a vendor API and turn its errors into readable ones. */

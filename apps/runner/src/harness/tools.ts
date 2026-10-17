@@ -244,6 +244,8 @@ export const openTicketTool = tool({
                     'github',
                     'cloudflare',
                     'google_cloud',
+                    'neon',
+                    'supabase',
                     'mcp',
                   ],
                 },

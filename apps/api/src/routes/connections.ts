@@ -84,7 +84,7 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: GoogleKind | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  kind: GoogleKind | 'github' | 'cloudflare' | 'google_cloud' | 'neon' | 'supabase' | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -392,6 +392,8 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        neon: true,
+        supabase: true,
         mcp: true,
         webhook: true,
       },
@@ -778,11 +780,16 @@ const bearer =
     })
 
 /**
- * Who an MCP account signed in as, to show which one it is: the server's whoami
- * tool when it has one (an email or an account name), else nothing.
+ * Who an MCP account signed in as, to show which one it is: the tool its App names
+ * (Neon's and Supabase's organizations), else the server's whoami tool when it has one
+ * (an email or an account name), else nothing.
  */
 async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType<typeof bearer>) {
   try {
+    if (server.account) {
+      const output = await callMcpTool(signedIn, server, server.account.tool, {})
+      return server.account.name(typeof output === 'string' ? JSON.parse(output) : output)
+    }
     const output = await callMcpTool(signedIn, server, 'whoami', {})
     const who = (typeof output === 'string' ? JSON.parse(output) : output) as {
       email?: string

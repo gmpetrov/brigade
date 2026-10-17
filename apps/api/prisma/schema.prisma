@@ -769,6 +769,10 @@ enum ConnectorKind {
   cloudflare
   /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
   google_cloud
+  /// Neon, through Neon's MCP server and its own OAuth.
+  neon
+  /// Supabase, through Supabase's MCP server and its own OAuth.
+  supabase
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }
