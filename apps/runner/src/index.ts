@@ -44,6 +44,7 @@ import { Outbox } from './outbox.js'
 import { MemoryGuard } from './memory-guard.js'
 import { runnerCgroups } from './preview-cgroup.js'
 import { Previews } from './previews.js'
+import { processGroups } from './process-groups.js'
 import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
@@ -129,6 +130,12 @@ async function start() {
     console.error(`A runner is already running from ${HOME} (pid ${other}). Stop it first.`)
     process.exit(ALREADY_RUNNING_EXIT_CODE)
   }
+  // Before any preview starts again on a port one of them may still hold.
+  await processGroups.reap().then(
+    (left) => left && console.log(`stopped what the runner before this one left running: ${left}`),
+    (error: unknown) =>
+      console.warn(`could not look for what the runner before left: ${String(error)}`),
+  )
   const outbox = new Outbox(paths.outbox)
   const library = new Library(config)
   void library.cleanTemp()

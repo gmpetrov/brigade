@@ -9,6 +9,7 @@ import { dirname, isAbsolute, resolve } from 'node:path'
 import { Readable, type Writable } from 'node:stream'
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
 import { runnerCgroups, type TurnCgroup } from '../preview-cgroup.js'
+import { processGroups } from '../process-groups.js'
 import { asTeammate, threadNet, type ThreadNet } from '../thread-net.js'
 
 type SandboxSession = ReturnType<HarnessV1NetworkSandboxSession['restricted']>
@@ -117,6 +118,7 @@ export function createLocalSandboxSession(options: {
       Boolean(cgroup && runAs),
     )
     children.add(child)
+    processGroups.add(child.pid, `turn ${options.id}`)
     const gate = child.stdio[3] as Writable | undefined
     if (gate) {
       gate.on('error', () => undefined)

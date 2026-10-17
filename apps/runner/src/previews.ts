@@ -55,6 +55,7 @@ import {
 } from './preview-cgroup.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
 import type { Candidate } from './memory-guard.js'
+import { processGroups } from './process-groups.js'
 import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { containerEnv, teammateHome } from './teammates.js'
 
@@ -857,6 +858,7 @@ export class Previews {
         })
     preview.child = child
     preview.group = child.pid
+    processGroups.add(child.pid, `the preview of ${preview.seat.sessionId}`)
     preview.exited = new Promise((done) => {
       child.once('error', () => done(null))
       child.once('close', (code) => done(code))
