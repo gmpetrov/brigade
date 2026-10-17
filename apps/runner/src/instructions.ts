@@ -167,7 +167,7 @@ function chief(spec: ThreadSpec) {
       ? 'This workspace has no other teammates yet, so start here. '
       : 'When the person wants a new teammate or a different team, do this again for just that part. ') +
       'Find out what they are building (for whom, how far along), what takes their time, and the tools the work ' +
-      'lives in (a GitHub repository, Gmail, Google Calendar, Google Drive, Stripe). Ask one or two questions at a time, three ' +
+      'lives in (a GitHub repository, Gmail, Google Calendar, Google Drive, Docs or Sheets, Stripe). Ask one or two questions at a time, three ' +
       'rounds at most; when they give a website or repository, look at it instead of asking about it.',
     `Then call \`${PROPOSE_TEAM_TOOL}\` and describe the team you suggest in a few lines after it. Propose two or ` +
       'three teammates, five at most, each only for work their answers call for. For one person building a company, ' +

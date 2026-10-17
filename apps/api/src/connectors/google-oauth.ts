@@ -2,7 +2,8 @@
 import { env } from '../config.js'
 
 /** The Apps that sign in with Brigade's Google client. */
-export type GoogleKind = 'gmail' | 'google_calendar' | 'google_drive'
+export type GoogleKind =
+  'gmail' | 'google_calendar' | 'google_drive' | 'google_docs' | 'google_sheets'
 
 export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
   gmail: [
@@ -14,9 +15,20 @@ export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
     'https://www.googleapis.com/auth/calendar.freebusy',
   ],
-  // Every file the account can open, to search, read and edit them; Docs and Sheets take it too.
+  // Every file the account can open, to search, read and edit them.
   google_drive: ['https://www.googleapis.com/auth/drive'],
+  // Documents and spreadsheets by id, and drive.file to create them in My Drive.
+  google_docs: [
+    'https://www.googleapis.com/auth/documents',
+    'https://www.googleapis.com/auth/drive.file',
+  ],
+  google_sheets: [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive.file',
+  ],
 }
+
+export const isGoogleKind = (kind: string): kind is GoogleKind => kind in GOOGLE_SCOPES
 
 export type GoogleCredential = {
   accessToken: string
@@ -103,7 +115,8 @@ export async function googleAccount(kind: GoogleKind, accessToken: string) {
     }).then((r) => r.json())) as { emailAddress?: string }
     return profile.emailAddress ?? null
   }
-  if (kind === 'google_drive') {
+  // Drive's account holder, which every Drive scope reads, drive.file included.
+  if (kind === 'google_drive' || kind === 'google_docs' || kind === 'google_sheets') {
     const about = (await fetch(
       'https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)',
       {

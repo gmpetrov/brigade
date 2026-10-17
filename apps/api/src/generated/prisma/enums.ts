@@ -141,6 +141,8 @@ export const ConnectorKind = {
   gmail: 'gmail',
   google_calendar: 'google_calendar',
   google_drive: 'google_drive',
+  google_docs: 'google_docs',
+  google_sheets: 'google_sheets',
   stripe: 'stripe',
   github: 'github',
   webhook: 'webhook',

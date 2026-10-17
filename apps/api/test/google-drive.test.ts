@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { googleDrive } from '../src/connectors/google-drive.js'
+import { googleDocs, googleDrive, googleSheets } from '../src/connectors/google-drive.js'
 import type { ConnectorContext } from '../src/connectors/types.js'
 
 type Call = { url: string; method: string; body?: string; type?: string }
@@ -48,7 +48,9 @@ function fake(routes: [string, (call: Call) => Response][]) {
 
 const ok = (body: unknown) => Response.json(body)
 const run = (name: string, ctx: ConnectorContext, input: unknown) => {
-  const operation = googleDrive.operations[name]!
+  const operation = (googleDrive.operations[name] ??
+    googleDocs.operations[name] ??
+    googleSheets.operations[name])!
   return operation.run(ctx, operation.input.parse(input))
 }
 
@@ -164,7 +166,16 @@ test('sheet writes are typed as a person would, and each tool says whether it wr
   })
   assert.match(calls[0]!.url, /Sheet1!A%3AB:append\?valueInputOption=USER_ENTERED/)
 
-  const ops = Object.entries(googleDrive.operations)
+  // Three Apps, each with only its own product's tools.
+  for (const [app, prefix] of [
+    [googleDrive, 'drive_'],
+    [googleDocs, 'docs_'],
+    [googleSheets, 'sheets_'],
+  ] as const)
+    assert.ok(Object.keys(app.operations).every((name) => name.startsWith(prefix)))
+  const ops = [googleDrive, googleDocs, googleSheets].flatMap((app) =>
+    Object.entries(app.operations),
+  )
   const reads = ops.filter(([, o]) => !o.write).map(([name]) => name)
   assert.ok(reads.includes('drive_search') && reads.includes('sheets_read_range'))
   assert.ok(

@@ -5,13 +5,15 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
-import { googleDrive } from './google-drive.js'
+import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
   google_calendar: googleCalendar,
   google_drive: googleDrive,
+  google_docs: googleDocs,
+  google_sheets: googleSheets,
   stripe,
   github,
   cloudflare,
@@ -47,6 +49,8 @@ export const triggerCatalog = () =>
         'gmail',
         'google_calendar',
         'google_drive',
+        'google_docs',
+        'google_sheets',
         'stripe',
         'github',
         'cloudflare',
@@ -67,7 +71,7 @@ export const triggerCatalog = () =>
 
 /**
  * The built-in Apps, as the dashboard shows them. One App asks for one consent:
- * Gmail, Google Calendar and Google Drive are three Apps, each with its own Google sign-in.
+ * Gmail, Google Calendar, Drive, Docs and Sheets are five Apps, each with its own Google sign-in.
  * personal: an account someone connects is theirs by default (reach mine).
  */
 export const appCatalog: Record<
@@ -98,7 +102,21 @@ export const appCatalog: Record<
   },
   google_drive: {
     name: 'Google Drive',
-    description: 'Search, read and write files in Drive, Google Docs and Google Sheets.',
+    description: 'Search, read, upload, organize and share files in Drive.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_docs: {
+    name: 'Google Docs',
+    description: 'Read, write and edit documents.',
+    developer: 'Google',
+    category: 'Productivity',
+    personal: true,
+  },
+  google_sheets: {
+    name: 'Google Sheets',
+    description: 'Read and update spreadsheets, add rows and create new ones.',
     developer: 'Google',
     category: 'Productivity',
     personal: true,

@@ -444,6 +444,8 @@ export type Connection = {
     | 'gmail'
     | 'google_calendar'
     | 'google_drive'
+    | 'google_docs'
+    | 'google_sheets'
     | 'stripe'
     | 'github'
     | 'webhook'

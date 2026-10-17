@@ -48,7 +48,7 @@ export type AccountRef = z.infer<typeof AccountRef>
 /** A connection the teammate is granted, as tools. Never its credential. */
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
-  /** gmail, google_calendar, google_drive, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
+  /** gmail, google_calendar, google_drive, google_docs, google_sheets, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
   kind: z.string(),
   label: z.string(),
   externalAccount: z.string().nullable(),
