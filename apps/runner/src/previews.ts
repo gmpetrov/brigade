@@ -186,10 +186,7 @@ type Preview = {
   ooms?: Ooms
   /** Frozen while nobody uses it; the next request thaws it. */
   frozen?: boolean
-  /**
-   * Its thread's containers, paused while it is frozen and nobody works in the
-   * thread; none to pause makes it empty, so they are looked for once.
-   */
+  /** Its thread's containers, paused while it is frozen. */
   pausedContainers?: string[]
   /** Freezing and thawing, one after the other. */
   pausing: Promise<unknown>
@@ -258,7 +255,7 @@ export class Previews {
       seat: (sessionId: string, teammateId: string) => Seat
       /** Where how each thread's preview last started is kept. */
       stateFile: string
-      /** A turn or a person works in the thread: its containers are not paused. */
+      /** A turn or a person works in the thread: its preview counts as used, so it does not freeze. */
       busy?: (sessionId: string) => boolean
     },
   ) {
@@ -994,12 +991,15 @@ export class Previews {
   }
 
   /**
-   * A turn or a person is about to work in the thread: the containers its frozen
-   * preview paused (its database, say) run again. The preview itself stays frozen.
+   * A turn or a person is about to work in the thread: its frozen preview runs
+   * again, with the containers it paused (its database, say). The teammate may
+   * call it directly, not through the proxy that wakes it.
    */
   threadBusy(sessionId: string) {
     const preview = this.previews.get(sessionId)
-    if (preview?.pausedContainers) return this.pause(preview, () => this.unpauseContainers(preview))
+    if (!preview) return
+    preview.lastUsed = Date.now()
+    return this.thaw(preview)
   }
 
   /** The thread's containers, on a cloud computer, while nobody works in it. */
@@ -1011,8 +1011,8 @@ export class Previews {
       this.append(preview, `[preview] Could not pause the thread's containers: ${String(error)}\n`)
       return []
     })
-    preview.pausedContainers = ids
     if (ids.length === 0) return
+    preview.pausedContainers = ids
     this.savePaused()
     this.append(preview, `[preview] Paused ${ids.length} of the thread's containers\n`)
   }
@@ -1166,13 +1166,12 @@ export class Previews {
   private expire() {
     const now = Date.now()
     for (const [sessionId, preview] of this.previews) {
+      // A turn or a person working in the thread uses its preview, through the proxy or not.
+      if (this.options.busy?.(sessionId)) preview.lastUsed = now
       const ttl = preview.cgroup ? FROZEN_TTL_MS : TTL_MS
       if (now - preview.lastUsed >= ttl)
         void this.stop(sessionId, `Stopped after ${Math.round(ttl / 60_000)} minutes without use`)
       else if (now - preview.lastUsed >= FREEZE_MS) void this.freeze(preview)
-      // Frozen while a turn worked in its thread: its containers once the turn is over.
-      if (preview.frozen && !preview.pausedContainers)
-        void this.pause(preview, () => this.pauseContainers(preview))
     }
     void this.makeRoom()
   }

@@ -631,7 +631,7 @@ export class Threads {
         try {
           if (spec.moved) await this.options.folders.arrive(name, spec.moved)
           await this.options.folders.ready(name)
-          // Containers a frozen preview paused: the turn may need them.
+          // A frozen preview, and the containers it paused: the turn may use them.
           await this.options.previews.threadBusy(spec.sessionId)
         } catch (error) {
           this.options.emit(spec.sessionId, {
