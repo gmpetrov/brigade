@@ -1,6 +1,7 @@
 'use client'
 import { type Effort, HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
 import type {
+  ChildReport,
   ProjectSummary,
   AssetTicket,
   AttachmentInfo,
@@ -279,6 +280,25 @@ export type ThreadSummary = {
   othersMayPrompt?: boolean
   /** Since when its events have not reached Brigade: its computer keeps sending them. */
   eventsWaitingSince?: string | null
+  /** Its child threads it waits for, at work: it shows as working. */
+  childrenWorking?: number
+}
+
+/** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */
+export type ThreadChild = {
+  id: string
+  title: string
+  status: string
+  origin: 'child' | 'schedule'
+  /** Its parent waits for its report, with the others it waits for. */
+  awaited: boolean
+  report: ChildReport | null
+  reportDeliveredAt: string | null
+  createdAt: string
+  teammate: { id: string; name: string }
+  schedule: { id: string; title: string } | null
+  /** Open tickets in it: its parent shows them, since it is out of the sidebar. */
+  tickets: { id: string; type: string; title: string; createdAt: string }[]
 }
 
 export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'> & {
@@ -299,9 +319,15 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   }[]
   computer: { id: string; name: string; kind: string }
   account: { id: string; label: string; status: string } | null
-  origin: 'member' | 'trigger' | 'schedule'
+  origin: 'member' | 'trigger' | 'schedule' | 'child'
   trigger: { id: string; label: string; event: string } | null
   schedule: { id: string; title: string } | null
+  /** The thread it was started from: it reports there, and is shown there rather than in the sidebar. */
+  parent: { id: string; title: string } | null
+  /** Its child threads, newest first. */
+  children: ThreadChild[]
+  /** Schedules whose runs report here, as its children. */
+  reportingSchedules: { id: string; title: string; pausedAt: string | null }[]
   tickets: Pick<Ticket, 'id' | 'type' | 'title' | 'payload' | 'createdAt'>[]
   /** Every file given to the thread, oldest first. */
   attachments: AttachmentInfo[]
@@ -349,6 +375,8 @@ export type Schedule = {
   project: ProjectRef | null
   /** Its latest thread. */
   lastRun: { id: string; status: string; createdAt: string } | null
+  /** The thread its runs report to, as its children; null: each run is a thread of its own. */
+  parentSession: { id: string; title: string } | null
 }
 
 /** A task on the board, with its thread if it has started. */
@@ -721,9 +749,11 @@ export type Ticket = {
   session: {
     id: string
     title: string
-    origin: 'member' | 'trigger' | 'schedule'
+    origin: 'member' | 'trigger' | 'schedule' | 'child'
     startedByMemberId: string
     projectId: string | null
+    /** A child thread's parent: out of the sidebar, its ticket marks the parent there. */
+    parentId: string | null
     teammate: { id: string; name: string }
   } | null
 }

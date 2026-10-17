@@ -76,6 +76,11 @@ function ScheduleRow({
             {schedule.createdByTeammate && `, set up by ${schedule.createdByTeammate.name}`}
           </span>
           {showProject && <ProjectTag project={schedule.project} />}
+          {schedule.parentSession && (
+            <Link href={`/app/threads/${schedule.parentSession.id}`} className="hover:underline">
+              Reports in “{schedule.parentSession.title}”
+            </Link>
+          )}
           {active && schedule.nextRunAt && (
             <span>Next {scheduleTime(schedule.nextRunAt, schedule.timezone)}</span>
           )}

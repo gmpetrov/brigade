@@ -84,7 +84,8 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { threadImageUrl, useApi, type Credential } from '@/lib/api'
+import { StartedChild } from '@/components/thread-children'
+import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -607,6 +608,15 @@ function openedPull(item: { toolName: string; input: unknown; output?: unknown }
   }
 }
 
+/** The child thread a start_child call started, once it went through: its id and title. */
+function startedChild(item: { toolName: string; input: unknown; output?: unknown }) {
+  if (bareToolName(item.toolName) !== 'start_child') return null
+  const found = json(item.output ?? '').match(/"threadId"\s*:\s*"([^"\\]+)"/)
+  if (!found) return null
+  const title = (item.input as { title?: unknown } | null)?.title
+  return { threadId: found[1]!, title: typeof title === 'string' ? title : 'Child thread' }
+}
+
 /** The team a propose_team call put up, once it went through. */
 function proposedTeam(item: Extract<Item, { kind: 'tool' }>) {
   if (item.toolName.replace(/^mcp__.+?__/, '') !== PROPOSE_TEAM_TOOL) return null
@@ -707,7 +717,7 @@ const isActivity = (item: Item): item is ActivityItem =>
     !suggestedReplies(item) &&
     !shownWidget(item) &&
     !proposedTeam(item) &&
-    !(item.finished && !item.isError && openedPull(item)))
+    !(item.finished && !item.isError && (openedPull(item) || startedChild(item))))
 
 /**
  * A step that does no work: thinking, loading a tool, a card refused and called
@@ -1335,6 +1345,7 @@ export function ThreadItems({
   starting = false,
   background = [],
   eventsWaitingSince,
+  childThreads = [],
 }: {
   threadId: string
   items: Item[]
@@ -1362,6 +1373,8 @@ export function ThreadItems({
   background?: BackgroundTask[]
   /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
   eventsWaitingSince?: string | null
+  /** The thread's child threads: where a teammate started one, its line shows how it is doing. */
+  childThreads?: ThreadChild[]
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
@@ -1518,6 +1531,16 @@ export function ThreadItems({
         }
         const widget = shownWidget(item)
         if (widget) return <WidgetCard key={item.key} widget={widget} />
+        const child = item.finished && !item.isError ? startedChild(item) : null
+        if (child)
+          return (
+            <StartedChild
+              key={item.key}
+              threadId={child.threadId}
+              title={child.title}
+              children={childThreads}
+            />
+          )
         const opened = item.finished && !item.isError ? openedPull(item) : null
         if (opened)
           return (
