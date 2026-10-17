@@ -163,7 +163,7 @@ export function McpServerCard({
 
   const ready =
     !!signIn &&
-    // Still enabled while a sign-in window is open: closed by mistake, it opens again.
+    // Still enabled while a sign-in tab is open: closed by mistake, it opens again.
     !busy &&
     (signIn !== 'api_key' || apiKey.trim().length > 0) &&
     (signIn !== 'oauth_client' || clientId.trim().length > 0)
@@ -298,8 +298,7 @@ export function McpServerCard({
           </Button>
           {waiting && (
             <p className="text-sm text-muted-foreground">
-              Finish signing in in the window that opened. The account shows here once it is
-              connected.
+              Finish signing in in the tab that opened. The account shows here once it is connected.
             </p>
           )}
         </div>

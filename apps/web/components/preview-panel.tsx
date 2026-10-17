@@ -428,8 +428,9 @@ export function PreviewPanel({
               src={view.url}
               title={`Preview of the app ${teammateName} runs`}
               className="min-h-0 w-full flex-1 border-0 bg-white"
-              // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab.
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+              // Its own origin, apart from the dashboard's: scripts and forms run as they would in a tab,
+              // and what it opens (a sign-in tab) is a plain tab, without the frame's sandbox.
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
               allow="clipboard-read; clipboard-write; fullscreen"
               referrerPolicy="no-referrer"
             />
