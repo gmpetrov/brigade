@@ -31,6 +31,7 @@ test('a turn waiting on a person resumes as its conversation, without the turn o
     waiting: [
       { toolCallId: 'toolu_1', toolName: 'open_ticket', input: { title: 'Access to Vault' } },
     ],
+    approvals: [],
   })
 })
 
@@ -75,4 +76,54 @@ test('the calls a turn waits on a person for are kept, and nothing else', async 
   assert.deepEqual(waitingOn(calls, new Set(['open_ticket'])), [
     { toolCallId: 'toolu_1', toolName: 'open_ticket', input: { title: 'Connect Neon' } },
   ])
+})
+
+test('a turn waiting on an approval is closed too, keeping the call it would have made', async () => {
+  const { closeTurn, approvalAfterRestart, sameCall } =
+    await import('../src/harness/closed-turn.js')
+  const closed = closeTurn({
+    type: 'resume-session',
+    harnessId: 'claude-code',
+    specificationVersion: 'harness-v1',
+    data: {},
+    continueFrom: {
+      type: 'continue-turn',
+      harnessId: 'claude-code',
+      specificationVersion: 'harness-v1',
+      data: { bridge: { port: 1, token: 't' } },
+      pendingToolApprovals: [
+        {
+          approvalId: 'toolu_9',
+          toolCallId: 'toolu_9',
+          toolName: 'bash',
+          input: '{"command":"ls","description":"List"}',
+        },
+      ],
+    },
+  })
+  assert.deepEqual(closed?.approvals, [
+    { approvalId: 'toolu_9', toolName: 'bash', input: { command: 'ls', description: 'List' } },
+  ])
+  assert.deepEqual(closed?.waiting, [])
+  // Made again, the same call in another key order is still the one approved.
+  assert.ok(
+    sameCall(closed!.approvals[0]!, {
+      toolName: 'Bash',
+      input: { description: 'List', command: 'ls' },
+    }),
+  )
+  assert.ok(
+    !sameCall(closed!.approvals[0]!, {
+      toolName: 'bash',
+      input: { command: 'rm -rf /', description: 'List' },
+    }),
+  )
+  assert.match(
+    approvalAfterRestart(closed!.approvals[0], true),
+    /never ran\. They approved it: make the same call again/,
+  )
+  assert.match(
+    approvalAfterRestart(closed!.approvals[0], false, 'not now'),
+    /They declined it: not now\. Do not make it/,
+  )
 })
