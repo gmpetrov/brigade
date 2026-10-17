@@ -40,7 +40,14 @@ export type ConnectorContext = {
 }
 
 export type ConnectorKind =
-  'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare' | 'mcp'
+  | 'gmail'
+  | 'google_calendar'
+  | 'stripe'
+  | 'github'
+  | 'webhook'
+  | 'cloudflare'
+  | 'google_cloud'
+  | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
 export type ApiKeyCredential = { apiKey: string }

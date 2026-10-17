@@ -20,6 +20,9 @@ export type GoogleCredential = {
 }
 
 export const googleConfigured = () => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
+/** The second Google client, for Google's MCP servers (the Google Cloud App). */
+export const googleMcpConfigured = () =>
+  Boolean(env.GOOGLE_MCP_CLIENT_ID && env.GOOGLE_MCP_CLIENT_SECRET)
 export const googleRedirectUri = () => `${env.API_URL}/api/connections/oauth/google/callback`
 
 export function googleAuthUrl(kind: 'gmail' | 'google_calendar', state: string) {

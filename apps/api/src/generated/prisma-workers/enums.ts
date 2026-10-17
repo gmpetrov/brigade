@@ -144,6 +144,7 @@ export const ConnectorKind = {
   github: 'github',
   webhook: 'webhook',
   cloudflare: 'cloudflare',
+  google_cloud: 'google_cloud',
   mcp: 'mcp'
 } as const
 

@@ -436,7 +436,15 @@ export type Connection = {
   reach: 'mine' | 'workspace'
   createdByMemberId: string
   /** webhook: a custom app that posts events to Brigade. Inbound only. */
-  kind: 'gmail' | 'google_calendar' | 'stripe' | 'github' | 'webhook' | 'cloudflare' | 'mcp'
+  kind:
+    | 'gmail'
+    | 'google_calendar'
+    | 'stripe'
+    | 'github'
+    | 'webhook'
+    | 'cloudflare'
+    | 'google_cloud'
+    | 'mcp'
   label: string
   externalAccount: string | null
   /** Where a person manages the account at the provider, e.g. a GitHub installation's settings. */

@@ -234,7 +234,15 @@ export const openTicketTool = tool({
               properties: {
                 kind: {
                   type: 'string',
-                  enum: ['gmail', 'google_calendar', 'stripe', 'github', 'cloudflare', 'mcp'],
+                  enum: [
+                    'gmail',
+                    'google_calendar',
+                    'stripe',
+                    'github',
+                    'cloudflare',
+                    'google_cloud',
+                    'mcp',
+                  ],
                 },
                 scope: { type: 'string', enum: ['read', 'read_write'] },
                 url: {

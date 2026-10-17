@@ -763,6 +763,8 @@ enum ConnectorKind {
   webhook
   /// Cloudflare's MCP server: its tools come from the server, through the API.
   cloudflare
+  /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
+  google_cloud
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }
