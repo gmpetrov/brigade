@@ -25,9 +25,10 @@ export const atlassian: ConnectorDefinition = {
       'write:confluence:agent-interface',
       'search:rovo:agent-interface',
     ],
-    // An account shows as the email of who signed in.
+    // An account shows as the email of who signed in. The server's atlassianUserInfo gives
+    // only an account id; Atlassian's /me takes the same token and gives the email.
     account: {
-      tool: 'atlassianUserInfo',
+      url: 'https://api.atlassian.com/me',
       name: (o) => {
         const who = o as { email?: unknown; name?: unknown } | null
         return typeof who?.email === 'string'
