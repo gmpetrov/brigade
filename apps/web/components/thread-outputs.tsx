@@ -1,7 +1,8 @@
 'use client'
 // What a thread made, beside it: files its teammates wrote or named, library
 // documents, images, pull requests, emails, schedules and skills proposed. Read from the event
-// log, newest first; a file made again keeps one row.
+// log, newest first; a file made again keeps one row. A pull request's row says how its
+// checks went, and an owner or admin merges it from there.
 import {
   bareToolName as bare,
   designName,
@@ -13,17 +14,43 @@ import {
 import {
   BookOpenText,
   CalendarClock,
+  Check,
+  CircleDashed,
+  Copy,
+  EllipsisVertical,
+  ExternalLink,
   FileText,
+  GitCompareArrows,
+  GitMerge,
   GitPullRequest,
+  GitPullRequestClosed,
   Image as ImageIcon,
   Library,
   Mail,
   Palette,
+  X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { isAdmin, useDashboard } from '@/components/dashboard'
 import { relativeFile, type OpenFile } from '@/components/file-links'
-import { pullHref } from '@/lib/api'
+import { pullStatus } from '@/components/pull-status'
+import { usePull } from '@/components/pull-card'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { pullHref, type CheckRun, type PullRequestState } from '@/lib/api'
+import {
+  blockedBecause,
+  canMerge,
+  hasConflicts,
+  resolvesInBrigade,
+  resolving,
+} from '@/lib/merge-method'
 
 export type ThreadOutput = {
   key: string
@@ -34,6 +61,7 @@ export type ThreadOutput = {
   /** Opens beside the thread. */
   file?: { path: string; teammateId?: string }
   href?: string
+  pull?: { repository: string; number: number }
 }
 
 /** Rows shown before "Show all". */
@@ -188,6 +216,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               detail: `${repository}#${number}`,
               at: e.at,
               href: pullHref(repository, number),
+              pull: { repository, number },
             })
           } else if (EMAIL_TOOL.test(tool)) {
             if (!/gmail|mail/i.test(call.toolName)) break
@@ -255,6 +284,12 @@ export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; on
     <div className="flex flex-col gap-1">
       <ul className="flex flex-col">
         {shown.map((output) => {
+          if (output.pull)
+            return (
+              <li key={output.key}>
+                <PullOutput output={output} {...output.pull} />
+              </li>
+            )
           const Icon = ICONS[output.kind]
           const body = (
             <>
@@ -302,6 +337,159 @@ export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; on
           {all ? 'Show fewer' : `Show all ${outputs.length}`}
         </button>
       )}
+    </div>
+  )
+}
+
+/** How its checks went, in words: failures first, then those still running. */
+function checksLine(checks: CheckRun[]): ReactNode {
+  const failed = checks.filter((c) => c.status === 'failure').length
+  const pending = checks.filter((c) => c.status === 'pending').length
+  const n = checks.length
+  if (failed)
+    return (
+      <>
+        <X className="size-3 flex-none text-destructive-text" aria-hidden />
+        {n === 1 ? 'Its check failed' : `${failed} of ${n} checks failed`}
+      </>
+    )
+  if (pending)
+    return (
+      <>
+        <CircleDashed className="size-3 flex-none text-warning" aria-hidden />
+        {n === 1 ? 'Its check is running' : `${pending} of ${n} checks running`}
+      </>
+    )
+  return (
+    <>
+      <Check className="size-3 flex-none text-success" aria-hidden />
+      {n === 1 ? 'Its check passed' : `${n} checks passed`}
+    </>
+  )
+}
+
+/** The line under its title: how it ended, else what it waits on, else its checks. */
+function pullLine(p: PullRequestState, fallback: string): ReactNode {
+  if (p.state === 'merged')
+    return `Merged into ${p.base}${p.mergedAt ? ` · ${time(p.mergedAt)}` : ''}`
+  if (p.state === 'closed') return `Closed · ${fallback}`
+  if (resolving(p)) {
+    const { label } = pullStatus(p)
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  }
+  if (p.mergeableState === 'dirty') return `Conflicts with ${p.base}`
+  return p.checks.length ? checksLine(p.checks) : fallback
+}
+
+function PullOutput({
+  output,
+  repository,
+  number,
+}: {
+  output: ThreadOutput
+  repository: string
+  number: number
+}) {
+  const { me } = useDashboard()
+  const { pull, busy, error, merge, resolve } = usePull(repository, number, { checks: true })
+  const p = pull.data
+  const Icon =
+    p?.state === 'merged' ? GitMerge : p?.state === 'closed' ? GitPullRequestClosed : GitPullRequest
+  const stamp = (
+    <time dateTime={output.at} className="flex-none text-xs text-muted-foreground">
+      {time(output.at)}
+    </time>
+  )
+  const pill = 'relative z-10 flex-none rounded-full'
+
+  const action = () => {
+    if (!p) return stamp
+    if (p.state === 'merged')
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              className="relative z-10 flex-none text-muted-foreground"
+              aria-label={`#${number}: more`}
+              title="More"
+            >
+              <EllipsisVertical />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-40">
+            <DropdownMenuItem asChild>
+              <a href={p.url} target="_blank" rel="noreferrer">
+                <ExternalLink />
+                Open on GitHub
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void navigator.clipboard.writeText(p.url)}>
+              <Copy />
+              Copy link
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    if (p.state !== 'open' || !isAdmin(me) || resolving(p)) return stamp
+    if (hasConflicts(p))
+      return resolvesInBrigade(p) ? (
+        <Button
+          size="xs"
+          variant="outline"
+          className={pill}
+          disabled={busy}
+          onClick={resolve}
+          title={`It conflicts with ${p.base}. ${p.tracking?.author?.name} resolves the conflicts, then it merges.`}
+        >
+          <GitCompareArrows />
+          {busy ? 'Asking…' : 'Resolve conflicts'}
+        </Button>
+      ) : (
+        <Button size="xs" variant="outline" className={pill} asChild>
+          <a href={`${p.url}/conflicts`} target="_blank" rel="noreferrer">
+            Resolve on GitHub
+            <ExternalLink />
+          </a>
+        </Button>
+      )
+    const mergeable = canMerge(p)
+    // A failed check doesn't stop it here, GitHub does if it must: the pill only gets quieter.
+    const failing = p.checks.some((c) => c.status === 'failure')
+    return (
+      <Button
+        size="xs"
+        variant={failing ? 'outline' : 'default'}
+        className={`${pill} px-2.5`}
+        disabled={busy || !mergeable}
+        onClick={merge}
+        title={mergeable ? undefined : blockedBecause[p.mergeableState]}
+      >
+        {busy ? 'Merging…' : 'Merge'}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="relative flex w-full items-center gap-3 rounded-md px-2 py-1.5 hover:bg-secondary/60">
+      <Icon
+        className={`size-4 flex-none ${p?.state === 'merged' ? 'text-primary' : 'text-muted-foreground'}`}
+        aria-hidden
+      />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <Link
+          href={output.href ?? pullHref(repository, number)}
+          className="truncate text-sm font-medium after:absolute after:inset-0"
+        >
+          {output.label}
+        </Link>
+        <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+          {p ? pullLine(p, output.detail ?? '') : output.detail}
+        </span>
+        {error && <span className="text-xs text-destructive-text">{error}</span>}
+      </span>
+      {action()}
     </div>
   )
 }

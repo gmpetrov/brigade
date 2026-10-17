@@ -394,20 +394,29 @@ async function checksOf(gh: GitHub, repo: string, sha: string): Promise<CheckRun
   ]
 }
 
-/** One pull request's state, one GitHub call: what its card in a thread shows. */
+/**
+ * One pull request's state, one GitHub call: what its card in a thread shows.
+ * With `checks`, an open one's checks too (two more calls), for its row in a thread's outputs.
+ */
 export async function pullState(
   db: ScopedDb,
   scope: Scope,
   repo: string,
   number: number,
+  options: { checks?: boolean } = {},
 ): Promise<PullRequestState> {
   const gh = await github(db, scope, repo)
   const [p, row] = await Promise.all([pullOf(gh, repo, number), findRow(db, repo, number)])
-  await sync(db, scope, row ?? undefined, p)
+  const [checks] = await Promise.all([
+    options.checks && stateOf(p) === 'open' ? checksOf(gh, repo, p.head.sha) : [],
+    sync(db, scope, row ?? undefined, p),
+  ])
   return {
     ...summary(repo, p, row ?? undefined),
     mergeable: p.mergeable ?? null,
     mergeableState: p.mergeable_state ?? 'unknown',
+    mergedAt: p.merged_at,
+    checks,
   }
 }
 

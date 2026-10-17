@@ -2,6 +2,7 @@
 // The card for a pull request a teammate opened in a thread: the whole card opens
 // its changes, and an owner or admin merges it from here. One that conflicts has
 // Resolve conflicts instead: its teammate resolves them, then it merges by itself.
+// A thread's outputs show the same pull request as a row (thread-outputs).
 import {
   ExternalLink,
   GitCompareArrows,
@@ -28,29 +29,18 @@ import { cn } from '@/lib/utils'
 /** While its conflicts are resolved and it merges, the card follows it. */
 const POLL_MS = 10_000
 
-export function PullCard({
-  repository,
-  number,
-  title,
-  open,
-}: {
-  repository: string
-  number: number
-  title: string | null
-  /** Known to be open (Home's waiting ones): Merge shows even when GitHub's state doesn't load. */
-  open?: boolean
-}) {
-  const { me } = useDashboard()
+/**
+ * A pull request's state from GitHub, and Merge and Resolve conflicts for it.
+ * While its conflicts are resolved and it merges, it follows it.
+ */
+export function usePull(repository: string, number: number, options: { checks?: boolean } = {}) {
   const path = `/pulls/${repository}/${number}`
-  const pull = useApi<PullRequestState>(`${path}/state`)
+  const pull = useApi<PullRequestState>(`${path}/state${options.checks ? '?checks=1' : ''}`)
   const [method] = useLastMergeMethod()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
 
   const p = pull.data
-  const Icon =
-    p?.state === 'merged' ? GitMerge : p?.state === 'closed' ? GitPullRequestClosed : GitPullRequest
-  const mergeable = p ? canMerge(p) : false
   const following = p?.state === 'open' && resolving(p)
   const reload = pull.reload
   useEffect(() => {
@@ -86,6 +76,29 @@ export function PullCard({
       return
     void act(() => api(`${path}/resolve`, { body: { method } }))
   }
+
+  return { pull, busy, error, merge, resolve }
+}
+
+export function PullCard({
+  repository,
+  number,
+  title,
+  open,
+}: {
+  repository: string
+  number: number
+  title: string | null
+  /** Known to be open (Home's waiting ones): Merge shows even when GitHub's state doesn't load. */
+  open?: boolean
+}) {
+  const { me } = useDashboard()
+  const { pull, busy, error, merge, resolve } = usePull(repository, number)
+
+  const p = pull.data
+  const Icon =
+    p?.state === 'merged' ? GitMerge : p?.state === 'closed' ? GitPullRequestClosed : GitPullRequest
+  const mergeable = p ? canMerge(p) : false
 
   const action = () => {
     // Its state from GitHub did not load: still merged from here, GitHub says if it can't be.
