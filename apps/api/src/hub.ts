@@ -14,6 +14,7 @@ import {
 } from '@brigade/contracts'
 import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
+import { storableJson } from './storable-json.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureSetup, touch, wake } from './cloud.js'
@@ -531,7 +532,14 @@ export function runnerSocket(runner: {
 
     if (message.type === 'events') {
       const bySession = Map.groupBy(message.events, (e) => e.sessionId)
-      for (const [sessionId, events] of bySession) await storeEvents(sessionId, events, ws)
+      // One thread's events failing to store must not hold back the others' in the batch.
+      for (const [sessionId, events] of bySession)
+        await storeEvents(sessionId, events, ws).catch((error) =>
+          console.error(
+            `runner ${runner.id}: could not store events of thread ${sessionId}`,
+            error,
+          ),
+        )
       return
     }
 
@@ -744,7 +752,8 @@ export function runnerSocket(runner: {
         sessionId,
         seq: e.seq,
         type: e.event.type,
-        data: e.event as unknown as Prisma.InputJsonValue,
+        // A NUL in a tool's output would fail the whole batch, and every later event of the thread with it.
+        data: storableJson(e.event) as unknown as Prisma.InputJsonValue,
         at: new Date(e.event.at),
       })),
       skipDuplicates: true,
