@@ -5,6 +5,7 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { sentry } from './sentry.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -14,6 +15,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  sentry,
 }
 
 /**
@@ -48,6 +50,7 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'sentry',
         'mcp',
         'webhook',
       ] as const
@@ -123,6 +126,15 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  sentry: {
+    name: 'Sentry',
+    description:
+      'Find production errors, their stack traces and traces, and resolve them, with Sentry’s MCP server. With GitHub, a teammate goes from an error to the pull request that fixes it.',
+    developer: 'Sentry',
+    category: 'Developer tools',
+    // A Sentry sign-in is someone's own user, with every organization they belong to.
     personal: true,
   },
   mcp: {

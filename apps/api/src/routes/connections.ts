@@ -82,7 +82,7 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'sentry' | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -387,6 +387,7 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        sentry: true,
         mcp: true,
         webhook: true,
       },
@@ -778,12 +779,14 @@ const bearer =
  */
 async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType<typeof bearer>) {
   try {
-    const output = await callMcpTool(signedIn, server, 'whoami', {})
-    const who = (typeof output === 'string' ? JSON.parse(output) : output) as {
-      email?: string
-      name?: string
-      id?: string
+    const { tool, arguments: args } = server.whoami ?? { tool: 'whoami', arguments: {} }
+    const output = await callMcpTool(signedIn, server, tool, args)
+    type Who = { email?: string; name?: string; id?: string }
+    const parsed = (typeof output === 'string' ? JSON.parse(output) : output) as Who & {
+      user?: Who
     }
+    // Sentry's answers { user: { email, name, id } }.
+    const who = parsed.user ?? parsed
     return who.email ?? who.name ?? who.id ?? null
   } catch {
     return null

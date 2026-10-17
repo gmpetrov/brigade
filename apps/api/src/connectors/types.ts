@@ -47,6 +47,7 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'sentry'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -140,6 +141,8 @@ export type McpServer = {
   client?: { id: string; secretId?: string }
   /** api_key: the header the key goes in. Default: Authorization, as a Bearer token. */
   header?: string
+  /** The call that names the account that signed in. Default: the server's whoami tool. */
+  whoami?: { tool: string; arguments: Record<string, unknown> }
 }
 
 export type McpAuth = 'oauth' | 'api_key' | 'none'

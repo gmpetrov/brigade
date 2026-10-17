@@ -42,6 +42,7 @@ const BUILT_IN: Kind[] = [
   'github',
   'cloudflare',
   'google_cloud',
+  'sentry',
   'stripe',
 ]
 
