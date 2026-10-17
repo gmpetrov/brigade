@@ -110,7 +110,11 @@ export function AppSheet({
   const route =
     custom || server || kind === 'stripe'
       ? null
-      : kind === 'cloudflare' || kind === 'google_cloud'
+      : kind === 'cloudflare' ||
+          kind === 'google_cloud' ||
+          kind === 'google_drive' ||
+          kind === 'google_docs' ||
+          kind === 'google_sheets'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
@@ -752,7 +756,12 @@ function Unavailable({ kind }: { kind: Kind }) {
         <span className="font-mono text-xs">GOOGLE_CLIENT_SECRET</span>).
       </p>
     )
-  if (kind === 'google_cloud')
+  if (
+    kind === 'google_cloud' ||
+    kind === 'google_drive' ||
+    kind === 'google_docs' ||
+    kind === 'google_sheets'
+  )
     return (
       <p className="text-sm text-muted-foreground">
         Needs Brigade&apos;s Google client for agents configured on this Brigade server (

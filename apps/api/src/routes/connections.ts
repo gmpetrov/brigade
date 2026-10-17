@@ -82,7 +82,8 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  /** An MCP App's kind is one ConnectMcp takes. */
+  kind: 'gmail' | 'google_calendar' | 'github' | (typeof ConnectMcp)['_output']['kind'] | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -387,6 +388,9 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        google_drive: googleMcpConfigured(),
+        google_docs: googleMcpConfigured(),
+        google_sheets: googleMcpConfigured(),
         mcp: true,
         webhook: true,
       },

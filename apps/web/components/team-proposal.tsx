@@ -24,6 +24,9 @@ import { cn } from '@/lib/utils'
 const KIND_LABEL: Record<ProposedConnection['kind'], string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
+  google_drive: 'Google Drive',
+  google_docs: 'Google Docs',
+  google_sheets: 'Google Sheets',
   stripe: 'Stripe',
   github: 'GitHub',
 }
@@ -294,10 +297,16 @@ function ConnectList({
     setError(undefined)
     try {
       if (kind === 'stripe') return setStripe(true)
-      const { url } = await api<{ url: string }>(
-        kind === 'github' ? '/connections/github' : '/connections/google',
-        { body: kind === 'github' ? { returnTo: pathname } : { kind, returnTo: pathname } },
-      )
+      // Drive, Docs and Sheets sign in on Google's MCP servers, Gmail and Calendar on Google's APIs.
+      const route =
+        kind === 'github'
+          ? 'github'
+          : kind === 'google_drive' || kind === 'google_docs' || kind === 'google_sheets'
+            ? 'mcp'
+            : 'google'
+      const { url } = await api<{ url: string }>(`/connections/${route}`, {
+        body: route === 'github' ? { returnTo: pathname } : { kind, returnTo: pathname },
+      })
       window.location.href = url
     } catch (e) {
       setError((e as Error).message)

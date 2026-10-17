@@ -145,6 +145,9 @@ export const ConnectorKind = {
   webhook: 'webhook',
   cloudflare: 'cloudflare',
   google_cloud: 'google_cloud',
+  google_drive: 'google_drive',
+  google_docs: 'google_docs',
+  google_sheets: 'google_sheets',
   mcp: 'mcp'
 } as const
 

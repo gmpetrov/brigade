@@ -765,6 +765,10 @@ enum ConnectorKind {
   cloudflare
   /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
   google_cloud
+  /// Google Drive, Docs and Sheets, each through its Google MCP server, like Google Cloud.
+  google_drive
+  google_docs
+  google_sheets
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }
