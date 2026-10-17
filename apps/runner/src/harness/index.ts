@@ -32,7 +32,7 @@ import { builtinSkills, instructions, writeInstructions } from '../instructions.
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { containerEnv, ensureUser, linkAccount, teammateHome } from '../teammates.js'
-import { answerAfterRestart, closeTurn } from './closed-turn.js'
+import { answerAfterRestart, closeTurn, waitingOn, type WaitingCall } from './closed-turn.js'
 import { harnessEnv } from './env.js'
 import {
   askUserQuestions,
@@ -140,11 +140,18 @@ type SavedState = {
   inTurn?: boolean
   /** Turns continued after a restart since one last finished, to stop when restarts keep cutting it off. */
   recoveries?: number
+  /**
+   * The calls the last turn stopped on, waiting for a person (a ticket, a question): their
+   * answer still reads right if the process stops without parking, which keeps no turn.
+   */
+  waiting?: WaitingCall[]
 }
 
 const TRANSCRIPT_CHARS = 40_000
 /** A turn cut off by this many restarts in a row is not continued again: it may be what stops the computer. */
 const MAX_RECOVERIES = 3
+/** The tools whose turn waits on a person's answer. */
+const PERSON_TOOLS = new Set([OPEN_TICKET_TOOL, QUESTION_TOOL, ASK_USER_TOOL])
 /** What a teammate is told when the computer stopped without warning during its turn. */
 const RESTARTED =
   "Brigade's computer restarted while you were working on this thread, so your last turn stopped partway. " +
@@ -378,6 +385,9 @@ export class HarnessThread {
         // never started (no usage) may have kept nothing: the next starts from it again.
         if (result?.status === 'idle' || result?.status === 'waiting') delete this.saved.arrivedFrom
         this.saved.inTurn = false
+        if (result?.status === 'waiting')
+          this.saved.waiting = waitingOn(this.toolCalls, PERSON_TOOLS)
+        else if (result?.status === 'idle') delete this.saved.waiting
         if (result?.status === 'idle') this.saved.recoveries = 0
         await this.persist().catch((error) =>
           console.warn(`could not save thread state: ${errorMessage(error)}`),
@@ -545,9 +555,12 @@ export class HarnessThread {
         await this.park()
       // An answer for a turn whose session stopped since (just above, or with the runner):
       // that turn is closed, and the answer comes as a new message (closed-turn.ts).
-      const closed =
-        !this.live && (input.kind === 'answer' || input.kind === 'ticket') && this.closeTurn()
+      const answer = input.kind === 'answer' || input.kind === 'ticket'
+      let closed = !this.live && answer && this.closeTurn()
       const live = (attached = await this.attach())
+      // Or nothing kept the turn at all (the process stopped without parking): the session has
+      // no turn to continue, and the answer comes as a new message just the same.
+      if (answer && !live.session.hasUnfinishedTurn()) closed = true
       const consume = async (stream: TurnStream) => {
         for await (const part of stream) {
           mapper.map(part)
@@ -1057,6 +1070,8 @@ export class HarnessThread {
       },
       () => undefined,
     )
+    for (const { toolCallId, ...call } of this.saved?.waiting ?? [])
+      if (!this.toolCalls.has(toolCallId)) this.toolCalls.set(toolCallId, call)
   }
 
   /**

@@ -54,3 +54,12 @@ export const answerAfterRestart = (result: { toolName: string; output: { value: 
   `Your session restarted while you waited on the person, which cut off your ${result.toolName} call above: ` +
   `it shows as interrupted, but they answered it. Their answer:\n\n${JSON.stringify(result.output.value)}\n\n` +
   'Carry on from there, without asking again.'
+
+/** The calls still waiting on a person among those not finished yet (EventMapper's). */
+export const waitingOn = (
+  calls: ReadonlyMap<string, { toolName: string; input: unknown }>,
+  tools: ReadonlySet<string>,
+): WaitingCall[] =>
+  [...calls]
+    .filter(([, call]) => tools.has(call.toolName))
+    .map(([toolCallId, call]) => ({ toolCallId, ...call }))
