@@ -36,6 +36,13 @@ const Env = z.object({
   GOOGLE_MCP_CLIENT_ID: z.string().optional(),
   GOOGLE_MCP_CLIENT_SECRET: z.string().optional(),
   /**
+   * HubSpot's MCP server (the HubSpot App) registers no clients either: an MCP connector
+   * made in a HubSpot account (Development > MCP connectors) with the redirect URL
+   * {API_URL}/api/connections/oauth/mcp/callback.
+   */
+  HUBSPOT_MCP_CLIENT_ID: z.string().optional(),
+  HUBSPOT_MCP_CLIENT_SECRET: z.string().optional(),
+  /**
    * Gmail push, for "Email received" triggers: a Pub/Sub topic in the OAuth client's Google
    * Cloud project, e.g. projects/acme/topics/brigade-gmail, that
    * gmail-api-push@system.gserviceaccount.com may publish to, with a push subscription

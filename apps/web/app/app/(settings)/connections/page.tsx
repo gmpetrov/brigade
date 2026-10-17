@@ -43,6 +43,7 @@ const BUILT_IN: Kind[] = [
   'cloudflare',
   'google_cloud',
   'stripe',
+  'hubspot',
 ]
 
 /** The App sheet that is open: an added App, or one from the catalog not added yet. */

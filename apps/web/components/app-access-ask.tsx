@@ -32,6 +32,7 @@ export const APP_NAMES: Record<string, string> = {
   github: 'GitHub',
   cloudflare: 'Cloudflare',
   google_cloud: 'Google Cloud',
+  hubspot: 'HubSpot',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -53,6 +54,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   github: 'github',
   cloudflare: 'mcp',
   google_cloud: 'mcp',
+  hubspot: 'mcp',
 }
 
 /**

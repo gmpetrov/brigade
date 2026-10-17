@@ -110,7 +110,7 @@ export function AppSheet({
   const route =
     custom || server || kind === 'stripe'
       ? null
-      : kind === 'cloudflare' || kind === 'google_cloud'
+      : kind === 'cloudflare' || kind === 'google_cloud' || kind === 'hubspot'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
@@ -758,6 +758,14 @@ function Unavailable({ kind }: { kind: Kind }) {
         Needs Brigade&apos;s Google client for agents configured on this Brigade server (
         <span className="font-mono text-xs">GOOGLE_MCP_CLIENT_ID</span> and{' '}
         <span className="font-mono text-xs">GOOGLE_MCP_CLIENT_SECRET</span>).
+      </p>
+    )
+  if (kind === 'hubspot')
+    return (
+      <p className="text-sm text-muted-foreground">
+        Needs Brigade&apos;s HubSpot MCP connector configured on this Brigade server (
+        <span className="font-mono text-xs">HUBSPOT_MCP_CLIENT_ID</span> and{' '}
+        <span className="font-mono text-xs">HUBSPOT_MCP_CLIENT_SECRET</span>).
       </p>
     )
   if (kind === 'github')

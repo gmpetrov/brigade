@@ -47,6 +47,7 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'hubspot'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -134,6 +135,8 @@ export type McpServer = {
    * member pastes, sent in `header`. none: the server asks for nothing.
    */
   auth?: McpAuth
+  /** The tool that says who signed in, to show the account; default whoami. */
+  whoami?: string
   /** sse: the older HTTP+SSE transport. Default: Streamable HTTP. */
   transport?: 'streamable' | 'sse'
   /** oauth: a client the member registered at the provider, for servers that register none. */

@@ -220,28 +220,38 @@ async function discover(server: McpServer) {
 /** Google signs in to its MCP servers, but registers no clients: Brigade brings its own. */
 const isGoogle = (authServer: AuthServer) =>
   authServer.issuer.replace(/\/$/, '') === 'https://accounts.google.com'
+/** HubSpot neither: its MCP connector, made in a HubSpot account. */
+const isHubSpot = (authServer: AuthServer) =>
+  authServer.issuer.replace(/\/$/, '') === 'https://mcp.hubspot.com'
 const googleClient = (): McpOAuthClient | null =>
   env.GOOGLE_MCP_CLIENT_ID && env.GOOGLE_MCP_CLIENT_SECRET
     ? { clientId: env.GOOGLE_MCP_CLIENT_ID, clientSecret: env.GOOGLE_MCP_CLIENT_SECRET }
     : null
+export const hubspotClient = (): McpOAuthClient | null =>
+  env.HUBSPOT_MCP_CLIENT_ID && env.HUBSPOT_MCP_CLIENT_SECRET
+    ? { clientId: env.HUBSPOT_MCP_CLIENT_ID, clientSecret: env.HUBSPOT_MCP_CLIENT_SECRET }
+    : null
+/** Brigade's own client for a server that registers none, when it has one. */
+const brigadeClient = (authServer: AuthServer) =>
+  isGoogle(authServer) ? googleClient() : isHubSpot(authServer) ? hubspotClient() : null
 
 /** Whether Brigade can be a client of this authorization server with nothing from the member. */
 const registersItself = (authServer: AuthServer) =>
   Boolean(
     authServer.registration_endpoint ||
     (authServer.client_id_metadata_document_supported && env.API_URL.startsWith('https://')) ||
-    (isGoogle(authServer) && googleClient()),
+    brigadeClient(authServer),
   )
 
 /**
  * Brigade as a client of this authorization server: the member's own client when they
- * gave one; else Brigade's Google client for Google; else registered once (dynamic client
+ * gave one; else Brigade's own for Google and HubSpot; else registered once (dynamic client
  * registration) and reused; else its client ID metadata document.
  */
 async function client(authServer: AuthServer, own?: McpOAuthClient): Promise<McpOAuthClient> {
   if (own) return own
-  const google = isGoogle(authServer) ? googleClient() : null
-  if (google) return google
+  const brigade = brigadeClient(authServer)
+  if (brigade) return brigade
   const redirectUri = mcpRedirectUri()
   const known = await prisma.mcpClient.findUnique({
     where: { issuer_redirectUri: { issuer: authServer.issuer, redirectUri } },

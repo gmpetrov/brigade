@@ -5,6 +5,7 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { hubspot } from './hubspot.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
@@ -14,6 +15,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  hubspot,
 }
 
 /**
@@ -48,6 +50,7 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'hubspot',
         'mcp',
         'webhook',
       ] as const
@@ -123,6 +126,15 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  hubspot: {
+    name: 'HubSpot',
+    description:
+      'Contacts, companies, deals and tickets, campaigns, marketing emails and pages, with HubSpot’s MCP server.',
+    developer: 'HubSpot',
+    category: 'Sales & marketing',
+    // A HubSpot sign-in is someone's own user, with their own permissions.
     personal: true,
   },
   mcp: {

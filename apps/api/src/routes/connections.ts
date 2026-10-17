@@ -40,6 +40,7 @@ import {
 import {
   callMcpTool,
   exchangeMcpCode,
+  hubspotClient,
   inspectMcp,
   listMcpTools,
   mcpAuthUrl,
@@ -82,7 +83,7 @@ type OAuthState = {
   workspaceId: string
   memberId: string
   userId: string
-  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'mcp'
+  kind: 'gmail' | 'google_calendar' | 'github' | 'cloudflare' | 'google_cloud' | 'hubspot' | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
   /** github: the installation GitHub named, still to be checked against the person. */
@@ -387,6 +388,7 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        hubspot: Boolean(hubspotClient()),
         mcp: true,
         webhook: true,
       },
@@ -778,7 +780,7 @@ const bearer =
  */
 async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType<typeof bearer>) {
   try {
-    const output = await callMcpTool(signedIn, server, 'whoami', {})
+    const output = await callMcpTool(signedIn, server, server.whoami ?? 'whoami', {})
     const who = (typeof output === 'string' ? JSON.parse(output) : output) as {
       email?: string
       name?: string
