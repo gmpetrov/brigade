@@ -6,8 +6,9 @@ import { createReadStream } from 'node:fs'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import { Readable } from 'node:stream'
+import { Readable, type Writable } from 'node:stream'
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
+import { runnerCgroups, type TurnCgroup } from '../preview-cgroup.js'
 import { asTeammate, threadNet, type ThreadNet } from '../thread-net.js'
 
 type SandboxSession = ReturnType<HarnessV1NetworkSandboxSession['restricted']>
@@ -39,6 +40,18 @@ export function createLocalSandboxSession(options: {
   const at = (path: string) => (isAbsolute(path) ? path : resolve(options.workingDirectory, path))
   const runAs = options.runAs
   const net = runAs && options.thread ? threadNet(options.thread) : Promise.resolve(null)
+  // On a cloud computer, a cgroup of its own (preview-cgroup.ts): the harness and all it starts,
+  // measured, and stopped as one when the whole computer runs out of memory (memory-guard.ts).
+  let turn: Promise<TurnCgroup | undefined> | undefined
+  const turnCgroup = () =>
+    (turn ??= runAs
+      ? runnerCgroups()
+          .then((cgroups) => cgroups?.createTurn(options.id, options.thread))
+          .catch((error: unknown) => {
+            console.warn(`${options.id} runs without a cgroup of its own: ${String(error)}`)
+            return undefined
+          })
+      : Promise.resolve(undefined))
 
   /** Stop a process group. sudo's group is killed as the teammate user, who owns it. */
   function killGroup(pid: number) {
@@ -60,45 +73,59 @@ export function createLocalSandboxSession(options: {
     cwd: string,
     env: Record<string, string>,
     thread: ThreadNet | null,
-    stdin: 'ignore' | 'pipe' = 'ignore',
-  ) =>
-    runAs
-      ? // sudo -E passes the environment without putting it on the command line. On a cloud
-        // computer the runner's service gives it a low OOM score (cgroups.conf in the API's
-        // setup): a turn takes back the usual one, so when memory runs out, a turn that grows
-        // goes before the desktop and the teammates' Docker, and the runner stays.
-        spawnChild(
-          asTeammate(runAs, thread).file,
-          [
-            ...asTeammate(runAs, thread).args,
-            'sh',
-            '-c',
-            '{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; cd -- "$0" && exec sh -c "$1"',
-            cwd,
-            command,
-          ],
-          {
-            cwd: '/',
-            env,
-            stdio: [stdin, 'pipe', 'pipe'],
-            detached: true,
-          },
-        )
-      : spawnChild('sh', ['-c', command], {
-          cwd,
+    gated: boolean,
+  ) => {
+    if (!runAs)
+      return spawnChild('sh', ['-c', command], {
+        cwd,
+        env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+      })
+    // sudo -E passes the environment without putting it on the command line. On a cloud
+    // computer the runner's service gives it a low OOM score (cgroups.conf in the API's
+    // setup): a turn takes back the usual one, so when memory runs out, a turn that grows
+    // goes before the desktop and the teammates' Docker, and the runner stays.
+    const { file, args } = asTeammate(runAs, thread)
+    const argv = [
+      ...args,
+      'sh',
+      '-c',
+      '{ echo 0 >/proc/self/oom_score_adj; } 2>/dev/null; cd -- "$0" && exec sh -c "$1"',
+      cwd,
+      command,
+    ]
+    // Gated: a shell that waits on fd 3 until it is in the turn's cgroup, then becomes sudo, so
+    // all that sudo starts is in there from the start. stdout is the harness's, untouched.
+    return gated
+      ? spawnChild('sh', ['-c', 'read -r _ <&3; exec "$@"', 'sh', file, ...argv], {
+          cwd: '/',
           env,
-          stdio: [stdin, 'pipe', 'pipe'],
+          stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
           detached: true,
         })
+      : spawnChild(file, argv, { cwd: '/', env, stdio: ['ignore', 'pipe', 'pipe'], detached: true })
+  }
 
   const spawn = async ({ command, workingDirectory, env, abortSignal }: ProcessOptions) => {
+    const cgroup = (await turnCgroup())?.cgroup
     const child = spawnAs(
       command,
       workingDirectory ? at(workingDirectory) : options.workingDirectory,
       { ...options.env, ...env },
       await net,
+      Boolean(cgroup && runAs),
     )
     children.add(child)
+    const gate = child.stdio[3] as Writable | undefined
+    if (gate) {
+      gate.on('error', () => undefined)
+      if (child.pid)
+        await cgroup!.attach(child.pid).catch((error: unknown) => {
+          console.warn(`${options.id}: a process outside its cgroup: ${String(error)}`)
+        })
+      gate.end('\n')
+    }
     const exited = new Promise<{ exitCode: number }>((done, fail) => {
       child.once('error', fail)
       child.once('close', (code, signal) => {
@@ -213,6 +240,17 @@ export function createLocalSandboxSession(options: {
     for (const child of children) if (child.pid) killGroup(child.pid)
   }
 
+  // Its cgroup goes with it: what is left a few seconds after the stop is killed.
+  const destroy = async () => {
+    await stop()
+    const cgroup = await turn
+    if (!cgroup) return
+    void (async () => {
+      for (let i = 0; i < 30 && children.size > 0; i++) await new Promise((r) => setTimeout(r, 100))
+      await (await runnerCgroups())?.removeTurn(cgroup)
+    })()
+  }
+
   return {
     ...restricted,
     id: options.id,
@@ -221,7 +259,7 @@ export function createLocalSandboxSession(options: {
     getPortEndpoint: async ({ port, protocol }) => ({ url: await endpoint(port, protocol) }),
     getPortUrl: async ({ port, protocol }) => endpoint(port, protocol),
     stop,
-    destroy: stop,
+    destroy,
     restricted: () => restricted,
   }
 }

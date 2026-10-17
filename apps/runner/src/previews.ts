@@ -48,11 +48,12 @@ import { pauseFor, unpause } from './containers.js'
 import {
   oomReason,
   PressureWatch,
-  PreviewCgroups,
+  runnerCgroups,
   type Ooms,
   type PreviewCgroup,
 } from './preview-cgroup.js'
 import { PORTS_PREFIX, PreviewProxy, type ProxyState } from './preview-proxy.js'
+import type { Candidate } from './memory-guard.js'
 import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { containerEnv, teammateHome } from './teammates.js'
 
@@ -235,7 +236,7 @@ export class Previews {
   private previews = new Map<string, Preview>()
   private readonly timer: NodeJS.Timeout
   /** Where previews get cgroups of their own; null where the runner's cgroup is not delegated to it. */
-  private readonly cgroups = PreviewCgroups.open()
+  private readonly cgroups = runnerCgroups()
 
   constructor(
     private readonly options: {
@@ -1096,15 +1097,45 @@ export class Previews {
     if (!stalled || stalled.stopping || this.previews.get(stalled.seat.sessionId) !== stalled)
       return
     const memory = readings.find((r) => r.key === stalled)!.memory
-    const status = stalled.info.status === 'running' ? 'The app stopped' : 'The command stopped'
-    stalled.stopping = {
-      status: 'failed',
-      reason:
-        `${status}: it was stuck waiting for memory for ${Math.round(this.pressure.duration / 1000)} s, ` +
+    this.killNow(
+      stalled,
+      `it was stuck waiting for memory for ${Math.round(this.pressure.duration / 1000)} s, ` +
         `with ${(memory / 1024 ** 3).toFixed(1)} GB in use`,
+    )
+  }
+
+  /**
+   * For the computer's memory guard (memory-guard.ts): the previews in cgroups,
+   * what they hold in memory, and how to stop one at once.
+   */
+  async memoryCandidates(): Promise<Candidate[]> {
+    const candidates: Candidate[] = []
+    for (const preview of this.previews.values()) {
+      if (!preview.cgroup || preview.stopping) continue
+      const memory = await preview.cgroup.resident()
+      candidates.push({
+        kind: preview.frozen ? 'frozen' : 'preview',
+        memory,
+        lastUsed: preview.lastUsed,
+        stop: async (why) =>
+          this.killNow(
+            preview,
+            preview.frozen
+              ? `${why}, and it was the paused preview unused longest`
+              : `${why}, and it held the most memory (${(memory / 1024 ** 3).toFixed(1)} GB)`,
+          ),
+      })
     }
-    this.append(stalled, `[preview] ${stalled.stopping.reason}\n`)
-    this.kill(stalled, 'KILL')
+    return candidates
+  }
+
+  /** Killed now, all of it (a frozen one too), reported as failed for `why`. */
+  private killNow(preview: Preview, why: string) {
+    if (preview.stopping || this.previews.get(preview.seat.sessionId) !== preview) return
+    const status = preview.info.status === 'running' ? 'The app stopped' : 'The command stopped'
+    preview.stopping = { status: 'failed', reason: `${status}: ${why}` }
+    this.append(preview, `[preview] ${preview.stopping.reason}\n`)
+    this.kill(preview, 'KILL')
   }
 
   /** Freezing and thawing in the order they were asked for: a request may come while it freezes. */

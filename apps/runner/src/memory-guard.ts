@@ -1,0 +1,170 @@
+// The whole computer running out of memory, watched by the runner itself:
+// nothing else acts before it is too late. Swap keeps the kernel from killing
+// at once, but a computer that swaps all the time crawls: whatever it runs
+// waits on memory most of the time, it stops answering for many minutes, and
+// its provider may not even manage to stop it. So when the computer has waited
+// on memory too long (PSI "full", all of it), or memory and swap are nearly
+// gone, the runner gives memory back itself, what costs least first:
+//   1. the frozen preview unused longest, when swap is what runs out;
+//   2. the running preview or turn holding the most memory, a preview counting
+//      double (it starts again at the next visit; a turn loses its work in
+//      progress), said in its thread.
+// One at a time, then a pause to see what it changed. Where the runner has no
+// cgroups of its own (preview-cgroup.ts), there is nothing it could stop.
+import { readFile } from 'node:fs/promises'
+
+/** The computer's memory now. */
+export type Reading = {
+  /** Share of the last 10 s in which everything waited on memory (PSI "full avg10"), in %. */
+  full: number
+  /** Memory available, as a share of all of it. */
+  available: number
+  /** Swap used, as a share of all of it; 0 without swap. */
+  swapUsed: number
+  swapTotal: number
+  /** Processes the kernel has killed for memory since it started (/proc/vmstat oom_kill). */
+  oomKills?: number
+}
+
+/** What the guard may stop to give memory back. */
+export type Candidate = {
+  kind: 'frozen' | 'preview' | 'turn'
+  /** Its own memory in RAM. */
+  memory: number
+  /** When it was last used, for frozen previews. */
+  lastUsed?: number
+  stop: (why: string) => Promise<unknown>
+}
+
+const GB = 1024 ** 3
+/** Less than this is not worth stopping: it would not change much. */
+const SMALL = 64 * 1024 ** 2
+
+export class MemoryGuard {
+  private since: number | undefined
+  private quietUntil = 0
+  private checking = false
+  private oomKills: number | undefined
+  private timer: NodeJS.Timeout | undefined
+
+  constructor(
+    private readonly options: {
+      candidates: () => Promise<Candidate[]>
+      read?: () => Promise<Reading | null>
+      /** Stalled this much of the time (PSI full, in %)… */
+      limit?: number
+      /** …for this long: act. */
+      duration?: number
+      /** After acting, the pressure averages need this long to show its effect. */
+      cooldown?: number
+    },
+  ) {}
+
+  private get limit() {
+    return this.options.limit ?? (Number(process.env.BRIGADE_MEMORY_PRESSURE) || 40)
+  }
+  private get duration() {
+    return this.options.duration ?? (Number(process.env.BRIGADE_MEMORY_PRESSURE_MS) || 10_000)
+  }
+
+  start(every = 2_000) {
+    this.timer = setInterval(() => void this.tick().catch(() => undefined), every)
+    this.timer.unref()
+  }
+
+  stop() {
+    clearInterval(this.timer)
+  }
+
+  /** Why the computer needs memory back now, or nothing. */
+  check(reading: Reading, now: number): string | undefined {
+    if (reading.full >= this.limit) this.since ??= now
+    else this.since = undefined
+    // The kernel just killed something for memory itself: see what that changed first.
+    if (this.killedByKernel(reading)) this.pause(now)
+    if (now < this.quietUntil) return undefined
+    if (reading.available < 0.03 && (reading.swapTotal === 0 || reading.swapUsed > 0.9))
+      return 'the computer is nearly out of memory'
+    if (this.since !== undefined && now - this.since >= this.duration)
+      return `the computer was stuck waiting for memory for ${Math.round((now - this.since) / 1000)} s`
+    return undefined
+  }
+
+  private killedByKernel(reading: Reading) {
+    const before = this.oomKills
+    if (reading.oomKills !== undefined) this.oomKills = reading.oomKills
+    return before !== undefined && reading.oomKills !== undefined && reading.oomKills > before
+  }
+
+  private pause(now: number) {
+    this.quietUntil = now + (this.options.cooldown ?? 20_000)
+    this.since = undefined
+  }
+
+  /** What to stop for it, the least costly that helps. */
+  pick(candidates: Candidate[], reading: Reading): Candidate | undefined {
+    const frozen = candidates
+      .filter((c) => c.kind === 'frozen')
+      .sort((a, b) => (a.lastUsed ?? 0) - (b.lastUsed ?? 0))
+    // Frozen previews hold swap, hardly any memory: they help when swap is what runs out.
+    if (frozen[0] && reading.swapTotal > 0 && reading.swapUsed > 0.8) return frozen[0]
+    const weight = (c: Candidate) => c.memory * (c.kind === 'preview' ? 2 : 1)
+    const running = candidates
+      .filter((c) => c.kind !== 'frozen' && c.memory >= SMALL)
+      .sort((a, b) => weight(b) - weight(a))
+    return running[0] ?? frozen[0]
+  }
+
+  async tick(now = Date.now()) {
+    // One at a time: on a computer stuck waiting for memory, a check can take longer than the
+    // interval, and checks piling up would each stop something (seen: three turns at once).
+    if (this.checking) return
+    this.checking = true
+    try {
+      const reading = await (this.options.read ?? readMemory)()
+      if (!reading) return
+      const why = this.check(reading, now)
+      if (!why) return
+      this.pause(now)
+      const victim = this.pick(await this.options.candidates(), reading)
+      if (!victim) {
+        console.warn(`${why}, and no preview or turn of the runner's holds much of it`)
+        return
+      }
+      // Stuck, the kernel may have killed something meanwhile: then that was enough for now.
+      const last = await (this.options.read ?? readMemory)()
+      if (last && this.killedByKernel(last)) return
+      console.warn(`${why}: stopping a ${victim.kind} (${(victim.memory / GB).toFixed(1)} GB)`)
+      await victim.stop(why)
+    } finally {
+      this.checking = false
+    }
+  }
+}
+
+/** The computer's memory, from /proc; null where it says nothing of it (not Linux). */
+export async function readMemory(): Promise<Reading | null> {
+  const [pressure, meminfo, vmstat] = await Promise.all([
+    readFile('/proc/pressure/memory', 'utf8').catch(() => ''),
+    readFile('/proc/meminfo', 'utf8').catch(() => ''),
+    readFile('/proc/vmstat', 'utf8').catch(() => ''),
+  ])
+  return parseMemory(pressure, meminfo, vmstat)
+}
+
+export function parseMemory(pressure: string, meminfo: string, vmstat = ''): Reading | null {
+  const kB = (key: string) =>
+    Number(new RegExp(`^${key}:\\s+(\\d+)`, 'm').exec(meminfo)?.[1] ?? NaN)
+  const total = kB('MemTotal')
+  if (!pressure || !(total > 0)) return null
+  const swapTotal = kB('SwapTotal') || 0
+  return {
+    full: Number(/^full avg10=([\d.]+)/m.exec(pressure)?.[1] ?? 0),
+    available: (kB('MemAvailable') || 0) / total,
+    swapUsed: swapTotal > 0 ? 1 - (kB('SwapFree') || 0) / swapTotal : 0,
+    swapTotal: swapTotal * 1024,
+    ...(/^oom_kill (\d+)$/m.test(vmstat)
+      ? { oomKills: Number(/^oom_kill (\d+)$/m.exec(vmstat)![1]) }
+      : {}),
+  }
+}

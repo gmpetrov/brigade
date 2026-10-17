@@ -3,7 +3,10 @@
 // unit), which starts in runner/ with its harnesses and gives previews a subtree:
 //
 //   brigade-runner.service/
-//     runner/        the runner and the harnesses, where systemd starts it
+//     runner/        the runner, where systemd starts it
+//     turns/         one cgroup per harness (a teammate's session in a thread, its
+//       <session>/   commands with it): no limits, but measured, and killed as one
+//                    when the whole computer runs out of memory (memory-guard.ts)
 //     previews/      every preview together: a ceiling below what the computer has,
 //       <thread>/    and a lower CPU weight; one preview: its own ceiling, killed as
 //                    one when it reaches it, frozen while nobody uses it
@@ -210,6 +213,11 @@ export class PreviewCgroup {
     return Number(await readFile(join(this.path, 'memory.current'), 'utf8').catch(() => 0))
   }
 
+  /** Its own memory in RAM (anon), without the page cache the kernel takes back by itself. */
+  async resident() {
+    return keyed(join(this.path, 'memory.stat'), 'anon')
+  }
+
   /** Its OOM counts so far: see oomReason. */
   async ooms(): Promise<Ooms> {
     const events = join(this.path, 'memory.events')
@@ -242,10 +250,24 @@ export class PreviewCgroup {
   }
 }
 
-/** The previews' subtree of the runner's delegated cgroup, or null where there is none. */
+/** A harness's cgroup, with the thread it works in. */
+export type TurnCgroup = { cgroup: PreviewCgroup; thread?: string }
+
+let opened: Promise<PreviewCgroups | null> | undefined
+
+/** The runner's cgroups for previews and turns, set up once; null where there are none. */
+export function runnerCgroups() {
+  opened ??= PreviewCgroups.open()
+  return opened
+}
+
+/** The previews' and turns' subtrees of the runner's delegated cgroup, or null where there is none. */
 export class PreviewCgroups {
+  private readonly turnCgroups = new Set<TurnCgroup>()
+
   private constructor(
     private readonly root: string,
+    private readonly turnsRoot: string,
     readonly budget: ReturnType<typeof previewBudget>,
   ) {}
 
@@ -262,17 +284,21 @@ export class PreviewCgroups {
       const service = join(ROOT, dirname(self))
       await access(join(service, 'cgroup.procs'), constants.W_OK)
       const root = join(service, 'previews')
+      const turns = join(service, 'turns')
       await mkdir(root, { recursive: true })
+      await mkdir(turns, { recursive: true })
       // Its children get memory and CPU control only once the service's own cgroup hands them down.
       if (!(await enable(service)).includes('memory')) return null
       await enable(root)
+      await enable(turns)
       const budget = previewBudget()
       await write(root, 'memory.high', round(budget.high))
       await write(root, 'memory.max', round(budget.max))
       // Under contention, turns and the runner get about three quarters of the CPU.
       await write(root, 'cpu.weight', '30')
-      const cgroups = new PreviewCgroups(root, budget)
-      await cgroups.sweep()
+      const cgroups = new PreviewCgroups(root, turns, budget)
+      await cgroups.sweep(root)
+      await cgroups.sweep(turns)
       return cgroups
     } catch (error) {
       console.warn(`previews run without cgroups: ${String(error)}`)
@@ -295,10 +321,32 @@ export class PreviewCgroups {
     return cgroup
   }
 
-  /** Previews' cgroups a previous run of the runner left behind, empty: removed. */
-  private async sweep() {
-    for (const name of await readdir(this.root, { withFileTypes: true })) {
-      if (name.isDirectory()) await rmdir(join(this.root, name.name)).catch(() => undefined)
+  /** A cgroup for a harness and all it starts, until its sandbox is destroyed. */
+  async createTurn(name: string, thread?: string): Promise<TurnCgroup> {
+    const unique = `${name}-${Math.random().toString(36).slice(2, 8)}`
+    const cgroup = new PreviewCgroup(join(this.turnsRoot, unique.replace(/[^A-Za-z0-9_-]/g, '_')))
+    await mkdir(cgroup.path, { recursive: true })
+    await write(cgroup.path, 'memory.oom.group', '1')
+    const turn = { cgroup, ...(thread ? { thread } : {}) }
+    this.turnCgroups.add(turn)
+    return turn
+  }
+
+  /** Its processes killed, and the cgroup gone. */
+  async removeTurn(turn: TurnCgroup) {
+    this.turnCgroups.delete(turn)
+    await turn.cgroup.remove()
+  }
+
+  /** The harnesses' cgroups now. */
+  get turns() {
+    return [...this.turnCgroups]
+  }
+
+  /** Cgroups a previous run of the runner left behind, empty: removed. */
+  private async sweep(root: string) {
+    for (const name of await readdir(root, { withFileTypes: true })) {
+      if (name.isDirectory()) await rmdir(join(root, name.name)).catch(() => undefined)
     }
   }
 }
