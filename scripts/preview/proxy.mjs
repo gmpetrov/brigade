@@ -94,6 +94,17 @@ function trySignIn() {
   })
 }
 
+/** The sign-in's ?next= when it is on this preview, else the dashboard. */
+function afterSignIn(url = '/') {
+  const next = new URL(url, ORIGIN).searchParams.get('next')
+  if (!next) return '/app'
+  try {
+    const to = new URL(next, ORIGIN)
+    if (to.origin === new URL(ORIGIN).origin) return to.pathname + to.search
+  } catch {}
+  return '/app'
+}
+
 // Shown while Next starts or restarts, instead of a blank page.
 const WAITING =
   '<!doctype html><meta http-equiv="refresh" content="3"><title>Starting…</title>' +
@@ -104,12 +115,13 @@ const server = http.createServer(async (req, res) => {
   const first = await needsSignIn(req)
   const signedIn = first ? await signIn() : null
   if (first && !signedIn) console.warn(`Could not sign in as ${SIGN_IN}: the page opens signed out`)
-  // From the landing or sign-in page, straight to the dashboard. Its own request is passed
-  // through, signed in, so a browser that drops the cookies cannot loop here.
+  // From the landing or sign-in page, straight to the dashboard, or to the sign-in's ?next=
+  // on this preview (an App's sign-in coming back). Its own request is passed through,
+  // signed in, so a browser that drops the cookies cannot loop here.
   const path = (req.url ?? '/').split('?')[0]
   if (signedIn && (path === '/' || path === '/sign-in')) {
     res.writeHead(302, {
-      location: '/app',
+      location: afterSignIn(req.url),
       'set-cookie': signedIn,
       'cache-control': 'no-store',
     })

@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
 /**
- * Signs in, or up, with Google: the API sends the browser to Google and back to /app,
- * or to /sign-in with ?error= when it fails.
+ * Signs in, or up, with Google: the API sends the browser to Google and back to /app (or
+ * the sign-in's ?next=), or to /sign-in with ?error= when it fails.
  */
 export function GoogleSignIn({ onError }: { onError: (message: string) => void }) {
   const [busy, setBusy] = useState(false)
@@ -15,7 +15,10 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
     try {
       const { error } = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: `${location.origin}/app`,
+        // On to ?next= through the sign-in page, which checks it.
+        callbackURL: new URLSearchParams(location.search).has('next')
+          ? `${location.origin}/sign-in${location.search}&signed`
+          : `${location.origin}/app`,
         errorCallbackURL: `${location.origin}/sign-in`,
       })
       if (error) {
