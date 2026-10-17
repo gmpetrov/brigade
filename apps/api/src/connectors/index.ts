@@ -5,15 +5,13 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
-import { googleDocs, googleDrive, googleSheets } from './google-workspace.js'
+import { googleDrive } from './google-drive.js'
 import { stripe } from './stripe.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
   google_calendar: googleCalendar,
   google_drive: googleDrive,
-  google_docs: googleDocs,
-  google_sheets: googleSheets,
   stripe,
   github,
   cloudflare,
@@ -49,8 +47,6 @@ export const triggerCatalog = () =>
         'gmail',
         'google_calendar',
         'google_drive',
-        'google_docs',
-        'google_sheets',
         'stripe',
         'github',
         'cloudflare',
@@ -71,8 +67,7 @@ export const triggerCatalog = () =>
 
 /**
  * The built-in Apps, as the dashboard shows them. One App asks for one consent:
- * Gmail and Google Calendar are two Apps, each with its own Google sign-in; so are Drive,
- * Docs and Sheets, each on its own Google MCP server.
+ * Gmail, Google Calendar and Google Drive are three Apps, each with its own Google sign-in.
  * personal: an account someone connects is theirs by default (reach mine).
  */
 export const appCatalog: Record<
@@ -103,21 +98,7 @@ export const appCatalog: Record<
   },
   google_drive: {
     name: 'Google Drive',
-    description: 'Search, read and create files in Drive, with Google’s Drive MCP server.',
-    developer: 'Google',
-    category: 'Productivity',
-    personal: true,
-  },
-  google_docs: {
-    name: 'Google Docs',
-    description: 'Read and edit documents, with Google’s Docs MCP server.',
-    developer: 'Google',
-    category: 'Productivity',
-    personal: true,
-  },
-  google_sheets: {
-    name: 'Google Sheets',
-    description: 'Read and edit spreadsheets, with Google’s Sheets MCP server.',
+    description: 'Search, read and write files in Drive, Google Docs and Google Sheets.',
     developer: 'Google',
     category: 'Productivity',
     personal: true,

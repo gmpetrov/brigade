@@ -110,11 +110,7 @@ export function AppSheet({
   const route =
     custom || server || kind === 'stripe'
       ? null
-      : kind === 'cloudflare' ||
-          kind === 'google_cloud' ||
-          kind === 'google_drive' ||
-          kind === 'google_docs' ||
-          kind === 'google_sheets'
+      : kind === 'cloudflare' || kind === 'google_cloud'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
@@ -748,7 +744,7 @@ function CustomAppForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
 
 /** What the server is missing for an App that needs its own setup. */
 function Unavailable({ kind }: { kind: Kind }) {
-  if (kind === 'gmail' || kind === 'google_calendar')
+  if (kind === 'gmail' || kind === 'google_calendar' || kind === 'google_drive')
     return (
       <p className="text-sm text-muted-foreground">
         Needs Google OAuth configured on this Brigade server (
@@ -756,12 +752,7 @@ function Unavailable({ kind }: { kind: Kind }) {
         <span className="font-mono text-xs">GOOGLE_CLIENT_SECRET</span>).
       </p>
     )
-  if (
-    kind === 'google_cloud' ||
-    kind === 'google_drive' ||
-    kind === 'google_docs' ||
-    kind === 'google_sheets'
-  )
+  if (kind === 'google_cloud')
     return (
       <p className="text-sm text-muted-foreground">
         Needs Brigade&apos;s Google client for agents configured on this Brigade server (

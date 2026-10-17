@@ -12,15 +12,7 @@ export type TeammateKind = z.infer<typeof TeammateKind>
 
 /** What a proposed teammate may do with a connection: read, or also write (each write asks a person first). */
 export const ProposedConnection = z.object({
-  kind: z.enum([
-    'gmail',
-    'google_calendar',
-    'google_drive',
-    'google_docs',
-    'google_sheets',
-    'stripe',
-    'github',
-  ]),
+  kind: z.enum(['gmail', 'google_calendar', 'google_drive', 'stripe', 'github']),
   scope: z.enum(['read', 'read_write']),
   /** Why the teammate needs it, in a few words. */
   why: z.string().max(200).optional(),

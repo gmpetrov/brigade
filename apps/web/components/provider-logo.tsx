@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 export type ProviderKind = Connection['kind']
 
 /**
- * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
+ * Each service's own mark: Google's 2020 Gmail, Calendar and Drive icons, Stripe's
  * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, GitHub's Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -103,34 +103,6 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#ffba00"
           d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"
-        />
-      </svg>
-    )
-  if (kind === 'google_docs')
-    return (
-      <svg viewBox="0 0 47 65" {...common}>
-        <path
-          fill="#4285f4"
-          d="M29.375 0H4.406A4.406 4.406 0 0 0 0 4.406v56.188A4.406 4.406 0 0 0 4.406 65h38.188A4.406 4.406 0 0 0 47 60.594V17.625L29.375 0z"
-        />
-        <path fill="#a1c2fa" d="M29.375 0v13.219a4.406 4.406 0 0 0 4.406 4.406H47L29.375 0z" />
-        <path
-          fill="#f1f1f1"
-          d="M11.75 47.531h23.5v-2.937h-23.5v2.937zm0 5.875h17.625v-2.937H11.75v2.937zm0-20.562v2.937h23.5v-2.937h-23.5zm0 8.812h23.5v-2.937h-23.5v2.937z"
-        />
-      </svg>
-    )
-  if (kind === 'google_sheets')
-    return (
-      <svg viewBox="0 0 47 65" {...common}>
-        <path
-          fill="#0f9d58"
-          d="M29.375 0H4.406A4.406 4.406 0 0 0 0 4.406v56.188A4.406 4.406 0 0 0 4.406 65h38.188A4.406 4.406 0 0 0 47 60.594V17.625L29.375 0z"
-        />
-        <path fill="#87ceac" d="M29.375 0v13.219a4.406 4.406 0 0 0 4.406 4.406H47L29.375 0z" />
-        <path
-          fill="#f1f1f1"
-          d="M11.75 31.719v20.562h23.5V31.719h-23.5zm10.281 17.625h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm10.282 11.75h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672zm0-5.875h-7.344v-3.672h7.344v3.672z"
         />
       </svg>
     )
