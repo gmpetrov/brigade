@@ -28,6 +28,9 @@ type AccessReply = Extract<
 export const APP_NAMES: Record<string, string> = {
   gmail: 'Gmail',
   google_calendar: 'Google Calendar',
+  google_drive: 'Google Drive',
+  google_docs: 'Google Docs',
+  google_sheets: 'Google Sheets',
   stripe: 'Stripe',
   github: 'GitHub',
   cloudflare: 'Cloudflare',
@@ -50,6 +53,9 @@ const sameServer = (a: string, b: string) => {
 const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> = {
   gmail: 'google',
   google_calendar: 'google',
+  google_drive: 'google',
+  google_docs: 'google',
+  google_sheets: 'google',
   github: 'github',
   cloudflare: 'mcp',
   google_cloud: 'mcp',

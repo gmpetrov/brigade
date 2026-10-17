@@ -443,6 +443,9 @@ export type Connection = {
   kind:
     | 'gmail'
     | 'google_calendar'
+    | 'google_drive'
+    | 'google_docs'
+    | 'google_sheets'
     | 'stripe'
     | 'github'
     | 'webhook'
