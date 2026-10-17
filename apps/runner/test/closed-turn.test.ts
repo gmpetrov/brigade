@@ -65,3 +65,14 @@ test('the answer names the call it answers', () => {
   assert.match(text, /your open_ticket call above/)
   assert.match(text, /"granted":true/)
 })
+
+test('the calls a turn waits on a person for are kept, and nothing else', async () => {
+  const { waitingOn } = await import('../src/harness/closed-turn.js')
+  const calls = new Map([
+    ['toolu_1', { toolName: 'open_ticket', input: { title: 'Connect Neon' } }],
+    ['toolu_2', { toolName: 'Bash', input: { command: 'ls' } }],
+  ])
+  assert.deepEqual(waitingOn(calls, new Set(['open_ticket'])), [
+    { toolCallId: 'toolu_1', toolName: 'open_ticket', input: { title: 'Connect Neon' } },
+  ])
+})
