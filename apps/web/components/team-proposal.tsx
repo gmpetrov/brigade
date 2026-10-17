@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { ProviderLogo } from '@/components/provider-logo'
 import { StatusBadge } from '@/components/status-badge'
+import { isSupportDesk, SupportDeskForm, type SupportDesk } from '@/components/support-desk-form'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,8 @@ const KIND_LABEL: Record<ProposedConnection['kind'], string> = {
   google_calendar: 'Google Calendar',
   stripe: 'Stripe',
   github: 'GitHub',
+  intercom: 'Intercom',
+  zendesk: 'Zendesk',
 }
 
 /** "read" or "read and write (asks you first)", for a connection a teammate needs. */
@@ -288,12 +291,14 @@ function ConnectList({
 }) {
   const pathname = usePathname()
   const [stripe, setStripe] = useState(false)
+  const [desk, setDesk] = useState<SupportDesk>()
   const [error, setError] = useState<string>()
 
   async function connect(kind: ProposedConnection['kind']) {
     setError(undefined)
     try {
       if (kind === 'stripe') return setStripe(true)
+      if (isSupportDesk(kind)) return setDesk(kind)
       const { url } = await api<{ url: string }>(
         kind === 'github' ? '/connections/github' : '/connections/google',
         { body: kind === 'github' ? { returnTo: pathname } : { kind, returnTo: pathname } },
@@ -367,6 +372,19 @@ function ConnectList({
             </Button>
           </div>
         </form>
+      )}
+      {desk && (
+        <div className="pt-1">
+          <SupportDeskForm
+            key={desk}
+            kind={desk}
+            compact
+            onConnected={() => {
+              setDesk(undefined)
+              onConnected()
+            }}
+          />
+        </div>
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       {!created && !kinds.every((kind) => connectionOf(data, kind)) && (

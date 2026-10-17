@@ -15,6 +15,11 @@ export type Operation<I extends z.ZodType = z.ZodType> = {
    * operation reads them with ctx.readFile by the ids it gets instead.
    */
   files?: string
+  /**
+   * always: a person approves each call, whatever the teammate's policy, because it reaches
+   * someone outside the workspace (a reply a customer reads).
+   */
+  approval?: 'always'
 }
 
 /**
@@ -47,10 +52,16 @@ export type ConnectorKind =
   | 'webhook'
   | 'cloudflare'
   | 'google_cloud'
+  | 'intercom'
+  | 'zendesk'
   | 'mcp'
 
-/** A vendor API key, entered once in the dashboard and kept in the vault. */
-export type ApiKeyCredential = { apiKey: string }
+/**
+ * A vendor API key, entered once in the dashboard and kept in the vault. Some vendors need
+ * more than the key: the account's own API address (a Zendesk subdomain, an Intercom region)
+ * and the email the key belongs to (Zendesk).
+ */
+export type ApiKeyCredential = { apiKey: string; baseUrl?: string; email?: string }
 
 /** A trigger option, shown as a text field. */
 export type TriggerOption = {
@@ -119,6 +130,11 @@ export type ConnectorDefinition = {
   operations: Record<string, Operation>
   /** A remote MCP server (Streamable HTTP) the API calls with the account's token. */
   mcp?: McpServer
+  /**
+   * api_key: how the key is sent, when not as a Bearer token. Operations then fetch paths
+   * ("/tickets.json") under the account's baseUrl.
+   */
+  key?: { headers: (credential: ApiKeyCredential) => Record<string, string> }
 }
 
 export type McpServer = {
@@ -157,7 +173,8 @@ export function redact(text: string) {
     .replace(/\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9*]+/g, '[redacted key]')
     .replace(/\bya29\.[\w-]+/g, '[redacted token]')
     .replace(/\b(gh[pousr]_[A-Za-z0-9]+|github_pat_\w+)/g, '[redacted token]')
-    .replace(/\bBearer\s+[\w.*-]+/gi, 'Bearer [redacted]')
+    .replace(/\bBearer\s+[\w.*=+/-]+/gi, 'Bearer [redacted]')
+    .replace(/\bBasic\s+[\w=+/]+/gi, 'Basic [redacted]')
 }
 
 /** Fetch JSON from a vendor API and turn its errors into readable ones. */

@@ -120,6 +120,19 @@ export const ConnectStripe = z.object({
     .regex(/^(sk|rk)_(test|live)_[A-Za-z0-9]+$/, 'A Stripe secret (sk_) or restricted (rk_) key'),
   label: z.string().trim().min(1).max(80).optional(),
 })
+/**
+ * A support desk connected with a token pasted once: an Intercom access token, or a Zendesk
+ * agent's email and API token with the account's subdomain. It goes straight into the vault.
+ */
+export const ConnectSupportDesk = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('intercom'), apiKey: z.string().trim().min(10).max(500) }),
+  z.object({
+    kind: z.literal('zendesk'),
+    subdomain: z.string().trim().min(1).max(200),
+    email: z.email().max(320),
+    apiKey: z.string().trim().min(10).max(200),
+  }),
+])
 /** A custom app that posts events to Brigade. No credential: its triggers' URLs carry the trust. */
 export const ConnectWebhookApp = z.object({ label: z.string().trim().min(1).max(80) })
 /**

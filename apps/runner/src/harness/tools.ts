@@ -241,6 +241,8 @@ export const openTicketTool = tool({
                     'github',
                     'cloudflare',
                     'google_cloud',
+                    'intercom',
+                    'zendesk',
                     'mcp',
                   ],
                 },
@@ -413,7 +415,10 @@ export const proposeTeamTool = tool({
               items: {
                 type: 'object',
                 properties: {
-                  kind: { type: 'string', enum: ['gmail', 'google_calendar', 'stripe', 'github'] },
+                  kind: {
+                    type: 'string',
+                    enum: ['gmail', 'google_calendar', 'stripe', 'github', 'intercom', 'zendesk'],
+                  },
                   scope: {
                     type: 'string',
                     enum: ['read', 'read_write'],

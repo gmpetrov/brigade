@@ -145,7 +145,8 @@ export async function handleConnectorCall(
   }
 
   // Approval and caps: the teammate's policy for connector writes (allow unless
-  // set otherwise), then its daily write cap.
+  // set otherwise), then its daily write cap. A write that reaches someone outside the
+  // workspace (a reply to a customer) asks a person whatever the policy.
   let decision: (Decision & { ticketId: string }) | undefined
   if (operation.write) {
     const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
@@ -157,7 +158,7 @@ export async function handleConnectorCall(
       })
     }
     const cap = await writeCapReached(db, teammate, connection.id)
-    if (cap || policy === 'ask') {
+    if (cap || policy === 'ask' || operation.approval === 'always') {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
       const reason = cap
@@ -286,12 +287,20 @@ export async function authorisedFetch(
     db.connection.updateMany({ where: { id: connection.id }, data: { status: 'needs_reauth' } })
 
   if (connectors[connection.kind]?.auth === 'api_key' || custom?.auth === 'api_key') {
-    const { apiKey } = await openSecret<ApiKeyCredential>(db, scope, secretId)
-    // A Bearer token, unless the server reads its key from a header of its own.
-    const header = custom?.header
-      ? { [custom.header]: apiKey }
-      : { authorization: `Bearer ${apiKey}` }
-    const authorised = async (url: string, init: RequestInit = {}) => {
+    const credential = await openSecret<ApiKeyCredential>(db, scope, secretId)
+    const key = connectors[connection.kind]?.key
+    // A Bearer token, unless the server reads its key from a header of its own or the
+    // vendor wants it its own way (Zendesk's email and token).
+    const header = key
+      ? key.headers(credential)
+      : custom?.header
+        ? { [custom.header]: credential.apiKey }
+        : { authorization: `Bearer ${credential.apiKey}` }
+    const authorised = async (path: string, init: RequestInit = {}) => {
+      // Paths are the account's own API address: its Zendesk subdomain, its Intercom region.
+      const url = path.startsWith('/') && credential.baseUrl ? `${credential.baseUrl}${path}` : path
+      if (credential.baseUrl && !url.startsWith(`${credential.baseUrl}/`))
+        throw new Error('This account calls only its own API address')
       const response = await fetch(url, {
         ...init,
         headers: { ...(init.headers as Record<string, string>), ...header },

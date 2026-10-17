@@ -145,6 +145,8 @@ export const ConnectorKind = {
   webhook: 'webhook',
   cloudflare: 'cloudflare',
   google_cloud: 'google_cloud',
+  intercom: 'intercom',
+  zendesk: 'zendesk',
   mcp: 'mcp'
 } as const
 

@@ -10,6 +10,7 @@ import {
   ConnectMcp,
   ConnectMcpServer,
   ConnectStripe,
+  ConnectSupportDesk,
   InspectMcp,
   ConnectWebhookApp,
   UpdateApp,
@@ -17,7 +18,9 @@ import {
 } from '@brigade/contracts'
 import { installAppSkills } from '../app-skills.js'
 import { appFor, appKey, requireAccountManager, requireAppManager } from '../apps.js'
+import { intercomAccount } from '../connectors/intercom.js'
 import { stripeAccount } from '../connectors/stripe.js'
+import { zendeskAccount } from '../connectors/zendesk.js'
 import type { ConnectorKind } from '../connectors/types.js'
 import { syncConnection } from '../subscriptions/index.js'
 import { deleteTriggers } from './triggers.js'
@@ -71,7 +74,7 @@ import {
   type AppEnv,
   type WorkspaceScope,
 } from '../scope.js'
-import { deleteSecret, openSecret, sealSecret } from '../vault.js'
+import { deleteSecret, openSecret, replaceSecret, sealSecret } from '../vault.js'
 
 const stateIdentifier = (state: string) => `oauth-state:${hashToken(state)}`
 /** A member's GitHub connect request, from "Connect GitHub" until GitHub sends them back. */
@@ -387,6 +390,8 @@ export const connections = new Hono<AppEnv>()
         github: githubConfigured(),
         cloudflare: true,
         google_cloud: googleMcpConfigured(),
+        intercom: true,
+        zendesk: true,
         mcp: true,
         webhook: true,
       },
@@ -558,6 +563,52 @@ export const connections = new Hono<AppEnv>()
       scope,
       { kind: 'stripe', label: input.label ?? 'Stripe', externalAccount: account },
       { apiKey: input.apiKey },
+    )
+    return c.json({ id: connection.id }, 201)
+  })
+
+  /**
+   * Connect Intercom or Zendesk with a token entered once, here or in a teammate's ticket.
+   * It is checked with the vendor, then goes straight into the vault.
+   */
+  .post('/support-desk', async (c) => {
+    const { scope, db } = c.var
+    const input = await parseBody(c.req.raw, ConnectSupportDesk)
+    const name = appCatalog[input.kind].name
+    let checked: Awaited<ReturnType<typeof intercomAccount>>
+    try {
+      checked =
+        input.kind === 'intercom'
+          ? await intercomAccount(input.apiKey)
+          : await zendeskAccount(input)
+    } catch (error) {
+      throw new HTTPException(400, {
+        message: error instanceof Error ? error.message : `${name} did not accept that token`,
+      })
+    }
+    // The same account again, by the same member: a new token for it, not a second account.
+    const existing = await db.connection.findFirst({
+      where: {
+        kind: input.kind,
+        externalAccount: checked.account,
+        createdByMemberId: scope.memberId,
+        status: { not: 'removed' },
+      },
+    })
+    if (existing?.vaultSecretId) {
+      await replaceSecret(db, scope, existing.vaultSecretId, checked.credential)
+      await db.connection.updateMany({ where: { id: existing.id }, data: { status: 'active' } })
+      return c.json({ id: existing.id }, 200)
+    }
+    const connection = await createConnection(
+      scope,
+      {
+        kind: input.kind,
+        label: name,
+        externalAccount: checked.account,
+        ...(checked.url ? { externalUrl: checked.url } : {}),
+      },
+      checked.credential,
     )
     return c.json({ id: connection.id }, 201)
   })

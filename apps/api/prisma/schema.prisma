@@ -765,6 +765,10 @@ enum ConnectorKind {
   cloudflare
   /// Google Cloud, through Google's Cloud CLI MCP server and Brigade's own Google client.
   google_cloud
+  /// Intercom's REST API, on an admin's access token.
+  intercom
+  /// Zendesk's Support API, on an agent's email and API token.
+  zendesk
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }

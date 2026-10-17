@@ -8,6 +8,7 @@ import { useDashboard, timeAgo } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
 import { StatusBadge } from '@/components/status-badge'
+import { isSupportDesk, SupportDeskForm } from '@/components/support-desk-form'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -85,7 +86,9 @@ export function AppSheet({
   const accounts = app ? data.connections.filter((c) => c.appId === app.id) : []
   const added = accounts.length > 0
   const name = app?.name ?? entry.name
-  const [adding, setAdding] = useState(!added && (kind === 'stripe' || custom))
+  // Apps that take a key show its form at once.
+  const keyed = kind === 'stripe' || isSupportDesk(kind)
+  const [adding, setAdding] = useState(!added && (keyed || custom))
   const [error, setError] = useState<string>()
   // The App as a whole: an admin, or the member who added it while every account is theirs.
   const managesApp =
@@ -108,7 +111,7 @@ export function AppSheet({
    * the sheet stays open and shows the account once it has connected.
    */
   const route =
-    custom || server || kind === 'stripe'
+    custom || server || keyed
       ? null
       : kind === 'cloudflare' || kind === 'google_cloud'
         ? 'mcp'
@@ -295,6 +298,15 @@ export function AppSheet({
               />
             ))}
             {adding && kind === 'stripe' && <StripeForm onSubmit={connectStripe} />}
+            {adding && isSupportDesk(kind) && (
+              <SupportDeskForm
+                kind={kind}
+                onConnected={() => {
+                  setAdding(false)
+                  void reload()
+                }}
+              />
+            )}
             {adding && custom && <CustomAppForm onSubmit={connectCustomApp} />}
             {adding && server && app && (
               <div className="px-4 py-4">
@@ -592,6 +604,14 @@ function Account({
                 <span className="ml-auto text-xs text-muted-foreground">{triggers.length}</span>
               )}
             </DropdownMenuItem>
+            {manages && isSupportDesk(c.kind) && c.externalUrl && (
+              <DropdownMenuItem asChild>
+                <a href={c.externalUrl} target="_blank" rel="noreferrer">
+                  Open {c.kind === 'intercom' ? 'Intercom' : 'Zendesk'}
+                  <ExternalLink className="ml-auto" aria-hidden />
+                </a>
+              </DropdownMenuItem>
+            )}
             {manages && c.kind === 'github' && c.externalUrl && (
               <DropdownMenuItem asChild>
                 <a href={c.externalUrl} target="_blank" rel="noreferrer">
@@ -730,7 +750,7 @@ function CustomAppForm({ onSubmit }: { onSubmit: (form: FormData) => void }) {
         <Input
           id="custom-label"
           name="label"
-          placeholder="Zendesk, our backend, Typeform…"
+          placeholder="Our backend, Typeform, Linear…"
           className="bg-card"
           required
         />

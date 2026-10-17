@@ -5,7 +5,9 @@ import { gmail } from './gmail.js'
 import { github } from './github.js'
 import { googleCalendar } from './google-calendar.js'
 import { googleCloud } from './google-cloud.js'
+import { intercom } from './intercom.js'
 import { stripe } from './stripe.js'
+import { zendesk } from './zendesk.js'
 
 export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDefinition>> = {
   gmail,
@@ -14,6 +16,8 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   github,
   cloudflare,
   google_cloud: googleCloud,
+  intercom,
+  zendesk,
 }
 
 /**
@@ -48,6 +52,8 @@ export const triggerCatalog = () =>
         'github',
         'cloudflare',
         'google_cloud',
+        'intercom',
+        'zendesk',
         'mcp',
         'webhook',
       ] as const
@@ -123,6 +129,24 @@ export const appCatalog: Record<
     developer: 'Google',
     category: 'Developer tools',
     // A Google sign-in is someone's own account, as for Gmail.
+    personal: true,
+  },
+  intercom: {
+    name: 'Intercom',
+    description:
+      'Read customer conversations and contacts, reply to customers and add internal notes. Each reply waits for a person to approve it.',
+    developer: 'Intercom',
+    category: 'Customer support',
+    // An access token acts as the admin who made it: theirs until they open it to every thread.
+    personal: true,
+  },
+  zendesk: {
+    name: 'Zendesk',
+    description:
+      'Search and read tickets, reply to requesters and add internal notes. Each reply waits for a person to approve it.',
+    developer: 'Zendesk',
+    category: 'Customer support',
+    // An API token acts as the agent whose email goes with it.
     personal: true,
   },
   mcp: {

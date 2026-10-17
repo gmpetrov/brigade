@@ -5,6 +5,7 @@ import type { Ask, TicketAnswer } from '@brigade/contracts'
 import { useDashboard } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
+import { isSupportDesk, SupportDeskForm } from '@/components/support-desk-form'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -32,6 +33,8 @@ export const APP_NAMES: Record<string, string> = {
   github: 'GitHub',
   cloudflare: 'Cloudflare',
   google_cloud: 'Google Cloud',
+  intercom: 'Intercom',
+  zendesk: 'Zendesk',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -46,7 +49,7 @@ const sameServer = (a: string, b: string) => {
   }
 }
 
-/** Where each App signs in; Stripe takes a key on the Apps page. */
+/** Where each App signs in; Stripe takes a key on the Apps page, Intercom and Zendesk right here. */
 const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> = {
   gmail: 'google',
   google_calendar: 'google',
@@ -165,6 +168,20 @@ export function AppAccessAsk({
             </Button>
             {decline}
           </>
+        ) : isSupportDesk(kind) ? (
+          // A token pasted here, then the access with it. Another member's own account stays theirs.
+          <div className="flex w-full max-w-md flex-col gap-2">
+            <SupportDeskForm
+              kind={kind}
+              compact
+              action={`Connect and give ${askerName} ${access} access`}
+              onConnected={(connectionId) => {
+                void data.reload()
+                give(connectionId)
+              }}
+            />
+            <div>{decline}</div>
+          </div>
         ) : accounts.length === 0 && serverUrl ? (
           // Not added yet: the server's card, here in the ticket, then the access with it.
           <div className="flex w-full max-w-md flex-col gap-2">
