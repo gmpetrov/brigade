@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf83f358bb9 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665be6f0f060 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -39,7 +39,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
  		}, async (...handlerArgs) => {
  			const [input, extra] = handlerArgs;
  			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-@@ -1792,6 +1800,51 @@ async function runTurn(start, turn) {
+@@ -1792,6 +1800,53 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -47,11 +47,12 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
 +	// back in a turn Claude Code starts by itself. Ending the query at the first result killed
 +	// it with the CLI, so the turn stays open while any runs, and until Claude Code has
 +	// answered the last report.
-+	const AGENT_TASKS = new Set(["local_agent", "remote_agent", "local_workflow"]);
-+	const HELD_TASKS = new Set([...AGENT_TASKS, "local_bash", "monitor_mcp"]);
++	const HELD_TASKS = new Set(["local_agent", "remote_agent", "local_workflow", "local_bash", "monitor_mcp"]);
 +	const heldTasks = new Set();
-+	let runningAgents = 0;
-+	let runningTasks = 0;
++	// Running now; and ended, with their notification (which starts the turn that reads it) still to come.
++	let running = new Set();
++	const ended = new Set();
++	const notified = new Set();
 +	let messages = 0;
 +	let reportedAt = -1;
 +	let turnFrom = 0;
@@ -59,7 +60,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
 +	let reportPending = false;
 +	let reportTimer;
 +	let waiting = false;
-+	const holding = () => runningTasks > 0 || reportPending;
++	const holding = () => running.size > 0 || ended.size > 0 || reportPending;
 +	const reported = () => {
 +		reportedAt = messages;
 +		// Between turns: Claude Code starts one to answer it.
@@ -84,6 +85,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
 +		clearTimeout(reportTimer);
 +		reportTimer = setTimeout(() => {
 +			reportPending = false;
++			ended.clear();
 +			if (!holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) queryInput.close();
 +		}, 6e4);
 +		reportTimer.unref?.();
@@ -91,7 +93,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1800,6 +1853,31 @@ async function runTurn(start, turn) {
+@@ -1800,6 +1855,34 @@ async function runTurn(start, turn) {
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
  			emitStreamEvent(msg);
@@ -99,16 +101,18 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
 +			clearTimeout(reportTimer);
 +			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
 +			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
-+				const tasks = msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type));
-+				for (const t of tasks) heldTasks.add(t.task_id);
-+				const agents = tasks.filter((t) => AGENT_TASKS.has(t.task_type)).length;
-+				// An agent that stopped running reports back, whether this or its notification comes first.
-+				if (agents < runningAgents) reported();
-+				runningAgents = agents;
-+				runningTasks = tasks.length;
++				const now = new Set(msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type)).map((t) => t.task_id));
++				for (const id of now) heldTasks.add(id);
++				// One that stopped running reports back, whether this or its notification comes first.
++				for (const id of running) if (!now.has(id) && !notified.has(id)) ended.add(id);
++				running = now;
 +			}
-+			// A shell or Monitor reports in its notification; one stopped on purpose (hidden from the transcript) does not.
-+			if (type === "system" && msg.subtype === "task_notification" && heldTasks.has(msg.task_id) && !msg.skip_transcript && !msg.ambient) reported();
++			// Its notification starts the turn that reads it; one stopped on purpose starts none.
++			if (type === "system" && msg.subtype === "task_notification" && heldTasks.has(msg.task_id)) {
++				notified.add(msg.task_id);
++				ended.delete(msg.task_id);
++				if (msg.status !== "stopped" && !msg.skip_transcript && !msg.ambient) reported();
++			}
 +			if (awaitingTurn && msg.parent_tool_use_id == null && (type === "assistant" || type === "stream_event")) {
 +				awaitingTurn = false;
 +				turnFrom = messages;
@@ -119,11 +123,12 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
 +				reportPending = reportedAt > turnFrom;
 +				awaitingTurn = true;
 +			}
-+			if (awaitingTurn && reportPending && runningTasks === 0) waitForReport();
++			if (awaitingTurn && (reportPending || ended.size > 0) && running.size === 0) waitForReport();
++			if (awaitingTurn && holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) setWaiting(true);
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,16 +1913,25 @@ async function runTurn(start, turn) {
+@@ -1835,16 +1918,25 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -152,7 +157,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf8
  				queryInput.close();
  				break;
  			}
-@@ -1857,6 +1944,7 @@ async function runTurn(start, turn) {
+@@ -1857,6 +1949,7 @@ async function runTurn(start, turn) {
  		return;
  	} finally {
  		gracefulAbort = void 0;
