@@ -31,13 +31,13 @@ import {
 import {
   exchangeGoogleCode,
   googleAccount,
-  isGoogleKind,
-  type GoogleKind,
   googleAuthUrl,
   googleConfigured,
   googleMcpConfigured,
+  isGoogleKind,
   revokeGoogle,
   type GoogleCredential,
+  type GoogleKind,
 } from '../connectors/google-oauth.js'
 import {
   callMcpTool,
@@ -397,6 +397,8 @@ export const connections = new Hono<AppEnv>()
         google_drive: googleConfigured(),
         google_docs: googleConfigured(),
         google_sheets: googleConfigured(),
+        google_search_console: googleConfigured(),
+        google_analytics: googleConfigured(),
         stripe: true,
         github: githubConfigured(),
         cloudflare: true,

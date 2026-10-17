@@ -161,7 +161,9 @@ export const ConnectorKind = {
   supabase: 'supabase',
   atlassian: 'atlassian',
   notion: 'notion',
-  mcp: 'mcp'
+  mcp: 'mcp',
+  google_search_console: 'google_search_console',
+  google_analytics: 'google_analytics'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]
