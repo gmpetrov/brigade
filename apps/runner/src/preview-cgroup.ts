@@ -12,10 +12,12 @@
 // and a preview nobody uses stops taking CPU and gives its memory back (to swap)
 // until the next request thaws it. Where the runner has no such tree (a member's
 // machine, a computer set up before the delegation), previews run as before.
+import { execFile } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, mkdir, readFile, readdir, rmdir, writeFile } from 'node:fs/promises'
 import { totalmem } from 'node:os'
 import { basename, dirname, join } from 'node:path'
+import { promisify } from 'node:util'
 
 const ROOT = '/sys/fs/cgroup'
 const GiB = 1024 ** 3
@@ -73,6 +75,26 @@ async function keyed(file: string, key: string) {
 }
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+const run = promisify(execFile)
+
+/**
+ * Ask the kernel to give back `bytes` of a cgroup's memory. It frees what it
+ * can and says EAGAIN when that is less than asked: not an error here. But it
+ * may also go on freeing a few pages at a time toward an amount it never
+ * reaches, for minutes (seen on a frozen Docker): bounded, in a process of its
+ * own, which a signal interrupts. A write from the runner itself would hold
+ * one of its threads, and the preview's thaw behind it.
+ */
+export async function reclaim(cgroup: string, bytes: number, seconds = 10) {
+  await run(
+    'timeout',
+    [String(seconds), 'sh', '-c', 'echo "$1" >"$0"', join(cgroup, 'memory.reclaim'), String(bytes)],
+    {
+      cwd: '/',
+    },
+  ).catch(() => undefined)
+}
 
 /** A preview cgroup's OOM counts (memory.events): kills in it, and the limits behind them. */
 export type Ooms = {
@@ -180,8 +202,7 @@ export class PreviewCgroup {
    */
   async reclaim() {
     const before = await this.current()
-    // It frees what it can and says EAGAIN when that is less than asked: not an error here.
-    await write(this.path, 'memory.reclaim', String(before)).catch(() => undefined)
+    await reclaim(this.path, before)
     return before - (await this.current())
   }
 
