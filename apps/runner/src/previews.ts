@@ -34,6 +34,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import http from 'node:http'
 import { createConnection } from 'node:net'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import type { Writable } from 'node:stream'
@@ -64,6 +65,7 @@ import type { Candidate } from './memory-guard.js'
 import { processGroups } from './process-groups.js'
 import { asTeammate, threadNet, type ThreadNet } from './thread-net.js'
 import { composeProject, containerEnv, teammateHome } from './teammates.js'
+import { holderOwner, takenPorts, whoHolds } from './port-holders.js'
 import {
   copyIncluded,
   otherSetups,
@@ -100,6 +102,12 @@ const RESTART_WINDOW_MS = 10 * 60_000
  */
 const PROXY_BASE = 20_000
 const REPOSITORY_PROXY_BASE = 30_000
+/**
+ * What an app answers while it waits on its own parts (a proxy in front of a
+ * server still starting): not ready yet, for up to WAITING_MS.
+ */
+const WAITING_STATUSES = new Set([502, 503, 504])
+const WAITING_MS = Number(process.env.BRIGADE_PREVIEW_WAITING_MS) || 60_000
 /** Setup (install, migrate) comes before the app answers: wait longer for it. */
 const SETUP_START_MS = 600_000
 /** Longest a recipe's archive script runs. */
@@ -195,6 +203,8 @@ export type PreviewResult = {
   logs?: string
   /** The names of the repository's preview variables the app got. */
   variables?: string[]
+  /** What the start changed, for the teammate: a port something else holds, and the one it got instead. */
+  notes?: string[]
 }
 
 export type Seat = { sessionId: string; teammateId: string; workDir: string; runAs?: string }
@@ -246,6 +256,8 @@ type Preview = {
   /** Set when a stop was asked for: how its exit is reported. */
   stopping?: { status: 'failed' | 'stopped'; reason: string }
   exited: Promise<number | null>
+  /** What its start changed, said in the result (PreviewResult.notes). */
+  notes: string[]
 }
 
 // eslint-disable-next-line no-control-regex
@@ -262,6 +274,24 @@ function answers(port: number, host = '127.0.0.1', timeoutMs = 1000) {
     socket.setTimeout(timeoutMs, () => finish(false))
     socket.once('connect', () => finish(true))
     socket.once('error', () => finish(false))
+  })
+}
+
+/**
+ * The status an app answers `/` with, or null when it does not answer HTTP in
+ * time (a dev server still compiling, an app that is not HTTP).
+ */
+function httpStatus(port: number, host = '127.0.0.1', timeoutMs = 10_000) {
+  return new Promise<number | null>((done) => {
+    const request = http.get(
+      { host, port, path: '/', headers: { host: `localhost:${port}` }, timeout: timeoutMs },
+      (response) => {
+        response.resume()
+        done(response.statusCode ?? null)
+      },
+    )
+    request.on('timeout', () => request.destroy())
+    request.on('error', () => done(null))
   })
 }
 
@@ -654,6 +684,7 @@ export class Previews {
     const result: PreviewResult = { status: preview.info.status, origins }
     if (preview.info.reason) result.reason = preview.info.reason
     if (preview.variables.length) result.variables = preview.variables
+    if (preview.notes.length) result.notes = preview.notes
     if (preview.info.status !== 'running') result.logs = this.tail(preview, 60)
     return result
   }
@@ -769,10 +800,15 @@ export class Previews {
     const net = seat.runAs ? await threadNet(seat.sessionId) : null
     const host = net?.address
     const others = (input.ports ?? []).filter((p) => p !== input.port)
+    const notes: string[] = []
     // Taken (another thread's preview of the same app): a command reading $PORT gets a free one.
     if (PORT_VARIABLE.test(command) && (await answers(input.port, host))) {
+      const held = await this.heldBy(input.port, seat, net)
       for (let port = input.port + 1; port < input.port + 100 && port <= 65535; port++) {
         if (others.includes(port) || (await answers(port, host))) continue
+        notes.push(
+          `Port ${input.port} is held by ${held?.text ?? 'another process'}: the app runs on ${port} (PORT) instead.`,
+        )
         input = { ...input, port }
         break
       }
@@ -781,15 +817,18 @@ export class Previews {
     const all = [input.port, ...ports]
     for (const port of all) {
       if (!(await answers(port, host))) continue
-      const owner = net
-        ? undefined
-        : [...this.previews.values()].find((p) => [p.info.port, ...p.info.ports].includes(port))
+      const held = await this.heldBy(port, seat, net)
+      const instead =
+        port === input.port
+          ? 'write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port'
+          : 'have the app use another port for it'
       throw new Error(
-        owner
-          ? `Port ${port} is in use by another thread's preview${owner.info.repository ? ` of ${owner.info.repository}` : ''}. ` +
-              'Stop that preview, or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.'
-          : `Port ${port} is already in use ${net ? 'in this thread' : 'on this computer'}, by a process you started. Stop that process, ` +
-              'or write the command with $PORT (e.g. "pnpm dev --port $PORT"): then it gets a free port.',
+        !held
+          ? `Port ${port} is already in use ${net ? 'in this thread' : 'on this computer'}, by a process you started. ` +
+              `Stop that process, or ${instead}.`
+          : held.own
+            ? `Port ${port} is held by ${held.text}. Stop it, or ${instead}.`
+            : `Port ${port} is held by ${held.text}, which is not this thread's: leave it running, and ${instead}.`,
       )
     }
 
@@ -925,6 +964,7 @@ export class Previews {
       partial: '',
       lastUsed: Date.now(),
       exited: Promise.resolve(null),
+      notes,
     }
     this.previews.set(seat.sessionId, preview)
     this.remember(seat, input, repository)
@@ -1024,7 +1064,14 @@ export class Previews {
       const ran = preview.info.status === 'running' || preview.restarting
       // Not after the kernel killed it for memory: started again at once, it would need it again.
       if (ran && !oom && this.restartAfterExit(preview, how)) return
-      this.ended(preview, 'failed', ran ? `The app stopped: it ${how}` : `The command ${how}`)
+      // It never ran, for want of a port (the app's, or one its containers publish): say who has it.
+      const taken = ran || preview.net ? '' : await this.takenSaid(preview)
+      if (this.previews.get(preview.seat.sessionId) !== preview || preview.child !== child) return
+      this.ended(
+        preview,
+        'failed',
+        ran ? `The app stopped: it ${how}` : `The command ${how}${taken}`,
+      )
     })
   }
 
@@ -1053,12 +1100,26 @@ export class Previews {
     return true
   }
 
-  /** Wait for the app's port to answer, its process to end, or the time to run out. */
+  /**
+   * Wait for the app to answer, its process to end, or the time to run out. An
+   * app answering 502, 503 or 504 (a page saying it starts) is waited on a while longer.
+   */
   private async untilReady(preview: Preview, waitMs: number, signal?: AbortSignal) {
     const { sessionId } = preview.seat
     const deadline = Date.now() + waitMs
+    let waitingSince: number | undefined
     while (this.previews.get(sessionId) === preview && preview.info.status === 'starting') {
-      if (await answers(preview.input.port, preview.net?.address)) {
+      const host = preview.net?.address
+      if (await answers(preview.input.port, host)) {
+        const status = await httpStatus(preview.input.port, host)
+        if (this.previews.get(sessionId) !== preview || preview.info.status !== 'starting') return
+        const now = Date.now()
+        waitingSince =
+          status !== null && WAITING_STATUSES.has(status) ? (waitingSince ?? now) : undefined
+        if (waitingSince !== undefined && now - waitingSince < WAITING_MS && now < deadline) {
+          await sleep(1000)
+          continue
+        }
         preview.restarting = false
         const { reason: _reason, step: _step, ...info } = preview.info
         preview.info = { ...info, status: 'running' }
@@ -1305,6 +1366,39 @@ export class Previews {
   private tail(preview: Preview, lines = PREVIEW_LOG_LINES) {
     const all = preview.partial ? [...preview.lines, hide(preview, preview.partial)] : preview.lines
     return all.slice(-lines).join('\n')
+  }
+
+  /**
+   * Who holds a port: another thread's preview here, or on a member's machine
+   * whatever listens on it (port-holders.ts); `own` when it is the thread's.
+   * Null in a thread's own network, where only the thread's processes can.
+   */
+  private async heldBy(port: number, seat: Seat, net: ThreadNet | null) {
+    if (net) return null
+    const owner = [...this.previews.values()].find((p) =>
+      [p.info.port, ...p.info.ports].includes(port),
+    )
+    if (owner)
+      return {
+        text: `another thread's preview${owner.info.repository ? ` of ${owner.info.repository}` : ''}`,
+        own: false,
+      }
+    if (CLOUD) return null
+    const held = await whoHolds(port, seat.sessionId)
+    return held && { text: held.text, own: holderOwner(held.holder, seat.sessionId) === 'thread' }
+  }
+
+  /** On a member's machine, the ports the log says were taken, with who holds each; '' for none. */
+  private async takenSaid(preview: Preview) {
+    if (CLOUD) return ''
+    const said: string[] = []
+    for (const port of takenPorts(this.tail(preview, 80))) {
+      const held = await whoHolds(port, preview.seat.sessionId).catch(() => null)
+      if (!held) continue
+      said.push(`port ${port} is held by ${held.text}`)
+      this.append(preview, `[preview] Port ${port} is held by ${held.text}\n`)
+    }
+    return said.length ? `: ${said.join('; ')}` : ''
   }
 
   private ended(preview: Preview, status: 'failed' | 'stopped', reason: string) {
