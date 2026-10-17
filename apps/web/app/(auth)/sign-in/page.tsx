@@ -8,15 +8,21 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authClient } from '@/lib/auth-client'
-import { markSignedIn } from '@/lib/signed-in'
+import { afterSignIn, markSignedIn } from '@/lib/signed-in'
 
 export default function SignIn() {
   const router = useRouter()
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
-  // Back from Google with ?error=: the API names what went wrong.
+  // Back from Google with ?error=: the API names what went wrong. With ?signed, signed in
+  // with Google on the way to ?next=.
   useEffect(() => {
-    const failed = new URLSearchParams(location.search).get('error')
+    const query = new URLSearchParams(location.search)
+    if (query.has('signed')) {
+      markSignedIn()
+      return location.replace(afterSignIn())
+    }
+    const failed = query.get('error')
     if (failed) setError(`Could not sign in with Google (${failed.replaceAll('_', ' ')})`)
   }, [])
 
@@ -30,7 +36,9 @@ export default function SignIn() {
       })
       if (error) return setError(error.message ?? 'Could not sign in')
       markSignedIn()
-      router.push('/app')
+      const next = afterSignIn()
+      if (next === '/app') router.push(next)
+      else location.assign(next)
     } catch {
       setError('Could not reach Brigade. Check your connection and try again.')
     } finally {
