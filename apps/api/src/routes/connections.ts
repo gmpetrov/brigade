@@ -795,6 +795,10 @@ const bearer =
  */
 async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType<typeof bearer>) {
   try {
+    if (server.account && 'url' in server.account) {
+      const response = await signedIn(server.account.url)
+      return response.ok ? server.account.name(await response.json()) : null
+    }
     if (server.account) {
       const output = await callMcpTool(signedIn, server, server.account.tool, {})
       return server.account.name(typeof output === 'string' ? JSON.parse(output) : output)
