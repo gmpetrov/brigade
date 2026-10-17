@@ -2,6 +2,7 @@ import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import type { z } from 'zod'
 import { auth } from './auth.js'
+import { env } from './config.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 
 export type Role = 'owner' | 'admin' | 'member'
@@ -34,6 +35,19 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
     'activeWorkspaceId',
     (session.session as { activeWorkspaceId?: string | null }).activeWorkspaceId ?? null,
   )
+  await next()
+})
+
+/**
+ * Before requireUser on the pages a provider sends the browser back to after its sign-in
+ * (OAuth callbacks): with no Brigade session in this browser, say a tab where the person
+ * never signed in to Brigade, Brigade's sign-in, which comes back here to finish.
+ */
+export const signInFirst = createMiddleware<AppEnv>(async (c, next) => {
+  if (c.req.method === 'GET' && !(await auth.api.getSession({ headers: c.req.raw.headers }))) {
+    const here = `${env.API_URL}${c.req.path}${new URL(c.req.url).search}`
+    return c.redirect(`${env.WEB_URL[0]}/sign-in?next=${encodeURIComponent(here)}`)
+  }
   await next()
 })
 
