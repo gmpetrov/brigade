@@ -94,6 +94,15 @@ type Seat = {
   parkTimer: NodeJS.Timeout | undefined
   /** The running turn's messages and steps: its answer is what hands it on (handOn). */
   turn: (TurnEntry & { text?: string })[]
+  /** The running turn only waits on work started in the background: a new message goes straight in. */
+  waiting: boolean
+}
+
+/** The bridge's word on whether the turn only waits on background work, from a harness event. */
+function backgroundWait(event: AgentEvent): boolean | undefined {
+  if (event.type !== 'raw' || event.source !== 'harness') return
+  const value = event.value as { type?: unknown; subtype?: unknown; waiting?: unknown } | null
+  if (value?.type === 'system' && value.subtype === 'brigade_waiting') return value.waiting === true
 }
 
 /** A turn's answer as the thread shows it (turnAnswer), joined. */
@@ -266,7 +275,9 @@ export class Threads {
         this.emitQueued(spec.sessionId, message)
       }
       this.enqueueMessage(thread, message)
-      if (command.steer && message.state === 'queued') void this.steer(thread, message)
+      // A turn that only waits on its background work takes it at once, as if steered.
+      if (message.state === 'queued' && (command.steer || this.waiting(thread, message)))
+        void this.steer(thread, message)
       if (command.nameThread !== undefined) void this.name(spec, command.text, command.nameThread)
       return
     }
@@ -627,6 +638,7 @@ export class Threads {
         const controller = new AbortController()
         thread.controller = controller
         thread.running = { teammateId: me, turnId }
+        seat.waiting = false
         const name = { sessionId: spec.sessionId, teammateId: me }
         try {
           if (spec.moved) await this.options.folders.arrive(name, spec.moved)
@@ -891,6 +903,20 @@ export class Threads {
     }
   }
 
+  /** The message's teammate runs a turn that only waits on its background work. */
+  private waiting(thread: Thread, message: Message) {
+    const teammateId = message.specs[0]!.teammate.id
+    return thread.running?.teammateId === teammateId && !!thread.harnesses.get(teammateId)?.waiting
+  }
+
+  /** The teammate's turn only waits on its background work: the messages queued for it go in now, in order. */
+  private async steerQueued(thread: Thread, teammateId: string) {
+    const queued = [...thread.messages.values()].filter(
+      (m) => m.state === 'queued' && m.specs[0]!.teammate.id === teammateId,
+    )
+    for (const message of queued) await this.steer(thread, message)
+  }
+
   /** The teammate no longer waits on a person: the messages held for that are queued again. */
   private async releaseHeld(thread: Thread, spec: ThreadSpec, seat: Seat) {
     const held = [...thread.messages.values()].filter(
@@ -1143,6 +1169,12 @@ export class Threads {
             this.note(spec, teammateId, spec.teammate.name, event.text)
             seat!.turn.push({ kind: 'message', chars: visibleChars(event.text), text: event.text })
           }
+          const waiting = backgroundWait(event)
+          if (waiting !== undefined) {
+            seat!.waiting = waiting
+            if (waiting) void this.steerQueued(thread, teammateId)
+          }
+          if (event.type === 'turn.completed') seat!.waiting = false
           if (event.type === 'tool.started')
             seat!.turn.push({
               kind: ASIDE_TOOLS.has(bareToolName(event.toolName)) ? 'other' : 'step',
@@ -1185,7 +1217,7 @@ export class Threads {
         },
         user,
       )
-      seat = { harness, folder, parkTimer: undefined, turn: [] }
+      seat = { harness, folder, parkTimer: undefined, turn: [], waiting: false }
       thread.harnesses.set(teammateId, seat)
     }
     return seat

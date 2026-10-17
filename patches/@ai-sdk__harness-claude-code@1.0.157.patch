@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c3633d25e28 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..b09dd5caecf16ace0c36e0bbe45bacf83f358bb9 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -39,28 +39,45 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c36
  		}, async (...handlerArgs) => {
  			const [input, extra] = handlerArgs;
  			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-@@ -1792,6 +1800,34 @@ async function runTurn(start, turn) {
+@@ -1792,6 +1800,51 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
-+	// Brigade: agents started in the background (and workflows) report back in a turn
-+	// Claude Code starts by itself. Ending the query at the first result killed them
-+	// with the CLI, so the turn stays open while any runs, and until Claude Code has
++	// Brigade: work started in the background (agents, workflows, shells, Monitors) reports
++	// back in a turn Claude Code starts by itself. Ending the query at the first result killed
++	// it with the CLI, so the turn stays open while any runs, and until Claude Code has
 +	// answered the last report.
 +	const AGENT_TASKS = new Set(["local_agent", "remote_agent", "local_workflow"]);
-+	const agentTasks = new Set();
++	const HELD_TASKS = new Set([...AGENT_TASKS, "local_bash", "monitor_mcp"]);
++	const heldTasks = new Set();
 +	let runningAgents = 0;
++	let runningTasks = 0;
 +	let messages = 0;
 +	let reportedAt = -1;
 +	let turnFrom = 0;
 +	let awaitingTurn = true;
 +	let reportPending = false;
 +	let reportTimer;
-+	const holding = () => runningAgents > 0 || reportPending;
++	let waiting = false;
++	const holding = () => runningTasks > 0 || reportPending;
 +	const reported = () => {
 +		reportedAt = messages;
 +		// Between turns: Claude Code starts one to answer it.
 +		if (awaitingTurn) reportPending = true;
++	};
++	// The host learns when the turn only waits on that work, and when Claude Code is at it again:
++	// a person's message then goes straight in rather than waiting for the turn to end.
++	const setWaiting = (value) => {
++		if (waiting === value) return;
++		waiting = value;
++		emit({
++			type: "raw",
++			rawValue: {
++				type: "system",
++				subtype: "brigade_waiting",
++				waiting: value
++			}
++		});
 +	};
 +	// A report folded into a turn already running gets no turn of its own: stop waiting for one.
 +	const waitForReport = () => {
@@ -74,35 +91,39 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c36
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1800,6 +1836,27 @@ async function runTurn(start, turn) {
+@@ -1800,6 +1853,31 @@ async function runTurn(start, turn) {
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
  			emitStreamEvent(msg);
 +			messages++;
 +			clearTimeout(reportTimer);
-+			if (type === "system" && msg.subtype === "task_started" && AGENT_TASKS.has(msg.task_type)) agentTasks.add(msg.task_id);
++			if (type === "system" && msg.subtype === "task_started" && HELD_TASKS.has(msg.task_type)) heldTasks.add(msg.task_id);
 +			if (type === "system" && msg.subtype === "background_tasks_changed" && Array.isArray(msg.tasks)) {
-+				const agents = msg.tasks.filter((t) => !t.ambient && AGENT_TASKS.has(t.task_type));
-+				for (const t of agents) agentTasks.add(t.task_id);
++				const tasks = msg.tasks.filter((t) => !t.ambient && HELD_TASKS.has(t.task_type));
++				for (const t of tasks) heldTasks.add(t.task_id);
++				const agents = tasks.filter((t) => AGENT_TASKS.has(t.task_type)).length;
 +				// An agent that stopped running reports back, whether this or its notification comes first.
-+				if (agents.length < runningAgents) reported();
-+				runningAgents = agents.length;
++				if (agents < runningAgents) reported();
++				runningAgents = agents;
++				runningTasks = tasks.length;
 +			}
-+			if (type === "system" && msg.subtype === "task_notification" && agentTasks.has(msg.task_id)) reported();
++			// A shell or Monitor reports in its notification; one stopped on purpose (hidden from the transcript) does not.
++			if (type === "system" && msg.subtype === "task_notification" && heldTasks.has(msg.task_id) && !msg.skip_transcript && !msg.ambient) reported();
 +			if (awaitingTurn && msg.parent_tool_use_id == null && (type === "assistant" || type === "stream_event")) {
 +				awaitingTurn = false;
 +				turnFrom = messages;
++				setWaiting(false);
 +			}
 +			if (type === "result") {
 +				// A report that came in after this turn began is answered in a turn of its own.
 +				reportPending = reportedAt > turnFrom;
 +				awaitingTurn = true;
 +			}
-+			if (awaitingTurn && reportPending && runningAgents === 0) waitForReport();
++			if (awaitingTurn && reportPending && runningTasks === 0) waitForReport();
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,16 +1892,23 @@ async function runTurn(start, turn) {
+@@ -1835,16 +1913,25 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -113,6 +134,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c36
 +							queryInput.close();
 +							break;
 +						}
++						if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) setWaiting(true);
 +						continue;
 +					}
  					queryInput.observeResult();
@@ -121,6 +143,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c36
  						queryInput.close();
  						break;
  					}
++					if (!queryInput.hasActiveUserMessages()) setWaiting(true);
  				} else emitTerminalError((Array.isArray(msg.errors) ? msg.errors.join("\n") : void 0) || streamEventState.observedTerminalError || msg.result || "Unknown error");
  				continue;
  			}
@@ -129,7 +152,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..4811536ab613b064bc49a635dc054c36
  				queryInput.close();
  				break;
  			}
-@@ -1857,6 +1921,7 @@ async function runTurn(start, turn) {
+@@ -1857,6 +1944,7 @@ async function runTurn(start, turn) {
  		return;
  	} finally {
  		gracefulAbort = void 0;
