@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
+import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
@@ -253,6 +254,7 @@ export function AppSheet({
             Finish signing in in the tab that opened. The account shows here once it is connected.
           </p>
         )}
+        {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
         {!data.available[kind] && <Unavailable kind={kind} />}
         {kind === 'google_cloud' && data.available[kind] && (
           <p className="text-sm text-muted-foreground">

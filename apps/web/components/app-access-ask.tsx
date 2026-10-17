@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
+import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
 import { useDashboard } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
@@ -228,6 +229,7 @@ export function AppAccessAsk({
           {name} is connected.
         </p>
       )}
+      {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </div>
   )
