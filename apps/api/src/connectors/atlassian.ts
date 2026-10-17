@@ -1,4 +1,4 @@
-import type { ConnectorDefinition } from './types.js'
+import { organizationsName, type ConnectorDefinition } from './types.js'
 
 /**
  * Jira and Confluence through Atlassian's Rovo MCP server (v2). It registers Brigade as a
@@ -25,18 +25,12 @@ export const atlassian: ConnectorDefinition = {
       'write:confluence:agent-interface',
       'search:rovo:agent-interface',
     ],
-    // An account shows as the email of who signed in. The server's atlassianUserInfo gives
-    // only an account id; Atlassian's /me takes the same token and gives the email.
+    // An account shows as the site(s) picked on Atlassian's consent page, as one member's
+    // email would show the same for each site. The server's tools give a site's URL only;
+    // Atlassian's accessible-resources takes the same token and gives its name.
     account: {
-      url: 'https://api.atlassian.com/me',
-      name: (o) => {
-        const who = o as { email?: unknown; name?: unknown } | null
-        return typeof who?.email === 'string'
-          ? who.email
-          : typeof who?.name === 'string'
-            ? who.name
-            : null
-      },
+      url: 'https://api.atlassian.com/oauth/token/accessible-resources',
+      name: organizationsName,
     },
     tools: {},
   },
