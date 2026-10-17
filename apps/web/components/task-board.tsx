@@ -92,17 +92,20 @@ function TaskCard({
             )}
         </span>
         {backlog && <AddedBy task={task} />}
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          {task.teammate ? (
-            <>
-              <TeammateAvatar teammate={task.teammate} className="size-5" />
-              <span className="truncate font-medium text-foreground">{task.teammate.name}</span>
-            </>
-          ) : (
-            <span className="truncate">Unassigned</span>
-          )}
-          {!backlog && <span className="ml-auto shrink-0">{progress(task)}</span>}
-        </span>
+        {/* In Backlog, nobody being on it goes without saying. */}
+        {(!backlog || task.teammate) && (
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {task.teammate ? (
+              <>
+                <TeammateAvatar teammate={task.teammate} className="size-5" />
+                <span className="truncate font-medium text-foreground">{task.teammate.name}</span>
+              </>
+            ) : (
+              <span className="truncate">Unassigned</span>
+            )}
+            {!backlog && <span className="ml-auto shrink-0">{progress(task)}</span>}
+          </span>
+        )}
       </button>
     </li>
   )
