@@ -80,7 +80,10 @@ const browsers = new Set<BrowserConn>()
  * Computers whose runner restarts into an update (runner.restarting), by id: until the next
  * runner connects, their commands wait for it and they stay online, as if it never left.
  */
-const restarting = new Map<string, { until: number; timer: ReturnType<typeof setTimeout> }>()
+const restarting = new Map<
+  string,
+  { until: number; timer: ReturnType<typeof setTimeout>; protocolVersion: number }
+>()
 /** Longest an update's restart may take: past it, the computer is offline after all. */
 const RESTART_MS = 2 * 60_000
 
@@ -126,7 +129,10 @@ function restartTimedOut(runner: { computerId: string; workspaceId: string }) {
 
 /** The protocol version of a computer's connected runner; undefined while it is offline. */
 export function runnerProtocol(computerId: string) {
-  return runners.get(computerId)?.protocolVersion
+  return (
+    runners.get(computerId)?.protocolVersion ??
+    (isRestarting(computerId) ? restarting.get(computerId)?.protocolVersion : undefined)
+  )
 }
 
 /** When the computer's connected runner process started, if it said. */
@@ -593,6 +599,7 @@ export function runnerSocket(runner: {
       restarting.set(runner.computerId, {
         until: Date.now() + RESTART_MS,
         timer: setTimeout(() => restartTimedOut(runner), RESTART_MS),
+        protocolVersion: conn.protocolVersion,
       })
       return
     }

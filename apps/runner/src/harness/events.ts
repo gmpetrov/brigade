@@ -275,8 +275,6 @@ const DROPPED_RAW = new Set(['stream_event'])
 type Part = { type: string; [key: string]: any }
 
 export class EventMapper {
-  private texts = new Map<string, string>()
-  private reasoning = new Map<string, string>()
   finishReason = 'unknown'
   /** The first error the harness reported during this turn. */
   error: string | undefined
@@ -306,6 +304,12 @@ export class EventMapper {
      * waited for approval finishes in the next turn, which needs its input.
      */
     private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>(),
+    /**
+     * Text and thinking blocks under way, by id. Kept by the thread: a block an update
+     * handed over halfway ends in the next runner, whole (HarnessThread.handOver).
+     */
+    private readonly texts = new Map<string, string>(),
+    private readonly reasoning = new Map<string, string>(),
   ) {}
 
   map(part: Part) {

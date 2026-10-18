@@ -139,7 +139,10 @@ export class Updater {
     this.installing = true
     clearInterval(this.timer)
     console.log('updating: handing the running turns over')
-    await this.options.handOver()
+    // Whatever happens there, the restart follows: the new runner takes up what it can.
+    await this.options
+      .handOver()
+      .catch((error: unknown) => console.error(`could not hand every turn over: ${String(error)}`))
     const ok = installedBundle() === bundle || (await this.runInstaller('swap'))
     const now = installedBundle()
     if (!ok || now !== bundle) {
