@@ -783,6 +783,62 @@ export type PullWaiting = {
   authorTeammate: { id: string; name: string } | null
 }
 
+/** Home's loose ends: nobody is blocked, but nothing moves on its own (apps/api/src/home.ts). */
+export type LooseEnd =
+  | {
+      kind: 'proposal'
+      key: string
+      at: string
+      thread: { id: string; title: string }
+      teammate: { id: string; name: string }
+      /** The first button's words: a click sends them. Null for choices, picked in the thread. */
+      reply: string | null
+      offers: string[]
+    }
+  | {
+      kind: 'stalled'
+      key: string
+      at: string
+      thread: { id: string; title: string }
+      teammate: { id: string; name: string }
+      quietSince: string
+      offline: boolean
+    }
+  | {
+      kind: 'routine'
+      key: string
+      at: string
+      schedule: { id: string; title: string }
+      run: { id: string } | null
+      error: string | null
+    }
+
+/** What came back since the member last looked. */
+export type HomeResult =
+  | {
+      kind: 'thread'
+      at: string
+      thread: { id: string; title: string; status: string }
+      teammate: { id: string; name: string }
+      pull: { repository: string; number: number; state: string } | null
+    }
+  | {
+      kind: 'decision'
+      at: string
+      verdict: 'approved' | 'denied' | 'resolved'
+      title: string
+      thread: { id: string; title: string } | null
+    }
+  | {
+      kind: 'merged'
+      at: string
+      pull: { repository: string; number: number; title: string }
+      thread: { id: string; title: string } | null
+      byYou: boolean
+    }
+
+export type HomeFeed = { looseEnds: LooseEnd[]; results: HomeResult[] }
+
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
 
 /** A credential's ticket only its creator or an admin decides: sharing it, or changing it. */

@@ -115,6 +115,7 @@ model Member {
   schedules      Schedule[]
   threadReads    ThreadRead[]
   threadPins     ThreadPin[]
+  homeDismissals HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
   notify         NotifyPreset @default(needed)
   pushNotices    PushNotice[]
@@ -188,6 +189,7 @@ model Workspace {
   previewVariables    PreviewVariable[]
   threadReads         ThreadRead[]
   threadPins          ThreadPin[]
+  homeDismissals      HomeDismissal[]
   pushNotices         PushNotice[]
 
   @@index([organizationId])
@@ -354,6 +356,21 @@ model ThreadPin {
 
   @@id([memberId, sessionId])
   @@index([sessionId])
+}
+
+/// A loose end a member set aside on Home. Its key names the thing as it stood then (a thread's
+/// proposal by its event, a stalled thread by its last event, a routine by its failed run), so
+/// the same thing comes back once it changes.
+model HomeDismissal {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  key            String
+  dismissedAt    DateTime  @default(now())
+
+  @@id([memberId, key])
 }
 
 /// A thread: one conversation with one teammate, one harness session.

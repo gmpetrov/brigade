@@ -410,6 +410,7 @@ export const ModelName = {
   Teammate: 'Teammate',
   ThreadRead: 'ThreadRead',
   ThreadPin: 'ThreadPin',
+  HomeDismissal: 'HomeDismissal',
   Session: 'Session',
   Task: 'Task',
   Schedule: 'Schedule',
@@ -463,7 +464,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1426,6 +1427,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ThreadPinCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ThreadPinCountAggregateOutputType> | number
+        }
+      }
+    }
+    HomeDismissal: {
+      payload: Prisma.$HomeDismissalPayload<ExtArgs>
+      fields: Prisma.HomeDismissalFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.HomeDismissalFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.HomeDismissalFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        findFirst: {
+          args: Prisma.HomeDismissalFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.HomeDismissalFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        findMany: {
+          args: Prisma.HomeDismissalFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>[]
+        }
+        create: {
+          args: Prisma.HomeDismissalCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        createMany: {
+          args: Prisma.HomeDismissalCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.HomeDismissalCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>[]
+        }
+        delete: {
+          args: Prisma.HomeDismissalDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        update: {
+          args: Prisma.HomeDismissalUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        deleteMany: {
+          args: Prisma.HomeDismissalDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.HomeDismissalUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.HomeDismissalUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>[]
+        }
+        upsert: {
+          args: Prisma.HomeDismissalUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$HomeDismissalPayload>
+        }
+        aggregate: {
+          args: Prisma.HomeDismissalAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateHomeDismissal>
+        }
+        groupBy: {
+          args: Prisma.HomeDismissalGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.HomeDismissalGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.HomeDismissalCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.HomeDismissalCountAggregateOutputType> | number
         }
       }
     }
@@ -4466,6 +4541,17 @@ export const ThreadPinScalarFieldEnum = {
 export type ThreadPinScalarFieldEnum = (typeof ThreadPinScalarFieldEnum)[keyof typeof ThreadPinScalarFieldEnum]
 
 
+export const HomeDismissalScalarFieldEnum = {
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  memberId: 'memberId',
+  key: 'key',
+  dismissedAt: 'dismissedAt'
+} as const
+
+export type HomeDismissalScalarFieldEnum = (typeof HomeDismissalScalarFieldEnum)[keyof typeof HomeDismissalScalarFieldEnum]
+
+
 export const SessionScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -5906,6 +5992,7 @@ export type GlobalOmitConfig = {
   teammate?: Prisma.TeammateOmit
   threadRead?: Prisma.ThreadReadOmit
   threadPin?: Prisma.ThreadPinOmit
+  homeDismissal?: Prisma.HomeDismissalOmit
   session?: Prisma.SessionOmit
   task?: Prisma.TaskOmit
   schedule?: Prisma.ScheduleOmit
