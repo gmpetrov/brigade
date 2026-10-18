@@ -7,8 +7,8 @@
 // the teammates and projects stay in reach however many there are; older ones load on asking.
 // Threads this member pinned sit above them, under Pinned; archived ones are out of both,
 // and the filter lists them. Pinned and Threads each fold to their label, with how many in
-// them wait on a person, and this browser remembers which are folded. Inside Threads, those
-// waiting on a person sit under their own "Needs you", which folds the same way.
+// them wait on a person, and this browser remembers which are folded. Inside Threads, the
+// latest thread waiting on a person shows first, and the others behind a "+N need you".
 import {
   Archive,
   ChevronDown,
@@ -59,21 +59,17 @@ const CAP = 5
 /** Each "+N more" shows this many more; folding "Threads" goes back to the cap. */
 const STEP = 20
 
-/** Which of Pinned, Threads and Threads' Needs you this browser folded. */
+/** Which of Pinned and Threads this browser folded. */
 const FOLDED_KEY = 'brigade:sidebar-folded'
-type Folded = { pinned: boolean; threads: boolean; waiting: boolean }
+type Folded = { pinned: boolean; threads: boolean }
 
 function useFolded() {
-  const [folded, setFolded] = useState<Folded>({ pinned: false, threads: false, waiting: false })
+  const [folded, setFolded] = useState<Folded>({ pinned: false, threads: false })
   // Read after the first render, so the server's page and the browser's agree.
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? 'null') as Partial<Folded> | null
-      setFolded({
-        pinned: saved?.pinned === true,
-        threads: saved?.threads === true,
-        waiting: saved?.waiting === true,
-      })
+      setFolded({ pinned: saved?.pinned === true, threads: saved?.threads === true })
     } catch {
       // Nothing saved, or not readable: both open.
     }
@@ -113,20 +109,6 @@ function FoldButton({
       {label}
       <Chevron className="size-3.5" />
     </button>
-  )
-}
-
-/** Beside a folded section's label: how many in it wait on a person, if any. */
-function FoldedCount({ threads }: { threads: ThreadSummary[] }) {
-  const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
-  if (!waiting) return null
-  return (
-    <span
-      title={`${waiting} waiting on you`}
-      className="text-warning ml-auto shrink-0 pl-2 font-mono text-[0.6875rem] font-semibold"
-    >
-      {waiting}
-    </span>
   )
 }
 
@@ -206,7 +188,7 @@ function shortAgo(iso: string) {
 const inThread = (t: ThreadSummary, teammateId: string) =>
   t.teammate.id === teammateId || !!t.teammates?.some((p) => p.teammate.id === teammateId)
 
-/** How many of some threads wait on a person: beside a teammate or project. */
+/** How many of some threads wait on a person: beside a teammate, a project or a folded section. */
 function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHover?: boolean }) {
   const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
   if (!waiting) return null
@@ -325,6 +307,8 @@ export function SidebarWork({
   // How many more than the cap the list shows: a step at a time.
   const [extra, setExtra] = useState(0)
   const [folded, toggleFolded] = useFolded()
+  // Whether the list shows every thread waiting on a person, not only the latest.
+  const [allWaiting, setAllWaiting] = useState(false)
   // Threads older than the latest the panel loads, asked for from the end of the list; and
   // the filters that have none left, so the list stops offering more.
   const [older, setOlder] = useState<ThreadSummary[]>([])
@@ -388,7 +372,10 @@ export function SidebarWork({
     return by
   }, [shown])
   // Another filter starts from the cap again.
-  useEffect(() => setExtra(0), [filter])
+  useEffect(() => {
+    setExtra(0)
+    setAllWaiting(false)
+  }, [filter])
 
   // Which older threads the server has for this filter: the teammate and project it can
   // narrow to; the status it cannot, so the list narrows what comes back.
@@ -420,10 +407,11 @@ export function SidebarWork({
     }
   }
 
-  // What the list shows: those waiting on a person under their own Needs you, all of them
-  // unless it is folded; then the first of the others and a "+N more" past them, which goes
-  // on past what is loaded: older threads, from the server.
+  // What the list shows: the latest thread waiting on a person, the others behind a "+N need
+  // you" until asked; then the first of the rest and a "+N more" past them, which goes on
+  // past what is loaded: older threads, from the server.
   const waitingRows = archived ? [] : groups.waiting
+  const waitingShown = allWaiting ? waitingRows : waitingRows.slice(0, 1)
   const ordered = [...(archived ? groups.waiting : []), ...groups.working, ...groups.rest]
   const visible = CAP + extra
   const hidden = Math.max(0, ordered.length - visible)
@@ -506,21 +494,20 @@ export function SidebarWork({
           {archived ? 'No archived threads.' : filtered ? 'No threads match.' : 'No threads yet.'}
         </li>
       )}
-      {waitingRows.length > 0 && (
-        // A label, not a thread: no dot, its text lines up with the titles, its count with
-        // Pinned's and Threads' when they are folded.
-        <li className="text-sidebar-foreground/70 flex h-7 items-center pr-8 pl-8 text-xs font-medium">
-          <FoldButton
-            label="Needs you"
-            folded={folded.waiting}
-            onToggle={() => toggleFolded('waiting')}
-          />
-          {folded.waiting && <FoldedCount threads={waitingRows} />}
-        </li>
-      )}
-      {!folded.waiting && waitingRows.map(row)}
-      {ordered.slice(0, visible).map(row)}
+      {waitingShown.map(row)}
       {/* No dot: a control, not a thread; its text lines up with the titles. */}
+      {waitingShown.length < waitingRows.length && (
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="sm"
+            className="text-muted-foreground pl-8"
+            onClick={() => setAllWaiting(true)}
+          >
+            <span>{`+${waitingRows.length - waitingShown.length} need you`}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
+      {ordered.slice(0, visible).map(row)}
       {more && (
         <SidebarMenuItem>
           <SidebarMenuButton
@@ -603,7 +590,7 @@ export function SidebarWork({
               folded={folded.pinned}
               onToggle={() => toggleFolded('pinned')}
             />
-            {folded.pinned && <FoldedCount threads={pinned} />}
+            {folded.pinned && <Signals threads={pinned} />}
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
@@ -620,7 +607,10 @@ export function SidebarWork({
             label="Threads"
             folded={folded.threads}
             onToggle={() => {
-              if (!folded.threads) setExtra(0)
+              if (!folded.threads) {
+                setExtra(0)
+                setAllWaiting(false)
+              }
               toggleFolded('threads')
             }}
           />
@@ -653,7 +643,7 @@ export function SidebarWork({
               onClear={() => setFilter((f) => ({ ...f, statuses: [] }))}
             />
           )}
-          {folded.threads && <FoldedCount threads={shown} />}
+          {folded.threads && <Signals threads={shown} />}
         </SidebarGroupLabel>
         {/* Folded, Threads is only its label: no filter beside it. */}
         {!folded.threads && (
