@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { StatusBadge } from '@/components/status-badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { useApi, type RunLog, type RunLogEntry, type Thread } from '@/lib/api'
@@ -28,9 +28,37 @@ const ticketKind: Record<string, string> = {
   request: 'ticket',
 }
 
+/** Rows laid out at first, and with each "Show more": a long thread has thousands. */
+const PAGE = 500
+
 const clip = (text: unknown, max = 280) => {
   const s = typeof text === 'string' ? text : JSON.stringify(text)
   return s.length > max ? `${s.slice(0, max - 1)}…` : s
+}
+
+/**
+ * An entry that opens on its detail. Native, not Radix's Collapsible: that measures itself as
+ * it mounts, and a log of thousands of rows laid out again for each froze the page. The
+ * detail is only written out once opened.
+ */
+function Detail({ what, detail }: { what: React.ReactNode; detail: unknown }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <details className="group" onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="flex cursor-pointer list-none items-start gap-1 [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          className="mt-0.5 size-4 flex-none text-muted-foreground transition-transform group-open:rotate-90"
+          aria-hidden
+        />
+        <span className="min-w-0">{what}</span>
+      </summary>
+      {open && (
+        <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere">
+          {typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2)}
+        </pre>
+      )}
+    </details>
+  )
 }
 
 /** Every thread replayed end to end, from the event, call and audit logs. */
@@ -40,6 +68,7 @@ export default function RunLogPage() {
   const log = useApi<RunLog>(`/threads/${id}/log`)
   const [sources, setSources] = useState(new Set(SOURCES.map((s) => s.value)))
   const [usage, setUsage] = useState(false)
+  const [shown, setShown] = useState(PAGE)
 
   if (!log.data || !thread.data)
     return (
@@ -333,7 +362,7 @@ export default function RunLogPage() {
         <Card className="gap-0 overflow-hidden py-0">
           <Table>
             <TableBody>
-              {entries.map((e, i) => {
+              {entries.slice(0, shown).map((e, i) => {
                 const { actor, what, detail } = describe(e)
                 return (
                   <TableRow key={`${e.source}${e.seq ?? ''}${i}`} className="hover:bg-transparent">
@@ -347,26 +376,7 @@ export default function RunLogPage() {
                       {actor}
                     </TableCell>
                     <TableCell className="min-w-64 py-2.5 pr-4 align-top whitespace-normal wrap-anywhere">
-                      {detail === undefined ? (
-                        what
-                      ) : (
-                        <Collapsible>
-                          <CollapsibleTrigger className="group flex items-start gap-1 text-left">
-                            <ChevronRight
-                              className="mt-0.5 size-4 flex-none text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
-                              aria-hidden
-                            />
-                            <span className="min-w-0">{what}</span>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere">
-                              {typeof detail === 'string'
-                                ? detail
-                                : JSON.stringify(detail, null, 2)}
-                            </pre>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
+                      {detail === undefined ? what : <Detail what={what} detail={detail} />}
                     </TableCell>
                   </TableRow>
                 )
@@ -374,6 +384,17 @@ export default function RunLogPage() {
             </TableBody>
           </Table>
         </Card>
+      )}
+      {entries.length > shown && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-center"
+          onClick={() => setShown((n) => n + PAGE)}
+        >
+          Show {Math.min(PAGE, entries.length - shown)} more of {entries.length - shown}
+        </Button>
       )}
     </div>
   )
