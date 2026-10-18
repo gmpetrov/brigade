@@ -8,6 +8,7 @@ import {
   pickedChoice,
   pickedDesignPath,
   bareToolName,
+  childNote,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -100,6 +101,8 @@ export type Item =
       replyTo?: ReplyTo
       /** Given to this teammate during its running turn. */
       steeredTo?: string
+      /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
+      brigade?: 'task' | 'report'
     }
   | {
       kind: 'assistant'
@@ -238,6 +241,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             attachments: e.attachments ?? [],
             ...(e.replyTo ? { replyTo: e.replyTo } : {}),
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
+            ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
           })
           break
         case 'message.queued':
@@ -1386,6 +1390,24 @@ export function ThreadItems({
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
+        // Brigade's own words about child threads: a note, not a person's message.
+        if (item.brigade)
+          return (
+            <div
+              key={item.key}
+              data-seq={item.seq}
+              className="rounded-xl border bg-card px-4 py-3 text-sm"
+            >
+              <p className="mb-1 text-xs font-medium text-muted-foreground">
+                {item.brigade === 'report'
+                  ? 'Reports from child threads'
+                  : 'Work from the parent thread'}
+              </p>
+              <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                <MessageWithCode text={item.text} />
+              </div>
+            </div>
+          )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         const asked = startingCommand(item.text, skillNames)
         const text = asked ? asked.rest : item.text

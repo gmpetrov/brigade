@@ -8,12 +8,16 @@
 // parent shows them.
 import { randomUUID } from 'node:crypto'
 import {
+  batchNote,
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
+  childPrompt,
   ChildReport,
-  type ChildReportStatus,
+  clipReport,
   type ScheduleOperation,
+  singleNote,
   WAKEUPS_IN_A_ROW,
+  wakesParent,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
@@ -56,81 +60,6 @@ type Session = {
 /** A report as stored, or null when there is none (or it is not one Brigade wrote). */
 export const reportOf = (value: unknown): ChildReport | null =>
   value ? (ChildReport.safeParse(value).data ?? null) : null
-
-const clip = (text: string, max: number) =>
-  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
-
-/** One line of a report, for a note: no line breaks, kept short. */
-const line = (text: string) => clip(text.replace(/\s+/g, ' ').trim(), 400)
-
-const STATUS_WORDS: Record<ChildReportStatus, string> = {
-  nothing: 'nothing new',
-  report: 'reports',
-  needs_person: 'needs a person (a ticket is open in it)',
-  failed: 'failed',
-  cancelled: 'cancelled',
-}
-
-/** What the child is told with its work: where it comes from and how to finish. */
-export function childPrompt(input: { from: string; parentTitle: string; instructions: string }) {
-  return (
-    `${input.from} started this thread from the thread “${input.parentTitle}” and waits for your report.\n\n` +
-    `${input.instructions}\n\n` +
-    'When you are done, call `report` once with what you found, then end your turn.'
-  )
-}
-
-/** The note a parent wakes up to when the children it waits for have reported. */
-export function batchNote(
-  finished: { id: string; title: string; teammate: string; report: ChildReport }[],
-  unfinished: { id: string; title: string; teammate: string }[],
-) {
-  const lines = [
-    finished.length === 1 && !unfinished.length
-      ? 'The child thread you were waiting for has finished:'
-      : finished.length
-        ? `${finished.length} child threads you were waiting for have finished:`
-        : 'You stopped waiting for your child threads: none has finished yet.',
-    ...finished.map(
-      (c) =>
-        `- ${c.teammate} · “${c.title}” (${c.id}): ${STATUS_WORDS[c.report.status]}. ${line(c.report.summary)}`,
-    ),
-  ]
-  if (unfinished.length)
-    lines.push(
-      '',
-      'Still working past the time you gave them (each tells you later, only if it has something to say):',
-      ...unfinished.map((c) => `- ${c.teammate} · “${c.title}” (${c.id})`),
-    )
-  lines.push(
-    '',
-    '`read_child` gives a child’s full report and what it produced. To tell one more, ' +
-      '`message_thread` with its threadId: it carries on and reports again. ' +
-      'Then go on with the work or tell the person where things stand.',
-  )
-  return lines.join('\n')
-}
-
-/** The note for one report nobody was waiting for: a schedule's run, or a child after its wait ran out. */
-export function singleNote(child: {
-  id: string
-  title: string
-  teammate: string
-  schedule: string | null
-  report: ChildReport
-}) {
-  return (
-    (child.schedule
-      ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${STATUS_WORDS[child.report.status]}:`
-      : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${STATUS_WORDS[child.report.status]} after you stopped waiting for it:`) +
-    `\n\n${clip(child.report.summary, 2_000)}\n\n` +
-    '`read_child` gives its full report and what it produced. Act on it if it needs you to, ' +
-    'or tell the person in a line.'
-  )
-}
-
-/** A report nobody waited for wakes the parent only when it has something to say. */
-export const wakesParent = (status: ChildReportStatus) => status === 'report' || status === 'failed'
 
 const CHILD_SELECT = {
   id: true,
@@ -317,7 +246,10 @@ export async function noteChildEvents(
               }
             : {
                 status: 'report',
-                summary: clip((await lastMessage(session.id)) || 'It ended without a word.', 2_000),
+                summary: clipReport(
+                  (await lastMessage(session.id)) || 'It ended without a word.',
+                  2_000,
+                ),
                 at: event.at,
                 fromLastMessage: true,
               }
@@ -490,7 +422,7 @@ export async function handleChildCall(
     ])
     return {
       ...brief(child),
-      lastMessage: clip(final, 8_000),
+      lastMessage: clipReport(final, 8_000),
       pullRequests: pulls.map((p) => ({
         ...p,
         url: `https://github.com/${p.repository}/pull/${p.number}`,
