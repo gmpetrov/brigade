@@ -120,7 +120,8 @@ export function AppSheet({
           kind === 'atlassian' ||
           kind === 'notion' ||
           kind === 'linear' ||
-          kind === 'mixpanel'
+          kind === 'mixpanel' ||
+          kind === 'resend'
         ? 'mcp'
         : kind === 'github'
           ? 'github'

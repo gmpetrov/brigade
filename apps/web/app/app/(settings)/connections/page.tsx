@@ -51,6 +51,7 @@ const BUILT_IN: Kind[] = [
   'notion',
   'linear',
   'mixpanel',
+  'resend',
   'stripe',
 ]
 

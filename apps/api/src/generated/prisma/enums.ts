@@ -163,6 +163,7 @@ export const ConnectorKind = {
   notion: 'notion',
   linear: 'linear',
   mixpanel: 'mixpanel',
+  resend: 'resend',
   mcp: 'mcp'
 } as const
 

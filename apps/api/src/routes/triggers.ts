@@ -30,6 +30,7 @@ const KINDS: ConnectorKind[] = [
   'notion',
   'linear',
   'mixpanel',
+  'resend',
   'mcp',
   'webhook',
 ]
