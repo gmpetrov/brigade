@@ -8,6 +8,8 @@
 //   cd apps/api && PORT=3101 API_URL=http://localhost:3101 WEB_URL=http://localhost:3102 pnpm dev
 //   node apps/api/scripts/children-e2e.mjs "$PWD" http://localhost:3101
 //
+// Against a preview's API (scripts/preview/start.sh), give its address as WEB_URL.
+//
 // It takes about three minutes (one case waits for a child's wait to run out).
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -40,7 +42,8 @@ async function until(what, check, ms = 20_000) {
 }
 
 // --- Sign in as Ada ---------------------------------------------------------
-const origin = 'http://localhost:3102'
+// The dashboard's address the API trusts (its WEB_URL); 3102 as in the command above.
+const origin = process.env.WEB_URL ?? 'http://localhost:3102'
 const signIn = await fetch(`${API}/api/auth/sign-in/email`, {
   method: 'POST',
   headers: { 'content-type': 'application/json', origin },
