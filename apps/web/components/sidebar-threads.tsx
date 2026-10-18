@@ -8,7 +8,7 @@
 // Threads this member pinned sit above them, under Pinned; archived ones are out of both,
 // and the filter lists them. Pinned and Threads each fold to their label, with how many in
 // them wait on a person, and this browser remembers which are folded. Inside Threads, the
-// latest thread waiting on a person shows first, and the others behind a "+N need you".
+// latest thread waiting on a person shows first, and the others behind a "+N waiting on you".
 import {
   Archive,
   ChevronDown,
@@ -407,7 +407,7 @@ export function SidebarWork({
     }
   }
 
-  // What the list shows: the latest thread waiting on a person, the others behind a "+N need
+  // What the list shows: the latest thread waiting on a person, the others behind a "+N waiting on
   // you" until asked; then the first of the rest and a "+N more" past them, which goes on
   // past what is loaded: older threads, from the server.
   const waitingRows = archived ? [] : groups.waiting
@@ -503,7 +503,7 @@ export function SidebarWork({
             className="text-muted-foreground pl-8"
             onClick={() => setAllWaiting(true)}
           >
-            <span>{`+${waitingRows.length - waitingShown.length} need you`}</span>
+            <span>{`+${waitingRows.length - waitingShown.length} waiting on you`}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       )}
