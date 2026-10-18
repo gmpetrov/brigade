@@ -5,6 +5,7 @@
 // it was started from is woken to show the report: per event, the case found, what would
 // have been done, and the session minutes it took, with a week's extrapolation.
 import {
+  DRY_RUN_HEAD,
   DRY_RUN_MAX,
   isTriggerEntry,
   nextRuns,
@@ -226,7 +227,12 @@ async function advance(scope: Scope, dryRunId: string) {
 async function startEvent(
   db: ScopedDb,
   scope: Scope,
-  dryRun: { id: string; installationId: string; sessionId: string | null; startedByMemberId: string },
+  dryRun: {
+    id: string
+    installationId: string
+    sessionId: string | null
+    startedByMemberId: string
+  },
   run: { id: string; replay: unknown },
 ) {
   const replay = run.replay as Replay
@@ -296,7 +302,9 @@ export async function noteDryRunEvents(
       where: { id: run.id, outcome: null },
       data: {
         status: error ? 'failed' : 'done',
-        ...(error ? { outcome: 'failed', summary: ended.event.message ?? 'It stopped on an error' } : {}),
+        ...(error
+          ? { outcome: 'failed', summary: ended.event.message ?? 'It stopped on an error' }
+          : {}),
         endedAt: new Date(),
       },
     })
@@ -355,7 +363,7 @@ async function reportDone(db: ScopedDb, scope: Scope, dryRunId: string) {
   const seated = thread.teammates.some((t) => t.teammateId === dryRun.teammateId)
   const failed = view.events.filter((e) => e.status === 'failed').length
   const note =
-    `The dry run of the playbook ${view.name} is done: ${view.events.length} event${view.events.length === 1 ? '' : 's'}` +
+    `${DRY_RUN_HEAD}${view.name} is done: ${view.events.length} event${view.events.length === 1 ? '' : 's'}` +
     (failed ? ` (${failed} failed)` : '') +
     `, ${minutesText(view.minutes)} of session on the owner's subscription` +
     (view.week
@@ -379,7 +387,9 @@ async function reportDone(db: ScopedDb, scope: Scope, dryRunId: string) {
 }
 
 const minutesText = (minutes: number) =>
-  minutes < 1 ? 'under a minute' : `${Math.round(minutes)} minute${Math.round(minutes) === 1 ? '' : 's'}`
+  minutes < 1
+    ? 'under a minute'
+    : `${Math.round(minutes)} minute${Math.round(minutes) === 1 ? '' : 's'}`
 
 /** Session minutes of each thread: its turns, from start to end. */
 async function sessionMinutes(db: ScopedDb, sessionIds: string[]) {

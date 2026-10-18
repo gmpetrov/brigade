@@ -78,12 +78,16 @@ type OpenTicket = {
 const payloadOf = (t: OpenTicket) => (t.payload ?? {}) as Record<string, unknown>
 const managedOnly = (t: OpenTicket) =>
   payloadOf(t).credentialAction === 'grant' || payloadOf(t).credentialAction === 'update'
+/** A skill a teammate proposes, or a playbook a member asks to activate: only an owner or admin decides. */
+const adminsOnly = (t: OpenTicket) =>
+  t.type === 'approval' && (!!payloadOf(t).skillAction || payloadOf(t).loopActivation === true)
 
 /** Whether a ticket waits on this member: apps/web/lib/api.ts's waitsOn, which the sidebar counts. */
 function waitsOn(t: OpenTicket, m: Recipient) {
   const admin = isAdmin(m)
   const starter = t.session?.startedByMemberId === m.id
   const p = payloadOf(t)
+  if (adminsOnly(t)) return admin
   if (t.type === 'approval')
     return managedOnly(t) ? admin || p.credentialOwnerId === m.id : admin || starter
   if (t.type === 'cap') return admin
@@ -99,7 +103,7 @@ function waitsOn(t: OpenTicket, m: Recipient) {
 function isFor(t: OpenTicket, m: Recipient) {
   const p = payloadOf(t)
   const starter = t.session?.startedByMemberId
-  if (t.type === 'cap') return isAdmin(m)
+  if (t.type === 'cap' || adminsOnly(t)) return isAdmin(m)
   if (t.type === 'approval' && managedOnly(t))
     return p.credentialOwnerId ? p.credentialOwnerId === m.id : isAdmin(m)
   const harness = (t.type === 'question' || t.type === 'request') && p.source === 'harness'

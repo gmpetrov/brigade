@@ -1523,8 +1523,12 @@ export function loopTools(call: ScheduleCaller): Record<string, Tool> {
  * Through the schedule calls, which the API checks.
  */
 export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool> {
-  const send = (operation: ScheduleOperation, toolCallId: string, toolName: string, input: unknown) =>
-    call({ operation, toolCallId, toolName, input })
+  const send = (
+    operation: ScheduleOperation,
+    toolCallId: string,
+    toolName: string,
+    input: unknown,
+  ) => call({ operation, toolCallId, toolName, input })
   const id = { type: 'string', description: 'The installationId configure_loop gave' } as const
   return {
     show_playbook: tool({
@@ -1559,7 +1563,10 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
       }>({
         type: 'object',
         properties: {
-          loopKey: { type: 'string', description: 'To start installing one, e.g. brigade/support-bugs' },
+          loopKey: {
+            type: 'string',
+            description: 'To start installing one, e.g. brigade/support-bugs',
+          },
           installationId: id,
           teammate: {
             type: 'string',
@@ -1567,7 +1574,8 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
           },
           settings: {
             type: 'object',
-            description: 'Answers by setting key, e.g. { "product": "Acme", "inbox": "support@acme.com" }',
+            description:
+              'Answers by setting key, e.g. { "product": "Acme", "inbox": "support@acme.com" }',
             additionalProperties: { type: ['string', 'number'] },
           },
         },
@@ -1635,7 +1643,7 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
     }),
     activate_loop: tool({
       description:
-        "Show the card that activates an installed playbook: its settings, Apps, actions and their levels, and " +
+        'Show the card that activates an installed playbook: its settings, Apps, actions and their levels, and ' +
         'whose accounts it runs on, with an Activate button. A click by an owner or admin activates it; a ' +
         "member's asks one. Only after its settings are all answered, usually after a dry run.",
       inputSchema: jsonSchema<{ installationId: string }>({

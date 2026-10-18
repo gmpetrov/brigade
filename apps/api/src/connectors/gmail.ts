@@ -292,7 +292,9 @@ export const gmail: ConnectorDefinition = {
       replay: async (options, ctx, last) => {
         const q = `${options.query ? `(${options.query}) ` : ''}in:inbox -in:sent -in:drafts`
         const found = await json<{ messages?: { id: string }[] }>(
-          await ctx.fetch(`${API}/messages?${new URLSearchParams({ q, maxResults: String(last) })}`),
+          await ctx.fetch(
+            `${API}/messages?${new URLSearchParams({ q, maxResults: String(last) })}`,
+          ),
         )
         const events = []
         for (const { id } of (found.messages ?? []).slice(0, last)) {
@@ -301,9 +303,8 @@ export const gmail: ConnectorDefinition = {
           const email = await json<Message>(got)
           const payload: ReceivedEmail = {
             ...full(email),
-            rfcMessageId: email.payload?.headers?.find(
-              (h) => h.name.toLowerCase() === 'message-id',
-            )?.value,
+            rfcMessageId: email.payload?.headers?.find((h) => h.name.toLowerCase() === 'message-id')
+              ?.value,
           }
           const at = Number(email.internalDate)
           events.push({

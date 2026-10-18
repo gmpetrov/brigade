@@ -1,8 +1,11 @@
 // End-to-end check of playbooks (src/loops.ts) against the real API and database: the
 // support-bugs playbook installed through the API receives a mail through its Gmail trigger
 // (a fake Gmail in the API's process, scripts/fake-gmail.mjs), starts a run out of the
-// sidebar with only the tools of the Apps it declares, and shows in its sheet. A scripted
-// runner on the real runner socket stands in for the teammate. It needs the preview's sample
+// sidebar with only the tools of the Apps it declares, and shows in its sheet. Then it is
+// installed from a chat (src/loop-chat.ts), tried in a dry run on the mailbox's past mails
+// with nothing sent (src/loop-dry-runs.ts), and activated: by an owner at once, and for a
+// member through one ticket an owner approves. A scripted runner on the real runner socket
+// stands in for the teammate. It needs the preview's sample
 // workspace (scripts/preview/setup.sh) and an API on its database, with nothing else
 // connected as the cloud computer's runner (it takes that runner's place):
 //
@@ -50,7 +53,7 @@ const receive = (mail) => {
 }
 writeFileSync(mailbox, JSON.stringify({ mails }))
 
-// --- Sign in as Ada (an owner: her installation is active at once) -----------
+// --- Sign in as Ada (an owner: she activates what she installs) -------------
 const origin = process.env.WEB_URL ?? 'http://localhost:3102'
 const signIn = await fetch(`${API}/api/auth/sign-in/email`, {
   method: 'POST',
@@ -62,10 +65,10 @@ const cookie = signIn.headers
   .getSetCookie()
   .map((c) => c.split(';')[0])
   .join('; ')
-async function call(path, { method = 'GET', body } = {}) {
+async function call(path, { method = 'GET', body, as = cookie } = {}) {
   const res = await fetch(`${API}/api${path}`, {
     method: body && method === 'GET' ? 'POST' : method,
-    headers: { cookie, origin, ...(body ? { 'content-type': 'application/json' } : {}) },
+    headers: { cookie: as, origin, ...(body ? { 'content-type': 'application/json' } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   })
   const text = await res.text()
@@ -253,6 +256,10 @@ await check('installed through the API: its triggers, schedule, skills and actio
       },
     },
   })
+  // In setup until activated: Ada is an owner, so the Activate button turns it on.
+  assert.equal(playbook.status, 'setup')
+  assert.equal(playbook.ready, true)
+  playbook = (await call(`/loops/${playbook.id}/activate`, { body: {} })).playbook
   assert.equal(playbook.status, 'active')
   assert.equal(playbook.name, 'Support and bugs')
   assert.equal(playbook.actions.length, 5)
@@ -485,6 +492,320 @@ await check('pausing stops its schedule; uninstalling removes all it made', asyn
   assert.ok(archived.archivedAt, 'its unsurfaced run is archived')
   const [kept] = await q(`select "archivedAt" from "Session" where id = $1`, [runThread])
   assert.equal(kept.archivedAt, null, 'the run a person joined stays')
+})
+
+// =============================================================================
+// Installed from the chat, tried in a dry run, then activated
+// =============================================================================
+
+// Sam needs GitHub too (the playbook fixes bugs); the sample has none.
+let [githubApp] = await q(`select id from "App" where "workspaceId" = $1 and key = 'github'`, [
+  computer.workspaceId,
+])
+if (!githubApp) {
+  githubApp = { id: `e2egh${Date.now()}` }
+  await q(
+    `insert into "App" (id, "organizationId", "workspaceId", key, "createdByMemberId", "updatedAt") values ($1,$2,$3,'github',$4, now())`,
+    [githubApp.id, ...inWs, ada.id],
+  )
+}
+const github = { id: `e2eghc${Date.now()}` }
+
+// The mailbox's past: four mails to the support address over three days, and one elsewhere.
+const day = 24 * 3600_000
+const past = [
+  { subject: 'WordPress', body: 'How do I connect WordPress?', ago: 3 * day },
+  { subject: 'Export broken', body: 'The CSV export fails with a 500', ago: 2 * day },
+  { subject: 'Pricing', body: 'Do you have a yearly plan?', ago: day },
+  { subject: 'Login', body: 'I cannot log in since yesterday', ago: 0 },
+]
+for (const [i, m] of past.entries())
+  receive({
+    id: `p${Date.now()}${i}`,
+    threadId: `tp${Date.now()}${i}`,
+    from: `Customer ${i} <c${i}@customer.test>`,
+    to: 'support@acme.test',
+    subject: m.subject,
+    body: m.body,
+    at: Date.now() - m.ago,
+  })
+receive({
+  id: `p${Date.now()}x`,
+  threadId: `tpx${Date.now()}`,
+  from: 'Newsletter <news@vendor.test>',
+  to: 'ada@acme.test',
+  subject: 'Not for support',
+  body: 'Unrelated',
+  at: Date.now(),
+})
+
+let installThread
+let installationId
+const dryRunPrompts = []
+const said = {}
+await check('installed from the chat: its card, then its settings one by one', async () => {
+  scripts.unshift((p) =>
+    p.text.startsWith('Install the playbook')
+      ? async (p) => {
+          const shown = await schedule(p, {
+            name: 'show_playbook',
+            loopKey: 'brigade/support-bugs',
+          })
+          assert.ok(shown.ok, JSON.stringify(shown))
+          assert.equal(shown.output.playbook.name, 'Support and bugs')
+          assert.equal(shown.output.playbook.source, 'brigade')
+          // The first answer: a new installation in setup, the next question, and GitHub missing.
+          const first = await schedule(p, {
+            name: 'configure_loop',
+            loopKey: 'brigade/support-bugs',
+            settings: { product: 'Acme' },
+          })
+          assert.ok(first.ok, JSON.stringify(first))
+          said.first = first.output
+          // A wrong answer is refused by its type.
+          const bad = await schedule(p, {
+            name: 'configure_loop',
+            installationId: first.output.installationId,
+            settings: { docs: 'not a url' },
+          })
+          said.bad = bad
+          // GitHub connected meanwhile (the ticket the teammate would open).
+          await q(
+            `insert into "Connection" (id, "organizationId", "workspaceId", "appId", kind, label, "externalAccount", "createdByMemberId", "updatedAt")
+             values ($1,$2,$3,$4,'github','acme','acme',$5, now())`,
+            [github.id, ...inWs, githubApp.id, ada.id],
+          )
+          await q(
+            `insert into "Grant" (id, "organizationId", "workspaceId", "teammateId", "connectionId", scope) values ($1,$2,$3,$4,$5,'read_write')`,
+            [`e2eghg${Date.now()}`, ...inWs, sam.id, github.id],
+          )
+          // The rest; the inbox by its address, as a person says it.
+          const rest = await schedule(p, {
+            name: 'configure_loop',
+            installationId: first.output.installationId,
+            settings: {
+              inbox: 'support@acme.test',
+              address: 'Support@Acme.test',
+              docs: 'https://docs.acme.test',
+              repo: 'https://github.com/acme/web',
+            },
+          })
+          assert.ok(rest.ok, JSON.stringify(rest))
+          said.rest = rest.output
+          const started = await schedule(p, {
+            name: 'start_dry_run',
+            installationId: first.output.installationId,
+            last: 4,
+          })
+          assert.ok(started.ok, JSON.stringify(started))
+          said.started = started.output
+          return 'The dry run is going; I will tell you what it finds.'
+        }
+      : undefined,
+  )
+  // Its runs: work as for real, a reply each (simulated), and a report.
+  scripts.unshift((p) =>
+    p.spec.loop?.dryRun
+      ? async (p) => {
+          dryRunPrompts.push(p)
+          await sleep(1500)
+          const sent = await connector(p, gmail.id, 'gmail_send', {
+            to: ['c@customer.test'],
+            subject: 'Re: your question',
+            body: `Hello, about "${p.text.match(/Subject: (.*)/)?.[1]}": here is how.`,
+          })
+          assert.ok(sent.ok, JSON.stringify(sent))
+          assert.equal(sent.output.simulated, true)
+          const r = await schedule(p, {
+            name: 'loop_report',
+            case: 'documented_question',
+            outcome: 'resolved',
+            summary: 'Answered from the docs.',
+          })
+          assert.ok(r.ok, JSON.stringify(r))
+          return 'Answered.'
+        }
+      : undefined,
+  )
+  const thread = await call('/threads', {
+    body: {
+      teammateId: sam.id,
+      computerId: computer.id,
+      text: 'Install the playbook “Support and bugs” (brigade/support-bugs).',
+    },
+  })
+  installThread = thread.id ?? thread.thread?.id
+  await until('the settings', () => said.started, 30_000)
+  installationId = said.first.installationId
+  assert.equal(said.first.status, 'setup')
+  assert.equal(said.first.missing[0].key, 'inbox')
+  assert.deepEqual(
+    said.first.missing.map((m) => m.key),
+    ['inbox', 'address', 'docs', 'repo'],
+  )
+  assert.equal(said.first.apps.find((a) => a.kind === 'github').status, 'missing')
+  assert.match(said.first.next, /scope the playbook declares/)
+  assert.equal(said.bad.ok, false)
+  assert.match(said.bad.error, /web address/)
+  assert.deepEqual(said.rest.missing, [])
+  assert.equal(said.rest.apps.find((a) => a.kind === 'github').status, 'ready')
+  const [row] = await q(`select settings from "LoopInstallation" where id = $1`, [installationId])
+  assert.equal(row.settings.inbox, gmail.id)
+  assert.equal(row.settings.address, 'support@acme.test')
+  assert.equal(row.settings.repo, 'acme/web')
+  assert.equal(row.settings.signature, 'The Acme team')
+  // Made, and waiting: its schedule does not fire.
+  const [s] = await q(`select "pausedAt" from "Schedule" where "loopInstallationId" = $1`, [
+    installationId,
+  ])
+  assert.ok(s.pausedAt)
+})
+
+await check('the dry run replays the mails its search matches, nothing sent', async () => {
+  assert.equal(said.started.events, 4)
+  await until('the four runs', () => dryRunPrompts.length >= 4, 60_000)
+  const subjects = dryRunPrompts.map((p) => p.text.match(/Subject: (.*)/)?.[1]).sort()
+  assert.deepEqual(subjects, ['Export broken', 'Login', 'Pricing', 'WordPress'])
+  for (const p of dryRunPrompts) {
+    assert.equal(p.spec.loop.dryRun, true)
+    assert.deepEqual(p.spec.connectors.map((c) => c.kind).sort(), ['github', 'gmail', 'stripe'])
+  }
+  const calls = await until(
+    'their replies',
+    () =>
+      q(
+        `select c.simulated, c.result, c.input from "ConnectionCall" c join "Session" s on s.id = c."sessionId"
+         join "LoopRun" r on r.id = s."loopRunId" where r."installationId" = $1 and c.operation = 'gmail_send'`,
+        [installationId],
+      ).then((rows) => rows.length === 4 && rows),
+    30_000,
+  )
+  assert.ok(calls.every((c) => c.simulated && c.result === 'ok' && c.input.subject))
+  // Its threads stay out of the sidebar.
+  const listed = await call('/threads')
+  assert.ok(!dryRunPrompts.some((p) => listed.some((t) => t.id === p.sessionId)))
+})
+
+await check('the thread is woken with the report: per event, cost and a week', async () => {
+  const wake = await until(
+    'the wake-up',
+    () => promptsTo(installThread).find((p) => p.text.startsWith('The dry run of the playbook')),
+    60_000,
+  )
+  assert.match(wake.text, /Nothing was sent/)
+  const report = await schedule(wake, { name: 'dry_run_report', installationId })
+  assert.ok(report.ok, JSON.stringify(report))
+  const r = report.output
+  assert.equal(r.status, 'done')
+  assert.equal(r.events.length, 4)
+  assert.equal(r.finished, 4)
+  for (const e of r.events) {
+    assert.equal(e.case, 'documented_question')
+    assert.equal(e.summary, 'Answered from the docs.')
+    assert.equal(e.writes.length, 1)
+    assert.equal(e.writes[0].action, 'Reply to the customer')
+    assert.ok(e.threadId)
+    assert.ok(e.minutes > 0, `minutes ${e.minutes}`)
+  }
+  // Oldest first, the order they came in.
+  assert.equal(r.events[0].title.includes('WordPress'), true, r.events[0].title)
+  // Four mails over three days: three gaps of a day, so seven a week.
+  assert.equal(r.week?.events, 7, JSON.stringify(r.week))
+  assert.ok(r.week.minutes >= 0)
+  const sheet = await call(`/loops/${installationId}`)
+  assert.equal(sheet.status, 'dry_run')
+  assert.equal(sheet.dryRun.id, r.id)
+  // Dry runs do not count as its runs.
+  assert.equal(sheet.runsThisWeek, 0)
+})
+
+await check('activate_loop, then an owner’s Activate turns it on', async () => {
+  const p = promptsTo(installThread).at(-1)
+  const shown = await schedule(p, { name: 'activate_loop', installationId })
+  assert.ok(shown.ok, JSON.stringify(shown))
+  assert.match(shown.output.next, /owner or admin: their click activates it/)
+  assert.ok(
+    shown.output.actions.every((a) =>
+      a.label === 'Reply to the customer' ? a.level === 'ask' : true,
+    ),
+  )
+  const { playbook: active, ticketId } = await call(`/loops/${installationId}/activate`, {
+    body: { threadId: installThread },
+  })
+  assert.equal(ticketId, null)
+  assert.equal(active.status, 'active')
+  const [s] = await q(
+    `select "pausedAt", "nextRunAt" from "Schedule" where "loopInstallationId" = $1`,
+    [installationId],
+  )
+  assert.equal(s.pausedAt, null)
+  assert.ok(s.nextRunAt)
+})
+
+await check('a member asks an owner or admin in one ticket, which activates it', async () => {
+  const carolIn = await fetch(`${API}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin },
+    body: JSON.stringify({ email: 'carol@example.com', password: 'correct-horse-battery' }),
+  })
+  assert.equal(carolIn.status, 200)
+  const carol = carolIn.headers
+    .getSetCookie()
+    .map((c) => c.split(';')[0])
+    .join('; ')
+  {
+    const r = await fetch(`${API}/api/auth/organization/set-active`, {
+      method: 'POST',
+      headers: { cookie: carol, origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ organizationId: computer.organizationId }),
+    })
+    assert.equal(r.status, 200, await r.text())
+  }
+  await call('/workspaces/switch', { body: { workspaceId: computer.workspaceId }, as: carol })
+  const mine = await call('/loops', {
+    as: carol,
+    body: {
+      loopKey: 'brigade/support-bugs',
+      teammateId: sam.id,
+      settings: {
+        product: 'Acme',
+        inbox: gmail.id,
+        address: 'support@acme.test',
+        docs: 'https://docs.acme.test',
+        repo: 'acme/web',
+      },
+    },
+  })
+  assert.equal(mine.status, 'setup')
+  await assert.rejects(
+    call(`/loops/${mine.id}`, { method: 'PATCH', body: { paused: false }, as: carol }),
+    /Only an owner or admin/,
+  )
+  const first = await call(`/loops/${mine.id}/activate`, { body: {}, as: carol })
+  const again = await call(`/loops/${mine.id}/activate`, { body: {}, as: carol })
+  assert.ok(first.ticketId)
+  assert.equal(again.ticketId, first.ticketId, 'one ticket')
+  assert.equal(again.playbook.status, 'setup')
+  assert.equal(again.playbook.activationTicketId, first.ticketId)
+  // Carol cannot approve it herself; Ada, an owner, can.
+  await assert.rejects(
+    call(`/tickets/${first.ticketId}/resolve`, { body: { approved: true }, as: carol }),
+    /Only an owner or admin/,
+  )
+  await call(`/tickets/${first.ticketId}/resolve`, { body: { approved: true } })
+  const sheet = await call(`/loops/${mine.id}`)
+  assert.equal(sheet.status, 'active')
+  assert.equal(sheet.activationTicketId, null)
+  await call(`/loops/${mine.id}`, { method: 'DELETE' })
+})
+
+await check('uninstalled, its dry run goes with it', async () => {
+  await call(`/loops/${installationId}`, { method: 'DELETE' })
+  assert.equal(
+    (await q(`select id from "LoopDryRun" where "installationId" = $1`, [installationId])).length,
+    0,
+  )
+  await q(`delete from "Connection" where id = $1`, [github.id])
 })
 
 console.log(results.join('\n'))

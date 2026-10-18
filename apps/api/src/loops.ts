@@ -352,7 +352,11 @@ export async function buildParts(db: ScopedDb, scope: Installer, id: string) {
   try {
     if (manifest.actions.length)
       await db.loopAction.createMany({
-        data: manifest.actions.map((a) => ({ installationId: id, key: a.key, level: a.start })) as never,
+        data: manifest.actions.map((a) => ({
+          installationId: id,
+          key: a.key,
+          level: a.start,
+        })) as never,
       })
 
     // Its recipe: a pack of its own, loaded only in its threads (threadSkills).
@@ -476,15 +480,15 @@ export async function answerSettings(
   const installation = await requireInstallation(db, id)
   if (installation.status === 'active' || installation.status === 'paused')
     throw new HTTPException(409, {
-      message: 'This playbook is already active: its settings change from its sheet, on Automations',
+      message:
+        'This playbook is already active: its settings change from its sheet, on Automations',
     })
   const manifest = installation.manifest as LoopManifest
   const given = await checkSettings(db, manifest, input)
   const answers = { ...(installation.settings as Record<string, string | number>), ...given }
   const { values, missing } = withDefaults(manifest, answers)
   const changed = Object.keys(given).length > 0
-  if (changed)
-    await db.loopInstallation.updateMany({ where: { id }, data: { settings: answers } })
+  if (changed) await db.loopInstallation.updateMany({ where: { id }, data: { settings: answers } })
   if (!missing.length) {
     // Defaults filled in are answers from now on.
     await db.loopInstallation.updateMany({ where: { id }, data: { settings: values } })

@@ -62,7 +62,21 @@ export function TicketRow({
 
   const owner = t.payload.credentialOwnerId === me.memberId
   let actions: React.ReactNode = null
-  if (open && t.type === 'approval' && t.payload.skillAction) {
+  if (open && t.type === 'approval' && t.payload.loopActivation) {
+    // A playbook a member installed: once active it runs on its own, so an owner or admin decides.
+    actions = admin ? (
+      <>
+        <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+          Activate
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
+          Decline
+        </Button>
+      </>
+    ) : (
+      <span className="text-sm text-muted-foreground">Waiting for an owner or admin</span>
+    )
+  } else if (open && t.type === 'approval' && t.payload.skillAction) {
     // A teammate's skill: it shapes what every teammate does, so an admin decides.
     actions = admin ? (
       <>

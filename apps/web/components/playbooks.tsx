@@ -9,13 +9,15 @@ import type {
 import { ArrowLeft, BookOpenCheck, MoreHorizontal, Pause, Play, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { isAdmin, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { ProjectTag } from '@/components/projects'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { describeCron, scheduleTime, zoneName } from '@/components/schedules'
 import { StatusDot } from '@/components/status-badge'
+import { NewThread, useThreadDraft } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +30,7 @@ import { api, projectQuery, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
 
 const STATUS_WORDS: Record<LoopInstallationView['status'], string> = {
-  setup: 'Waiting for activation',
+  setup: 'Being set up',
   dry_run: 'Dry run',
   active: 'Active',
   paused: 'Paused',
@@ -115,6 +117,7 @@ export function PlaybookList({ projectId, filter }: { projectId?: string; filter
   useLive((message) => {
     if (message.type === 'thread.updated' || message.type === 'schedule.updated') void reload()
   })
+  const [installing, setInstalling] = useState<LoopTemplate>()
   const list = playbooks.data ?? []
   const available = (catalog.data ?? []).filter((t) => !list.some((p) => p.loopKey === t.id))
 
@@ -138,23 +141,87 @@ export function PlaybookList({ projectId, filter }: { projectId?: string; filter
           own.
         </p>
       )}
-      {list.length === 0 && available.length > 0 && (
-        <ul className="flex flex-col divide-y rounded-xl border">
-          {available.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-              <AppLogos apps={t.apps} />
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-semibold">{t.name}</span>
-                <span className="text-xs text-muted-foreground">{t.description}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {available.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="px-1 text-sm font-medium text-muted-foreground">Catalog</h3>
+          <ul className="flex flex-col divide-y rounded-xl border">
+            {available.map((t) => (
+              <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+                <AppLogos apps={t.apps} />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-sm font-semibold">{t.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t.source === 'brigade' ? 'Brigade' : t.source} · v{t.version} · {t.description}
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setInstalling(t)}>
+                  Install
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {installing && (
+        <InstallDialog
+          template={installing}
+          projectId={projectId ?? (filter && filter !== 'none' ? filter : undefined)}
+          onClose={() => setInstalling(undefined)}
+        />
       )}
       {playbooks.error && (
         <p className="text-sm text-destructive-text">{playbooks.error.message}</p>
       )}
     </section>
+  )
+}
+
+/**
+ * Installing happens in the chat: a new thread to the chief (or a teammate picked), its
+ * message ready to send. The teammate asks for its settings there, tries it, then activates it.
+ */
+function InstallDialog({
+  template,
+  projectId,
+  onClose,
+}: {
+  template: LoopTemplate
+  projectId?: string
+  onClose: () => void
+}) {
+  const { teammates } = useDashboard()
+  const chief = teammates.find((t) => t.kind === 'chief') ?? teammates[0]
+  const [chosen, setChosen] = useState(chief?.id)
+  const teammate = teammates.find((t) => t.id === chosen) ?? chief
+  const draft = useThreadDraft()
+  const { setText } = draft
+  useEffect(() => {
+    setText(`Install the playbook “${template.name}” (${template.id}).`)
+  }, [setText, template])
+  if (!teammate) return null
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-[20%] translate-y-0 gap-0 p-0 sm:max-w-2xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogTitle className="sr-only">Install {template.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          A teammate installs it with you in a new thread: its settings, a dry run, then activation.
+        </DialogDescription>
+        <NewThread
+          layout="dialog"
+          teammate={teammate}
+          rows={3}
+          draft={draft}
+          autoFocus
+          projectId={projectId}
+          picker={teammates.length > 1 ? { teammates, onChange: setChosen } : undefined}
+          placeholder={`Chat with ${teammate.name}`}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -218,6 +285,17 @@ export function PlaybookSheet({ id }: { id: string }) {
     }
   }
 
+  // An owner or admin activates it; a member asks one, in one ticket.
+  async function activate() {
+    setError(undefined)
+    try {
+      await api(`/loops/${id}/activate`, { body: {} })
+      await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <Link
@@ -274,11 +352,13 @@ export function PlaybookSheet({ id }: { id: string }) {
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
-                  disabled={waiting && !isAdmin(me)}
-                  onSelect={() => void act({ method: 'PATCH', body: { paused: false } })}
+                  disabled={waiting && (!p.ready || (!!p.activationTicketId && !isAdmin(me)))}
+                  onSelect={() =>
+                    void (waiting ? activate() : act({ method: 'PATCH', body: { paused: false } }))
+                  }
                 >
                   <Play aria-hidden />
-                  {waiting ? 'Activate' : 'Resume'}
+                  {!waiting ? 'Resume' : isAdmin(me) ? 'Activate' : 'Ask to activate'}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

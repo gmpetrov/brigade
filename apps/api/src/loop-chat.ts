@@ -114,7 +114,9 @@ export async function handleLoopCall(
   op: LoopInstallOperation,
 ): Promise<object | { error: string }> {
   if (session.loopRunId)
-    return { error: "This is a playbook's own thread: playbooks are installed from a member's thread." }
+    return {
+      error: "This is a playbook's own thread: playbooks are installed from a member's thread.",
+    }
   if (session.origin !== 'member')
     return { error: 'Playbooks are installed only from a thread a person started.' }
   const installer = { ...scope, memberId: session.startedByMemberId }
@@ -159,7 +161,8 @@ export async function handleLoopCall(
       let installation
       if (op.installationId) installation = await ownInstallation(db, session, op.installationId)
       else {
-        if (!op.loopKey) return { error: 'Give the loopKey to start installing, or the installationId to go on' }
+        if (!op.loopKey)
+          return { error: 'Give the loopKey to start installing, or the installationId to go on' }
         const template = templates().get(op.loopKey)
         if (!template) return { error: `No playbook ${op.loopKey}; show_playbook lists them` }
         // One being installed by this member already: go on with it rather than start a second.
@@ -217,7 +220,7 @@ export async function handleLoopCall(
           (questions.length
             ? `Ask the person next: "${questions[0]!.ask}" (${questions[0]!.type}), one question at a time, ` +
               'then call configure_loop with installationId and the answer, by its key. An account setting takes ' +
-              "the account as its row shows it (the Gmail address). Do not guess an answer you were not given."
+              'the account as its row shows it (the Gmail address). Do not guess an answer you were not given.'
             : 'Every setting has an answer: its triggers, schedules and skills are made, and nothing runs yet. ' +
               'Offer a dry run on real past events, where nothing is sent (start_dry_run).') +
           appsNote(apps),
@@ -252,9 +255,11 @@ export async function handleLoopCall(
 
     if (op.name === 'dry_run_report') {
       await ownInstallation(db, session, op.installationId)
-      const view = await latestDryRun(db, op.installationId)
+      // Its error field would read as the call's own (schedules.ts): named apart, when there is one.
+      const { error: problem, ...view } = await latestDryRun(db, op.installationId)
       return {
         ...view,
+        ...(problem ? { problem } : {}),
         events: view.events.map((e) => ({
           ...e,
           // What the teammate reads of each write: clipped, as the card shows it whole.

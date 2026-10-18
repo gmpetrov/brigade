@@ -20,6 +20,7 @@ const message = (m) => ({
   id: m.id,
   threadId: m.threadId,
   labelIds: ['INBOX'],
+  internalDate: String(m.at ?? m.historyId),
   snippet: m.body.slice(0, 100),
   historyId: String(m.historyId),
   payload: {
@@ -63,7 +64,12 @@ globalThis.fetch = async (input, init) => {
     const q = url.searchParams.get('q') ?? ''
     const to = q.match(/to:([^\s)]+)/)?.[1]
     const rfc = q.match(/rfc822msgid:<?([^@\s>]+)/)?.[1]
-    const found = all.filter((m) => (!to || m.to.includes(to)) && (!rfc || m.id === rfc))
+    // Newest first, as Gmail lists them, up to maxResults (a dry run's replay).
+    const max = Number(url.searchParams.get('maxResults') ?? 100)
+    const found = all
+      .filter((m) => (!to || m.to.includes(to)) && (!rfc || m.id === rfc))
+      .sort((a, b) => b.historyId - a.historyId)
+      .slice(0, max)
     return json({ messages: found.map((m) => ({ id: m.id, threadId: m.threadId })) })
   }
   const one = path.match(/^\/messages\/([^/]+)$/)

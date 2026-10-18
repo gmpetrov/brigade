@@ -468,7 +468,8 @@ export function ThreadConversation({
   )
   // A skill the teammate proposed has no event in the thread: its ticket shows at the end, where the reply that mentions it is.
   const proposals = t.tickets.filter(
-    (ticket) => ticket.type === 'approval' && ticket.payload.skillAction,
+    (ticket) =>
+      ticket.type === 'approval' && (ticket.payload.skillAction || ticket.payload.loopActivation),
   )
   const ticketCard = (tickets: typeof t.tickets, className: string) => (
     <Card className={cn('gap-0 overflow-hidden py-0', className)}>

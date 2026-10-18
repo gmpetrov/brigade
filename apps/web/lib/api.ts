@@ -727,6 +727,9 @@ export type Ticket = {
     input?: unknown
     resetsAt?: string
     reason?: string
+    /** A member asks an owner or admin to activate a playbook they installed. */
+    loopActivation?: boolean
+    loopInstallationId?: string
     source?: 'harness'
     toolName?: string
     /** A harness ticket's teammate, and what it asks: a question's or a ticket's asks. */
@@ -836,8 +839,8 @@ export function waitsOn(t: Ticket, me: Me) {
   if (t.status !== 'open' || t.session?.archivedAt) return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
-  // A skill shapes what every teammate does: an admin's call.
-  if (t.type === 'approval' && t.payload.skillAction) return admin
+  // A skill shapes what every teammate does, and a playbook acts alone: an admin's call.
+  if (t.type === 'approval' && (t.payload.skillAction || t.payload.loopActivation)) return admin
   if (t.type === 'approval')
     return credentialManagersOnly(t)
       ? admin || t.payload.credentialOwnerId === me.memberId

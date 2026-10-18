@@ -222,13 +222,17 @@ export function NeedsYou({
         ? approved
           ? 'Skill added'
           : 'Declined'
-        : t?.payload.source === 'harness'
-          ? 'Declined'
-          : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
-            ? 'Dismissed'
-            : approved
-              ? 'Allowed'
-              : 'Denied',
+        : t?.payload.loopActivation
+          ? approved
+            ? 'Activated'
+            : 'Declined'
+          : t?.payload.source === 'harness'
+            ? 'Declined'
+            : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
+              ? 'Dismissed'
+              : approved
+                ? 'Allowed'
+                : 'Denied',
     )
   }
 

@@ -131,3 +131,82 @@ rejects('no entries', (m) => (m.entries = []), /entries/)
 test('fill puts settings in, and leaves unknown ones', () => {
   assert.equal(fill('to:{{ address }} {{other}}', { address: 'a@b.c' }), 'to:a@b.c {{other}}')
 })
+
+const { withDefaults } = await import('../src/loops.js')
+const { pushRefusal } = await import('../src/git.js')
+const { gmail } = await import('../src/connectors/gmail.js')
+const { childNote, DRY_RUN_HEAD } = await import('@brigade/contracts')
+
+test('withDefaults fills defaults from the answers, and names what still lacks one', () => {
+  const { manifest } = readTemplate(
+    'inbox',
+    template((m) =>
+      m.settings.push(
+        { key: 'product', type: 'text' },
+        { key: 'signature', type: 'text', default: 'The {{product}} team' },
+        { key: 'extra', type: 'text', optional: true },
+      ),
+    ),
+  )
+  assert.deepEqual(withDefaults(manifest, { product: 'Acme' }), {
+    values: { product: 'Acme', signature: 'The Acme team' },
+    missing: ['inbox', 'address'],
+  })
+})
+
+test('a dry run refuses every push, before any branch is named', () => {
+  const request = (dryRun: boolean) =>
+    ({
+      session: { id: 's', origin: 'trigger', dryRun },
+      teammate: { id: 't', name: 'Sam', caps: {}, permissionPolicy: {} },
+      fullName: 'acme/web',
+      via: { connectionId: 'c', installationId: 1, write: true },
+    }) as never
+  assert.match(pushRefusal(request(true)) ?? '', /dry run, so nothing is pushed/)
+  assert.equal(pushRefusal(request(false)), null)
+})
+
+test('Gmail replays the latest mails its search matches, as the inbox reader hands them', async () => {
+  const asked: string[] = []
+  const message = (id: string, at: number) => ({
+    id,
+    threadId: `t${id}`,
+    internalDate: String(at),
+    payload: {
+      mimeType: 'text/plain',
+      headers: [
+        { name: 'From', value: 'Jane <jane@customer.test>' },
+        { name: 'Subject', value: `Mail ${id}` },
+        { name: 'Message-ID', value: `<${id}@x>` },
+      ],
+      body: { data: Buffer.from(`Body ${id}`).toString('base64url') },
+    },
+  })
+  const fetch = async (url: string) => {
+    asked.push(url)
+    const u = new URL(url)
+    if (u.pathname.endsWith('/messages'))
+      return Response.json({ messages: [{ id: 'b' }, { id: 'a' }] })
+    const id = u.pathname.split('/').pop()!
+    return Response.json(message(id, id === 'a' ? 1_700_000_000_000 : 1_700_000_360_000))
+  }
+  const events = await gmail.triggers!.email_received!.replay!(
+    { query: 'to:support@acme.test' },
+    { fetch: fetch as never },
+    2,
+  )
+  const search = new URL(asked[0]!).searchParams
+  assert.equal(search.get('q'), '(to:support@acme.test) in:inbox -in:sent -in:drafts')
+  assert.equal(search.get('maxResults'), '2')
+  assert.deepEqual(
+    events.map((e) => [e.id, e.type, e.at, e.payload.subject, e.payload.rfcMessageId]),
+    [
+      ['b', 'email', new Date(1_700_000_360_000).toISOString(), 'Mail b', '<b@x>'],
+      ['a', 'email', new Date(1_700_000_000_000).toISOString(), 'Mail a', '<a@x>'],
+    ],
+  )
+})
+
+test("the dry run's closing note shows as Brigade's, not as a person's message", () => {
+  assert.equal(childNote(`${DRY_RUN_HEAD}Support and bugs is done: 3 events`), 'dry_run')
+})

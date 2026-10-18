@@ -179,7 +179,10 @@ export async function handleConnectorCall(
     const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
     if (policy === 'deny') {
       await record({ result: 'denied', target, error: 'policy denies connector writes' })
-      return result({ ok: false, error: `${teammate.name} may not make changes through connectors` })
+      return result({
+        ok: false,
+        error: `${teammate.name} may not make changes through connectors`,
+      })
     }
     await record({ result: 'ok', target, simulated: true, input: input.data })
     return result({
