@@ -116,20 +116,6 @@ function FoldButton({
   )
 }
 
-/** Beside a folded section's label: how many in it wait on a person, if any. */
-function FoldedCount({ threads }: { threads: ThreadSummary[] }) {
-  const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
-  if (!waiting) return null
-  return (
-    <span
-      title={`${waiting} waiting on you`}
-      className="text-warning ml-auto shrink-0 pl-2 font-mono text-[0.6875rem] font-semibold"
-    >
-      {waiting}
-    </span>
-  )
-}
-
 const groupOf = (status: string): Group =>
   status === 'waiting'
     ? 'waiting'
@@ -206,7 +192,7 @@ function shortAgo(iso: string) {
 const inThread = (t: ThreadSummary, teammateId: string) =>
   t.teammate.id === teammateId || !!t.teammates?.some((p) => p.teammate.id === teammateId)
 
-/** How many of some threads wait on a person: beside a teammate or project. */
+/** How many of some threads wait on a person: beside a teammate, a project or a folded section. */
 function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHover?: boolean }) {
   const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
   if (!waiting) return null
@@ -515,7 +501,7 @@ export function SidebarWork({
             folded={folded.waiting}
             onToggle={() => toggleFolded('waiting')}
           />
-          {folded.waiting && <FoldedCount threads={waitingRows} />}
+          {folded.waiting && <Signals threads={waitingRows} />}
         </li>
       )}
       {!folded.waiting && waitingRows.map(row)}
@@ -603,7 +589,7 @@ export function SidebarWork({
               folded={folded.pinned}
               onToggle={() => toggleFolded('pinned')}
             />
-            {folded.pinned && <FoldedCount threads={pinned} />}
+            {folded.pinned && <Signals threads={pinned} />}
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
@@ -653,7 +639,7 @@ export function SidebarWork({
               onClear={() => setFilter((f) => ({ ...f, statuses: [] }))}
             />
           )}
-          {folded.threads && <FoldedCount threads={shown} />}
+          {folded.threads && <Signals threads={shown} />}
         </SidebarGroupLabel>
         {/* Folded, Threads is only its label: no filter beside it. */}
         {!folded.threads && (
