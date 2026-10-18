@@ -192,7 +192,12 @@ export type PreviewControl = {
   /** Setups the repository's checkout here has for other tools (orca.yaml, …), to start from. */
   otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
-  logs(lines?: number): { status: PreviewInfo['status'] | 'none'; logs: string }
+  logs(lines?: number): {
+    status: PreviewInfo['status'] | 'none'
+    /** Where the app answers for a person, by port, while it runs: to test on it. */
+    origins?: Record<number, string>
+    logs: string
+  }
 }
 
 export type PreviewResult = {
@@ -216,6 +221,8 @@ type Preview = {
   info: PreviewInfo
   seat: Seat
   input: PreviewStart
+  /** Where the app answers for a person, by port, with no token. */
+  origins: Record<number, string>
   /** Unset only until the first launch. */
   child?: ChildProcess
   proxy: PreviewProxy
@@ -404,6 +411,7 @@ export class Previews {
         if (preview) preview.lastUsed = Date.now()
         return {
           status: preview?.info.status ?? 'none',
+          ...(preview?.info.status === 'running' ? { origins: preview.origins } : {}),
           logs: preview ? this.tail(preview, lines) : '',
         }
       },
@@ -946,6 +954,7 @@ export class Previews {
       },
       seat,
       input,
+      origins,
       env,
       dir,
       proxy,

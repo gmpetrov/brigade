@@ -488,6 +488,14 @@ const PREVIEWS =
   'typecheck, a build or check_preview for each tweak. Run check_preview only when the person asks, when ' +
   'the preview crashed or restarted, or once after fixing what its last check found. Run the full checks ' +
   'once, before you commit or push, or when a change reaches data, routes or the server. ' +
+  'Do not test your own changes in a browser by default: tests, a typecheck and lint are enough, and the person ' +
+  'sees the result when they try it. Use a browser only to reproduce a bug someone reported, or for a change ' +
+  'to an interaction (a menu, a popover, the keyboard, a pop-up, a flow of several steps), which those checks ' +
+  "miss. Then run one scenario, in about five minutes: read the page's state with browser_snapshot, and take " +
+  "a screenshot only to judge how it looks. When this thread's preview is running, test on its address " +
+  '(preview_logs gives it) rather than starting a copy of your own; never restart or stop it for that. If ' +
+  'the test setup itself fails (a server that will not start, a sign-in, a port), stop and say what you ' +
+  'could not check, rather than debugging the setup. ' +
   'Before you start, set up, check or save one, read the `brigade-previews` skill.'
 
 /** How to start, check and save a preview: Brigade's skill for it. */

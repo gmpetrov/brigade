@@ -1721,7 +1721,7 @@ export type PreviewTools = {
   /** Setups the repository's checkout has for other tools (orca.yaml, …). */
   otherSetups(repository: string): Promise<string[]>
   stop(): Promise<{ stopped: boolean }>
-  logs(lines?: number): { status: string; logs: string }
+  logs(lines?: number): { status: string; origins?: Record<number, string>; logs: string }
 }
 
 type PreviewInput = {
@@ -2012,7 +2012,9 @@ export function previewTools(
     }),
     preview_logs: tool({
       description:
-        "The latest output of this thread's preview (its dev server's console), e.g. to see why a page fails.",
+        "The latest output of this thread's preview (its dev server's console), e.g. to see why a page fails, " +
+        'and, while it runs, its address by port (`origins`): test in your browser there rather than starting ' +
+        'a copy of your own.',
       inputSchema: jsonSchema<{ lines?: number }>({
         type: 'object',
         properties: { lines: { type: 'number', description: 'How many lines (default 100)' } },

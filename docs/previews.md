@@ -99,6 +99,16 @@ provider and hands out the address with its token (`apps/api/src/app-previews.ts
   started, or from the saved setup of a repository checked out in the thread,
   then checks its pages itself. With nothing saved, the dashboard explains what
   setting one up involves (the first time only, unless kept) and asks the teammate.
+- **No browser testing by default.** Measured on four days of threads (October
+  15 to 18, 2026), teammates testing their own changes in a browser took about
+  22% of their active time in threads that changed code, 60% of it unasked, and
+  caught 5 real bugs, all in interactions (Esc, popovers, a pop-up's state). So a
+  teammate relies on tests, a typecheck and lint, and uses a browser only to
+  reproduce a reported bug or for a change to an interaction: one scenario, about
+  five minutes, `browser_snapshot` for state and screenshots only for looks. When
+  the thread's preview runs, it tests there (`preview_logs` gives its `origins`)
+  rather than on a copy of its own, whose ports, database and cookies clash with
+  other previews; when its test setup fails, it says what it could not check.
 - **Ready means checked.** Previews report their step while starting (`setup`,
   then `app` once the wrapper prints `[preview] Starting the app`) and their
   check (`checking`, `passed`, `failed` with the pages). The thread says "ready"
