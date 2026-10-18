@@ -813,29 +813,15 @@ export type LooseEnd =
       error: string | null
     }
 
-/** What came back since the member last looked. */
-export type HomeResult =
-  | {
-      kind: 'thread'
-      at: string
-      thread: { id: string; title: string; status: string }
-      teammate: { id: string; name: string }
-      pull: { repository: string; number: number; state: string } | null
-    }
-  | {
-      kind: 'decision'
-      at: string
-      verdict: 'approved' | 'denied' | 'resolved'
-      title: string
-      thread: { id: string; title: string } | null
-    }
-  | {
-      kind: 'merged'
-      at: string
-      pull: { repository: string; number: number; title: string }
-      thread: { id: string; title: string } | null
-      byYou: boolean
-    }
+/** A thread with a teammate's reply the member has not read (apps/api/src/home.ts). */
+export type HomeResult = {
+  kind: 'thread'
+  at: string
+  thread: { id: string; title: string; status: string }
+  teammate: { id: string; name: string }
+  /** A pull request it opened or merged since the member last looked. */
+  pull: { repository: string; number: number; state: string } | null
+}
 
 export type HomeFeed = { looseEnds: LooseEnd[]; results: HomeResult[] }
 

@@ -50,29 +50,15 @@ export type LooseEnd =
       error: string | null
     }
 
-export type HomeResult =
-  | {
-      kind: 'thread'
-      at: string
-      thread: { id: string; title: string; status: string }
-      teammate: { id: string; name: string }
-      /** A pull request it opened since the member last looked. */
-      pull: { repository: string; number: number; state: string } | null
-    }
-  | {
-      kind: 'decision'
-      at: string
-      verdict: 'approved' | 'denied' | 'resolved'
-      title: string
-      thread: { id: string; title: string } | null
-    }
-  | {
-      kind: 'merged'
-      at: string
-      pull: { repository: string; number: number; title: string }
-      thread: { id: string; title: string } | null
-      byYou: boolean
-    }
+/** A thread with a teammate's reply the member has not read. */
+export type HomeResult = {
+  kind: 'thread'
+  at: string
+  thread: { id: string; title: string; status: string }
+  teammate: { id: string; name: string }
+  /** A pull request it opened or merged since the member last looked. */
+  pull: { repository: string; number: number; state: string } | null
+}
 
 export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) {
   const threads = await db.session.findMany({
@@ -223,7 +209,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   }
   loose.sort((a, b) => b.at.localeCompare(a.at))
 
-  // What came back: threads with a reply they have not read, their decisions and merges of the day.
+  // What came back: threads with a teammate's reply they have not read. Not their own
+  // decisions: they made them; what came of one is the reply that follows.
   const looseThreads = new Set(loose.flatMap((l) => ('thread' in l ? [l.thread.id] : [])))
   const unread = threads.filter((t) => {
     if (looseThreads.has(t.id) || held.has(t.id)) return false
@@ -232,53 +219,29 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     const seen = reads.find((r) => r.sessionId === t.id)?.seenAt
     return !!turn && (!seen || turn > seen)
   })
-  const since = new Date(now.getTime() - DAY)
-  const [opened, decisions, merged] = await Promise.all([
-    unread.length
-      ? db.pullRequest.findMany({
-          where: { sessionId: { in: unread.map((t) => t.id) } },
-          orderBy: { createdAt: 'desc' },
-          select: { sessionId: true, repository: true, number: true, state: true, createdAt: true },
-        })
-      : [],
-    db.ticket.findMany({
-      where: { resolvedByMemberId: memberId, resolvedAt: { gte: since } },
-      orderBy: { resolvedAt: 'desc' },
-      take: LISTED,
-      select: {
-        title: true,
-        status: true,
-        resolvedAt: true,
-        session: { select: { id: true, title: true } },
-      },
-    }),
-    db.pullRequest.findMany({
-      where: {
-        mergedAt: { gte: since },
-        OR: [{ requestedByMemberId: memberId }, { session: { startedByMemberId: memberId } }],
-      },
-      orderBy: { mergedAt: 'desc' },
-      take: LISTED,
-      select: {
-        repository: true,
-        number: true,
-        title: true,
-        mergedAt: true,
-        requestedByMemberId: true,
-        session: { select: { id: true, title: true } },
-      },
-    }),
-  ])
+  const pulls = unread.length
+    ? await db.pullRequest.findMany({
+        where: { sessionId: { in: unread.map((t) => t.id) } },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          sessionId: true,
+          repository: true,
+          number: true,
+          state: true,
+          createdAt: true,
+          mergedAt: true,
+        },
+      })
+    : []
 
-  const results: HomeResult[] = [
-    ...unread.map((t): HomeResult => {
+  const results: HomeResult[] = unread
+    .map((t): HomeResult => {
       const seen = reads.find((r) => r.sessionId === t.id)?.seenAt
-      // A pull request merged today has its own row, which says who merged it.
-      const pull = opened.find(
+      // A pull request it opened or merged since they looked: what the reply is about.
+      const pull = pulls.find(
         (p) =>
           p.sessionId === t.id &&
-          (!seen || p.createdAt > seen) &&
-          !merged.some((m) => m.repository === p.repository && m.number === p.number),
+          (!seen || p.createdAt > seen || (p.mergedAt != null && p.mergedAt > seen)),
       )
       return {
         kind: 'thread',
@@ -287,22 +250,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
         teammate: t.teammate,
         pull: pull ? { repository: pull.repository, number: pull.number, state: pull.state } : null,
       }
-    }),
-    ...decisions.map((d): HomeResult => ({
-      kind: 'decision',
-      at: d.resolvedAt!.toISOString(),
-      verdict: d.status === 'open' ? 'resolved' : d.status,
-      title: d.title,
-      thread: d.session,
-    })),
-    ...merged.map((p): HomeResult => ({
-      kind: 'merged',
-      at: p.mergedAt!.toISOString(),
-      pull: { repository: p.repository, number: p.number, title: p.title },
-      thread: p.session,
-      byYou: p.requestedByMemberId === memberId,
-    })),
-  ].sort((a, b) => b.at.localeCompare(a.at))
+    })
+    .sort((a, b) => b.at.localeCompare(a.at))
 
   return { looseEnds: loose, results: results.slice(0, LISTED) }
 }
