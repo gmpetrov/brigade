@@ -257,7 +257,11 @@ export const connections = new Hono<AppEnv>()
       return back('error=mcp')
     }
     const signedIn = bearer(credential.accessToken)
-    const account = email ?? (await mcpAccount(server, signedIn))
+    // An App that names its accounts (Linear's workspace, Atlassian's site) wins over the
+    // sign-in's email, which would show the same on each of a member's accounts.
+    const account = server.account
+      ? ((await mcpAccount(server, signedIn)) ?? email)
+      : (email ?? (await mcpAccount(server, signedIn)))
     const kind = grant.kind as ConnectorKind
     const connection = await createConnection(
       scope,
