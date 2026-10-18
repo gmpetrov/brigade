@@ -264,6 +264,7 @@ export type TeammateWhereInput = {
   schedules?: Prisma.ScheduleListRelationFilter
   schedulesCreated?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
+  loopInstallations?: Prisma.LoopInstallationListRelationFilter
 }
 
 export type TeammateOrderByWithRelationInput = {
@@ -299,6 +300,7 @@ export type TeammateOrderByWithRelationInput = {
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   schedulesCreated?: Prisma.ScheduleOrderByRelationAggregateInput
   wakeups?: Prisma.WakeupOrderByRelationAggregateInput
+  loopInstallations?: Prisma.LoopInstallationOrderByRelationAggregateInput
 }
 
 export type TeammateWhereUniqueInput = Prisma.AtLeast<{
@@ -337,6 +339,7 @@ export type TeammateWhereUniqueInput = Prisma.AtLeast<{
   schedules?: Prisma.ScheduleListRelationFilter
   schedulesCreated?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
+  loopInstallations?: Prisma.LoopInstallationListRelationFilter
 }, "id">
 
 export type TeammateOrderByWithAggregationInput = {
@@ -411,6 +414,7 @@ export type TeammateCreateInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateInput = {
@@ -445,6 +449,7 @@ export type TeammateUncheckedCreateInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUpdateInput = {
@@ -479,6 +484,7 @@ export type TeammateUpdateInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateInput = {
@@ -513,6 +519,7 @@ export type TeammateUncheckedUpdateInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateManyInput = {
@@ -940,6 +947,20 @@ export type TeammateUpdateOneRequiredWithoutLibraryFolderGrantsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutLibraryFolderGrantsInput, Prisma.TeammateUpdateWithoutLibraryFolderGrantsInput>, Prisma.TeammateUncheckedUpdateWithoutLibraryFolderGrantsInput>
 }
 
+export type TeammateCreateNestedOneWithoutLoopInstallationsInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedCreateWithoutLoopInstallationsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutLoopInstallationsInput
+  connect?: Prisma.TeammateWhereUniqueInput
+}
+
+export type TeammateUpdateOneRequiredWithoutLoopInstallationsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeammateCreateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedCreateWithoutLoopInstallationsInput>
+  connectOrCreate?: Prisma.TeammateCreateOrConnectWithoutLoopInstallationsInput
+  upsert?: Prisma.TeammateUpsertWithoutLoopInstallationsInput
+  connect?: Prisma.TeammateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeammateUpdateToOneWithWhereWithoutLoopInstallationsInput, Prisma.TeammateUpdateWithoutLoopInstallationsInput>, Prisma.TeammateUncheckedUpdateWithoutLoopInstallationsInput>
+}
+
 export type TeammateCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -971,6 +992,7 @@ export type TeammateCreateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutWorkspaceInput = {
@@ -1004,6 +1026,7 @@ export type TeammateUncheckedCreateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutWorkspaceInput = {
@@ -1083,6 +1106,7 @@ export type TeammateCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSessionsInput = {
@@ -1116,6 +1140,7 @@ export type TeammateUncheckedCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSessionsInput = {
@@ -1165,6 +1190,7 @@ export type TeammateUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSessionsInput = {
@@ -1198,6 +1224,7 @@ export type TeammateUncheckedUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutTasksInput = {
@@ -1231,6 +1258,7 @@ export type TeammateCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutTasksInput = {
@@ -1264,6 +1292,7 @@ export type TeammateUncheckedCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutTasksInput = {
@@ -1302,6 +1331,7 @@ export type TeammateCreateWithoutTasksCreatedInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutTasksCreatedInput = {
@@ -1335,6 +1365,7 @@ export type TeammateUncheckedCreateWithoutTasksCreatedInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutTasksCreatedInput = {
@@ -1384,6 +1415,7 @@ export type TeammateUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutTasksInput = {
@@ -1417,6 +1449,7 @@ export type TeammateUncheckedUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUpsertWithoutTasksCreatedInput = {
@@ -1461,6 +1494,7 @@ export type TeammateUpdateWithoutTasksCreatedInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutTasksCreatedInput = {
@@ -1494,6 +1528,7 @@ export type TeammateUncheckedUpdateWithoutTasksCreatedInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutSchedulesInput = {
@@ -1527,6 +1562,7 @@ export type TeammateCreateWithoutSchedulesInput = {
   tasksCreated?: Prisma.TaskCreateNestedManyWithoutCreatedByTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSchedulesInput = {
@@ -1560,6 +1596,7 @@ export type TeammateUncheckedCreateWithoutSchedulesInput = {
   tasksCreated?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSchedulesInput = {
@@ -1598,6 +1635,7 @@ export type TeammateCreateWithoutSchedulesCreatedInput = {
   tasksCreated?: Prisma.TaskCreateNestedManyWithoutCreatedByTeammateInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSchedulesCreatedInput = {
@@ -1631,6 +1669,7 @@ export type TeammateUncheckedCreateWithoutSchedulesCreatedInput = {
   tasksCreated?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSchedulesCreatedInput = {
@@ -1680,6 +1719,7 @@ export type TeammateUpdateWithoutSchedulesInput = {
   tasksCreated?: Prisma.TaskUpdateManyWithoutCreatedByTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSchedulesInput = {
@@ -1713,6 +1753,7 @@ export type TeammateUncheckedUpdateWithoutSchedulesInput = {
   tasksCreated?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUpsertWithoutSchedulesCreatedInput = {
@@ -1757,6 +1798,7 @@ export type TeammateUpdateWithoutSchedulesCreatedInput = {
   tasksCreated?: Prisma.TaskUpdateManyWithoutCreatedByTeammateNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSchedulesCreatedInput = {
@@ -1790,6 +1832,7 @@ export type TeammateUncheckedUpdateWithoutSchedulesCreatedInput = {
   tasksCreated?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutWakeupsInput = {
@@ -1823,6 +1866,7 @@ export type TeammateCreateWithoutWakeupsInput = {
   tasksCreated?: Prisma.TaskCreateNestedManyWithoutCreatedByTeammateInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutWakeupsInput = {
@@ -1856,6 +1900,7 @@ export type TeammateUncheckedCreateWithoutWakeupsInput = {
   tasksCreated?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutWakeupsInput = {
@@ -1905,6 +1950,7 @@ export type TeammateUpdateWithoutWakeupsInput = {
   tasksCreated?: Prisma.TaskUpdateManyWithoutCreatedByTeammateNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutWakeupsInput = {
@@ -1938,6 +1984,7 @@ export type TeammateUncheckedUpdateWithoutWakeupsInput = {
   tasksCreated?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutThreadSeatsInput = {
@@ -1971,6 +2018,7 @@ export type TeammateCreateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
@@ -2004,6 +2052,7 @@ export type TeammateUncheckedCreateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutThreadSeatsInput = {
@@ -2053,6 +2102,7 @@ export type TeammateUpdateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
@@ -2086,6 +2136,7 @@ export type TeammateUncheckedUpdateWithoutThreadSeatsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutPullRequestsAuthoredInput = {
@@ -2119,6 +2170,7 @@ export type TeammateCreateWithoutPullRequestsAuthoredInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestsAuthoredInput = {
@@ -2152,6 +2204,7 @@ export type TeammateUncheckedCreateWithoutPullRequestsAuthoredInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestsAuthoredInput = {
@@ -2190,6 +2243,7 @@ export type TeammateCreateWithoutPullRequestsReviewingInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestsReviewingInput = {
@@ -2223,6 +2277,7 @@ export type TeammateUncheckedCreateWithoutPullRequestsReviewingInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestsReviewingInput = {
@@ -2272,6 +2327,7 @@ export type TeammateUpdateWithoutPullRequestsAuthoredInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestsAuthoredInput = {
@@ -2305,6 +2361,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestsAuthoredInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUpsertWithoutPullRequestsReviewingInput = {
@@ -2349,6 +2406,7 @@ export type TeammateUpdateWithoutPullRequestsReviewingInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestsReviewingInput = {
@@ -2382,6 +2440,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestsReviewingInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutPullRequestReviewsInput = {
@@ -2415,6 +2474,7 @@ export type TeammateCreateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutPullRequestReviewsInput = {
@@ -2448,6 +2508,7 @@ export type TeammateUncheckedCreateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutPullRequestReviewsInput = {
@@ -2497,6 +2558,7 @@ export type TeammateUpdateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutPullRequestReviewsInput = {
@@ -2530,6 +2592,7 @@ export type TeammateUncheckedUpdateWithoutPullRequestReviewsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutSavedCredentialsInput = {
@@ -2563,6 +2626,7 @@ export type TeammateCreateWithoutSavedCredentialsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutSavedCredentialsInput = {
@@ -2596,6 +2660,7 @@ export type TeammateUncheckedCreateWithoutSavedCredentialsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutSavedCredentialsInput = {
@@ -2645,6 +2710,7 @@ export type TeammateUpdateWithoutSavedCredentialsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutSavedCredentialsInput = {
@@ -2678,6 +2744,7 @@ export type TeammateUncheckedUpdateWithoutSavedCredentialsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutCredentialGrantsInput = {
@@ -2711,6 +2778,7 @@ export type TeammateCreateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutCredentialGrantsInput = {
@@ -2744,6 +2812,7 @@ export type TeammateUncheckedCreateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutCredentialGrantsInput = {
@@ -2793,6 +2862,7 @@ export type TeammateUpdateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutCredentialGrantsInput = {
@@ -2826,6 +2896,7 @@ export type TeammateUncheckedUpdateWithoutCredentialGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutGrantsInput = {
@@ -2859,6 +2930,7 @@ export type TeammateCreateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutGrantsInput = {
@@ -2892,6 +2964,7 @@ export type TeammateUncheckedCreateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutGrantsInput = {
@@ -2941,6 +3014,7 @@ export type TeammateUpdateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutGrantsInput = {
@@ -2974,6 +3048,7 @@ export type TeammateUncheckedUpdateWithoutGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutConnectionCallsInput = {
@@ -3007,6 +3082,7 @@ export type TeammateCreateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
@@ -3040,6 +3116,7 @@ export type TeammateUncheckedCreateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutConnectionCallsInput = {
@@ -3089,6 +3166,7 @@ export type TeammateUpdateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
@@ -3122,6 +3200,7 @@ export type TeammateUncheckedUpdateWithoutConnectionCallsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutTriggersInput = {
@@ -3155,6 +3234,7 @@ export type TeammateCreateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutTriggersInput = {
@@ -3188,6 +3268,7 @@ export type TeammateUncheckedCreateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutTriggersInput = {
@@ -3237,6 +3318,7 @@ export type TeammateUpdateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutTriggersInput = {
@@ -3270,6 +3352,7 @@ export type TeammateUncheckedUpdateWithoutTriggersInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutDocumentsInput = {
@@ -3303,6 +3386,7 @@ export type TeammateCreateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutDocumentsInput = {
@@ -3336,6 +3420,7 @@ export type TeammateUncheckedCreateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutDocumentsInput = {
@@ -3385,6 +3470,7 @@ export type TeammateUpdateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutDocumentsInput = {
@@ -3418,6 +3504,7 @@ export type TeammateUncheckedUpdateWithoutDocumentsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateCreateWithoutLibraryFolderGrantsInput = {
@@ -3451,6 +3538,7 @@ export type TeammateCreateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateUncheckedCreateWithoutLibraryFolderGrantsInput = {
@@ -3484,6 +3572,7 @@ export type TeammateUncheckedCreateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
   schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedCreateNestedManyWithoutTeammateInput
 }
 
 export type TeammateCreateOrConnectWithoutLibraryFolderGrantsInput = {
@@ -3533,6 +3622,7 @@ export type TeammateUpdateWithoutLibraryFolderGrantsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutLibraryFolderGrantsInput = {
@@ -3558,6 +3648,159 @@ export type TeammateUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutTeammateNestedInput
   connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
+  pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
+  pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutTeammateNestedInput
+  tasksCreated?: Prisma.TaskUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
+  schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateCreateWithoutLoopInstallationsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  kind?: $Enums.TeammateKind
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutTeammatesInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantCreateNestedManyWithoutTeammateInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutTeammateInput
+  savedCredentials?: Prisma.CredentialCreateNestedManyWithoutCreatedByTeammateInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutTeammateInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutTeammateInput
+  pullRequestsAuthored?: Prisma.PullRequestCreateNestedManyWithoutAuthorTeammateInput
+  pullRequestsReviewing?: Prisma.PullRequestCreateNestedManyWithoutReviewerTeammateInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutTeammateInput
+  tasksCreated?: Prisma.TaskCreateNestedManyWithoutCreatedByTeammateInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutTeammateInput
+  schedulesCreated?: Prisma.ScheduleCreateNestedManyWithoutCreatedByTeammateInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateUncheckedCreateWithoutLoopInstallationsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  kind?: $Enums.TeammateKind
+  instructions?: string
+  harness?: $Enums.Harness
+  model?: string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: $Enums.LibraryAccess
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTeammateInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutTeammateInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutTeammateInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutTeammateInput
+  savedCredentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutCreatedByTeammateInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutTeammateInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutTeammateInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutTeammateInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutTeammateInput
+  pullRequestsAuthored?: Prisma.PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput
+  pullRequestsReviewing?: Prisma.PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutTeammateInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutTeammateInput
+  tasksCreated?: Prisma.TaskUncheckedCreateNestedManyWithoutCreatedByTeammateInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutTeammateInput
+  schedulesCreated?: Prisma.ScheduleUncheckedCreateNestedManyWithoutCreatedByTeammateInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutTeammateInput
+}
+
+export type TeammateCreateOrConnectWithoutLoopInstallationsInput = {
+  where: Prisma.TeammateWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedCreateWithoutLoopInstallationsInput>
+}
+
+export type TeammateUpsertWithoutLoopInstallationsInput = {
+  update: Prisma.XOR<Prisma.TeammateUpdateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedUpdateWithoutLoopInstallationsInput>
+  create: Prisma.XOR<Prisma.TeammateCreateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedCreateWithoutLoopInstallationsInput>
+  where?: Prisma.TeammateWhereInput
+}
+
+export type TeammateUpdateToOneWithWhereWithoutLoopInstallationsInput = {
+  where?: Prisma.TeammateWhereInput
+  data: Prisma.XOR<Prisma.TeammateUpdateWithoutLoopInstallationsInput, Prisma.TeammateUncheckedUpdateWithoutLoopInstallationsInput>
+}
+
+export type TeammateUpdateWithoutLoopInstallationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTeammatesNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutTeammateNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutTeammateNestedInput
+  savedCredentials?: Prisma.CredentialUpdateManyWithoutCreatedByTeammateNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutTeammateNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutTeammateNestedInput
+  pullRequestsAuthored?: Prisma.PullRequestUpdateManyWithoutAuthorTeammateNestedInput
+  pullRequestsReviewing?: Prisma.PullRequestUpdateManyWithoutReviewerTeammateNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutTeammateNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutTeammateNestedInput
+  tasksCreated?: Prisma.TaskUpdateManyWithoutCreatedByTeammateNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
+  schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+}
+
+export type TeammateUncheckedUpdateWithoutLoopInstallationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumTeammateKindFieldUpdateOperationsInput | $Enums.TeammateKind
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  harness?: Prisma.EnumHarnessFieldUpdateOperationsInput | $Enums.Harness
+  model?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  caps?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  permissionPolicy?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  libraryAccess?: Prisma.EnumLibraryAccessFieldUpdateOperationsInput | $Enums.LibraryAccess
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTeammateNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutTeammateNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutTeammateNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutTeammateNestedInput
+  savedCredentials?: Prisma.CredentialUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutTeammateNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutTeammateNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutTeammateNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutTeammateNestedInput
   pullRequestsAuthored?: Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput
   pullRequestsReviewing?: Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutTeammateNestedInput
@@ -3615,6 +3858,7 @@ export type TeammateUpdateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
@@ -3648,6 +3892,7 @@ export type TeammateUncheckedUpdateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutTeammateNestedInput
   schedulesCreated?: Prisma.ScheduleUncheckedUpdateManyWithoutCreatedByTeammateNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutTeammateNestedInput
+  loopInstallations?: Prisma.LoopInstallationUncheckedUpdateManyWithoutTeammateNestedInput
 }
 
 export type TeammateUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -3689,6 +3934,7 @@ export type TeammateCountOutputType = {
   schedules: number
   schedulesCreated: number
   wakeups: number
+  loopInstallations: number
 }
 
 export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3709,6 +3955,7 @@ export type TeammateCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   schedules?: boolean | TeammateCountOutputTypeCountSchedulesArgs
   schedulesCreated?: boolean | TeammateCountOutputTypeCountSchedulesCreatedArgs
   wakeups?: boolean | TeammateCountOutputTypeCountWakeupsArgs
+  loopInstallations?: boolean | TeammateCountOutputTypeCountLoopInstallationsArgs
 }
 
 /**
@@ -3840,6 +4087,13 @@ export type TeammateCountOutputTypeCountWakeupsArgs<ExtArgs extends runtime.Type
   where?: Prisma.WakeupWhereInput
 }
 
+/**
+ * TeammateCountOutputType without action
+ */
+export type TeammateCountOutputTypeCountLoopInstallationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LoopInstallationWhereInput
+}
+
 
 export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3874,6 +4128,7 @@ export type TeammateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   schedules?: boolean | Prisma.Teammate$schedulesArgs<ExtArgs>
   schedulesCreated?: boolean | Prisma.Teammate$schedulesCreatedArgs<ExtArgs>
   wakeups?: boolean | Prisma.Teammate$wakeupsArgs<ExtArgs>
+  loopInstallations?: boolean | Prisma.Teammate$loopInstallationsArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["teammate"]>
 
@@ -3950,6 +4205,7 @@ export type TeammateInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   schedules?: boolean | Prisma.Teammate$schedulesArgs<ExtArgs>
   schedulesCreated?: boolean | Prisma.Teammate$schedulesCreatedArgs<ExtArgs>
   wakeups?: boolean | Prisma.Teammate$wakeupsArgs<ExtArgs>
+  loopInstallations?: boolean | Prisma.Teammate$loopInstallationsArgs<ExtArgs>
   _count?: boolean | Prisma.TeammateCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TeammateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3980,6 +4236,7 @@ export type $TeammatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     schedulesCreated: Prisma.$SchedulePayload<ExtArgs>[]
     wakeups: Prisma.$WakeupPayload<ExtArgs>[]
+    loopInstallations: Prisma.$LoopInstallationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4417,6 +4674,7 @@ export interface Prisma__TeammateClient<T, Null = never, ExtArgs extends runtime
   schedules<T extends Prisma.Teammate$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   schedulesCreated<T extends Prisma.Teammate$schedulesCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$schedulesCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   wakeups<T extends Prisma.Teammate$wakeupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$wakeupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WakeupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  loopInstallations<T extends Prisma.Teammate$loopInstallationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Teammate$loopInstallationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LoopInstallationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5266,6 +5524,30 @@ export type Teammate$wakeupsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.WakeupScalarFieldEnum | Prisma.WakeupScalarFieldEnum[]
+}
+
+/**
+ * Teammate.loopInstallations
+ */
+export type Teammate$loopInstallationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LoopInstallation
+   */
+  select?: Prisma.LoopInstallationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LoopInstallation
+   */
+  omit?: Prisma.LoopInstallationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LoopInstallationInclude<ExtArgs> | null
+  where?: Prisma.LoopInstallationWhereInput
+  orderBy?: Prisma.LoopInstallationOrderByWithRelationInput | Prisma.LoopInstallationOrderByWithRelationInput[]
+  cursor?: Prisma.LoopInstallationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LoopInstallationScalarFieldEnum | Prisma.LoopInstallationScalarFieldEnum[]
 }
 
 /**

@@ -102,7 +102,10 @@ export const ModelName = {
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
   PushDevice: 'PushDevice',
-  PushNotice: 'PushNotice'
+  PushNotice: 'PushNotice',
+  LoopInstallation: 'LoopInstallation',
+  LoopAction: 'LoopAction',
+  LoopRun: 'LoopRun'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -351,7 +354,9 @@ export const SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
-  projectId: 'projectId'
+  projectId: 'projectId',
+  loopRunId: 'loopRunId',
+  surfacedAt: 'surfacedAt'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -398,7 +403,8 @@ export const ScheduleScalarFieldEnum = {
   projectId: 'projectId',
   parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  loopInstallationId: 'loopInstallationId'
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
@@ -653,6 +659,8 @@ export const ConnectionCallScalarFieldEnum = {
   result: 'result',
   error: 'error',
   ticketId: 'ticketId',
+  simulated: 'simulated',
+  loopActionKey: 'loopActionKey',
   createdAt: 'createdAt'
 } as const
 
@@ -673,6 +681,7 @@ export const TriggerScalarFieldEnum = {
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
   projectId: 'projectId',
+  loopInstallationId: 'loopInstallationId',
   createdAt: 'createdAt'
 } as const
 
@@ -918,7 +927,8 @@ export const SkillPackScalarFieldEnum = {
   createdById: 'createdById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  appId: 'appId'
+  appId: 'appId',
+  loopInstallationId: 'loopInstallationId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
@@ -1014,6 +1024,65 @@ export const PushNoticeScalarFieldEnum = {
 } as const
 
 export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]
+
+
+export const LoopInstallationScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  projectId: 'projectId',
+  loopKey: 'loopKey',
+  version: 'version',
+  source: 'source',
+  manifest: 'manifest',
+  teammateId: 'teammateId',
+  ownerMemberId: 'ownerMemberId',
+  settings: 'settings',
+  status: 'status',
+  createdByMemberId: 'createdByMemberId',
+  activatedAt: 'activatedAt',
+  activatedByMemberId: 'activatedByMemberId',
+  pausedAt: 'pausedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LoopInstallationScalarFieldEnum = (typeof LoopInstallationScalarFieldEnum)[keyof typeof LoopInstallationScalarFieldEnum]
+
+
+export const LoopActionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  key: 'key',
+  level: 'level',
+  conditions: 'conditions',
+  levelChangedAt: 'levelChangedAt',
+  levelChangedByMemberId: 'levelChangedByMemberId'
+} as const
+
+export type LoopActionScalarFieldEnum = (typeof LoopActionScalarFieldEnum)[keyof typeof LoopActionScalarFieldEnum]
+
+
+export const LoopRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  rootSessionId: 'rootSessionId',
+  conversationKey: 'conversationKey',
+  case: 'case',
+  status: 'status',
+  outcome: 'outcome',
+  interventions: 'interventions',
+  firstResponseAt: 'firstResponseAt',
+  dryRun: 'dryRun',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type LoopRunScalarFieldEnum = (typeof LoopRunScalarFieldEnum)[keyof typeof LoopRunScalarFieldEnum]
 
 
 export const SortOrder = {

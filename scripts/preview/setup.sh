@@ -28,6 +28,7 @@ say "Installing dependencies"
 say "Building shared packages"
 "${PNPM[@]}" exec turbo run build --filter='@brigade/api^...' --filter='@brigade/web^...'
 "${PNPM[@]}" --filter @brigade/api exec prisma generate
+"${PNPM[@]}" --filter @brigade/api loops
 
 say "Starting PostgreSQL"
 mkdir -p "$DATA"

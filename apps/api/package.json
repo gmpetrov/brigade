@@ -4,16 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "prisma generate && tsc -p tsconfig.json",
-    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "prisma generate && node scripts/loops.mjs && tsc -p tsconfig.json",
+    "dev": "node scripts/loops.mjs && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "node --env-file-if-exists=.env dist/index.js",
-    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
+    "typecheck": "prisma generate && node scripts/loops.mjs && tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist .turbo",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
-    "test": "node --import tsx --test test/*.test.ts",
-    "vapid": "node scripts/vapid.mjs"
+    "test": "node scripts/loops.mjs && node --import tsx --test test/*.test.ts",
+    "vapid": "node scripts/vapid.mjs",
+    "loops": "node scripts/loops.mjs"
   },
   "dependencies": {
     "@blocknote/core": "0.55.0",
@@ -48,6 +49,7 @@
     "@types/pg": "8.23.1",
     "@types/ws": "8.18.2",
     "tsx": "4.23.15",
-    "wrangler": "4.149.0"
+    "wrangler": "4.149.0",
+    "yaml": "2.9.1"
   }
 }

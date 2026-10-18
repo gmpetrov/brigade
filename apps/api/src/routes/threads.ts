@@ -76,6 +76,7 @@ import { setThreadArchived } from '../thread-archive.js'
 import { descendants } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
+import { surface } from '../loops.js'
 import { runLog } from '../timeline.js'
 import { historyContext, pageEvents, pageStart } from '../thread-history.js'
 import {
@@ -187,6 +188,8 @@ export const threads = new Hono<AppEnv>()
         archivedAt: c.req.query('archived') === '1' ? { not: null } : null,
         // Child threads show in their parent, not in lists.
         parentId: null,
+        // A playbook's runs, once a person took part in them (src/loops.ts).
+        OR: [{ loopRunId: null }, { surfacedAt: { not: null } }],
       },
       ...(limit
         ? {
@@ -612,6 +615,8 @@ export const threads = new Hono<AppEnv>()
       c.req.raw,
       SendMessage,
     )
+    // A playbook's run a member writes in joins their Threads, and counts as stepping in.
+    await surface(db, thread, true)
     // A design picked from the thread's options: checked first, moved once the message is sent.
     const picking = pick ? await checkPick(db, thread.id, pick) : undefined
     // Teammates the message mentions answer it, joining the thread if new; otherwise whoever answered last.
@@ -1010,6 +1015,7 @@ export const threads = new Hono<AppEnv>()
       where: { id: thread.id },
       data: { controlledByMemberId: scope.memberId },
     })
+    await surface(db, thread, true)
     await deliver(thread.computer, {
       type: 'thread.takeover',
       commandId: randomUUID(),
@@ -1109,6 +1115,7 @@ export const threads = new Hono<AppEnv>()
   .post('/:id/pin', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
+    await surface(db, thread)
     await db.threadPin.upsert({
       where: { memberId_sessionId: { memberId: scope.memberId, sessionId: thread.id } },
       create: {

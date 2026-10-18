@@ -3,6 +3,7 @@ import { CalendarClock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from 'lucid
 import Link from 'next/link'
 import { useState } from 'react'
 import { isAdmin, StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { PlaybookList } from '@/components/playbooks'
 import { ProjectFilter, ProjectTag } from '@/components/projects'
 import { describeCron, ScheduleDialog, scheduleTime, zoneName } from '@/components/schedules'
 import { Button } from '@/components/ui/button'
@@ -154,7 +155,10 @@ function ScheduleRow({
   )
 }
 
-/** Automations: schedules that prompt a teammate at set times. In a project, its own. */
+/**
+ * Automations: the playbooks installed, then schedules that prompt a teammate at set times. In
+ * a project, its own.
+ */
 export function ScheduleList({ projectId }: { projectId?: string }) {
   const [filter, setFilter] = useState('')
   const schedules = useApi<Schedule[]>(`/schedules${projectQuery(projectId ?? filter)}`)
@@ -175,8 +179,8 @@ export function ScheduleList({ projectId }: { projectId?: string }) {
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-extrabold tracking-tight">Automations</h1>
             <p className="max-w-prose text-muted-foreground">
-              Work your teammates do on a schedule, each run in a fresh thread. Ask a teammate in a
-              thread, or add one yourself.
+              Work your teammates do on their own: playbooks, and schedules that run in a fresh
+              thread each time. Ask a teammate in a thread, or add a schedule yourself.
             </p>
           </div>
         )}
@@ -188,6 +192,8 @@ export function ScheduleList({ projectId }: { projectId?: string }) {
           </Button>
         </div>
       </header>
+
+      <PlaybookList projectId={projectId} filter={filter} />
 
       <section aria-labelledby="schedules" className="flex flex-col gap-3">
         <h2 id="schedules" className="flex items-center gap-2 text-sm font-bold">
