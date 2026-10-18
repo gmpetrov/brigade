@@ -144,6 +144,13 @@ const answersHere = (t: Ticket) =>
       !!t.payload.asks &&
       !(t.payload.asks as Ask[]).some((a) => a.type === 'action' && a.browser)))
 
+/** A ticket's title without the "Sam: " or "Sam asks: " it starts with. */
+const withoutAsker = (title: string, name: string) =>
+  [`${name}: `, `${name} asks: `].reduce(
+    (t, prefix) => (t.startsWith(prefix) ? t.slice(prefix.length) : t),
+    title,
+  )
+
 /** One thing waiting: a ticket answered here, a ticket's row, or a pull request. */
 type Waiting =
   | { key: string; title: string; from?: string; ticket: Ticket; pull?: undefined }
@@ -173,7 +180,8 @@ export function NeedsYou({
       const name = teammates.find((m) => m.id === asker)?.name ?? t.session?.teammate.name
       return {
         key: `ticket:${t.id}`,
-        title: name ? t.title.replace(`${name}: `, '') : t.title,
+        // Titles start with the teammate's name, shown beside them.
+        title: name ? withoutAsker(t.title, name) : t.title,
         from: name,
         ticket: t,
       }
