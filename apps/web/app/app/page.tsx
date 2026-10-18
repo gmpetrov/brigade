@@ -107,7 +107,7 @@ export default function Home() {
           rows={3}
           typeToFocus
           picker={teammates.length > 1 ? { teammates, onChange: choose } : undefined}
-          placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
+          placeholder={`Chat with ${teammate.name}`}
         />
       ) : (
         <section className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-6 py-12 text-center">
