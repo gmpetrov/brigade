@@ -310,7 +310,11 @@ export async function noteChildEvents(
       if (!reportOf(row.report)) {
         const report: ChildReport =
           event.type === 'error'
-            ? { status: 'failed', summary: event.message ?? 'It stopped on an error.', at: event.at }
+            ? {
+                status: 'failed',
+                summary: event.message ?? 'It stopped on an error.',
+                at: event.at,
+              }
             : {
                 status: 'report',
                 summary: clip((await lastMessage(session.id)) || 'It ended without a word.', 2_000),
@@ -576,7 +580,8 @@ export async function handleChildCall(
       projectId: session.projectId,
       effort: (parent.effort as never) ?? null,
     })
-    if (outcome === 'offline') return { error: 'This computer is offline; the child could not start.' }
+    if (outcome === 'offline')
+      return { error: 'This computer is offline; the child could not start.' }
     await parentChanged(scope, session.id)
     return {
       threadId: thread.id,

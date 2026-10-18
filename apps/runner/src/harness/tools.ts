@@ -1452,7 +1452,10 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
  * comes back here. A child reports with `report` and starts no children of its own.
  * They go through the schedule calls; the API checks the thread and its children.
  */
-export function childTools(call: ScheduleCaller, options: { child: boolean }): Record<string, Tool> {
+export function childTools(
+  call: ScheduleCaller,
+  options: { child: boolean },
+): Record<string, Tool> {
   const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
   if (options.child)
     return {
@@ -1540,7 +1543,12 @@ export function childTools(call: ScheduleCaller, options: { child: boolean }): R
         "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in.",
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) =>
-        call({ operation: { name: 'list_children' }, toolCallId, toolName: 'list_children', input }),
+        call({
+          operation: { name: 'list_children' },
+          toolCallId,
+          toolName: 'list_children',
+          input,
+        }),
     }),
     read_child: tool({
       description:

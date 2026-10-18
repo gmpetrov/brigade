@@ -414,7 +414,7 @@ const TEACH_SKILL: ThreadSkill = {
 /** The rest of the board, which any teammate may manage. */
 const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
-  '`message_thread` (to write in a started task\'s thread), `update_task`, `assign_task` (teammates only, never a ' +
+  "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
   'person), `move_task` and ' +
   '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
 

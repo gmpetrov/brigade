@@ -16,7 +16,13 @@ export const CHILD_WAIT_MAX_MINUTES = 7 * 24 * 60
  * needs_person: it opened a ticket and waits on a person. failed: it could not do the work.
  * cancelled: its parent stopped it (set by Brigade, not by the child).
  */
-export const ChildReportStatus = z.enum(['nothing', 'report', 'needs_person', 'failed', 'cancelled'])
+export const ChildReportStatus = z.enum([
+  'nothing',
+  'report',
+  'needs_person',
+  'failed',
+  'cancelled',
+])
 export type ChildReportStatus = z.infer<typeof ChildReportStatus>
 
 /** What a child said when it finished, kept on the child and shown in its parent. */
