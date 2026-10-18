@@ -14,6 +14,8 @@ const { mcpToolName } = await import('../src/connectors/index.js')
 const { notionAccountName } = await import('../src/connectors/notion.js')
 const { linearAccountName } = await import('../src/connectors/linear.js')
 const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpanel.js')
+const { resendAccountName } = await import('../src/connectors/resend.js')
+const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
 const servers: ReturnType<typeof createServer>[] = []
@@ -126,6 +128,29 @@ test('a Mixpanel account shows as its organizations', () => {
   assert.equal(mixpanelAccountName(two), 'Acme +1')
   assert.equal(mixpanelAccountName({ result: [] }), null)
   assert.equal(mixpanelAccountName({}), null)
+})
+
+test('a Resend account shows as its domains', () => {
+  // list-domains' reply: a text block per domain after a count, as Resend's server sends it.
+  const domain = (name: string) => ({
+    type: 'text',
+    text: `Name: ${name}\nID: 4dd369bc-aa82-4ff3-97de-514ae3000ee0\nStatus: verified\nRegion: us-east-1\nSending: enabled\nReceiving: disabled\nOpen Tracking: false\nClick Tracking: false\nCreated at: 2026-01-12 10:00:00.000000+00`,
+  })
+  const one = mcpOutput({
+    content: [{ type: 'text', text: 'Found 1 domain:' }, domain('lovarank.com')],
+  })
+  assert.equal(resendAccountName(one.output), 'lovarank.com')
+  const two = mcpOutput({
+    content: [
+      { type: 'text', text: 'Found 2 domains:' },
+      domain('acme.com'),
+      domain('mail.acme.com'),
+    ],
+  })
+  assert.equal(resendAccountName(two.output), 'acme.com +1')
+  const none = mcpOutput({ content: [{ type: 'text', text: 'No domains found.' }] })
+  assert.equal(resendAccountName(none.output), null)
+  assert.equal(resendAccountName({}), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

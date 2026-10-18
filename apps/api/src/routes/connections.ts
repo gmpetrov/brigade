@@ -96,6 +96,7 @@ type OAuthState = {
     | 'notion'
     | 'linear'
     | 'mixpanel'
+    | 'resend'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
@@ -437,6 +438,7 @@ export const connections = new Hono<AppEnv>()
         notion: true,
         linear: true,
         mixpanel: true,
+        resend: true,
         mcp: true,
         webhook: true,
       },
@@ -846,7 +848,8 @@ async function mcpAccount(server: McpServer, signedIn: typeof fetch | ReturnType
     }
     if (server.account) {
       const output = await callMcpTool(signedIn, server, server.account.tool, {})
-      return server.account.name(typeof output === 'string' ? JSON.parse(output) : output)
+      // Text that held JSON came back parsed already: what is left is plain text (Resend's).
+      return server.account.name(output)
     }
     const output = await callMcpTool(signedIn, server, 'whoami', {})
     const who = (typeof output === 'string' ? JSON.parse(output) : output) as {

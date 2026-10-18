@@ -256,6 +256,7 @@ export const openTicketTool = tool({
                     'notion',
                     'linear',
                     'mixpanel',
+                    'resend',
                     'mcp',
                   ],
                 },

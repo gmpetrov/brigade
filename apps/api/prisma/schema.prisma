@@ -821,6 +821,8 @@ enum ConnectorKind {
   linear
   /// Mixpanel, through Mixpanel's own MCP server (one per data region) and its OAuth.
   mixpanel
+  /// Resend, through Resend's own MCP server and its OAuth.
+  resend
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }

@@ -495,6 +495,7 @@ export type Connection = {
     | 'notion'
     | 'linear'
     | 'mixpanel'
+    | 'resend'
     | 'mcp'
   label: string
   externalAccount: string | null

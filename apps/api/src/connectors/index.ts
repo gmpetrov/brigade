@@ -11,6 +11,7 @@ import { atlassian } from './atlassian.js'
 import { notion } from './notion.js'
 import { linear } from './linear.js'
 import { mixpanel } from './mixpanel.js'
+import { resend } from './resend.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
 
@@ -30,6 +31,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   notion,
   linear,
   mixpanel,
+  resend,
 }
 
 /**
@@ -73,6 +75,7 @@ export const triggerCatalog = () =>
         'notion',
         'linear',
         'mixpanel',
+        'resend',
         'mcp',
         'webhook',
       ] as const
@@ -222,6 +225,15 @@ export const appCatalog: Record<
     developer: 'Mixpanel',
     category: 'Analytics',
     // A Mixpanel sign-in reaches its person's projects: kept to their threads until they share it.
+    personal: true,
+  },
+  resend: {
+    name: 'Resend',
+    description:
+      'Send emails and broadcasts, read received mail, and manage templates, contacts, domains and webhooks, with Resend’s MCP server.',
+    developer: 'Resend',
+    category: 'Developer tools',
+    // A Resend sign-in reaches a team that sends from its domains: kept to its member's threads until they share it.
     personal: true,
   },
   mcp: {
