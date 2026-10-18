@@ -92,6 +92,7 @@ import {
   waitsOn,
   type Me,
   type ProjectSummary,
+  type PullWaiting,
   type Task,
   type Teammate,
   type Ticket,
@@ -199,6 +200,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Tasks that need a person, the same way.
   const tasks = useApi<Task[]>('/tasks')
   const reloadTasks = tasks.reload
+  // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
+  const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
+  const reloadPulls = pulls.reload
   const [searching, setSearching] = useState(false)
   // Expanded or folded to icons, as the member left it: the sidebar keeps it in a cookie.
   // Read once, before the sidebar first shows (it waits for the member to load).
@@ -212,11 +216,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     counted.current = pathname
     void reloadTickets()
     void reloadTasks()
-  }, [pathname, reloadTickets, reloadTasks])
+    void reloadPulls()
+  }, [pathname, reloadTickets, reloadTasks, reloadPulls])
   // And live: a task's column follows its thread's status and open tickets.
   useLive((message) => {
     if (message.type === 'projects.updated') void reloadProjects()
     if (message.type === 'tickets.updated') void reloadTickets()
+    if (message.type === 'pulls.updated') void reloadPulls()
     if (
       message.type === 'task.updated' ||
       message.type === 'thread.updated' ||
@@ -256,6 +262,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const data = me.data
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
+  // What Home's Waiting on you holds, counted beside Home in the sidebar: the one count of
+  // what waits on this member (folded sections show none).
+  const waitingOnYou =
+    (tickets.data ?? []).filter((t) => waitsOn(t, data)).length + (pulls.data?.pulls.length ?? 0)
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
   // A child thread is out of the sidebar: its ticket marks its parent, which shows it.
@@ -371,6 +381,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                         <Link href="/app">
                           <House />
                           <span>Home</span>
+                          {waitingOnYou > 0 && (
+                            <span
+                              title={`${waitingOnYou} waiting on you`}
+                              className="bg-warning/15 text-warning ml-auto shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
+                            >
+                              {waitingOnYou}
+                            </span>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
