@@ -15,6 +15,31 @@ import { asTeammate, threadNet, type ThreadNet } from '../thread-net.js'
 type SandboxSession = ReturnType<HarnessV1NetworkSandboxSession['restricted']>
 type ProcessOptions = Parameters<SandboxSession['spawn']>[0]
 
+/** Stop a process group. One a teammate's sudo started is killed as that teammate, who owns it. */
+export function stopGroup(pid: number, runAs?: string) {
+  if (runAs) {
+    spawnChild('sudo', ['-n', '-u', runAs, '--', 'kill', '-TERM', '--', `-${pid}`], {
+      stdio: 'ignore',
+    }).on('error', () => undefined)
+    return
+  }
+  try {
+    process.kill(-pid, 'SIGTERM')
+  } catch {
+    // already gone
+  }
+}
+
+/**
+ * A harness's bridge outlives this runner when an update hands its turn over (hand-over.ts),
+ * but writes to pipes this runner reads, which close with it: a write would then fail in the
+ * bridge, and the turn with it. So its output goes through relays that, once the runner is
+ * gone, read on and drop it.
+ */
+export const outliving = (command: string) =>
+  `{ { ${command}
+} 2>&1 1>&3 3>&- | { cat; cat >/dev/null; } >&2; } 3>&1 | { cat; cat >/dev/null; }`
+
 /** Find a free localhost port for the bridge. */
 export async function freePort(): Promise<number> {
   return new Promise((done, fail) => {
@@ -36,7 +61,9 @@ export function createLocalSandboxSession(options: {
   runAs?: string
   /** With runAs: the thread, whose own network its processes run in where it has one (thread-net.ts). */
   thread?: string
-}): HarnessV1NetworkSandboxSession {
+  /** Process groups the runner before this one started and handed over, stopped with this sandbox. */
+  adopt?: number[]
+}): HarnessV1NetworkSandboxSession & { groups: () => number[] } {
   const children = new Set<ChildProcess>()
   const at = (path: string) => (isAbsolute(path) ? path : resolve(options.workingDirectory, path))
   const runAs = options.runAs
@@ -54,20 +81,7 @@ export function createLocalSandboxSession(options: {
           })
       : Promise.resolve(undefined))
 
-  /** Stop a process group. sudo's group is killed as the teammate user, who owns it. */
-  function killGroup(pid: number) {
-    if (runAs) {
-      spawnChild('sudo', ['-n', '-u', runAs, '--', 'kill', '-TERM', '--', `-${pid}`], {
-        stdio: 'ignore',
-      }).on('error', () => undefined)
-      return
-    }
-    try {
-      process.kill(-pid, 'SIGTERM')
-    } catch {
-      // already gone
-    }
-  }
+  const killGroup = (pid: number) => stopGroup(pid, runAs)
 
   const spawnAs = (
     command: string,
@@ -111,7 +125,7 @@ export function createLocalSandboxSession(options: {
   const spawn = async ({ command, workingDirectory, env, abortSignal }: ProcessOptions) => {
     const cgroup = (await turnCgroup())?.cgroup
     const child = spawnAs(
-      command,
+      env?.BRIDGE_WS_PORT ? outliving(command) : command,
       workingDirectory ? at(workingDirectory) : options.workingDirectory,
       { ...options.env, ...env },
       await net,
@@ -240,6 +254,7 @@ export function createLocalSandboxSession(options: {
 
   const stop = async () => {
     for (const child of children) if (child.pid) killGroup(child.pid)
+    for (const pid of options.adopt ?? []) killGroup(pid)
   }
 
   // Its cgroup goes with it: what is left a few seconds after the stop is killed.
@@ -263,5 +278,10 @@ export function createLocalSandboxSession(options: {
     stop,
     destroy,
     restricted: () => restricted,
+    /** Its process groups running now (a harness's bridge), to hand over (hand-over.ts). */
+    groups: () => [
+      ...[...children].flatMap((c) => (c.pid && c.exitCode === null ? [c.pid] : [])),
+      ...(options.adopt ?? []),
+    ],
   }
 }

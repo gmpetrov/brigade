@@ -113,3 +113,28 @@ test('the next runner stops the groups the one before left running', async () =>
   // The list is the new runner's now: a runner after it finds nothing to stop.
   assert.equal(await new ProcessGroups(file).reap(), undefined)
 })
+
+test('a group handed over by an update is kept, and stopped by a runner after if left', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'brigade-groups-'))
+  const file = join(dir, 'process-groups.json')
+  const start = () => spawn('sleep', ['60'], { detached: true, stdio: 'ignore' })
+  const handed = start()
+  const left = start()
+  test.after(async () => {
+    for (const p of [handed, left]) p.kill()
+    await rm(dir, { recursive: true, force: true })
+  })
+  const before = new ProcessGroups(file)
+  before.add(handed.pid, 'turn handed over')
+  before.add(left.pid, 'turn left')
+  await new Promise((done) => setTimeout(done, 100))
+  const alive = async (pid: number | undefined) => (await processes()).some((p) => p.pid === pid)
+
+  const reaped = await new ProcessGroups(file).reap(new Set([handed.pid!]))
+  assert.match(reaped ?? '', /^1 process\(es\) of turn left/)
+  assert.equal(await alive(handed.pid), true)
+  assert.equal(await alive(left.pid), false)
+  // Still on the list: a runner after this one that did not take it up stops it.
+  assert.match((await new ProcessGroups(file).reap()) ?? '', /turn handed over/)
+  assert.equal(await alive(handed.pid), false)
+})

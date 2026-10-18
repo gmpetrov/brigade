@@ -56,10 +56,11 @@ export class ProcessGroups {
   }
 
   /**
-   * Stop what is left of the groups the runner before this one noted, then
-   * start a list of this one's. Resolves to what was stopped, for the log.
+   * Stop what is left of the groups the runner before this one noted, but those it handed
+   * over (`kept`, hand-over.ts), which go on this one's list; then start that list. Resolves
+   * to what was stopped, for the log.
    */
-  async reap(): Promise<string | undefined> {
+  async reap(kept: ReadonlySet<number> = new Set()): Promise<string | undefined> {
     if (!this.enabled) return undefined
     let saved: Partial<Saved> | undefined
     try {
@@ -67,10 +68,13 @@ export class ProcessGroups {
     } catch {
       // None yet.
     }
-    this.save()
-    const groups = saved?.groups ?? []
     // From before the computer last started: none of it can be left, and the pids are others' now.
-    if (groups.length === 0 || Math.abs((saved?.boot ?? 0) - bootTime()) > 60_000) return undefined
+    const fresh = Math.abs((saved?.boot ?? 0) - bootTime()) <= 60_000
+    const all = fresh ? (saved?.groups ?? []) : []
+    this.groups = all.filter((g) => kept.has(g.pgid))
+    this.save()
+    const groups = all.filter((g) => !kept.has(g.pgid))
+    if (groups.length === 0) return undefined
     const found = leftovers(groups, await processes(), process.pid)
     if (found.length === 0) return undefined
     const signal = (pid: number, name: NodeJS.Signals | 0) => {

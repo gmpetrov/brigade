@@ -47,8 +47,9 @@ export * from './thread-history.js'
  * 27: notes from outside a turn (thread.note), such as a pull request merged from its card.
  * 28: child threads (start_child, list_children, read_child, cancel_child and report as schedule.call operations;
  *     the spec's `parent`), and message_thread (a task.call comment to a thread).
+ * 29: an updating runner hands its running turns over to the next one (runner.restarting).
  */
-export const PROTOCOL_VERSION = 28
+export const PROTOCOL_VERSION = 29
 /** Runners from this version on take thread.note. */
 export const NOTE_PROTOCOL = 27
 /** Runners from this version on hand a thread's folders over to another computer, and take one in (moved). */

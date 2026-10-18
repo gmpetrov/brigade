@@ -48,6 +48,10 @@ import { processGroups } from './process-groups.js'
 import { Threads, threadFolder } from './threads.js'
 import { prefetch, sweep, type BackupName, type BundleStore } from './repos.js'
 import { Updater } from './updater.js'
+import { noteHandOver, takeHandOver } from './hand-over.js'
+
+/** While an update hands its turns over, how long the calls under way get to finish on the connection. */
+const CALLS_GRACE_MS = 8_000
 
 // Brigade sets no API key anywhere; harnesses use this computer's subscription logins.
 stripApiKeys()
@@ -130,8 +134,9 @@ async function start() {
     console.error(`A runner is already running from ${HOME} (pid ${other}). Stop it first.`)
     process.exit(ALREADY_RUNNING_EXIT_CODE)
   }
-  // Before any preview starts again on a port one of them may still hold.
-  await processGroups.reap().then(
+  // Before any preview starts again on a port one of them may still hold. The harnesses of
+  // turns an update handed over stay, for their threads to take up.
+  await processGroups.reap(takeHandOver()).then(
     (left) => left && console.log(`stopped what the runner before this one left running: ${left}`),
     (error: unknown) =>
       console.warn(`could not look for what the runner before left: ${String(error)}`),
@@ -415,6 +420,8 @@ async function start() {
         ])
           arrive(spec)
         threads.resumeLost(message.resume ?? [], message.runningThreads ?? [], last)
+        // The previews an update stopped (once, after it).
+        void previews.startAgain()
         threads.requeueLost(message.requeue ?? [], unacknowledged)
         const requeued = new Set(
           (message.requeue ?? []).map((p) => `${p.thread.sessionId}:${p.messageId}`),
@@ -618,17 +625,22 @@ async function start() {
     const setup = await readFile('/var/lib/brigade/setup', 'utf8').catch(() => '')
     return setup.trim() ? { setup: setup.trim() } : {}
   }
-  // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in, no preview.
-  // One the API requires goes at once: running turns are frozen, and go on after the restart.
+  // An update waits only for what a restart would cut short and cannot hand over: a terminal,
+  // a sign-in. The turns running then go on in their harnesses, which the new runner takes up
+  // (hand-over.ts); previews start again there.
   const updater = new Updater({
     apiUrl: config.apiUrl,
-    idle: () => !threads.busy && terminals.count === 0 && !accounts.busy && previews.count === 0,
-    stop: async () => {
-      // No new commands once disconnected; a turn that slipped in is frozen like the others.
-      connection.close()
+    quiet: () => terminals.count === 0 && !accounts.busy,
+    handOver: async () => {
+      // From now on the API holds this computer's commands for the new runner.
+      connection.send({ type: 'runner.restarting' })
+      // The calls under way finish on this connection; past a while, closing it ends them.
+      const closing = setTimeout(() => connection.close(), CALLS_GRACE_MS)
+      noteHandOver(await threads.handOverTurns())
+      clearTimeout(closing)
       terminals.closeAll()
-      await previews.stopAll('The computer updated Brigade')
-      await threads.stop()
+      await previews.stopForUpdate()
+      connection.close()
     },
   })
   connection = new Connection(
