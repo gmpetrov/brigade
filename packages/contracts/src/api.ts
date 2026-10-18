@@ -70,7 +70,18 @@ export const ConnectGoogle = z.object({
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
 /** An App whose account signs in on its MCP server's own OAuth. */
 export const ConnectMcp = z.object({
-  kind: z.enum(['cloudflare', 'google_cloud', 'neon', 'supabase', 'atlassian', 'notion', 'linear']),
+  kind: z.enum([
+    'cloudflare',
+    'google_cloud',
+    'neon',
+    'supabase',
+    'atlassian',
+    'notion',
+    'linear',
+    'mixpanel',
+  ]),
+  /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */
+  region: z.string().max(20).optional(),
   returnTo: ReturnTo.optional(),
 })
 /** An MCP server's address, to see what it is and how its accounts sign in. */

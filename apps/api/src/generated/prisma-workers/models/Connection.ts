@@ -34,6 +34,7 @@ export type ConnectionMinAggregateOutputType = {
   label: string | null
   externalAccount: string | null
   externalUrl: string | null
+  mcpUrl: string | null
   status: $Enums.ConnectionStatus | null
   vaultSecretId: string | null
   createdByMemberId: string | null
@@ -51,6 +52,7 @@ export type ConnectionMaxAggregateOutputType = {
   label: string | null
   externalAccount: string | null
   externalUrl: string | null
+  mcpUrl: string | null
   status: $Enums.ConnectionStatus | null
   vaultSecretId: string | null
   createdByMemberId: string | null
@@ -68,6 +70,7 @@ export type ConnectionCountAggregateOutputType = {
   label: number
   externalAccount: number
   externalUrl: number
+  mcpUrl: number
   status: number
   vaultSecretId: number
   createdByMemberId: number
@@ -87,6 +90,7 @@ export type ConnectionMinAggregateInputType = {
   label?: true
   externalAccount?: true
   externalUrl?: true
+  mcpUrl?: true
   status?: true
   vaultSecretId?: true
   createdByMemberId?: true
@@ -104,6 +108,7 @@ export type ConnectionMaxAggregateInputType = {
   label?: true
   externalAccount?: true
   externalUrl?: true
+  mcpUrl?: true
   status?: true
   vaultSecretId?: true
   createdByMemberId?: true
@@ -121,6 +126,7 @@ export type ConnectionCountAggregateInputType = {
   label?: true
   externalAccount?: true
   externalUrl?: true
+  mcpUrl?: true
   status?: true
   vaultSecretId?: true
   createdByMemberId?: true
@@ -211,6 +217,7 @@ export type ConnectionGroupByOutputType = {
   label: string
   externalAccount: string | null
   externalUrl: string | null
+  mcpUrl: string | null
   status: $Enums.ConnectionStatus
   vaultSecretId: string | null
   createdByMemberId: string
@@ -249,6 +256,7 @@ export type ConnectionWhereInput = {
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
   externalUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
+  mcpUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
   status?: Prisma.EnumConnectionStatusFilter<"Connection"> | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.StringNullableFilter<"Connection"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Connection"> | string
@@ -274,6 +282,7 @@ export type ConnectionOrderByWithRelationInput = {
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
   externalUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mcpUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
@@ -303,6 +312,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
   externalUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
+  mcpUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
   status?: Prisma.EnumConnectionStatusFilter<"Connection"> | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFilter<"Connection"> | string
   createdAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
@@ -327,6 +337,7 @@ export type ConnectionOrderByWithAggregationInput = {
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrderInput | Prisma.SortOrder
   externalUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  mcpUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
@@ -350,6 +361,7 @@ export type ConnectionScalarWhereWithAggregatesInput = {
   label?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
   externalUrl?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
+  mcpUrl?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
   status?: Prisma.EnumConnectionStatusWithAggregatesFilter<"Connection"> | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Connection"> | string
@@ -365,6 +377,7 @@ export type ConnectionCreateInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -389,6 +402,7 @@ export type ConnectionUncheckedCreateInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -409,6 +423,7 @@ export type ConnectionUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -433,6 +448,7 @@ export type ConnectionUncheckedUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -455,6 +471,7 @@ export type ConnectionCreateManyInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -470,6 +487,7 @@ export type ConnectionUpdateManyMutationInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -486,6 +504,7 @@ export type ConnectionUncheckedUpdateManyInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -513,6 +532,7 @@ export type ConnectionCountOrderByAggregateInput = {
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
   externalUrl?: Prisma.SortOrder
+  mcpUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
@@ -530,6 +550,7 @@ export type ConnectionMaxOrderByAggregateInput = {
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
   externalUrl?: Prisma.SortOrder
+  mcpUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
@@ -547,6 +568,7 @@ export type ConnectionMinOrderByAggregateInput = {
   label?: Prisma.SortOrder
   externalAccount?: Prisma.SortOrder
   externalUrl?: Prisma.SortOrder
+  mcpUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   vaultSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
@@ -772,6 +794,7 @@ export type ConnectionCreateWithoutWorkspaceInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -794,6 +817,7 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -845,6 +869,7 @@ export type ConnectionScalarWhereInput = {
   label?: Prisma.StringFilter<"Connection"> | string
   externalAccount?: Prisma.StringNullableFilter<"Connection"> | string | null
   externalUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
+  mcpUrl?: Prisma.StringNullableFilter<"Connection"> | string | null
   status?: Prisma.EnumConnectionStatusFilter<"Connection"> | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.StringNullableFilter<"Connection"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Connection"> | string
@@ -860,6 +885,7 @@ export type ConnectionCreateWithoutAppInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -882,6 +908,7 @@ export type ConnectionUncheckedCreateWithoutAppInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -928,6 +955,7 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -951,6 +979,7 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -986,6 +1015,7 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1009,6 +1039,7 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1028,6 +1059,7 @@ export type ConnectionCreateWithoutGrantsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -1051,6 +1083,7 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1086,6 +1119,7 @@ export type ConnectionUpdateWithoutGrantsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1109,6 +1143,7 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1128,6 +1163,7 @@ export type ConnectionCreateWithoutCallsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -1151,6 +1187,7 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1186,6 +1223,7 @@ export type ConnectionUpdateWithoutCallsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1209,6 +1247,7 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1228,6 +1267,7 @@ export type ConnectionCreateWithoutTriggersInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -1251,6 +1291,7 @@ export type ConnectionUncheckedCreateWithoutTriggersInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1286,6 +1327,7 @@ export type ConnectionUpdateWithoutTriggersInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1309,6 +1351,7 @@ export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1328,6 +1371,7 @@ export type ConnectionCreateWithoutSubscriptionsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -1351,6 +1395,7 @@ export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1386,6 +1431,7 @@ export type ConnectionUpdateWithoutSubscriptionsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1409,6 +1455,7 @@ export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1428,6 +1475,7 @@ export type ConnectionCreateWithoutAttachmentsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   createdByMemberId: string
   createdAt?: Date | string
@@ -1451,6 +1499,7 @@ export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1486,6 +1535,7 @@ export type ConnectionUpdateWithoutAttachmentsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1509,6 +1559,7 @@ export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1529,6 +1580,7 @@ export type ConnectionCreateManyWorkspaceInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1544,6 +1596,7 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1566,6 +1619,7 @@ export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1587,6 +1641,7 @@ export type ConnectionUncheckedUpdateManyWithoutWorkspaceInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1603,6 +1658,7 @@ export type ConnectionCreateManyAppInput = {
   label: string
   externalAccount?: string | null
   externalUrl?: string | null
+  mcpUrl?: string | null
   status?: $Enums.ConnectionStatus
   vaultSecretId?: string | null
   createdByMemberId: string
@@ -1618,6 +1674,7 @@ export type ConnectionUpdateWithoutAppInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1640,6 +1697,7 @@ export type ConnectionUncheckedUpdateWithoutAppInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1661,6 +1719,7 @@ export type ConnectionUncheckedUpdateManyWithoutAppInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
   vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1745,6 +1804,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   label?: boolean
   externalAccount?: boolean
   externalUrl?: boolean
+  mcpUrl?: boolean
   status?: boolean
   vaultSecretId?: boolean
   createdByMemberId?: boolean
@@ -1771,6 +1831,7 @@ export type ConnectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   label?: boolean
   externalAccount?: boolean
   externalUrl?: boolean
+  mcpUrl?: boolean
   status?: boolean
   vaultSecretId?: boolean
   createdByMemberId?: boolean
@@ -1791,6 +1852,7 @@ export type ConnectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   label?: boolean
   externalAccount?: boolean
   externalUrl?: boolean
+  mcpUrl?: boolean
   status?: boolean
   vaultSecretId?: boolean
   createdByMemberId?: boolean
@@ -1811,6 +1873,7 @@ export type ConnectionSelectScalar = {
   label?: boolean
   externalAccount?: boolean
   externalUrl?: boolean
+  mcpUrl?: boolean
   status?: boolean
   vaultSecretId?: boolean
   createdByMemberId?: boolean
@@ -1818,7 +1881,7 @@ export type ConnectionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "kind" | "label" | "externalAccount" | "externalUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
+export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "appId" | "reach" | "kind" | "label" | "externalAccount" | "externalUrl" | "mcpUrl" | "status" | "vaultSecretId" | "createdByMemberId" | "createdAt" | "updatedAt", ExtArgs["result"]["connection"]>
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   app?: boolean | Prisma.AppDefaultArgs<ExtArgs>
@@ -1872,6 +1935,10 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * Where a person manages the account at the provider, e.g. a GitHub installation's settings.
      */
     externalUrl: string | null
+    /**
+     * The MCP server the account signed in to, when its App has one per data region (Mixpanel).
+     */
+    mcpUrl: string | null
     status: $Enums.ConnectionStatus
     vaultSecretId: string | null
     createdByMemberId: string
@@ -2317,6 +2384,7 @@ export interface ConnectionFieldRefs {
   readonly label: Prisma.FieldRef<"Connection", 'String'>
   readonly externalAccount: Prisma.FieldRef<"Connection", 'String'>
   readonly externalUrl: Prisma.FieldRef<"Connection", 'String'>
+  readonly mcpUrl: Prisma.FieldRef<"Connection", 'String'>
   readonly status: Prisma.FieldRef<"Connection", 'ConnectionStatus'>
   readonly vaultSecretId: Prisma.FieldRef<"Connection", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Connection", 'String'>

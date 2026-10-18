@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronDown, EllipsisVertical, ExternalLink, Package, Plus } from 'lucide-react'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
+import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
+import { RegionMenu } from '@/components/region-menu'
 import { CloseButton } from '@/components/close-button'
 import { ConnectionTriggers } from '@/components/connection-triggers'
 import { useDashboard, timeAgo } from '@/components/dashboard'
@@ -117,12 +119,15 @@ export function AppSheet({
           kind === 'supabase' ||
           kind === 'atlassian' ||
           kind === 'notion' ||
-          kind === 'linear'
+          kind === 'linear' ||
+          kind === 'mixpanel'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
           : 'google'
-  const connect = () =>
+  // A server per data region (Mixpanel): connecting starts by picking one.
+  const regions = entry.regions
+  const connect = (region?: string) =>
     run(async () => {
       if (!route) return setAdding(true)
       const before = accounts.length
@@ -130,6 +135,7 @@ export function AppSheet({
         const { url } = await api<{ url: string }>(`/connections/${route}`, {
           body: {
             ...(route === 'github' ? {} : { kind }),
+            ...(region ? { region } : {}),
             ...(returnTo ? { returnTo } : {}),
           },
         })
@@ -239,9 +245,14 @@ export function AppSheet({
             )}
           </div>
           {!added && !custom && !server && (
-            <Button onClick={() => void connect()} disabled={!data.available[kind]}>
-              Add
-            </Button>
+            <RegionMenu regions={regions} onPick={(region) => void connect(region)}>
+              <Button
+                onClick={regions ? undefined : () => void connect()}
+                disabled={!data.available[kind]}
+              >
+                Add
+              </Button>
+            </RegionMenu>
           )}
           <CloseButton label={`Close ${name}`} title="Close" onClick={onClose} />
         </div>
@@ -257,6 +268,7 @@ export function AppSheet({
           </p>
         )}
         {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
+        {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
         {!data.available[kind] && <Unavailable kind={kind} />}
         {kind === 'google_cloud' && data.available[kind] && (
           <p className="text-sm text-muted-foreground">
@@ -318,15 +330,17 @@ export function AppSheet({
             )}
             {/* A server with nothing to sign in to has one account. */}
             {added && !custom && !adding && mcp?.auth !== 'none' && (
-              <button
-                type="button"
-                disabled={!data.available[kind]}
-                onClick={() => (server ? setAdding(true) : void connect())}
-                className="flex items-center gap-2 px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-              >
-                <Plus className="size-4" aria-hidden />
-                Add another account
-              </button>
+              <RegionMenu regions={regions} onPick={(region) => void connect(region)}>
+                <button
+                  type="button"
+                  disabled={!data.available[kind]}
+                  onClick={regions ? undefined : () => (server ? setAdding(true) : void connect())}
+                  className="flex items-center gap-2 px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Add another account
+                </button>
+              </RegionMenu>
             )}
           </Section>
         )}

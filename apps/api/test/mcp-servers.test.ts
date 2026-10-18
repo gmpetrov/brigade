@@ -9,10 +9,11 @@ process.env.BETTER_AUTH_SECRET ??= 'x'.repeat(32)
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
 const { idTokenEmail, inspectMcp, listMcpTools, callMcpTool, nameFromHost, privateAddress } =
   await import('../src/connectors/mcp.js')
-const { mcpAppKey, toolPrefix } = await import('../src/mcp-servers.js')
+const { inRegion, mcpAppKey, serverOf, toolPrefix } = await import('../src/mcp-servers.js')
 const { mcpToolName } = await import('../src/connectors/index.js')
 const { notionAccountName } = await import('../src/connectors/notion.js')
 const { linearAccountName } = await import('../src/connectors/linear.js')
+const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpanel.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
 const servers: ReturnType<typeof createServer>[] = []
@@ -110,6 +111,47 @@ test("a Linear account shows as its workspace's name", () => {
   const workspace = { id: 'w1', name: 'Unicorn Factory', url: 'https://linear.app/unicorn' }
   assert.equal(linearAccountName(workspace), 'Unicorn Factory')
   assert.equal(linearAccountName({}), null)
+})
+
+test('a Mixpanel account shows as its organizations, however the list comes', () => {
+  assert.equal(mixpanelAccountName([{ id: 1, name: 'Acme' }]), 'Acme')
+  assert.equal(
+    mixpanelAccountName({ organizations: [{ name: 'Acme' }, { name: 'Beta' }] }),
+    'Acme +1',
+  )
+  assert.equal(
+    mixpanelAccountName({ results: { '1': { name: 'Acme' }, '2': { name: 'Beta' } } }),
+    'Acme +1',
+  )
+  assert.equal(mixpanelAccountName({ id: 1, name: 'Acme' }), 'Acme')
+  assert.equal(mixpanelAccountName({}), null)
+  assert.equal(mixpanelAccountName('nope'), null)
+})
+
+test("a Mixpanel account keeps its region's server", async () => {
+  const server = mixpanel.mcp!
+  assert.equal(inRegion(server, { id: 'eu' }).url, 'https://mcp-eu.mixpanel.com/mcp')
+  assert.equal(inRegion(server, {}).url, 'https://mcp.mixpanel.com/mcp')
+  assert.throws(() => inRegion(server, { id: 'mars' }))
+  // An account's server, as its tools are called: the URL it kept, never one it did not.
+  const db = {} as never
+  const eu = await serverOf(db, {
+    kind: 'mixpanel',
+    appId: 'a',
+    mcpUrl: 'https://mcp-eu.mixpanel.com/mcp',
+  })
+  assert.equal(eu?.server.url, 'https://mcp-eu.mixpanel.com/mcp')
+  const odd = await serverOf(db, {
+    kind: 'mixpanel',
+    appId: 'a',
+    mcpUrl: 'https://evil.example/mcp',
+  })
+  assert.equal(odd?.server.url, 'https://mcp.mixpanel.com/mcp')
+  // An App with one server ignores regions altogether.
+  assert.equal(
+    inRegion({ url: 'https://mcp.linear.app/mcp', tools: {} }, { id: 'eu' }).url,
+    'https://mcp.linear.app/mcp',
+  )
 })
 
 test('one App per server, however its URL was typed', () => {

@@ -557,6 +557,7 @@ export const ConnectionScalarFieldEnum = {
   label: 'label',
   externalAccount: 'externalAccount',
   externalUrl: 'externalUrl',
+  mcpUrl: 'mcpUrl',
   status: 'status',
   vaultSecretId: 'vaultSecretId',
   createdByMemberId: 'createdByMemberId',

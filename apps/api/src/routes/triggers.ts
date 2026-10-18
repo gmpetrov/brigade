@@ -29,6 +29,7 @@ const KINDS: ConnectorKind[] = [
   'atlassian',
   'notion',
   'linear',
+  'mixpanel',
   'mcp',
   'webhook',
 ]

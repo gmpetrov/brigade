@@ -819,6 +819,8 @@ enum ConnectorKind {
   notion
   /// Linear, through Linear's own MCP server and its OAuth.
   linear
+  /// Mixpanel, through Mixpanel's own MCP server (one per data region) and its OAuth.
+  mixpanel
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
 }
@@ -893,6 +895,8 @@ model Connection {
   externalAccount   String?
   /// Where a person manages the account at the provider, e.g. a GitHub installation's settings.
   externalUrl       String?
+  /// The MCP server the account signed in to, when its App has one per data region (Mixpanel).
+  mcpUrl            String?
   status            ConnectionStatus @default(active)
   vaultSecretId     String?          @unique
   vaultSecret       VaultSecret?     @relation(fields: [vaultSecretId], references: [id], onDelete: SetNull)

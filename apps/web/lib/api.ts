@@ -494,6 +494,7 @@ export type Connection = {
     | 'atlassian'
     | 'notion'
     | 'linear'
+    | 'mixpanel'
     | 'mcp'
   label: string
   externalAccount: string | null
@@ -548,6 +549,8 @@ export type AppEntry = {
   tools: { name: string; description: string; write: boolean }[]
   /** Where its skills come from, e.g. a GitHub repository. */
   source: string | null
+  /** A server per data region (Mixpanel): the member picks one as an account signs in. */
+  regions: { id: string; label: string }[] | null
 }
 export type ConnectionsResponse = {
   apps: App[]

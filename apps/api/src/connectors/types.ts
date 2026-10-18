@@ -55,6 +55,7 @@ export type ConnectorKind =
   | 'atlassian'
   | 'notion'
   | 'linear'
+  | 'mixpanel'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */
@@ -131,6 +132,11 @@ export type ConnectorDefinition = {
 
 export type McpServer = {
   url: string
+  /**
+   * One server per data region (Mixpanel's US, EU and India), by id, the first the default:
+   * the member picks one as an account signs in, and the account keeps its server's URL.
+   */
+  regions?: Record<string, { label: string; url: string }>
   /**
    * The tools Brigade knows, by the server's names, for the App's tool switches before an
    * account connects and to say which change something. A tool not listed is a write unless
