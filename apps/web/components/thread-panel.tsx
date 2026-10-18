@@ -10,15 +10,7 @@
 // open it there; docking it again goes back to the page you were on.
 // ⌘J (Ctrl+J) shows it, brings it in front of a preview or a file, or hides it;
 // ⌘⇧K starts a thread without it (components/quick-thread.tsx).
-import {
-  ArrowLeft,
-  ChevronRight,
-  Laptop,
-  LoaderCircle,
-  Maximize2,
-  MessagesSquare,
-  X,
-} from 'lucide-react'
+import { ArrowLeft, ChevronRight, Laptop, LoaderCircle, Maximize2, X } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   createContext,
@@ -46,7 +38,7 @@ import {
   type TeammateActivity,
   type ThreadDraft,
 } from '@/components/new-thread'
-import { panelInFront, raisePanel, SidePanel, usePanelInFront } from '@/components/side-panel'
+import { panelInFront, raisePanel, SidePanel } from '@/components/side-panel'
 import {
   EarlierMessages,
   JumpToEnd,
@@ -65,7 +57,7 @@ import {
   type Teammate,
   type ThreadSummary,
 } from '@/lib/api'
-import { isMac, useIsMac } from '@/lib/platform'
+import { isMac } from '@/lib/platform'
 import { StreamedTitle } from '@/components/streamed-title'
 import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
@@ -492,51 +484,6 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     ],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>
-}
-
-/** The top bar's button: opens and closes the panel; counts the threads waiting on a person. */
-export function ThreadsButton({ className }: { className?: string }) {
-  const { visible, expanded, toggle, waiting, activity } = useThreadPanel()
-  const working = Object.values(activity).includes('busy')
-  // Behind a preview or a file, it is not what shows.
-  const inFront = usePanelInFront(PANEL)
-  const shown = visible && (expanded || inFront)
-  const label = shown ? 'Hide threads' : 'Threads'
-  const mac = useIsMac()
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
-      aria-pressed={shown}
-      onClick={toggle}
-      aria-label={waiting > 0 ? `${label}, ${waiting} waiting on a person` : label}
-      aria-keyshortcuts={mac ? 'Meta+J' : 'Control+J'}
-      title={`${label} (${mac ? '⌘' : 'Ctrl+'}J)`}
-      className={cn(
-        'relative aria-pressed:bg-accent aria-pressed:text-accent-foreground',
-        className,
-      )}
-    >
-      <MessagesSquare aria-hidden />
-      {/* On the icon's corner: a count of what waits, else a dot while teammates work. */}
-      {waiting > 0 ? (
-        <span
-          aria-hidden
-          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] leading-none font-semibold text-primary-foreground ring-2 ring-background"
-        >
-          {waiting > 99 ? '99+' : waiting}
-        </span>
-      ) : (
-        working && (
-          <span
-            aria-hidden
-            className="absolute top-1 right-1 size-2 animate-pulse rounded-full bg-primary ring-2 ring-background"
-          />
-        )
-      )}
-    </Button>
-  )
 }
 
 /** The panel. Rendered once, by the dashboard, docked or in the page's place. */
