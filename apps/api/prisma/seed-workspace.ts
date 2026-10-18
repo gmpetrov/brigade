@@ -355,7 +355,7 @@ export async function seedWorkspace(users: Users) {
     teammateId: string
     member: { id: string }
     accountId: string
-    status: 'idle' | 'waiting' | 'paused' | 'failed' | 'done'
+    status: 'idle' | 'running' | 'waiting' | 'paused' | 'failed' | 'done'
     startedAt: Date
     events: Draft[]
     projectId?: string
@@ -1285,6 +1285,62 @@ export async function seedWorkspace(users: Users) {
         'Not merged yet.',
       ),
     })
+
+  // -------------------------------------------------------------------------
+  // Home's loose ends for Ada (src/home.ts): a proposal nobody answered, a running
+  // thread gone quiet, an automation that could not start.
+  // -------------------------------------------------------------------------
+  await thread({
+    title: 'Annual billing toggle on the pricing page',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: hours(2),
+    projectId: website.id,
+    events: turn(
+      riley.id,
+      adaAccount.id,
+      'Can we offer annual billing on the pricing page, with two months free?',
+      ada.id,
+      [],
+      'Yes: a Monthly / Annual toggle above the cards, annual prices shown per month with "2 months free" under them. Stripe already has the yearly prices, so it is only the page.\n\n```replies\nBuild it and open a PR\nNot yet\n```',
+    ),
+  })
+  await thread({
+    title: 'Move the blog to MDX',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'running',
+    startedAt: hours(3),
+    projectId: website.id,
+    events: [
+      ...turn(riley.id, adaAccount.id, 'Move the blog posts from Markdown to MDX.', ada.id, [
+        ...tool('Bash', { command: 'pnpm add @next/mdx' }, 'Done in 4.2s'),
+        {
+          type: 'tool.started',
+          toolCallId: `call_${id()}`,
+          toolName: 'Bash',
+          input: { command: 'pnpm build' },
+        },
+      ]),
+    ],
+  })
+  await prisma.schedule.create({
+    data: {
+      ...inWorkspace,
+      teammateId: maya.id,
+      title: 'Daily signups report',
+      instructions: "Count yesterday's signups by source and post the numbers to #growth.",
+      cron: '0 8 * * *',
+      timezone: 'Europe/Paris',
+      ownerMemberId: ada.id,
+      nextRunAt: new Date(Date.now() + 86_400_000),
+      lastError: "None of Ada's computers was online.",
+      createdAt: days(10),
+    },
+  })
 
   console.log('created: sample organization Acme (ada owner, bob admin, carol member)')
 }

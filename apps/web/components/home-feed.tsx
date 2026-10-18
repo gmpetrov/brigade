@@ -2,7 +2,7 @@
 // Home under Waiting on you: loose ends (nobody is blocked, but nothing moves on its own),
 // then what came back since the member last looked. Each section shows only when it has
 // something, so a quiet day leaves the composer alone on the page.
-import { CircleAlert, Clock, GitMerge, MessageCircleQuestion, Ticket, X } from 'lucide-react'
+import { CircleAlert, Clock, MessageCircleQuestion, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
@@ -240,81 +240,30 @@ function ResultRow({ item }: { item: HomeResult }) {
     <span className="w-12 flex-none text-right text-xs text-muted-foreground">{when(item.at)}</span>
   )
 
-  if (item.kind === 'thread') {
-    const { pull } = item
-    return (
-      <Row
-        icon={<TeammateAvatar teammate={item.teammate} className="size-8 flex-none text-xs" />}
-        title={item.thread.title}
-        meta={
-          pull
-            ? `${item.teammate.name} opened PR ${pullLabel(pull)}`
-            : item.thread.status === 'failed'
-              ? `${item.teammate.name} ran into a problem`
-              : `${item.teammate.name} replied`
-        }
-        href={`/app/threads/${item.thread.id}`}
-      >
-        {pull ? (
-          <StatusBadge
-            status={pull.state === 'merged' ? 'merged' : 'pr opened'}
-            tone={pull.state === 'merged' ? 'success' : 'neutral'}
-          />
-        ) : item.thread.status === 'failed' ? (
-          <StatusBadge status="failed" />
-        ) : (
-          <StatusBadge status="reply" tone="neutral" />
-        )}
-        {time}
-      </Row>
-    )
-  }
-
-  if (item.kind === 'merged') {
-    return (
-      <Row
-        icon={
-          <Icon>
-            <GitMerge />
-          </Icon>
-        }
-        title={
-          <>
-            {item.byYou ? 'You merged' : 'Merged'} PR {pullLabel(item.pull)}{' '}
-            <span className="font-normal text-muted-foreground">· {item.pull.title}</span>
-          </>
-        }
-        meta={item.thread ? item.thread.title : item.pull.repository}
-        href={item.thread ? `/app/threads/${item.thread.id}` : '/app/pulls'}
-      >
-        <StatusBadge status="merged" tone="success" />
-        {time}
-      </Row>
-    )
-  }
-
-  const verdict = { approved: 'You approved', denied: 'You declined', resolved: 'You answered' }[
-    item.verdict
-  ]
+  const { pull } = item
   return (
     <Row
-      icon={
-        <Icon>
-          <Ticket />
-        </Icon>
+      icon={<TeammateAvatar teammate={item.teammate} className="size-8 flex-none text-xs" />}
+      title={item.thread.title}
+      meta={
+        pull
+          ? `${item.teammate.name} ${pull.state === 'merged' ? 'merged' : 'opened'} PR ${pullLabel(pull)}`
+          : item.thread.status === 'failed'
+            ? `${item.teammate.name} ran into a problem`
+            : `${item.teammate.name} replied`
       }
-      title={
-        <>
-          {verdict} <span className="font-normal text-muted-foreground">· {item.title}</span>
-        </>
-      }
-      meta={item.thread ? `Your decision · ${item.thread.title}` : 'Your decision'}
-      href={item.thread ? `/app/threads/${item.thread.id}` : '/app/tickets'}
+      href={`/app/threads/${item.thread.id}`}
     >
-      <StatusBadge
-        status={item.verdict === 'denied' ? 'declined' : 'done'}
-        tone={item.verdict === 'denied' ? 'neutral' : 'success'}
-      />
+      {pull ? (
+        <StatusBadge
+          status={pull.state === 'merged' ? 'merged' : 'pr opened'}
+          tone={pull.state === 'merged' ? 'success' : 'neutral'}
+        />
+      ) : item.thread.status === 'failed' ? (
+        <StatusBadge status="failed" />
+      ) : (
+        <StatusBadge status="reply" tone="neutral" />
+      )}
       {time}
     </Row>
   )
@@ -339,8 +288,8 @@ export function SinceAway({ feed }: { feed: HomeFeed }) {
       </SectionTitle>
       <Card className="gap-0 overflow-hidden py-0">
         <ul className="divide-y">
-          {feed.results.map((item, i) => (
-            <ResultRow key={`${item.kind}:${item.at}:${i}`} item={item} />
+          {feed.results.map((item) => (
+            <ResultRow key={item.thread.id} item={item} />
           ))}
         </ul>
       </Card>
