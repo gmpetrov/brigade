@@ -1,4 +1,4 @@
-import type { ConnectorDefinition } from './types.js'
+import { organizationsName, type ConnectorDefinition } from './types.js'
 
 const read = (description: string) => ({ description, write: false })
 const write = (description: string) => ({ description, write: true })
@@ -38,6 +38,8 @@ export const mixpanel: ConnectorDefinition = {
       'Delete-Dashboard': write('Delete a dashboard.'),
       'Get-Business-Context': read('The organization’s and project’s business context.'),
       'Get-Projects': read('List the projects and workspaces.'),
+      'Get-Project-Token': read('A project’s token, to send it events.'),
+      'Get-Live-Events': read('The events a project is receiving now.'),
       'List-Organizations': read('List the organizations the account belongs to.'),
       'Get-Events': read('Browse and search the events in a project.'),
       'List-Properties': read('List and search event or user properties.'),
@@ -57,6 +59,7 @@ export const mixpanel: ConnectorDefinition = {
       'Find-Duplicate-Groups': read('Find events and properties with duplicate names.'),
       'Dismiss-Duplicate-Group': write('Dismiss a duplicate-names suggestion.'),
       'Merge-Group': write('Merge duplicate names into one.'),
+      'Fill-Event-Metadata': write('Fill in events’ descriptions and other Lexicon details.'),
       'Create-Custom-Property': write('Create a custom property.'),
       'Get-Custom-Property': read('Read a custom property’s definition.'),
       'Update-Custom-Property': write('Change a custom property’s definition.'),
@@ -97,24 +100,10 @@ export const mixpanel: ConnectorDefinition = {
 }
 
 /**
- * The Mixpanel account as a row shows it: its organizations, from List-Organizations as a
- * list, an object holding one, or Mixpanel's usual map of organizations by id.
+ * The Mixpanel account as a row shows it: its organizations' names. List-Organizations answers
+ * { result: [{ id, name, role }] }, as a real account showed.
  */
 export function mixpanelAccountName(output: unknown): string | null {
-  const unwrap = (value: unknown): unknown => {
-    if (Array.isArray(value) || !value || typeof value !== 'object') return value
-    const o = value as { results?: unknown; organizations?: unknown; name?: unknown }
-    if (typeof o.name === 'string') return [value]
-    if (o.results !== undefined) return unwrap(o.results)
-    if (o.organizations !== undefined) return unwrap(o.organizations)
-    // A map by id: { "123": { name }, ... }.
-    return Object.values(value)
-  }
-  const list = unwrap(output)
-  if (!Array.isArray(list)) return null
-  const names = list
-    .map((o) => (o as { name?: unknown } | null)?.name)
-    .filter((n): n is string => typeof n === 'string' && n.length > 0)
-  if (!names.length) return null
-  return names.length === 1 ? names[0]! : `${names[0]} +${names.length - 1}`
+  const result = (output as { result?: unknown } | null)?.result
+  return organizationsName(Array.isArray(result) ? result : output)
 }

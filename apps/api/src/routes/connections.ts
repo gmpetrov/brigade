@@ -269,6 +269,8 @@ export const connections = new Hono<AppEnv>()
       ? ((await mcpAccount(server, signedIn)) ?? email)
       : (email ?? (await mcpAccount(server, signedIn)))
     const kind = grant.kind as ConnectorKind
+    // The row would show only the App's name: say so, as the provider's reply may have changed.
+    if (!account) console.warn(`mcp connection of ${kind}: no account name`)
     const connection = await createConnection(
       scope,
       {
