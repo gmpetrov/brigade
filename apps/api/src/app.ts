@@ -24,6 +24,7 @@ import { githubWebhook } from './routes/github-webhook.js'
 import { library } from './routes/library.js'
 import { notifications } from './routes/notifications.js'
 import { projects } from './routes/projects.js'
+import { home } from './routes/home.js'
 import { pulls } from './routes/pulls.js'
 import { repositories } from './routes/repositories.js'
 import { runnerAttachments } from './routes/runner-attachments.js'
@@ -100,6 +101,7 @@ app.route('/api/skills', skills)
 app.route('/api/designs', designs)
 app.route('/api/attachments', attachments)
 app.route('/api/repositories', repositories)
+app.route('/api/home', home)
 app.route('/api/pulls', pulls)
 app.route('/api/triggers', triggers)
 app.route('/api/threads', threads)

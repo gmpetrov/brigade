@@ -238,13 +238,8 @@ export function NeedsYou({
     setCurrentKey(key)
   }
 
-  if (!current && !sent)
-    return (
-      <p className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-        <span aria-hidden className="size-1.5 rounded-full bg-success" />
-        Nothing is waiting on you.
-      </p>
-    )
+  // Nothing waiting: the line under Home's greeting says so.
+  if (!current && !sent) return null
 
   const others = sent ? items : items.filter((i) => i.key !== current?.key)
   const listed = others.slice(0, LISTED)

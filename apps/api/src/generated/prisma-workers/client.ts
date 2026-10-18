@@ -104,6 +104,13 @@ export type ThreadRead = Prisma.ThreadReadModel
  */
 export type ThreadPin = Prisma.ThreadPinModel
 /**
+ * Model HomeDismissal
+ * A loose end a member set aside on Home. Its key names the thing as it stood then (a thread's
+ * proposal by its event, a stalled thread by its last event, a routine by its failed run), so
+ * the same thing comes back once it changes.
+ */
+export type HomeDismissal = Prisma.HomeDismissalModel
+/**
  * Model Session
  * 
  */
