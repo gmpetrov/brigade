@@ -479,7 +479,7 @@ export function NewThread({
       autoFocus={autoFocus}
       typeToFocus={typeToFocus}
       placeholder={
-        placeholder ?? `What should ${teammate.name} do? Type @ to mention, / for commands`
+        placeholder ?? `Chat with ${teammate.name}`
       }
     />
   )

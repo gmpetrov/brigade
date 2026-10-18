@@ -114,7 +114,7 @@ export function CaptureDraft() {
         teammate={teammate}
         rows={4}
         autoFocus
-        placeholder={`What should ${teammate.name} look at? Type @ to mention, / for commands`}
+        placeholder={`Chat with ${teammate.name}`}
         picker={
           teammates.length > 1 ? { teammates, onChange: chooseTeammate, numbered: true } : undefined
         }

@@ -72,7 +72,7 @@ export function QuickThread() {
                 ? { teammates, onChange: chooseTeammate, numbered: true }
                 : undefined
             }
-            placeholder={`Ask ${teammate.name} to… Type @ to mention, / for commands`}
+            placeholder={`Chat with ${teammate.name}`}
             onStarted={(thread) => {
               onOpenChange(false)
               setStarted({ id: thread.id, teammate: teammate.name })
