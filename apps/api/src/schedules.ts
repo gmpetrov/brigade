@@ -174,7 +174,19 @@ async function applyChanges(
   const timezone = changes.timezone ?? schedule.timezone
   const timing = cron !== schedule.cron || timezone !== schedule.timezone
   if (timing) checked(cron, timezone)
-  const projectId = await usableProject(db, changes.projectId)
+  // Reporting to a thread, it is in that thread's project: moving the thread moves it.
+  if (
+    schedule.parentSessionId &&
+    changes.projectId !== undefined &&
+    changes.projectId !== schedule.projectId
+  )
+    throw new HTTPException(409, {
+      message:
+        'This schedule reports to a thread and stays in its project. Move the thread instead.',
+    })
+  const projectId = schedule.parentSessionId
+    ? undefined
+    : await usableProject(db, changes.projectId)
   const paused = changes.paused ?? schedule.pausedAt !== null
   const resuming = schedule.pausedAt !== null && !paused
   await db.schedule.updateMany({
@@ -338,7 +350,8 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
         scheduleId: schedule.id,
         ...(parent ? { parent, parentTeammateId: schedule.teammateId } : {}),
       },
-      projectId: schedule.projectId,
+      // A run reporting to a thread is in that thread's project, wherever it has moved.
+      projectId: parent ? parent.projectId : schedule.projectId,
     })
     if (outcome === 'offline') return failed('the computer is offline')
     if (schedule.lastError)

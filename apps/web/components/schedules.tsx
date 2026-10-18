@@ -3,7 +3,7 @@ import { cronProblem, nextRuns } from '@brigade/contracts'
 import cronstrue from 'cronstrue'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { ProjectSelect } from '@/components/projects'
+import { ProjectIcon, ProjectSelect } from '@/components/projects'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -105,7 +105,7 @@ function Field({
   children,
 }: {
   label: string
-  htmlFor: string
+  htmlFor?: string
   hint?: string
   children: React.ReactNode
 }) {
@@ -157,6 +157,7 @@ export function ScheduleDialog({
   }, [open, schedule, initialProject])
 
   const teammate = teammateId ?? teammates[0]?.id
+  const reports = schedule?.parentSession
   const cron = toCron(when)
   const problem = cron ? cronProblem(cron, timezone) : 'Enter a cron expression'
   const upcoming = problem ? [] : nextRuns(cron, timezone, 3)
@@ -173,7 +174,8 @@ export function ScheduleDialog({
         instructions,
         cron,
         timezone,
-        projectId: projectId === 'none' ? null : projectId,
+        // Reporting to a thread, it stays in that thread's project.
+        ...(reports ? {} : { projectId: projectId === 'none' ? null : projectId }),
       }
       const saved = schedule
         ? await api<Schedule>(`/schedules/${schedule.id}`, { method: 'PATCH', body })
@@ -228,16 +230,28 @@ export function ScheduleDialog({
               </Select>
             </Field>
           </div>
-          {(projects.some((p) => !p.archivedAt) || schedule?.projectId) && (
-            <Field label="Project" htmlFor="schedule-project">
-              <ProjectSelect
-                id="schedule-project"
-                value={projectId}
-                onChange={setProjectId}
-                className="sm:w-full"
-              />
-            </Field>
-          )}
+          {reports
+            ? schedule?.project && (
+                <Field
+                  label="Project"
+                  hint={`Its runs report to “${reports.title}”, so it stays in that thread's project.`}
+                >
+                  <p className="flex min-w-0 items-center gap-2 text-sm">
+                    <ProjectIcon project={schedule.project} className="size-4 text-[0.625rem]" />
+                    <span className="truncate">{schedule.project.name}</span>
+                  </p>
+                </Field>
+              )
+            : (projects.some((p) => !p.archivedAt) || schedule?.projectId) && (
+                <Field label="Project" htmlFor="schedule-project">
+                  <ProjectSelect
+                    id="schedule-project"
+                    value={projectId}
+                    onChange={setProjectId}
+                    className="sm:w-full"
+                  />
+                </Field>
+              )}
           <Field
             label="Instructions"
             htmlFor="schedule-instructions"

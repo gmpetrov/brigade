@@ -27,7 +27,7 @@ import {
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { renamedHere, StreamedTitle } from '@/components/streamed-title'
 import { useThreadPanel } from '@/components/thread-panel'
-import { api, type ThreadSummary } from '@/lib/api'
+import { api, type Thread, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type Action = 'preview' | 'pin' | 'rename' | 'archive' | 'delete'
@@ -72,11 +72,7 @@ export function ThreadRow({
     setOpen(false)
     if (action === 'preview') return openPreview(thread.id)
     if (action === 'rename') return setRenaming(true)
-    if (
-      action === 'delete' &&
-      !confirm(`Delete “${title}” for good, with its files? This can't be undone.`)
-    )
-      return
+    if (action === 'delete' && !confirm(await deleteQuestion(thread.id, title))) return
     const path = `/threads/${thread.id}`
     setBusy(true)
     try {
@@ -266,4 +262,19 @@ export function ThreadRow({
       </DropdownMenu>
     </SidebarMenuItem>
   )
+}
+
+/** Delete's confirmation: the schedules reporting to the thread go with it, so it says so. */
+async function deleteQuestion(id: string, title: string) {
+  const schedules = await api<Thread>(`/threads/${id}`)
+    .then((t) => t.reportingSchedules)
+    .catch(() => [])
+  const names = schedules.map((s) => `“${s.title}”`).join(', ')
+  const also =
+    schedules.length === 0
+      ? ''
+      : schedules.length === 1
+        ? `\n\nThe schedule ${names} reports here: it will be deleted too, with its runs.`
+        : `\n\nThe schedules ${names} report here: they will be deleted too, with their runs.`
+  return `Delete “${title}” for good, with its files? This can't be undone.${also}`
 }

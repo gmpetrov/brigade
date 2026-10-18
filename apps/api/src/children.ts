@@ -77,6 +77,20 @@ const CHILD_SELECT = {
   schedule: { select: { id: true, title: true } },
 } as const
 
+/** Every thread below this one: its children, theirs, and so on. */
+export async function descendants(db: ScopedDb, id: string) {
+  const ids: string[] = []
+  for (let level = [id]; level.length;) {
+    const rows = await db.session.findMany({
+      where: { parentId: { in: level } },
+      select: { id: true },
+    })
+    level = rows.map((r) => r.id)
+    ids.push(...level)
+  }
+  return ids
+}
+
 /** Dashboards showing the parent refresh its children: told with the parent's own status. */
 async function parentChanged(scope: Scope, parentId: string) {
   const parent = await scoped(scope).session.findFirst({

@@ -544,7 +544,7 @@ model Schedule {
   nextRunAt           DateTime?
   /// Why the last firing could not start; cleared by the next one that does.
   lastError           String?
-  /// Its runs start in this project.
+  /// Its runs start in this project. Reporting to a thread, it is that thread's project, kept in step when the thread moves.
   projectId           String?
   project             Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Set when made from a thread to report there: each run is a child of that thread (src/children.ts).

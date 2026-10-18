@@ -47,6 +47,7 @@ import { watchDesktop } from '../desktop-proxy.js'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
 import type { ScopedDb } from '../db.js'
 import {
+  broadcastSchedule,
   broadcastTask,
   broadcastThreadStatus,
   desktopClipboard,
@@ -70,6 +71,7 @@ import {
 import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
 import { setThreadArchived } from '../thread-archive.js'
+import { descendants } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
 import { runLog } from '../timeline.js'
@@ -1037,6 +1039,21 @@ export const threads = new Hono<AppEnv>()
     })
     if (thread.taskId)
       await db.task.updateMany({ where: { id: thread.taskId }, data: { projectId: next } })
+    // Its child threads, schedule runs among them, and the schedules reporting here follow.
+    const family = await descendants(db, thread.id)
+    if (family.length)
+      await db.session.updateMany({ where: { id: { in: family } }, data: { projectId: next } })
+    const reporting = await db.schedule.findMany({
+      where: { parentSessionId: { in: [thread.id, ...family] } },
+      select: { id: true },
+    })
+    if (reporting.length) {
+      await db.schedule.updateMany({
+        where: { id: { in: reporting.map((s) => s.id) } },
+        data: { projectId: next },
+      })
+      for (const s of reporting) broadcastSchedule(scope.workspaceId, s.id)
+    }
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
