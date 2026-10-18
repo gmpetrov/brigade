@@ -131,6 +131,8 @@ export const ThreadSpec = z.object({
     .default([]),
   /** A private thread does not write to workspace memory, and its summary is not searchable. */
   private: z.boolean().default(false),
+  /** Set in a child thread: the thread it was started from, which its report goes to. */
+  parent: z.object({ id: z.string(), title: z.string() }).nullish(),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */
   git: GitAccess.optional(),
   /** Every file given to the thread so far: each is put in the teammate's working folder before its turn. */

@@ -16,6 +16,7 @@ import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
+import { ChildrenList } from '@/components/thread-children'
 import { Button } from '@/components/ui/button'
 import {
   api,
@@ -385,6 +386,12 @@ export function ComputerPanel({
       <Section title="Details">{details}</Section>
 
       {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
+
+      {thread.children.length > 0 && (
+        <Section title={`Child threads · ${thread.children.length}`}>
+          <ChildrenList children={thread.children} />
+        </Section>
+      )}
 
       {outputs.length > 0 && (
         <Section title={`Outputs · ${outputs.length}`}>

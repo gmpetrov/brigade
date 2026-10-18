@@ -35,6 +35,7 @@ import { runnerBundle } from './routes/runner-install.js'
 import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
+import { noteChildEvents } from './children.js'
 import { movesOn, onReleased } from './move.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { Session } from './generated/prisma/client.js'
@@ -844,6 +845,8 @@ export function runnerSocket(runner: {
         void movesOn(runner.computerId, session.id).catch(console.error)
       // Not awaited: a review loop may call GitHub and prompt the next teammate.
       void noteTurnsEnded(session, fresh).catch(console.error)
+      // A child's report goes to its parent once its turn ends.
+      if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
     }
     send(ws, { type: 'ack', sessionId: session.id, seq: lastSeq })
   }
@@ -1484,6 +1487,7 @@ async function openTerminal(
       teammate: true,
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
+      parent: { select: { id: true, title: true } },
       task: { select: { id: true, title: true, description: true, completedAt: true } },
     },
   })

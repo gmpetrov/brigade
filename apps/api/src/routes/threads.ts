@@ -137,6 +137,11 @@ async function archive(c: Context<AppEnv>, on: boolean) {
     where: { id: thread.id },
     data: { archivedAt: on ? new Date() : null, updatedAt: thread.updatedAt },
   })
+  // Its children go and come back with it.
+  await db.session.updateMany({
+    where: { parentId: thread.id },
+    data: { archivedAt: on ? new Date() : null },
+  })
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
@@ -183,6 +188,8 @@ export const threads = new Hono<AppEnv>()
         ...projectWhere(c.req.query('project')),
         // Archived ones only when asked for: ?archived=1.
         archivedAt: c.req.query('archived') === '1' ? { not: null } : null,
+        // Child threads show in their parent, not in lists.
+        parentId: null,
       },
       ...(limit
         ? {
@@ -208,7 +215,7 @@ export const threads = new Hono<AppEnv>()
       if (missing.length)
         rows.push(
           ...(await c.var.db.session.findMany({
-            where: { id: { in: missing }, archivedAt: null },
+            where: { id: { in: missing }, archivedAt: null, parentId: null },
             include,
           })),
         )
@@ -234,6 +241,18 @@ export const threads = new Hono<AppEnv>()
           _count: { _all: true },
         })
       : []
+    // Children it waits for, at work: it shows as working, as for its own background work.
+    const working = rows.length
+      ? await c.var.db.session.groupBy({
+          by: ['parentId'],
+          where: {
+            parentId: { in: rows.map((r) => r.id) },
+            awaited: true,
+            status: { in: ['starting', 'running'] },
+          },
+          _count: { _all: true },
+        })
+      : []
     // When this member last looked at each: a teammate's turn after it is unread for them.
     const reads = rows.length
       ? await c.var.db.threadRead.findMany({
@@ -256,6 +275,7 @@ export const threads = new Hono<AppEnv>()
           lastReplyAt: latest?.toISOString() ?? null,
           unread: unread(turns?._max.at, reads.find((r) => r.sessionId === row.id)?.seenAt),
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
+          childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           eventsWaitingSince: eventsWaitingSince(row.id),
         }
@@ -281,6 +301,29 @@ export const threads = new Hono<AppEnv>()
         startedBy: { select: { id: true, user: { select: { name: true } } } },
         trigger: { select: { id: true, label: true, event: true } },
         schedule: { select: { id: true, title: true } },
+        parent: { select: { id: true, title: true } },
+        // Shown in it, newest first: each a line that opens it.
+        children: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            origin: true,
+            awaited: true,
+            report: true,
+            reportDeliveredAt: true,
+            createdAt: true,
+            teammate: { select: { id: true, name: true } },
+            schedule: { select: { id: true, title: true } },
+            tickets: {
+              where: { status: 'open' },
+              select: { id: true, type: true, title: true, createdAt: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
+        reportingSchedules: { select: { id: true, title: true, pausedAt: true } },
         tickets: {
           where: { status: 'open' },
           select: { id: true, type: true, title: true, payload: true, createdAt: true },
@@ -290,7 +333,7 @@ export const threads = new Hono<AppEnv>()
         task: { select: { id: true, title: true, completedAt: true } },
         project: { select: { id: true, name: true, icon: true, logo: true, archivedAt: true } },
         wakeups: {
-          where: { status: 'pending' },
+          where: { status: 'pending', kind: 'wakeup' },
           select: { id: true, teammateId: true, note: true, wakeAt: true },
           orderBy: { wakeAt: 'asc' },
         },

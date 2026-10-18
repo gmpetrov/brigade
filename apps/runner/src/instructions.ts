@@ -94,7 +94,8 @@ export function instructions(
     PREVIEWS,
     skills(spec),
     tasks(spec),
-    SCHEDULES,
+    schedules(spec),
+    children(spec),
     credentials(browser),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
     spec.project &&
@@ -189,8 +190,11 @@ function chief(spec: ThreadSpec) {
       "- Work that is a teammate's: hand it on by mentioning them as @Name in your reply, with the ask and what " +
         'they need to know. They join this thread and answer after you; bigger work they track as a task themselves. ' +
         'Mention only those who must act now: anywhere else, write a name without the @, since an @ brings them in.',
-      '- Several separate pieces of work, or work that should go on in its own thread: `create_task` with the ' +
-        'teammate as assignee, one task each, and say in a line what you handed to whom.',
+      '- Work whose result should come back to you here, long or in parallel (research, a check across several ' +
+        'things, one part each for several teammates): `start_child` with the teammate, one child each, then end ' +
+        'your turn. You are woken once all of them reported: put their answers together for the person.',
+      '- Several separate pieces of work that the board should track, or that go on in their own thread: ' +
+        '`create_task` with the teammate as assignee, one task each, and say in a line what you handed to whom.',
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
@@ -410,7 +414,8 @@ const TEACH_SKILL: ThreadSkill = {
 /** The rest of the board, which any teammate may manage. */
 const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
-  '`comment_on_task`, `update_task`, `assign_task` (teammates only, never a person), `move_task` and ' +
+  "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
+  'person), `move_task` and ' +
   '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
 
 /** The Tasks board: this thread's task, or when to make one. */
@@ -529,16 +534,39 @@ const PREVIEW_SKILL: ThreadSkill = {
 }
 
 /** Schedules: recurring work, set up when the person asks for it. */
-const SCHEDULES =
+const schedules = (spec: ThreadSpec) =>
   '## Schedules\n\n' +
   'When the person asks for something to happen repeatedly or at set times, set it up with `create_schedule`: ' +
   'each run prompts you in a fresh thread with no memory of this one, so the instructions must stand alone ' +
-  '(inputs by name, steps, where the result goes). `list_schedules` and `update_schedule` show and change yours. ' +
+  '(inputs by name, steps, where the result goes). By default each run is a child thread of this one, which ' +
+  'wakes you here only when it has something to say; `attachToThread: false` makes runs threads of their own. ' +
+  '`list_schedules` and `update_schedule` show and change yours. ' +
   'A thread that starts with "Scheduled run of" is one of those runs: nobody is watching it live, so do the work ' +
-  'and open a ticket when you need a person.\n\n' +
-  'To check on something later in this same thread (a deploy, a CI run, a reply), set a wake-up with ' +
-  '`set_wakeup` and end your turn, instead of waiting or polling: you are prompted again here with your note, ' +
-  'with this conversation.'
+  'and open a ticket when you need a person.' +
+  (spec.parent
+    ? ''
+    : '\n\n' +
+      'To check on something later in this same thread (a deploy, a CI run, a reply), set a wake-up with ' +
+      '`set_wakeup` and end your turn, instead of waiting or polling: you are prompted again here with your note, ' +
+      'with this conversation.')
+
+/** Child threads: in a child, how to report; elsewhere, when to start one. */
+const children = (spec: ThreadSpec) =>
+  spec.parent
+    ? '## This is a child thread\n\n' +
+      `This thread was started from the thread “${spec.parent.title}”, which waits for what you find. It is not in ` +
+      'the sidebar and nobody watches it live, though a person may open it and write here. Do the work, then call ' +
+      '`report` once and end your turn: your report wakes the parent when your turn ends. If something you need is ' +
+      'missing (a decision, an input), do not guess: report it as what you need, and the parent answers by writing ' +
+      'here. When only a person can decide, open a ticket and report needs_person. You cannot start child threads ' +
+      'of your own.'
+    : '## Child threads\n\n' +
+      'For work that is long, can run in parallel, or is for another teammate, start a child thread with ' +
+      '`start_child`: a fresh context beside this thread, shown here and not in the sidebar. It does not see this ' +
+      'conversation, so its instructions must stand alone. Start every child you need, then end your turn: you are ' +
+      'woken here once, with one note, when all those you wait for have reported. Then `read_child` for the details, ' +
+      '`message_thread` with its threadId to tell one more (it carries on and reports again), and tell the person ' +
+      'where things stand. Quick work you do yourself.'
 
 /**
  * The teammate's own browser, which website logins need: ready, none on this

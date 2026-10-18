@@ -360,10 +360,17 @@ export async function seedWorkspace(users: Users) {
     events: Draft[]
     projectId?: string
     others?: string[]
-    origin?: 'member' | 'trigger' | 'schedule'
+    origin?: 'member' | 'trigger' | 'schedule' | 'child'
     triggerId?: string
     scheduleId?: string
     private?: boolean
+    // A child thread (src/children.ts): shown in its parent, out of the sidebar.
+    id?: string
+    parentId?: string
+    parentTeammateId?: string
+    awaited?: boolean
+    report?: Prisma.InputJsonValue
+    reportDeliveredAt?: Date
   }) => {
     const { events, others = [], member: by, startedAt, ...rest } = data
     // Events a minute or so apart, from when it started.
@@ -1058,6 +1065,201 @@ export async function seedWorkspace(users: Users) {
     setup,
     'Created Riley (engineering), Sam (support) and Maya (marketing).',
   )
+
+  // Child threads: Riley split an investigation in two and was woken once both reported;
+  // one still waits on a person. A schedule made there reports its runs to it.
+  const parentId = `seed-parent-${id()}`
+  const bisectId = `seed-child-${id()}`
+  const upgradeId = `seed-child-${id()}`
+  const started = (threadId: string, title: string, instructions: string) =>
+    tool(
+      harness('start_child'),
+      { title, instructions, wait: true },
+      { threadId, title, teammate: riley.name },
+    )
+  await thread({
+    id: parentId,
+    title: 'Live reload stops after navigating in the dashboard',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: days(3),
+    projectId: website.id,
+    events: [
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        'Editing a file no longer updates a page reached by a link, only one opened by its URL. Find out why.',
+        ada.id,
+        [
+          ...started(
+            bisectId,
+            'Bisect the Next.js versions',
+            'Find the first Next.js version where a page reached by a link stops updating on edit.',
+          ),
+          ...started(
+            upgradeId,
+            'Try Next 16.4.2 on acme/web',
+            'Upgrade acme/web to Next 16.4.2 and check whether a page reached by a link updates on edit.',
+          ),
+        ],
+        'I started two threads beside this one: a bisect of Next.js, and a try of 16.4.2 on acme/web. I will be back here with both answers.',
+      ),
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        `2 child threads you were waiting for have finished:\n- Riley · “Bisect the Next.js versions” (${bisectId}): reports. It broke in 16.3.0-canary.34 (vercel/next.js#94062); 16.3.0-canary.33 works.\n- Riley · “Try Next 16.4.2 on acme/web” (${upgradeId}): needs a person (a ticket is open in it). The upgrade does not fix it.`,
+        null,
+        [],
+        'Found it: live reload broke in Next 16.3.0-canary.34 (vercel/next.js#94062), and 16.4.2 does not fix it. Its upgrade thread asks you whether to keep 16.4.2 anyway.',
+      ),
+    ],
+  })
+  await thread({
+    id: bisectId,
+    title: 'Bisect the Next.js versions',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: days(3),
+    projectId: website.id,
+    origin: 'child',
+    parentId,
+    parentTeammateId: riley.id,
+    awaited: true,
+    report: {
+      status: 'report',
+      summary: 'It broke in 16.3.0-canary.34 (vercel/next.js#94062); 16.3.0-canary.33 works.',
+      at: days(3).toISOString(),
+    },
+    reportDeliveredAt: days(3),
+    events: turn(
+      riley.id,
+      adaAccount.id,
+      'Riley started this thread from the thread “Live reload stops after navigating in the dashboard” and waits for your report.\n\nFind the first Next.js version where a page reached by a link stops updating on edit.',
+      null,
+      [
+        ...tool(
+          'Bash',
+          { command: 'node bisect.mjs 16.2.12 16.4.2' },
+          'first bad: 16.3.0-canary.34',
+        ),
+        ...tool(
+          harness('report'),
+          { status: 'report', summary: 'It broke in 16.3.0-canary.34 (vercel/next.js#94062).' },
+          { ok: true },
+        ),
+      ],
+      'Reported: 16.3.0-canary.34 is the first version that breaks.',
+    ),
+  })
+  const upgradeRequest = `call_${id()}`
+  const upgradeAsks = [
+    {
+      id: 'keep',
+      type: 'decision',
+      question: '16.4.2 does not fix live reload. Keep the upgrade anyway?',
+      options: [
+        { id: 'keep', label: 'Keep 16.4.2' },
+        { id: 'revert', label: 'Stay on 16.4.0' },
+      ],
+    },
+  ]
+  await thread({
+    id: upgradeId,
+    title: 'Try Next 16.4.2 on acme/web',
+    teammateId: riley.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'waiting',
+    startedAt: days(3),
+    projectId: website.id,
+    origin: 'child',
+    parentId,
+    parentTeammateId: riley.id,
+    awaited: true,
+    report: {
+      status: 'needs_person',
+      summary: 'The upgrade does not fix it. Asked whether to keep 16.4.2 anyway.',
+      at: days(3).toISOString(),
+    },
+    reportDeliveredAt: days(3),
+    events: turn(
+      riley.id,
+      adaAccount.id,
+      'Riley started this thread from the thread “Live reload stops after navigating in the dashboard” and waits for your report.\n\nUpgrade acme/web to Next 16.4.2 and check whether a page reached by a link updates on edit.',
+      null,
+      [
+        ...tool('Bash', { command: 'pnpm add next@16.4.2' }, 'next 16.4.2'),
+        {
+          type: 'ticket.opened',
+          requestId: upgradeRequest,
+          title: 'Keep Next 16.4.2?',
+          asks: upgradeAsks,
+        },
+      ],
+    ),
+  })
+  await prisma.ticket.create({
+    data: {
+      ...inWorkspace,
+      sessionId: upgradeId,
+      type: 'request',
+      title: 'Riley: Keep Next 16.4.2?',
+      payload: {
+        source: 'harness',
+        teammateId: riley.id,
+        requestId: upgradeRequest,
+        asks: upgradeAsks,
+      },
+      createdAt: days(3),
+    },
+  })
+  const watch = await prisma.schedule.create({
+    data: {
+      ...inWorkspace,
+      teammateId: riley.id,
+      title: 'Watch the Next.js live reload fix',
+      instructions:
+        'Check whether vercel/next.js#99550 is merged and in a release. Report nothing when it is not.',
+      cron: '0 9 * * *',
+      timezone: 'Europe/Paris',
+      ownerMemberId: ada.id,
+      createdByTeammateId: riley.id,
+      parentSessionId: parentId,
+      nextRunAt: new Date(Date.now() + 86_400_000),
+      createdAt: days(3),
+    },
+  })
+  for (const [n, ago] of [
+    [1, days(2)],
+    [2, days(1)],
+  ] as const)
+    await thread({
+      title: `Watch the Next.js live reload fix · run ${n}`,
+      teammateId: riley.id,
+      member: ada,
+      accountId: adaAccount.id,
+      status: 'idle',
+      startedAt: ago,
+      projectId: website.id,
+      origin: 'schedule',
+      scheduleId: watch.id,
+      parentId,
+      parentTeammateId: riley.id,
+      report: { status: 'nothing', summary: 'Not merged yet.', at: ago.toISOString() },
+      reportDeliveredAt: ago,
+      events: turn(
+        riley.id,
+        adaAccount.id,
+        'Scheduled run of "Watch the Next.js live reload fix". Check whether vercel/next.js#99550 is merged.',
+        null,
+        [],
+        'Not merged yet.',
+      ),
+    })
 
   console.log('created: sample organization Acme (ada owner, bob admin, carol member)')
 }

@@ -3,6 +3,7 @@ export * from './api.js'
 export * from './attachments.js'
 export * from './cards.js'
 export * from './chief.js'
+export * from './children.js'
 export * from './commands.js'
 export * from './credentials.js'
 export * from './design.js'
@@ -44,8 +45,10 @@ export * from './thread-history.js'
  * 25: threads move between computers (thread.release, the spec's `moved`).
  * 26: unacknowledged events are sent again after a while, and threads whose events wait are reported (events.waiting).
  * 27: notes from outside a turn (thread.note), such as a pull request merged from its card.
+ * 28: child threads (start_child, list_children, read_child, cancel_child and report as schedule.call operations;
+ *     the spec's `parent`), and message_thread (a task.call comment to a thread).
  */
-export const PROTOCOL_VERSION = 27
+export const PROTOCOL_VERSION = 28
 /** Runners from this version on take thread.note. */
 export const NOTE_PROTOCOL = 27
 /** Runners from this version on hand a thread's folders over to another computer, and take one in (moved). */

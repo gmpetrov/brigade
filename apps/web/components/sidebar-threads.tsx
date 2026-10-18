@@ -195,7 +195,9 @@ function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
     const ask =
       needsYou[t.id] ??
       (t.pullsWaiting ? 'review PR' : t.status === 'waiting' ? 'needs you' : undefined)
-    if (!ask) return t
+    // Children it waits for at work: it shows as working, as for its own background work.
+    if (!ask)
+      return t.childrenWorking && groupOf(t.status) === 'rest' ? { ...t, status: 'running' } : t
     asks.set(t.id, ask)
     return groupOf(t.status) === 'rest' ? { ...t, status: 'waiting' } : t
   })

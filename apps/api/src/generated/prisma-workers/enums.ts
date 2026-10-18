@@ -70,7 +70,8 @@ export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus]
 export const SessionOrigin = {
   member: 'member',
   trigger: 'trigger',
-  schedule: 'schedule'
+  schedule: 'schedule',
+  child: 'child'
 } as const
 
 export type SessionOrigin = (typeof SessionOrigin)[keyof typeof SessionOrigin]
@@ -84,6 +85,14 @@ export const TaskPriority = {
 } as const
 
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
+
+
+export const WakeupKind = {
+  wakeup: 'wakeup',
+  report: 'report'
+} as const
+
+export type WakeupKind = (typeof WakeupKind)[keyof typeof WakeupKind]
 
 
 export const WakeupStatus = {

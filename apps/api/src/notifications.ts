@@ -180,7 +180,13 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
       : [],
     wantsReplies
       ? prisma.sessionEvent.findMany({
-          where: { workspaceId, type: 'turn.completed', at: { gt: fresh } },
+          // A child's turns go to its parent, which says what matters: no push of their own.
+          where: {
+            workspaceId,
+            type: 'turn.completed',
+            at: { gt: fresh },
+            session: { parentId: null },
+          },
           select: {
             at: true,
             session: {

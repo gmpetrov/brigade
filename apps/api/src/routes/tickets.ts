@@ -27,6 +27,8 @@ export const tickets = new Hono<AppEnv>()
             origin: true,
             startedByMemberId: true,
             projectId: true,
+            // A child's ticket also marks its parent, which shows the child.
+            parentId: true,
             teammate: { select: { id: true, name: true } },
           },
         },

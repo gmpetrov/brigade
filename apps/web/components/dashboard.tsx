@@ -258,8 +258,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
+  // A child thread is out of the sidebar: its ticket marks its parent, which shows it.
   for (const t of tickets.data ?? [])
-    if (t.session && waitsOn(t, data)) needsYou[t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
+    if (t.session && waitsOn(t, data))
+      needsYou[t.session.parentId ?? t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
   // And threads whose task is in Needs you, so the list agrees with the board.
   for (const t of tasks.data ?? [])
     if (t.column === 'needs_you' && t.thread)

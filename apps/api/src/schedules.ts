@@ -13,9 +13,10 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
-import { broadcastSchedule } from './hub.js'
+import { handleChildCall, isChildOperation } from './children.js'
+import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
-import { actingTeammate } from './thread-spec.js'
+import { actingTeammate, loadThread } from './thread-spec.js'
 import { projectWhere, usableProject } from './projects.js'
 import { handleWakeup, isWakeupOperation } from './wakeups.js'
 import { startThread } from './work.js'
@@ -43,6 +44,7 @@ const LIST = {
   owner: { select: { id: true, user: { select: { name: true } } } },
   createdByTeammate: { select: { id: true, name: true } },
   project: { select: { id: true, name: true, icon: true, logo: true } },
+  parentSession: { select: { id: true, title: true } },
   sessions: {
     orderBy: { createdAt: 'desc' as const },
     take: 1,
@@ -127,6 +129,8 @@ export async function createSchedule(
     cron: string
     timezone: string
     projectId?: string | null | undefined
+    /** Its runs are children of this thread and report to it. */
+    parentSessionId?: string | null
   },
   by: { memberId: string; teammateId?: string },
 ) {
@@ -143,6 +147,7 @@ export async function createSchedule(
       ownerMemberId: by.memberId,
       createdByTeammateId: by.teammateId ?? null,
       projectId: projectId ?? null,
+      parentSessionId: input.parentSessionId ?? null,
       nextRunAt: upcoming(input.cron, input.timezone),
     } as never,
   })
@@ -294,8 +299,15 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     return { error: message }
   }
 
-  // The workspace computer, or else the owner's own machine.
+  // Its runs report to a thread: they run beside it, on its computer while it is online.
+  const parent = schedule.parentSessionId
+    ? await loadThread(db, schedule.parentSessionId).catch(() => null)
+    : null
+  // The parent's computer, or the workspace computer, or else the owner's own machine.
   const computer =
+    (parent && (parent.computer.kind === 'cloud' || isOnline(parent.computer.id))
+      ? parent.computer
+      : null) ??
     (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
     (await db.computer.findFirst({
       where: { kind: 'member_machine', memberId: schedule.ownerMemberId },
@@ -305,7 +317,12 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
 
   const text = [
     `Scheduled run of "${schedule.title}", due ${localTime(dueAt, schedule.timezone)} (${schedule.timezone}). ` +
-      'Nobody is watching this thread live: do the work below, and open a ticket if you need a person.',
+      'Nobody is watching this thread live: do the work below, and open a ticket if you need a person.' +
+      (parent
+        ? ` It reports to the thread “${parent.title}”: when you are done, call \`report\` once, with ` +
+          'status nothing when there is nothing new (that wakes nobody), report when there is something to tell, ' +
+          'needs_person when you opened a ticket, or failed.'
+        : ''),
     '',
     schedule.instructions,
   ].join('\n')
@@ -316,7 +333,11 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
       memberId: schedule.ownerMemberId,
       title: `${schedule.title} · ${localTime(dueAt, schedule.timezone)}`,
       text,
-      origin: { kind: 'schedule', scheduleId: schedule.id },
+      origin: {
+        kind: 'schedule',
+        scheduleId: schedule.id,
+        ...(parent ? { parent, parentTeammateId: schedule.teammateId } : {}),
+      },
       projectId: schedule.projectId,
     })
     if (outcome === 'offline') return failed('the computer is offline')
@@ -439,6 +460,11 @@ export async function handleScheduleCall(
     const output = await handleWakeup(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
+  // So do child threads; a child reports with them.
+  if (isChildOperation(op)) {
+    const output = await handleChildCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
   const actor: Actor = { type: 'teammate', id: teammate.id }
@@ -459,13 +485,18 @@ export async function handleScheduleCall(
           timezone,
           // A schedule made in a project's thread runs there.
           projectId: session.projectId,
+          // Its runs report to this thread, unless asked to stand alone.
+          parentSessionId: op.attachToThread === false ? null : session.id,
         },
         { memberId: session.startedByMemberId, teammateId: teammate.id },
       )
       return done({
         ...brief(schedule),
         note:
-          'The schedule is active. Each run starts a fresh thread with the instructions as its first message. ' +
+          (op.attachToThread === false
+            ? 'The schedule is active. Each run starts a fresh thread with the instructions as its first message. '
+            : 'The schedule is active. Each run is a child thread of this one, with a fresh context and the ' +
+              'instructions as its first message: it wakes you here only when it reports something or fails. ') +
           'Tell the person in one line when it runs (in words, with the timezone) and the next run.' +
           (op.timezone ? '' : ` No timezone was given, so it uses ${timezone}; say so.`),
       })

@@ -457,11 +457,28 @@ export type EnumTaskPriorityWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumTaskPriorityFilter<$PrismaModel>
 }
 
+export type EnumWakeupKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.WakeupKind | Prisma.EnumWakeupKindFieldRefInput<$PrismaModel>
+  in?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel> | $Enums.WakeupKind
+}
+
 export type EnumWakeupStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.WakeupStatus | Prisma.EnumWakeupStatusFieldRefInput<$PrismaModel>
   in?: $Enums.WakeupStatus[] | Prisma.ListEnumWakeupStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.WakeupStatus[] | Prisma.ListEnumWakeupStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumWakeupStatusFilter<$PrismaModel> | $Enums.WakeupStatus
+}
+
+export type EnumWakeupKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.WakeupKind | Prisma.EnumWakeupKindFieldRefInput<$PrismaModel>
+  in?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumWakeupKindWithAggregatesFilter<$PrismaModel> | $Enums.WakeupKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel>
 }
 
 export type EnumWakeupStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -1260,11 +1277,28 @@ export type NestedEnumTaskPriorityWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumTaskPriorityFilter<$PrismaModel>
 }
 
+export type NestedEnumWakeupKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.WakeupKind | Prisma.EnumWakeupKindFieldRefInput<$PrismaModel>
+  in?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel> | $Enums.WakeupKind
+}
+
 export type NestedEnumWakeupStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.WakeupStatus | Prisma.EnumWakeupStatusFieldRefInput<$PrismaModel>
   in?: $Enums.WakeupStatus[] | Prisma.ListEnumWakeupStatusFieldRefInput<$PrismaModel>
   notIn?: $Enums.WakeupStatus[] | Prisma.ListEnumWakeupStatusFieldRefInput<$PrismaModel>
   not?: Prisma.NestedEnumWakeupStatusFilter<$PrismaModel> | $Enums.WakeupStatus
+}
+
+export type NestedEnumWakeupKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.WakeupKind | Prisma.EnumWakeupKindFieldRefInput<$PrismaModel>
+  in?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.WakeupKind[] | Prisma.ListEnumWakeupKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumWakeupKindWithAggregatesFilter<$PrismaModel> | $Enums.WakeupKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumWakeupKindFilter<$PrismaModel>
 }
 
 export type NestedEnumWakeupStatusWithAggregatesFilter<$PrismaModel = never> = {

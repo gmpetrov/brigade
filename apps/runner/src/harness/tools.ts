@@ -2,6 +2,9 @@
 // which checks the grant, asks for approval if needed, and makes the request.
 import { asSchema, jsonSchema, tool, type Tool } from 'ai'
 import {
+  CHILD_WAIT_MAX_MINUTES,
+  CHILD_WAIT_MINUTES,
+  CHILDREN_AT_WORK,
   CHIEF_NAME,
   isChiefName,
   DESIGN_ENTRY,
@@ -1144,17 +1147,32 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) => send('list_tasks', { name: 'list' }, input, toolCallId),
     }),
-    comment_on_task: tool({
+    message_thread: tool({
       description:
-        "Post a message to another task's thread; its teammate reads it and answers there. For a task that has " +
-        'started (not Backlog). To talk to a person, open a ticket instead.',
-      inputSchema: jsonSchema<{ taskId: string; text: string }>({
+        "Write in another thread: a started task's thread (taskId), where its teammate reads it and answers there, " +
+        'or one of your child threads (threadId, from list_children), which carries on and reports to you again. ' +
+        'Nowhere else. To talk to a person, open a ticket instead.',
+      inputSchema: jsonSchema<{ taskId?: string; threadId?: string; text: string }>({
         type: 'object',
-        properties: { taskId, text: { type: 'string', description: 'The comment, in Markdown' } },
-        required: ['taskId', 'text'],
+        properties: {
+          taskId: { ...taskId, description: 'A started task, from list_tasks. Or threadId.' },
+          threadId: { type: 'string', description: 'One of your child threads. Or taskId.' },
+          text: { type: 'string', description: 'The message, in Markdown' },
+        },
+        required: ['text'],
       }),
       execute: (input, { toolCallId }) =>
-        send('comment_on_task', { name: 'comment', ...input }, input, toolCallId),
+        send(
+          'message_thread',
+          {
+            name: 'comment',
+            ...(input.taskId ? { taskId: input.taskId } : {}),
+            ...(input.threadId ? { threadId: input.threadId } : {}),
+            text: input.text,
+          },
+          input,
+          toolCallId,
+        ),
     }),
     update_task: tool({
       description: "Change a task's title, description or priority.",
@@ -1286,12 +1304,16 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
         'repeatedly or at set times ("every morning", "each Monday", "daily at 6pm"). Each run starts with no memory ' +
         'of this conversation, so write instructions that stand alone: the inputs by name (repositories, mailboxes, ' +
         'documents, searches), the steps, where the result goes (an email, a pull request, the library) and when to ' +
-        'open a ticket instead. Do not ask first; create it, then tell the person in one line when it runs.',
+        'open a ticket instead. By default each run is a child thread of this one: it reports here and wakes you ' +
+        'only when it has something to say, so follow-ups of this conversation (watch a fix, a release, a reply) ' +
+        'come back here. attachToThread false makes runs stand alone in the sidebar, for reports of their own ' +
+        '(a weekly digest). Do not ask first; create it, then tell the person in one line when it runs.',
       inputSchema: jsonSchema<{
         title: string
         instructions: string
         cron: string
         timezone?: string
+        attachToThread?: boolean
       }>({
         type: 'object',
         properties: {
@@ -1299,6 +1321,11 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
           instructions: { type: 'string', description: 'What to do on each run, standing alone' },
           cron: { type: 'string', description: CRON },
           timezone: { type: 'string', description: TIMEZONE },
+          attachToThread: {
+            type: 'boolean',
+            description:
+              'true (default): each run reports to this thread as its child. false: runs are threads of their own.',
+          },
         },
         required: ['title', 'instructions', 'cron'],
       }),
@@ -1310,6 +1337,7 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
             instructions: input.instructions,
             cron: input.cron,
             ...(input.timezone ? { timezone: input.timezone } : {}),
+            ...(input.attachToThread !== undefined ? { attachToThread: input.attachToThread } : {}),
           },
           toolCallId,
           toolName: 'create_schedule',
@@ -1413,6 +1441,144 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
           operation: { name: 'cancel_wakeup', wakeupId: input.wakeupId },
           toolCallId,
           toolName: 'cancel_wakeup',
+          input,
+        }),
+    }),
+  }
+}
+
+/**
+ * Child threads: work started beside this thread, in a fresh context, whose report
+ * comes back here. A child reports with `report` and starts no children of its own.
+ * They go through the schedule calls; the API checks the thread and its children.
+ */
+export function childTools(
+  call: ScheduleCaller,
+  options: { child: boolean },
+): Record<string, Tool> {
+  const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
+  if (options.child)
+    return {
+      report: tool({
+        description:
+          'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
+          'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
+          'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when you opened a ticket ' +
+          'and wait on a person, failed when you could not do it (say why). The summary is what the parent reads ' +
+          'first: a few lines, the answer first. Without a report, your last message stands for it.',
+        inputSchema: jsonSchema<{
+          status: 'report' | 'nothing' | 'needs_person' | 'failed'
+          summary: string
+        }>({
+          type: 'object',
+          properties: {
+            status: { type: 'string', enum: ['report', 'nothing', 'needs_person', 'failed'] },
+            summary: { type: 'string', description: 'At most a few lines, the answer first' },
+          },
+          required: ['status', 'summary'],
+        }),
+        execute: (input, { toolCallId }) =>
+          call({
+            operation: { name: 'report', status: input.status, summary: input.summary },
+            toolCallId,
+            toolName: 'report',
+            input,
+          }),
+      }),
+    }
+  return {
+    start_child: tool({
+      description:
+        'Start work in a child thread of this one: a fresh context, on this computer and the accounts of the person in ' +
+        'this thread, out of their sidebar and shown here. Use it for work that is long, can run in parallel with ' +
+        'other work, or is for another teammate (teammate); do quick work yourself. The child does not see this ' +
+        'conversation: write instructions that stand alone (the goal, inputs by name, where the result goes, what ' +
+        'done looks like). With wait (default), you are woken here once, with one note, when every child you wait ' +
+        'for has reported: start them all, then end your turn; never wait or poll. ' +
+        `At most ${CHILDREN_AT_WORK} at work at once.`,
+      inputSchema: jsonSchema<{
+        title: string
+        instructions: string
+        teammate?: string
+        wait?: boolean
+        timeoutMinutes?: number
+      }>({
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Short, e.g. "Bisect the Next 16.3 regression"' },
+          instructions: { type: 'string', description: 'The work, standing alone' },
+          teammate: {
+            type: 'string',
+            description: 'Who does it: a teammate id or name (list_tasks lists them). Unset: you.',
+          },
+          wait: {
+            type: 'boolean',
+            description:
+              'true (default): woken when it and the others you wait for reported. false: woken only if it reports something or fails.',
+          },
+          timeoutMinutes: {
+            type: 'number',
+            description: `Stop waiting after this long and hear what is done (default ${CHILD_WAIT_MINUTES}, at most ${CHILD_WAIT_MAX_MINUTES})`,
+          },
+        },
+        required: ['title', 'instructions'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'start_child',
+            title: input.title,
+            instructions: input.instructions,
+            ...(input.teammate ? { teammate: input.teammate } : {}),
+            wait: input.wait ?? true,
+            ...(input.timeoutMinutes ? { timeoutMinutes: Math.round(input.timeoutMinutes) } : {}),
+          },
+          toolCallId,
+          toolName: 'start_child',
+          input,
+        }),
+    }),
+    list_children: tool({
+      description:
+        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in.",
+      inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'list_children' },
+          toolCallId,
+          toolName: 'list_children',
+          input,
+        }),
+    }),
+    read_child: tool({
+      description:
+        "A child thread's full report, its last message and the pull requests it opened.",
+      inputSchema: jsonSchema<{ threadId: string }>({
+        type: 'object',
+        properties: { threadId },
+        required: ['threadId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'read_child', threadId: input.threadId },
+          toolCallId,
+          toolName: 'read_child',
+          input,
+        }),
+    }),
+    cancel_child: tool({
+      description:
+        'Stop a child thread that is no longer needed. You stop waiting for it; the others you wait for still count.',
+      inputSchema: jsonSchema<{ threadId: string }>({
+        type: 'object',
+        properties: { threadId },
+        required: ['threadId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'cancel_child', threadId: input.threadId },
+          toolCallId,
+          toolName: 'cancel_child',
           input,
         }),
     }),

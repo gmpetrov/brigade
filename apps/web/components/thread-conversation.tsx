@@ -71,6 +71,7 @@ import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { ThreadTaskBar } from '@/components/tasks'
+import { ChildrenWaiting, ParentLink } from '@/components/thread-children'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -160,6 +161,12 @@ export function ThreadConversation({
   // The thread moved, or a computer came or went: where it runs, and where it could, change.
   useLive((message) => {
     if (message.type === 'thread.updated' && message.sessionId === id && message.moved)
+      void thread.reload()
+    // Its children's lines follow them; a child started or reported tells it too.
+    if (
+      message.type === 'thread.updated' &&
+      (message.sessionId === id || thread.data?.children.some((c) => c.id === message.sessionId))
+    )
       void thread.reload()
     if (
       message.type === 'thread.updated' &&
@@ -475,6 +482,7 @@ export function ThreadConversation({
                 origin: t.origin,
                 startedByMemberId: t.startedByMemberId,
                 projectId: t.project?.id ?? null,
+                parentId: t.parent?.id ?? null,
                 teammate: t.teammate,
               },
             }}
@@ -901,6 +909,8 @@ export function ThreadConversation({
         {top}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
+            {t.parent && <ParentLink parent={t.parent} />}
+
             {t.task && (
               <ThreadTaskBar
                 taskId={t.task.id}
@@ -939,6 +949,7 @@ export function ThreadConversation({
                     starting={current === 'starting'}
                     background={background}
                     eventsWaitingSince={eventsWaitingSince}
+                    childThreads={t.children}
                     onOpenPreview={previewLive(preview) ? openPreview : undefined}
                     onApproval={(approvalId, approved, always) =>
                       void call('/approvals', {
@@ -980,6 +991,7 @@ export function ThreadConversation({
                     }
                   />
                   {proposals.length > 0 && ticketCard(proposals, 'mt-4')}
+                  <ChildrenWaiting children={t.children} />
                 </FileLinksProvider>
               </div>
             )}

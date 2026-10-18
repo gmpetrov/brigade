@@ -89,6 +89,35 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     throw new HTTPException(409, {
       message: 'A teammate is working in this thread. Stop it first.',
     })
+  // Its child threads go with it, their files too: none may be at work.
+  const children = await db.session.findMany({
+    where: { parentId: sessionId },
+    select: { id: true, status: true },
+  })
+  if (children.some((c) => BUSY.has(c.status)))
+    throw new HTTPException(409, {
+      message: 'One of its child threads is at work. Stop it first, or wait for it to finish.',
+    })
+  for (const child of children) await deleteThread(db, scope, actor, child.id)
+  // A schedule whose runs reported here stops, and its owner hears why.
+  const reporting = await db.schedule.findMany({
+    where: { parentSessionId: sessionId },
+    select: { id: true, title: true, ownerMemberId: true, pausedAt: true },
+  })
+  for (const schedule of reporting) {
+    await db.schedule.updateMany({
+      where: { id: schedule.id },
+      data: { parentSessionId: null, pausedAt: schedule.pausedAt ?? new Date(), nextRunAt: null },
+    })
+    if (!schedule.pausedAt)
+      await db.ticket.create({
+        data: {
+          type: 'question',
+          title: `Schedule "${schedule.title}" is paused: the thread it reported to, “${thread.title}”, was deleted. Resume it to run its runs as threads of their own.`,
+          payload: { scheduleId: schedule.id, memberId: schedule.ownerMemberId },
+        } as never,
+      })
+  }
 
   const { keys, attachmentIds } = await threadObjectKeys(db, scope, sessionId)
   const failed: string[] = []

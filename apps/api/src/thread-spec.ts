@@ -33,6 +33,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       computer: true,
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       task: { select: { id: true, title: true, description: true, completedAt: true } },
+      parent: { select: { id: true, title: true } },
     },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -201,6 +202,8 @@ export async function specFor(
     library: teammate.libraryAccess,
     libraryFolders: folderExceptions({ id: teammate.id, library: teammate.libraryAccess }, rules),
     private: thread.private,
+    // A child reports to it; older runners ignore it, and its last message stands for its report.
+    parent: thread.parent,
     attachments,
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }

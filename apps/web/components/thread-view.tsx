@@ -8,6 +8,7 @@ import {
   pickedChoice,
   pickedDesignPath,
   bareToolName,
+  childNote,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -88,7 +89,8 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { threadImageUrl, useApi, type Credential } from '@/lib/api'
+import { StartedChild } from '@/components/thread-children'
+import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -103,6 +105,8 @@ export type Item =
       replyTo?: ReplyTo
       /** Given to this teammate during its running turn. */
       steeredTo?: string
+      /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
+      brigade?: 'task' | 'report'
     }
   | {
       kind: 'assistant'
@@ -242,6 +246,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             attachments: e.attachments ?? [],
             ...(e.replyTo ? { replyTo: e.replyTo } : {}),
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
+            ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
           })
           break
         case 'message.queued':
@@ -614,6 +619,15 @@ function openedPull(item: { toolName: string; input: unknown; output?: unknown }
   }
 }
 
+/** The child thread a start_child call started, once it went through: its id and title. */
+function startedChild(item: { toolName: string; input: unknown; output?: unknown }) {
+  if (bareToolName(item.toolName) !== 'start_child') return null
+  const found = json(item.output ?? '').match(/"threadId"\s*:\s*"([^"\\]+)"/)
+  if (!found) return null
+  const title = (item.input as { title?: unknown } | null)?.title
+  return { threadId: found[1]!, title: typeof title === 'string' ? title : 'Child thread' }
+}
+
 /** The team a propose_team call put up, once it went through. */
 function proposedTeam(item: Extract<Item, { kind: 'tool' }>) {
   if (item.toolName.replace(/^mcp__.+?__/, '') !== PROPOSE_TEAM_TOOL) return null
@@ -714,7 +728,7 @@ const isActivity = (item: Item): item is ActivityItem =>
     !suggestedReplies(item) &&
     !shownWidget(item) &&
     !proposedTeam(item) &&
-    !(item.finished && !item.isError && openedPull(item)))
+    !(item.finished && !item.isError && (openedPull(item) || startedChild(item))))
 
 /**
  * A step that does no work: thinking, loading a tool, a card refused and called
@@ -1342,6 +1356,7 @@ export function ThreadItems({
   starting = false,
   background = [],
   eventsWaitingSince,
+  childThreads = [],
   drafting = false,
 }: {
   threadId: string
@@ -1370,6 +1385,8 @@ export function ThreadItems({
   background?: BackgroundTask[]
   /** Since when its updates have not reached Brigade: said instead of how long it has worked. */
   eventsWaitingSince?: string | null
+  /** The thread's child threads: where a teammate started one, its line shows how it is doing. */
+  childThreads?: ThreadChild[]
   /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
   drafting?: boolean
 }) {
@@ -1416,6 +1433,24 @@ export function ThreadItems({
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
+        // Brigade's own words about child threads: a note, not a person's message.
+        if (item.brigade)
+          return (
+            <div
+              key={item.key}
+              data-seq={item.seq}
+              className="rounded-xl border bg-card px-4 py-3 text-sm"
+            >
+              <p className="mb-1 text-xs font-medium text-muted-foreground">
+                {item.brigade === 'report'
+                  ? 'Reports from child threads'
+                  : 'Work from the parent thread'}
+              </p>
+              <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                <MessageWithCode text={item.text} />
+              </div>
+            </div>
+          )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         const asked = startingCommand(item.text, skillNames)
         const text = asked ? asked.rest : item.text
@@ -1563,6 +1598,16 @@ export function ThreadItems({
         }
         const widget = shownWidget(item)
         if (widget) return <WidgetCard key={item.key} widget={widget} />
+        const child = item.finished && !item.isError ? startedChild(item) : null
+        if (child)
+          return (
+            <StartedChild
+              key={item.key}
+              threadId={child.threadId}
+              title={child.title}
+              children={childThreads}
+            />
+          )
         const opened = item.finished && !item.isError ? openedPull(item) : null
         if (opened)
           return (

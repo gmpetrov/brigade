@@ -78,7 +78,15 @@ export const TaskOperation = z.discriminatedUnion('name', [
     assignee: z.string().default('self'),
   }),
   z.object({ name: z.literal('list') }),
-  z.object({ name: z.literal('comment'), taskId: z.string(), text: Description.min(1) }),
+  /** To a started task's thread (taskId), or to a child of the thread calling (threadId). */
+  z
+    .object({
+      name: z.literal('comment'),
+      taskId: z.string().optional(),
+      threadId: z.string().optional(),
+      text: Description.min(1),
+    })
+    .refine((v) => !!v.taskId !== !!v.threadId, { message: 'Give either taskId or threadId' }),
   z.object({
     name: z.literal('update'),
     taskId: z.string(),
