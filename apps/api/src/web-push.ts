@@ -157,13 +157,23 @@ export async function generateVapidKeys() {
   return { publicKey: toBase64Url(publicKey), privateKey: jwk.d! }
 }
 
+/**
+ * A push service topic for `key`, any text: 32 characters of base64url, the whole
+ * encoding of 24 bytes of its hash. Apple refuses one that does not decode as
+ * base64url (BadWebPushTopic), such as a 25-character thread id; Chrome's took it.
+ */
+export async function topicOf(key: string) {
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(key)))
+  return toBase64Url(hash.slice(0, 24))
+}
+
 /** What the push service said. Failed: why, as it said it (e.g. 403 BadJwtToken). */
 export type PushResult =
   { status: 'sent' } | { status: 'gone' } | { status: 'failed'; detail: string }
 
 /**
  * Send one message. `topic` replaces a message with the same topic the push
- * service still holds for an offline device (letters, digits, - and _; at most 32).
+ * service still holds for an offline device (any text: sent as topicOf's).
  * Gone: the browser unsubscribed or the subscription expired; forget it.
  */
 export async function sendPush(
@@ -184,7 +194,7 @@ export async function sendPush(
         'content-type': 'application/octet-stream',
         ttl: String(options.ttlSeconds ?? 24 * 60 * 60),
         urgency: options.urgency ?? 'normal',
-        ...(options.topic && { topic: options.topic }),
+        ...(options.topic && { topic: await topicOf(options.topic) }),
       },
       body,
     })

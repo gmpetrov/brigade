@@ -6,6 +6,7 @@ import {
   fromBase64Url,
   generateVapidKeys,
   toBase64Url,
+  topicOf,
   vapidAuthorization,
 } from '../src/web-push.js'
 
@@ -59,4 +60,15 @@ test('a VAPID token is signed by the public key it names, for the push service',
   const payload = JSON.parse(Buffer.from(fromBase64Url(claims!)).toString())
   assert.equal(payload.aud, 'https://push.example.net')
   assert.equal(payload.sub, 'mailto:ops@example.com')
+})
+
+test('a topic is 32 characters that decode as base64url, the same for the same key', async () => {
+  // A thread id: 25 characters, which no base64url encoding has. Apple refused it as is.
+  for (const key of ['cmvdx6pwh001ipsp77ih0dlo2', 'brigade', 'brigade-test', 'é · x']) {
+    const topic = await topicOf(key)
+    assert.match(topic, /^[A-Za-z0-9_-]{32}$/)
+    assert.equal(fromBase64Url(topic).length, 24)
+    assert.equal(await topicOf(key), topic)
+  }
+  assert.notEqual(await topicOf('a'), await topicOf('b'))
 })
