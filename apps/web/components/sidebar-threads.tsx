@@ -188,19 +188,19 @@ function shortAgo(iso: string) {
 const inThread = (t: ThreadSummary, teammateId: string) =>
   t.teammate.id === teammateId || !!t.teammates?.some((p) => p.teammate.id === teammateId)
 
-/** How many of some threads wait on a person: beside a teammate, a project or a folded section. */
-function Signals({ threads, hideOnHover }: { threads: ThreadSummary[]; hideOnHover?: boolean }) {
+/**
+ * Beside a folded section's label: how many in it wait on a person, if any. Only there: the
+ * rows' dots say it otherwise, and teammates and projects don't count them again.
+ */
+function FoldedCount({ threads }: { threads: ThreadSummary[] }) {
   const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
   if (!waiting) return null
   return (
     <span
-      className={cn(
-        'text-muted-foreground ml-auto flex shrink-0 items-center gap-1.5 font-mono text-[0.6875rem]',
-        hideOnHover && 'group-hover/menu-item:opacity-0',
-      )}
+      title={`${waiting} waiting on you`}
+      className="text-warning ml-auto shrink-0 pl-2 font-mono text-[0.6875rem] font-semibold"
     >
-      <ThreadStatusIcon status="waiting" />
-      <span className="text-warning font-semibold">{waiting}</span>
+      {waiting}
     </span>
   )
 }
@@ -590,7 +590,7 @@ export function SidebarWork({
               folded={folded.pinned}
               onToggle={() => toggleFolded('pinned')}
             />
-            {folded.pinned && <Signals threads={pinned} />}
+            {folded.pinned && <FoldedCount threads={pinned} />}
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
@@ -643,7 +643,7 @@ export function SidebarWork({
               onClear={() => setFilter((f) => ({ ...f, statuses: [] }))}
             />
           )}
-          {folded.threads && <Signals threads={shown} />}
+          {folded.threads && <FoldedCount threads={shown} />}
         </SidebarGroupLabel>
         {/* Folded, Threads is only its label: no filter beside it. */}
         {!folded.threads && (
@@ -781,7 +781,6 @@ export function SidebarWork({
                 onClick={() => clickTeammate(t.id)}
                 icon={<TeammateAvatar teammate={t} className="size-5" />}
                 label={t.name}
-                threads={all.filter((thread) => inThread(thread, t.id))}
                 action={{
                   href: `/app/teammates/${t.id}`,
                   label: `${t.name}'s settings`,
@@ -815,7 +814,6 @@ export function SidebarWork({
                 onClick={() => clickProject(p.id)}
                 icon={<ProjectIcon project={p} />}
                 label={p.name}
-                threads={all.filter((t) => t.projectId === p.id)}
               />
             ))}
             {live.length === 0 && (
@@ -840,7 +838,6 @@ function SidebarRow({
   onClick,
   icon,
   label,
-  threads,
   action,
 }: {
   active: boolean
@@ -848,7 +845,6 @@ function SidebarRow({
   onClick: () => void
   icon: ReactNode
   label: string
-  threads: ThreadSummary[]
   action?: { href: string; label: string; icon: ReactNode }
 }) {
   return (
@@ -856,7 +852,6 @@ function SidebarRow({
       <SidebarMenuButton isActive={active} title={title} onClick={onClick}>
         {icon}
         <span className="truncate">{label}</span>
-        <Signals threads={threads} hideOnHover={!!action} />
       </SidebarMenuButton>
       {action && (
         <SidebarMenuAction asChild showOnHover>
