@@ -12,6 +12,7 @@ const { idTokenEmail, inspectMcp, listMcpTools, callMcpTool, nameFromHost, priva
 const { mcpAppKey, toolPrefix } = await import('../src/mcp-servers.js')
 const { mcpToolName } = await import('../src/connectors/index.js')
 const { notionAccountName } = await import('../src/connectors/notion.js')
+const { linearAccountName } = await import('../src/connectors/linear.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
 const servers: ReturnType<typeof createServer>[] = []
@@ -103,6 +104,12 @@ test('a Notion account shows as its workspace, else its email', () => {
   assert.equal(notionAccountName({ workspace: { name: 'Acme' }, user }), 'Acme')
   assert.equal(notionAccountName({ workspace: {}, user }), 'ada@acme.com')
   assert.equal(notionAccountName({}), null)
+})
+
+test("a Linear account shows as its workspace's name", () => {
+  const workspace = { id: 'w1', name: 'Unicorn Factory', url: 'https://linear.app/unicorn' }
+  assert.equal(linearAccountName(workspace), 'Unicorn Factory')
+  assert.equal(linearAccountName({}), null)
 })
 
 test('one App per server, however its URL was typed', () => {
