@@ -6,9 +6,10 @@
 // on a person first, then working, then the rest) and folds the others into a "+N" row, so
 // the teammates and projects stay in reach however many there are; older ones load on asking.
 // Threads this member pinned sit above them, under Pinned; archived ones are out of both,
-// and the filter lists them. Pinned and Threads each fold to their label, with how many in
-// them wait on a person, and this browser remembers which are folded. Inside Threads, the
-// latest thread waiting on a person shows first, and the others behind a "+N waiting on you".
+// and the filter lists them. Pinned and Threads each fold to their label alone (what waits
+// on a person is counted once, beside Home), and this browser remembers which are folded.
+// Inside Threads, the latest thread waiting on a person shows first, and the others behind a
+// "+N waiting on you".
 import {
   Archive,
   ChevronDown,
@@ -187,24 +188,6 @@ function shortAgo(iso: string) {
 
 const inThread = (t: ThreadSummary, teammateId: string) =>
   t.teammate.id === teammateId || !!t.teammates?.some((p) => p.teammate.id === teammateId)
-
-/**
- * Beside a folded section's label: how many in it wait on a person, if any. Only there: the
- * rows' dots say it otherwise, and teammates and projects don't count them again.
- */
-function FoldedCount({ threads }: { threads: ThreadSummary[] }) {
-  const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
-  if (!waiting) return null
-  return (
-    // Beside the label, as Home's Waiting on you badge: the label and its chevron stay put.
-    <span
-      title={`${waiting} waiting on you`}
-      className="bg-warning/15 text-warning ml-1 shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
-    >
-      {waiting}
-    </span>
-  )
-}
 
 function FilterChip({
   label,
@@ -590,7 +573,6 @@ export function SidebarWork({
               folded={folded.pinned}
               onToggle={() => toggleFolded('pinned')}
             />
-            {folded.pinned && <FoldedCount threads={pinned} />}
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
@@ -614,7 +596,6 @@ export function SidebarWork({
               toggleFolded('threads')
             }}
           />
-          {folded.threads && <FoldedCount threads={shown} />}
           {teammate && (
             <FilterChip
               label={teammate.name}
