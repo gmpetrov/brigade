@@ -281,9 +281,12 @@ export class Threads {
         this.emitQueued(spec.sessionId, message)
       }
       this.enqueueMessage(thread, message)
-      // A turn that only waits on its background work takes it at once, as if steered.
-      if (message.state === 'queued' && (command.steer || this.waiting(thread, message)))
-        void this.steer(thread, message)
+      // A turn that only waits on its background work takes it at once, as if steered,
+      // unless one is already in it: then it waits its turn (steerQueued).
+      if (message.state === 'queued') {
+        if (command.steer) void this.steer(thread, message)
+        else if (this.waiting(thread, message)) this.steerQueued(thread, spec.teammate.id)
+      }
       if (command.nameThread !== undefined) void this.name(spec, command.text, command.nameThread)
       return
     }
@@ -914,12 +917,22 @@ export class Threads {
     return thread.running?.teammateId === teammateId && !!thread.harnesses.get(teammateId)?.waiting
   }
 
-  /** The teammate's turn only waits on its background work: the messages queued for it go in now, in order. */
-  private async steerQueued(thread: Thread, teammateId: string) {
-    const queued = [...thread.messages.values()].filter(
+  /**
+   * The teammate's turn only waits on its background work: the oldest message
+   * queued for it goes in now. The next one waits until the teammate answered it
+   * and only waits again, so each message gets a reply of its own, as in a turn
+   * of its own, rather than all of them read at once.
+   */
+  private steerQueued(thread: Thread, teammateId: string) {
+    const seat = thread.harnesses.get(teammateId)
+    if (!seat?.waiting) return
+    const next = [...thread.messages.values()].find(
       (m) => m.state === 'queued' && m.specs[0]!.teammate.id === teammateId,
     )
-    for (const message of queued) await this.steer(thread, message)
+    if (!next) return
+    // Busy with it until the bridge says the turn only waits again.
+    seat.waiting = false
+    void this.steer(thread, next)
   }
 
   /** The teammate no longer waits on a person: the messages held for that are queued again. */
@@ -1216,7 +1229,7 @@ export class Threads {
           const waiting = backgroundWait(event)
           if (waiting !== undefined) {
             seat!.waiting = waiting
-            if (waiting) void this.steerQueued(thread, teammateId)
+            if (waiting) this.steerQueued(thread, teammateId)
           }
           if (event.type === 'turn.completed') seat!.waiting = false
           if (event.type === 'tool.started')
