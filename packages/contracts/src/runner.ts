@@ -657,6 +657,15 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     url: z.url({ protocol: /^https?$/ }).optional(),
   }),
   /**
+   * Bring the thread's own tab to the front of its teammate's browser, for
+   * people watching the thread's desktop (FOCUS_PROTOCOL). Cloud computers only.
+   */
+  z.object({
+    type: z.literal('browser.focus'),
+    teammateId: z.string(),
+    sessionId: z.string(),
+  }),
+  /**
    * The cloud computer's desktop clipboard, for a person in control copying
    * and pasting through the desktop view: set it to `text`, or read it.
    */

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   FILE_VIEW_MAX,
+  FOCUS_PROTOCOL,
   VIEWABLE_FILE,
   AnswerQuestion,
   AnswerTicket,
@@ -59,7 +60,7 @@ import {
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
-import { loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
+import { currentTeammate, loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
 import { movePublic, requestMove } from '../move.js'
 import {
   handBack,
@@ -70,6 +71,7 @@ import {
 } from '../work.js'
 import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
+import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
 import { descendants } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
@@ -838,6 +840,19 @@ export const threads = new Hono<AppEnv>()
       })
     }
     const view = await watchDesktop(thread.computer)
+    // The screen is shared by every thread on the computer: show this one's tab,
+    // unless a person is using the screen (in control of a thread, or recording a task).
+    const inUse = async () =>
+      recorder(thread.computer.id) ||
+      (await db.session.count({
+        where: { computerId: thread.computer.id, controlledByMemberId: { not: null } },
+      }))
+    if ((runnerProtocol(thread.computer.id) ?? 0) >= FOCUS_PROTOCOL && !(await inUse()))
+      sendToRunner(
+        thread.computer.id,
+        { type: 'browser.focus', teammateId: currentTeammate(thread).id, sessionId: thread.id },
+        { touch: false },
+      )
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },

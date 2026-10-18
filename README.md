@@ -286,7 +286,10 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
 - **One browser, a tab set per thread** (`apps/runner/src/browser-relay.ts`). Playwright's MCP server would adopt
   every open tab, so each thread reaches the browser through a small DevTools relay that shows it only the tabs it
   opened and their popups. The harness restarts MCP servers between turns, so a thread's tab ids are kept in
-  `~/.browser-tabs/<thread>.json`; tabs of threads idle for a day are closed.
+  `~/.browser-tabs/<thread>.json`; tabs of threads idle for a day are closed. The desktop shows all the threads'
+  tabs in the same windows, so watching a thread's desktop brings the tab it opened last to the front
+  (`browser-focus.ts`, `browser.focus`), unless a person is using the screen: in control of a thread, or recording a
+  task. Chrome starts without its "Restore pages?" bubble, since a stopped computer cuts it off.
 - **Sign-in through the dashboard.** "Open <teammate>'s browser" (teammate page, and the takeover panel) opens a
   window of that teammate's Chrome on the desktop, optionally at a URL, and shows the desktop. Whatever a person
   signs in to stays in that teammate's profile only.

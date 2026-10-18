@@ -36,7 +36,7 @@ import { describeProject } from './describe.js'
 import { readThreadFile } from './files.js'
 import { Folders, type FolderName } from './folders.js'
 import { Library } from './library.js'
-import { BROWSER_START_PAGE, ensureBrowser } from './browsers.js'
+import { BROWSER_START_PAGE, ensureBrowser, focusThreadTab } from './browsers.js'
 import { desktopClipboard } from './desktop.js'
 import { changedFilesSince, Terminals } from './terminals.js'
 import { stripApiKeys, usePersonPath, type Transcript } from './harness/index.js'
@@ -613,6 +613,11 @@ async function start() {
               commandId: message.commandId,
               error: String(error),
             }),
+        )
+      case 'browser.focus':
+        if (!CLOUD) return
+        return focusThreadTab(message.teammateId, message.sessionId).catch((error) =>
+          console.warn(`could not bring ${message.sessionId}'s tab to the front: ${error}`),
         )
     }
   }

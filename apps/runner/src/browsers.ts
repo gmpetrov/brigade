@@ -82,6 +82,11 @@ const PLAYWRIGHT_MCP = join(
 
 const here = fileURLToPath(import.meta.url)
 const RELAY = join(dirname(here), `browser-relay${extname(here)}`)
+const FOCUS = join(dirname(here), `browser-focus${extname(here)}`)
+
+/** Where the relay keeps the ids of the tabs a thread opened in the teammate's browser. */
+export const threadTabsFile = (user: string, sessionId: string) =>
+  `${teammateHome(user)}/.browser-tabs/${sessionId}.json`
 
 /**
  * The harness's MCP server for the teammate's browser, in the shape both
@@ -92,3 +97,18 @@ export const browserMcpServer = (port: number, tabsFile: string) => ({
   command: process.execPath,
   args: [RELAY, String(port), tabsFile, PLAYWRIGHT_MCP],
 })
+
+/**
+ * Bring the thread's own tab to the front of the teammate's browser, if the
+ * browser runs and the thread has a tab open in it.
+ */
+export async function focusThreadTab(teammateId: string, sessionId: string) {
+  const user = teammateUser(teammateId)
+  const port = await portOf(user)
+  if (!(await listening(port))) return
+  await run(
+    'sudo',
+    ['-n', '-u', user, process.execPath, FOCUS, String(port), threadTabsFile(user, sessionId)],
+    { cwd: '/', timeout: 15_000 },
+  )
+}
