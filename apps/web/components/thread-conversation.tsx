@@ -491,6 +491,7 @@ export function ThreadConversation({
                 startedByMemberId: t.startedByMemberId,
                 projectId: t.project?.id ?? null,
                 parentId: t.parent?.id ?? null,
+                archivedAt: t.archivedAt ?? null,
                 teammate: t.teammate,
               },
             }}

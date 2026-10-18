@@ -761,6 +761,8 @@ export type Ticket = {
     projectId: string | null
     /** A child thread's parent: out of the sidebar, its ticket marks the parent there. */
     parentId: string | null
+    /** Archived: its tickets no longer wait on anyone, until it comes back. */
+    archivedAt: string | null
     teammate: { id: string; name: string }
   } | null
 }
@@ -784,7 +786,7 @@ export const credentialManagersOnly = (t: Ticket) =>
 
 /** Whether an open ticket waits on this member: the same rules that give them actions below. */
 export function waitsOn(t: Ticket, me: Me) {
-  if (t.status !== 'open') return false
+  if (t.status !== 'open' || t.session?.archivedAt) return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
   // A skill shapes what every teammate does: an admin's call.

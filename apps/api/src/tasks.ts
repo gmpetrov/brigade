@@ -282,10 +282,13 @@ async function settleMission(scope: Scope, missionId: string | null | undefined)
     select: { id: true, completedAt: true },
   })
   if (!mission) return
-  const children = await db.task.findMany({
-    where: { parentId: missionId, trashedAt: null },
-    select: { completedAt: true },
-  })
+  // One archived unfinished, with its thread, no longer holds the mission back.
+  const children = (
+    await db.task.findMany({
+      where: { parentId: missionId, trashedAt: null },
+      select: { completedAt: true, archivedAt: true },
+    })
+  ).filter((c) => c.completedAt || !c.archivedAt)
   if (!children.length) return
   const allDone = children.every((c) => c.completedAt)
   if (allDone && !mission.completedAt) {
@@ -300,7 +303,7 @@ async function settleMission(scope: Scope, missionId: string | null | undefined)
       data: { completedAt: null, archivedAt: null },
     })
     await db.task.updateMany({
-      where: { parentId: missionId, archivedAt: { not: null } },
+      where: { parentId: missionId, archivedAt: { not: null }, completedAt: { not: null } },
       data: { archivedAt: null },
     })
     await changed(scope, system, 'task.reopened', missionId)
@@ -697,9 +700,9 @@ export async function reopenTask(db: ScopedDb, by: By, id: string) {
   requireNotTrashed(task)
   await requireMayAct(db, by, id)
   await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
-  // A mission comes back with its tasks.
+  // A mission comes back with its tasks, those put away done with it.
   await db.task.updateMany({
-    where: { parentId: id, archivedAt: { not: null } },
+    where: { parentId: id, archivedAt: { not: null }, completedAt: { not: null } },
     data: { archivedAt: null },
   })
   await changed(by.scope, by.actor, 'task.reopened', id)
@@ -719,7 +722,7 @@ export async function reopenOnMessage(
     data: { completedAt: null, archivedAt: null },
   })
   await db.task.updateMany({
-    where: { parentId: thread.task.id, archivedAt: { not: null } },
+    where: { parentId: thread.task.id, archivedAt: { not: null }, completedAt: { not: null } },
     data: { archivedAt: null },
   })
   broadcastTask(scope.workspaceId, thread.task.id)
@@ -755,7 +758,10 @@ export async function archiveTask(db: ScopedDb, by: By, id: string) {
   return getTask(db, id)
 }
 
-/** An archived task back in Done. */
+/**
+ * An archived task back on the board: in Done, or, one archived with its thread, where
+ * its thread says, with the thread back in the sidebar.
+ */
 export async function unarchiveTask(db: ScopedDb, by: By, id: string): Promise<TaskDetail> {
   const task = await loadTask(db, id)
   // A mission's task comes back with its mission.
@@ -763,10 +769,8 @@ export async function unarchiveTask(db: ScopedDb, by: By, id: string): Promise<T
     const mission = await db.task.findFirst({
       where: { id: task.parentId, archivedAt: { not: null } },
     })
-    if (mission) {
-      await unarchiveTask(db, by, mission.id)
-      return getTask(db, id)
-    }
+    // One archived unfinished, with its thread, still has to come back itself.
+    if (mission) await unarchiveTask(db, by, mission.id)
   }
   const { count } = await db.task.updateMany({
     where: { id, archivedAt: { not: null } },
@@ -774,12 +778,49 @@ export async function unarchiveTask(db: ScopedDb, by: By, id: string): Promise<T
   })
   if (count) {
     await db.task.updateMany({
-      where: { parentId: id, archivedAt: { not: null } },
+      where: { parentId: id, archivedAt: { not: null }, completedAt: { not: null } },
       data: { archivedAt: null },
     })
+    if (!task.completedAt) {
+      const thread = await db.session.findFirst({ where: { taskId: id }, select: { id: true } })
+      if (thread)
+        await db.session.updateMany({
+          where: { OR: [{ id: thread.id }, { parentId: thread.id }], archivedAt: { not: null } },
+          data: { archivedAt: null },
+        })
+    }
     await changed(by.scope, by.actor, 'task.unarchived', id)
+    await settleMission(by.scope, task.parentId)
   }
   return getTask(db, id)
+}
+
+/**
+ * Its thread archived: an unfinished task goes off the board with it, so nothing there
+ * waits on a person any more; Archived lists it. A mission's tasks stay, as tasks of
+ * their own: each has its own thread. A done one stays in Done, waiting on nobody.
+ */
+export async function archiveWithThread(scope: Scope, taskId: string, at: Date) {
+  const db = scoped(scope)
+  const { count } = await db.task.updateMany({
+    where: { id: taskId, completedAt: null, archivedAt: null, trashedAt: null },
+    data: { archivedAt: at },
+  })
+  if (!count) return
+  broadcastTask(scope.workspaceId, taskId)
+  await settleMission(scope, await missionOf(db, taskId))
+}
+
+/** Its thread back: an unfinished task archived with it comes back where the thread says. */
+export async function unarchiveWithThread(scope: Scope, taskId: string) {
+  const db = scoped(scope)
+  const { count } = await db.task.updateMany({
+    where: { id: taskId, completedAt: null, archivedAt: { not: null } },
+    data: { archivedAt: null },
+  })
+  if (!count) return
+  broadcastTask(scope.workspaceId, taskId)
+  await settleMission(scope, await missionOf(db, taskId))
 }
 
 type TaskDetail = Awaited<ReturnType<typeof getTask>>
