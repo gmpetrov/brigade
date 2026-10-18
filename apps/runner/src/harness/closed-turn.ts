@@ -50,6 +50,29 @@ export function closeTurn(
   }
 }
 
+/**
+ * A parked session's saved state without the bridge it ran under, which stops with the
+ * session's sandbox. Kept, the next session would try that bridge's port for the harness's
+ * whole startup timeout (two minutes) before starting a new one: a turn frozen by a restart
+ * would wait that long to go on.
+ */
+export function withoutBridge(resume: unknown): unknown {
+  if (!resume || typeof resume !== 'object') return resume
+  const state = resume as { data?: unknown; continueFrom?: { data?: unknown } }
+  const strip = (data: unknown) => {
+    if (!data || typeof data !== 'object') return data
+    const { bridge: _bridge, ...rest } = data as Record<string, unknown>
+    return rest
+  }
+  return {
+    ...state,
+    ...(state.data !== undefined ? { data: strip(state.data) } : {}),
+    ...(state.continueFrom
+      ? { continueFrom: { ...state.continueFrom, data: strip(state.continueFrom.data) } }
+      : {}),
+  }
+}
+
 /** The harness keeps a pending call's input as JSON text. */
 const parsed = (input: unknown) => {
   if (typeof input !== 'string') return input

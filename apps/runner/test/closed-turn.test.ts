@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answerAfterRestart, closeTurn } from '../src/harness/closed-turn.js'
+import { answerAfterRestart, closeTurn, withoutBridge } from '../src/harness/closed-turn.js'
 
 // What Claude Code's harness saves when a turn waiting on open_ticket stops.
 const waiting = {
@@ -38,6 +38,19 @@ test('a turn waiting on a person resumes as its conversation, without the turn o
 test('a turn frozen mid-run, waiting on nobody, is left to go on', () => {
   const frozen = { ...waiting, continueFrom: { ...waiting.continueFrom, pendingToolResults: [] } }
   assert.equal(closeTurn(frozen), undefined)
+})
+
+test('a parked session keeps its conversation and frozen turn, without the bridge that stopped', () => {
+  const frozen = { ...waiting, continueFrom: { ...waiting.continueFrom, pendingToolResults: [] } }
+  assert.deepEqual(withoutBridge(frozen), {
+    ...frozen,
+    data: { claudeSessionId: 'c1' },
+    continueFrom: { ...frozen.continueFrom, data: { claudeSessionId: 'c1' } },
+  })
+  // Between turns, or with nothing saved, there is no bridge to drop.
+  const between = { type: 'resume-session', harnessId: 'codex', data: { threadId: 't1' } }
+  assert.deepEqual(withoutBridge(between), between)
+  assert.equal(withoutBridge(undefined), undefined)
 })
 
 test('no turn is left as it is', () => {

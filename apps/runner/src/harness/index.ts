@@ -45,6 +45,7 @@ import {
   closeTurn,
   sameCall,
   waitingOn,
+  withoutBridge,
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
@@ -540,8 +541,9 @@ export class HarnessThread {
     if (!live) return
     this.live = undefined
     try {
-      const resume = await live.session.stop()
-      // Parked, a turn that was running is frozen in `resume`: it goes on from there.
+      // Parked, a turn that was running is frozen in `resume`: it goes on from there, under a
+      // new bridge (this one stops with the sandbox below).
+      const resume = withoutBridge(await live.session.stop())
       this.saved = { ...this.saved!, accountId: live.account.id, resume, inTurn: false }
       await this.persist()
     } finally {
