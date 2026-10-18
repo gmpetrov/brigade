@@ -5,7 +5,7 @@
 // reaches an outside service: connection and credential secrets are placeholders.
 // Called by seed.ts when the organization does not exist yet.
 import { randomBytes, randomUUID } from 'node:crypto'
-import type { AgentEvent } from '@brigade/contracts'
+import { SUGGEST_REPLIES_TOOL, type AgentEvent } from '@brigade/contracts'
 import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
 import { saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
@@ -1298,14 +1298,22 @@ export async function seedWorkspace(users: Users) {
     status: 'idle',
     startedAt: hours(2),
     projectId: website.id,
-    events: turn(
-      riley.id,
-      adaAccount.id,
-      'Can we offer annual billing on the pricing page, with two months free?',
-      ada.id,
-      [],
-      'Yes: a Monthly / Annual toggle above the cards, annual prices shown per month with "2 months free" under them. Stripe already has the yearly prices, so it is only the page.\n\n```replies\nBuild it and open a PR\nNot yet\n```',
-    ),
+    events: [
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        'Can we offer annual billing on the pricing page, with two months free?',
+        ada.id,
+        [],
+        'Yes: a Monthly / Annual toggle above the cards, annual prices shown per month with "2 months free" under them. Stripe already has the yearly prices, so it is only the page.',
+      ),
+      // Its buttons, as the runner records a replies block (apps/runner/src/harness/events.ts).
+      ...tool(
+        SUGGEST_REPLIES_TOOL,
+        { replies: ['Build it and open a PR', 'Not yet'] },
+        { shown: 2 },
+      ),
+    ],
   })
   await thread({
     title: 'Move the blog to MDX',

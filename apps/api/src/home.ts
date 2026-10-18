@@ -3,15 +3,24 @@
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
 // with no event for a while, a routine whose last run failed. Pull requests and
 // tickets that wait on a person are Waiting on you, not here.
-import { replyCard } from '@brigade/contracts'
+import {
+  bareToolName,
+  OFFER_CHOICES_TOOL,
+  safeChoices,
+  safeReplies,
+  SUGGEST_REPLIES_TOOL,
+  THREAD_NOTE_SOURCE,
+} from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
 import { eventsWaitingSince } from './hub.js'
 import { waitingOnPerson } from './pull-requests.js'
 
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
-/** A teammate's proposal is a loose end once nobody answered it for this long. */
+/** A teammate's proposal is a loose end once nobody answered it for this long… */
 const PROPOSAL_AFTER = 30 * MINUTE
+/** …and until it is this old: past that, the member moved on. */
+const PROPOSAL_UNTIL = 3 * DAY
 /** A running thread with no event for this long has stalled, or works out of sight. */
 const STALLED_AFTER = 60 * MINUTE
 /** Threads looked at: those active lately. */
@@ -86,7 +95,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
           by: ['sessionId', 'type'],
           where: {
             sessionId: { in: ids },
-            type: { in: ['message.user', 'message.done', 'turn.completed'] },
+            type: { in: ['message.user', 'turn.completed'] },
           },
           _max: { seq: true, at: true },
         })
@@ -132,32 +141,67 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   const held = new Set([...tickets, ...pullsWaiting].map((t) => t.sessionId))
   const gone = new Set(dismissed.map((d) => d.key))
 
-  // The last reply of each idle thread nobody wrote in since.
-  const answered = threads.filter((t) => {
-    if (t.status !== 'idle' || held.has(t.id)) return false
-    const done = max(t.id, 'message.done')?.seq
-    return done != null && (max(t.id, 'message.user')?.seq ?? -1) < done
-  })
-  const lastReplies = answered.length
-    ? await db.sessionEvent.findMany({
-        where: {
-          OR: answered.map((t) => ({ sessionId: t.id, seq: max(t.id, 'message.done')!.seq! })),
-        },
-        select: { sessionId: true, seq: true, at: true, data: true },
-      })
-    : []
+  // The buttons or choices each idle thread ended on. The runner takes them out of the
+  // reply's text and records them as a card tool's call (apps/runner/src/harness/events.ts),
+  // as the thread reads them. They stand until someone writes in the thread or a note
+  // settles them (a pull request merged from its card), as the thread shows them.
+  const idle = threads.filter((t) => t.status === 'idle' && !held.has(t.id))
+  const [cards, notes, closedPulls] = idle.length
+    ? await Promise.all([
+        db.sessionEvent.findMany({
+          where: {
+            sessionId: { in: idle.map((t) => t.id) },
+            type: 'tool.started',
+            OR: [
+              { data: { path: ['toolName'], string_ends_with: SUGGEST_REPLIES_TOOL } },
+              { data: { path: ['toolName'], string_ends_with: OFFER_CHOICES_TOOL } },
+            ],
+          },
+          orderBy: { seq: 'desc' },
+          select: { sessionId: true, seq: true, at: true, data: true },
+        }),
+        db.sessionEvent.groupBy({
+          by: ['sessionId'],
+          where: {
+            sessionId: { in: idle.map((t) => t.id) },
+            type: 'raw',
+            data: { path: ['source'], equals: THREAD_NOTE_SOURCE },
+          },
+          _max: { seq: true },
+        }),
+        // A pull request merged or closed since settles what was asked about it, from
+        // wherever it was merged (GitHub, Home, the card).
+        db.pullRequest.findMany({
+          where: { sessionId: { in: idle.map((t) => t.id) }, state: { in: ['merged', 'closed'] } },
+          select: { sessionId: true, updatedAt: true, mergedAt: true },
+        }),
+      ])
+    : [[], [], []]
 
   const loose: LooseEnd[] = []
-  for (const event of lastReplies) {
-    if (now.getTime() - event.at.getTime() < PROPOSAL_AFTER) continue
-    const card = replyCard(String((event.data as { text?: unknown }).text ?? ''))
-    const offers = card.replies
-      ? [...(card.replies.actions ?? []).map((a) => a.label), ...card.replies.replies]
-      : (card.choices?.options.map((o) => o.label) ?? [])
+  for (const thread of idle) {
+    const event = cards.find((c) => c.sessionId === thread.id)
+    const age = event ? now.getTime() - event.at.getTime() : 0
+    if (!event || age < PROPOSAL_AFTER || age > PROPOSAL_UNTIL) continue
+    if (
+      closedPulls.some((p) => p.sessionId === thread.id && (p.mergedAt ?? p.updatedAt) > event.at)
+    )
+      continue
+    const settled = Math.max(
+      max(thread.id, 'message.user')?.seq ?? -1,
+      notes.find((n) => n.sessionId === thread.id)?._max.seq ?? -1,
+    )
+    if (settled > event.seq) continue
+    const { toolName, input } = event.data as { toolName?: string; input?: unknown }
+    const name = bareToolName(String(toolName ?? ''))
+    const replies = name === SUGGEST_REPLIES_TOOL ? safeReplies(input) : null
+    const choices = name === OFFER_CHOICES_TOOL ? safeChoices(input) : null
+    const offers = replies
+      ? [...(replies.actions ?? []).map((a) => a.label), ...replies.replies]
+      : (choices?.options.map((o) => o.label) ?? [])
     if (!offers.length) continue
-    const key = `proposal:${event.sessionId}:${event.seq}`
+    const key = `proposal:${thread.id}:${event.seq}`
     if (gone.has(key)) continue
-    const thread = threads.find((t) => t.id === event.sessionId)!
     loose.push({
       kind: 'proposal',
       key,
@@ -165,7 +209,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       thread: { id: thread.id, title: thread.title },
       teammate: thread.teammate,
       // A Brigade action (merge) runs from the thread's own button, not from here.
-      reply: card.replies?.replies[0] ?? null,
+      reply: replies?.replies[0] ?? null,
       offers,
     })
   }
