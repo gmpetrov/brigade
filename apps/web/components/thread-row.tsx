@@ -1,7 +1,8 @@
 'use client'
 // A thread in the sidebar, with its menu: ⋮ on hover in place of the time, or a right-click
 // on the row. Pin, Rename, Archive and Delete, each with its letter, as in Claude: with the
-// menu open, the letter does it. Rename edits the title in the row itself.
+// menu open, the letter does it. Rename edits the title in the row itself. A thread whose
+// preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
 import {
   Archive,
   ArchiveRestore,
@@ -25,10 +26,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
 import { renamedHere, StreamedTitle } from '@/components/streamed-title'
+import { useThreadPanel } from '@/components/thread-panel'
 import { api, type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-type Action = 'pin' | 'rename' | 'archive' | 'delete'
+type Action = 'preview' | 'pin' | 'rename' | 'archive' | 'delete'
 
 export function ThreadRow({
   thread,
@@ -56,6 +58,7 @@ export function ThreadRow({
   const [open, setOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [busy, setBusy] = useState(false)
+  const { openPreview } = useThreadPanel()
 
   const starter = thread.startedBy.id === memberId
   // As the API decides (routes/threads.ts): who may write in it renames and archives it,
@@ -67,6 +70,7 @@ export function ThreadRow({
 
   async function run(action: Action) {
     setOpen(false)
+    if (action === 'preview') return openPreview(thread.id)
     if (action === 'rename') return setRenaming(true)
     if (
       action === 'delete' &&
@@ -105,6 +109,13 @@ export function ThreadRow({
   }
 
   const items: { action: Action; label: string; icon: ReactNode; key: string; show: boolean }[] = [
+    {
+      action: 'preview',
+      label: 'Open preview',
+      icon: <MonitorPlay />,
+      key: 'O',
+      show: !!thread.previewRunning,
+    },
     {
       action: 'pin',
       label: pinned ? 'Unpin' : 'Pin',
@@ -159,7 +170,15 @@ export function ThreadRow({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} className={cn(busy && 'opacity-60')}>
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        className={cn(
+          busy && 'opacity-60',
+          // On hover the title makes room for the preview's button beside ⋮.
+          thread.previewRunning && 'md:group-hover/menu-item:pr-14!',
+        )}
+      >
         <Link
           href={href}
           title={title}
@@ -198,6 +217,17 @@ export function ThreadRow({
           </span>
         </Link>
       </SidebarMenuButton>
+      {/* Its preview, in reach on hover beside ⋮ where the icon was; on a phone, in ⋮. */}
+      {thread.previewRunning && (
+        <SidebarMenuAction
+          aria-label={`${title}: open preview`}
+          title="Open preview"
+          onClick={() => openPreview(thread.id)}
+          className="right-7 group-hover/menu-item:opacity-100 focus-visible:opacity-100 max-md:hidden md:opacity-0"
+        >
+          <MonitorPlay />
+        </SidebarMenuAction>
+      )}
       <DropdownMenu open={open} onOpenChange={setOpen}>
         {/* Only on the hovered row, or while its menu is open: not left behind on a row that
             keeps the focus after a click or a shortcut. Always there on a phone. */}

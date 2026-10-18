@@ -227,6 +227,8 @@ export function ThreadConversation({
     setCovered,
     openComputer,
     computerPage,
+    previewRequest,
+    takePreviewRequest,
   } = useThreadPanel()
   // A file a message names, open beside the thread in the desktop's place.
   const [file, setFile] = useState<{ path: string; teammateId?: string }>()
@@ -272,6 +274,12 @@ export function ThreadConversation({
   // A preview a person started, or asked the teammate for: its panel opens once it starts.
   const [awaitingPreview, setAwaitingPreview] = useState(false)
   const live = previewLive(preview)
+  // Opened from the sidebar's preview icon: its panel opens once the preview shows as up.
+  useEffect(() => {
+    if (previewRequest?.threadId !== id) return
+    takePreviewRequest()
+    setAwaitingPreview(true)
+  }, [previewRequest, id, takePreviewRequest])
   useEffect(() => {
     if (!awaitingPreview || !live) return
     setAwaitingPreview(false)
@@ -786,8 +794,8 @@ export function ThreadConversation({
           }}
           title={
             live
-              ? `Try the app ${previewTeammate?.name ?? answering.name} runs`
-              : 'Run the app to try it here'
+              ? `Opens the app ${previewTeammate?.name ?? answering.name} runs, so you can try it`
+              : 'Runs the app this thread builds, so you can try it'
           }
         >
           {previewStart.busy ? (
@@ -795,7 +803,14 @@ export function ThreadConversation({
           ) : (
             <AppWindow aria-hidden />
           )}
-          Preview
+          {/* What a click does, not only what it is about. */}
+          {previewStart.busy
+            ? 'Starting…'
+            : previewing
+              ? 'Hide preview'
+              : live
+                ? 'Open preview'
+                : 'Start preview'}
           {preview && live && (
             <span
               className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}

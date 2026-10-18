@@ -106,6 +106,11 @@ type ThreadPanel = {
   setDetails: (open: boolean) => void
   /** Changes each time the teammate's panel should come in front of a file or preview. */
   revealKey: number
+  /** Opens a thread on its preview (the sidebar's icon): the thread, then its preview once up. */
+  openPreview: (threadId: string) => void
+  /** The latest such request, until the thread's page takes it up: once, not on each visit. */
+  previewRequest?: { threadId: string; key: number }
+  takePreviewRequest: () => void
   /** A thread's file or preview is in the teammate panel's place. */
   covered: boolean
   setCovered: (covered: boolean) => void
@@ -281,6 +286,15 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
     },
     [expanded, computerPage, router],
   )
+  const [previewRequest, setPreviewRequest] = useState<{ threadId: string; key: number }>()
+  const openPreview = useCallback(
+    (id: string) => {
+      setPreviewRequest({ threadId: id, key: Date.now() })
+      openThread(id)
+    },
+    [openThread],
+  )
+  const takePreviewRequest = useCallback(() => setPreviewRequest(undefined), [])
   const back = useCallback(() => {
     if (expanded) router.push('/app/threads')
     else setDocked(null)
@@ -430,6 +444,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       details,
       setDetails,
       revealKey,
+      openPreview,
+      previewRequest,
+      takePreviewRequest,
       covered,
       setCovered,
       teammateId,
@@ -461,6 +478,9 @@ export function ThreadPanelProvider({ children }: { children: ReactNode }) {
       details,
       setDetails,
       revealKey,
+      openPreview,
+      previewRequest,
+      takePreviewRequest,
       covered,
       teammateId,
       chooseTeammate,
