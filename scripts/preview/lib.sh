@@ -8,7 +8,7 @@ CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/brigade-preview
 DATA=$REPO/.preview
 NODE_VERSION=22.14.0
 EMBEDDED_POSTGRES=17.10.0-beta.17
-DB_PORT=5433
+DB_PORT=${DB_PORT:-5433}
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 
