@@ -1,18 +1,22 @@
 'use client'
-// Home's "waiting on you": each ticket and pull request with the card that decides it,
-// the same as in its thread, so a person with enough context answers without opening it.
+// Home's "waiting on you": one ticket or pull request at a time, with the card that decides
+// it, the same as in its thread, so a person with enough context answers without opening it.
+// Answering stops on what was sent; the next one comes when they ask for it, so a ticket's
+// second ask is never mistaken for another ticket.
 import type { Ask, Question, QuestionAnswer, TicketAnswer } from '@brigade/contracts'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { PullCard } from '@/components/pull-card'
 import { QuestionCard, TicketCard } from '@/components/thread-view'
 import { TicketRow } from '@/components/ticket-row'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api, type PullWaiting, type Ticket } from '@/lib/api'
 
-/** Cards shown at once; the rest are a link away. */
-const SHOWN = 5
+/** Others listed under the one shown; the rest are a link away. */
+const LISTED = 4
 
 /** Why a pull request waits on a person, by where its review stands. */
 const PULL_WAITS: Record<string, string> = {
@@ -62,7 +66,14 @@ function From({
 }
 
 /** A ticket a teammate opened or a question it asked, answered as in its thread. */
-function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Promise<void> }) {
+function HarnessTicket({
+  ticket: t,
+  onDone,
+}: {
+  ticket: Ticket
+  /** Answered: what to say it did, before the next one. */
+  onDone: (sent: string) => Promise<void>
+}) {
   const { teammates } = useDashboard()
   const session = t.session!
   const asker = t.payload.teammateId ?? session.teammate.id
@@ -83,7 +94,9 @@ function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Pr
           }}
           canAnswer
           onAnswer={(answer: QuestionAnswer) =>
-            api(`/tickets/${t.id}/answer`, { body: { answer } }).then(onDone)
+            api(`/tickets/${t.id}/answer`, { body: { answer } }).then(() =>
+              onDone(`Sent to ${askerName}`),
+            )
           }
         />
       </div>
@@ -110,7 +123,9 @@ function HarnessTicket({ ticket: t, onDone }: { ticket: Ticket; onDone: () => Pr
         askerId={asker}
         askerName={askerName}
         onAnswer={(answer: TicketAnswer) =>
-          api(`/tickets/${t.id}/answer`, { body: { answer } }).then(onDone)
+          api(`/tickets/${t.id}/answer`, { body: { answer } }).then(() =>
+            onDone(answer.action === 'declined' ? 'Declined' : `Sent to ${askerName}`),
+          )
         }
       />
     </div>
@@ -129,6 +144,14 @@ const answersHere = (t: Ticket) =>
       !!t.payload.asks &&
       !(t.payload.asks as Ask[]).some((a) => a.type === 'action' && a.browser)))
 
+/** One thing waiting: a ticket answered here, a ticket's row, or a pull request. */
+type Waiting =
+  | { key: string; title: string; from?: string; ticket: Ticket; pull?: undefined }
+  | { key: string; title: string; from?: string; ticket?: undefined; pull: PullWaiting }
+
+/** Shown in place of the one just answered, until the person moves on. */
+type Sent = { label: string; next: string | undefined }
+
 export function NeedsYou({
   tickets,
   pulls,
@@ -139,8 +162,41 @@ export function NeedsYou({
   pulls: PullWaiting[]
   onChange: () => Promise<void>
 }) {
-  const { me } = useDashboard()
+  const { me, teammates } = useDashboard()
   const [error, setError] = useState<string>()
+  const [currentKey, setCurrentKey] = useState<string>()
+  const [sent, setSent] = useState<Sent>()
+
+  const items: Waiting[] = [
+    ...tickets.map((t) => {
+      const asker = t.payload.teammateId ?? t.session?.teammate.id
+      const name = teammates.find((m) => m.id === asker)?.name ?? t.session?.teammate.name
+      return {
+        key: `ticket:${t.id}`,
+        title: name ? t.title.replace(`${name}: `, '') : t.title,
+        from: name,
+        ticket: t,
+      }
+    }),
+    ...pulls.map((p) => ({
+      key: `pull:${p.repository}#${p.number}`,
+      title: p.title,
+      from: p.authorTeammate?.name,
+      pull: p,
+    })),
+  ]
+  // One answered elsewhere drops out: the first one left takes its place.
+  const index = Math.max(
+    0,
+    items.findIndex((i) => i.key === currentKey),
+  )
+  const current = items[index]
+
+  /** The one shown was answered: say so, and remember which comes next. */
+  async function done(label: string) {
+    setSent({ label, next: (items[index + 1] ?? items[index - 1])?.key })
+    await onChange()
+  }
 
   async function resolve(id: string, approved: boolean, always?: boolean) {
     setError(undefined)
@@ -148,11 +204,19 @@ export function NeedsYou({
       await api(`/tickets/${id}/resolve`, { body: { approved, ...(always ? { always } : {}) } })
     } catch (e) {
       setError((e as Error).message)
+      await onChange()
+      return
     }
-    await onChange()
+    await done(approved ? 'Approved' : 'Denied')
   }
 
-  if (tickets.length === 0 && pulls.length === 0)
+  function go(key: string | undefined) {
+    setSent(undefined)
+    setError(undefined)
+    setCurrentKey(key)
+  }
+
+  if (!current && !sent)
     return (
       <p className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
         <span aria-hidden className="size-1.5 rounded-full bg-success" />
@@ -160,12 +224,10 @@ export function NeedsYou({
       </p>
     )
 
-  const shownTickets = tickets.slice(0, SHOWN)
-  const shownPulls = pulls.slice(0, Math.max(0, SHOWN - shownTickets.length))
-  // Approvals, caps and logins keep their row, which has their buttons.
-  const rows = shownTickets.filter((t) => !answersHere(t))
-  const moreTickets = tickets.length - shownTickets.length
-  const morePulls = pulls.length - shownPulls.length
+  const others = sent ? items : items.filter((i) => i.key !== current?.key)
+  const listed = others.slice(0, LISTED)
+  const moreTickets = others.slice(LISTED).filter((i) => i.ticket).length
+  const morePulls = others.length - listed.length - moreTickets
 
   return (
     // Yellow, as needs-you is in the sidebar: what blocks a teammate comes first.
@@ -173,32 +235,106 @@ export function NeedsYou({
       aria-labelledby="needs-you"
       className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/5 p-4 sm:p-5"
     >
-      <h2 id="needs-you" className="flex items-center gap-2 text-lg font-bold">
-        <span aria-hidden className="size-2 rounded-full bg-warning" />
-        Waiting on you
-        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-          {tickets.length + pulls.length}
-        </span>
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2 id="needs-you" className="flex items-center gap-2 text-lg font-bold">
+          <span aria-hidden className="size-2 rounded-full bg-warning" />
+          Waiting on you
+        </h2>
+        {items.length > 1 && !sent && (
+          // Which one of how many: the card's own count is its asks.
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Previous"
+              disabled={index === 0}
+              onClick={() => go(items[index - 1]?.key)}
+            >
+              <ChevronLeft aria-hidden />
+            </Button>
+            <span className="text-sm font-semibold text-warning tabular-nums">
+              {index + 1} of {items.length}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Next"
+              disabled={index === items.length - 1}
+              onClick={() => go(items[index + 1]?.key)}
+            >
+              <ChevronRight aria-hidden />
+            </Button>
+          </div>
+        )}
+        {(items.length === 1 || sent) && items.length > 0 && (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+            {items.length}
+          </span>
+        )}
+      </div>
       {error && <p className="text-sm text-destructive-text">{error}</p>}
-      {shownTickets.filter(answersHere).map((t) => (
-        <HarnessTicket key={t.id} ticket={t} onDone={onChange} />
-      ))}
-      {rows.length > 0 && (
-        <Card className="gap-0 overflow-hidden py-0">
-          <ul className="divide-y">
-            {rows.map((t) => (
-              <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
-            ))}
+
+      {sent ? (
+        <Card className="items-center gap-3 px-5 py-6 text-center">
+          <p className="flex items-center gap-2 font-semibold">
+            <Check className="size-4 text-success" aria-hidden />
+            {sent.label}
+          </p>
+          {items.length > 0 ? (
+            <Button
+              size="sm"
+              onClick={() => go(items.some((i) => i.key === sent.next) ? sent.next : items[0]?.key)}
+            >
+              Next
+              <ChevronRight aria-hidden />
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nothing else is waiting on you.</p>
+          )}
+        </Card>
+      ) : current?.pull ? (
+        <div className="flex flex-col gap-1.5">
+          <From
+            teammate={current.pull.authorTeammate}
+            thread={current.pull.session}
+            note={PULL_WAITS[current.pull.reviewStatus]}
+          />
+          <PullCard
+            key={current.key}
+            repository={current.pull.repository}
+            number={current.pull.number}
+            title={current.pull.title}
+            open
+          />
+        </div>
+      ) : current?.ticket && answersHere(current.ticket) ? (
+        <HarnessTicket key={current.key} ticket={current.ticket} onDone={done} />
+      ) : current?.ticket ? (
+        // Approvals, caps and logins keep their row, which has their buttons.
+        <Card key={current.key} className="gap-0 overflow-hidden py-0">
+          <ul>
+            <TicketRow ticket={current.ticket} me={me} onResolve={resolve} />
           </ul>
         </Card>
+      ) : null}
+
+      {listed.length > 0 && (
+        <ul className="flex flex-col">
+          {listed.map((i) => (
+            <li key={i.key}>
+              <button
+                type="button"
+                onClick={() => go(i.key)}
+                className="flex w-full min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left text-sm text-muted-foreground hover:bg-warning/10 hover:text-foreground"
+              >
+                <span aria-hidden className="size-1.5 flex-none rounded-full bg-warning" />
+                <span className="truncate text-foreground">{i.title}</span>
+                {i.from && <span className="flex-none text-xs">· {i.from}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-      {shownPulls.map((p) => (
-        <div key={`${p.repository}#${p.number}`} className="flex flex-col gap-1.5">
-          <From teammate={p.authorTeammate} thread={p.session} note={PULL_WAITS[p.reviewStatus]} />
-          <PullCard repository={p.repository} number={p.number} title={p.title} open />
-        </div>
-      ))}
       {(moreTickets > 0 || morePulls > 0) && (
         <p className="flex flex-wrap gap-x-4 px-1 text-sm">
           {moreTickets > 0 && (

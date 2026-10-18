@@ -7,7 +7,14 @@
 // shell, SQL, diff and more; colors in globals.css).
 import { MENTION_KINDS, type MentionKind } from '@brigade/contracts'
 import { Check, Copy, ImageIcon } from 'lucide-react'
-import { memo, useState, type ComponentProps, type ReactNode } from 'react'
+import {
+  createContext,
+  memo,
+  useContext,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
@@ -89,10 +96,60 @@ function CodeBlock({ children, ...props }: ComponentProps<'pre'>) {
 
 const codeClass = 'rounded bg-muted px-1.5 py-0.5 font-mono text-[0.875em] wrap-anywhere'
 
+/** Inline code in a ticket: something a person pastes elsewhere, so it has a copy button. */
+const CopyInline = createContext(false)
+
+/** Inline code under it gets a copy button, and an address in it opens as a link. */
+export function CopyableCode({ children }: { children: ReactNode }) {
+  return <CopyInline.Provider value>{children}</CopyInline.Provider>
+}
+
+function CopyChip({ text, children }: { text: string; children: ReactNode }) {
+  const [copied, setCopied] = useState(false)
+  const url = /^https?:\/\/\S+$/.test(text)
+  return (
+    <span className="inline-flex max-w-full items-baseline gap-0.5 rounded bg-muted py-0.5 pr-0.5 pl-1.5 align-baseline">
+      {url ? (
+        <a
+          href={text}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="min-w-0 font-mono text-[0.875em] wrap-anywhere text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+        >
+          {children}
+        </a>
+      ) : (
+        <code className="min-w-0 font-mono text-[0.875em] wrap-anywhere">{children}</code>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+          })
+        }}
+        className="flex-none self-center rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+        aria-label={copied ? 'Copied' : `Copy ${text}`}
+        title={copied ? 'Copied' : 'Copy'}
+      >
+        {copied ? (
+          <Check className="size-3" aria-hidden />
+        ) : (
+          <Copy className="size-3" aria-hidden />
+        )}
+      </button>
+    </span>
+  )
+}
+
 /** Inline code; a file path opens in the panel beside the thread. */
 function InlineCode({ className, children, ...props }: ComponentProps<'code'>) {
   const links = useFileLinks()
+  const copyable = useContext(CopyInline)
   const text = textOf(children)
+  if (copyable && !className && !(links && looksLikeFile(text)))
+    return <CopyChip text={text}>{children}</CopyChip>
   if (!links || className || !looksLikeFile(text))
     return (
       <code className={cn(codeClass, className)} {...props}>
@@ -270,10 +327,12 @@ const components: Components = {
   },
   img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} />,
   code: ({ node: _, ...props }) => <InlineCode {...props} />,
-  // A code block's text is code, not links.
+  // A code block's text is code, not links; it has its own copy button.
   pre: ({ node: _, ...props }) => (
     <FileLinksProvider value={null}>
-      <CodeBlock {...props} />
+      <CopyInline.Provider value={false}>
+        <CodeBlock {...props} />
+      </CopyInline.Provider>
     </FileLinksProvider>
   ),
   table: ({ node: _, ...props }) => (
