@@ -473,7 +473,7 @@ async function settle(
   let delivered = false
   for (const device of devices) {
     const result = await sendPush(keys, device, message, {
-      topic: topicOf(message.tag),
+      topic: message.tag,
       urgency: due.some((i) => i.needs) || remind.length ? 'high' : 'normal',
     })
     if (result.status === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
@@ -503,9 +503,6 @@ const tagOf = (key: string) => {
   const [, id, more] = key.split(':')
   return key.startsWith('needs:ticket:') ? more! : id!
 }
-
-/** A push service topic: letters, digits, - and _, at most 32. */
-const topicOf = (tag: string) => tag.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
 
 /** One push for everything due: the thing itself, or how many and which. */
 export function compose(items: Item[], badge: number, close: string[]): PushMessage {
@@ -558,7 +555,8 @@ export async function sendTest(userId: string) {
         tag: 'brigade-test',
         close: [],
       } satisfies PushMessage,
-      { ttlSeconds: 60, urgency: 'high' },
+      // A topic as real pushes have one: Apple refused those alone (BadWebPushTopic).
+      { topic: 'brigade-test', ttlSeconds: 60, urgency: 'high' },
     )
     if (result.status === 'gone') await prisma.pushDevice.deleteMany({ where: { id: device.id } })
     if (result.status === 'sent') sent++
