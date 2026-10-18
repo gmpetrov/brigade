@@ -20,7 +20,7 @@ const DAY = 24 * 60 * MINUTE
 /** A teammate's proposal is a loose end once nobody answered it for this long… */
 const PROPOSAL_AFTER = 30 * MINUTE
 /** …and until it is this old: past that, the member moved on. */
-const PROPOSAL_UNTIL = 3 * DAY
+const PROPOSAL_UNTIL = DAY
 /** A running thread with no event for this long has stalled, or works out of sight. */
 const STALLED_AFTER = 60 * MINUTE
 /** Threads looked at: those active lately. */

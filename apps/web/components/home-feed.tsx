@@ -202,6 +202,9 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
   )
 }
 
+/** Rows of Needs a nudge shown before Show more. */
+const NUDGES_SHOWN = 5
+
 export function LooseEnds({
   items,
   onChange,
@@ -209,7 +212,10 @@ export function LooseEnds({
   items: LooseEnd[]
   onChange: () => Promise<void>
 }) {
+  const [all, setAll] = useState(false)
   if (!items.length) return null
+  // A few at a time, newest first: a long list would read as a reproach, not a nudge.
+  const shown = all ? items : items.slice(0, NUDGES_SHOWN)
   return (
     <section aria-labelledby="needs-nudge" className="flex flex-col gap-3">
       <SectionTitle
@@ -224,10 +230,19 @@ export function LooseEnds({
       </SectionTitle>
       <Card className="gap-0 overflow-hidden py-0 shadow-none">
         <ul className="divide-y">
-          {items.map((item) => (
+          {shown.map((item) => (
             <LooseEndRow key={item.key} item={item} onChange={onChange} />
           ))}
         </ul>
+        {items.length > shown.length && (
+          <button
+            type="button"
+            onClick={() => setAll(true)}
+            className="border-t py-2.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Show {items.length - shown.length} more
+          </button>
+        )}
       </Card>
     </section>
   )
