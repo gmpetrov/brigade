@@ -12,6 +12,9 @@ import { HOME, VERSION, type RunnerConfig } from './config.js'
 import type { Outbox } from './outbox.js'
 import { installedBundle } from './updater.js'
 
+/** When this process started: the API tells previews it lost from those it runs (hello). */
+const STARTED_AT = new Date().toISOString()
+
 const BATCH = 200
 /**
  * A ping this often keeps the socket from looking idle (Cloudflare closes
@@ -93,6 +96,7 @@ export class Connection {
         protocolVersion: PROTOCOL_VERSION,
         version: VERSION,
         platform: `${process.platform}-${process.arch}`,
+        startedAt: STARTED_AT,
         ...(installedBundle() ? { bundle: installedBundle() } : {}),
       })
     })

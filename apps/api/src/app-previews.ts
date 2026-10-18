@@ -18,20 +18,44 @@ import { audit } from './audit.js'
 import { cloudAvailable, ensureRunning, hostedPort } from './cloud.js'
 import { prisma, scoped, type Prisma } from './db.js'
 import type { ScopedDb } from './db.js'
-import { runnerProtocol, sendToRunner } from './hub.js'
+import { runnerProtocol, runnerStartedAt, sendToRunner } from './hub.js'
 import { variableNames, variableValues } from './preview-variables.js'
 import { actingTeammate, currentTeammate, type LoadedThread } from './thread-spec.js'
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
-/** A thread's preview as its latest event says (with the teammate running it), or null when it never had one. */
-export async function latestPreview(db: ScopedDb, sessionId: string) {
+/** Said when a preview's events say it runs, but it was lost with its runner's previous process. */
+const LOST = 'Stopped when the computer restarted'
+
+/**
+ * Whether a preview reported at `at` was lost: its computer's runner has restarted since,
+ * and previews do not outlive their runner. Its stop may never have been reported (the
+ * computer was stopped or crashed before it could say so).
+ */
+function lost(computerId: string, at: Date) {
+  const startedAt = runnerStartedAt(computerId)
+  return !!startedAt && at.getTime() < Date.parse(startedAt)
+}
+
+/**
+ * A thread's preview as its latest event says (with the teammate running it), or null when it
+ * never had one. With its computer: stopped when it was lost with a runner that restarted since.
+ */
+export async function latestPreview(db: ScopedDb, sessionId: string, computerId?: string) {
   const row = await db.sessionEvent.findFirst({
     where: { sessionId, type: 'preview.changed' },
     orderBy: { seq: 'desc' },
-    select: { data: true },
+    select: { data: true, at: true },
   })
-  return row ? previewOf(row.data) : null
+  const preview = row ? previewOf(row.data) : null
+  if (
+    preview &&
+    computerId &&
+    (preview.status === 'starting' || preview.status === 'running') &&
+    lost(computerId, row!.at)
+  )
+    return { ...preview, status: 'stopped' as const, reason: LOST }
+  return preview
 }
 
 function previewOf(data: unknown): (PreviewInfo & { teammateId?: string }) | null {
@@ -45,17 +69,27 @@ function previewOf(data: unknown): (PreviewInfo & { teammateId?: string }) | nul
 export async function previewStates(db: ScopedDb, sessionIds: string[]) {
   const states = new Map<string, 'starting' | 'running' | 'ready' | null>()
   if (!sessionIds.length) return states
-  const rows = await db.sessionEvent.findMany({
-    where: { sessionId: { in: sessionIds }, type: 'preview.changed' },
-    orderBy: { seq: 'desc' },
-    distinct: ['sessionId'],
-    select: { sessionId: true, data: true },
-  })
+  const [rows, sessions] = await Promise.all([
+    db.sessionEvent.findMany({
+      where: { sessionId: { in: sessionIds }, type: 'preview.changed' },
+      orderBy: { seq: 'desc' },
+      distinct: ['sessionId'],
+      select: { sessionId: true, data: true, at: true },
+    }),
+    db.session.findMany({
+      where: { id: { in: sessionIds } },
+      select: { id: true, computerId: true },
+    }),
+  ])
+  const computers = new Map(sessions.map((s) => [s.id, s.computerId]))
   for (const row of rows) {
     const preview = previewOf(row.data)
+    const computerId = computers.get(row.sessionId)
     states.set(
       row.sessionId,
-      !preview || (preview.status !== 'starting' && preview.status !== 'running')
+      !preview ||
+        (preview.status !== 'starting' && preview.status !== 'running') ||
+        (computerId && lost(computerId, row.at))
         ? null
         : previewReady(preview)
           ? 'ready'
@@ -67,14 +101,14 @@ export async function previewStates(db: ScopedDb, sessionIds: string[]) {
 
 /** Stop a thread's preview if one runs, saying why (its pull request merged). */
 export async function stopThreadPreview(db: ScopedDb, sessionId: string, reason: string) {
-  const preview = await latestPreview(db, sessionId)
-  if (!preview || (preview.status !== 'starting' && preview.status !== 'running')) return
   const session = await db.session.findFirst({
     where: { id: sessionId },
     select: { computerId: true },
   })
-  if (session)
-    sendToRunner(session.computerId, { type: 'preview.control', sessionId, action: 'stop', reason })
+  if (!session) return
+  const preview = await latestPreview(db, sessionId, session.computerId)
+  if (!preview || (preview.status !== 'starting' && preview.status !== 'running')) return
+  sendToRunner(session.computerId, { type: 'preview.control', sessionId, action: 'stop', reason })
 }
 
 type StartResult = Extract<RunnerToApi, { type: 'preview.start.result' }>
@@ -162,7 +196,7 @@ export function previewOffline(computer: PreviewComputer) {
 
 /** The preview a person acts on: one that is starting or running, on a runner that runs previews. */
 export async function livePreview(db: ScopedDb, thread: { id: string; computer: PreviewComputer }) {
-  const preview = await latestPreview(db, thread.id)
+  const preview = await latestPreview(db, thread.id, thread.computer.id)
   if (!preview || (preview.status !== 'starting' && preview.status !== 'running'))
     throw new HTTPException(409, { message: 'This thread has no preview running' })
   if (previewOffline(thread.computer))
