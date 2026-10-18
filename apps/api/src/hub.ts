@@ -54,6 +54,8 @@ type RunnerConn = {
   ws: WSContext
   /** When it last said anything (Date.now()): see watchRunners. */
   heardAt: number
+  /** When its process started (its hello, its clock): previews reported before then are gone. */
+  startedAt?: string
 }
 
 type BrowserConn = {
@@ -102,6 +104,11 @@ export function dropRunner(computerId: string) {
 /** The protocol version of a computer's connected runner; undefined while it is offline. */
 export function runnerProtocol(computerId: string) {
   return runners.get(computerId)?.protocolVersion
+}
+
+/** When the computer's connected runner process started, if it said. */
+export function runnerStartedAt(computerId: string) {
+  return runners.get(computerId)?.startedAt
 }
 
 function send(ws: WSContext, message: ApiToRunner | ApiToBrowser) {
@@ -451,6 +458,7 @@ export function runnerSocket(runner: {
         protocolVersion: message.protocolVersion,
         ws,
         heardAt: Date.now(),
+        ...(message.startedAt ? { startedAt: message.startedAt } : {}),
         ...(message.bundle ? { bundle: message.bundle } : {}),
         ...(bundle ? { offered: bundle } : {}),
       }
@@ -475,6 +483,9 @@ export function runnerSocket(runner: {
           ...(message.machineId ? { machineId: message.machineId } : {}),
         },
       })
+      // Previews its previous process ran are gone (app-previews.ts): lists that mark them
+      // (the sidebar's threads, pull requests) fetch again.
+      if (message.startedAt) notifyList(runner.workspaceId, 'pulls.updated')
       // A cloud computer set up by an older bootstrap gets the current root setup.
       if (computer.kind === 'cloud')
         void ensureSetup(computer, message.setup).catch((error) =>

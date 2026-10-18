@@ -181,6 +181,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     setup: z.string().optional(),
     /** On a member's machine: this machine and runner home, hashed (see RunnerLink). */
     machineId: z.string().max(128).optional(),
+    /**
+     * When this runner process started, by its clock. Previews do not outlive their runner,
+     * so one its events said was running before then stopped with the previous process.
+     */
+    startedAt: z.iso.datetime().optional(),
     /** On a member's machine: which harnesses are already signed in there. Never a credential. */
     machineLogins: z
       .array(

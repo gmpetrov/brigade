@@ -921,7 +921,7 @@ export const threads = new Hono<AppEnv>()
   .get('/:id/preview/state', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
-    const latest = await latestPreview(db, thread.id)
+    const latest = await latestPreview(db, thread.id, thread.computer.id)
     const offline = previewOffline(thread.computer)
     // Its events say it runs, but its computer is gone: it stopped with it.
     const preview =
