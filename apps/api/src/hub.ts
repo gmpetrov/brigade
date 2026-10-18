@@ -76,10 +76,23 @@ const PRESENCE_MS = 75_000
 const runners = new Map<string, RunnerConn>() // by computerId
 const browsers = new Set<BrowserConn>()
 
+/**
+ * Computers whose runner restarts into an update (runner.restarting), by id: until the next
+ * runner connects, their commands wait for it and they stay online, as if it never left.
+ */
+const restarting = new Map<
+  string,
+  { until: number; timer: ReturnType<typeof setTimeout>; protocolVersion: number }
+>()
+/** Longest an update's restart may take: past it, the computer is offline after all. */
+const RESTART_MS = 2 * 60_000
+
+const isRestarting = (computerId: string) => (restarting.get(computerId)?.until ?? 0) > Date.now()
+
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
 
 export function isOnline(computerId: string) {
-  return runners.has(computerId)
+  return runners.has(computerId) || isRestarting(computerId)
 }
 
 /** SHA-256 of the bundle the computer's connected runner was installed from; none offline or from source. */
@@ -101,9 +114,25 @@ export function dropRunner(computerId: string) {
   broadcast(conn.workspaceId, { type: 'computer.updated', computerId, online: false })
 }
 
+/** An update's restart that took too long: the computer is offline, as if its runner had stopped. */
+function restartTimedOut(runner: { computerId: string; workspaceId: string }) {
+  restarting.delete(runner.computerId)
+  if (runners.has(runner.computerId)) return
+  broadcast(runner.workspaceId, {
+    type: 'computer.updated',
+    computerId: runner.computerId,
+    online: false,
+  })
+  // A thread waiting to leave it leaves without its folders.
+  void movesOn(runner.computerId).catch(console.error)
+}
+
 /** The protocol version of a computer's connected runner; undefined while it is offline. */
 export function runnerProtocol(computerId: string) {
-  return runners.get(computerId)?.protocolVersion
+  return (
+    runners.get(computerId)?.protocolVersion ??
+    (isRestarting(computerId) ? restarting.get(computerId)?.protocolVersion : undefined)
+  )
 }
 
 /** When the computer's connected runner process started, if it said. */
@@ -125,7 +154,8 @@ export function sendToRunner(
   options: { touch?: boolean } = {},
 ): boolean {
   const conn = runners.get(computerId)
-  if (!conn) return false
+  // A runner restarting into an update takes nothing more: the next one gets it (dispatch).
+  if (!conn || isRestarting(computerId)) return false
   if (options.touch !== false) touch(computerId)
   send(conn.ws, message)
   return true
@@ -191,26 +221,28 @@ export function readThreadFile(
   })
 }
 
-/** Commands for cloud computers that are starting, sent when their runner connects. */
+/** Commands for cloud computers that are starting, or runners restarting, sent when their runner connects. */
 const queued = new Map<string, { message: ApiToRunner; at: number }[]>()
 const QUEUE_TTL_MS = 10 * 60_000
 
 /**
  * Send now, or for a cloud computer that is stopped or starting, start it and
- * send once its runner connects. A member's machine that is offline returns 'offline'.
+ * send once its runner connects; the same, without starting it, while its runner
+ * restarts into an update. A member's machine that is offline returns 'offline'.
  */
 export async function dispatch(
   computer: { id: string; kind: string },
   message: ApiToRunner,
 ): Promise<'sent' | 'queued' | 'offline'> {
   if (sendToRunner(computer.id, message)) return 'sent'
-  if (computer.kind !== 'cloud') return 'offline'
+  const updating = isRestarting(computer.id)
+  if (computer.kind !== 'cloud' && !updating) return 'offline'
   const list = queued.get(computer.id) ?? []
   list.push({ message, at: Date.now() })
   queued.set(computer.id, list)
   // Not waited for: it asks the provider first, at times for seconds, and the answer
   // here is the same.
-  wake(computer.id)
+  if (!updating) wake(computer.id)
   return 'queued'
 }
 
@@ -404,6 +436,8 @@ export function runnerSocket(runner: {
       for (const timer of retries.values()) clearTimeout(timer)
       if (conn && runners.get(runner.computerId) === conn) {
         runners.delete(runner.computerId)
+        // Restarting into an update: the next runner takes over in a moment (restarting).
+        if (isRestarting(runner.computerId)) return
         // Its threads' events wait on it now, as its computer shows: it says again once back.
         const waited = [...eventsWaiting].filter(([, w]) => w.computerId === runner.computerId)
         for (const [id] of waited) eventsWaiting.delete(id)
@@ -463,6 +497,9 @@ export function runnerSocket(runner: {
         ...(bundle ? { offered: bundle } : {}),
       }
       runners.set(runner.computerId, conn)
+      // Back from an update: what waited for it is sent below (flushQueue).
+      clearTimeout(restarting.get(runner.computerId)?.timer)
+      restarting.delete(runner.computerId)
       await prisma.runner.update({
         where: { id: runner.id },
         data: {
@@ -557,6 +594,15 @@ export function runnerSocket(runner: {
     if (!conn) return // must say hello first
     // Heard, which is all it says (onMessage).
     if (message.type === 'heartbeat') return
+    if (message.type === 'runner.restarting') {
+      clearTimeout(restarting.get(runner.computerId)?.timer)
+      restarting.set(runner.computerId, {
+        until: Date.now() + RESTART_MS,
+        timer: setTimeout(() => restartTimedOut(runner), RESTART_MS),
+        protocolVersion: conn.protocolVersion,
+      })
+      return
+    }
 
     if (message.type === 'events.waiting') return noteEventsWaiting(message.threads)
 

@@ -19,10 +19,13 @@ export const runnerBundle = runnerBundleSha256
 
 export const installScript = (apiUrl: string) => `#!/bin/sh
 # Brigade runner installer. Installs into \${BRIGADE_INSTALL_DIR:-$HOME/.brigade}; needs curl and tar.
+# An updating runner runs it in two steps (BRIGADE_INSTALL_STEP): stage, which downloads the new
+# runner beside the running one, then swap, which puts it in place, once its turns are handed over.
 set -eu
 API="${apiUrl}"
 NODE_VERSION="${NODE_VERSION}"
 DIR="\${BRIGADE_INSTALL_DIR:-\${BRIGADE_HOME:-$HOME/.brigade}}"
+STEP="\${BRIGADE_INSTALL_STEP:-all}"
 mkdir -p "$DIR/bin"
 
 node_ok() { [ -x "$1" ] && [ "$("$1" -p 'process.versions.node.split(".")[0]')" -ge 22 ]; }
@@ -51,17 +54,22 @@ else
   NODE="$DIR/node/bin/node"
 fi
 
-echo "Installing the Brigade runner"
-T=$(mktemp -d)
-curl -fsSL -D "$T/headers" "$API/runner/bundle.tgz" -o "$T/runner.tgz"
-EXPECTED=$(sed -n 's/^[Xx]-[Bb]undle-[Ss]ha256: *\\([0-9a-f]*\\).*/\\1/p' "$T/headers" | tail -1)
-ACTUAL=$( (sha256sum "$T/runner.tgz" 2>/dev/null || shasum -a 256 "$T/runner.tgz") | cut -d' ' -f1)
-[ -z "$EXPECTED" ] || [ "$EXPECTED" = "$ACTUAL" ] || { echo "Runner bundle checksum mismatch" >&2; exit 1; }
-rm -rf "$DIR/runner.new" && mkdir -p "$DIR/runner.new"
-tar -xzf "$T/runner.tgz" -C "$DIR/runner.new" --strip-components=1
-# The bundle a runner was installed from: it updates when the API serves another.
-echo "$ACTUAL" > "$DIR/runner.new/.bundle-sha256"
-rm -rf "$T" "$DIR/runner.old" "$DIR/bin/shims"
+if [ "$STEP" != swap ]; then
+  echo "Installing the Brigade runner"
+  T=$(mktemp -d)
+  curl -fsSL -D "$T/headers" "$API/runner/bundle.tgz" -o "$T/runner.tgz"
+  EXPECTED=$(sed -n 's/^[Xx]-[Bb]undle-[Ss]ha256: *\\([0-9a-f]*\\).*/\\1/p' "$T/headers" | tail -1)
+  ACTUAL=$( (sha256sum "$T/runner.tgz" 2>/dev/null || shasum -a 256 "$T/runner.tgz") | cut -d' ' -f1)
+  [ -z "$EXPECTED" ] || [ "$EXPECTED" = "$ACTUAL" ] || { echo "Runner bundle checksum mismatch" >&2; exit 1; }
+  rm -rf "$DIR/runner.new" && mkdir -p "$DIR/runner.new"
+  tar -xzf "$T/runner.tgz" -C "$DIR/runner.new" --strip-components=1
+  # The bundle a runner was installed from: it updates when the API serves another.
+  echo "$ACTUAL" > "$DIR/runner.new/.bundle-sha256"
+  rm -rf "$T"
+fi
+[ "$STEP" != stage ] || { echo "Staged $DIR/runner.new"; exit 0; }
+[ -f "$DIR/runner.new/.bundle-sha256" ] || { echo "No staged runner in $DIR/runner.new" >&2; exit 1; }
+rm -rf "$DIR/runner.old" "$DIR/bin/shims"
 [ ! -d "$DIR/runner" ] || mv "$DIR/runner" "$DIR/runner.old"
 mv "$DIR/runner.new" "$DIR/runner"
 rm -rf "$DIR/runner.old"

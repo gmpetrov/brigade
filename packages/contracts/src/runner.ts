@@ -209,6 +209,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   }),
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
+  /**
+   * The runner restarts into an update and hands its turns over to the next one (protocol 29):
+   * until that one connects, the API holds the computer's commands, and it stays online.
+   */
+  z.object({ type: z.literal('runner.restarting') }),
   z.object({ type: z.literal('command.failed'), commandId: z.string(), error: z.string() }),
   z.object({ type: z.literal('terminal.output'), terminalId: z.string(), data: z.string() }),
   z.object({

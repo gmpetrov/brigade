@@ -3,7 +3,9 @@
 // one module of the runner package").
 import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { connect } from 'node:net'
 import { basename, dirname, extname, join } from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { HarnessAgent, type HarnessAgentSession } from '@ai-sdk/harness/agent'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
@@ -60,7 +62,8 @@ import {
   ticketAsks,
   ticketResult,
 } from './events.js'
-import { createLocalSandboxSession, freePort } from './local-sandbox.js'
+import { createLocalSandboxSession, freePort, stopGroup } from './local-sandbox.js'
+import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
 import {
@@ -164,6 +167,17 @@ type SavedState = {
   waiting?: WaitingCall[]
   /** The built-in tool calls the last turn stopped on, waiting to be approved, for the same reason. */
   approvals?: WaitingApproval[]
+  /**
+   * An update handed the running turn over (handOver): it goes on in the harness it ran in,
+   * these process groups, which the next session attaches to. With the calls it had under way.
+   */
+  handedOver?: {
+    groups: number[]
+    calls: WaitingCall[]
+    /** The text and thinking blocks it was writing, so far, by id. */
+    texts?: [string, string][]
+    reasoning?: [string, string][]
+  }
 }
 
 const TRANSCRIPT_CHARS = 40_000
@@ -276,8 +290,28 @@ type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
 function frozenMidRun(resume: unknown) {
   const from = (resume as { continueFrom?: Record<string, unknown> } | undefined)?.continueFrom
   if (!from) return false
-  const pending = (key: string) => Array.isArray(from[key]) && from[key].length > 0
-  return !pending('pendingToolApprovals') && !pending('pendingToolResults')
+  // A result its host gave while the turn froze (a Brigade tool's) goes to the harness on continue.
+  const waits = (key: string) =>
+    Array.isArray(from[key]) &&
+    from[key].some((p) => !(p as { completedResult?: unknown }).completedResult)
+  return !waits('pendingToolApprovals') && !waits('pendingToolResults')
+}
+
+/** How long a harness may take to let go of its turn when the runner hands it over. */
+const HAND_OVER_MS = 20_000
+
+/** Whether something answers on the port a handed-over bridge listened on. */
+function answers(host: string, port: number) {
+  return new Promise<boolean>((done) => {
+    const socket = connect({ host, port, timeout: 1000 })
+    const end = (ok: boolean) => {
+      socket.destroy()
+      done(ok)
+    }
+    socket.once('connect', () => end(true))
+    socket.once('error', () => end(false))
+    socket.once('timeout', () => end(false))
+  })
 }
 
 /**
@@ -302,11 +336,18 @@ export class HarnessThread {
   private live: Live | undefined
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
+  /** Text and thinking blocks under way, by id (see EventMapper), handed over with the turn. */
+  private readonly texts = new Map<string, string>()
+  private readonly reasoning = new Map<string, string>()
   /** Built-in tool calls waiting for a person's approval, by approval id. */
   private readonly approvals = new Map<string, { toolName: string; input: unknown }>()
   private saved: SavedState | undefined
   /** The live session resumed a turn frozen mid-run (see frozenMidRun). */
   private frozen = false
+  /** An update stopped the running turn's harness, which could not hand it over (handOver). */
+  private handOverFailed = false
+  /** The running turn is being handed over: what its harness still sends goes out (handOver). */
+  private handingOver = false
   /** What the person has read of the turn: a turn without a reply is asked for one. */
   private readonly replies = new ReplyWatch()
   private readonly stateFile: string
@@ -370,6 +411,9 @@ export class HarnessThread {
     if (input.kind === 'prompt') {
       this.remember('user', input.text)
       this.prompts++
+      // Blocks a turn cut off left unfinished end with it.
+      this.texts.clear()
+      this.reasoning.clear()
     }
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     // Someone asked for this turn: restarts that cut off earlier ones no longer count.
@@ -406,7 +450,8 @@ export class HarnessThread {
         // The new session has the transcript now: later turns resume it. One that failed or
         // never started (no usage) may have kept nothing: the next starts from it again.
         if (result?.status === 'idle' || result?.status === 'waiting') delete this.saved.arrivedFrom
-        this.saved.inTurn = false
+        // Stopped by an update that could not hand it over: found so, it is continued (recover).
+        this.saved.inTurn = this.handOverFailed
         if (result?.status === 'waiting') {
           this.saved.waiting = waitingOn(this.toolCalls, PERSON_TOOLS)
           this.saved.approvals = [...this.approvals].map(([approvalId, call]) => ({
@@ -439,6 +484,19 @@ export class HarnessThread {
   ): Promise<{ input: ThreadInput; handoff?: string } | null> {
     this.saved ??= { accountId: spec.account.id, transcript: [] }
     const saved = this.saved
+    // Handed over by an update: the turn went on in its harness, which this session attaches
+    // to (attach) and takes up where it is, with what it did meanwhile. Nothing to tell anyone.
+    if (
+      saved.handedOver &&
+      !saved.inTurn &&
+      frozenMidRun(saved.resume) &&
+      saved.accountId === spec.account.id &&
+      (await this.bridgeAnswers(saved.resume))
+    )
+      return { input: { kind: 'resume', text: unseen } }
+    // Done again from its last step, the turn writes its blocks anew.
+    this.texts.clear()
+    this.reasoning.clear()
     const recoveries = (saved.recoveries ?? 0) + 1
     if (recoveries > MAX_RECOVERIES) {
       saved.recoveries = 0
@@ -552,6 +610,78 @@ export class HarnessThread {
     }
   }
 
+  /**
+   * The runner restarts into an update: the running turn stays in its harness, left running
+   * (detach), for the next runner to attach to and take up where it is (recover). Resolves to
+   * the harness's process groups, which the next runner keeps (hand-over.ts). A harness that
+   * does not let go in time (a call of its host's that goes on) is stopped instead, and its
+   * turn continued from its conversation after the restart, as after a stop without warning.
+   */
+  async handOver(): Promise<HandedOver[]> {
+    const live = this.live
+    if (!live) return []
+    this.live = undefined
+    const groups = live.sandbox.groups()
+    this.handingOver = true
+    const detached = live.session.detach().then(
+      (resume) => resume,
+      () => undefined,
+    )
+    const resume = await Promise.race([detached, sleep(HAND_OVER_MS, undefined, { ref: false })])
+    this.handingOver = false
+    if (!resume || groups.length === 0) {
+      this.handOverFailed = true
+      this.saved = { ...this.saved!, inTurn: true }
+      await this.persist()
+      await live.sandbox.destroy()
+      return []
+    }
+    this.saved = {
+      ...this.saved!,
+      accountId: live.account.id,
+      resume,
+      inTurn: false,
+      handedOver: {
+        groups,
+        calls: [...this.toolCalls].map(([toolCallId, call]) => ({ toolCallId, ...call })),
+        texts: [...this.texts],
+        reasoning: [...this.reasoning],
+      },
+    }
+    await this.persist()
+    // Its credential files stay for the turn: the next session's are the same (ThreadCredentials).
+    return groups.map((pgid) => ({ pgid, ...(this.runAs ? { runAs: this.runAs } : {}) }))
+  }
+
+  /**
+   * The harness the runner before handed over, for the session about to start: still there,
+   * the session attaches to it and stops it with its sandbox; gone, or left on another account,
+   * the session starts a new one, rather than wait on its port (withoutBridge).
+   */
+  private async takeHandedOver(account: AccountRef): Promise<number[]> {
+    const saved = this.saved
+    const handed = saved?.handedOver
+    if (!saved || !handed) return []
+    delete saved.handedOver
+    for (const pgid of handed.groups) claimHandOver(pgid)
+    if (saved.accountId === account.id && (await this.bridgeAnswers(saved.resume)))
+      return handed.groups
+    for (const pgid of handed.groups) stopGroup(pgid, this.runAs)
+    saved.resume = withoutBridge(saved.resume)
+    return []
+  }
+
+  /** The bridge a handed-over session ran under still answers (on the thread's own network, there). */
+  private async bridgeAnswers(resume: unknown) {
+    const state = resume as { continueFrom?: { data?: { bridge?: { port?: unknown } } } }
+    const port = state.continueFrom?.data?.bridge?.port
+    if (typeof port !== 'number') return false
+    const host = this.runAs
+      ? ((await threadNet(this.spec.sessionId))?.address ?? '127.0.0.1')
+      : '127.0.0.1'
+    return answers(host, port)
+  }
+
   private get current(): AccountRef {
     return this.live?.account ?? this.spec.account
   }
@@ -569,20 +699,26 @@ export class HarnessThread {
     // A call approved while its turn was lost, made again: approved without asking twice.
     let approvedAgain: { toolName: string; input: unknown } | undefined
     const autoApproved: string[] = []
-    const mapper = new EventMapper((event) => {
-      if (frozenUnder()) return
-      if (event.type === 'approval.requested') {
-        if (approvedAgain && sameCall(approvedAgain, event)) {
-          approvedAgain = undefined
-          autoApproved.push(event.approvalId)
-          return
+    const mapper = new EventMapper(
+      (event) => {
+        // Parked, what is left is done again; handed over, it is up to where the next runner goes on.
+        if (frozenUnder() && !this.handingOver) return
+        if (event.type === 'approval.requested') {
+          if (approvedAgain && sameCall(approvedAgain, event)) {
+            approvedAgain = undefined
+            autoApproved.push(event.approvalId)
+            return
+          }
+          this.approvals.set(event.approvalId, { toolName: event.toolName, input: event.input })
         }
-        this.approvals.set(event.approvalId, { toolName: event.toolName, input: event.input })
-      }
-      if (event.type === 'message.done') this.remember('assistant', event.text)
-      this.replies.see(event)
-      this.emitEvent(event)
-    }, this.toolCalls)
+        if (event.type === 'message.done') this.remember('assistant', event.text)
+        this.replies.see(event)
+        this.emitEvent(event)
+      },
+      this.toolCalls,
+      this.texts,
+      this.reasoning,
+    )
     try {
       // Its connector tools changed (an App granted from a ticket the turn waits on, or on the
       // teammate's page between turns), or the thread's effort did: the harness stops and
@@ -1073,6 +1209,7 @@ export class HarnessThread {
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
     )
+    const adopt = await this.takeHandedOver(account)
     const sandbox = createLocalSandboxSession({
       id: this.key,
       workingDirectory: this.workDir,
@@ -1080,6 +1217,8 @@ export class HarnessThread {
       // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch).
       env: this.spec.teammate.harness === 'codex' ? env : { ...env, ...terminalTools(tools) },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
+      // The harness the runner before handed over, which this session attaches to: stopped with it.
+      ...(adopt.length ? { adopt } : {}),
     })
     const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
     const session = await agent.createSession({
@@ -1153,8 +1292,13 @@ export class HarnessThread {
       },
       () => undefined,
     )
-    for (const { toolCallId, ...call } of this.saved?.waiting ?? [])
+    for (const { toolCallId, ...call } of [
+      ...(this.saved?.waiting ?? []),
+      ...(this.saved?.handedOver?.calls ?? []),
+    ])
       if (!this.toolCalls.has(toolCallId)) this.toolCalls.set(toolCallId, call)
+    for (const [id, text] of this.saved?.handedOver?.texts ?? []) this.texts.set(id, text)
+    for (const [id, text] of this.saved?.handedOver?.reasoning ?? []) this.reasoning.set(id, text)
     for (const { approvalId, ...call } of this.saved?.approvals ?? [])
       if (!this.approvals.has(approvalId)) this.approvals.set(approvalId, call)
   }

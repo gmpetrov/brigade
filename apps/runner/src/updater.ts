@@ -1,7 +1,10 @@
 // Self-update. The API serves one runner bundle and names its SHA-256 when a
-// runner connects. A runner installed from another bundle runs the API's own
-// installer once no turn is running, then restarts into the new code. A runner
-// started from source (no install stamp) never updates itself.
+// runner connects. A runner installed from another bundle has the API's own
+// installer download it beside itself while it works, then restarts into the
+// new code at once: its running turns are handed over to the next runner, which
+// takes them up where they are (hand-over.ts). It waits only for what a restart
+// would cut short (a terminal, a sign-in), and not for long. A runner started
+// from source (no install stamp) never updates itself.
 import { spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -16,17 +19,24 @@ const INSTALL_DIR = dirname(ROOT)
 export const UPDATED_EXIT_CODE = 75
 /** How often to look for a quiet moment while an update waits. */
 const CHECK_EVERY_MS = 15_000
+/** Longest an update waits for a terminal or a sign-in to end: past that, they are closed. */
+const WAIT_AT_MOST_MS = 30 * 60_000
 /** After a failed install, the same bundle is not tried again for this long. */
 const RETRY_AFTER_MS = 60 * 60_000
 
-/** SHA-256 of the bundle this runner was installed from; undefined when run from source. */
-export function installedBundle(): string | undefined {
+const stamp = (dir: string) => {
   try {
-    return readFileSync(join(ROOT, '.bundle-sha256'), 'utf8').trim() || undefined
+    return readFileSync(join(dir, '.bundle-sha256'), 'utf8').trim() || undefined
   } catch {
     return undefined
   }
 }
+
+/** SHA-256 of the bundle this runner was installed from; undefined when run from source. */
+export const installedBundle = () => stamp(ROOT)
+
+/** SHA-256 of the bundle downloaded beside it, waiting to be put in place (the installer's stage). */
+const stagedBundle = () => stamp(join(INSTALL_DIR, 'runner.new'))
 
 /** The last bundle that failed to install, kept across the restart that follows. */
 const FAILED_FILE = join(paths.state, 'update-failed.json')
@@ -51,6 +61,12 @@ function recordFailure(bundle: string) {
 
 export class Updater {
   private target: string | undefined
+  /** Since when `target` waits to be installed. */
+  private since = 0
+  /** The API refuses this runner: nothing waits. */
+  private required = false
+  private staged: string | undefined
+  private staging = false
   private timer: NodeJS.Timeout | undefined
   private installing = false
   private readonly installed = installedBundle()
@@ -59,16 +75,16 @@ export class Updater {
   constructor(
     private readonly options: {
       apiUrl: string
-      /** True when nothing would be cut short: no turn running, no terminal, no sign-in. */
-      idle: () => boolean
-      /** Disconnect and park every thread, keeping state for the new runner. */
-      stop: () => Promise<void>
+      /** Nothing a restart would cut short and cannot hand over: no terminal, no sign-in. */
+      quiet: () => boolean
+      /** Hand the running turns over and disconnect, keeping state for the new runner. */
+      handOver: () => Promise<void>
     },
   ) {}
 
   /**
-   * The API serves `bundle`. Updates once idle; `now` (the API refuses this
-   * runner's protocol) updates at once, since nothing can run meanwhile.
+   * The API serves `bundle`: it is downloaded, then installed once quiet, or
+   * at once when `now` (the API refuses this runner's protocol).
    */
   offer(bundle: string | undefined, now = false) {
     if (!bundle || !this.installed || bundle === this.installed) return false
@@ -79,24 +95,55 @@ export class Updater {
     if (Date.now() - failedAt(bundle) < RETRY_AFTER_MS) return false
     if (this.target !== bundle) {
       this.target = bundle
+      this.since = Date.now()
       console.log(
-        `update available (${this.installed.slice(0, 12)} → ${bundle.slice(0, 12)}); installing when idle`,
+        `update available (${this.installed.slice(0, 12)} → ${bundle.slice(0, 12)}); downloading it`,
       )
     }
-    clearInterval(this.timer)
-    if (now) void this.install()
-    else this.timer = setInterval(() => this.options.idle() && void this.install(), CHECK_EVERY_MS)
+    this.required ||= now
+    void this.prepare()
     return true
   }
 
+  /** Download the update beside this runner, which works on meanwhile; then install it when due. */
+  private async prepare() {
+    if (this.staging || this.installing) return
+    if (this.staged !== this.target) {
+      this.staging = true
+      const bundle = this.target!
+      const ok = await this.runInstaller('stage')
+      this.staging = false
+      // The API may serve another by now: what was downloaded is what gets installed. An
+      // installer that cannot stage (an older API's) put it in place already.
+      const swapped = installedBundle() !== this.installed ? installedBundle() : undefined
+      const staged = ok ? (stagedBundle() ?? swapped) : undefined
+      if (!staged) {
+        console.error('could not download the update; trying again later')
+        recordFailure(bundle)
+        return
+      }
+      this.staged = staged
+      if (staged === this.installed) return
+    }
+    clearInterval(this.timer)
+    const due = () =>
+      this.required || this.options.quiet() || Date.now() - this.since >= WAIT_AT_MOST_MS
+    if (due()) return void this.install()
+    console.log('update downloaded; installing once no terminal or sign-in is open')
+    this.timer = setInterval(() => due() && void this.install(), CHECK_EVERY_MS)
+  }
+
   private async install() {
-    const bundle = this.target
+    const bundle = this.staged
     if (this.installing || !bundle) return
     this.installing = true
     clearInterval(this.timer)
-    console.log('updating: saving thread state')
-    await this.options.stop()
-    const ok = await this.runInstaller()
+    console.log('updating: handing the running turns over')
+    // Whatever happens there, the restart follows: the new runner takes up what it can.
+    await this.options
+      .handOver()
+      .catch((error: unknown) => console.error(`could not hand every turn over: ${String(error)}`))
+    const ok = installedBundle() === bundle || (await this.runInstaller('swap'))
     const now = installedBundle()
     if (!ok || now !== bundle) {
       // The installer swaps directories last: on failure the old runner is still in place.
@@ -112,15 +159,15 @@ export class Updater {
     this.restart()
   }
 
-  /** The API's installer, into this runner's install directory. */
-  private runInstaller() {
+  /** The API's installer, into this runner's install directory: its download, or putting it in place. */
+  private runInstaller(step: 'stage' | 'swap') {
     return new Promise<boolean>((resolve) => {
       const child = spawn(
         'sh',
         ['-c', 'curl -fsSL "$1/runner/install.sh" | sh', 'sh', this.options.apiUrl],
         {
           cwd: INSTALL_DIR,
-          env: { ...process.env, BRIGADE_INSTALL_DIR: INSTALL_DIR },
+          env: { ...process.env, BRIGADE_INSTALL_DIR: INSTALL_DIR, BRIGADE_INSTALL_STEP: step },
           stdio: 'inherit',
         },
       )

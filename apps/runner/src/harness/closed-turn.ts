@@ -20,7 +20,10 @@ export function closeTurn(
 ): { resume: unknown; waiting: WaitingCall[]; approvals: WaitingApproval[] } | undefined {
   const from = (resume as { continueFrom?: Record<string, unknown> } | undefined)?.continueFrom
   const data = from?.data as { claudeSessionId?: unknown; bridge?: unknown } | undefined
-  const pending = Array.isArray(from?.pendingToolResults) ? from.pendingToolResults : []
+  // A result its host gave while the turn froze (a Brigade tool's) waits on nobody.
+  const pending = (Array.isArray(from?.pendingToolResults) ? from.pendingToolResults : []).filter(
+    (p: { completedResult?: unknown }) => !p.completedResult,
+  )
   const approvals = Array.isArray(from?.pendingToolApprovals) ? from.pendingToolApprovals : []
   if (!from || pending.length + approvals.length === 0) return
   // The bridge it ran under stopped with the session. A thread's first turn has no

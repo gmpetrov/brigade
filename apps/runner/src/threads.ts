@@ -28,6 +28,7 @@ import {
 } from '@brigade/contracts'
 import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
+import type { HandedOver } from './hand-over.js'
 import type { Previews } from './previews.js'
 import { memoryPrompt, parseMemory } from './memory.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
@@ -615,6 +616,31 @@ export class Threads {
     // this is cut off by the restart, and goes on from its conversation (recover).
     await Promise.race([this.settle(), sleep(STOP_GRACE_MS)])
     await this.parkAll()
+  }
+
+  /**
+   * The runner restarts into an update: as stop(), but the turns running now go on in their
+   * harnesses, which the next runner takes up where they are (HarnessThread.handOver).
+   * Resolves to those harnesses' process groups, for the next runner to keep (hand-over.ts).
+   */
+  async handOverTurns(): Promise<HandedOver[]> {
+    this.stopping = true
+    this.stopped.abort()
+    const handed = await Promise.all(
+      [...this.threads.values()].flatMap((thread) =>
+        [...thread.harnesses].map(([teammateId, seat]) =>
+          thread.running?.teammateId === teammateId
+            ? seat.harness.handOver().catch(() => [])
+            : seat.harness.park().then(
+                () => [],
+                () => [],
+              ),
+        ),
+      ),
+    )
+    await Promise.race([this.settle(), sleep(STOP_GRACE_MS)])
+    await this.parkAll()
+    return handed.flat()
   }
 
   /** Wait until no turn is running or queued. */

@@ -32,7 +32,7 @@
 // never into what the teammate reads; a secret's value is hidden in the log.
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import http from 'node:http'
 import { createConnection } from 'node:net'
@@ -637,6 +637,55 @@ export class Previews {
 
   async stopAll(reason: string) {
     await Promise.all([...this.previews.keys()].map((id) => this.stop(id, reason)))
+  }
+
+  /**
+   * The runner restarts into an update: its previews stop, and the next runner starts again
+   * those in use, as they last started (startAgain). Not one that needs the vault's
+   * credentials, which only its teammate can release, nor a frozen one nobody was using.
+   */
+  async stopForUpdate() {
+    const again = [...this.previews.values()].flatMap((p) => {
+      const last = this.lastStarts.get(p.seat.sessionId)
+      return !p.frozen && last && !last.input.credentials?.length ? [p.seat.sessionId] : []
+    })
+    try {
+      writeFileSync(this.againFile, JSON.stringify(again), { mode: 0o600 })
+    } catch (error) {
+      console.warn(`could not note the previews to start again: ${String(error)}`)
+    }
+    await Promise.all(
+      [...this.previews.keys()].map((id) =>
+        this.stop(
+          id,
+          again.includes(id)
+            ? 'Brigade updated on this computer: the preview starts again in a moment'
+            : 'The computer updated Brigade',
+        ),
+      ),
+    )
+  }
+
+  /** After an update: start again the previews the runner before stopped for it (stopForUpdate). */
+  async startAgain() {
+    let again: string[] = []
+    try {
+      again = JSON.parse(readFileSync(this.againFile, 'utf8')) as string[]
+      rmSync(this.againFile, { force: true })
+    } catch {
+      return
+    }
+    for (const sessionId of again) {
+      const last = this.lastStarts.get(sessionId)
+      if (!last || this.previews.has(sessionId)) continue
+      await this.startInBackground(last.seat, last.input).catch((error: unknown) =>
+        console.warn(`could not start the preview of ${sessionId} again: ${String(error)}`),
+      )
+    }
+  }
+
+  private get againFile() {
+    return join(dirname(this.options.stateFile), 'previews-again.json')
   }
 
   /**
