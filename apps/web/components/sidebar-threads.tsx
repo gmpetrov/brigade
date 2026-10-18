@@ -239,6 +239,51 @@ type Filter = {
   byRow?: 'teammate' | 'project'
 }
 
+/** The filter this browser last set, and whether it showed the archived threads. */
+const FILTER_KEY = 'brigade:sidebar-filter'
+type SavedFilter = Filter & { archived?: boolean }
+
+/** Whether `pathname` is the page a filter from a row goes with. */
+function onOwnPage(filter: Filter, pathname: string) {
+  if (!filter.byRow || pathname.startsWith('/app/threads')) return true
+  return filter.byRow === 'teammate'
+    ? pathname.startsWith(`/app/teammates/${filter.teammateId}`)
+    : pathname.startsWith(`/app/projects/${filter.projectId}`)
+}
+
+function readFilter(pathname: string): SavedFilter | undefined {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FILTER_KEY) ?? 'null') as SavedFilter | null
+    if (!saved) return
+    const keys: readonly string[] = STATUSES.map((s) => s.key)
+    const filter: Filter = {
+      teammateId: typeof saved.teammateId === 'string' ? saved.teammateId : undefined,
+      projectId: typeof saved.projectId === 'string' ? saved.projectId : undefined,
+      statuses: Array.isArray(saved.statuses)
+        ? saved.statuses.filter((k): k is StatusKey => keys.includes(k))
+        : [],
+      byRow: saved.byRow === 'teammate' || saved.byRow === 'project' ? saved.byRow : undefined,
+    }
+    // A filter from a row goes with its page: opened on another, it ends.
+    if (!onOwnPage(filter, pathname)) {
+      if (filter.byRow === 'teammate') filter.teammateId = undefined
+      else filter.projectId = undefined
+      filter.byRow = undefined
+    }
+    return { ...filter, archived: saved.archived === true }
+  } catch {
+    // Nothing saved, or not readable: no filter.
+  }
+}
+
+function saveFilter(saved: SavedFilter) {
+  try {
+    localStorage.setItem(FILTER_KEY, JSON.stringify(saved))
+  } catch {
+    // Private mode or full: the filter lasts until the page reloads.
+  }
+}
+
 /** The threads with what each waiting on a person asks, those shown as waiting. */
 function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
   const asks = new Map<string, string>()
@@ -303,17 +348,39 @@ export function SidebarWork({
   const project = live.find((p) => p.id === filter.projectId)
   const filtered = !!(filter.teammateId || filter.projectId || filter.statuses.length || archived)
 
+  // The filter this browser last set comes back with the page: read after the first render,
+  // so the server's page and the browser's agree, and saved from then on.
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    const saved = readFilter(pathname)
+    if (saved) {
+      const { archived, ...rest } = saved
+      setFilter(rest)
+      if (archived) void loadArchived()
+    }
+    setRestored(true)
+    // Once, on load: later pages keep the filter as it is.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (restored) saveFilter({ ...filter, archived: !!archived })
+  }, [restored, filter, archived])
+  // A teammate or project since removed filters nothing in: it goes, once the lists are in.
+  useEffect(() => {
+    if (filter.teammateId && teammates.length && !teammate)
+      setFilter((f) => ({ ...f, teammateId: undefined, byRow: undefined }))
+  }, [filter.teammateId, teammates.length, teammate])
+  useEffect(() => {
+    if (filter.projectId && projects.length && !project)
+      setFilter((f) => ({ ...f, projectId: undefined, byRow: undefined }))
+  }, [filter.projectId, projects.length, project])
+
   // A filter from a row ends on a page that is not its own (or a thread).
   const latest = useRef(filter)
   latest.current = filter
   useEffect(() => {
-    const { byRow, teammateId, projectId } = latest.current
-    if (!byRow || pathname.startsWith('/app/threads')) return
-    const own =
-      byRow === 'teammate'
-        ? pathname.startsWith(`/app/teammates/${teammateId}`)
-        : pathname.startsWith(`/app/projects/${projectId}`)
-    if (!own)
+    const { byRow } = latest.current
+    if (byRow && !onOwnPage(latest.current, pathname))
       setFilter((f) => ({
         ...f,
         byRow: undefined,
