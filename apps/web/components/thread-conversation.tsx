@@ -1179,7 +1179,7 @@ export function ThreadConversation({
                         onSubmit={() => void send().catch(() => undefined)}
                         rows={1}
                         typeToFocus
-                        placeholder="Type / for commands"
+                        placeholder={`Chat with ${answering.name}`}
                       />
                     </div>
                     <EffortButton effort={effort} later={effortLater} className="mb-1" />
