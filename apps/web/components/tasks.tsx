@@ -614,9 +614,12 @@ export function TaskSheet({
           <>
             <SheetHeader className="gap-3 border-b pr-12">
               <div className="flex flex-wrap items-center gap-2">
-                <ColumnBadge
-                  column={task.children.length ? missionColumn(task, task.children) : task.column}
-                />
+                {/* Archived unfinished, with its thread: it waits on nobody until it is back. */}
+                {(!task.archivedAt || task.completedAt) && (
+                  <ColumnBadge
+                    column={task.children.length ? missionColumn(task, task.children) : task.column}
+                  />
+                )}
                 {task.archivedAt && (
                   <StatusBadge status="archived" tone="neutral" label="Archived" />
                 )}
@@ -737,9 +740,10 @@ export function TaskSheet({
                 <MissionTasks tasks={task.children} onOpen={onOpenTask} />
               )}
 
-              {!task.trashedAt && task.thread && task.column === 'needs_you' && (
-                <NeedsYouNote task={task} thread={task.thread} />
-              )}
+              {!task.trashedAt &&
+                !task.archivedAt &&
+                task.thread &&
+                task.column === 'needs_you' && <NeedsYouNote task={task} thread={task.thread} />}
 
               <section className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
@@ -960,13 +964,15 @@ export function TaskSheet({
 
 /** A mission's tasks in its sheet: where each stands, and who is on it. */
 function MissionTasks({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: string) => void }) {
-  const done = tasks.filter((t) => t.completedAt).length
+  // One archived unfinished, with its thread, no longer counts toward the mission.
+  const counted = tasks.filter((t) => t.completedAt || !t.archivedAt)
+  const done = counted.filter((t) => t.completedAt).length
   return (
     <section className="flex flex-col gap-2">
       <h3 className="flex items-center gap-2 text-sm font-bold">
         Tasks
         <span className="font-mono text-xs font-normal text-muted-foreground">
-          {done}/{tasks.length}
+          {done}/{counted.length}
         </span>
       </h3>
       <ul className="flex flex-col divide-y rounded-lg border">
@@ -977,10 +983,15 @@ function MissionTasks({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: string) =
               onClick={() => onOpen(t.id)}
               className={cn(
                 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50',
-                t.column === 'needs_you' && 'bg-warning/10',
+                t.column === 'needs_you' && !t.archivedAt && 'bg-warning/10',
+                t.archivedAt && !t.completedAt && 'text-muted-foreground',
               )}
             >
-              <ColumnDot column={t.column} />
+              {t.archivedAt && !t.completedAt ? (
+                <Archive className="size-3.5 shrink-0" aria-label="Archived" />
+              ) : (
+                <ColumnDot column={t.column} />
+              )}
               <span className="min-w-0 flex-1 truncate">{t.title}</span>
               {t.teammate ? (
                 <TeammateAvatar teammate={t.teammate} className="size-5" />

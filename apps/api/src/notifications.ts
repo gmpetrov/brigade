@@ -133,7 +133,12 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   }
   const [tickets, tasks, done, merged, turns] = await Promise.all([
     prisma.ticket.findMany({
-      where: { workspaceId, status: 'open' },
+      // Not those of an archived thread: put away, they no longer wait on anyone.
+      where: {
+        workspaceId,
+        status: 'open',
+        OR: [{ sessionId: null }, { session: { archivedAt: null } }],
+      },
       select: { id: true, type: true, title: true, payload: true, session: thread },
       orderBy: { createdAt: 'asc' },
     }),

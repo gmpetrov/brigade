@@ -369,7 +369,7 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
             </h1>
             <p className="max-w-prose text-muted-foreground">
               {archived
-                ? 'Done tasks move here 3 days after they’re finished, most recently archived first. Unarchive or reopen one to bring it back to the board.'
+                ? 'Done tasks move here 3 days after they’re finished, and unfinished ones when their thread is archived, most recently archived first. Unarchive or reopen one to bring it back to the board.'
                 : view === 'trash'
                   ? 'Tasks taken off the board, most recently trashed first. Restore one to bring it back.'
                   : 'Bigger work your teammates are on. Assign a task and its teammate starts on it; leave it unassigned and it waits in Backlog.'}

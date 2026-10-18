@@ -29,6 +29,8 @@ export const tickets = new Hono<AppEnv>()
             projectId: true,
             // A child's ticket also marks its parent, which shows the child.
             parentId: true,
+            // Archived: it no longer waits on anyone (waitsOn), though the Tickets page lists it.
+            archivedAt: true,
             teammate: { select: { id: true, name: true } },
           },
         },

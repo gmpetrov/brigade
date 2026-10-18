@@ -54,7 +54,7 @@ const READS = new Set([
   'groupBy',
 ])
 
-type WriteListener = (model: string, scope: Scope) => void
+type WriteListener = (model: string, scope: Scope, operation: string, result: unknown) => void
 const writeListeners: WriteListener[] = []
 
 /** Called after every write through a scoped client, e.g. to tell dashboards. */
@@ -95,7 +95,7 @@ export function scoped(scope: Scope) {
           // A bulk write that matched nothing changed nothing.
           const none = (result as { count?: number } | null)?.count === 0
           if (!READS.has(operation) && !none)
-            for (const listener of writeListeners) listener(model, scope)
+            for (const listener of writeListeners) listener(model, scope, operation, result)
           return result
         },
       },

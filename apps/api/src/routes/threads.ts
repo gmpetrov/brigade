@@ -69,6 +69,7 @@ import {
 } from '../work.js'
 import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
+import { setThreadArchived } from '../thread-archive.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
 import { runLog } from '../timeline.js'
@@ -134,22 +135,13 @@ async function archive(c: Context<AppEnv>, on: boolean) {
   const { scope, db } = c.var
   const thread = await loadThread(db, c.req.param('id')!)
   mayChange(scope, thread)
-  await db.session.updateMany({
-    where: { id: thread.id },
-    data: { archivedAt: on ? new Date() : null, updatedAt: thread.updatedAt },
-  })
-  // Its children go and come back with it.
-  await db.session.updateMany({
-    where: { parentId: thread.id },
-    data: { archivedAt: on ? new Date() : null },
-  })
+  await setThreadArchived(scope, thread.id, on)
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
     action: on ? 'thread.archived' : 'thread.unarchived',
     target: { type: 'thread', id: thread.id },
   })
-  broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
   return c.json({ ok: true })
 }
 
@@ -639,8 +631,7 @@ export const threads = new Hono<AppEnv>()
         },
       )
       if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
-      if (thread.archivedAt)
-        await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
+      if (thread.archivedAt) await setThreadArchived(scope, thread.id, false)
       await reopenOnMessage(scope, thread)
       return c.json({ ok: true, paused: false, delivery: 'moving' })
     }
@@ -665,8 +656,7 @@ export const threads = new Hono<AppEnv>()
       })
     if (picking) await applyPick(db, scope, { type: 'member', id: scope.memberId }, picking)
     // Written in again, an archived thread is back in the sidebar.
-    if (thread.archivedAt)
-      await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: null } })
+    if (thread.archivedAt) await setThreadArchived(scope, thread.id, false)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
