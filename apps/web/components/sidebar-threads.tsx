@@ -7,7 +7,8 @@
 // the teammates and projects stay in reach however many there are; older ones load on asking.
 // Threads this member pinned sit above them, under Pinned; archived ones are out of both,
 // and the filter lists them. Pinned and Threads each fold to their label, with how many in
-// them wait on a person, and this browser remembers which are folded.
+// them wait on a person, and this browser remembers which are folded. Inside Threads, those
+// waiting on a person sit under their own "Needs you", which folds the same way.
 import {
   Archive,
   ChevronDown,
@@ -58,17 +59,21 @@ const CAP = 5
 /** Each "+N more" shows this many more; folding "Threads" goes back to the cap. */
 const STEP = 20
 
-/** Which of Pinned and Threads this browser folded. */
+/** Which of Pinned, Threads and Threads' Needs you this browser folded. */
 const FOLDED_KEY = 'brigade:sidebar-folded'
-type Folded = { pinned: boolean; threads: boolean }
+type Folded = { pinned: boolean; threads: boolean; waiting: boolean }
 
 function useFolded() {
-  const [folded, setFolded] = useState<Folded>({ pinned: false, threads: false })
+  const [folded, setFolded] = useState<Folded>({ pinned: false, threads: false, waiting: false })
   // Read after the first render, so the server's page and the browser's agree.
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? 'null') as Partial<Folded> | null
-      setFolded({ pinned: saved?.pinned === true, threads: saved?.threads === true })
+      setFolded({
+        pinned: saved?.pinned === true,
+        threads: saved?.threads === true,
+        waiting: saved?.waiting === true,
+      })
     } catch {
       // Nothing saved, or not readable: both open.
     }
@@ -415,9 +420,11 @@ export function SidebarWork({
     }
   }
 
-  // What the list shows: its first threads, waiting ones first, then a "+N more" past them,
-  // which goes on past what is loaded: older threads, from the server.
-  const ordered = [...groups.waiting, ...groups.working, ...groups.rest]
+  // What the list shows: those waiting on a person under their own Needs you, all of them
+  // unless it is folded; then the first of the others and a "+N more" past them, which goes
+  // on past what is loaded: older threads, from the server.
+  const waitingRows = archived ? [] : groups.waiting
+  const ordered = [...(archived ? groups.waiting : []), ...groups.working, ...groups.rest]
   const visible = CAP + extra
   const hidden = Math.max(0, ordered.length - visible)
   const next = mayHaveOlder && hidden < STEP ? STEP : Math.min(STEP, hidden)
@@ -499,6 +506,19 @@ export function SidebarWork({
           {archived ? 'No archived threads.' : filtered ? 'No threads match.' : 'No threads yet.'}
         </li>
       )}
+      {waitingRows.length > 0 && (
+        // A label, not a thread: no dot, its text lines up with the titles, its count with
+        // Pinned's and Threads' when they are folded.
+        <li className="text-sidebar-foreground/70 flex h-7 items-center pr-8 pl-8 text-xs font-medium">
+          <FoldButton
+            label="Needs you"
+            folded={folded.waiting}
+            onToggle={() => toggleFolded('waiting')}
+          />
+          {folded.waiting && <FoldedCount threads={waitingRows} />}
+        </li>
+      )}
+      {!folded.waiting && waitingRows.map(row)}
       {ordered.slice(0, visible).map(row)}
       {/* No dot: a control, not a thread; its text lines up with the titles. */}
       {more && (
