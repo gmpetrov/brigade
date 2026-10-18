@@ -82,9 +82,26 @@ export const SUGGEST_REPLIES_TOOL = 'suggest_replies'
 /** Text a person can see: not only spaces or zero-width characters. */
 export const hasVisibleText = (text: string) => /[^\s\u200b-\u200d\u2060\ufeff]/.test(text)
 export const SUGGESTED_REPLY_MAX = 40
-export const SuggestedReplies = z.object({
-  replies: z.array(z.string().trim().min(1).max(SUGGESTED_REPLY_MAX)).min(1).max(3),
-})
+/**
+ * What a button may do instead of sending its text: Brigade's own action, shown
+ * only while it can be done. merge: the pull request opened last in the thread.
+ */
+export const REPLY_ACTIONS = ['merge'] as const
+export const SuggestedReplies = z
+  .object({
+    replies: z.array(z.string().trim().min(1).max(SUGGESTED_REPLY_MAX)).max(3),
+    /** Shown before the replies. */
+    actions: z
+      .array(
+        z.object({
+          action: z.enum(REPLY_ACTIONS),
+          label: z.string().trim().min(1).max(SUGGESTED_REPLY_MAX),
+        }),
+      )
+      .max(1)
+      .optional(),
+  })
+  .refine((r) => r.replies.length + (r.actions?.length ?? 0) > 0)
 export type SuggestedReplies = z.infer<typeof SuggestedReplies>
 
 /**

@@ -578,6 +578,8 @@ async function start() {
         return prefetch(message.repository, message.fetch)
       case 'library.changed':
         return library.sync()
+      case 'thread.note':
+        return threads.noteFromOutside(message.sessionId, message.text)
       case 'thread.file.read':
         return folderReady(message.sessionId, message.teammateIds)
           .then(() => readThreadFile(message))

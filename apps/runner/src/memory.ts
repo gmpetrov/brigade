@@ -9,7 +9,7 @@ const MEMORY_CHARS = 20_000
 /** Lines one thread may add to a memory file: memory is loaded into every thread. */
 const MAX_ADD = 3
 
-type Entry = { by: string | null; name: string; text: string }
+type Entry = { by: string | null; name: string; text: string; note?: true }
 
 export function memoryPrompt(input: {
   spec: ThreadSpec
@@ -22,7 +22,7 @@ export function memoryPrompt(input: {
   let budget = CONVERSATION_CHARS
   const lines: string[] = []
   for (const e of [...input.entries].reverse()) {
-    const line = `${e.by ? `${e.name} (AI teammate)` : 'Member'}: ${e.text}`
+    const line = `${e.note ? 'Brigade' : e.by ? `${e.name} (AI teammate)` : 'Member'}: ${e.text}`
     if (lines.length > 0 && line.length > budget) break
     lines.unshift(line.length > budget ? `${line.slice(0, budget)}…` : line)
     budget -= line.length

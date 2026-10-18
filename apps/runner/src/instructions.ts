@@ -27,16 +27,16 @@ import { CLOUD } from './config.js'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
-/** Memory beyond this is left to search, so the file stays a reasonable size. */
-const MEMORY_CHARS = 16_000
+/** Memory beyond this is left to search and recall (recall.ts), so the file stays a reasonable size. */
+export const MEMORY_CHARS = 16_000
 
 const clip = (text: string) =>
   text.length > MEMORY_CHARS
-    ? `${text.slice(0, MEMORY_CHARS)}\n\n… (longer than shown; search_workspace finds the rest)`
+    ? `${text.slice(0, MEMORY_CHARS)}\n\n… (longer than shown: lines that bear on a message come with it, search_workspace finds the rest)`
     : text
 
 /** Strip a memory file's own top heading; the section gives one. */
-const body = (text: string) => text.replace(/^#\s[^\n]*\n+/, '').trim()
+export const memoryBody = (text: string) => text.replace(/^#\s[^\n]*\n+/, '').trim()
 
 /** Where the teammate may save to the library: everywhere, nowhere, or some folders. */
 function saving(spec: ThreadSpec) {
@@ -66,8 +66,8 @@ export function instructions(
   libraryDir: string,
   browser: Browser,
 ) {
-  const workspace = body(memory.workspace)
-  const own = body(memory.teammate)
+  const workspace = memoryBody(memory.workspace)
+  const own = memoryBody(memory.teammate)
   return [
     MARK,
     '# Brigade',
@@ -99,8 +99,8 @@ export function instructions(
     credentials(browser),
     workspace && `## Workspace memory\n\n${clip(workspace)}`,
     spec.project &&
-      body(spec.project.memory) &&
-      `## Project memory: ${spec.project.name}\n\n${clip(body(spec.project.memory))}`,
+      memoryBody(spec.project.memory) &&
+      `## Project memory: ${spec.project.name}\n\n${clip(memoryBody(spec.project.memory))}`,
     own && `## What you have learned\n\n${clip(own)}`,
     '## Memory',
     'When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
@@ -457,7 +457,11 @@ const REPLIES =
   '"Send to 5 first", "Build and merge", "Not yet"), never a generic "Yes", one per line in a `replies` block:\n\n' +
   '```replies\nSend it\nNot yet\n```\n\n' +
   'They show as buttons under your reply; a click is their next message, word for word, and counts as them ' +
-  'asking for it. Not after explanations or open questions.\n\n' +
+  'asking for it. Not after explanations or open questions. A reply is only words: no @mention, no leading `/` ' +
+  'or `!`; a button with one is not shown.\n\n' +
+  'When the next step is merging the pull request you opened, write that line as `[merge] Merge #158`: it ' +
+  "becomes Brigade's own merge button, shown only while the pull request can merge and to someone allowed " +
+  'to merge it, and the thread tells you once it is merged.\n\n' +
   'To let the person pick among alternatives you made (designs, approaches, drafts), end your reply instead with ' +
   'a `choices` block: 2 to 6 options, each with a short unique `id`, a `label` of a few words, an optional ' +
   'one-line `description` and, for a design, its library path in `design`:\n\n' +

@@ -106,7 +106,7 @@ await new Promise((resolve, reject) => {
   ws.once('error', reject)
 })
 const send = (m) => ws.send(JSON.stringify(m))
-send({ type: 'hello', protocolVersion: 27, version: 'e2e', platform: 'linux' })
+send({ type: 'hello', protocolVersion: 28, version: 'e2e', platform: 'linux' })
 
 const prompts = [] // every thread.prompt: { sessionId, text, title, parent }
 const seqs = new Map()
