@@ -635,110 +635,115 @@ export function SidebarWork({
           )}
           {folded.threads && <FoldedCount threads={shown} />}
         </SidebarGroupLabel>
-        <DropdownMenu>
-          <SidebarGroupAction asChild title="Filter threads">
-            <DropdownMenuTrigger
-              aria-label="Filter threads"
-              className="data-[state=open]:bg-sidebar-accent"
-            >
-              <ListFilter />
-              {filtered && (
-                <span
-                  aria-hidden
-                  className="bg-primary absolute top-0.5 right-0.5 size-1.5 rounded-full"
-                />
-              )}
-            </DropdownMenuTrigger>
-          </SidebarGroupAction>
-          <DropdownMenuContent align="start" side="right" className="min-w-56">
-            <DropdownMenuLabel className="text-muted-foreground text-xs">Status</DropdownMenuLabel>
-            {STATUSES.map((s) => (
-              <DropdownMenuCheckboxItem
-                key={s.key}
-                checked={filter.statuses.includes(s.key)}
-                onSelect={(e) => e.preventDefault()}
-                onCheckedChange={(on) =>
-                  setFilter((f) => ({
-                    ...f,
-                    statuses: on ? [...f.statuses, s.key] : f.statuses.filter((k) => k !== s.key),
-                  }))
-                }
+        {/* Folded, Threads is only its label: no filter beside it. */}
+        {!folded.threads && (
+          <DropdownMenu>
+            <SidebarGroupAction asChild title="Filter threads">
+              <DropdownMenuTrigger
+                aria-label="Filter threads"
+                className="data-[state=open]:bg-sidebar-accent"
               >
-                <ThreadStatusIcon status={s.icon} unread={s.unread} />
-                {s.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Teammate
-            </DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={filter.teammateId ?? ''}
-              onValueChange={(id) =>
-                setFilter((f) => ({
-                  ...f,
-                  teammateId: id || undefined,
-                  byRow: f.byRow === 'teammate' ? undefined : f.byRow,
-                }))
-              }
-            >
-              <DropdownMenuRadioItem value="">Everyone</DropdownMenuRadioItem>
-              {teammates.map((t) => (
-                <DropdownMenuRadioItem key={t.id} value={t.id}>
-                  <TeammateAvatar teammate={t} className="size-4" />
-                  {t.name}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-            {live.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                  Project
-                </DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={filter.projectId ?? ''}
-                  onValueChange={(id) =>
+                <ListFilter />
+                {filtered && (
+                  <span
+                    aria-hidden
+                    className="bg-primary absolute top-0.5 right-0.5 size-1.5 rounded-full"
+                  />
+                )}
+              </DropdownMenuTrigger>
+            </SidebarGroupAction>
+            <DropdownMenuContent align="start" side="right" className="min-w-56">
+              <DropdownMenuLabel className="text-muted-foreground text-xs">
+                Status
+              </DropdownMenuLabel>
+              {STATUSES.map((s) => (
+                <DropdownMenuCheckboxItem
+                  key={s.key}
+                  checked={filter.statuses.includes(s.key)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) =>
                     setFilter((f) => ({
                       ...f,
-                      projectId: id || undefined,
-                      byRow: f.byRow === 'project' ? undefined : f.byRow,
+                      statuses: on ? [...f.statuses, s.key] : f.statuses.filter((k) => k !== s.key),
                     }))
                   }
                 >
-                  <DropdownMenuRadioItem value="">All projects</DropdownMenuRadioItem>
-                  {live.map((p) => (
-                    <DropdownMenuRadioItem key={p.id} value={p.id}>
-                      <ProjectIcon project={p} />
-                      {p.name}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={!!archived}
-              onCheckedChange={(on) => (on ? void loadArchived() : setArchived(undefined))}
-            >
-              <Archive />
-              Archived
-            </DropdownMenuCheckboxItem>
-            {filtered && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setFilter({ statuses: [] })
-                    setArchived(undefined)
-                  }}
-                >
-                  Clear filters
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  <ThreadStatusIcon status={s.icon} unread={s.unread} />
+                  {s.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-muted-foreground text-xs">
+                Teammate
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={filter.teammateId ?? ''}
+                onValueChange={(id) =>
+                  setFilter((f) => ({
+                    ...f,
+                    teammateId: id || undefined,
+                    byRow: f.byRow === 'teammate' ? undefined : f.byRow,
+                  }))
+                }
+              >
+                <DropdownMenuRadioItem value="">Everyone</DropdownMenuRadioItem>
+                {teammates.map((t) => (
+                  <DropdownMenuRadioItem key={t.id} value={t.id}>
+                    <TeammateAvatar teammate={t} className="size-4" />
+                    {t.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              {live.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">
+                    Project
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={filter.projectId ?? ''}
+                    onValueChange={(id) =>
+                      setFilter((f) => ({
+                        ...f,
+                        projectId: id || undefined,
+                        byRow: f.byRow === 'project' ? undefined : f.byRow,
+                      }))
+                    }
+                  >
+                    <DropdownMenuRadioItem value="">All projects</DropdownMenuRadioItem>
+                    {live.map((p) => (
+                      <DropdownMenuRadioItem key={p.id} value={p.id}>
+                        <ProjectIcon project={p} />
+                        {p.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={!!archived}
+                onCheckedChange={(on) => (on ? void loadArchived() : setArchived(undefined))}
+              >
+                <Archive />
+                Archived
+              </DropdownMenuCheckboxItem>
+              {filtered && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setFilter({ statuses: [] })
+                      setArchived(undefined)
+                    }}
+                  >
+                    Clear filters
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {!folded.threads && (
           <SidebarGroupContent>
             <SidebarMenu>{list}</SidebarMenu>
