@@ -1179,7 +1179,7 @@ export function ThreadConversation({
                         onSubmit={() => void send().catch(() => undefined)}
                         rows={1}
                         typeToFocus
-                        placeholder="Type @ to mention, / for commands"
+                        placeholder="Type / for commands"
                       />
                     </div>
                     <EffortButton effort={effort} later={effortLater} className="mb-1" />
