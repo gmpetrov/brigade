@@ -44,9 +44,11 @@ import {
   ChevronRight,
   Circle,
   CircleCheck,
+  CircleX,
   CircleDot,
   CircleHelp,
   ClipboardList,
+  EllipsisVertical,
   Copy,
   Hand,
   LayoutTemplate,
@@ -66,7 +68,7 @@ import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
 import { CommandChip, startingCommand, useSkillCommands } from '@/components/composer'
-import { CodeSnippet, Markdown, MessageWithCode } from '@/components/markdown'
+import { CodeSnippet, CopyableCode, Markdown, MessageWithCode } from '@/components/markdown'
 import { credentialHint } from '@/components/mention'
 import { endedText } from '@/components/preview-panel'
 import { VariablesAsk } from '@/components/preview-variables'
@@ -78,6 +80,12 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -2326,24 +2334,56 @@ export function TicketCard({
   const disabled = !canAnswer || busy || done
   const soleAccess = item.asks.length === 1 && item.asks[0]!.type === 'access'
 
+  const several = item.asks.length > 1
+  const count = Object.keys(answered ?? replies).length
+
   return (
-    <Card className="gap-4 border-primary/40 px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <CardLabel className="text-primary">
-          <ClipboardList aria-hidden />
-          Ticket
-        </CardLabel>
-        {item.answer && (
+    <Card className="gap-0 border-primary/40 px-5 py-4">
+      <div className="flex items-start gap-2">
+        <ClipboardList aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
+        <div className="min-w-0 flex-1 font-semibold">{item.title}</div>
+        {item.answer ? (
           <StatusBadge
             status={item.answer.action}
             tone={item.answer.action === 'declined' ? 'warning' : 'success'}
             label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
           />
+        ) : (
+          <>
+            {several && (
+              <span className="flex-none pt-0.5 text-xs text-muted-foreground tabular-nums">
+                {count}/{item.asks.length}
+              </span>
+            )}
+            {/* A single access ask has a Decline of its own: no second one in a menu. */}
+            {canAnswer && !soleAccess && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="-my-1 -mr-2 flex-none"
+                    aria-label="Ticket options"
+                    disabled={busy}
+                  >
+                    <EllipsisVertical aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => void send({ action: 'declined' })}>
+                    Decline ticket
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
         )}
       </div>
-      <div className="font-semibold">{item.title}</div>
-      {item.asks.map((ask) => (
-        <div key={ask.id} className="flex flex-col gap-2.5 border-t pt-3">
+      {item.asks.map((ask, i) => (
+        <div
+          key={ask.id}
+          className={cn('flex flex-col gap-2.5', i === 0 ? 'mt-3' : 'mt-3 border-t pt-3')}
+        >
           <AskView
             ask={ask}
             reply={answered?.[ask.id] ?? replies[ask.id]}
@@ -2357,35 +2397,27 @@ export function TicketCard({
           />
         </div>
       ))}
-      {done ? null : canAnswer ? (
-        // A single access ask has a Decline of its own: no second one below it.
-        soleAccess && !error ? null : (
-          <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-            {item.asks.length > 1 && (
-              <span className="text-sm text-muted-foreground">
-                {Object.keys(replies).length} of {item.asks.length} answered
-              </span>
-            )}
-            {!soleAccess && (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => void send({ action: 'declined' })}
-              >
-                Decline ticket
-              </Button>
-            )}
-            {error && <span className="text-sm text-destructive-text">{error}</span>}
-          </div>
-        )
-      ) : (
-        <p className="text-sm text-muted-foreground">
+      {error && <p className="mt-3 text-sm text-destructive-text">{error}</p>}
+      {!done && !canAnswer && (
+        <p className="mt-3 text-sm text-muted-foreground">
           Only the member who started this thread can answer.
         </p>
       )}
     </Card>
   )
+}
+
+/** Whether a reply gives the teammate what it asked for, or leaves it without. */
+function replyTone(ask: Ask, reply: AskReply): 'success' | 'warning' {
+  return (reply.type === 'approval' && !reply.approved) ||
+    (reply.type === 'decision' &&
+      !('options' in ask && ask.options) &&
+      reply.optionId === 'decline') ||
+    (reply.type === 'access' && !reply.granted) ||
+    (reply.type === 'action' && !reply.done) ||
+    (reply.type === 'variables' && reply.set.length === 0)
+    ? 'warning'
+    : 'success'
 }
 
 /** What a person answered, shown in place of the buttons. */
@@ -2448,22 +2480,34 @@ function AskView({
         : ask.type === 'variables'
           ? `Values for the preview of ${ask.repository}`
           : ask.question
-  const kind = {
-    approval: 'Approval',
-    decision: 'Decision',
-    access: 'Access',
-    action: 'Action',
-    input: 'Input',
-    variables: 'Preview variables',
-  }[ask.type]
+  // Answered: one line, so what is still to do stands out.
+  if (reply)
+    return (
+      <div className="flex min-w-0 items-start gap-2 text-sm">
+        {replyTone(ask, reply) === 'success' ? (
+          <CircleCheck className="mt-0.5 size-4 flex-none text-success" aria-hidden />
+        ) : (
+          <CircleX className="mt-0.5 size-4 flex-none text-warning" aria-hidden />
+        )}
+        <div className="min-w-0 flex-1 text-muted-foreground">
+          <Markdown text={heading} className="inline [&>p]:inline" />
+          <span aria-hidden> · </span>
+          <span>{replyLabel(ask, reply, teammates)}</span>
+        </div>
+        {onUndo && (
+          <Button variant="link" size="sm" className="h-auto flex-none p-0" onClick={onUndo}>
+            Change
+          </Button>
+        )}
+      </div>
+    )
 
   return (
     <>
       <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          {kind}
-        </span>
-        <Markdown text={heading} className="font-medium" />
+        <CopyableCode>
+          <Markdown text={heading} className="font-medium" />
+        </CopyableCode>
         {ask.type === 'access' && ask.reason && (
           <p className="text-sm text-muted-foreground">{ask.reason}</p>
         )}
@@ -2489,54 +2533,19 @@ function AskView({
       )}
 
       {ask.type === 'action' && ask.steps?.length ? (
-        <Collapsible defaultOpen>
-          <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm font-medium text-primary">
-            <ChevronRight
-              className="size-3.5 transition-transform group-data-[state=open]:rotate-90"
-              aria-hidden
-            />
-            View steps
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <ol className="mt-2 flex flex-col gap-2 text-sm">
-              {ask.steps.map((step, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  {/* Not a label: its text stays selectable, and its links open without ticking the box. */}
-                  <Checkbox aria-labelledby={`${ask.id}-step-${i}`} className="mt-0.5" />
-                  <div id={`${ask.id}-step-${i}`} className="min-w-0">
-                    <Markdown text={step} className="leading-snug" />
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </CollapsibleContent>
-        </Collapsible>
+        // Plain numbers: the text stays selectable and its links open.
+        <CopyableCode>
+          <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-sm marker:text-muted-foreground">
+            {ask.steps.map((step, i) => (
+              <li key={i} className="pl-1">
+                <Markdown text={step} className="leading-snug" />
+              </li>
+            ))}
+          </ol>
+        </CopyableCode>
       ) : null}
 
-      {reply ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge
-            status={reply.type}
-            tone={
-              (reply.type === 'approval' && !reply.approved) ||
-              (reply.type === 'decision' &&
-                !('options' in ask && ask.options) &&
-                reply.optionId === 'decline') ||
-              (reply.type === 'access' && !reply.granted) ||
-              (reply.type === 'action' && !reply.done) ||
-              (reply.type === 'variables' && reply.set.length === 0)
-                ? 'warning'
-                : 'success'
-            }
-            label={replyLabel(ask, reply, teammates)}
-          />
-          {onUndo && (
-            <Button variant="link" size="sm" className="h-auto p-0" onClick={onUndo}>
-              Change
-            </Button>
-          )}
-        </div>
-      ) : disabled ? null : ask.type === 'approval' ? (
+      {disabled ? null : ask.type === 'approval' ? (
         open ? (
           <div className="flex flex-col gap-2">
             <Textarea

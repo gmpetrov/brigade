@@ -180,7 +180,10 @@ export const openTicketTool = tool({
     "person sets them for the repository's preview, and each start_preview gives them to the app; you learn which " +
     'were set, never their values. For a login or key the vault lacks, ' +
     'use an access ask of kind credential and fill in `credential` with what you know: the person saves it to the ' +
-    'vault right in the ticket, and its mention comes back for you to use at once.',
+    'vault right in the ticket, and its mention comes back for you to use at once. Write it to be read at a glance: ' +
+    "the ticket's title says what it is about once, each ask's title says what to do, without repeating it, and " +
+    'anything a person copies elsewhere (an address, a value, a command) goes in `backticks`, which gives it a copy ' +
+    'button.',
   inputSchema: jsonSchema<{ title: string; asks: unknown[] }>({
     type: 'object',
     properties: {
@@ -283,7 +286,8 @@ export const openTicketTool = tool({
             steps: {
               type: 'array',
               items: { type: 'string' },
-              description: 'action: a checklist for the person',
+              description:
+                'action: what to do, in order: one short line each, such as "Development → MCP connectors → Create", with no asides in parentheses; put what they need to know (use a test account, why) in the title instead',
             },
             browser: {
               type: 'boolean',
