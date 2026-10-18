@@ -15,7 +15,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { messageChild } from './children.js'
-import { scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
+import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastTask, dispatch, isOnline } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
 import { usableAccounts } from './routes/accounts.js'
@@ -29,6 +29,7 @@ const BOARD = {
   project: { select: { id: true, name: true, icon: true, logo: true } },
   createdBy: { select: { id: true, user: { select: { name: true, image: true } } } },
   createdByTeammate: { select: { id: true, name: true } },
+  parent: { select: { id: true, title: true } },
   session: {
     select: {
       id: true,
@@ -177,7 +178,11 @@ export async function getTask(db: ScopedDb, id: string) {
         orderBy: { createdAt: 'asc' },
       })
     : []
-  return { ...view(row), pullRequests }
+  // A mission's sub-tasks, in the order they were made; in the Trash ones left out.
+  const children = (
+    await boardRows(db, { parentId: id, trashedAt: null }, [{ createdAt: 'asc' }, { id: 'asc' }])
+  ).map(view)
+  return { ...view(row), pullRequests, children }
 }
 
 async function loadTask(db: ScopedDb, id: string) {
@@ -242,6 +247,71 @@ function requireNotTrashed(task: { trashedAt: Date | null }) {
 }
 
 /**
+ * The mission a task goes in: a task on the board that is not itself a
+ * sub-task, and never the task itself or one with sub-tasks of its own (one level).
+ */
+async function requireMission(db: ScopedDb, parentId: string, taskId?: string) {
+  const mission = await db.task.findFirst({ where: { id: parentId } })
+  if (!mission) throw new HTTPException(404, { message: 'Mission not found' })
+  if (mission.id === taskId)
+    throw new HTTPException(400, { message: 'A task cannot be its own mission' })
+  if (mission.parentId)
+    throw new HTTPException(400, {
+      message: 'That task is in a mission itself: a mission cannot go in another.',
+    })
+  if (mission.trashedAt) throw new HTTPException(409, { message: 'That mission is in the Trash' })
+  if (mission.archivedAt) throw new HTTPException(409, { message: 'That mission is archived' })
+  if (taskId && (await db.task.count({ where: { id: taskId, children: { some: {} } } })))
+    throw new HTTPException(400, {
+      message: 'This task is a mission with tasks of its own: it cannot go in another.',
+    })
+  return mission
+}
+
+const system: Actor = { type: 'system', id: 'brigade' }
+
+/**
+ * A mission is done once every sub-task is, and back on the board, with them,
+ * when one is not. Called after anything that changes a sub-task.
+ */
+async function settleMission(scope: Scope, missionId: string | null | undefined) {
+  if (!missionId) return
+  const db = scoped(scope)
+  const mission = await db.task.findFirst({
+    where: { id: missionId, trashedAt: null },
+    select: { id: true, completedAt: true },
+  })
+  if (!mission) return
+  const children = await db.task.findMany({
+    where: { parentId: missionId, trashedAt: null },
+    select: { completedAt: true },
+  })
+  if (!children.length) return
+  const allDone = children.every((c) => c.completedAt)
+  if (allDone && !mission.completedAt) {
+    const { count } = await db.task.updateMany({
+      where: { id: missionId, completedAt: null },
+      data: { completedAt: new Date() },
+    })
+    if (count) await changed(scope, system, 'task.completed', missionId)
+  } else if (!allDone && mission.completedAt) {
+    await db.task.updateMany({
+      where: { id: missionId },
+      data: { completedAt: null, archivedAt: null },
+    })
+    await db.task.updateMany({
+      where: { parentId: missionId, archivedAt: { not: null } },
+      data: { archivedAt: null },
+    })
+    await changed(scope, system, 'task.reopened', missionId)
+  }
+}
+
+/** The mission a task is in, to settle after changing it. */
+const missionOf = async (db: ScopedDb, id: string) =>
+  (await db.task.findFirst({ where: { id }, select: { parentId: true } }))?.parentId
+
+/**
  * A thread becomes a task's thread, unless a trigger started it or it already
  * is one. Returns false when another request linked it first.
  */
@@ -263,10 +333,13 @@ export async function createTask(
     teammateId?: string | undefined
     sessionId?: string | undefined
     projectId?: string | null | undefined
+    parentId?: string | undefined
   },
 ) {
   const by = byMember(scope)
-  const projectId = await usableProject(db, input.projectId)
+  // In a mission, it is in the mission's project.
+  const mission = input.parentId ? await requireMission(db, input.parentId) : null
+  const projectId = mission ? mission.projectId : await usableProject(db, input.projectId)
   if (!input.sessionId) {
     const task = await db.task.create({
       data: {
@@ -275,9 +348,11 @@ export async function createTask(
         priority: input.priority,
         createdByMemberId: scope.memberId,
         projectId: projectId ?? null,
+        parentId: mission?.id ?? null,
       } as never,
     })
     await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })
+    await settleMission(scope, mission?.id)
     if (!input.teammateId) return getTask(db, task.id)
     // Its thread starts now; if it cannot, the task stays in Backlog and says why.
     try {
@@ -295,8 +370,12 @@ export async function createTask(
   if (thread.taskId) throw new HTTPException(409, { message: 'This thread is already a task' })
   const teammateId = input.teammateId ?? currentTeammate(thread).id
   await activeTeammate(db, teammateId)
-  // The thread's project unless another is given; the thread then moves with it.
-  const inProject = projectId === undefined ? thread.projectId : projectId
+  // The thread's project unless another (or a mission's) is given; the thread then moves with it.
+  const inProject = mission
+    ? mission.projectId
+    : projectId === undefined
+      ? thread.projectId
+      : projectId
   const task = await db.task.create({
     data: {
       title: input.title,
@@ -305,6 +384,7 @@ export async function createTask(
       teammateId,
       createdByMemberId: scope.memberId,
       projectId: inProject,
+      parentId: mission?.id ?? null,
     } as never,
   })
   if (!(await link(db, thread.id, task.id))) {
@@ -314,6 +394,7 @@ export async function createTask(
   if (inProject !== thread.projectId)
     await db.session.updateMany({ where: { id: thread.id }, data: { projectId: inProject } })
   await changed(scope, by.actor, 'task.created', task.id, { sessionId: thread.id })
+  await settleMission(scope, mission?.id)
   return getTask(db, task.id)
 }
 
@@ -326,10 +407,29 @@ export async function updateTask(
     description?: string | undefined
     priority?: TaskPriority | undefined
     projectId?: string | null | undefined
+    parentId?: string | null | undefined
   },
 ) {
-  await loadTask(db, id)
-  const projectId = await usableProject(db, input.projectId)
+  const task = await loadTask(db, id)
+  const mission =
+    input.parentId && input.parentId !== task.parentId
+      ? await requireMission(db, input.parentId, id)
+      : null
+  const parentId = input.parentId === undefined ? task.parentId : input.parentId
+  // A sub-task is in its mission's project: moving it in brings it there.
+  let projectId = mission ? mission.projectId : await usableProject(db, input.projectId)
+  if (!mission && parentId && projectId !== undefined) {
+    const current = await db.task.findFirst({
+      where: { id: parentId },
+      select: { projectId: true },
+    })
+    if (current && current.projectId !== projectId)
+      throw new HTTPException(400, {
+        message:
+          "A task in a mission is in the mission's project. Take it out of the mission first.",
+      })
+    projectId = undefined
+  }
   await db.task.updateMany({
     where: { id },
     data: {
@@ -337,21 +437,30 @@ export async function updateTask(
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(projectId !== undefined ? { projectId } : {}),
+      ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
     },
   })
-  // Its thread follows, so its next turn has the project's context.
   if (projectId !== undefined) {
-    const thread = await db.session.findFirst({
-      where: { taskId: id },
+    // A mission's tasks follow it.
+    const children = await db.task.findMany({ where: { parentId: id }, select: { id: true } })
+    await db.task.updateMany({ where: { parentId: id }, data: { projectId } })
+    // Each thread follows, so its next turn has the project's context.
+    const threads = await db.session.findMany({
+      where: { taskId: { in: [id, ...children.map((c) => c.id)] } },
       select: { id: true, updatedAt: true },
     })
-    if (thread)
+    for (const thread of threads)
       await db.session.updateMany({
         where: { id: thread.id },
         data: { projectId, updatedAt: thread.updatedAt },
       })
   }
   await changed(by.scope, by.actor, 'task.updated', id)
+  if (input.parentId !== undefined && input.parentId !== task.parentId) {
+    await settleMission(by.scope, task.parentId)
+    await settleMission(by.scope, input.parentId)
+    if (task.parentId) broadcastTask(by.scope.workspaceId, task.parentId)
+  }
   return getTask(db, id)
 }
 
@@ -504,6 +613,7 @@ export async function assignTask(
       to: teammate.id,
       sessionId: threadId,
     })
+    await settleMission(by.scope, task.parentId)
     return { ...(await getTask(db, id)), paused: outcome === 'paused' }
   }
 
@@ -547,6 +657,7 @@ export async function assignTask(
     to: teammate.id,
     reason: input.reason || null,
   })
+  await settleMission(by.scope, task.parentId)
   return getTask(db, id)
 }
 
@@ -576,6 +687,7 @@ export async function completeTask(
     },
   })
   await changed(by.scope, by.actor, 'task.completed', id)
+  await settleMission(by.scope, task.parentId)
   return getTask(db, id)
 }
 
@@ -585,21 +697,33 @@ export async function reopenTask(db: ScopedDb, by: By, id: string) {
   requireNotTrashed(task)
   await requireMayAct(db, by, id)
   await db.task.updateMany({ where: { id }, data: { completedAt: null, archivedAt: null } })
+  // A mission comes back with its tasks.
+  await db.task.updateMany({
+    where: { parentId: id, archivedAt: { not: null } },
+    data: { archivedAt: null },
+  })
   await changed(by.scope, by.actor, 'task.reopened', id)
+  await settleMission(by.scope, task.parentId)
   return getTask(db, id)
 }
 
 /** A message to a done task's thread puts it back in Doing, archived or not. */
 export async function reopenOnMessage(
   scope: Scope,
-  thread: { task: { id: string; completedAt: Date | null } | null },
+  thread: { task: { id: string; completedAt: Date | null; parentId?: string | null } | null },
 ) {
   if (!thread.task?.completedAt) return
-  await scoped(scope).task.updateMany({
+  const db = scoped(scope)
+  await db.task.updateMany({
     where: { id: thread.task.id },
     data: { completedAt: null, archivedAt: null },
   })
+  await db.task.updateMany({
+    where: { parentId: thread.task.id, archivedAt: { not: null } },
+    data: { archivedAt: null },
+  })
   broadcastTask(scope.workspaceId, thread.task.id)
+  await settleMission(scope, thread.task.parentId ?? (await missionOf(db, thread.task.id)))
 }
 
 /**
@@ -611,76 +735,179 @@ export async function archiveTask(db: ScopedDb, by: By, id: string) {
   requireNotTrashed(task)
   if (!task.completedAt)
     throw new HTTPException(409, { message: 'Only a done task can be archived' })
+  if (task.parentId)
+    throw new HTTPException(409, {
+      message: 'It goes with its mission: archive the mission once it is done.',
+    })
+  const now = new Date()
   const { count } = await db.task.updateMany({
     where: { id, completedAt: { not: null }, archivedAt: null },
-    data: { archivedAt: new Date() },
+    data: { archivedAt: now },
   })
-  if (count) await changed(by.scope, by.actor, 'task.archived', id)
+  if (count) {
+    // A mission's tasks go with it.
+    await db.task.updateMany({
+      where: { parentId: id, archivedAt: null, trashedAt: null },
+      data: { archivedAt: now },
+    })
+    await changed(by.scope, by.actor, 'task.archived', id)
+  }
   return getTask(db, id)
 }
 
 /** An archived task back in Done. */
-export async function unarchiveTask(db: ScopedDb, by: By, id: string) {
-  await loadTask(db, id)
+export async function unarchiveTask(db: ScopedDb, by: By, id: string): Promise<TaskDetail> {
+  const task = await loadTask(db, id)
+  // A mission's task comes back with its mission.
+  if (task.parentId) {
+    const mission = await db.task.findFirst({
+      where: { id: task.parentId, archivedAt: { not: null } },
+    })
+    if (mission) {
+      await unarchiveTask(db, by, mission.id)
+      return getTask(db, id)
+    }
+  }
   const { count } = await db.task.updateMany({
     where: { id, archivedAt: { not: null } },
     data: { archivedAt: null },
   })
-  if (count) await changed(by.scope, by.actor, 'task.unarchived', id)
+  if (count) {
+    await db.task.updateMany({
+      where: { parentId: id, archivedAt: { not: null } },
+      data: { archivedAt: null },
+    })
+    await changed(by.scope, by.actor, 'task.unarchived', id)
+  }
   return getTask(db, id)
 }
+
+type TaskDetail = Awaited<ReturnType<typeof getTask>>
 
 /**
  * Into the Trash, from any column: off the board, its running turn stopped.
  * Its thread stays. Restoring puts it back where its thread says.
  */
 export async function trashTask(db: ScopedDb, by: By, id: string) {
-  await loadTask(db, id)
+  const task = await loadTask(db, id)
   const session = await requireMayAct(db, by, id)
+  const now = new Date()
   const { count } = await db.task.updateMany({
     where: { id, trashedAt: null },
-    data: { trashedAt: new Date() },
+    data: { trashedAt: now },
   })
   if (!count) return getTask(db, id)
-  if (session && (session.status === 'running' || session.status === 'starting')) {
-    const computer = await db.computer.findFirst({ where: { id: session.computerId } })
-    if (computer) await interrupt({ id: session.id, computer })
+  await stopTurn(db, session)
+  // A mission takes its unfinished tasks with it, at the same time, so restoring brings them back.
+  // One on another member's subscription that this one may not act on stays.
+  const children = await db.task.findMany({
+    where: { parentId: id, trashedAt: null, completedAt: null },
+    select: { id: true },
+  })
+  for (const child of children) {
+    const thread = await requireMayAct(db, by, child.id).catch(() => false as const)
+    if (thread === false) continue
+    await db.task.updateMany({ where: { id: child.id, trashedAt: null }, data: { trashedAt: now } })
+    await stopTurn(db, thread)
   }
   await changed(by.scope, by.actor, 'task.trashed', id)
+  await settleMission(by.scope, task.parentId)
   return getTask(db, id)
 }
 
+/** Stop a task thread's running turn, if it has one. */
+async function stopTurn(
+  db: ScopedDb,
+  session: { id: string; status: string; computerId: string } | null,
+) {
+  if (!session || (session.status !== 'running' && session.status !== 'starting')) return
+  const computer = await db.computer.findFirst({ where: { id: session.computerId } })
+  if (computer) await interrupt({ id: session.id, computer })
+}
+
 export async function restoreTask(db: ScopedDb, by: By, id: string) {
-  await loadTask(db, id)
+  const task = await loadTask(db, id)
   const { count } = await db.task.updateMany({
     where: { id, trashedAt: { not: null } },
     data: { trashedAt: null },
   })
-  if (count) await changed(by.scope, by.actor, 'task.restored', id)
+  if (count) {
+    // The tasks that went to the Trash with it.
+    if (task.trashedAt)
+      await db.task.updateMany({
+        where: { parentId: id, trashedAt: task.trashedAt },
+        data: { trashedAt: null },
+      })
+    await changed(by.scope, by.actor, 'task.restored', id)
+    await settleMission(by.scope, task.parentId)
+  }
   return getTask(db, id)
 }
 
 /** Clear the Done column: every done task goes off the board at once. */
 export async function archiveDoneTasks(db: ScopedDb, scope: WorkspaceScope) {
+  return archiveDone(scope, member(scope), {})
+}
+
+/**
+ * Done tasks off the board, `where` they match; a mission's tasks go with it,
+ * and stay while it is not done.
+ */
+async function archiveDone(scope: Scope, actor: Actor, where: Prisma.TaskWhereInput) {
+  const db = scoped(scope)
   const done = await db.task.findMany({
-    where: { completedAt: { not: null }, archivedAt: null, trashedAt: null },
+    where: {
+      completedAt: { not: null },
+      archivedAt: null,
+      trashedAt: null,
+      parentId: null,
+      ...where,
+    },
     select: { id: true },
   })
   if (!done.length) return { archived: 0 }
   const ids = done.map((t) => t.id)
+  const now = new Date()
   const { count } = await db.task.updateMany({
     where: { id: { in: ids }, completedAt: { not: null }, archivedAt: null },
-    data: { archivedAt: new Date() },
+    data: { archivedAt: now },
+  })
+  await db.task.updateMany({
+    where: { parentId: { in: ids }, archivedAt: null, trashedAt: null },
+    data: { archivedAt: now },
   })
   await audit({
     ...scope,
-    actor: member(scope),
+    actor,
     action: 'task.archived',
     target: { type: 'workspace', id: scope.workspaceId },
     data: { taskIds: ids },
   })
   broadcastTask(scope.workspaceId, ids[0]!)
   return { archived: count }
+}
+
+/** How long a done task stays in Done before it is archived by itself. */
+const DONE_DAYS = 3
+
+/** Done tasks finished DONE_DAYS ago go off the board, in every workspace. */
+export async function sweepDoneTasks() {
+  const before = new Date(Date.now() - DONE_DAYS * 24 * 60 * 60_000)
+  const workspaces = await prisma.task.groupBy({
+    by: ['organizationId', 'workspaceId'],
+    where: {
+      completedAt: { lt: before },
+      archivedAt: null,
+      trashedAt: null,
+      parentId: null,
+    },
+  })
+  for (const w of workspaces) {
+    const scope = { organizationId: w.organizationId, workspaceId: w.workspaceId }
+    await archiveDone(scope, system, { completedAt: { lt: before } }).catch((error) =>
+      console.warn(`tasks: done tasks of ${w.workspaceId} not archived: ${String(error)}`),
+    )
+  }
 }
 
 /**
@@ -701,7 +928,10 @@ export async function settleOnMerge(scope: Scope, sessionId: string) {
     where: { id: task.id, completedAt: null },
     data: { completedAt: new Date() },
   })
-  if (count) await changed(scope, { type: 'system', id: 'brigade' }, 'task.completed', task.id)
+  if (count) {
+    await changed(scope, system, 'task.completed', task.id)
+    await settleMission(scope, task.parentId)
+  }
 }
 
 /**
@@ -720,20 +950,29 @@ export async function deleteTask(db: ScopedDb, scope: WorkspaceScope, id: string
     throw new HTTPException(403, { message: 'Only whoever asked for it or an admin can delete it' })
   await db.task.deleteMany({ where: { id } })
   await changed(scope, member(scope), 'task.deleted', id, { title: task.title })
+  // Its mission may be done now; a mission's own tasks stay, as tasks of their own.
+  await settleMission(scope, task.parentId)
 }
 
 type Runner = { computerId: string; organizationId: string; workspaceId: string }
 
-/** A task's line for a teammate's list_tasks. */
-const listed = (task: ReturnType<typeof view>) => ({
-  id: task.id,
-  title: task.title,
-  column: task.column,
-  priority: task.priority,
-  teammate: task.teammate && { id: task.teammate.id, name: task.teammate.name },
-  description:
-    task.description.length > 300 ? `${task.description.slice(0, 300)}…` : task.description,
-})
+/** A task's line for a teammate's list_tasks; a mission's says how many of its tasks are done. */
+const listed = (task: ReturnType<typeof view>, all: ReturnType<typeof view>[]) => {
+  const children = all.filter((t) => t.parentId === task.id)
+  return {
+    id: task.id,
+    title: task.title,
+    column: task.column,
+    priority: task.priority,
+    teammate: task.teammate && { id: task.teammate.id, name: task.teammate.name },
+    ...(task.parentId ? { missionId: task.parentId } : {}),
+    ...(children.length
+      ? { mission: { done: children.filter((c) => c.completedAt).length, total: children.length } }
+      : {}),
+    description:
+      task.description.length > 300 ? `${task.description.slice(0, 300)}…` : task.description,
+  }
+}
 
 /** A teammate's task tool call, from its thread on this runner's computer. */
 export async function handleTaskCall(
@@ -782,12 +1021,15 @@ export async function handleTaskCall(
       ])
       return done({
         thisThreadTask: session.task?.id ?? null,
-        tasks: tasks.map(listed),
+        tasks: tasks.map((t) => listed(t, tasks)),
         teammates: teammates.map((t) => ({ ...t, you: t.id === teammate.id })),
       })
     }
 
     if (op.name === 'create') {
+      // In a mission, it is in the mission's project.
+      const mission = op.mission ? await requireMission(db, op.mission) : null
+      const projectId = mission ? mission.projectId : session.projectId
       if (op.assignee === 'self') {
         if (session.origin === 'trigger')
           return fail('A thread a trigger started cannot become a task. Just do the work here.')
@@ -803,14 +1045,18 @@ export async function handleTaskCall(
             teammateId: teammate.id,
             createdByMemberId: session.startedByMemberId,
             createdByTeammateId: teammate.id,
-            projectId: session.projectId,
+            projectId,
+            parentId: mission?.id ?? null,
           } as never,
         })
         if (!(await link(db, session.id, task.id))) {
           await db.task.deleteMany({ where: { id: task.id } })
           return fail('This thread is already a task. Carry on with it.')
         }
+        if (projectId !== session.projectId)
+          await db.session.updateMany({ where: { id: session.id }, data: { projectId } })
         await changed(scope, by.actor, 'task.created', task.id, { sessionId: session.id })
+        await settleMission(scope, mission?.id)
         return done({
           taskId: task.id,
           title: task.title,
@@ -828,10 +1074,12 @@ export async function handleTaskCall(
           priority: op.priority,
           createdByMemberId: session.startedByMemberId,
           createdByTeammateId: teammate.id,
-          projectId: session.projectId,
+          projectId,
+          parentId: mission?.id ?? null,
         } as never,
       })
       await changed(scope, by.actor, 'task.created', task.id, { sessionId: null })
+      await settleMission(scope, mission?.id)
       if (!assignee)
         return done({ taskId: task.id, column: 'backlog', note: 'In Backlog, assigned to nobody.' })
       try {
@@ -881,8 +1129,11 @@ export async function handleTaskCall(
         })
 
       case 'update': {
-        const { name: _, taskId: __, ...changes } = op
-        await updateTask(db, by, taskId, changes)
+        const { name: _, taskId: __, mission, ...changes } = op
+        await updateTask(db, by, taskId, {
+          ...changes,
+          ...(mission !== undefined ? { parentId: mission } : {}),
+        })
         return done({ ok: true })
       }
 

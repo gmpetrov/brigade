@@ -390,6 +390,9 @@ export type Task = {
   teammate: { id: string; name: string; harness: Teammate['harness'] } | null
   projectId: string | null
   project: ProjectRef | null
+  /** The mission it is in: a task that groups it with others on the board. */
+  parentId: string | null
+  parent: { id: string; title: string } | null
   /** Who asked: the member, or the thread's starter when a teammate created it. */
   createdBy: { id: string; user: { name: string; image: string | null } }
   createdByMemberId: string
@@ -419,6 +422,8 @@ export type Task = {
 export type TaskDetail = Task & {
   /** On create with a teammate: why its thread could not start, so it waits in Backlog. */
   startError?: string
+  /** A mission's tasks, in the order they were made; none for a task of its own. */
+  children: Task[]
   pullRequests: {
     id: string
     repository: string

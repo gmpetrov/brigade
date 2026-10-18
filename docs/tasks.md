@@ -25,6 +25,28 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 - **Trash, not delete.** Moving a task to the Trash takes it off the board from
   any column and stops its running turn; restoring brings it back. Deleting
   for good stays (from the Trash, or "Not a task" on its thread).
+- **Done goes away by itself.** A task done for 3 days is archived by the API's
+  hourly sweep (`sweepDoneTasks`); "Archive all" clears Done sooner.
+- **Missions group tasks toward one goal.** A mission is a task with sub-tasks
+  (`Task.parentId`, one level), "Mission" in visible text only. The board shows
+  it as one card ("Mission", its title, `done/total`); its sheet lists its tasks.
+  A sub-task is in its mission's project. Teammates create the mission first,
+  then each task with `mission`; one deliverable stays one task.
+
+## Missions
+
+- **Column**, computed on the board from the mission and its tasks: Needs you
+  while it or any of its tasks waits on a person; Done once it is done; Backlog
+  while it has no thread and every task is in Backlog; else Doing. Each task
+  keeps its own column in the API, so the sidebar, Home and notifications count
+  the real items, never the mission on top.
+- **Done by itself**: the API marks a mission done when its last task is done,
+  and reopens it (with its archived tasks) when one is reopened or added.
+- **Archive and Trash**: archiving a mission archives its tasks with it; a task
+  in a mission is not archived alone, and unarchiving it brings its mission
+  back. Trashing a mission takes its unfinished tasks with it, at the same
+  time, and restoring brings those back. Deleting a mission for good leaves its
+  tasks as tasks of their own.
 
 ## Columns
 
@@ -68,14 +90,17 @@ Both harnesses get these tools; the API checks every call. A teammate acts for
 its thread's starter: a thread it starts runs on that member's accounts, on its
 own thread's computer.
 
-- `create_task { title, description, priority?, assignee? }`: `assignee` is
+- `create_task { title, description, priority?, assignee?, mission? }`: `mission`
+  puts it in that mission (refused for a sub-task, an archived or trashed one);
+  `assignee` is
   `self` (default: the current thread becomes the task's thread; refused in a
   trigger's thread or one that is already a task), `none` (Backlog), or a
   teammate id or name (a new task, its thread started for that teammate).
-- `list_tasks`: the board's tasks with ids, and the teammates.
+- `list_tasks`: the board's tasks with ids (a sub-task's `missionId`, a mission's `mission: { done, total }`), and the teammates.
 - `comment_on_task { taskId, text }`: a message in that task's thread, headed
   with who wrote it; its teammate answers there. Not for Backlog tasks.
-- `update_task { taskId, title?, description?, priority? }`.
+- `update_task { taskId, title?, description?, priority?, mission? }`: `mission`
+  moves it into a mission, or `"none"` out of its mission.
 - `assign_task { taskId, teammate, reason? }`: teammates only. Backlog: starts
   it. Started: a reassign (below).
 - `move_task { taskId, to: doing | archived | trash }`: `doing` reopens a done,

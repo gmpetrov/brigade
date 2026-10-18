@@ -6,6 +6,7 @@ import {
   Check,
   ExternalLink,
   GitPullRequest,
+  ListPlus,
   Pencil,
   RotateCcw,
   SquareKanban,
@@ -60,6 +61,7 @@ import {
   type Teammate,
 } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
+import { cn } from '@/lib/utils'
 
 export const COLUMNS: { id: TaskColumn; label: string; tone: StatusTone; empty: string }[] = [
   {
@@ -88,6 +90,37 @@ export const PRIORITIES: { id: TaskPriority; label: string; tone: StatusTone }[]
 /** Higher first. */
 export const priorityRank = (p: TaskPriority) =>
   PRIORITIES.length - PRIORITIES.findIndex((x) => x.id === p)
+
+/**
+ * A mission's column, from its own thread and its tasks: Needs you while any
+ * of them waits on a person, Done once it is (the API marks it done with its
+ * last task), Backlog while nothing has started.
+ */
+export function missionColumn(mission: Task, children: Task[]): TaskColumn {
+  if (mission.column === 'needs_you' || children.some((c) => c.column === 'needs_you'))
+    return 'needs_you'
+  if (mission.completedAt) return 'done'
+  if (!mission.thread && children.every((c) => c.column === 'backlog')) return 'backlog'
+  return 'doing'
+}
+
+/** The status dot of a column, as on the board's column headers. */
+export function ColumnDot({ column, className }: { column: TaskColumn; className?: string }) {
+  const tone = COLUMNS.find((c) => c.id === column)!.tone
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'size-2 shrink-0 rounded-full',
+        tone === 'warning' && 'bg-warning',
+        tone === 'progress' && 'bg-primary',
+        tone === 'success' && 'bg-success',
+        tone === 'neutral' && 'bg-muted-foreground',
+        className,
+      )}
+    />
+  )
+}
 
 export function ColumnBadge({ column }: { column: TaskColumn }) {
   const c = COLUMNS.find((x) => x.id === column)!
@@ -250,6 +283,7 @@ export function NewTaskDialog({
   onCreated,
   from,
   projectId: initialProject,
+  mission,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -258,6 +292,8 @@ export function NewTaskDialog({
   from?: { sessionId: string; title: string }
   /** The project it starts in, e.g. from a project page. */
   projectId?: string
+  /** The mission it goes in, which it takes the project of; a task of its own becomes one. */
+  mission?: { id: string; title: string; isMission: boolean }
 }) {
   const { teammates, projects } = useDashboard()
   const [projectId, setProjectId] = useState(initialProject ?? 'none')
@@ -295,7 +331,8 @@ export function NewTaskDialog({
           description,
           priority,
           ...(from ? { sessionId: from.sessionId } : assignee ? { teammateId: assignee } : {}),
-          ...(from ? {} : { projectId: projectId === 'none' ? null : projectId }),
+          ...(from || mission ? {} : { projectId: projectId === 'none' ? null : projectId }),
+          ...(mission ? { parentId: mission.id } : {}),
         },
       })
       if (!from)
@@ -319,13 +356,21 @@ export function NewTaskDialog({
       <DialogContent>
         <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>{from ? 'Make this thread a task' : 'New task'}</DialogTitle>
+            <DialogTitle>
+              {from
+                ? 'Make this thread a task'
+                : mission
+                  ? `New task in “${mission.title}”`
+                  : 'New task'}
+            </DialogTitle>
             <DialogDescription>
               {from
                 ? 'It goes on the Tasks board, and this thread becomes its thread.'
-                : assignee
-                  ? 'The teammate starts on it right away, with the title and description as the first message of its thread.'
-                  : 'It waits in Backlog. Assign it to a teammate when you want it started.'}
+                : mission && !mission.isMission
+                  ? 'This task becomes a mission: one card on the board for its tasks, done when they all are.'
+                  : assignee
+                    ? 'The teammate starts on it right away, with the title and description as the first message of its thread.'
+                    : 'It waits in Backlog. Assign it to a teammate when you want it started.'}
             </DialogDescription>
           </DialogHeader>
           <Field label="Title" htmlFor="task-title">
@@ -364,7 +409,7 @@ export function NewTaskDialog({
               </Field>
             )}
           </div>
-          {!from && projects.some((p) => !p.archivedAt) && (
+          {!from && !mission && projects.some((p) => !p.archivedAt) && (
             <Field label="Project" htmlFor="task-project">
               <ProjectSelect
                 id="task-project"
@@ -513,14 +558,18 @@ export function TaskSheet({
   taskId,
   onClose,
   onChanged,
+  onOpenTask,
 }: {
   taskId: string | null
   onClose: () => void
   onChanged: () => void
+  /** Open another task in the sheet: a mission's task, or a task's mission. */
+  onOpenTask: (id: string) => void
 }) {
   const { projects } = useDashboard()
   const detail = useApi<TaskDetail>(taskId ? `/tasks/${taskId}` : null)
   const task = detail.data?.id === taskId ? detail.data : undefined
+  const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -565,7 +614,9 @@ export function TaskSheet({
           <>
             <SheetHeader className="gap-3 border-b pr-12">
               <div className="flex flex-wrap items-center gap-2">
-                <ColumnBadge column={task.column} />
+                <ColumnBadge
+                  column={task.children.length ? missionColumn(task, task.children) : task.column}
+                />
                 {task.archivedAt && (
                   <StatusBadge status="archived" tone="neutral" label="Archived" />
                 )}
@@ -609,6 +660,18 @@ export function TaskSheet({
                   {timeAgo(task.createdAt)}
                 </span>
               </SheetDescription>
+              {task.parent && (
+                <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                  In mission
+                  <button
+                    type="button"
+                    onClick={() => onOpenTask(task.parent!.id)}
+                    className="min-w-0 truncate font-semibold text-foreground hover:underline"
+                  >
+                    {task.parent.title}
+                  </button>
+                </p>
+              )}
             </SheetHeader>
 
             <div className="flex flex-col gap-6 p-4">
@@ -643,7 +706,8 @@ export function TaskSheet({
                     Reopen
                   </Button>
                 )}
-                {!task.trashedAt && task.completedAt && !task.archivedAt && (
+                {/* A mission's task is archived with its mission. */}
+                {!task.trashedAt && task.completedAt && !task.archivedAt && !task.parentId && (
                   <Button size="sm" variant="outline" onClick={() => void act('/archive')}>
                     <Archive aria-hidden />
                     Archive
@@ -661,7 +725,17 @@ export function TaskSheet({
                     Reassign
                   </Button>
                 )}
+                {!task.trashedAt && !task.archivedAt && !task.parentId && (
+                  <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+                    <ListPlus aria-hidden />
+                    Add a task
+                  </Button>
+                )}
               </div>
+
+              {task.children.length > 0 && (
+                <MissionTasks tasks={task.children} onOpen={onOpenTask} />
+              )}
 
               {!task.trashedAt && task.thread && task.column === 'needs_you' && (
                 <NeedsYouNote task={task} thread={task.thread} />
@@ -738,7 +812,7 @@ export function TaskSheet({
                     />
                   </div>
                 </section>
-                {(projects.length > 0 || task.projectId) && (
+                {!task.parentId && (projects.length > 0 || task.projectId) && (
                   <section className="flex flex-col gap-2">
                     <Label htmlFor="sheet-project" className="text-sm font-bold">
                       Project
@@ -754,6 +828,12 @@ export function TaskSheet({
                       }
                     />
                   </section>
+                )}
+                {!task.trashedAt && task.children.length === 0 && (
+                  <MissionSelect
+                    task={task}
+                    onChange={(parentId) => void act('', { method: 'PATCH', body: { parentId } })}
+                  />
                 )}
               </div>
 
@@ -862,10 +942,102 @@ export function TaskSheet({
                 onChanged()
               }}
             />
+            <NewTaskDialog
+              open={adding}
+              onOpenChange={setAdding}
+              mission={{ id: task.id, title: task.title, isMission: task.children.length > 0 }}
+              onCreated={() => {
+                void detail.reload()
+                onChanged()
+              }}
+            />
           </>
         )}
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** A mission's tasks in its sheet: where each stands, and who is on it. */
+function MissionTasks({ tasks, onOpen }: { tasks: Task[]; onOpen: (id: string) => void }) {
+  const done = tasks.filter((t) => t.completedAt).length
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-2 text-sm font-bold">
+        Tasks
+        <span className="font-mono text-xs font-normal text-muted-foreground">
+          {done}/{tasks.length}
+        </span>
+      </h3>
+      <ul className="flex flex-col divide-y rounded-lg border">
+        {tasks.map((t) => (
+          <li key={t.id}>
+            <button
+              type="button"
+              onClick={() => onOpen(t.id)}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50',
+                t.column === 'needs_you' && 'bg-warning/10',
+              )}
+            >
+              <ColumnDot column={t.column} />
+              <span className="min-w-0 flex-1 truncate">{t.title}</span>
+              {t.teammate ? (
+                <TeammateAvatar teammate={t.teammate} className="size-5" />
+              ) : (
+                <span className="shrink-0 text-xs text-muted-foreground">Unassigned</span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const NO_MISSION = 'none'
+
+/**
+ * The mission a task is in, among the tasks of its project on the board that
+ * are not in a mission themselves. None: a task of its own.
+ */
+function MissionSelect({
+  task,
+  onChange,
+}: {
+  task: TaskDetail
+  onChange: (parentId: string | null) => void
+}) {
+  const board = useApi<Task[]>(`/tasks?project=${task.projectId ?? 'none'}`)
+  const missions = (board.data ?? []).filter(
+    (t) => t.id !== task.id && !t.parentId && !t.archivedAt && !t.trashedAt,
+  )
+  if (!task.parentId && board.data && missions.length === 0) return null
+  return (
+    <section className="flex flex-col gap-2">
+      <Label htmlFor="sheet-mission" className="text-sm font-bold">
+        Mission
+      </Label>
+      <Select
+        value={task.parentId ?? NO_MISSION}
+        onValueChange={(v) => onChange(v === NO_MISSION ? null : v)}
+      >
+        <SelectTrigger id="sheet-mission" className="w-full sm:w-56">
+          <SelectValue placeholder="None" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_MISSION}>None</SelectItem>
+          {task.parent && !missions.some((m) => m.id === task.parentId) && (
+            <SelectItem value={task.parent.id}>{task.parent.title}</SelectItem>
+          )}
+          {missions.map((m) => (
+            <SelectItem key={m.id} value={m.id}>
+              <span className="truncate">{m.title}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </section>
   )
 }
 
@@ -944,6 +1116,14 @@ export function ThreadTaskBar({
       >
         {task.title}
       </Link>
+      {task.parent && (
+        <Link
+          href={`/app/tasks?task=${task.parent.id}`}
+          className="min-w-0 truncate text-sm text-muted-foreground hover:underline"
+        >
+          Mission · {task.parent.title}
+        </Link>
+      )}
       <ColumnBadge column={task.column} />
       <PriorityBadge priority={task.priority} quiet />
       <div className="ml-auto flex flex-wrap items-center gap-2">

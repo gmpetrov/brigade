@@ -3,7 +3,14 @@ import { Archive, ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { ProjectFilter, ProjectTag } from '@/components/projects'
-import { COLUMNS, NewTaskDialog, PriorityBadge, priorityRank, TaskSheet } from '@/components/tasks'
+import {
+  COLUMNS,
+  missionColumn,
+  NewTaskDialog,
+  PriorityBadge,
+  priorityRank,
+  TaskSheet,
+} from '@/components/tasks'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,6 +27,29 @@ function order(a: Task, b: Task) {
   return (
     priorityRank(b.priority) - priorityRank(a.priority) || b.updatedAt.localeCompare(a.updatedAt)
   )
+}
+
+/**
+ * The cards of a list of tasks: a mission's tasks go in its card, so a card is
+ * a task of its own or a mission with its tasks (in the order they were made),
+ * in the mission's column. A task whose mission is not in the list has a card.
+ */
+type Card = Task & { children: Task[] }
+
+function cards(tasks: Task[]): Card[] {
+  const ids = new Set(tasks.map((t) => t.id))
+  const children = new Map<string, Task[]>()
+  for (const t of tasks)
+    if (t.parentId && ids.has(t.parentId))
+      children.set(t.parentId, [...(children.get(t.parentId) ?? []), t])
+  return tasks
+    .filter((t) => !t.parentId || !ids.has(t.parentId))
+    .map((t) => {
+      const mine = (children.get(t.id) ?? []).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      return mine.length
+        ? { ...t, column: missionColumn(t, mine), children: mine }
+        : { ...t, children: [] }
+    })
 }
 
 /** What the card says about where the work is. */
@@ -63,10 +93,12 @@ function TaskCard({
   onOpen,
   showProject,
 }: {
-  task: Task
+  task: Card
   onOpen: () => void
   showProject: boolean
 }) {
+  if (task.children.length)
+    return <MissionCard task={task} onOpen={onOpen} showProject={showProject} />
   const status = task.thread?.status
   // Only in Backlog: nobody is on it yet, so who added it is what matters.
   const backlog = task.column === 'backlog' && !task.archivedAt && !task.trashedAt
@@ -106,6 +138,80 @@ function TaskCard({
             {!backlog && <span className="ml-auto shrink-0">{progress(task)}</span>}
           </span>
         )}
+      </button>
+    </li>
+  )
+}
+
+/**
+ * A mission: one card for its tasks, with how many are done and who is on
+ * them. Its sheet lists them.
+ */
+function MissionCard({
+  task,
+  onOpen,
+  showProject,
+}: {
+  task: Card
+  onOpen: () => void
+  showProject: boolean
+}) {
+  const done = task.children.filter((c) => c.completedAt).length
+  const teammates = [task, ...task.children]
+    .map((t) => t.teammate)
+    .filter((t, i, all): t is NonNullable<Task['teammate']> =>
+      Boolean(t && all.findIndex((o) => o?.id === t.id) === i),
+    )
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full flex-col gap-2.5 rounded-lg border bg-card p-3 text-left shadow-xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <span className="flex flex-col gap-1">
+          <span className="text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase">
+            Mission
+          </span>
+          <span className="line-clamp-3 text-sm leading-snug font-semibold">{task.title}</span>
+        </span>
+        {(showProject || task.priority === 'high' || task.priority === 'urgent') && (
+          <span className="flex flex-wrap items-center gap-1.5">
+            <PriorityBadge priority={task.priority} quiet />
+            {showProject && (
+              <span className="text-xs">
+                <ProjectTag project={task.project} />
+              </span>
+            )}
+          </span>
+        )}
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {teammates.length === 0 ? (
+            <span className="truncate">Unassigned</span>
+          ) : teammates.length === 1 ? (
+            <>
+              <TeammateAvatar teammate={teammates[0]!} className="size-5" />
+              <span className="truncate font-medium text-foreground">{teammates[0]!.name}</span>
+            </>
+          ) : (
+            <>
+              <span className="flex -space-x-1.5">
+                {teammates.slice(0, 3).map((t) => (
+                  <TeammateAvatar key={t.id} teammate={t} className="size-5 ring-2 ring-card" />
+                ))}
+              </span>
+              <span className="truncate font-medium text-foreground">
+                {teammates.length} teammates
+              </span>
+            </>
+          )}
+          <span
+            className="ml-auto shrink-0 font-mono"
+            aria-label={`${done} of ${task.children.length} tasks done`}
+          >
+            {done}/{task.children.length}
+          </span>
+        </span>
       </button>
     </li>
   )
@@ -225,8 +331,9 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
   })
 
   // Right after leaving the archive, the board loaded before is still shown.
-  const board = tasks.data?.filter((t) => !t.archivedAt && !t.trashedAt)
-  const list = view === 'trash' ? trash.data : archive.tasks
+  const board = tasks.data && cards(tasks.data.filter((t) => !t.archivedAt && !t.trashedAt))
+  const loaded = view === 'trash' ? trash.data : archive.tasks
+  const list = loaded && cards(loaded)
   const byColumn = (column: Task['column']) =>
     (board ?? []).filter((t) => t.column === column).sort(order)
 
@@ -262,7 +369,7 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
             </h1>
             <p className="max-w-prose text-muted-foreground">
               {archived
-                ? 'Done tasks put away, most recently archived first. Unarchive or reopen one to bring it back to the board.'
+                ? 'Done tasks move here 3 days after they’re finished, most recently archived first. Unarchive or reopen one to bring it back to the board.'
                 : view === 'trash'
                   ? 'Tasks taken off the board, most recently trashed first. Restore one to bring it back.'
                   : 'Bigger work your teammates are on. Assign a task and its teammate starts on it; leave it unassigned and it waits in Backlog.'}
@@ -301,7 +408,7 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
         ) : list.length === 0 ? (
           <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
             {archived
-              ? 'No archived tasks. Archive done tasks to keep the board short.'
+              ? 'No archived tasks. Done tasks move here 3 days after they’re finished.'
               : 'The Trash is empty.'}
           </p>
         ) : (
@@ -420,7 +527,12 @@ export function TaskBoard({ projectId }: { projectId?: string }) {
           openTask(task.id)
         }}
       />
-      <TaskSheet taskId={open} onClose={() => openTask(null)} onChanged={() => void reload()} />
+      <TaskSheet
+        taskId={open}
+        onClose={() => openTask(null)}
+        onChanged={() => void reload()}
+        onOpenTask={openTask}
+      />
     </div>
   )
 }
