@@ -613,7 +613,8 @@ function RoundButton({
   )
 }
 
-function NewThreadButton() {
+/** The round + that starts a thread: beside the workspace's name, and on a phone at the top of each page. */
+export function NewThreadButton() {
   const { newThreadPage } = useThreadPanel()
   return (
     <RoundButton label="New thread" onClick={newThreadPage}>
