@@ -113,19 +113,19 @@ test("a Linear account shows as its workspace's name", () => {
   assert.equal(linearAccountName({}), null)
 })
 
-test('a Mixpanel account shows as its organizations, however the list comes', () => {
-  assert.equal(mixpanelAccountName([{ id: 1, name: 'Acme' }]), 'Acme')
-  assert.equal(
-    mixpanelAccountName({ organizations: [{ name: 'Acme' }, { name: 'Beta' }] }),
-    'Acme +1',
-  )
-  assert.equal(
-    mixpanelAccountName({ results: { '1': { name: 'Acme' }, '2': { name: 'Beta' } } }),
-    'Acme +1',
-  )
-  assert.equal(mixpanelAccountName({ id: 1, name: 'Acme' }), 'Acme')
+test('a Mixpanel account shows as its organizations', () => {
+  // List-Organizations' reply, as a real account gave it.
+  const one = { result: [{ id: 2509503, name: 'Chaindesk', role: 'owner' }] }
+  assert.equal(mixpanelAccountName(one), 'Chaindesk')
+  const two = {
+    result: [
+      { id: 1, name: 'Acme' },
+      { id: 2, name: 'Beta' },
+    ],
+  }
+  assert.equal(mixpanelAccountName(two), 'Acme +1')
+  assert.equal(mixpanelAccountName({ result: [] }), null)
   assert.equal(mixpanelAccountName({}), null)
-  assert.equal(mixpanelAccountName('nope'), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

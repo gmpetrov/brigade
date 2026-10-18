@@ -26,3 +26,7 @@ In a thread, start it with `start_preview({ repository: "gmpetrov/brigade" })`, 
 The seed runs with each `setup.sh` and adds the sample only when the Acme organization is missing; to start over, delete `.preview/` (embedded PostgreSQL) or run `docker compose down -v` (Docker), then `setup.sh` again.
 
 PostgreSQL comes from `docker-compose.yml` when Docker works, else from the `embedded-postgres` package (no Docker or root needed), with its data in `.preview/`; delete that folder to start over. Downloads (Node, PostgreSQL) are cached in `~/.cache/brigade-preview`. If the dashboard goes blank, Next crashed: `start.sh` starts it again, and the page reloads by itself.
+
+# Adding a built-in App
+
+An account row shows only the account itself (the Gmail address, the Linear workspace, the Mixpanel organization), never just the App's name. Before writing the code that names an account (`mcp.account` for an MCP App), call that tool or URL once with a real account and read its actual reply; write the parser for that reply and keep it as the test's fixture, rather than guessing its shape from the docs. Then, in a Preview, connect a real account and check that its row shows the name before opening the pull request. A real account may be live: call only read tools while testing.
