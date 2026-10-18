@@ -1,7 +1,7 @@
 'use client'
-// Home under Waiting on you: loose ends (nobody is blocked, but nothing moves on its own),
-// then what came back since the member last looked. Each section shows only when it has
-// something, so a quiet day leaves the composer alone on the page.
+// Home under Waiting on you: loose ends, shown as Needs a nudge (nobody is blocked, but
+// nothing moves on its own), then what came back since the member last looked. Each section
+// shows only when it has something, so a quiet day leaves the composer alone on the page.
 import { CircleAlert, Clock, MessageCircleQuestion, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
@@ -211,16 +211,16 @@ export function LooseEnds({
 }) {
   if (!items.length) return null
   return (
-    <section aria-labelledby="loose-ends" className="flex flex-col gap-3">
+    <section aria-labelledby="needs-nudge" className="flex flex-col gap-3">
       <SectionTitle
-        id="loose-ends"
+        id="needs-nudge"
         aside={
           <span className="hidden text-xs text-muted-foreground sm:block">
-            Nobody is blocked, but these won&apos;t move on their own.
+            Nobody is blocked, but these won&apos;t move without you.
           </span>
         }
       >
-        Loose ends
+        Needs a nudge
       </SectionTitle>
       <Card className="gap-0 overflow-hidden py-0 shadow-none">
         <ul className="divide-y">
