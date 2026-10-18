@@ -57,7 +57,7 @@ export default function Home() {
     tickets.data && pulls.data && feed.data && waitingCount === 0
       ? feed.data.looseEnds.length
         ? 'Nothing is waiting on you'
-        : 'Nothing is waiting on you, and nothing is left hanging'
+        : 'Nothing is waiting on you, and nothing needs a nudge'
       : null
 
   return (
