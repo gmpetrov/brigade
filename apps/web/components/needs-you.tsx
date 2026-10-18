@@ -215,7 +215,21 @@ export function NeedsYou({
       await onChange()
       return
     }
-    await done(approved ? 'Approved' : 'Denied')
+    // In the words of the button that was clicked.
+    const t = tickets.find((x) => x.id === id)
+    await done(
+      t?.payload.skillAction
+        ? approved
+          ? 'Skill added'
+          : 'Declined'
+        : t?.payload.source === 'harness'
+          ? 'Declined'
+          : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
+            ? 'Dismissed'
+            : approved
+              ? 'Allowed'
+              : 'Denied',
+    )
   }
 
   function go(key: string | undefined) {

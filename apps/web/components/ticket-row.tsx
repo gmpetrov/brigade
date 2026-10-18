@@ -69,8 +69,8 @@ export function TicketRow({
         <Button size="sm" onClick={() => void onResolve(t.id, true)}>
           {t.payload.skillAction === 'update' ? 'Apply the change' : 'Add the skill'}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
-          Reject
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
+          Decline
         </Button>
       </>
     ) : (
@@ -102,7 +102,7 @@ export function TicketRow({
             {t.payload.credentialAction === 'create' ? 'Save, use without asking' : 'Always allow'}
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
           Deny
         </Button>
       </>
@@ -117,9 +117,9 @@ export function TicketRow({
     actions = (
       <>
         <Button size="sm" onClick={() => void onResolve(t.id, true)}>
-          Approve
+          Allow
         </Button>
-        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
           Deny
         </Button>
       </>
@@ -130,7 +130,7 @@ export function TicketRow({
         <Button size="sm" onClick={() => void onResolve(t.id, true)}>
           Allow once
         </Button>
-        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
           Deny
         </Button>
       </>
@@ -150,7 +150,7 @@ export function TicketRow({
               <Link href={`/app/threads/${t.session.id}`}>Answer in the thread</Link>
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, false)}>
+          <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
             Decline
           </Button>
         </>
@@ -172,7 +172,7 @@ export function TicketRow({
             </Link>
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={() => void onResolve(t.id, true)}>
+        <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, true)}>
           Dismiss
         </Button>
       </>
@@ -181,8 +181,8 @@ export function TicketRow({
 
   return (
     <li className="px-5 py-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[200px] flex-1">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
           <div className="font-semibold">{t.title}</div>
           <div className="text-sm text-muted-foreground">
             {typeLabel[t.type]} · {timeAgo(t.createdAt)}
@@ -204,11 +204,8 @@ export function TicketRow({
             )}
           </div>
         </div>
-        {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        ) : (
-          <StatusBadge status={t.status} tone={statusTone(t.status)} />
-        )}
+        {/* Answered: its status at the top, as on the cards in a thread. */}
+        {!actions && <StatusBadge status={t.status} tone={statusTone(t.status)} />}
       </div>
       {t.payload.reason && (
         <p className="mt-1.5 text-sm text-muted-foreground">{t.payload.reason}</p>
@@ -258,6 +255,8 @@ export function TicketRow({
             : JSON.stringify(t.payload.input, null, 2)}
         </Detail>
       )}
+      {/* Last, once all there is to read before deciding has been shown. */}
+      {actions && <div className="mt-3 flex flex-wrap items-center gap-2">{actions}</div>}
     </li>
   )
 }

@@ -111,7 +111,6 @@ export function PullCard({
       return resolvesInBrigade(p) ? (
         <Button
           size="sm"
-          variant="outline"
           className="relative z-10 flex-none"
           disabled={busy}
           onClick={resolve}
@@ -121,7 +120,7 @@ export function PullCard({
           {busy ? 'Asking…' : 'Resolve conflicts'}
         </Button>
       ) : (
-        <Button size="sm" variant="outline" className="relative z-10 flex-none" asChild>
+        <Button size="sm" className="relative z-10 flex-none" asChild>
           <a href={`${p.url}/conflicts`} target="_blank" rel="noreferrer">
             Resolve on GitHub
             <ExternalLink />
@@ -132,10 +131,11 @@ export function PullCard({
     return mergeButton(mergeable, mergeable ? undefined : blockedBecause[p.mergeableState])
   }
 
+  // Filled, as every card's main action, while it can merge.
   const mergeButton = (enabled: boolean, title?: string) => (
     <Button
       size="sm"
-      variant="outline"
+      variant={enabled ? 'default' : 'outline'}
       className="relative z-10 flex-none"
       disabled={busy || !enabled}
       onClick={merge}
