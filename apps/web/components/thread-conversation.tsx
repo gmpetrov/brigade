@@ -68,7 +68,6 @@ import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
-import { ThreadTaskBar } from '@/components/tasks'
 import { ChildrenWaiting, ParentLink } from '@/components/thread-children'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
@@ -887,14 +886,6 @@ export function ThreadConversation({
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
             {t.parent && <ParentLink parent={t.parent} />}
-
-            {t.task && (
-              <ThreadTaskBar
-                taskId={t.task.id}
-                status={current}
-                onChanged={() => void thread.reload()}
-              />
-            )}
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
 

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { Markdown } from '@/components/markdown'
 import { ProjectSelect } from '@/components/projects'
@@ -60,7 +60,6 @@ import {
   type TaskPriority,
   type Teammate,
 } from '@/lib/api'
-import { useLive } from '@/lib/use-live'
 import { cn } from '@/lib/utils'
 
 export const COLUMNS: { id: TaskColumn; label: string; tone: StatusTone; empty: string }[] = [
@@ -1074,92 +1073,5 @@ export function MakeTaskButton({
         onCreated={onCreated}
       />
     </>
-  )
-}
-
-/** Above a task's thread: which task, where it stands, and what to do with it. */
-export function ThreadTaskBar({
-  taskId,
-  status,
-  onChanged,
-}: {
-  taskId: string
-  /** The thread's status: a change can move the task between columns. */
-  status: string
-  onChanged: () => void
-}) {
-  const detail = useApi<TaskDetail>(`/tasks/${taskId}`)
-  const [reassigning, setReassigning] = useState(false)
-  const [error, setError] = useState<string>()
-  const reload = detail.reload
-  // On a new status: it loaded with the first.
-  const loadedAt = useRef(status)
-  useEffect(() => {
-    if (loadedAt.current === status) return
-    loadedAt.current = status
-    void reload()
-  }, [status, reload])
-  useLive((message) => {
-    if (message.type === 'task.updated' && message.taskId === taskId) void reload()
-  })
-
-  const task = detail.data
-  if (!task) return null
-
-  async function act(path: string) {
-    setError(undefined)
-    try {
-      await api(`/tasks/${taskId}${path}`, { method: 'POST', body: {} })
-      await reload()
-      onChanged()
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border bg-card px-4 py-2.5">
-      <SquareKanban className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-      <span className="text-sm text-muted-foreground">Task</span>
-      <Link
-        href={`/app/tasks?task=${task.id}`}
-        className="min-w-0 truncate text-sm font-semibold hover:underline"
-      >
-        {task.title}
-      </Link>
-      {task.parent && (
-        <Link
-          href={`/app/tasks?task=${task.parent.id}`}
-          className="min-w-0 truncate text-sm text-muted-foreground hover:underline"
-        >
-          Mission · {task.parent.title}
-        </Link>
-      )}
-      <ColumnBadge column={task.column} />
-      <PriorityBadge priority={task.priority} quiet />
-      <div className="ml-auto flex flex-wrap items-center gap-2">
-        {error && <span className="text-sm text-destructive-text">{error}</span>}
-        {/* Reopening and untracking a task are on the tasks board. */}
-        {!task.completedAt && (
-          <Button size="sm" variant="outline" onClick={() => void act('/complete')}>
-            <Check aria-hidden />
-            Mark done
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={() => setReassigning(true)}>
-          <UserRoundCog aria-hidden />
-          Reassign
-        </Button>
-      </div>
-      <AssignDialog
-        task={task}
-        open={reassigning}
-        onOpenChange={setReassigning}
-        onDone={() => {
-          void reload()
-          onChanged()
-        }}
-      />
-    </div>
   )
 }
