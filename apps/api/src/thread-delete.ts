@@ -5,6 +5,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { attachmentKey, deleteObject, folderArchiveKey, repoBackupKey } from './bucket.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
+import { broadcastSchedule } from './hub.js'
 
 /** While a teammate works in it, the thread's computer is still writing to it. */
 const BUSY = new Set(['starting', 'running'])
@@ -98,26 +99,25 @@ export async function deleteThread(db: ScopedDb, scope: Scope, actor: Actor, ses
     throw new HTTPException(409, {
       message: 'One of its child threads is at work. Stop it first, or wait for it to finish.',
     })
-  for (const child of children) await deleteThread(db, scope, actor, child.id)
-  // A schedule whose runs reported here stops, and its owner hears why.
+  // A schedule whose runs report here only made sense for this thread: it goes too,
+  // first, so no new run starts while its past runs are deleted below.
   const reporting = await db.schedule.findMany({
     where: { parentSessionId: sessionId },
-    select: { id: true, title: true, ownerMemberId: true, pausedAt: true },
+    select: { id: true, title: true },
   })
   for (const schedule of reporting) {
-    await db.schedule.updateMany({
-      where: { id: schedule.id },
-      data: { parentSessionId: null, pausedAt: schedule.pausedAt ?? new Date(), nextRunAt: null },
+    await db.schedule.deleteMany({ where: { id: schedule.id } })
+    await audit({
+      ...scope,
+      actor,
+      action: 'schedule.deleted',
+      target: { type: 'schedule', id: schedule.id },
+      data: { title: schedule.title, with: { type: 'thread', id: sessionId } },
     })
-    if (!schedule.pausedAt)
-      await db.ticket.create({
-        data: {
-          type: 'question',
-          title: `Schedule "${schedule.title}" is paused: the thread it reported to, “${thread.title}”, was deleted. Resume it to run its runs as threads of their own.`,
-          payload: { scheduleId: schedule.id, memberId: schedule.ownerMemberId },
-        } as never,
-      })
+    broadcastSchedule(scope.workspaceId, schedule.id)
   }
+  // Its runs are among the children, so they go here with their files.
+  for (const child of children) await deleteThread(db, scope, actor, child.id)
 
   const { keys, attachmentIds } = await threadObjectKeys(db, scope, sessionId)
   const failed: string[] = []

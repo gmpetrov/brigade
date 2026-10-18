@@ -1251,6 +1251,8 @@ export async function seedWorkspace(users: Users) {
       timezone: 'Europe/Paris',
       ownerMemberId: ada.id,
       createdByTeammateId: riley.id,
+      // Reporting to a thread, it is in that thread's project.
+      projectId: website.id,
       parentSessionId: parentId,
       nextRunAt: new Date(Date.now() + 86_400_000),
       createdAt: days(3),

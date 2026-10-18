@@ -2061,7 +2061,7 @@ export type $SchedulePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      */
     lastError: string | null
     /**
-     * Its runs start in this project.
+     * Its runs start in this project. Reporting to a thread, it is that thread's project, kept in step when the thread moves.
      */
     projectId: string | null
     /**

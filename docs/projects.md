@@ -257,6 +257,8 @@ while they are being filled, so nothing typed is lost; "Fill it in myself" stops
 - **A project folder moved or renamed** in the library updates `Project.folder` in the
   same transaction as the path rewrite.
 - **Teammates creating schedules** from a project thread give the schedule that project.
+  When the thread moves to another project, its child threads and the schedules reporting
+  to it move with it.
 
 ## Not now
 

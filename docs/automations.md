@@ -120,6 +120,12 @@ handled by `handleScheduleCall` in `schedules.ts`, and answered with `connector.
 - `update_schedule { scheduleId, title?, instructions?, cron?, timezone?, paused? }`
   - Changes a schedule this teammate runs. Only from a thread whose starter owns it.
   - Deleting is left to people, on the Automations page.
+- A schedule made from a thread reports there, and belongs to it:
+  - It is in that thread's project. The Edit dialog shows the project without a picker,
+    `PATCH /schedules/:id` refuses another one, and moving the thread moves the schedule
+    (and every child thread below it).
+  - Deleting the thread deletes the schedule and its runs, with their files. The
+    confirmation names the schedules that go with it.
 
 In `instructions.ts`, a few lines on when to create a schedule:
 
