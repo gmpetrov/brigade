@@ -9,6 +9,7 @@ import { googleDocs, googleDrive, googleSheets } from './google-drive.js'
 import { neon } from './neon.js'
 import { atlassian } from './atlassian.js'
 import { notion } from './notion.js'
+import { linear } from './linear.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
 
@@ -26,6 +27,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   supabase,
   atlassian,
   notion,
+  linear,
 }
 
 /**
@@ -67,6 +69,7 @@ export const triggerCatalog = () =>
         'supabase',
         'atlassian',
         'notion',
+        'linear',
         'mcp',
         'webhook',
       ] as const
@@ -198,6 +201,15 @@ export const appCatalog: Record<
     developer: 'Notion',
     category: 'Productivity',
     // A Notion sign-in reaches what its member can see, private pages included.
+    personal: true,
+  },
+  linear: {
+    name: 'Linear',
+    description:
+      'Find, create and update issues, projects and comments, with Linear’s MCP server. With GitHub, teammates take a ticket and open its pull request.',
+    developer: 'Linear',
+    category: 'Productivity',
+    // A Linear sign-in is someone's own account, kept to their threads until they share it.
     personal: true,
   },
   mcp: {

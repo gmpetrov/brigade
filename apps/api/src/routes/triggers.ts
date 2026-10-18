@@ -28,6 +28,7 @@ const KINDS: ConnectorKind[] = [
   'supabase',
   'atlassian',
   'notion',
+  'linear',
   'mcp',
   'webhook',
 ]
