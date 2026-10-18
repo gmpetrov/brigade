@@ -129,10 +129,20 @@ export function PullPreview({
         aria-pressed={open && inFront}
         disabled={start.busy}
         onClick={onClick}
-        title={live ? 'Try the change beside the pull request' : 'Run the change to try it here'}
+        title={
+          live
+            ? 'Opens the change beside the pull request, so you can try it'
+            : "Runs this pull request's change, so you can try it"
+        }
       >
         {start.busy ? <LoaderCircle className="animate-spin" /> : <AppWindow />}
-        Preview
+        {start.busy
+          ? 'Starting…'
+          : open && inFront
+            ? 'Hide preview'
+            : live || open
+              ? 'Open preview'
+              : 'Start preview'}
         {preview && live && phase && (
           <span
             className={cn('size-1.5 rounded-full', PHASE[phase].dot)}
