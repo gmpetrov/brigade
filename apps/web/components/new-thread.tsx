@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { defaultEffort, type Effort } from '@brigade/contracts'
 import {
-  AttachButton,
   ComposerMenu,
   UploadList,
   useFileDrop,
@@ -563,8 +562,14 @@ export function NewThread({
     </>
   )
   // The +, as in a thread, phones included, where there is no teaching. The quick dialog
-  // keeps the paperclip: its modal would keep the recording's computer from use.
-  const add = <ComposerMenu onFiles={files.add} effort={effort} {...(phone ? {} : { teach })} />
+  // has no teaching either: its modal would keep the recording's computer from use.
+  const add = (
+    <ComposerMenu
+      onFiles={files.add}
+      effort={effort}
+      {...(phone || layout === 'dialog' ? {} : { teach })}
+    />
+  )
   const recorder = teaching && (
     <TeachTask
       teammate={teammate}
@@ -625,13 +630,16 @@ export function NewThread({
         </div>
         {message && <div className="px-3 pb-2">{message}</div>}
         <div className="flex flex-wrap items-center gap-1 border-t px-3 py-2">
-          <AttachButton onFiles={files.add} />
+          {add}
           {where}
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-xs text-muted-foreground sm:inline">
               esc to close · ↵ to send
             </span>
-            {send}
+            <div className="flex items-center gap-1">
+              <EffortButton effort={effort} />
+              {send}
+            </div>
           </div>
         </div>
       </form>

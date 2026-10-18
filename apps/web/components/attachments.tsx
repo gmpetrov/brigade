@@ -198,42 +198,6 @@ export function useFileDrop(add: (files: File[]) => void, enabled = true) {
   }
 }
 
-/** The paperclip: pick files from this computer. */
-export function AttachButton({
-  onFiles,
-  disabled,
-}: {
-  onFiles: (files: File[]) => void
-  disabled?: boolean
-}) {
-  const input = useRef<HTMLInputElement>(null)
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        disabled={disabled}
-        onClick={() => input.current?.click()}
-        aria-label="Attach files"
-        title="Attach files (or drop or paste them)"
-      >
-        <Paperclip aria-hidden />
-      </Button>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        hidden
-        onChange={(e) => {
-          if (e.target.files?.length) onFiles([...e.target.files])
-          e.target.value = ''
-        }}
-      />
-    </>
-  )
-}
-
 /** A computer a thread can continue on, for the + menu's Continue on…. */
 export type MoveTarget = {
   id: string
