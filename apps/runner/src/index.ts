@@ -619,16 +619,16 @@ async function start() {
     return setup.trim() ? { setup: setup.trim() } : {}
   }
   // Updates wait for a quiet moment: no turn running or queued, no terminal, no sign-in, no preview.
+  // One the API requires goes at once: running turns are frozen, and go on after the restart.
   const updater = new Updater({
     apiUrl: config.apiUrl,
     idle: () => !threads.busy && terminals.count === 0 && !accounts.busy && previews.count === 0,
     stop: async () => {
-      // No new commands once disconnected; a turn that slipped in finishes first.
+      // No new commands once disconnected; a turn that slipped in is frozen like the others.
       connection.close()
       terminals.closeAll()
       await previews.stopAll('The computer updated Brigade')
-      await threads.settle()
-      await threads.parkAll()
+      await threads.stop()
     },
   })
   connection = new Connection(
@@ -656,7 +656,7 @@ async function start() {
     // Reported before the connection closes; the outbox keeps it otherwise.
     await previews.stopAll('The computer stopped')
     connection.close()
-    await threads.parkAll()
+    await threads.stop()
     process.exit(0)
   }
   process.once('SIGINT', shutdown)

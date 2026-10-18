@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
 import {
   ASIDE_TOOLS,
   attachmentLines,
@@ -56,6 +57,8 @@ const MAX_HANDOFFS = 40
 const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
 /** Longest a memory run may take. */
 const MEMORY_RUN_MS = 4 * 60_000
+/** When the runner stops, how long it waits for the turns it froze to come back out. */
+const STOP_GRACE_MS = 10_000
 /** Longest a title run may take: past that, the thread keeps its first line. */
 const TITLE_RUN_MS = 60_000
 /** Events after which a thread is no longer running a turn. */
@@ -181,6 +184,10 @@ export class Threads {
   /** Turns queued or running, across threads. */
   private pending = 0
   private waiters: Array<() => void> = []
+  /** The runner is stopping (stop): nothing new starts. */
+  private stopping = false
+  /** Aborts the memory runs under way when the runner stops. */
+  private readonly stopped = new AbortController()
 
   constructor(
     private readonly options: {
@@ -593,14 +600,31 @@ export class Threads {
     return this.pending > 0
   }
 
-  /** Wait until no turn is running or queued, e.g. one that started just before a disconnect. */
-  async settle() {
+  /**
+   * The runner stops, to update or shut down: no turn or memory run starts any
+   * more, and every harness session is parked with its state. A running turn is
+   * frozen and goes on after the restart (pickUp): none is waited for, since one
+   * may run for hours and every thread here would wait with it.
+   */
+  async stop() {
+    this.stopping = true
+    this.stopped.abort()
+    await this.parkAll()
+    // Frozen, a running turn comes back out at once, and the turns queued behind it no longer
+    // start; a session one of them started meanwhile is parked too. A turn still running past
+    // this is cut off by the restart, and goes on from its conversation (recover).
+    await Promise.race([this.settle(), sleep(STOP_GRACE_MS)])
+    await this.parkAll()
+  }
+
+  /** Wait until no turn is running or queued. */
+  private async settle() {
     while (this.pending > 0)
       await Promise.all([...this.threads.values()].map((t) => t.queue.catch(() => undefined)))
   }
 
-  /** Stop every harness session, keeping saved state. Called on shutdown. */
-  async parkAll() {
+  /** Stop every harness session, keeping saved state. */
+  private async parkAll() {
     await Promise.all(
       [...this.threads.values()].flatMap((t) =>
         [...t.harnesses.values()].map((h) => h.harness.park().catch(() => undefined)),
@@ -641,6 +665,8 @@ export class Threads {
         if (thread.takeover) return
         await this.acquire()
         acquired = true
+        // The runner is stopping: the API still has the turn, and gives it to the next runner.
+        if (this.stopping) return
         const upTo = prepare ? await prepare() : undefined
         started()
         if (upTo === null) return
@@ -677,7 +703,7 @@ export class Threads {
             : input.kind === 'lost'
               ? await this.pickUp(spec, seat, input)
               : input
-        if (!turn) return
+        if (!turn || this.stopping) return
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
           type: 'turn.started',
@@ -1009,6 +1035,8 @@ export class Threads {
         if (!fresh.some((e) => e.by)) return
         await this.acquire()
         try {
+          // Taken from the same log by the next runner, when the thread goes quiet there.
+          if (this.stopping) return
           const speakers = spec.teammates.filter((t) => fresh.some((e) => e.by === t.id))
           const text = await runOnce({
             spec,
@@ -1020,7 +1048,7 @@ export class Threads {
               memory: this.options.context.memoryFor,
               speakers,
             }),
-            signal: AbortSignal.timeout(MEMORY_RUN_MS),
+            signal: AbortSignal.any([AbortSignal.timeout(MEMORY_RUN_MS), this.stopped.signal]),
           })
           const update = parseMemory(text, spec, speakers)
           if (!update) return console.warn(`thread ${sessionId}: memory run gave no usable answer`)
