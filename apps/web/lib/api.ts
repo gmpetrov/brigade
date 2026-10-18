@@ -282,6 +282,8 @@ export type ThreadSummary = {
   eventsWaitingSince?: string | null
   /** Its child threads it waits for, at work: it shows as working. */
   childrenWorking?: number
+  /** Its preview is starting or running, on a computer that is up. */
+  previewRunning?: boolean
 }
 
 /** A thread started from another (start_child, or a schedule's run that reports there), shown in it. */
