@@ -7,6 +7,7 @@ import {
   ArchiveRestore,
   EllipsisVertical,
   Laptop,
+  MonitorPlay,
   Pencil,
   Pin,
   PinOff,
@@ -179,6 +180,13 @@ export function ThreadRow({
               open && 'opacity-0',
             )}
           >
+            {/* Its preview is up: people can try what it builds. */}
+            {thread.previewRunning && (
+              <span title="Preview running" className="flex">
+                <MonitorPlay aria-hidden className="size-3 opacity-50" />
+                <span className="sr-only">Preview running</span>
+              </span>
+            )}
             {/* On a member's own machine; no laptop means the workspace computer. */}
             {thread.computer.kind === 'member_machine' && (
               <span title={`Runs on ${thread.computer.name}`} className="flex">

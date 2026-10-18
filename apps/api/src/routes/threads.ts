@@ -37,6 +37,7 @@ import {
   livePreview,
   previewLogs,
   previewOffline,
+  previewStates,
   startPreview,
   touchPreview,
 } from '../app-previews.js'
@@ -253,6 +254,12 @@ export const threads = new Hono<AppEnv>()
           _count: { _all: true },
         })
       : []
+    // Whose preview is up: the sidebar marks them. Not on a computer that is gone, whatever
+    // the events say, as on the preview panel.
+    const previews = await previewStates(
+      c.var.db,
+      rows.map((r) => r.id),
+    )
     // When this member last looked at each: a teammate's turn after it is unread for them.
     const reads = rows.length
       ? await c.var.db.threadRead.findMany({
@@ -278,6 +285,8 @@ export const threads = new Hono<AppEnv>()
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           eventsWaitingSince: eventsWaitingSince(row.id),
+          previewRunning:
+            !!previews.get(row.id) && !previewOffline({ id: row.computerId, ...row.computer }),
         }
       }),
     )
