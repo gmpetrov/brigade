@@ -15,10 +15,8 @@ import {
   FolderKanban,
   Laptop,
   Reply,
-  ListOrdered,
   LoaderCircle,
   SquareKanban,
-  SquareTerminal,
   UserRound,
   UsersRound,
   X,
@@ -510,8 +508,6 @@ export function ThreadConversation({
     </Card>
   )
 
-  const mine = !!me.memberId && t.controlledByMemberId === me.memberId
-
   // Where the thread can continue: its starter moves it, it runs on their accounts. The cloud
   // computer or a machine of theirs, with an account for each of its teammates.
   const harnesses = new Set(people.map((p) => p.harness))
@@ -563,16 +559,7 @@ export function ThreadConversation({
             : `Moving to ${movingTo}…`
       : undefined
   // The computer's own page, the thread docked beside it.
-  const showComputer = (shell = false) => openComputer(t.teammate.id, { threadId: id, shell })
-  async function openShell() {
-    setError(undefined)
-    try {
-      if (!mine) await api(`/threads/${id}/takeover`, { body: { interrupt: false } })
-      showComputer(true)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
+  const showComputer = () => openComputer(t.teammate.id, { threadId: id })
 
   async function call(path: string, body?: unknown) {
     setError(undefined)
@@ -699,7 +686,7 @@ export function ThreadConversation({
   )
 
   // Expanded, what is not the conversation sits in the panel beside it: the thread's
-  // computer (with Preview, the shell and the run log), its details, then what it made.
+  // computer (with Preview), its details, then what it made.
   // One row per fact, an icon for its kind: who is in it, its project, its task, who started it.
   const fact = 'flex min-w-0 items-center gap-2.5'
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
@@ -777,74 +764,48 @@ export function ThreadConversation({
       </div>
     </div>
   )
-  const computerActions = (
+  // Preview is the computer's one action.
+  const computerActions = offersPreview && (
     <div className="flex flex-wrap gap-2">
-      {offersPreview && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-pressed={previewing}
-          disabled={previewStart.busy}
-          onClick={() => {
-            if (previewing) return setPreviewing(false)
-            if (live) return openPreview()
-            // Stopped: the panel says what happens while it starts again.
-            if (preview) openPreview()
-            void previewStart.start()
-          }}
-          title={
-            live
-              ? `Opens the app ${previewTeammate?.name ?? answering.name} runs, so you can try it`
-              : 'Runs the app this thread builds, so you can try it'
-          }
-        >
-          {previewStart.busy ? (
-            <LoaderCircle aria-hidden className="animate-spin" />
-          ) : (
-            <AppWindow aria-hidden />
-          )}
-          {/* What a click does, not only what it is about. */}
-          {previewStart.busy
-            ? 'Starting…'
-            : previewing
-              ? 'Hide preview'
-              : live
-                ? 'Open preview'
-                : 'Start preview'}
-          {preview && live && (
-            <span
-              className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}
-              aria-label={PHASE[previewPhase(preview)].label}
-              role="img"
-            />
-          )}
-        </Button>
-      )}
-      {t.computer.kind === 'cloud' && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!me.memberId || (!!t.controlledByMemberId && !mine)}
-          onClick={() => void openShell()}
-          title={
-            t.controlledByMemberId && !mine
-              ? 'Another member has control of this thread'
-              : mine
-                ? `A shell on the cloud computer, as ${t.teammate.name}`
-                : `Take control and open a shell, as ${t.teammate.name}. ${t.teammate.name} waits until you hand back`
-          }
-        >
-          <SquareTerminal aria-hidden />
-          Shell
-        </Button>
-      )}
-      <Button asChild variant="outline" size="sm">
-        <Link href={`/app/threads/${id}/log`}>
-          <ListOrdered aria-hidden />
-          Run log
-        </Link>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-pressed={previewing}
+        disabled={previewStart.busy}
+        onClick={() => {
+          if (previewing) return setPreviewing(false)
+          if (live) return openPreview()
+          // Stopped: the panel says what happens while it starts again.
+          if (preview) openPreview()
+          void previewStart.start()
+        }}
+        title={
+          live
+            ? `Opens the app ${previewTeammate?.name ?? answering.name} runs, so you can try it`
+            : 'Runs the app this thread builds, so you can try it'
+        }
+      >
+        {previewStart.busy ? (
+          <LoaderCircle aria-hidden className="animate-spin" />
+        ) : (
+          <AppWindow aria-hidden />
+        )}
+        {/* What a click does, not only what it is about. */}
+        {previewStart.busy
+          ? 'Starting…'
+          : previewing
+            ? 'Hide preview'
+            : live
+              ? 'Open preview'
+              : 'Start preview'}
+        {preview && live && (
+          <span
+            className={cn('size-1.5 rounded-full', PHASE[previewPhase(preview)].dot)}
+            aria-label={PHASE[previewPhase(preview)].label}
+            role="img"
+          />
+        )}
       </Button>
     </div>
   )
