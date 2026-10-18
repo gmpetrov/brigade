@@ -196,9 +196,10 @@ function FoldedCount({ threads }: { threads: ThreadSummary[] }) {
   const waiting = threads.filter((t) => groupOf(t.status) === 'waiting').length
   if (!waiting) return null
   return (
+    // Beside the label, as Home's Waiting on you badge: the label and its chevron stay put.
     <span
       title={`${waiting} waiting on you`}
-      className="text-warning ml-auto shrink-0 pl-2 font-mono text-[0.6875rem] font-semibold"
+      className="bg-warning/15 text-warning ml-1 shrink-0 rounded-full px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums"
     >
       {waiting}
     </span>
@@ -583,8 +584,7 @@ export function SidebarWork({
 
       {pinned.length > 0 && (
         <SidebarGroup className="py-1 group-data-[collapsible=icon]:hidden">
-          {/* Room on the right as under Threads' filter: both counts line up. */}
-          <SidebarGroupLabel className="pr-8">
+          <SidebarGroupLabel>
             <FoldButton
               label="Pinned"
               folded={folded.pinned}
@@ -614,6 +614,7 @@ export function SidebarWork({
               toggleFolded('threads')
             }}
           />
+          {folded.threads && <FoldedCount threads={shown} />}
           {teammate && (
             <FilterChip
               label={teammate.name}
@@ -643,7 +644,6 @@ export function SidebarWork({
               onClear={() => setFilter((f) => ({ ...f, statuses: [] }))}
             />
           )}
-          {folded.threads && <FoldedCount threads={shown} />}
         </SidebarGroupLabel>
         {/* Folded, Threads is only its label: no filter beside it. */}
         {!folded.threads && (
