@@ -72,11 +72,13 @@ case "\${1:-}" in
     fi
     cd /
     # Chrome's output goes to ~/.browser.log, written as the teammate, so the runner can
-    # say why it did not start.
+    # say why it did not start. A stopped computer cuts Chrome off: no "Restore pages?"
+    # bubble after that, since the tabs it would restore belong to no thread.
     setsid -f runuser -u "$2" -- env -i HOME="/home/$2" USER="$2" LOGNAME="$2" DISPLAY=:0 \\
       PATH=/usr/bin:/bin LANG=C.UTF-8 sh -c 'exec "$@" >"$HOME/.browser.log" 2>&1' sh \\
       google-chrome --user-data-dir="/home/$2/.browser" \\
       --remote-debugging-port="$3" --no-first-run --no-default-browser-check \\
+      --hide-crash-restore-bubble \\
       --password-store=basic --class="brigade-$2" --window-name="$4" \${URL:+"$URL"} \\
       >/dev/null 2>&1 </dev/null
     ;;

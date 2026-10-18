@@ -27,7 +27,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
-import { browserMcpServer, ensureBrowser } from '../browsers.js'
+import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
 import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
@@ -1133,9 +1133,7 @@ export class HarnessThread {
           })
       : null
     const tabsFile =
-      browser && this.runAs
-        ? `${teammateHome(this.runAs)}/.browser-tabs/${this.spec.sessionId}.json`
-        : undefined
+      browser && this.runAs ? threadTabsFile(this.runAs, this.spec.sessionId) : undefined
     const libraryDir = await this.context.libraryDir(this.spec.teammate.id)
     // Memory loads through the harness's own instruction file.
     await writeInstructions(
