@@ -1103,12 +1103,15 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
         'asks to track it; not for questions, explanations, brainstorming or quick actions you finish in this ' +
         'reply. Call it before starting the work; do not ask first, say in one line that you are tracking it. ' +
         'Set assignee to "none" to put a separate task in Backlog for later, or to another teammate (id or name) ' +
-        'to hand them a separate task: it starts at once in its own thread.',
+        'to hand them a separate task: it starts at once in its own thread. One deliverable (one spec, one pull ' +
+        'request) is one task, its steps in the description. Two or more tasks toward one goal go in a mission: ' +
+        'create the mission first (a task saying the goal and what done looks like), then each task with `mission`.',
       inputSchema: jsonSchema<{
         title: string
         description: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
         assignee?: string
+        mission?: string
       }>({
         type: 'object',
         properties: {
@@ -1123,6 +1126,12 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
             description:
               '"self" (default): this thread is the task. "none": Backlog. Else a teammate id or name, never a person.',
           },
+          mission: {
+            type: 'string',
+            description:
+              'The id of the mission it belongs to, from list_tasks or the create_task that made it. It takes the ' +
+              "mission's project. Unset: a task of its own.",
+          },
         },
         required: ['title', 'description'],
       }),
@@ -1135,6 +1144,7 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
             description: input.description,
             priority: input.priority ?? 'medium',
             assignee: input.assignee || 'self',
+            ...(input.mission ? { mission: input.mission } : {}),
           },
           input,
           toolCallId,
@@ -1175,12 +1185,14 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
         ),
     }),
     update_task: tool({
-      description: "Change a task's title, description or priority.",
+      description:
+        "Change a task's title, description or priority, or move it into or out of a mission.",
       inputSchema: jsonSchema<{
         taskId: string
         title?: string
         description?: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
+        mission?: string
       }>({
         type: 'object',
         properties: {
@@ -1188,11 +1200,24 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
           title: { type: 'string' },
           description: { type: 'string' },
           priority,
+          mission: {
+            type: 'string',
+            description: 'A mission id to move it into, or "none" to take it out of its mission',
+          },
         },
         required: ['taskId'],
       }),
-      execute: (input, { toolCallId }) =>
-        send('update_task', { name: 'update', ...input }, input, toolCallId),
+      execute: ({ mission, ...input }, { toolCallId }) =>
+        send(
+          'update_task',
+          {
+            name: 'update',
+            ...input,
+            ...(mission ? { mission: mission === 'none' ? null : mission } : {}),
+          },
+          { ...input, mission },
+          toolCallId,
+        ),
     }),
     assign_task: tool({
       description:

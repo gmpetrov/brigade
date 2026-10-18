@@ -500,6 +500,11 @@ model Task {
   /// The project it belongs to; its thread starts there.
   projectId           String?
   project             Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// Its mission: a task whose sub-tasks it groups on the board ("Mission" in visible text
+  /// only). One level: a sub-task has no sub-tasks. Deleting the mission leaves them as tasks.
+  parentId            String?
+  parent              Task?        @relation("TaskChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children            Task[]       @relation("TaskChildren")
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   session             Session?
@@ -509,6 +514,7 @@ model Task {
   @@index([workspaceId, trashedAt])
   @@index([teammateId])
   @@index([projectId])
+  @@index([parentId])
 }
 
 /// A teammate prompted with the same instructions on a cron schedule; each

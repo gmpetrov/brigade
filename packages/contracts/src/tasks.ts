@@ -36,6 +36,8 @@ export const CreateTask = z.object({
   sessionId: z.string().optional(),
   /** Unset with a thread: the thread's project. */
   projectId: z.string().nullish(),
+  /** The mission it goes in; it takes the mission's project. */
+  parentId: z.string().optional(),
 })
 
 export const UpdateTask = z.object({
@@ -44,6 +46,8 @@ export const UpdateTask = z.object({
   priority: TaskPriority.optional(),
   /** Null: out of its project. Its thread follows. */
   projectId: z.string().nullable().optional(),
+  /** Into a mission (it takes the mission's project), or null: out of its mission. */
+  parentId: z.string().nullable().optional(),
 })
 
 /**
@@ -76,6 +80,8 @@ export const TaskOperation = z.discriminatedUnion('name', [
      * a new task, its thread started for that teammate.
      */
     assignee: z.string().default('self'),
+    /** The id of the mission it goes in. */
+    mission: z.string().optional(),
   }),
   z.object({ name: z.literal('list') }),
   /** To a started task's thread (taskId), or to a child of the thread calling (threadId). */
@@ -93,6 +99,8 @@ export const TaskOperation = z.discriminatedUnion('name', [
     title: Title.optional(),
     description: Description.optional(),
     priority: TaskPriority.optional(),
+    /** Into that mission, or null: out of its mission. */
+    mission: z.string().nullable().optional(),
   }),
   z.object({
     name: z.literal('assign'),

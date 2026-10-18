@@ -416,7 +416,11 @@ const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
   "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
   'person), `move_task` and ' +
-  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
+  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.\n\n' +
+  'One deliverable (one spec, one pull request) is one task, with its steps in the description, never one task ' +
+  'per step. When you create two or more tasks toward one goal (different teammates, parallel work, separate ' +
+  'pull requests), group them in a mission: create the mission first, a task with the goal and what done looks ' +
+  'like, then each task with `mission` set to its id. The board shows them as one card, done when they all are.'
 
 /** The Tasks board: this thread's task, or when to make one. */
 const tasks = (spec: ThreadSpec) =>

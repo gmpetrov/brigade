@@ -841,6 +841,7 @@ export async function seedWorkspace(users: Users) {
     summary?: string
     deliverables?: { label: string; url: string }[]
     sessionId?: string
+    parentId?: string
     createdAt: Date
   }) => {
     const { sessionId, ...rest } = data
@@ -868,12 +869,33 @@ export async function seedWorkspace(users: Users) {
     projectId: website.id,
     createdAt: days(4),
   })
+  // A mission: one card on the board for the launch's tasks.
+  const launchMission = await task({
+    title: 'Launch Acme Teams',
+    description:
+      'Everything for the Teams launch on November 4: the sales deck, the newsletter and the blog post.',
+    priority: 'medium',
+    projectId: launch.id,
+    createdByMemberId: bob.id,
+    createdAt: days(3),
+  })
+  await task({
+    title: 'Publish the launch blog post',
+    description:
+      'A post on acme.com/blog announcing Teams, with the pricing and two customer quotes.',
+    priority: 'medium',
+    projectId: launch.id,
+    createdByMemberId: bob.id,
+    parentId: launchMission.id,
+    createdAt: days(2),
+  })
   await task({
     title: 'Write the Acme Teams sales deck',
     description: '10 slides for sales calls: problem, Teams, pricing, security, customer quotes.',
     priority: 'low',
     projectId: launch.id,
     createdByMemberId: bob.id,
+    parentId: launchMission.id,
     createdAt: days(2),
   })
   await task({
@@ -903,6 +925,7 @@ export async function seedWorkspace(users: Users) {
     projectId: launch.id,
     createdByMemberId: bob.id,
     sessionId: newsletter.id,
+    parentId: launchMission.id,
     createdAt: hours(2),
   })
   await task({
