@@ -110,11 +110,9 @@ export function TeamProposalCard({
 
   return (
     <Card className="gap-4 border-primary/40 px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary uppercase [&>svg]:size-3.5">
-          <Users aria-hidden />
-          Your team
-        </div>
+      <div className="flex items-start gap-2">
+        <Users aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
+        <div className="min-w-0 flex-1 font-semibold">Your team</div>
         {reply !== undefined && (
           <StatusBadge
             status={created ? 'answered' : 'replied'}
@@ -157,6 +155,7 @@ export function TeamProposalCard({
           {open && (
             <div className="flex flex-wrap items-center gap-3">
               <Button
+                size="sm"
                 disabled={busy || !draft.some((t) => t.included)}
                 onClick={() => void create()}
               >

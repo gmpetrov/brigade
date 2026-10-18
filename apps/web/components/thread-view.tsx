@@ -1650,25 +1650,25 @@ export function ThreadItems({
       case 'approval':
         return (
           <Card key={item.key} className="min-w-0 gap-3 border-warning/50 px-5 py-4 wrap-anywhere">
-            <CardLabel className="text-warning">
-              <ShieldAlert aria-hidden />
-              Approval needed
-            </CardLabel>
-            <div className="font-medium">
-              Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
-              {toolSummary(item.toolName, item.input)}?
+            <div className="flex items-start gap-2">
+              <ShieldAlert aria-hidden className="mt-0.5 size-4 flex-none text-warning" />
+              <div className="min-w-0 flex-1 font-semibold">
+                Allow <code className="font-mono text-sm">{item.toolName}</code>{' '}
+                {toolSummary(item.toolName, item.input)}?
+              </div>
+              {item.resolved && (
+                <StatusBadge
+                  status={item.resolved.approved ? 'approved' : 'denied'}
+                  label={item.resolved.approved ? 'Allowed' : 'Denied'}
+                />
+              )}
             </div>
             {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
             <pre className={cn(preClass, 'max-h-60')}>{json(item.input)}</pre>
-            {item.resolved ? (
-              <StatusBadge
-                status={item.resolved.approved ? 'approved' : 'denied'}
-                label={item.resolved.approved ? 'Approved' : 'Denied'}
-              />
-            ) : canApprove ? (
+            {item.resolved ? null : canApprove ? (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>
-                  {item.always ? 'Allow in this thread' : 'Approve'}
+                  {item.always ? 'Allow in this thread' : 'Allow'}
                 </Button>
                 {item.always && (
                   <Button
@@ -1682,7 +1682,7 @@ export function ThreadItems({
                 )}
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => onApproval(item.approvalId, false)}
                 >
                   Deny
@@ -1991,7 +1991,7 @@ function CredentialAccess({
   const grant = (mention: string) => onReply({ type: 'access', granted: true, credential: mention })
   const refuse = (
     <Button size="sm" variant="ghost" onClick={() => onReply({ type: 'access', granted: false })}>
-      Can&apos;t grant
+      Decline
     </Button>
   )
   if (fromVault)
@@ -2031,6 +2031,41 @@ function CredentialAccess({
         {refuse}
       </div>
     </div>
+  )
+}
+
+/**
+ * Turning down a whole ticket or question: in a menu at the card's top, since each of its
+ * asks has its own "no" by its buttons.
+ */
+function DeclineMenu({
+  label,
+  disabled,
+  onDecline,
+  children = 'Decline',
+}: {
+  label: string
+  disabled: boolean
+  onDecline: () => void
+  children?: React.ReactNode
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-my-1 -mr-2 flex-none"
+          aria-label={label}
+          disabled={disabled}
+        >
+          <EllipsisVertical aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onDecline}>{children}</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -2076,28 +2111,41 @@ export function QuestionCard({
 
   return (
     <Card className="gap-4 border-primary/40 px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <CardLabel className="text-primary">
-          <CircleHelp aria-hidden />
-          Question
-        </CardLabel>
-        {item.answer && (
-          <StatusBadge
-            status={item.answer.action}
-            tone={item.answer.action === 'declined' ? 'warning' : 'success'}
-            label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
-          />
-        )}
-      </div>
-      {item.questions.map((q) => {
+      {item.questions.map((q, i) => {
         const optionId = (o: { id: string }) => `${item.questionId}-${q.id}-${o.id}`
+        const question = (
+          <div className="min-w-0 flex-1 font-semibold">
+            {q.header && <span className="text-muted-foreground">{q.header}: </span>}
+            {/* The first paragraph stays on the header's line. */}
+            <Markdown text={q.question} className="inline [&>p:first-child]:inline" />
+          </div>
+        )
         return (
           <div key={q.id} className="flex flex-col gap-3">
-            <div className="font-semibold">
-              {q.header && <span className="text-muted-foreground">{q.header}: </span>}
-              {/* The first paragraph stays on the header's line. */}
-              <Markdown text={q.question} className="inline [&>p:first-child]:inline" />
-            </div>
+            {i === 0 ? (
+              // The first question heads the card, with its answer or its Decline.
+              <div className="flex items-start gap-2">
+                <CircleHelp aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
+                {question}
+                {item.answer ? (
+                  <StatusBadge
+                    status={item.answer.action}
+                    tone={item.answer.action === 'declined' ? 'warning' : 'success'}
+                    label={item.answer.action === 'declined' ? 'Declined' : 'Answered'}
+                  />
+                ) : (
+                  canAnswer && (
+                    <DeclineMenu
+                      label="Question options"
+                      disabled={busy}
+                      onDecline={() => void send({ action: 'declined' })}
+                    />
+                  )
+                )}
+              </div>
+            ) : (
+              question
+            )}
             {item.answer ? null : (
               <>
                 {q.options?.length ? (
@@ -2172,14 +2220,6 @@ export function QuestionCard({
             onClick={() => void send({ action: 'answered', answers })}
           >
             Answer
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void send({ action: 'declined' })}
-          >
-            Decline
           </Button>
           {error && <span className="text-sm text-destructive-text">{error}</span>}
         </div>
@@ -2272,7 +2312,7 @@ function BrowserAction({
               variant="outline"
               onClick={() => onReply({ type: 'action', done: true })}
             >
-              I&apos;ve done this
+              Done
             </Button>
           </>
         )}
@@ -2357,24 +2397,13 @@ export function TicketCard({
             )}
             {/* A single access ask has a Decline of its own: no second one in a menu. */}
             {canAnswer && !soleAccess && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="-my-1 -mr-2 flex-none"
-                    aria-label="Ticket options"
-                    disabled={busy}
-                  >
-                    <EllipsisVertical aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => void send({ action: 'declined' })}>
-                    Decline ticket
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <DeclineMenu
+                label="Ticket options"
+                disabled={busy}
+                onDecline={() => void send({ action: 'declined' })}
+              >
+                Decline ticket
+              </DeclineMenu>
             )}
           </>
         )}
@@ -2625,7 +2654,7 @@ function AskView({
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={() => onReply({ type: 'decision', optionId: 'decline' })}
               >
                 Decline
@@ -2642,13 +2671,13 @@ function AskView({
       ) : ask.type === 'access' ? (
         // A connection asked for in words: given by hand on the Apps page.
         <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>
+            I&apos;ve given access
+          </Button>
           <Button asChild size="sm" variant="outline">
             <a href="/app/connections" target="_blank" rel="noreferrer">
               Open Apps →
             </a>
-          </Button>
-          <Button size="sm" onClick={() => onReply({ type: 'access', granted: true })}>
-            I&apos;ve given access
           </Button>
           <Button
             size="sm"
@@ -2663,7 +2692,7 @@ function AskView({
       ) : ask.type === 'action' ? (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => onReply({ type: 'action', done: true })}>
-            I&apos;ve done this
+            Done
           </Button>
           <Button
             size="sm"
@@ -2709,7 +2738,7 @@ function AskView({
           </div>
         </div>
       ) : (
-        <Button size="sm" variant="outline" className="self-start" onClick={() => setOpen(true)}>
+        <Button size="sm" className="self-start" onClick={() => setOpen(true)}>
           Provide details
         </Button>
       )}
@@ -2758,11 +2787,11 @@ function ChoicesCard({
 
   return (
     <Card className="gap-4 border-primary/40 px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <CardLabel className="text-primary">
-          <LayoutTemplate aria-hidden />
-          Pick one
-        </CardLabel>
+      <div className="flex items-start gap-2">
+        <LayoutTemplate aria-hidden className="mt-0.5 size-4 flex-none text-primary" />
+        <div className="min-w-0 flex-1 font-semibold">
+          <Markdown text={choices.question} className="[&>p]:inline" />
+        </div>
         {reply !== undefined && (
           <StatusBadge
             status={picked ? 'answered' : 'replied'}
@@ -2770,9 +2799,6 @@ function ChoicesCard({
             label={picked ? 'Picked' : 'Replied'}
           />
         )}
-      </div>
-      <div className="font-semibold">
-        <Markdown text={choices.question} className="[&>p]:inline" />
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {choices.options.map((o) => {
