@@ -15,7 +15,6 @@ import {
   type ThreadSummary,
   type Ticket,
 } from '@/lib/api'
-import { cn } from '@/lib/utils'
 import { useLive } from '@/lib/use-live'
 
 function greeting(name: string) {
@@ -30,8 +29,6 @@ function greeting(name: string) {
           : 'Good evening'
   return `${part}, ${name.split(' ')[0]}`
 }
-
-const busyStatus = new Set(['starting', 'running'])
 
 export default function Home() {
   const { me, teammates } = useDashboard()
@@ -54,28 +51,23 @@ export default function Home() {
   })
 
   const waiting = (tickets.data ?? []).filter((t) => waitsOn(t, me))
-  const working = (threads.data ?? []).filter((t) => busyStatus.has(t.status)).length
   const waitingCount = waiting.length + (pulls.data?.pulls.length ?? 0)
-  const loose = feed.data?.looseEnds.length ?? 0
-  const running = working > 0 ? `${working} ${working === 1 ? 'thread' : 'threads'} running` : ''
-  // What stands, in one line: calm when nothing waits, nothing hangs and nothing runs.
-  const state =
-    waitingCount > 0
-      ? { dot: 'bg-warning', text: [`${waitingCount} waiting on you`, running] }
-      : working > 0
-        ? { dot: 'bg-primary', text: [running, 'nothing is waiting on you'] }
-        : loose > 0
-          ? { dot: 'bg-success', text: ['Nothing is waiting on you'] }
-          : { dot: 'bg-success', text: ['Nothing is waiting on you, and nothing is left hanging'] }
+  // Only when nothing waits: then Waiting on you is hidden, and this line says so.
+  const calm =
+    tickets.data && pulls.data && feed.data && waitingCount === 0
+      ? feed.data.looseEnds.length
+        ? 'Nothing is waiting on you'
+        : 'Nothing is waiting on you, and nothing is left hanging'
+      : null
 
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-extrabold tracking-tight">{greeting(me.user.name)}</h1>
-        {tickets.data && pulls.data && threads.data && (
+        {calm && (
           <p className="flex items-center gap-2 text-muted-foreground">
-            <span aria-hidden className={cn('size-2 flex-none rounded-full', state.dot)} />
-            {state.text.filter(Boolean).join(' · ')}
+            <span aria-hidden className="size-2 flex-none rounded-full bg-success" />
+            {calm}
           </p>
         )}
       </header>

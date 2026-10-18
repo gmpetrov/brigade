@@ -6,6 +6,7 @@
 import { replyCard } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
 import { eventsWaitingSince } from './hub.js'
+import { waitingOnPerson } from './pull-requests.js'
 
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
@@ -79,7 +80,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     },
   })
   const ids = threads.map((t) => t.id)
-  const [latest, reads, tickets, dismissed, schedules] = await Promise.all([
+  const [latest, reads, tickets, pullsWaiting, dismissed, schedules] = await Promise.all([
     ids.length
       ? db.sessionEvent.groupBy({
           by: ['sessionId', 'type'],
@@ -96,10 +97,17 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
           select: { sessionId: true, seenAt: true },
         })
       : [],
-    // A thread held by an open ticket is Waiting on you.
+    // A thread held by an open ticket is Waiting on you, not here.
     ids.length
       ? db.ticket.findMany({
           where: { sessionId: { in: ids }, status: 'open' },
+          select: { sessionId: true },
+        })
+      : [],
+    // So is one whose pull request waits on a person.
+    ids.length
+      ? db.pullRequest.findMany({
+          where: { ...waitingOnPerson, sessionId: { in: ids } },
           select: { sessionId: true },
         })
       : [],
@@ -121,7 +129,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
   ])
   const max = (id: string, type: string) =>
     latest.find((l) => l.sessionId === id && l.type === type)?._max
-  const held = new Set(tickets.map((t) => t.sessionId))
+  const held = new Set([...tickets, ...pullsWaiting].map((t) => t.sessionId))
   const gone = new Set(dismissed.map((d) => d.key))
 
   // The last reply of each idle thread nobody wrote in since.
