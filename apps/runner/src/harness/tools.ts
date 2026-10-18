@@ -1682,6 +1682,7 @@ export type PreviewTools = {
       timeoutSeconds?: number
       passed?: boolean
       archive?: string
+      inRepository?: boolean
     }
     checkout: string
     /** The checkout's settings files it came from, or Brigade, where it was saved. */
@@ -1790,7 +1791,8 @@ export function previewTools(
             type: 'string',
             description:
               'Shell commands run first, in cwd, stopping at a failure: install dependencies, start its services ' +
-              '(e.g. docker compose up -d), migrate, seed. Safe to run again: they run on each start',
+              '(e.g. docker compose up -d), migrate, seed. Safe to run again: they run on each start. Longer, and only for the preview: ' +
+              "a script in the repository's .brigade/ folder (e.g. .brigade/preview/setup.sh)",
           },
           env: {
             type: 'object',
@@ -1834,6 +1836,8 @@ export function previewTools(
         let input = args
         let passed = false
         let from: string[] | undefined
+        // Saved in Brigade before repositories had .brigade/settings.toml: the next save writes it.
+        let unfiled = false
         if (args.repository && !args.command) {
           const saved = await previews.saved(args.repository)
           if (!saved) {
@@ -1850,6 +1854,7 @@ export function previewTools(
           }
           const { recipe, checkout } = saved
           if (saved.from !== 'brigade') from = saved.from
+          else if (recipe.inRepository !== false) unfiled = true
           passed = recipe.passed === true
           input = {
             ...recipe,
@@ -1890,7 +1895,19 @@ export function previewTools(
         )
         const started = { ...result, ...(from ? { from } : {}) }
         if (result.status !== 'running') return started
-        return { ...started, check: await checked(previews, paths, abortSignal) }
+        const check = await checked(previews, paths, abortSignal)
+        return {
+          ...started,
+          check,
+          ...(unfiled && check.ok
+            ? {
+                note:
+                  "Its setup is saved in Brigade only, not in the repository's .brigade/settings.toml: save it " +
+                  'with save_preview, which writes that file in the checkout, and commit it, in a pull request of ' +
+                  'its own unless the person wants it in this one or an open pull request already adds it.',
+              }
+            : {}),
+        }
       },
     }),
     check_preview: tool({

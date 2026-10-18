@@ -1,0 +1,11 @@
+# How Brigade starts this repository's preview, on this branch: setup, then command, in cwd;
+# archive frees what setup made outside the checkout once the thread goes quiet. Secrets are
+# not here: they are the repository's preview variables in Brigade. One person's changes go in
+# .brigade/settings.local.toml, which git ignores.
+
+[preview]
+setup = "scripts/preview/setup.sh"
+command = "scripts/preview/start.sh"
+port = 3000
+pages = ["/", "/sign-in", "/sign-up"]
+timeout = 600

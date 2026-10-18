@@ -498,7 +498,10 @@ const PREVIEW_SKILL: ThreadSkill = {
     'To start one in a checkout, first try `start_preview({ repository })`: a repository set up before starts ' +
     "as its checkout's .brigade/settings.toml says (that branch's), else as saved in Brigade. Otherwise start from " +
     'what the repository has for other tools (orca.yaml, .conductor/settings.toml, conductor.json: their setup and ' +
-    'run scripts) and its README, and set it up in start_preview itself, not in your shell, so it can be saved: ' +
+    'run scripts) and its README, and set it up in start_preview itself, not in your shell, so it can be saved. ' +
+    'A script you write only so the preview runs (a setup longer than a few lines, a seed, a proxy) goes in the ' +
+    "repository's .brigade/ folder, such as .brigade/preview/setup.sh, beside the settings save_preview writes; " +
+    'what the team runs too (its own setup and dev scripts) stays with its code, where it is. Give start_preview ' +
     '`setup` (install; `docker compose up -d` for its database, cache or mail' +
     (CLOUD
       ? ': you have your own Docker; '
