@@ -29,6 +29,7 @@ import {
   type Operation,
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
+import { threadLoop } from './loops.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
@@ -93,6 +94,9 @@ export async function handleConnectorCall(
   if (!connection || !operation)
     return result({ ok: false, error: 'Unknown connection or operation' })
 
+  // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
+  const loop = await threadLoop(db, session.loopRunId)
+  const loopActionKey = loop?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
   const record = (data: { result: string; target: string; error?: string; ticketId?: string }) =>
     db.connectionCall.create({
       data: {
@@ -101,6 +105,7 @@ export async function handleConnectorCall(
         teammateId: teammate.id,
         operation: call.operation,
         write: operation.write,
+        ...(loopActionKey ? { loopActionKey } : {}),
         ...data,
       } as never,
     })
@@ -131,6 +136,23 @@ export async function handleConnectorCall(
       ok: false,
       error: `${connection.label} belongs to another member and is used only in their threads`,
     })
+  }
+  if (loop) {
+    const access = loop.access.get(connection.kind)
+    if (!access) {
+      await record({ result: 'denied', target, error: 'not an App of the playbook' })
+      return result({
+        ok: false,
+        error: `The playbook ${loop.name} does not use ${connection.label}`,
+      })
+    }
+    if (operation.write && access !== 'read_write') {
+      await record({ result: 'denied', target, error: 'read-only in the playbook' })
+      return result({
+        ok: false,
+        error: `The playbook ${loop.name} only reads ${connection.label}`,
+      })
+    }
   }
   if (connection.app.disabledTools.includes(call.operation)) {
     await record({ result: 'denied', target, error: 'tool turned off' })

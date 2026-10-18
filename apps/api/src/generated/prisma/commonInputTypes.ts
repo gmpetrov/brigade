@@ -875,6 +875,57 @@ export type EnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
 }
 
+export type EnumLoopStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopStatus | Prisma.EnumLoopStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel> | $Enums.LoopStatus
+}
+
+export type EnumLoopStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopStatus | Prisma.EnumLoopStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopStatusWithAggregatesFilter<$PrismaModel> | $Enums.LoopStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel>
+}
+
+export type EnumLoopActionLevelFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopActionLevel | Prisma.EnumLoopActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel> | $Enums.LoopActionLevel
+}
+
+export type EnumLoopActionLevelWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopActionLevel | Prisma.EnumLoopActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopActionLevelWithAggregatesFilter<$PrismaModel> | $Enums.LoopActionLevel
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel>
+}
+
+export type EnumLoopRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopRunStatus | Prisma.EnumLoopRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel> | $Enums.LoopRunStatus
+}
+
+export type EnumLoopRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopRunStatus | Prisma.EnumLoopRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.LoopRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1693,6 +1744,57 @@ export type NestedEnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = nev
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
+}
+
+export type NestedEnumLoopStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopStatus | Prisma.EnumLoopStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel> | $Enums.LoopStatus
+}
+
+export type NestedEnumLoopStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopStatus | Prisma.EnumLoopStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopStatus[] | Prisma.ListEnumLoopStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopStatusWithAggregatesFilter<$PrismaModel> | $Enums.LoopStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumLoopActionLevelFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopActionLevel | Prisma.EnumLoopActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel> | $Enums.LoopActionLevel
+}
+
+export type NestedEnumLoopActionLevelWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopActionLevel | Prisma.EnumLoopActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopActionLevel[] | Prisma.ListEnumLoopActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopActionLevelWithAggregatesFilter<$PrismaModel> | $Enums.LoopActionLevel
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopActionLevelFilter<$PrismaModel>
+}
+
+export type NestedEnumLoopRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopRunStatus | Prisma.EnumLoopRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel> | $Enums.LoopRunStatus
+}
+
+export type NestedEnumLoopRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LoopRunStatus | Prisma.EnumLoopRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.LoopRunStatus[] | Prisma.ListEnumLoopRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumLoopRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.LoopRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLoopRunStatusFilter<$PrismaModel>
 }
 
 

@@ -7,6 +7,7 @@ import { HTTPException } from 'hono/http-exception'
 import { ingestExternal } from './attachments.js'
 import { audit } from './audit.js'
 import { authorisedFetch } from './connector-calls.js'
+import { beginRun, continueRun, settleRun } from './loops.js'
 import { triggersOf } from './connectors/index.js'
 import type { ConnectorContext, ConnectorKind, VendorEvent } from './connectors/types.js'
 import { prisma, scoped, type Scope } from './db.js'
@@ -31,7 +32,11 @@ export function fenced(content: string, lang = '') {
 }
 
 export type Delivery =
-  { ok: true; threadId: string; paused: boolean } | { duplicate: true } | { error: string }
+  | { ok: true; threadId: string; paused: boolean }
+  | { duplicate: true }
+  /** A playbook's trigger while the playbook is not active: the event starts nothing. */
+  | { skipped: string }
+  | { error: string }
 
 /**
  * Start a thread for one event, once per event id, or continue the thread of
@@ -109,6 +114,7 @@ export async function deliver(
         null,
       )
       if (outcome === 'offline') return failed('the computer is offline')
+      await continueRun(db, ongoing.loopRunId)
       await received(ongoing.id, outcome)
       return { ok: true, threadId: ongoing.id, paused: outcome === 'paused' }
     } catch (error) {
@@ -128,6 +134,14 @@ export async function deliver(
     }))
   if (!computer) return failed('the workspace has no computer')
 
+  // A playbook's trigger: each event a run, within its runs a day (past them, the event waits).
+  const run = trigger.loopInstallationId
+    ? await beginRun(db, trigger.loopInstallationId, event.conversationKey)
+    : null
+  if (run && 'skipped' in run) return { skipped: run.skipped }
+  if (run && 'limit' in run) return { error: run.limit }
+  const runId = run?.runId
+
   try {
     const { thread, outcome } = await startThread(db, scope, {
       teammate: trigger.teammate,
@@ -138,11 +152,14 @@ export async function deliver(
       origin: { kind: 'trigger', triggerId: trigger.id, conversationKey: event.conversationKey },
       attachmentIds: event.attachmentIds ?? [],
       projectId: trigger.projectId,
+      ...(runId ? { loopRunId: runId } : {}),
     })
+    if (runId) await settleRun(db, runId, outcome === 'offline' ? null : thread.id)
     if (outcome === 'offline') return failed('the computer is offline')
     await received(thread.id, outcome)
     return { ok: true, threadId: thread.id, paused: outcome === 'paused' }
   } catch (error) {
+    if (runId) await settleRun(db, runId, null)
     if (error instanceof HTTPException) return failed(error.message)
     throw error
   }

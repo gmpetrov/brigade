@@ -55,6 +55,8 @@ type Session = {
   private: boolean
   othersMayPrompt: boolean
   parentId: string | null
+  /** A playbook run's thread: its children are part of the run. */
+  loopRunId: string | null
 }
 
 /** A report as stored, or null when there is none (or it is not one Brigade wrote). */

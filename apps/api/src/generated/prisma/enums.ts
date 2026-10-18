@@ -306,3 +306,33 @@ export const NotifyPreset = {
 } as const
 
 export type NotifyPreset = (typeof NotifyPreset)[keyof typeof NotifyPreset]
+
+
+export const LoopStatus = {
+  setup: 'setup',
+  dry_run: 'dry_run',
+  active: 'active',
+  paused: 'paused'
+} as const
+
+export type LoopStatus = (typeof LoopStatus)[keyof typeof LoopStatus]
+
+
+export const LoopActionLevel = {
+  ask: 'ask',
+  auto: 'auto',
+  deny: 'deny'
+} as const
+
+export type LoopActionLevel = (typeof LoopActionLevel)[keyof typeof LoopActionLevel]
+
+
+export const LoopRunStatus = {
+  running: 'running',
+  waiting_person: 'waiting_person',
+  waiting_event: 'waiting_event',
+  done: 'done',
+  failed: 'failed'
+} as const
+
+export type LoopRunStatus = (typeof LoopRunStatus)[keyof typeof LoopRunStatus]
