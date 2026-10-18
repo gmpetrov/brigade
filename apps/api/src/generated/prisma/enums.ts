@@ -162,6 +162,7 @@ export const ConnectorKind = {
   atlassian: 'atlassian',
   notion: 'notion',
   linear: 'linear',
+  mixpanel: 'mixpanel',
   mcp: 'mcp'
 } as const
 

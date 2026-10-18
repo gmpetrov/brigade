@@ -57,6 +57,7 @@ import {
   asServer,
   catalogTools,
   customMcp,
+  inRegion,
   mcpAppKey,
   normalUrl,
   toolPrefix,
@@ -94,9 +95,12 @@ type OAuthState = {
     | 'atlassian'
     | 'notion'
     | 'linear'
+    | 'mixpanel'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
+  /** A built-in App with a server per data region: the region picked. */
+  region?: string
   /** github: the installation GitHub named, still to be checked against the person. */
   installationId?: number
   /** An MCP server's sign-in: the PKCE verifier for its code. */
@@ -153,6 +157,7 @@ async function createConnection(
     label: string
     externalAccount: string | null
     externalUrl?: string
+    mcpUrl?: string
   },
   credential: object | null,
   /** An MCP server added by its URL: its App, added before its first account signs in. */
@@ -237,7 +242,8 @@ export const connections = new Hono<AppEnv>()
         ? await db.app.findFirst({ where: { id: grant.appId } })
         : null
     const config = added ? customMcp(added) : null
-    const server = config ? asServer(config) : connectors[grant.kind]?.mcp
+    const builtIn = connectors[grant.kind]?.mcp
+    const server = config ? asServer(config) : builtIn && inRegion(builtIn, { id: grant.region })
     if (!server || !grant.verifier || (grant.kind === 'mcp' && !added))
       return back('error=forbidden')
     if (c.req.query('error') || !c.req.query('code')) return back('error=declined')
@@ -265,7 +271,12 @@ export const connections = new Hono<AppEnv>()
     const kind = grant.kind as ConnectorKind
     const connection = await createConnection(
       scope,
-      { kind, label: added?.name ?? appCatalog[kind].name, externalAccount: account },
+      {
+        kind,
+        label: added?.name ?? appCatalog[kind].name,
+        externalAccount: account,
+        ...(server.regions ? { mcpUrl: server.url } : {}),
+      },
       credential,
       added ?? undefined,
     )
@@ -393,7 +404,19 @@ export const connections = new Hono<AppEnv>()
       catalog: Object.fromEntries(
         (Object.keys(appCatalog) as ConnectorKind[]).map((kind) => {
           const { personal: _personal, skills: source, ...app } = appCatalog[kind]
-          return [kind, { ...app, tools: toolCatalog(kind), source: source ?? null }]
+          const regions = connectors[kind]?.mcp?.regions
+          return [
+            kind,
+            {
+              ...app,
+              tools: toolCatalog(kind),
+              source: source ?? null,
+              // A server per data region: the member picks one as an account signs in.
+              regions: regions
+                ? Object.entries(regions).map(([id, r]) => ({ id, label: r.label }))
+                : null,
+            },
+          ]
         }),
       ),
       available: {
@@ -411,6 +434,7 @@ export const connections = new Hono<AppEnv>()
         atlassian: true,
         notion: true,
         linear: true,
+        mixpanel: true,
         mcp: true,
         webhook: true,
       },
@@ -533,8 +557,13 @@ export const connections = new Hono<AppEnv>()
 
   /** Start an MCP App's sign-in, on its server's own OAuth. */
   .post('/mcp', async (c) => {
-    const { kind, returnTo } = await parseBody(c.req.raw, ConnectMcp)
-    const server = connectors[kind]!.mcp!
+    const { kind, region, returnTo } = await parseBody(c.req.raw, ConnectMcp)
+    let server: McpServer
+    try {
+      server = inRegion(connectors[kind]!.mcp!, { id: region })
+    } catch {
+      throw new HTTPException(400, { message: `${appCatalog[kind].name} has no region ${region}` })
+    }
     const state = randomBytes(24).toString('base64url')
     const verifier = pkceVerifier()
     let url: string
@@ -545,7 +574,13 @@ export const connections = new Hono<AppEnv>()
         message: `${appCatalog[kind].name} did not answer: ${error instanceof Error ? error.message : 'error'}`,
       })
     }
-    await saveState(stateIdentifier(state), { ...c.var.scope, kind, returnTo, verifier })
+    await saveState(stateIdentifier(state), {
+      ...c.var.scope,
+      kind,
+      returnTo,
+      verifier,
+      ...(region ? { region } : {}),
+    })
     return c.json({ url })
   })
 

@@ -50,6 +50,7 @@ const BUILT_IN: Kind[] = [
   'atlassian',
   'notion',
   'linear',
+  'mixpanel',
   'stripe',
 ]
 

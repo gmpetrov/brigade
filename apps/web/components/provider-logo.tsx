@@ -9,7 +9,7 @@ export type ProviderKind = Connection['kind']
 /**
  * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
  * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's square N, Supabase's
- * bolt, Atlassian's two-part A, Notion's black-on-white cube, Linear's violet mark, GitHub's Invertocat (in the text
+ * bolt, Atlassian's two-part A, Notion's black-on-white cube, Linear's violet mark, Mixpanel's violet x, GitHub's Invertocat (in the text
  * color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -229,6 +229,15 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
         <path
           fill="#5e6ad2"
           d="M2.886 4.18A11.982 11.982 0 0 1 11.99 0C18.624 0 24 5.376 24 12.009c0 3.64-1.62 6.903-4.18 9.105L2.887 4.18ZM1.817 5.626l16.556 16.556c-.524.33-1.075.62-1.65.866L.951 7.277c.247-.575.537-1.126.866-1.65ZM.322 9.163l14.515 14.515c-.71.172-1.443.282-2.195.322L0 11.358a12 12 0 0 1 .322-2.195Zm-.17 4.862 9.823 9.824a12.02 12.02 0 0 1-9.824-9.824Z"
+        />
+      </svg>
+    )
+  if (kind === 'mixpanel')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path
+          fill="#7856ff"
+          d="M6.967 9.996h3.053c-.763-.477-1.048-1.145-1.431-2.384L7.443 3.366C6.919 1.458 6.49.551 4.39.551H.004v1.145h.621c1.286 0 1.431.477 1.814 1.908L3.44 7.326c.524 1.814 1.337 2.67 3.53 2.67h-.003Zm7.06 0h3.053c2.194 0 2.956-.86 3.484-2.67l1.001-3.722c.382-1.431.57-1.908 1.814-1.908H24V.551h-4.34c-2.146 0-2.576.86-3.053 2.815l-1.145 4.246c-.384 1.286-.673 1.907-1.435 2.384Zm-4.007 4.008h4.007V9.996H10.02v4.008ZM0 23.449h4.39c2.1 0 2.529-.907 3.053-2.815l1.146-4.246c.383-1.239.668-1.907 1.431-2.384H6.967c-2.194 0-3.007.86-3.531 2.67l-1.001 3.722c-.383 1.431-.524 1.907-1.814 1.907H0v1.146Zm19.65 0h4.343v-1.146h-.622c-1.239 0-1.431-.476-1.814-1.907l-1.001-3.722c-.524-1.814-1.286-2.67-3.483-2.67h-3.046c.762.477 1.041 1.098 1.424 2.384l1.145 4.246c.477 1.955.907 2.815 3.054 2.815Z"
         />
       </svg>
     )

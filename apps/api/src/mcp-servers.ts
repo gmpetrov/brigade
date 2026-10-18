@@ -73,13 +73,29 @@ export function toolPrefix(name: string, taken: readonly string[]) {
   for (let n = 2; ; n++) if (!used.has(`${base}_${n}`)) return `${base}_${n}`
 }
 
+/**
+ * A built-in server in a data region, by the region's id (as an account signs in) or by the
+ * URL its account kept: that region's server, else the default one. Unknown ids are refused.
+ */
+export function inRegion(server: McpServer, region: { id?: string; url?: string | null }) {
+  if (!server.regions) return server
+  if (region.id !== undefined) {
+    const picked = server.regions[region.id]
+    if (!picked) throw new Error('Unknown region')
+    return { ...server, url: picked.url }
+  }
+  const kept = Object.values(server.regions).find((r) => r.url === region.url)
+  return kept ? { ...server, url: kept.url } : server
+}
+
 /** A connection's MCP server and the prefix of its tools, or null when it has none. */
 export async function serverOf(
   db: ScopedDb,
-  connection: { kind: string; appId: string },
+  connection: { kind: string; appId: string; mcpUrl?: string | null },
 ): Promise<{ server: McpServer; prefix: string; app?: { id: string; mcp: CustomMcp } } | null> {
   const builtIn = connectors[connection.kind as keyof typeof connectors]?.mcp
-  if (builtIn) return { server: builtIn, prefix: connection.kind }
+  if (builtIn)
+    return { server: inRegion(builtIn, { url: connection.mcpUrl }), prefix: connection.kind }
   if (connection.kind !== 'mcp') return null
   const app = await db.app.findFirst({ where: { id: connection.appId } })
   const mcp = app && customMcp(app)

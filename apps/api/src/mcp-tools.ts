@@ -17,6 +17,8 @@ type McpConnection = {
   appId: string
   kind: ConnectorKind
   vaultSecretId: string | null
+  /** The server it signed in to, for an App with one per data region. */
+  mcpUrl?: string | null
 }
 
 /** Whether a kind's tools come from an MCP server rather than from Brigade. */

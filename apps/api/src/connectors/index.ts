@@ -10,6 +10,7 @@ import { neon } from './neon.js'
 import { atlassian } from './atlassian.js'
 import { notion } from './notion.js'
 import { linear } from './linear.js'
+import { mixpanel } from './mixpanel.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
 
@@ -28,6 +29,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   atlassian,
   notion,
   linear,
+  mixpanel,
 }
 
 /**
@@ -70,6 +72,7 @@ export const triggerCatalog = () =>
         'atlassian',
         'notion',
         'linear',
+        'mixpanel',
         'mcp',
         'webhook',
       ] as const
@@ -210,6 +213,15 @@ export const appCatalog: Record<
     developer: 'Linear',
     category: 'Productivity',
     // A Linear sign-in is someone's own account, kept to their threads until they share it.
+    personal: true,
+  },
+  mixpanel: {
+    name: 'Mixpanel',
+    description:
+      'Query events, funnels, retention and session replays, and manage dashboards, Lexicon, cohorts, experiments and feature flags, with Mixpanel’s MCP server.',
+    developer: 'Mixpanel',
+    category: 'Analytics',
+    // A Mixpanel sign-in reaches its person's projects: kept to their threads until they share it.
     personal: true,
   },
   mcp: {

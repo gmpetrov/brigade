@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { Ask, TicketAnswer } from '@brigade/contracts'
 import { AtlassianDomainHint } from '@/components/atlassian-domain-hint'
+import { MixpanelMcpHint } from '@/components/mixpanel-mcp-hint'
+import { RegionMenu } from '@/components/region-menu'
 import { useDashboard } from '@/components/dashboard'
 import { McpServerCard } from '@/components/mcp-server-card'
 import { ProviderTile } from '@/components/provider-logo'
@@ -41,6 +43,7 @@ export const APP_NAMES: Record<string, string> = {
   atlassian: 'Atlassian',
   notion: 'Notion',
   linear: 'Linear',
+  mixpanel: 'Mixpanel',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -70,6 +73,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   atlassian: 'mcp',
   notion: 'mcp',
   linear: 'mcp',
+  mixpanel: 'mcp',
 }
 
 /**
@@ -131,14 +135,18 @@ export function AppAccessAsk({
     return () => clearInterval(timer)
   }, [waiting, givable.length])
 
-  async function connect() {
+  async function connect(region?: string) {
     setError(undefined)
     const route = SIGN_IN[kind]
     if (!route) return
     try {
       const inWindow = await openSignIn(async (returnTo) => {
         const { url } = await api<{ url: string }>(`/connections/${route}`, {
-          body: { ...(route === 'github' ? {} : { kind }), ...(returnTo ? { returnTo } : {}) },
+          body: {
+            ...(route === 'github' ? {} : { kind }),
+            ...(region ? { region } : {}),
+            ...(returnTo ? { returnTo } : {}),
+          },
         })
         return url
       })
@@ -196,13 +204,18 @@ export function AppAccessAsk({
           </div>
         ) : accounts.length === 0 && SIGN_IN[kind] ? (
           <>
-            <Button
-              size="sm"
-              disabled={waiting || !data.data.available[kind]}
-              onClick={() => void connect()}
+            <RegionMenu
+              regions={data.data.catalog[kind]?.regions}
+              onPick={(region) => void connect(region)}
             >
-              Connect {name}
-            </Button>
+              <Button
+                size="sm"
+                disabled={waiting || !data.data.available[kind]}
+                onClick={data.data.catalog[kind]?.regions ? undefined : () => void connect()}
+              >
+                Connect {name}
+              </Button>
+            </RegionMenu>
             {decline}
           </>
         ) : accounts.length === 0 ? (
@@ -234,6 +247,7 @@ export function AppAccessAsk({
         </p>
       )}
       {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
+      {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
     </div>
   )

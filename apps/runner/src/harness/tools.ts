@@ -255,6 +255,7 @@ export const openTicketTool = tool({
                     'atlassian',
                     'notion',
                     'linear',
+                    'mixpanel',
                     'mcp',
                   ],
                 },
