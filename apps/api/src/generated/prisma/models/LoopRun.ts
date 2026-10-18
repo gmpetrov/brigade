@@ -48,6 +48,8 @@ export type LoopRunMinAggregateOutputType = {
   interventions: number | null
   firstResponseAt: Date | null
   dryRun: boolean | null
+  dryRunId: string | null
+  summary: string | null
   startedAt: Date | null
   endedAt: Date | null
 }
@@ -65,6 +67,8 @@ export type LoopRunMaxAggregateOutputType = {
   interventions: number | null
   firstResponseAt: Date | null
   dryRun: boolean | null
+  dryRunId: string | null
+  summary: string | null
   startedAt: Date | null
   endedAt: Date | null
 }
@@ -82,6 +86,9 @@ export type LoopRunCountAggregateOutputType = {
   interventions: number
   firstResponseAt: number
   dryRun: number
+  dryRunId: number
+  replay: number
+  summary: number
   startedAt: number
   endedAt: number
   _all: number
@@ -109,6 +116,8 @@ export type LoopRunMinAggregateInputType = {
   interventions?: true
   firstResponseAt?: true
   dryRun?: true
+  dryRunId?: true
+  summary?: true
   startedAt?: true
   endedAt?: true
 }
@@ -126,6 +135,8 @@ export type LoopRunMaxAggregateInputType = {
   interventions?: true
   firstResponseAt?: true
   dryRun?: true
+  dryRunId?: true
+  summary?: true
   startedAt?: true
   endedAt?: true
 }
@@ -143,6 +154,9 @@ export type LoopRunCountAggregateInputType = {
   interventions?: true
   firstResponseAt?: true
   dryRun?: true
+  dryRunId?: true
+  replay?: true
+  summary?: true
   startedAt?: true
   endedAt?: true
   _all?: true
@@ -247,6 +261,9 @@ export type LoopRunGroupByOutputType = {
   interventions: number
   firstResponseAt: Date | null
   dryRun: boolean
+  dryRunId: string | null
+  replay: runtime.JsonValue | null
+  summary: string | null
   startedAt: Date
   endedAt: Date | null
   _count: LoopRunCountAggregateOutputType | null
@@ -287,11 +304,15 @@ export type LoopRunWhereInput = {
   interventions?: Prisma.IntFilter<"LoopRun"> | number
   firstResponseAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
   dryRun?: Prisma.BoolFilter<"LoopRun"> | boolean
+  dryRunId?: Prisma.StringNullableFilter<"LoopRun"> | string | null
+  replay?: Prisma.JsonNullableFilter<"LoopRun">
+  summary?: Prisma.StringNullableFilter<"LoopRun"> | string | null
   startedAt?: Prisma.DateTimeFilter<"LoopRun"> | Date | string
   endedAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   installation?: Prisma.XOR<Prisma.LoopInstallationScalarRelationFilter, Prisma.LoopInstallationWhereInput>
   rootSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  dryRunOf?: Prisma.XOR<Prisma.LoopDryRunNullableScalarRelationFilter, Prisma.LoopDryRunWhereInput> | null
   threads?: Prisma.SessionListRelationFilter
 }
 
@@ -308,11 +329,15 @@ export type LoopRunOrderByWithRelationInput = {
   interventions?: Prisma.SortOrder
   firstResponseAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dryRun?: Prisma.SortOrder
+  dryRunId?: Prisma.SortOrderInput | Prisma.SortOrder
+  replay?: Prisma.SortOrderInput | Prisma.SortOrder
+  summary?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   installation?: Prisma.LoopInstallationOrderByWithRelationInput
   rootSession?: Prisma.SessionOrderByWithRelationInput
+  dryRunOf?: Prisma.LoopDryRunOrderByWithRelationInput
   threads?: Prisma.SessionOrderByRelationAggregateInput
 }
 
@@ -332,11 +357,15 @@ export type LoopRunWhereUniqueInput = Prisma.AtLeast<{
   interventions?: Prisma.IntFilter<"LoopRun"> | number
   firstResponseAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
   dryRun?: Prisma.BoolFilter<"LoopRun"> | boolean
+  dryRunId?: Prisma.StringNullableFilter<"LoopRun"> | string | null
+  replay?: Prisma.JsonNullableFilter<"LoopRun">
+  summary?: Prisma.StringNullableFilter<"LoopRun"> | string | null
   startedAt?: Prisma.DateTimeFilter<"LoopRun"> | Date | string
   endedAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   installation?: Prisma.XOR<Prisma.LoopInstallationScalarRelationFilter, Prisma.LoopInstallationWhereInput>
   rootSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
+  dryRunOf?: Prisma.XOR<Prisma.LoopDryRunNullableScalarRelationFilter, Prisma.LoopDryRunWhereInput> | null
   threads?: Prisma.SessionListRelationFilter
 }, "id" | "rootSessionId">
 
@@ -353,6 +382,9 @@ export type LoopRunOrderByWithAggregationInput = {
   interventions?: Prisma.SortOrder
   firstResponseAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dryRun?: Prisma.SortOrder
+  dryRunId?: Prisma.SortOrderInput | Prisma.SortOrder
+  replay?: Prisma.SortOrderInput | Prisma.SortOrder
+  summary?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.LoopRunCountOrderByAggregateInput
@@ -378,6 +410,9 @@ export type LoopRunScalarWhereWithAggregatesInput = {
   interventions?: Prisma.IntWithAggregatesFilter<"LoopRun"> | number
   firstResponseAt?: Prisma.DateTimeNullableWithAggregatesFilter<"LoopRun"> | Date | string | null
   dryRun?: Prisma.BoolWithAggregatesFilter<"LoopRun"> | boolean
+  dryRunId?: Prisma.StringNullableWithAggregatesFilter<"LoopRun"> | string | null
+  replay?: Prisma.JsonNullableWithAggregatesFilter<"LoopRun">
+  summary?: Prisma.StringNullableWithAggregatesFilter<"LoopRun"> | string | null
   startedAt?: Prisma.DateTimeWithAggregatesFilter<"LoopRun"> | Date | string
   endedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"LoopRun"> | Date | string | null
 }
@@ -392,11 +427,14 @@ export type LoopRunCreateInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopRunsInput
   installation: Prisma.LoopInstallationCreateNestedOneWithoutRunsInput
   rootSession?: Prisma.SessionCreateNestedOneWithoutRootOfLoopRunInput
+  dryRunOf?: Prisma.LoopDryRunCreateNestedOneWithoutRunsInput
   threads?: Prisma.SessionCreateNestedManyWithoutLoopRunInput
 }
 
@@ -413,6 +451,9 @@ export type LoopRunUncheckedCreateInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   threads?: Prisma.SessionUncheckedCreateNestedManyWithoutLoopRunInput
@@ -428,11 +469,14 @@ export type LoopRunUpdateInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopRunsNestedInput
   installation?: Prisma.LoopInstallationUpdateOneRequiredWithoutRunsNestedInput
   rootSession?: Prisma.SessionUpdateOneWithoutRootOfLoopRunNestedInput
+  dryRunOf?: Prisma.LoopDryRunUpdateOneWithoutRunsNestedInput
   threads?: Prisma.SessionUpdateManyWithoutLoopRunNestedInput
 }
 
@@ -449,6 +493,9 @@ export type LoopRunUncheckedUpdateInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   threads?: Prisma.SessionUncheckedUpdateManyWithoutLoopRunNestedInput
@@ -467,6 +514,9 @@ export type LoopRunCreateManyInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
 }
@@ -481,6 +531,8 @@ export type LoopRunUpdateManyMutationInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -498,6 +550,9 @@ export type LoopRunUncheckedUpdateManyInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -530,6 +585,9 @@ export type LoopRunCountOrderByAggregateInput = {
   interventions?: Prisma.SortOrder
   firstResponseAt?: Prisma.SortOrder
   dryRun?: Prisma.SortOrder
+  dryRunId?: Prisma.SortOrder
+  replay?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
 }
@@ -551,6 +609,8 @@ export type LoopRunMaxOrderByAggregateInput = {
   interventions?: Prisma.SortOrder
   firstResponseAt?: Prisma.SortOrder
   dryRun?: Prisma.SortOrder
+  dryRunId?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
 }
@@ -568,6 +628,8 @@ export type LoopRunMinOrderByAggregateInput = {
   interventions?: Prisma.SortOrder
   firstResponseAt?: Prisma.SortOrder
   dryRun?: Prisma.SortOrder
+  dryRunId?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
 }
@@ -712,6 +774,48 @@ export type EnumLoopRunStatusFieldUpdateOperationsInput = {
   set?: $Enums.LoopRunStatus
 }
 
+export type LoopRunCreateNestedManyWithoutDryRunOfInput = {
+  create?: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput> | Prisma.LoopRunCreateWithoutDryRunOfInput[] | Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput[]
+  connectOrCreate?: Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput | Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput[]
+  createMany?: Prisma.LoopRunCreateManyDryRunOfInputEnvelope
+  connect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+}
+
+export type LoopRunUncheckedCreateNestedManyWithoutDryRunOfInput = {
+  create?: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput> | Prisma.LoopRunCreateWithoutDryRunOfInput[] | Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput[]
+  connectOrCreate?: Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput | Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput[]
+  createMany?: Prisma.LoopRunCreateManyDryRunOfInputEnvelope
+  connect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+}
+
+export type LoopRunUpdateManyWithoutDryRunOfNestedInput = {
+  create?: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput> | Prisma.LoopRunCreateWithoutDryRunOfInput[] | Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput[]
+  connectOrCreate?: Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput | Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput[]
+  upsert?: Prisma.LoopRunUpsertWithWhereUniqueWithoutDryRunOfInput | Prisma.LoopRunUpsertWithWhereUniqueWithoutDryRunOfInput[]
+  createMany?: Prisma.LoopRunCreateManyDryRunOfInputEnvelope
+  set?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  disconnect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  delete?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  connect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  update?: Prisma.LoopRunUpdateWithWhereUniqueWithoutDryRunOfInput | Prisma.LoopRunUpdateWithWhereUniqueWithoutDryRunOfInput[]
+  updateMany?: Prisma.LoopRunUpdateManyWithWhereWithoutDryRunOfInput | Prisma.LoopRunUpdateManyWithWhereWithoutDryRunOfInput[]
+  deleteMany?: Prisma.LoopRunScalarWhereInput | Prisma.LoopRunScalarWhereInput[]
+}
+
+export type LoopRunUncheckedUpdateManyWithoutDryRunOfNestedInput = {
+  create?: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput> | Prisma.LoopRunCreateWithoutDryRunOfInput[] | Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput[]
+  connectOrCreate?: Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput | Prisma.LoopRunCreateOrConnectWithoutDryRunOfInput[]
+  upsert?: Prisma.LoopRunUpsertWithWhereUniqueWithoutDryRunOfInput | Prisma.LoopRunUpsertWithWhereUniqueWithoutDryRunOfInput[]
+  createMany?: Prisma.LoopRunCreateManyDryRunOfInputEnvelope
+  set?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  disconnect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  delete?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  connect?: Prisma.LoopRunWhereUniqueInput | Prisma.LoopRunWhereUniqueInput[]
+  update?: Prisma.LoopRunUpdateWithWhereUniqueWithoutDryRunOfInput | Prisma.LoopRunUpdateWithWhereUniqueWithoutDryRunOfInput[]
+  updateMany?: Prisma.LoopRunUpdateManyWithWhereWithoutDryRunOfInput | Prisma.LoopRunUpdateManyWithWhereWithoutDryRunOfInput[]
+  deleteMany?: Prisma.LoopRunScalarWhereInput | Prisma.LoopRunScalarWhereInput[]
+}
+
 export type LoopRunCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -722,10 +826,13 @@ export type LoopRunCreateWithoutWorkspaceInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   installation: Prisma.LoopInstallationCreateNestedOneWithoutRunsInput
   rootSession?: Prisma.SessionCreateNestedOneWithoutRootOfLoopRunInput
+  dryRunOf?: Prisma.LoopDryRunCreateNestedOneWithoutRunsInput
   threads?: Prisma.SessionCreateNestedManyWithoutLoopRunInput
 }
 
@@ -741,6 +848,9 @@ export type LoopRunUncheckedCreateWithoutWorkspaceInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   threads?: Prisma.SessionUncheckedCreateNestedManyWithoutLoopRunInput
@@ -788,6 +898,9 @@ export type LoopRunScalarWhereInput = {
   interventions?: Prisma.IntFilter<"LoopRun"> | number
   firstResponseAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
   dryRun?: Prisma.BoolFilter<"LoopRun"> | boolean
+  dryRunId?: Prisma.StringNullableFilter<"LoopRun"> | string | null
+  replay?: Prisma.JsonNullableFilter<"LoopRun">
+  summary?: Prisma.StringNullableFilter<"LoopRun"> | string | null
   startedAt?: Prisma.DateTimeFilter<"LoopRun"> | Date | string
   endedAt?: Prisma.DateTimeNullableFilter<"LoopRun"> | Date | string | null
 }
@@ -802,11 +915,14 @@ export type LoopRunCreateWithoutThreadsInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopRunsInput
   installation: Prisma.LoopInstallationCreateNestedOneWithoutRunsInput
   rootSession?: Prisma.SessionCreateNestedOneWithoutRootOfLoopRunInput
+  dryRunOf?: Prisma.LoopDryRunCreateNestedOneWithoutRunsInput
 }
 
 export type LoopRunUncheckedCreateWithoutThreadsInput = {
@@ -822,6 +938,9 @@ export type LoopRunUncheckedCreateWithoutThreadsInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
 }
@@ -841,10 +960,13 @@ export type LoopRunCreateWithoutRootSessionInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopRunsInput
   installation: Prisma.LoopInstallationCreateNestedOneWithoutRunsInput
+  dryRunOf?: Prisma.LoopDryRunCreateNestedOneWithoutRunsInput
   threads?: Prisma.SessionCreateNestedManyWithoutLoopRunInput
 }
 
@@ -860,6 +982,9 @@ export type LoopRunUncheckedCreateWithoutRootSessionInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   threads?: Prisma.SessionUncheckedCreateNestedManyWithoutLoopRunInput
@@ -891,11 +1016,14 @@ export type LoopRunUpdateWithoutThreadsInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopRunsNestedInput
   installation?: Prisma.LoopInstallationUpdateOneRequiredWithoutRunsNestedInput
   rootSession?: Prisma.SessionUpdateOneWithoutRootOfLoopRunNestedInput
+  dryRunOf?: Prisma.LoopDryRunUpdateOneWithoutRunsNestedInput
 }
 
 export type LoopRunUncheckedUpdateWithoutThreadsInput = {
@@ -911,6 +1039,9 @@ export type LoopRunUncheckedUpdateWithoutThreadsInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -936,10 +1067,13 @@ export type LoopRunUpdateWithoutRootSessionInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopRunsNestedInput
   installation?: Prisma.LoopInstallationUpdateOneRequiredWithoutRunsNestedInput
+  dryRunOf?: Prisma.LoopDryRunUpdateOneWithoutRunsNestedInput
   threads?: Prisma.SessionUpdateManyWithoutLoopRunNestedInput
 }
 
@@ -955,6 +1089,9 @@ export type LoopRunUncheckedUpdateWithoutRootSessionInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   threads?: Prisma.SessionUncheckedUpdateManyWithoutLoopRunNestedInput
@@ -970,10 +1107,13 @@ export type LoopRunCreateWithoutInstallationInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopRunsInput
   rootSession?: Prisma.SessionCreateNestedOneWithoutRootOfLoopRunInput
+  dryRunOf?: Prisma.LoopDryRunCreateNestedOneWithoutRunsInput
   threads?: Prisma.SessionCreateNestedManyWithoutLoopRunInput
 }
 
@@ -989,6 +1129,9 @@ export type LoopRunUncheckedCreateWithoutInstallationInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
   threads?: Prisma.SessionUncheckedCreateNestedManyWithoutLoopRunInput
@@ -1020,6 +1163,72 @@ export type LoopRunUpdateManyWithWhereWithoutInstallationInput = {
   data: Prisma.XOR<Prisma.LoopRunUpdateManyMutationInput, Prisma.LoopRunUncheckedUpdateManyWithoutInstallationInput>
 }
 
+export type LoopRunCreateWithoutDryRunOfInput = {
+  id?: string
+  organizationId: string
+  conversationKey?: string | null
+  case?: string | null
+  status?: $Enums.LoopRunStatus
+  outcome?: string | null
+  interventions?: number
+  firstResponseAt?: Date | string | null
+  dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
+  startedAt?: Date | string
+  endedAt?: Date | string | null
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopRunsInput
+  installation: Prisma.LoopInstallationCreateNestedOneWithoutRunsInput
+  rootSession?: Prisma.SessionCreateNestedOneWithoutRootOfLoopRunInput
+  threads?: Prisma.SessionCreateNestedManyWithoutLoopRunInput
+}
+
+export type LoopRunUncheckedCreateWithoutDryRunOfInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  installationId: string
+  rootSessionId?: string | null
+  conversationKey?: string | null
+  case?: string | null
+  status?: $Enums.LoopRunStatus
+  outcome?: string | null
+  interventions?: number
+  firstResponseAt?: Date | string | null
+  dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
+  startedAt?: Date | string
+  endedAt?: Date | string | null
+  threads?: Prisma.SessionUncheckedCreateNestedManyWithoutLoopRunInput
+}
+
+export type LoopRunCreateOrConnectWithoutDryRunOfInput = {
+  where: Prisma.LoopRunWhereUniqueInput
+  create: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput>
+}
+
+export type LoopRunCreateManyDryRunOfInputEnvelope = {
+  data: Prisma.LoopRunCreateManyDryRunOfInput | Prisma.LoopRunCreateManyDryRunOfInput[]
+  skipDuplicates?: boolean
+}
+
+export type LoopRunUpsertWithWhereUniqueWithoutDryRunOfInput = {
+  where: Prisma.LoopRunWhereUniqueInput
+  update: Prisma.XOR<Prisma.LoopRunUpdateWithoutDryRunOfInput, Prisma.LoopRunUncheckedUpdateWithoutDryRunOfInput>
+  create: Prisma.XOR<Prisma.LoopRunCreateWithoutDryRunOfInput, Prisma.LoopRunUncheckedCreateWithoutDryRunOfInput>
+}
+
+export type LoopRunUpdateWithWhereUniqueWithoutDryRunOfInput = {
+  where: Prisma.LoopRunWhereUniqueInput
+  data: Prisma.XOR<Prisma.LoopRunUpdateWithoutDryRunOfInput, Prisma.LoopRunUncheckedUpdateWithoutDryRunOfInput>
+}
+
+export type LoopRunUpdateManyWithWhereWithoutDryRunOfInput = {
+  where: Prisma.LoopRunScalarWhereInput
+  data: Prisma.XOR<Prisma.LoopRunUpdateManyMutationInput, Prisma.LoopRunUncheckedUpdateManyWithoutDryRunOfInput>
+}
+
 export type LoopRunCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
@@ -1032,6 +1241,9 @@ export type LoopRunCreateManyWorkspaceInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
 }
@@ -1046,10 +1258,13 @@ export type LoopRunUpdateWithoutWorkspaceInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   installation?: Prisma.LoopInstallationUpdateOneRequiredWithoutRunsNestedInput
   rootSession?: Prisma.SessionUpdateOneWithoutRootOfLoopRunNestedInput
+  dryRunOf?: Prisma.LoopDryRunUpdateOneWithoutRunsNestedInput
   threads?: Prisma.SessionUpdateManyWithoutLoopRunNestedInput
 }
 
@@ -1065,6 +1280,9 @@ export type LoopRunUncheckedUpdateWithoutWorkspaceInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   threads?: Prisma.SessionUncheckedUpdateManyWithoutLoopRunNestedInput
@@ -1082,6 +1300,9 @@ export type LoopRunUncheckedUpdateManyWithoutWorkspaceInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -1098,6 +1319,9 @@ export type LoopRunCreateManyInstallationInput = {
   interventions?: number
   firstResponseAt?: Date | string | null
   dryRun?: boolean
+  dryRunId?: string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
   startedAt?: Date | string
   endedAt?: Date | string | null
 }
@@ -1112,10 +1336,13 @@ export type LoopRunUpdateWithoutInstallationInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopRunsNestedInput
   rootSession?: Prisma.SessionUpdateOneWithoutRootOfLoopRunNestedInput
+  dryRunOf?: Prisma.LoopDryRunUpdateOneWithoutRunsNestedInput
   threads?: Prisma.SessionUpdateManyWithoutLoopRunNestedInput
 }
 
@@ -1131,6 +1358,9 @@ export type LoopRunUncheckedUpdateWithoutInstallationInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   threads?: Prisma.SessionUncheckedUpdateManyWithoutLoopRunNestedInput
@@ -1148,6 +1378,87 @@ export type LoopRunUncheckedUpdateManyWithoutInstallationInput = {
   interventions?: Prisma.IntFieldUpdateOperationsInput | number
   firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dryRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type LoopRunCreateManyDryRunOfInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  installationId: string
+  rootSessionId?: string | null
+  conversationKey?: string | null
+  case?: string | null
+  status?: $Enums.LoopRunStatus
+  outcome?: string | null
+  interventions?: number
+  firstResponseAt?: Date | string | null
+  dryRun?: boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: string | null
+  startedAt?: Date | string
+  endedAt?: Date | string | null
+}
+
+export type LoopRunUpdateWithoutDryRunOfInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  case?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumLoopRunStatusFieldUpdateOperationsInput | $Enums.LoopRunStatus
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventions?: Prisma.IntFieldUpdateOperationsInput | number
+  firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopRunsNestedInput
+  installation?: Prisma.LoopInstallationUpdateOneRequiredWithoutRunsNestedInput
+  rootSession?: Prisma.SessionUpdateOneWithoutRootOfLoopRunNestedInput
+  threads?: Prisma.SessionUpdateManyWithoutLoopRunNestedInput
+}
+
+export type LoopRunUncheckedUpdateWithoutDryRunOfInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  installationId?: Prisma.StringFieldUpdateOperationsInput | string
+  rootSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  case?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumLoopRunStatusFieldUpdateOperationsInput | $Enums.LoopRunStatus
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventions?: Prisma.IntFieldUpdateOperationsInput | number
+  firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  threads?: Prisma.SessionUncheckedUpdateManyWithoutLoopRunNestedInput
+}
+
+export type LoopRunUncheckedUpdateManyWithoutDryRunOfInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  installationId?: Prisma.StringFieldUpdateOperationsInput | string
+  rootSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  case?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumLoopRunStatusFieldUpdateOperationsInput | $Enums.LoopRunStatus
+  outcome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventions?: Prisma.IntFieldUpdateOperationsInput | number
+  firstResponseAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dryRun?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  replay?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -1196,11 +1507,15 @@ export type LoopRunSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   interventions?: boolean
   firstResponseAt?: boolean
   dryRun?: boolean
+  dryRunId?: boolean
+  replay?: boolean
+  summary?: boolean
   startedAt?: boolean
   endedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
   threads?: boolean | Prisma.LoopRun$threadsArgs<ExtArgs>
   _count?: boolean | Prisma.LoopRunCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["loopRun"]>
@@ -1218,11 +1533,15 @@ export type LoopRunSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   interventions?: boolean
   firstResponseAt?: boolean
   dryRun?: boolean
+  dryRunId?: boolean
+  replay?: boolean
+  summary?: boolean
   startedAt?: boolean
   endedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
 }, ExtArgs["result"]["loopRun"]>
 
 export type LoopRunSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1238,11 +1557,15 @@ export type LoopRunSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   interventions?: boolean
   firstResponseAt?: boolean
   dryRun?: boolean
+  dryRunId?: boolean
+  replay?: boolean
+  summary?: boolean
   startedAt?: boolean
   endedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
 }, ExtArgs["result"]["loopRun"]>
 
 export type LoopRunSelectScalar = {
@@ -1258,15 +1581,19 @@ export type LoopRunSelectScalar = {
   interventions?: boolean
   firstResponseAt?: boolean
   dryRun?: boolean
+  dryRunId?: boolean
+  replay?: boolean
+  summary?: boolean
   startedAt?: boolean
   endedAt?: boolean
 }
 
-export type LoopRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "installationId" | "rootSessionId" | "conversationKey" | "case" | "status" | "outcome" | "interventions" | "firstResponseAt" | "dryRun" | "startedAt" | "endedAt", ExtArgs["result"]["loopRun"]>
+export type LoopRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "installationId" | "rootSessionId" | "conversationKey" | "case" | "status" | "outcome" | "interventions" | "firstResponseAt" | "dryRun" | "dryRunId" | "replay" | "summary" | "startedAt" | "endedAt", ExtArgs["result"]["loopRun"]>
 export type LoopRunInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
   threads?: boolean | Prisma.LoopRun$threadsArgs<ExtArgs>
   _count?: boolean | Prisma.LoopRunCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1274,11 +1601,13 @@ export type LoopRunIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
 }
 export type LoopRunIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.LoopInstallationDefaultArgs<ExtArgs>
   rootSession?: boolean | Prisma.LoopRun$rootSessionArgs<ExtArgs>
+  dryRunOf?: boolean | Prisma.LoopRun$dryRunOfArgs<ExtArgs>
 }
 
 export type $LoopRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1287,6 +1616,7 @@ export type $LoopRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     installation: Prisma.$LoopInstallationPayload<ExtArgs>
     rootSession: Prisma.$SessionPayload<ExtArgs> | null
+    dryRunOf: Prisma.$LoopDryRunPayload<ExtArgs> | null
     threads: Prisma.$SessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1317,6 +1647,18 @@ export type $LoopRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     interventions: number
     firstResponseAt: Date | null
     dryRun: boolean
+    /**
+     * A dry run's: the replay it is one event of.
+     */
+    dryRunId: string | null
+    /**
+     * A dry run's event waiting its turn: its thread's title, first message, files and time.
+     */
+    replay: runtime.JsonValue | null
+    /**
+     * What the teammate said it did (loop_report's summary).
+     */
+    summary: string | null
     startedAt: Date
     endedAt: Date | null
   }, ExtArgs["result"]["loopRun"]>
@@ -1716,6 +2058,7 @@ export interface Prisma__LoopRunClient<T, Null = never, ExtArgs extends runtime.
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   installation<T extends Prisma.LoopInstallationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopInstallationDefaultArgs<ExtArgs>>): Prisma.Prisma__LoopInstallationClient<runtime.Types.Result.GetResult<Prisma.$LoopInstallationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   rootSession<T extends Prisma.LoopRun$rootSessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopRun$rootSessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  dryRunOf<T extends Prisma.LoopRun$dryRunOfArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopRun$dryRunOfArgs<ExtArgs>>): Prisma.Prisma__LoopDryRunClient<runtime.Types.Result.GetResult<Prisma.$LoopDryRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   threads<T extends Prisma.LoopRun$threadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopRun$threadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1758,6 +2101,9 @@ export interface LoopRunFieldRefs {
   readonly interventions: Prisma.FieldRef<"LoopRun", 'Int'>
   readonly firstResponseAt: Prisma.FieldRef<"LoopRun", 'DateTime'>
   readonly dryRun: Prisma.FieldRef<"LoopRun", 'Boolean'>
+  readonly dryRunId: Prisma.FieldRef<"LoopRun", 'String'>
+  readonly replay: Prisma.FieldRef<"LoopRun", 'Json'>
+  readonly summary: Prisma.FieldRef<"LoopRun", 'String'>
   readonly startedAt: Prisma.FieldRef<"LoopRun", 'DateTime'>
   readonly endedAt: Prisma.FieldRef<"LoopRun", 'DateTime'>
 }
@@ -2177,6 +2523,25 @@ export type LoopRun$rootSessionArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.SessionInclude<ExtArgs> | null
   where?: Prisma.SessionWhereInput
+}
+
+/**
+ * LoopRun.dryRunOf
+ */
+export type LoopRun$dryRunOfArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LoopDryRun
+   */
+  select?: Prisma.LoopDryRunSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LoopDryRun
+   */
+  omit?: Prisma.LoopDryRunOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LoopDryRunInclude<ExtArgs> | null
+  where?: Prisma.LoopDryRunWhereInput
 }
 
 /**

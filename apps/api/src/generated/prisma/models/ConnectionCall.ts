@@ -75,6 +75,7 @@ export type ConnectionCallCountAggregateOutputType = {
   ticketId: number
   simulated: number
   loopActionKey: number
+  input: number
   createdAt: number
   _all: number
 }
@@ -131,6 +132,7 @@ export type ConnectionCallCountAggregateInputType = {
   ticketId?: true
   simulated?: true
   loopActionKey?: true
+  input?: true
   createdAt?: true
   _all?: true
 }
@@ -222,6 +224,7 @@ export type ConnectionCallGroupByOutputType = {
   ticketId: string | null
   simulated: boolean
   loopActionKey: string | null
+  input: runtime.JsonValue | null
   createdAt: Date
   _count: ConnectionCallCountAggregateOutputType | null
   _min: ConnectionCallMinAggregateOutputType | null
@@ -261,6 +264,7 @@ export type ConnectionCallWhereInput = {
   ticketId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   loopActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
+  input?: Prisma.JsonNullableFilter<"ConnectionCall">
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -283,6 +287,7 @@ export type ConnectionCallOrderByWithRelationInput = {
   ticketId?: Prisma.SortOrderInput | Prisma.SortOrder
   simulated?: Prisma.SortOrder
   loopActionKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  input?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
@@ -308,6 +313,7 @@ export type ConnectionCallWhereUniqueInput = Prisma.AtLeast<{
   ticketId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   loopActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
+  input?: Prisma.JsonNullableFilter<"ConnectionCall">
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -330,6 +336,7 @@ export type ConnectionCallOrderByWithAggregationInput = {
   ticketId?: Prisma.SortOrderInput | Prisma.SortOrder
   simulated?: Prisma.SortOrder
   loopActionKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  input?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ConnectionCallCountOrderByAggregateInput
   _max?: Prisma.ConnectionCallMaxOrderByAggregateInput
@@ -354,6 +361,7 @@ export type ConnectionCallScalarWhereWithAggregatesInput = {
   ticketId?: Prisma.StringNullableWithAggregatesFilter<"ConnectionCall"> | string | null
   simulated?: Prisma.BoolWithAggregatesFilter<"ConnectionCall"> | boolean
   loopActionKey?: Prisma.StringNullableWithAggregatesFilter<"ConnectionCall"> | string | null
+  input?: Prisma.JsonNullableWithAggregatesFilter<"ConnectionCall">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ConnectionCall"> | Date | string
 }
 
@@ -368,6 +376,7 @@ export type ConnectionCallCreateInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -390,6 +399,7 @@ export type ConnectionCallUncheckedCreateInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -404,6 +414,7 @@ export type ConnectionCallUpdateInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -426,6 +437,7 @@ export type ConnectionCallUncheckedUpdateInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -444,6 +456,7 @@ export type ConnectionCallCreateManyInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -458,6 +471,7 @@ export type ConnectionCallUpdateManyMutationInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -476,6 +490,7 @@ export type ConnectionCallUncheckedUpdateManyInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -504,6 +519,7 @@ export type ConnectionCallCountOrderByAggregateInput = {
   ticketId?: Prisma.SortOrder
   simulated?: Prisma.SortOrder
   loopActionKey?: Prisma.SortOrder
+  input?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -722,6 +738,7 @@ export type ConnectionCallCreateWithoutWorkspaceInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
   connection: Prisma.ConnectionCreateNestedOneWithoutCallsInput
@@ -742,6 +759,7 @@ export type ConnectionCallUncheckedCreateWithoutWorkspaceInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -789,6 +807,7 @@ export type ConnectionCallScalarWhereInput = {
   ticketId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   loopActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
+  input?: Prisma.JsonNullableFilter<"ConnectionCall">
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
 }
 
@@ -803,6 +822,7 @@ export type ConnectionCallCreateWithoutTeammateInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -823,6 +843,7 @@ export type ConnectionCallUncheckedCreateWithoutTeammateInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -863,6 +884,7 @@ export type ConnectionCallCreateWithoutSessionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   connection: Prisma.ConnectionCreateNestedOneWithoutCallsInput
@@ -883,6 +905,7 @@ export type ConnectionCallUncheckedCreateWithoutSessionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -923,6 +946,7 @@ export type ConnectionCallCreateWithoutConnectionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -943,6 +967,7 @@ export type ConnectionCallUncheckedCreateWithoutConnectionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -986,6 +1011,7 @@ export type ConnectionCallCreateManyWorkspaceInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -1000,6 +1026,7 @@ export type ConnectionCallUpdateWithoutWorkspaceInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutCallsNestedInput
@@ -1020,6 +1047,7 @@ export type ConnectionCallUncheckedUpdateWithoutWorkspaceInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1037,6 +1065,7 @@ export type ConnectionCallUncheckedUpdateManyWithoutWorkspaceInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1054,6 +1083,7 @@ export type ConnectionCallCreateManyTeammateInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -1068,6 +1098,7 @@ export type ConnectionCallUpdateWithoutTeammateInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -1088,6 +1119,7 @@ export type ConnectionCallUncheckedUpdateWithoutTeammateInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1105,6 +1137,7 @@ export type ConnectionCallUncheckedUpdateManyWithoutTeammateInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1122,6 +1155,7 @@ export type ConnectionCallCreateManySessionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -1136,6 +1170,7 @@ export type ConnectionCallUpdateWithoutSessionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutCallsNestedInput
@@ -1156,6 +1191,7 @@ export type ConnectionCallUncheckedUpdateWithoutSessionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1173,6 +1209,7 @@ export type ConnectionCallUncheckedUpdateManyWithoutSessionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1190,6 +1227,7 @@ export type ConnectionCallCreateManyConnectionInput = {
   ticketId?: string | null
   simulated?: boolean
   loopActionKey?: string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -1204,6 +1242,7 @@ export type ConnectionCallUpdateWithoutConnectionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -1224,6 +1263,7 @@ export type ConnectionCallUncheckedUpdateWithoutConnectionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1241,6 +1281,7 @@ export type ConnectionCallUncheckedUpdateManyWithoutConnectionInput = {
   ticketId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   loopActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1261,6 +1302,7 @@ export type ConnectionCallSelect<ExtArgs extends runtime.Types.Extensions.Intern
   ticketId?: boolean
   simulated?: boolean
   loopActionKey?: boolean
+  input?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1283,6 +1325,7 @@ export type ConnectionCallSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   ticketId?: boolean
   simulated?: boolean
   loopActionKey?: boolean
+  input?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1305,6 +1348,7 @@ export type ConnectionCallSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   ticketId?: boolean
   simulated?: boolean
   loopActionKey?: boolean
+  input?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1327,10 +1371,11 @@ export type ConnectionCallSelectScalar = {
   ticketId?: boolean
   simulated?: boolean
   loopActionKey?: boolean
+  input?: boolean
   createdAt?: boolean
 }
 
-export type ConnectionCallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "connectionId" | "teammateId" | "operation" | "write" | "target" | "result" | "error" | "ticketId" | "simulated" | "loopActionKey" | "createdAt", ExtArgs["result"]["connectionCall"]>
+export type ConnectionCallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "connectionId" | "teammateId" | "operation" | "write" | "target" | "result" | "error" | "ticketId" | "simulated" | "loopActionKey" | "input" | "createdAt", ExtArgs["result"]["connectionCall"]>
 export type ConnectionCallInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1385,6 +1430,10 @@ export type $ConnectionCallPayload<ExtArgs extends runtime.Types.Extensions.Inte
      * In a playbook's thread: the action of its manifest the call is.
      */
     loopActionKey: string | null
+    /**
+     * A simulated call's input, for the dry run's report: what would have been sent.
+     */
+    input: runtime.JsonValue | null
     createdAt: Date
   }, ExtArgs["result"]["connectionCall"]>
   composites: {}
@@ -1827,6 +1876,7 @@ export interface ConnectionCallFieldRefs {
   readonly ticketId: Prisma.FieldRef<"ConnectionCall", 'String'>
   readonly simulated: Prisma.FieldRef<"ConnectionCall", 'Boolean'>
   readonly loopActionKey: Prisma.FieldRef<"ConnectionCall", 'String'>
+  readonly input: Prisma.FieldRef<"ConnectionCall", 'Json'>
   readonly createdAt: Prisma.FieldRef<"ConnectionCall", 'DateTime'>
 }
     

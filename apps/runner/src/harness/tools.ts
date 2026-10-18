@@ -1518,6 +1518,143 @@ export function loopTools(call: ScheduleCaller): Record<string, Tool> {
 }
 
 /**
+ * Installing a playbook from the chat: its card, its settings one by one, a dry run on real
+ * past events with every write simulated, its report, then the card that activates it.
+ * Through the schedule calls, which the API checks.
+ */
+export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool> {
+  const send = (operation: ScheduleOperation, toolCallId: string, toolName: string, input: unknown) =>
+    call({ operation, toolCallId, toolName, input })
+  const id = { type: 'string', description: 'The installationId configure_loop gave' } as const
+  return {
+    show_playbook: tool({
+      description:
+        'Playbooks are whole jobs Brigade ships, ready to install (support, releases…): what starts them, their ' +
+        'recipe, the Apps they need, their settings and the writes they may make. Without loopKey: the catalog. ' +
+        'With one: its card in the thread (what it does, its Apps, its author, its version). Use it when a person ' +
+        'asks to install or see a playbook.',
+      inputSchema: jsonSchema<{ loopKey?: string }>({
+        type: 'object',
+        properties: { loopKey: { type: 'string', description: 'e.g. brigade/support-bugs' } },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'show_playbook', ...(input.loopKey ? { loopKey: input.loopKey } : {}) },
+          toolCallId,
+          'show_playbook',
+          input,
+        ),
+    }),
+    configure_loop: tool({
+      description:
+        'Install a playbook for the person in this thread, on their accounts: first with its loopKey, then with ' +
+        'the installationId it gives. Pass the answers you have by setting key; Brigade checks each by its type ' +
+        'and says what is still missing, which question to ask next, and which Apps are missing. Ask one ' +
+        'question at a time, and never invent an answer. Nothing runs until it is activated.',
+      inputSchema: jsonSchema<{
+        loopKey?: string
+        installationId?: string
+        teammate?: string
+        settings?: Record<string, string | number>
+      }>({
+        type: 'object',
+        properties: {
+          loopKey: { type: 'string', description: 'To start installing one, e.g. brigade/support-bugs' },
+          installationId: id,
+          teammate: {
+            type: 'string',
+            description: 'The teammate that runs it, by name; leave out for yourself',
+          },
+          settings: {
+            type: 'object',
+            description: 'Answers by setting key, e.g. { "product": "Acme", "inbox": "support@acme.com" }',
+            additionalProperties: { type: ['string', 'number'] },
+          },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'configure_loop',
+            ...(input.loopKey ? { loopKey: input.loopKey } : {}),
+            ...(input.installationId ? { installationId: input.installationId } : {}),
+            ...(input.teammate ? { teammate: input.teammate } : {}),
+            settings: input.settings ?? {},
+          },
+          toolCallId,
+          'configure_loop',
+          input,
+        ),
+    }),
+    start_dry_run: tool({
+      description:
+        'Try an installed playbook on real past events (for Gmail, the latest mails its search matches) before ' +
+        'it is active: each event a run of its own, every write simulated (recorded, answered with a fake ' +
+        'success, never sent) and no push. Its progress shows under your reply, and you are woken here once ' +
+        'all are done. It runs on the subscription of the person in this thread.',
+      inputSchema: jsonSchema<{ installationId: string; last?: number }>({
+        type: 'object',
+        properties: {
+          installationId: id,
+          last: {
+            type: 'number',
+            description: 'Fewer events than the playbook replays, for a quick try (at most 20)',
+          },
+        },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'start_dry_run',
+            installationId: input.installationId,
+            ...(input.last ? { last: input.last } : {}),
+          },
+          toolCallId,
+          'start_dry_run',
+          input,
+        ),
+    }),
+    dry_run_report: tool({
+      description:
+        "A playbook's latest dry run: for each event, the case found, what would have been done (each simulated " +
+        'write with what it would have sent) and its thread, and the session minutes it took with a week at that ' +
+        'pace. Shows its report in the thread, one card per event.',
+      inputSchema: jsonSchema<{ installationId: string }>({
+        type: 'object',
+        properties: { installationId: id },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'dry_run_report', installationId: input.installationId },
+          toolCallId,
+          'dry_run_report',
+          input,
+        ),
+    }),
+    activate_loop: tool({
+      description:
+        "Show the card that activates an installed playbook: its settings, Apps, actions and their levels, and " +
+        'whose accounts it runs on, with an Activate button. A click by an owner or admin activates it; a ' +
+        "member's asks one. Only after its settings are all answered, usually after a dry run.",
+      inputSchema: jsonSchema<{ installationId: string }>({
+        type: 'object',
+        properties: { installationId: id },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'activate_loop', installationId: input.installationId },
+          toolCallId,
+          'activate_loop',
+          input,
+        ),
+    }),
+  }
+}
+
+/**
  * Child threads: work started beside this thread, in a fresh context, whose report
  * comes back here. A child reports with `report` and starts no children of its own.
  * They go through the schedule calls; the API checks the thread and its children.

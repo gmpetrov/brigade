@@ -12,6 +12,7 @@ import {
   parseSkillMarkdown,
   SkillName,
   type InstallLoop,
+  type LoopEntry,
   type LoopInstallationView,
   type LoopRunStatus,
   type LoopRunView,
@@ -28,6 +29,7 @@ import { LOOP_TEMPLATES } from './generated/loops.js'
 import { isMcp } from './mcp-tools.js'
 import { usableProject } from './projects.js'
 import { deleteTriggers, resync } from './routes/triggers.js'
+import { dryRunView } from './loop-dry-runs.js'
 import { createSchedule, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { savePack, storeSkillFile } from './skills.js'
@@ -151,11 +153,10 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const REPOSITORY = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/
 
 /**
- * The installation's settings: each answer checked by its kind, defaults for those not
- * given (after the answers, so a default may use them). An account setting is the id of an
- * account of its App in the workspace.
+ * The answers given, each checked by its setting's kind. An account setting takes one of the
+ * workspace's accounts of its App, by id or by what its row shows, and keeps its id.
  */
-export async function resolveSettings(
+export async function checkSettings(
   db: ScopedDb,
   manifest: LoopManifest,
   input: Record<string, string | number>,
@@ -164,8 +165,12 @@ export async function resolveSettings(
   const bad = (setting: { key: string; ask?: string }, why: string): never => {
     throw new HTTPException(400, { message: `${setting.ask ?? setting.key} ${why}` })
   }
-  for (const setting of manifest.settings) {
-    const given = input[setting.key]
+  for (const [key, given] of Object.entries(input)) {
+    const setting = manifest.settings.find((s) => s.key === key)
+    if (!setting)
+      throw new HTTPException(400, {
+        message: `${manifest.name} has no setting ${key}; its settings are ${manifest.settings.map((s) => s.key).join(', ')}`,
+      })
     if (given === undefined || given === '') continue
     const text = String(given).trim()
     switch (setting.type) {
@@ -200,22 +205,54 @@ export async function resolveSettings(
         values[setting.key] = text
         break
       case 'account': {
-        const account = await db.connection.findFirst({
-          where: { id: text, kind: setting.app as ConnectorKind, status: { not: 'removed' } },
+        // Its id, or what its row shows (the Gmail address), as a person would say it.
+        const accounts = await db.connection.findMany({
+          where: { kind: setting.app as ConnectorKind, status: { not: 'removed' } },
+          select: { id: true, externalAccount: true, label: true },
         })
-        if (!account) bad(setting, `needs one of the workspace's ${setting.app} accounts`)
+        const lower = text.toLowerCase()
+        const account =
+          accounts.find((a) => a.id === text) ??
+          accounts.find((a) => a.externalAccount?.toLowerCase() === lower) ??
+          accounts.find((a) => a.label.toLowerCase() === lower)
+        if (!account)
+          bad(
+            setting,
+            accounts.length
+              ? `needs one of the workspace's ${setting.app} accounts: ${accounts.map((a) => a.externalAccount ?? a.label).join(', ')}`
+              : `needs a ${setting.app} account, and the workspace has none yet`,
+          )
         values[setting.key] = account!.id
         break
       }
     }
   }
+  return values
+}
+
+/** Its answers with defaults for those not given (after the answers, so a default may use them), and what still lacks one. */
+export function withDefaults(manifest: LoopManifest, answers: Record<string, string | number>) {
+  const values = { ...answers }
+  const missing: string[] = []
   for (const setting of manifest.settings) {
     if (setting.key in values) continue
     if (setting.default !== undefined)
       values[setting.key] =
         typeof setting.default === 'string' ? fill(setting.default, values) : setting.default
-    else if (!setting.optional) bad(setting, 'needs an answer')
+    else if (!setting.optional) missing.push(setting.key)
   }
+  return { values, missing }
+}
+
+/** Every answer checked by its kind, with defaults; throws on the first one missing. */
+export async function resolveSettings(
+  db: ScopedDb,
+  manifest: LoopManifest,
+  input: Record<string, string | number>,
+) {
+  const { values, missing } = withDefaults(manifest, await checkSettings(db, manifest, input))
+  const first = manifest.settings.find((s) => s.key === missing[0])
+  if (first) throw new HTTPException(400, { message: `${first.ask ?? first.key} needs an answer` })
   return values
 }
 
@@ -228,7 +265,7 @@ function requireManager(scope: WorkspaceScope, installation: { ownerMemberId: st
     })
 }
 
-const admin = (scope: WorkspaceScope) => scope.role === 'owner' || scope.role === 'admin'
+export const isAdminRole = (role: string) => role === 'owner' || role === 'admin'
 
 /** A skill name not yet taken in the workspace: its own, else with -2, -3… */
 async function freeName(db: ScopedDb, name: string) {
@@ -239,25 +276,29 @@ async function freeName(db: ScopedDb, name: string) {
   }
 }
 
+/** Who installs: the member whose accounts it runs on. */
+export type Installer = Scope & { memberId: string }
+
 /**
- * Install a template: its settings checked, then its actions at their starting level, its
- * skill pack, triggers and schedules, all marked as its own. An owner or admin's installation
- * is active at once; a member's waits in setup for one of them to activate it. If any part
- * cannot be made (a vendor refuses the subscription), nothing is kept.
+ * A template installed in setup, its settings so far: nothing runs until it is activated.
+ * Its parts come once every setting has an answer (buildParts).
  */
-export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: InstallLoop) {
-  const template = templates().get(input.loopKey)
-  if (!template) throw new HTTPException(404, { message: `No playbook ${input.loopKey}` })
-  const { manifest } = template
+export async function createInstallation(
+  db: ScopedDb,
+  scope: Installer,
+  input: {
+    template: Template
+    teammateId: string
+    projectId?: string | null
+    settings: Record<string, string | number>
+  },
+) {
+  const { manifest } = input.template
   const teammate = await db.teammate.findFirst({
     where: { id: input.teammateId, archivedAt: null },
   })
   if (!teammate) throw new HTTPException(404, { message: 'Teammate not found or archived' })
   const projectId = (await usableProject(db, input.projectId)) ?? null
-  const settings = await resolveSettings(db, manifest, input.settings)
-  const active = admin(scope)
-  const actor: Actor = { type: 'member', id: scope.memberId }
-
   const installation = await db.loopInstallation.create({
     data: {
       projectId,
@@ -267,25 +308,55 @@ export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: In
       manifest: manifest as never,
       teammateId: teammate.id,
       ownerMemberId: scope.memberId,
-      settings,
-      status: active ? 'active' : 'setup',
+      settings: await checkSettings(db, manifest, input.settings),
+      status: 'setup',
       createdByMemberId: scope.memberId,
-      ...(active ? { activatedAt: new Date(), activatedByMemberId: scope.memberId } : {}),
     } as never,
   })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'loop.installed',
+    target: { type: 'loop', id: installation.id },
+    data: { loopKey: manifest.id, version: manifest.version, status: installation.status },
+  })
+  return installation
+}
+
+/** What it made from its settings: its actions, skill pack, triggers and schedules. */
+async function removeParts(db: ScopedDb, scope: Scope, id: string) {
+  const removed = await deleteTriggers(db, { loopInstallationId: id })
+  await db.schedule.deleteMany({ where: { loopInstallationId: id } })
+  await db.skillPack.deleteMany({ where: { loopInstallationId: id } })
+  await db.loopAction.deleteMany({ where: { installationId: id } })
+  return removed.map((t) => t.connectionId)
+}
+
+/**
+ * Make its parts from its settings, all marked as its own: its actions at their starting
+ * level, its skill pack (loaded only in its threads), its triggers and its schedules
+ * (paused until it is active). Made again when its settings change before it is active.
+ * If a part cannot be made (a vendor refuses the subscription), none is kept.
+ */
+export async function buildParts(db: ScopedDb, scope: Installer, id: string) {
+  const installation = await requireInstallation(db, id)
+  const manifest = installation.manifest as LoopManifest
+  const template = templates().get(installation.loopKey)
+  const settings = installation.settings as Record<string, string | number>
+  const teammate = await db.teammate.findFirst({ where: { id: installation.teammateId } })
+  if (!teammate) throw new HTTPException(404, { message: 'Teammate not found' })
+  const active = installation.status === 'active'
+  const actor: Actor = { type: 'member', id: scope.memberId }
+  const before = await removeParts(db, scope, id)
   const connectionIds = new Set<string>()
   try {
     if (manifest.actions.length)
       await db.loopAction.createMany({
-        data: manifest.actions.map((a) => ({
-          installationId: installation.id,
-          key: a.key,
-          level: a.start,
-        })) as never,
+        data: manifest.actions.map((a) => ({ installationId: id, key: a.key, level: a.start })) as never,
       })
 
     // Its recipe: a pack of its own, loaded only in its threads (threadSkills).
-    if (template.skills.length) {
+    if (template?.skills.length) {
       const skills = []
       for (const s of template.skills)
         skills.push({
@@ -299,16 +370,13 @@ export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: In
         })
       const pack = await savePack(db, scope, actor, {
         name: manifest.name,
-        source: `loop:${installation.id}`,
+        source: `loop:${id}`,
         everywhere: true,
         teammateIds: [],
         projectIds: [],
         skills,
       })
-      await db.skillPack.updateMany({
-        where: { id: pack.id },
-        data: { loopInstallationId: installation.id },
-      })
+      await db.skillPack.updateMany({ where: { id: pack.id }, data: { loopInstallationId: id } })
     }
 
     for (const entry of manifest.entries) {
@@ -322,21 +390,16 @@ export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: In
             message: `${entry.trigger} needs one of the workspace's ${kind} accounts`,
           })
         const definition = triggersOf(kind)[event]!
-        const options = Object.fromEntries(
-          Object.entries(entry.options)
-            .map(([k, v]) => [k, fill(v, settings).trim()] as const)
-            .filter(([, v]) => v),
-        )
         await db.trigger.create({
           data: {
             connectionId: connection.id,
             teammateId: teammate.id,
             label: entry.label ?? `${manifest.name}: ${definition.label}`,
             event,
-            options,
-            createdByMemberId: scope.memberId,
-            projectId,
-            loopInstallationId: installation.id,
+            options: entryOptions(entry, settings),
+            createdByMemberId: installation.ownerMemberId,
+            projectId: installation.projectId,
+            loopInstallationId: id,
           } as never,
         })
         connectionIds.add(connection.id)
@@ -349,15 +412,15 @@ export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: In
             title: entry.title ?? manifest.name,
             instructions: fill(entry.instructions, settings),
             cron: entry.schedule,
-            timezone: entry.timezone ?? (await memberTimezone(db, scope.memberId)),
-            projectId,
+            timezone: entry.timezone ?? (await memberTimezone(db, installation.ownerMemberId)),
+            projectId: installation.projectId,
           },
-          { memberId: scope.memberId },
+          { memberId: installation.ownerMemberId },
         )
         await db.schedule.updateMany({
           where: { id: schedule.id },
           data: {
-            loopInstallationId: installation.id,
+            loopInstallationId: id,
             // Waiting for activation, it does not fire.
             ...(active ? {} : { pausedAt: new Date(), nextRunAt: null }),
           },
@@ -365,25 +428,96 @@ export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: In
       }
     }
     // Subscribe the vendors now, so a refusal is the installer's to see.
-    for (const id of connectionIds) await syncConnection(scope, id)
+    for (const connectionId of connectionIds) await syncConnection(scope, connectionId)
   } catch (error) {
-    await removeInstallation(db, scope, installation.id)
+    await resync(scope, [...before, ...(await removeParts(db, scope, id))])
     if (error instanceof HTTPException) throw error
     if (error instanceof SubscribeError) throw new HTTPException(400, { message: error.message })
     throw error
   }
-  await audit({
-    ...scope,
-    actor,
-    action: 'loop.installed',
-    target: { type: 'loop', id: installation.id },
-    data: { loopKey: manifest.id, version: manifest.version, status: installation.status },
+  // An account the old settings used and these do not: its subscription goes.
+  await resync(
+    scope,
+    before.filter((c) => !connectionIds.has(c)),
+  )
+}
+
+/** A trigger entry's options, its settings put in; empty ones left out. */
+export const entryOptions = (
+  entry: Extract<LoopEntry, { trigger: string }>,
+  settings: Record<string, string | number>,
+) =>
+  Object.fromEntries(
+    Object.entries(entry.options)
+      .map(([k, v]) => [k, fill(v, settings).trim()] as const)
+      .filter(([, v]) => v),
+  )
+
+/** Whether its parts are made: every setting answered, and its first entry exists. */
+export async function hasParts(db: ScopedDb, id: string) {
+  const [triggers, schedules] = await Promise.all([
+    db.trigger.count({ where: { loopInstallationId: id } }),
+    db.schedule.count({ where: { loopInstallationId: id } }),
+  ])
+  return triggers + schedules > 0
+}
+
+/**
+ * New answers for an installation not yet active: checked by kind, kept with the earlier ones.
+ * Once every setting has one, its parts are made (again, when they were). Returns what still
+ * lacks an answer.
+ */
+export async function answerSettings(
+  db: ScopedDb,
+  scope: Installer,
+  id: string,
+  input: Record<string, string | number>,
+) {
+  const installation = await requireInstallation(db, id)
+  if (installation.status === 'active' || installation.status === 'paused')
+    throw new HTTPException(409, {
+      message: 'This playbook is already active: its settings change from its sheet, on Automations',
+    })
+  const manifest = installation.manifest as LoopManifest
+  const given = await checkSettings(db, manifest, input)
+  const answers = { ...(installation.settings as Record<string, string | number>), ...given }
+  const { values, missing } = withDefaults(manifest, answers)
+  const changed = Object.keys(given).length > 0
+  if (changed)
+    await db.loopInstallation.updateMany({ where: { id }, data: { settings: answers } })
+  if (!missing.length) {
+    // Defaults filled in are answers from now on.
+    await db.loopInstallation.updateMany({ where: { id }, data: { settings: values } })
+    if (changed || !(await hasParts(db, id))) await buildParts(db, scope, id)
+  }
+  return missing
+}
+
+/**
+ * Install a template with all its answers at once (the API's POST /loops): in setup, its
+ * parts made. Activating it is a step of its own (activateLoop).
+ */
+export async function installLoop(db: ScopedDb, scope: WorkspaceScope, input: InstallLoop) {
+  const template = templates().get(input.loopKey)
+  if (!template) throw new HTTPException(404, { message: `No playbook ${input.loopKey}` })
+  await resolveSettings(db, template.manifest, input.settings)
+  const installation = await createInstallation(db, scope, {
+    template,
+    teammateId: input.teammateId,
+    projectId: input.projectId,
+    settings: input.settings,
   })
+  try {
+    await answerSettings(db, scope, installation.id, {})
+  } catch (error) {
+    await removeInstallation(db, scope, installation.id)
+    throw error
+  }
   return getInstallation(db, installation.id)
 }
 
 /** Everything it made goes: triggers (and their subscriptions), schedules, its pack, its runs. */
-async function removeInstallation(db: ScopedDb, scope: Scope, id: string) {
+export async function removeInstallation(db: ScopedDb, scope: Scope, id: string) {
   const removed = await deleteTriggers(db, { loopInstallationId: id })
   // Its runs no person took part in go out of sight; those a person joined stay their threads.
   await db.session.updateMany({
@@ -397,7 +531,7 @@ async function removeInstallation(db: ScopedDb, scope: Scope, id: string) {
   )
 }
 
-async function requireInstallation(db: ScopedDb, id: string) {
+export async function requireInstallation(db: ScopedDb, id: string) {
   const installation = await db.loopInstallation.findFirst({ where: { id } })
   if (!installation) throw new HTTPException(404, { message: 'Playbook not found' })
   return installation
@@ -416,6 +550,114 @@ export async function uninstallLoop(db: ScopedDb, scope: WorkspaceScope, id: str
   })
 }
 
+/** The open ticket asking an owner or admin to activate it, if any. */
+const activationTicket = (db: ScopedDb, id: string) =>
+  db.ticket.findFirst({
+    where: {
+      type: 'approval',
+      status: 'open',
+      AND: [
+        { payload: { path: ['loopInstallationId'], equals: id } },
+        { payload: { path: ['loopActivation'], equals: true } },
+      ],
+    },
+    select: { id: true },
+  })
+
+/**
+ * Activate it: from now on it runs on its owner's accounts, every action at its level (all
+ * Ask first to begin with). It takes an owner or admin, like importing a skill pack; a
+ * member asks one (requestActivation). Its parts must be made first.
+ */
+export async function activateLoop(db: ScopedDb, scope: WorkspaceScope, id: string) {
+  const installation = await requireInstallation(db, id)
+  if (installation.status === 'active') return getInstallation(db, id)
+  if (!isAdminRole(scope.role))
+    throw new HTTPException(403, { message: 'Only an owner or admin can activate a playbook' })
+  if (!(await hasParts(db, id))) {
+    const { missing } = withDefaults(
+      installation.manifest as LoopManifest,
+      installation.settings as Record<string, string | number>,
+    )
+    throw new HTTPException(409, {
+      message: missing.length
+        ? `Its settings are not all answered yet: ${missing.join(', ')}`
+        : 'Its triggers and schedules are not made yet: answer its settings again',
+    })
+  }
+  return setLoopPaused(db, scope, id, false)
+}
+
+/**
+ * A member who is not an owner or admin asks one to activate it: one ticket in Needs you,
+ * which an owner or admin approves (resolveTicket). Asking again keeps the one ticket.
+ */
+export async function requestActivation(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  id: string,
+  sessionId: string | null,
+) {
+  const installation = await requireInstallation(db, id)
+  requireManager(scope, installation)
+  if (installation.status === 'active') return { ticketId: null, active: true }
+  if (!(await hasParts(db, id)))
+    throw new HTTPException(409, { message: 'Its settings are not all answered yet' })
+  const open = await activationTicket(db, id)
+  if (open) return { ticketId: open.id, active: false }
+  const manifest = installation.manifest as LoopManifest
+  const owner = await db.member.findFirst({
+    where: { id: installation.ownerMemberId },
+    select: { user: { select: { name: true } } },
+  })
+  const ticket = await db.ticket.create({
+    data: {
+      ...(sessionId ? { sessionId } : {}),
+      type: 'approval',
+      title: `Activate the playbook ${manifest.name}`,
+      payload: {
+        loopInstallationId: id,
+        loopActivation: true,
+        reason: `${owner?.user.name ?? 'A member'} installed it and asks an owner or admin to activate it. It runs on their accounts, and every action asks first to begin with.`,
+      },
+    } as never,
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'loop.activation_requested',
+    target: { type: 'loop', id },
+    data: { ticketId: ticket.id },
+  })
+  return { ticketId: ticket.id, active: false }
+}
+
+/** An owner or admin's answer to a member's request: approving activates it. */
+export async function decideActivation(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  ticket: { id: string; payload: unknown },
+  approved: boolean,
+) {
+  const { loopInstallationId } = ticket.payload as { loopInstallationId: string }
+  if (approved) await activateLoop(db, scope, loopInstallationId)
+  await db.ticket.updateMany({
+    where: { id: ticket.id, status: 'open' },
+    data: {
+      status: approved ? 'approved' : 'denied',
+      resolvedByMemberId: scope.memberId,
+      resolvedAt: new Date(),
+    },
+  })
+  if (!approved)
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'loop.activation_denied',
+      target: { type: 'loop', id: loopInstallationId },
+    })
+}
+
 /**
  * Pause or resume. Resuming one that waits in setup activates it, which takes an owner or
  * admin: it then runs on its owner's accounts with no one checking each time.
@@ -429,8 +671,10 @@ export async function setLoopPaused(
   const installation = await requireInstallation(db, id)
   requireManager(scope, installation)
   const activating = !paused && installation.status !== 'active' && !installation.activatedAt
-  if (activating && !admin(scope))
+  if (activating && !isAdminRole(scope.role))
     throw new HTTPException(403, { message: 'Only an owner or admin can activate a playbook' })
+  if (activating && !(await hasParts(db, id)))
+    throw new HTTPException(409, { message: 'Its settings are not all answered yet' })
   const now = new Date()
   await db.loopInstallation.updateMany({
     where: { id },
@@ -449,6 +693,19 @@ export async function setLoopPaused(
       data: paused
         ? { pausedAt: now, nextRunAt: null }
         : { pausedAt: null, nextRunAt: nextRun(s.cron, s.timezone) ?? null },
+    })
+  // Activated: a member's request waiting for it is answered.
+  if (activating)
+    await db.ticket.updateMany({
+      where: {
+        type: 'approval',
+        status: 'open',
+        AND: [
+          { payload: { path: ['loopInstallationId'], equals: id } },
+          { payload: { path: ['loopActivation'], equals: true } },
+        ],
+      },
+      data: { status: 'approved', resolvedByMemberId: scope.memberId, resolvedAt: now },
     })
   await audit({
     ...scope,
@@ -568,6 +825,7 @@ export async function threadLoop(
   | (ThreadLoop & {
       access: Map<string, 'read' | 'read_write'>
       actions: LoopManifest['actions']
+      dryRunId: string | null
     })
   | null
 > {
@@ -583,6 +841,8 @@ export async function threadLoop(
     runId: run.id,
     name: manifest.name,
     apps: manifest.apps.map((a) => a.kind),
+    dryRun: run.dryRun,
+    dryRunId: run.dryRunId,
     access: new Map(manifest.apps.map((a) => [a.kind, a.access])),
     actions: manifest.actions,
   }
@@ -605,6 +865,7 @@ export async function reportRun(
     data: {
       case: op.case,
       outcome: op.outcome,
+      summary: op.summary ?? null,
       status: op.outcome === 'failed' ? 'failed' : 'done',
       endedAt: new Date(),
     },
@@ -666,7 +927,7 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<LoopInsta
   const manifest = row.manifest as LoopManifest
   const week = new Date(Date.now() - 7 * DAY_MS)
   const day = new Date(Date.now() - DAY_MS)
-  const [recent, weekRuns, calls] = await Promise.all([
+  const [recent, weekRuns, calls, dryRun, ticket] = await Promise.all([
     db.loopRun.findMany({
       where: { installationId: row.id, dryRun: false },
       orderBy: { startedAt: 'desc' },
@@ -685,6 +946,12 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<LoopInsta
       },
       select: { loopActionKey: true, result: true, ticketId: true },
     }),
+    db.loopDryRun.findFirst({
+      where: { installationId: row.id },
+      orderBy: { startedAt: 'desc' },
+      select: { id: true },
+    }),
+    activationTicket(db, row.id),
   ])
   const ended = weekRuns.filter((r) => r.endedAt)
   // A call a person decided carries its ticket: approved, or denied. One without, done alone.
@@ -692,6 +959,7 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<LoopInsta
     calls.filter((c) => c.loopActionKey === key && c.result === result && !!c.ticketId === decided)
       .length
   const settings = (row.settings ?? {}) as Record<string, string | number>
+  const { missing } = withDefaults(manifest, settings)
   const recentRuns: LoopRunView[] = recent.map((run) => ({
     id: run.id,
     title: run.rootSession?.title ?? 'Run',
@@ -758,6 +1026,10 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<LoopInsta
       ? ended.filter((r) => r.interventions === 0).length / ended.length
       : null,
     recentRuns,
+    ready: !missing.length && row.triggers.length + row.schedules.length > 0,
+    missing,
+    dryRun: dryRun ? await dryRunView(db, dryRun.id) : null,
+    activationTicketId: ticket?.id ?? null,
     createdAt: row.createdAt.toISOString(),
     activatedAt: row.activatedAt?.toISOString() ?? null,
     pausedAt: row.pausedAt?.toISOString() ?? null,

@@ -14,6 +14,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
+import { handleLoopCall, isLoopInstallOperation } from './loop-chat.js'
 import { beginRun, reportRun, settleRun } from './loops.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
@@ -512,6 +513,11 @@ export async function handleScheduleCall(
   // And a playbook run's report.
   if (op.name === 'loop_report') {
     const output = await reportRun(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And installing a playbook from the chat.
+  if (isLoopInstallOperation(op)) {
+    const output = await handleLoopCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   if (session.origin !== 'member')

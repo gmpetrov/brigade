@@ -17,6 +17,7 @@ import { localTime, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread } from './thread-spec.js'
 import { settleOverdueChildren } from './children.js'
+import { settleOverdueDryRuns } from './loop-dry-runs.js'
 import { promptThread } from './work.js'
 
 type WakeupOperation = Extract<
@@ -257,6 +258,8 @@ export async function fireDueWakeups() {
       )
     // Children whose parent's wait ran out: it hears what is done.
     await settleOverdueChildren()
+    // Dry runs' events that took too long: left out, so the report comes.
+    await settleOverdueDryRuns()
   } finally {
     ticking = false
   }

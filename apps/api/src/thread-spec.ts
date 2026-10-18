@@ -218,7 +218,13 @@ export async function specFor(
     // A child reports to it; older runners ignore it, and its last message stands for its report.
     parent: thread.parent,
     loop: loop
-      ? { installationId: loop.installationId, runId: loop.runId, name: loop.name, apps: loop.apps }
+      ? {
+          installationId: loop.installationId,
+          runId: loop.runId,
+          name: loop.name,
+          apps: loop.apps,
+          dryRun: loop.dryRun,
+        }
       : null,
     attachments,
     task: thread.task

@@ -350,3 +350,10 @@ export type LoopAction = Prisma.LoopActionModel
  * A later event of the same conversation continues it.
  */
 export type LoopRun = Prisma.LoopRunModel
+/**
+ * Model LoopDryRun
+ * A playbook replaying past events with every write simulated, before it is activated.
+ * Its runs (LoopRun.dryRun) start a few at a time; the thread it was started from hears
+ * once they are all done.
+ */
+export type LoopDryRun = Prisma.LoopDryRunModel

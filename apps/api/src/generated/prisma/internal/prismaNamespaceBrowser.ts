@@ -105,7 +105,8 @@ export const ModelName = {
   PushNotice: 'PushNotice',
   LoopInstallation: 'LoopInstallation',
   LoopAction: 'LoopAction',
-  LoopRun: 'LoopRun'
+  LoopRun: 'LoopRun',
+  LoopDryRun: 'LoopDryRun'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -661,6 +662,7 @@ export const ConnectionCallScalarFieldEnum = {
   ticketId: 'ticketId',
   simulated: 'simulated',
   loopActionKey: 'loopActionKey',
+  input: 'input',
   createdAt: 'createdAt'
 } as const
 
@@ -1078,11 +1080,33 @@ export const LoopRunScalarFieldEnum = {
   interventions: 'interventions',
   firstResponseAt: 'firstResponseAt',
   dryRun: 'dryRun',
+  dryRunId: 'dryRunId',
+  replay: 'replay',
+  summary: 'summary',
   startedAt: 'startedAt',
   endedAt: 'endedAt'
 } as const
 
 export type LoopRunScalarFieldEnum = (typeof LoopRunScalarFieldEnum)[keyof typeof LoopRunScalarFieldEnum]
+
+
+export const LoopDryRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  startedByMemberId: 'startedByMemberId',
+  status: 'status',
+  error: 'error',
+  firstEventAt: 'firstEventAt',
+  lastEventAt: 'lastEventAt',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type LoopDryRunScalarFieldEnum = (typeof LoopDryRunScalarFieldEnum)[keyof typeof LoopDryRunScalarFieldEnum]
 
 
 export const SortOrder = {

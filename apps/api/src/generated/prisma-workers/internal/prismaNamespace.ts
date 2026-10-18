@@ -451,7 +451,8 @@ export const ModelName = {
   PushNotice: 'PushNotice',
   LoopInstallation: 'LoopInstallation',
   LoopAction: 'LoopAction',
-  LoopRun: 'LoopRun'
+  LoopRun: 'LoopRun',
+  LoopDryRun: 'LoopDryRun'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -467,7 +468,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "loopInstallation" | "loopAction" | "loopRun"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "loopInstallation" | "loopAction" | "loopRun" | "loopDryRun"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4541,6 +4542,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    LoopDryRun: {
+      payload: Prisma.$LoopDryRunPayload<ExtArgs>
+      fields: Prisma.LoopDryRunFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LoopDryRunFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LoopDryRunFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        findFirst: {
+          args: Prisma.LoopDryRunFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LoopDryRunFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        findMany: {
+          args: Prisma.LoopDryRunFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>[]
+        }
+        create: {
+          args: Prisma.LoopDryRunCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        createMany: {
+          args: Prisma.LoopDryRunCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LoopDryRunCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>[]
+        }
+        delete: {
+          args: Prisma.LoopDryRunDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        update: {
+          args: Prisma.LoopDryRunUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        deleteMany: {
+          args: Prisma.LoopDryRunDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LoopDryRunUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LoopDryRunUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>[]
+        }
+        upsert: {
+          args: Prisma.LoopDryRunUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopDryRunPayload>
+        }
+        aggregate: {
+          args: Prisma.LoopDryRunAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLoopDryRun>
+        }
+        groupBy: {
+          args: Prisma.LoopDryRunGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoopDryRunGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LoopDryRunCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LoopDryRunCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -5117,6 +5192,7 @@ export const ConnectionCallScalarFieldEnum = {
   ticketId: 'ticketId',
   simulated: 'simulated',
   loopActionKey: 'loopActionKey',
+  input: 'input',
   createdAt: 'createdAt'
 } as const
 
@@ -5534,11 +5610,33 @@ export const LoopRunScalarFieldEnum = {
   interventions: 'interventions',
   firstResponseAt: 'firstResponseAt',
   dryRun: 'dryRun',
+  dryRunId: 'dryRunId',
+  replay: 'replay',
+  summary: 'summary',
   startedAt: 'startedAt',
   endedAt: 'endedAt'
 } as const
 
 export type LoopRunScalarFieldEnum = (typeof LoopRunScalarFieldEnum)[keyof typeof LoopRunScalarFieldEnum]
+
+
+export const LoopDryRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  startedByMemberId: 'startedByMemberId',
+  status: 'status',
+  error: 'error',
+  firstEventAt: 'firstEventAt',
+  lastEventAt: 'lastEventAt',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type LoopDryRunScalarFieldEnum = (typeof LoopDryRunScalarFieldEnum)[keyof typeof LoopDryRunScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -6367,6 +6465,7 @@ export type GlobalOmitConfig = {
   loopInstallation?: Prisma.LoopInstallationOmit
   loopAction?: Prisma.LoopActionOmit
   loopRun?: Prisma.LoopRunOmit
+  loopDryRun?: Prisma.LoopDryRunOmit
 }
 
 /* Types for Logging */

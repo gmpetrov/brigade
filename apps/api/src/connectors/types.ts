@@ -112,6 +112,15 @@ export type TriggerDefinition = {
   conversation?: (event: VendorEvent) => string | undefined
   /** Files that come with the event (an email's attachments): given to its thread. */
   attachments?: (event: VendorEvent) => ExternalFile[]
+  /**
+   * The latest past events it would have started threads for, newest first, each with when
+   * it happened: what a playbook's dry run replays.
+   */
+  replay?: (
+    options: Record<string, string>,
+    ctx: Pick<ConnectorContext, 'fetch'>,
+    last: number,
+  ) => Promise<(VendorEvent & { at: string | null })[]>
 }
 
 export type ConnectorDefinition = {

@@ -288,6 +288,7 @@ export type LoopInstallationWhereInput = {
   triggers?: Prisma.TriggerListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   skillPacks?: Prisma.SkillPackListRelationFilter
+  dryRuns?: Prisma.LoopDryRunListRelationFilter
 }
 
 export type LoopInstallationOrderByWithRelationInput = {
@@ -318,6 +319,7 @@ export type LoopInstallationOrderByWithRelationInput = {
   triggers?: Prisma.TriggerOrderByRelationAggregateInput
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   skillPacks?: Prisma.SkillPackOrderByRelationAggregateInput
+  dryRuns?: Prisma.LoopDryRunOrderByRelationAggregateInput
 }
 
 export type LoopInstallationWhereUniqueInput = Prisma.AtLeast<{
@@ -351,6 +353,7 @@ export type LoopInstallationWhereUniqueInput = Prisma.AtLeast<{
   triggers?: Prisma.TriggerListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   skillPacks?: Prisma.SkillPackListRelationFilter
+  dryRuns?: Prisma.LoopDryRunListRelationFilter
 }, "id">
 
 export type LoopInstallationOrderByWithAggregationInput = {
@@ -425,6 +428,7 @@ export type LoopInstallationCreateInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateInput = {
@@ -451,6 +455,7 @@ export type LoopInstallationUncheckedCreateInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUpdateInput = {
@@ -477,6 +482,7 @@ export type LoopInstallationUpdateInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateInput = {
@@ -503,6 +509,7 @@ export type LoopInstallationUncheckedUpdateInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationCreateManyInput = {
@@ -891,6 +898,20 @@ export type LoopInstallationUpdateOneRequiredWithoutRunsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.LoopInstallationUpdateToOneWithWhereWithoutRunsInput, Prisma.LoopInstallationUpdateWithoutRunsInput>, Prisma.LoopInstallationUncheckedUpdateWithoutRunsInput>
 }
 
+export type LoopInstallationCreateNestedOneWithoutDryRunsInput = {
+  create?: Prisma.XOR<Prisma.LoopInstallationCreateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedCreateWithoutDryRunsInput>
+  connectOrCreate?: Prisma.LoopInstallationCreateOrConnectWithoutDryRunsInput
+  connect?: Prisma.LoopInstallationWhereUniqueInput
+}
+
+export type LoopInstallationUpdateOneRequiredWithoutDryRunsNestedInput = {
+  create?: Prisma.XOR<Prisma.LoopInstallationCreateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedCreateWithoutDryRunsInput>
+  connectOrCreate?: Prisma.LoopInstallationCreateOrConnectWithoutDryRunsInput
+  upsert?: Prisma.LoopInstallationUpsertWithoutDryRunsInput
+  connect?: Prisma.LoopInstallationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.LoopInstallationUpdateToOneWithWhereWithoutDryRunsInput, Prisma.LoopInstallationUpdateWithoutDryRunsInput>, Prisma.LoopInstallationUncheckedUpdateWithoutDryRunsInput>
+}
+
 export type LoopInstallationCreateWithoutOwnerInput = {
   id?: string
   organizationId: string
@@ -914,6 +935,7 @@ export type LoopInstallationCreateWithoutOwnerInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutOwnerInput = {
@@ -939,6 +961,7 @@ export type LoopInstallationUncheckedCreateWithoutOwnerInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutOwnerInput = {
@@ -1014,6 +1037,7 @@ export type LoopInstallationCreateWithoutWorkspaceInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutWorkspaceInput = {
@@ -1039,6 +1063,7 @@ export type LoopInstallationUncheckedCreateWithoutWorkspaceInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutWorkspaceInput = {
@@ -1090,6 +1115,7 @@ export type LoopInstallationCreateWithoutTeammateInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutTeammateInput = {
@@ -1115,6 +1141,7 @@ export type LoopInstallationUncheckedCreateWithoutTeammateInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutTeammateInput = {
@@ -1166,6 +1193,7 @@ export type LoopInstallationCreateWithoutSchedulesInput = {
   runs?: Prisma.LoopRunCreateNestedManyWithoutInstallationInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutSchedulesInput = {
@@ -1191,6 +1219,7 @@ export type LoopInstallationUncheckedCreateWithoutSchedulesInput = {
   runs?: Prisma.LoopRunUncheckedCreateNestedManyWithoutInstallationInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutSchedulesInput = {
@@ -1232,6 +1261,7 @@ export type LoopInstallationUpdateWithoutSchedulesInput = {
   runs?: Prisma.LoopRunUpdateManyWithoutInstallationNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutSchedulesInput = {
@@ -1257,6 +1287,7 @@ export type LoopInstallationUncheckedUpdateWithoutSchedulesInput = {
   runs?: Prisma.LoopRunUncheckedUpdateManyWithoutInstallationNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationCreateWithoutTriggersInput = {
@@ -1282,6 +1313,7 @@ export type LoopInstallationCreateWithoutTriggersInput = {
   runs?: Prisma.LoopRunCreateNestedManyWithoutInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutTriggersInput = {
@@ -1307,6 +1339,7 @@ export type LoopInstallationUncheckedCreateWithoutTriggersInput = {
   runs?: Prisma.LoopRunUncheckedCreateNestedManyWithoutInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutTriggersInput = {
@@ -1348,6 +1381,7 @@ export type LoopInstallationUpdateWithoutTriggersInput = {
   runs?: Prisma.LoopRunUpdateManyWithoutInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutTriggersInput = {
@@ -1373,6 +1407,7 @@ export type LoopInstallationUncheckedUpdateWithoutTriggersInput = {
   runs?: Prisma.LoopRunUncheckedUpdateManyWithoutInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationCreateWithoutSkillPacksInput = {
@@ -1398,6 +1433,7 @@ export type LoopInstallationCreateWithoutSkillPacksInput = {
   runs?: Prisma.LoopRunCreateNestedManyWithoutInstallationInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutSkillPacksInput = {
@@ -1423,6 +1459,7 @@ export type LoopInstallationUncheckedCreateWithoutSkillPacksInput = {
   runs?: Prisma.LoopRunUncheckedCreateNestedManyWithoutInstallationInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutSkillPacksInput = {
@@ -1464,6 +1501,7 @@ export type LoopInstallationUpdateWithoutSkillPacksInput = {
   runs?: Prisma.LoopRunUpdateManyWithoutInstallationNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutSkillPacksInput = {
@@ -1489,6 +1527,7 @@ export type LoopInstallationUncheckedUpdateWithoutSkillPacksInput = {
   runs?: Prisma.LoopRunUncheckedUpdateManyWithoutInstallationNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationCreateWithoutProjectInput = {
@@ -1514,6 +1553,7 @@ export type LoopInstallationCreateWithoutProjectInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutProjectInput = {
@@ -1539,6 +1579,7 @@ export type LoopInstallationUncheckedCreateWithoutProjectInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutProjectInput = {
@@ -1590,6 +1631,7 @@ export type LoopInstallationCreateWithoutActionsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutActionsInput = {
@@ -1615,6 +1657,7 @@ export type LoopInstallationUncheckedCreateWithoutActionsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutActionsInput = {
@@ -1656,6 +1699,7 @@ export type LoopInstallationUpdateWithoutActionsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutActionsInput = {
@@ -1681,6 +1725,7 @@ export type LoopInstallationUncheckedUpdateWithoutActionsInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationCreateWithoutRunsInput = {
@@ -1706,6 +1751,7 @@ export type LoopInstallationCreateWithoutRunsInput = {
   triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationUncheckedCreateWithoutRunsInput = {
@@ -1731,6 +1777,7 @@ export type LoopInstallationUncheckedCreateWithoutRunsInput = {
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
   skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+  dryRuns?: Prisma.LoopDryRunUncheckedCreateNestedManyWithoutInstallationInput
 }
 
 export type LoopInstallationCreateOrConnectWithoutRunsInput = {
@@ -1772,6 +1819,7 @@ export type LoopInstallationUpdateWithoutRunsInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutRunsInput = {
@@ -1794,6 +1842,127 @@ export type LoopInstallationUncheckedUpdateWithoutRunsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actions?: Prisma.LoopActionUncheckedUpdateManyWithoutInstallationNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
+}
+
+export type LoopInstallationCreateWithoutDryRunsInput = {
+  id?: string
+  organizationId: string
+  loopKey: string
+  version: string
+  source?: string
+  manifest: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  settings?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.LoopStatus
+  createdByMemberId: string
+  activatedAt?: Date | string | null
+  activatedByMemberId?: string | null
+  pausedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutLoopInstallationsInput
+  project?: Prisma.ProjectCreateNestedOneWithoutLoopInstallationsInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutLoopInstallationsInput
+  owner: Prisma.MemberCreateNestedOneWithoutLoopInstallationsInput
+  actions?: Prisma.LoopActionCreateNestedManyWithoutInstallationInput
+  runs?: Prisma.LoopRunCreateNestedManyWithoutInstallationInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutLoopInstallationInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutLoopInstallationInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutLoopInstallationInput
+}
+
+export type LoopInstallationUncheckedCreateWithoutDryRunsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  projectId?: string | null
+  loopKey: string
+  version: string
+  source?: string
+  manifest: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  teammateId: string
+  ownerMemberId: string
+  settings?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.LoopStatus
+  createdByMemberId: string
+  activatedAt?: Date | string | null
+  activatedByMemberId?: string | null
+  pausedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actions?: Prisma.LoopActionUncheckedCreateNestedManyWithoutInstallationInput
+  runs?: Prisma.LoopRunUncheckedCreateNestedManyWithoutInstallationInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutLoopInstallationInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutLoopInstallationInput
+}
+
+export type LoopInstallationCreateOrConnectWithoutDryRunsInput = {
+  where: Prisma.LoopInstallationWhereUniqueInput
+  create: Prisma.XOR<Prisma.LoopInstallationCreateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedCreateWithoutDryRunsInput>
+}
+
+export type LoopInstallationUpsertWithoutDryRunsInput = {
+  update: Prisma.XOR<Prisma.LoopInstallationUpdateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedUpdateWithoutDryRunsInput>
+  create: Prisma.XOR<Prisma.LoopInstallationCreateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedCreateWithoutDryRunsInput>
+  where?: Prisma.LoopInstallationWhereInput
+}
+
+export type LoopInstallationUpdateToOneWithWhereWithoutDryRunsInput = {
+  where?: Prisma.LoopInstallationWhereInput
+  data: Prisma.XOR<Prisma.LoopInstallationUpdateWithoutDryRunsInput, Prisma.LoopInstallationUncheckedUpdateWithoutDryRunsInput>
+}
+
+export type LoopInstallationUpdateWithoutDryRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  loopKey?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  manifest?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  settings?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumLoopStatusFieldUpdateOperationsInput | $Enums.LoopStatus
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutLoopInstallationsNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutLoopInstallationsNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutLoopInstallationsNestedInput
+  owner?: Prisma.MemberUpdateOneRequiredWithoutLoopInstallationsNestedInput
+  actions?: Prisma.LoopActionUpdateManyWithoutInstallationNestedInput
+  runs?: Prisma.LoopRunUpdateManyWithoutInstallationNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+}
+
+export type LoopInstallationUncheckedUpdateWithoutDryRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  loopKey?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.StringFieldUpdateOperationsInput | string
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  manifest?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  settings?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumLoopStatusFieldUpdateOperationsInput | $Enums.LoopStatus
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  activatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activatedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actions?: Prisma.LoopActionUncheckedUpdateManyWithoutInstallationNestedInput
+  runs?: Prisma.LoopRunUncheckedUpdateManyWithoutInstallationNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
@@ -1842,6 +2011,7 @@ export type LoopInstallationUpdateWithoutOwnerInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutOwnerInput = {
@@ -1867,6 +2037,7 @@ export type LoopInstallationUncheckedUpdateWithoutOwnerInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateManyWithoutOwnerInput = {
@@ -1932,6 +2103,7 @@ export type LoopInstallationUpdateWithoutWorkspaceInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutWorkspaceInput = {
@@ -1957,6 +2129,7 @@ export type LoopInstallationUncheckedUpdateWithoutWorkspaceInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -2022,6 +2195,7 @@ export type LoopInstallationUpdateWithoutTeammateInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutTeammateInput = {
@@ -2047,6 +2221,7 @@ export type LoopInstallationUncheckedUpdateWithoutTeammateInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateManyWithoutTeammateInput = {
@@ -2112,6 +2287,7 @@ export type LoopInstallationUpdateWithoutProjectInput = {
   triggers?: Prisma.TriggerUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateWithoutProjectInput = {
@@ -2137,6 +2313,7 @@ export type LoopInstallationUncheckedUpdateWithoutProjectInput = {
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutLoopInstallationNestedInput
   skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutLoopInstallationNestedInput
+  dryRuns?: Prisma.LoopDryRunUncheckedUpdateManyWithoutInstallationNestedInput
 }
 
 export type LoopInstallationUncheckedUpdateManyWithoutProjectInput = {
@@ -2170,6 +2347,7 @@ export type LoopInstallationCountOutputType = {
   triggers: number
   schedules: number
   skillPacks: number
+  dryRuns: number
 }
 
 export type LoopInstallationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2178,6 +2356,7 @@ export type LoopInstallationCountOutputTypeSelect<ExtArgs extends runtime.Types.
   triggers?: boolean | LoopInstallationCountOutputTypeCountTriggersArgs
   schedules?: boolean | LoopInstallationCountOutputTypeCountSchedulesArgs
   skillPacks?: boolean | LoopInstallationCountOutputTypeCountSkillPacksArgs
+  dryRuns?: boolean | LoopInstallationCountOutputTypeCountDryRunsArgs
 }
 
 /**
@@ -2225,6 +2404,13 @@ export type LoopInstallationCountOutputTypeCountSkillPacksArgs<ExtArgs extends r
   where?: Prisma.SkillPackWhereInput
 }
 
+/**
+ * LoopInstallationCountOutputType without action
+ */
+export type LoopInstallationCountOutputTypeCountDryRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LoopDryRunWhereInput
+}
+
 
 export type LoopInstallationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2254,6 +2440,7 @@ export type LoopInstallationSelect<ExtArgs extends runtime.Types.Extensions.Inte
   triggers?: boolean | Prisma.LoopInstallation$triggersArgs<ExtArgs>
   schedules?: boolean | Prisma.LoopInstallation$schedulesArgs<ExtArgs>
   skillPacks?: boolean | Prisma.LoopInstallation$skillPacksArgs<ExtArgs>
+  dryRuns?: boolean | Prisma.LoopInstallation$dryRunsArgs<ExtArgs>
   _count?: boolean | Prisma.LoopInstallationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["loopInstallation"]>
 
@@ -2339,6 +2526,7 @@ export type LoopInstallationInclude<ExtArgs extends runtime.Types.Extensions.Int
   triggers?: boolean | Prisma.LoopInstallation$triggersArgs<ExtArgs>
   schedules?: boolean | Prisma.LoopInstallation$schedulesArgs<ExtArgs>
   skillPacks?: boolean | Prisma.LoopInstallation$skillPacksArgs<ExtArgs>
+  dryRuns?: boolean | Prisma.LoopInstallation$dryRunsArgs<ExtArgs>
   _count?: boolean | Prisma.LoopInstallationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type LoopInstallationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2366,6 +2554,7 @@ export type $LoopInstallationPayload<ExtArgs extends runtime.Types.Extensions.In
     triggers: Prisma.$TriggerPayload<ExtArgs>[]
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     skillPacks: Prisma.$SkillPackPayload<ExtArgs>[]
+    dryRuns: Prisma.$LoopDryRunPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2804,6 +2993,7 @@ export interface Prisma__LoopInstallationClient<T, Null = never, ExtArgs extends
   triggers<T extends Prisma.LoopInstallation$triggersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopInstallation$triggersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   schedules<T extends Prisma.LoopInstallation$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopInstallation$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   skillPacks<T extends Prisma.LoopInstallation$skillPacksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopInstallation$skillPacksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SkillPackPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  dryRuns<T extends Prisma.LoopInstallation$dryRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LoopInstallation$dryRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LoopDryRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3388,6 +3578,30 @@ export type LoopInstallation$skillPacksArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.SkillPackScalarFieldEnum | Prisma.SkillPackScalarFieldEnum[]
+}
+
+/**
+ * LoopInstallation.dryRuns
+ */
+export type LoopInstallation$dryRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LoopDryRun
+   */
+  select?: Prisma.LoopDryRunSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LoopDryRun
+   */
+  omit?: Prisma.LoopDryRunOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LoopDryRunInclude<ExtArgs> | null
+  where?: Prisma.LoopDryRunWhereInput
+  orderBy?: Prisma.LoopDryRunOrderByWithRelationInput | Prisma.LoopDryRunOrderByWithRelationInput[]
+  cursor?: Prisma.LoopDryRunWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LoopDryRunScalarFieldEnum | Prisma.LoopDryRunScalarFieldEnum[]
 }
 
 /**

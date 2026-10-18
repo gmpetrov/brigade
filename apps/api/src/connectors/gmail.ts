@@ -27,6 +27,8 @@ type Part = {
 export type Message = {
   id: string
   threadId: string
+  /** When Gmail received it, in milliseconds. */
+  internalDate?: string
   snippet?: string
   labelIds?: string[]
   payload?: Part
@@ -286,6 +288,33 @@ export const gmail: ConnectorDefinition = {
       },
       // A reply in the same Gmail thread continues the Brigade thread.
       conversation: ({ payload }) => (payload as ReceivedEmail).threadId || undefined,
+      // The latest mails its search matches, as the inbox reader would have handed them over.
+      replay: async (options, ctx, last) => {
+        const q = `${options.query ? `(${options.query}) ` : ''}in:inbox -in:sent -in:drafts`
+        const found = await json<{ messages?: { id: string }[] }>(
+          await ctx.fetch(`${API}/messages?${new URLSearchParams({ q, maxResults: String(last) })}`),
+        )
+        const events = []
+        for (const { id } of (found.messages ?? []).slice(0, last)) {
+          const got = await ctx.fetch(`${API}/messages/${encodeURIComponent(id)}?format=full`)
+          if (got.status === 404) continue
+          const email = await json<Message>(got)
+          const payload: ReceivedEmail = {
+            ...full(email),
+            rfcMessageId: email.payload?.headers?.find(
+              (h) => h.name.toLowerCase() === 'message-id',
+            )?.value,
+          }
+          const at = Number(email.internalDate)
+          events.push({
+            id: email.id,
+            type: 'email',
+            payload,
+            at: Number.isFinite(at) && at > 0 ? new Date(at).toISOString() : null,
+          })
+        }
+        return events
+      },
       attachments: ({ payload }): ExternalFile[] => {
         const email = payload as ReceivedEmail
         return (email.attachments ?? []).map((a) => ({

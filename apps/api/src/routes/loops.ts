@@ -1,9 +1,13 @@
-import { InstallLoop, UpdateLoop } from '@brigade/contracts'
+import { ActivateLoop, InstallLoop, UpdateLoop } from '@brigade/contracts'
 import { Hono } from 'hono'
+import { latestDryRun } from '../loop-dry-runs.js'
 import {
+  activateLoop,
   getInstallation,
+  isAdminRole,
   installLoop,
   listInstallations,
+  requestActivation,
   setLoopPaused,
   templates,
   templateView,
@@ -22,7 +26,26 @@ export const loops = new Hono<AppEnv>()
 
   .get('/:id', async (c) => c.json(await getInstallation(c.var.db, c.req.param('id'))))
 
-  /** It runs on the installer's accounts. An owner or admin's is active at once; a member's waits for one. */
+  /** Its latest dry run: the report, one event at a time. */
+  .get('/:id/dry-run', async (c) => c.json(await latestDryRun(c.var.db, c.req.param('id'))))
+
+  /**
+   * The Activate button. An owner or admin activates it; a member asks one, in one ticket
+   * (in the thread it was installed from, when given).
+   */
+  .post('/:id/activate', async (c) => {
+    const { threadId } = await parseBody(c.req.raw, ActivateLoop)
+    const id = c.req.param('id')
+    if (isAdminRole(c.var.scope.role))
+      return c.json({ ticketId: null, playbook: await activateLoop(c.var.db, c.var.scope, id) })
+    const thread = threadId
+      ? await c.var.db.session.findFirst({ where: { id: threadId }, select: { id: true } })
+      : null
+    const { ticketId } = await requestActivation(c.var.db, c.var.scope, id, thread?.id ?? null)
+    return c.json({ ticketId, playbook: await getInstallation(c.var.db, id) })
+  })
+
+  /** It runs on the installer's accounts, in setup until it is activated. */
   .post('/', async (c) => {
     const input = await parseBody(c.req.raw, InstallLoop)
     return c.json(await installLoop(c.var.db, c.var.scope, input), 201)

@@ -97,7 +97,14 @@ export async function handleConnectorCall(
   // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
   const loop = await threadLoop(db, session.loopRunId)
   const loopActionKey = loop?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
-  const record = (data: { result: string; target: string; error?: string; ticketId?: string }) =>
+  const record = (data: {
+    result: string
+    target: string
+    error?: string
+    ticketId?: string
+    simulated?: boolean
+    input?: unknown
+  }) =>
     db.connectionCall.create({
       data: {
         sessionId: session.id,
@@ -163,6 +170,27 @@ export async function handleConnectorCall(
     return result({
       ok: false,
       error: `${teammate.name} has read-only access to ${connection.label}`,
+    })
+  }
+
+  // A playbook's dry run: the write is recorded with what it would have sent, and answered
+  // as if it went through. Nothing leaves, and nobody is asked. A deny still stands.
+  if (operation.write && loop?.dryRun) {
+    const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
+    if (policy === 'deny') {
+      await record({ result: 'denied', target, error: 'policy denies connector writes' })
+      return result({ ok: false, error: `${teammate.name} may not make changes through connectors` })
+    }
+    await record({ result: 'ok', target, simulated: true, input: input.data })
+    return result({
+      ok: true,
+      output: {
+        simulated: true,
+        id: `dry-run-${call.callId}`,
+        note:
+          `Dry run: ${call.operation} (${target}) was recorded for the report and not sent. Carry on as if ` +
+          'it went through.',
+      },
     })
   }
 

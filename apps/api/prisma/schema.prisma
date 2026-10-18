@@ -196,6 +196,7 @@ model Workspace {
   loopInstallations   LoopInstallation[]
   loopActions         LoopAction[]
   loopRuns            LoopRun[]
+  loopDryRuns         LoopDryRun[]
 
   @@index([organizationId])
 }
@@ -480,6 +481,8 @@ model Session {
   /// A run's thread stays out of the sidebar's Threads until a person first takes part in it
   /// (a message, a takeover, a pin): then this is set, and it stays there.
   surfacedAt           DateTime?
+  /// The dry runs of a playbook started from this thread (its installation's chat).
+  loopDryRuns          LoopDryRun[]
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -1076,6 +1079,8 @@ model ConnectionCall {
   simulated      Boolean    @default(false)
   /// In a playbook's thread: the action of its manifest the call is.
   loopActionKey  String?
+  /// A simulated call's input, for the dry run's report: what would have been sent.
+  input          Json?
   createdAt      DateTime   @default(now())
 
   @@index([sessionId])
@@ -1774,6 +1779,7 @@ model LoopInstallation {
   triggers            Trigger[]
   schedules           Schedule[]
   skillPacks          SkillPack[]
+  dryRuns             LoopDryRun[]
 
   @@index([workspaceId])
   @@index([projectId])
@@ -1820,10 +1826,48 @@ model LoopRun {
   interventions   Int              @default(0)
   firstResponseAt DateTime?
   dryRun          Boolean          @default(false)
+  /// A dry run's: the replay it is one event of.
+  dryRunId        String?
+  dryRunOf        LoopDryRun?      @relation(fields: [dryRunId], references: [id], onDelete: Cascade)
+  /// A dry run's event waiting its turn: its thread's title, first message, files and time.
+  replay          Json?
+  /// What the teammate said it did (loop_report's summary).
+  summary         String?
   startedAt       DateTime         @default(now())
   endedAt         DateTime?
   threads         Session[]        @relation("LoopRunThreads")
 
   @@index([installationId, startedAt])
   @@index([installationId, conversationKey])
+  @@index([dryRunId])
+}
+
+/// A playbook replaying past events with every write simulated, before it is activated.
+/// Its runs (LoopRun.dryRun) start a few at a time; the thread it was started from hears
+/// once they are all done.
+model LoopDryRun {
+  id                String           @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId    String
+  installation      LoopInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  /// The thread it was started from, which hears when it is done.
+  sessionId         String?
+  session           Session?         @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  /// The teammate there that started it, woken with the report.
+  teammateId        String
+  startedByMemberId String
+  /// running, done, or failed (nothing to replay, or it could not start).
+  status            String           @default("running")
+  error             String?
+  /// The span of the replayed events, for the week's extrapolation.
+  firstEventAt      DateTime?
+  lastEventAt       DateTime?
+  startedAt         DateTime         @default(now())
+  endedAt           DateTime?
+  runs              LoopRun[]
+
+  @@index([installationId, startedAt])
+  @@index([status])
 }

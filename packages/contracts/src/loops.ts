@@ -175,7 +175,17 @@ export const LoopRunStatus = z.enum([
 ])
 export type LoopRunStatus = z.infer<typeof LoopRunStatus>
 
-/** The playbook operations of a teammate's schedule tools (in a playbook's thread). */
+/** Settings answers, by key. */
+const SettingValues = z.record(z.string(), z.union([z.string(), z.number()]))
+
+/** A dry run replays at most this many events. */
+export const DRY_RUN_MAX = 20
+
+/**
+ * The playbook operations of a teammate's schedule tools: loop_report in a playbook's thread;
+ * the others to install one from a member's thread (show_playbook, configure_loop,
+ * start_dry_run, dry_run_report, activate_loop).
+ */
 export const LoopOperations = [
   z.object({
     name: z.literal('loop_report'),
@@ -184,7 +194,36 @@ export const LoopOperations = [
     outcome: LoopOutcome,
     summary: z.string().trim().max(2_000).optional(),
   }),
+  /** The catalog, or one playbook as a card in the thread. */
+  z.object({ name: z.literal('show_playbook'), loopKey: z.string().trim().min(1).optional() }),
+  /** Start installing one (loopKey), or go on with it (installationId): answers, checked by type. */
+  z.object({
+    name: z.literal('configure_loop'),
+    loopKey: z.string().trim().min(1).optional(),
+    installationId: z.string().trim().min(1).optional(),
+    /** The teammate that runs it, by name or id; unset: the one installing it. */
+    teammate: z.string().trim().min(1).optional(),
+    settings: SettingValues.default({}),
+  }),
+  z.object({
+    name: z.literal('start_dry_run'),
+    installationId: z.string().trim().min(1),
+    /** Fewer events than the playbook replays, for a quick try. */
+    last: z.number().int().positive().max(DRY_RUN_MAX).optional(),
+  }),
+  z.object({ name: z.literal('dry_run_report'), installationId: z.string().trim().min(1) }),
+  z.object({ name: z.literal('activate_loop'), installationId: z.string().trim().min(1) }),
 ] as const
+
+/** The tools of the teammate that installs a playbook, by the operation each one is. */
+export const LOOP_INSTALL_TOOLS = [
+  'show_playbook',
+  'configure_loop',
+  'start_dry_run',
+  'dry_run_report',
+  'activate_loop',
+] as const
+export type LoopInstallTool = (typeof LOOP_INSTALL_TOOLS)[number]
 
 /** A playbook's thread, as its runner sees it (ThreadSpec.loop). */
 export const ThreadLoop = z.object({
@@ -193,6 +232,8 @@ export const ThreadLoop = z.object({
   name: z.string(),
   /** The Apps it declares: the thread has only theirs. */
   apps: z.array(z.string()).default([]),
+  /** A dry run's: every write is simulated, nothing is pushed, nobody is asked. */
+  dryRun: z.boolean().default(false),
 })
 export type ThreadLoop = z.infer<typeof ThreadLoop>
 
@@ -228,6 +269,57 @@ export type InstallLoop = z.infer<typeof InstallLoop>
 export const UpdateLoop = z.object({
   paused: z.boolean().optional(),
 })
+
+/** The Activate button: from the thread it was installed in, where a member's ticket goes. */
+export const ActivateLoop = z.object({ threadId: z.string().optional() })
+
+/** What an App of a playbook stands at for its teammate: usable, missing, or read-only where it writes. */
+export type LoopAppStatus = LoopApp & {
+  status: 'ready' | 'missing' | 'read_only'
+  /** The accounts the teammate can use, by what they show (a Gmail address). */
+  accounts: string[]
+}
+
+/** One event of a dry run: the case found, what would have been done, its thread. */
+export type LoopDryRunEvent = {
+  runId: string
+  title: string
+  threadId: string | null
+  status: 'waiting' | 'running' | 'done' | 'failed'
+  case: string | null
+  outcome: LoopOutcome | null
+  summary: string | null
+  /** When the event happened (the mail's date). */
+  at: string | null
+  /** Session minutes on the owner's subscription, its children's included. */
+  minutes: number
+  /** The writes it would have made: recorded, answered with a fake success, never sent. */
+  writes: {
+    operation: string
+    /** The playbook's action it is, e.g. "Reply to the customer". */
+    action: string | null
+    target: string
+    input: unknown
+  }[]
+  /** Pushes refused, as nothing leaves a dry run. */
+  pushes: number
+}
+
+export type LoopDryRunView = {
+  id: string
+  installationId: string
+  name: string
+  status: 'running' | 'done' | 'failed'
+  error: string | null
+  events: LoopDryRunEvent[]
+  /** Events done (or failed) out of all. */
+  finished: number
+  minutes: number
+  /** At the pace of the replayed events: a week's events and minutes. Null when it cannot tell. */
+  week: { events: number; minutes: number } | null
+  startedAt: string
+  endedAt: string | null
+}
 export type UpdateLoop = z.infer<typeof UpdateLoop>
 
 export type LoopRunView = {
@@ -288,6 +380,14 @@ export type LoopInstallationView = {
   /** Share of this week's finished runs with no person stepping in, 0 to 1; null with none. */
   unattended: number | null
   recentRuns: LoopRunView[]
+  /** Every setting it needs has an answer, and its triggers, schedules and skills are made. */
+  ready: boolean
+  /** Its settings still without an answer. */
+  missing: string[]
+  /** Its latest dry run. */
+  dryRun: LoopDryRunView | null
+  /** A member asked an owner or admin to activate it: the ticket that waits. */
+  activationTicketId: string | null
   createdAt: string
   activatedAt: string | null
   pausedAt: string | null
