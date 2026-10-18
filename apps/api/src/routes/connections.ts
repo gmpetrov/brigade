@@ -93,6 +93,7 @@ type OAuthState = {
     | 'supabase'
     | 'atlassian'
     | 'notion'
+    | 'linear'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
@@ -405,6 +406,7 @@ export const connections = new Hono<AppEnv>()
         supabase: true,
         atlassian: true,
         notion: true,
+        linear: true,
         mcp: true,
         webhook: true,
       },

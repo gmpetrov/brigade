@@ -493,6 +493,7 @@ export type Connection = {
     | 'supabase'
     | 'atlassian'
     | 'notion'
+    | 'linear'
     | 'mcp'
   label: string
   externalAccount: string | null

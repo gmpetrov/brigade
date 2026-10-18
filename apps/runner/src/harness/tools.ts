@@ -254,6 +254,7 @@ export const openTicketTool = tool({
                     'supabase',
                     'atlassian',
                     'notion',
+                    'linear',
                     'mcp',
                   ],
                 },

@@ -161,6 +161,7 @@ export const ConnectorKind = {
   supabase: 'supabase',
   atlassian: 'atlassian',
   notion: 'notion',
+  linear: 'linear',
   mcp: 'mcp'
 } as const
 
