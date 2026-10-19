@@ -14,7 +14,6 @@ import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
 import { describeCron } from '@/components/schedules'
 import { Terminal } from '@/components/terminal'
-import { ThreadMenu } from '@/components/thread-menu'
 import { ThreadOutputs, type ThreadOutput } from '@/components/thread-outputs'
 import { PanelResizeHandle, useEscapeToClose, usePanelStack } from '@/components/side-panel'
 import { ChildrenList } from '@/components/thread-children'
@@ -384,11 +383,7 @@ export function ComputerPanel({
         {actions}
       </Section>
 
-      {/* Pin, rename, archive or delete it here too: it may be out of the sidebar. On the
-          thread's details rather than in the header, which is the teammate's. */}
-      <Section title="Details" action={<ThreadMenu thread={thread} onChanged={onChange} />}>
-        {details}
-      </Section>
+      <Section title="Details">{details}</Section>
 
       {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
 

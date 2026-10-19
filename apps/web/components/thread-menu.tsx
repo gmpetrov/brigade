@@ -154,8 +154,8 @@ export async function renameThread(id: string, current: string, next: string) {
 }
 
 /**
- * In the thread's details panel, on its Details line, round like the panel's close button: the
- * sidebar row's menu, for the thread open. Deleted, the thread is gone: back to Home.
+ * In the thread's details panel, at the end of its title's row, quiet as the sidebar row's ⋮:
+ * that row's menu, for the thread open. Deleted, the thread is gone: back to Home.
  */
 export function ThreadMenu({ thread, onChanged }: { thread: Thread; onChanged: () => void }) {
   const { me } = useDashboard()
@@ -183,7 +183,7 @@ export function ThreadMenu({ thread, onChanged }: { thread: Thread; onChanged: (
         aria-label={`${menu.title}: more`}
         title="More"
         disabled={menu.busy}
-        className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-card text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent [&>svg]:size-4"
+        className="-my-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent data-[state=open]:text-foreground [&>svg]:size-4"
       >
         <EllipsisVertical aria-hidden />
       </DropdownMenuTrigger>
