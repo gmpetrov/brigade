@@ -222,11 +222,10 @@ export function TeammatePanel({
 }
 
 /** Taking over the computer and handing it back, for the panel and the open computer. */
-function useControl(thread: Thread, memberId: string, status: string, onChange: () => void) {
+function useControl(thread: Thread, memberId: string, onChange: () => void) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const mine = !!memberId && thread.controlledByMemberId === memberId
-  const working = status === 'running' || status === 'starting'
 
   async function act(fn: () => Promise<unknown>) {
     setBusy(true)
@@ -245,9 +244,8 @@ function useControl(thread: Thread, memberId: string, status: string, onChange: 
     busy,
     error,
     mine,
-    working,
-    takeOver: (interrupt: boolean) =>
-      void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt } })),
+    takeOver: () =>
+      void act(() => api(`/threads/${thread.id}/takeover`, { body: { interrupt: false } })),
     // No note from here: the thread's own hand back, below the conversation, takes one.
     handBack: () => void act(() => api(`/threads/${thread.id}/handback`, { body: { note: '' } })),
     openBrowser: () =>
@@ -416,20 +414,18 @@ export function ComputerPanel({
 export function ComputerScreen({
   thread,
   memberId,
-  status,
   shell,
   onShell,
   onChange,
 }: {
   thread: Thread
   memberId: string
-  status: string
   shell: boolean
   onShell: (open: boolean) => void
   onChange: () => void
 }) {
   const teammate = thread.teammate
-  const control = useControl(thread, memberId, status, onChange)
+  const control = useControl(thread, memberId, onChange)
   const { busy, mine } = control
   // The shell needs control: handing back closes it.
   const shellOpen = shell && mine
@@ -481,22 +477,11 @@ export function ComputerScreen({
       <Button
         size="sm"
         disabled={busy}
-        onClick={() => control.takeOver(false)}
+        onClick={control.takeOver}
         title={`Use the mouse and keyboard. ${teammate.name} waits until you hand back`}
       >
         Take control
       </Button>
-      {control.working && (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => control.takeOver(true)}
-          title={`Stop ${teammate.name}'s current turn first`}
-        >
-          Stop and take control
-        </Button>
-      )}
     </>
   )
 
@@ -555,13 +540,11 @@ export function ComputerScreen({
 export function ExpandedComputer({
   thread,
   memberId,
-  status,
   onChange,
   onClose,
 }: {
   thread: Thread
   memberId: string
-  status: string
   onChange: () => void
   onClose: () => void
 }) {
@@ -581,7 +564,6 @@ export function ExpandedComputer({
       <ComputerScreen
         thread={thread}
         memberId={memberId}
-        status={status}
         shell={shell}
         onShell={setShell}
         onChange={onChange}

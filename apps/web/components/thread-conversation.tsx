@@ -850,7 +850,6 @@ export function ThreadConversation({
         <ExpandedComputer
           thread={t}
           memberId={me.memberId ?? ''}
-          status={status ?? t.status}
           onChange={() => void thread.reload()}
           onClose={() => setComputerOpen(false)}
         />
