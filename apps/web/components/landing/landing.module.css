@@ -1465,7 +1465,7 @@ a.btn.pri:hover {
 }
 .built .wrap {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 88px;
   align-items: center;
 }
@@ -1513,7 +1513,7 @@ a.btn.pri:hover {
 }
 .lgr {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   padding: 12px 18px;
@@ -2097,7 +2097,7 @@ a.btn.pri:hover {
   }
 
   .built .wrap {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 44px;
   }
   .nums {
@@ -2110,7 +2110,7 @@ a.btn.pri:hover {
     display: none;
   }
   .lgr {
-    grid-template-columns: 22px 1fr;
+    grid-template-columns: 22px minmax(0, 1fr);
   }
 
   .pricing {
@@ -2256,6 +2256,18 @@ a.btn.pri:hover {
   .hero .sub {
     font-size: 18px;
   }
+}
+
+/* Rows of the merged-PR log are links to the pull requests. */
+a.lgr:hover {
+  background: var(--muted);
+}
+a.lgr:hover .tt {
+  text-decoration: underline;
+}
+.page a.lgr:focus-visible {
+  outline-offset: -3px;
+  border-radius: 0;
 }
 
 /* =================== Focus =================== */
