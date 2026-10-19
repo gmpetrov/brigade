@@ -6,10 +6,12 @@
 // on now. Both end with the teammate: routines, settings.
 import { AlarmClock, ArrowRight, Globe, Hand, Settings, SquareTerminal, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseButton } from '@/components/close-button'
-import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
+import type { SequencedEvent } from '@brigade/contracts'
+import { MediaPreview } from '@/components/attachments'
+import { StatusBadge, TeammateAvatar, timeAgo } from '@/components/dashboard'
 import { DesktopScreen } from '@/components/desktop-preview'
 import type { OpenFile } from '@/components/file-links'
 import { describeCron } from '@/components/schedules'
@@ -22,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import {
   api,
   teammateModelLabel,
+  threadImageUrl,
   useApi,
   type Schedule,
   type Teammate,
@@ -317,6 +320,118 @@ function Wakeups({ thread, onChange }: { thread: Thread; onChange: () => void })
   )
 }
 
+/** The member's Mac as the thread's latest turn last saw it, when that turn used it. */
+export type MacScreen = { path: string; at: string; teammateId?: string }
+
+export function useMacScreen(events: SequencedEvent[]): MacScreen | undefined {
+  return useMemo(() => {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const e = events[i]!.event
+      if (e.type === 'turn.started') return undefined
+      if (e.type === 'computer.screen') return { path: e.path, at: e.at, teammateId: e.teammateId }
+    }
+  }, [events])
+}
+
+/**
+ * What the teammate sees of the member's Mac: its latest screenshot, or a glance just after it
+ * acted there. A new one shows once loaded, so the picture never blanks; a click opens it large.
+ * While the turn runs, Stop ends its use of the Mac, as the pill's Stop on that Mac does.
+ */
+function MacScreenView({
+  thread,
+  screen,
+  teammateName,
+  turnId,
+}: {
+  thread: Thread
+  screen: MacScreen
+  teammateName: string
+  /** The turn running now, if one is. */
+  turnId?: string
+}) {
+  const src = threadImageUrl(thread.id, screen.path, screen.teammateId)
+  const [shown, setShown] = useState(src)
+  const [failed, setFailed] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [stopped, setStopped] = useState<string>()
+  const [error, setError] = useState<string>()
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const image = new Image()
+    image.onload = () => {
+      setShown(src)
+      setFailed(false)
+    }
+    image.src = src
+    return () => {
+      image.onload = null
+    }
+  }, [src])
+  useEffect(() => {
+    const timer = setInterval(() => tick((n) => n + 1), 15_000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const stop = async () => {
+    setError(undefined)
+    try {
+      await api(`/threads/${thread.id}/computer/stop`, { body: turnId ? { turnId } : {} })
+      setStopped(turnId)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+  const using = !!turnId && stopped !== turnId
+  return (
+    <div className="flex flex-col gap-2">
+      {failed ? (
+        <p className="text-sm text-muted-foreground">
+          {teammateName} used {thread.computer.name}&apos;s screen, which can&apos;t be shown while
+          it is offline.
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
+          title="Open large"
+          onClick={() => setOpen(true)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={shown}
+            alt={`${thread.computer.name}'s screen`}
+            className="aspect-video w-full object-contain"
+            onError={() => shown === src && setFailed(true)}
+          />
+        </button>
+      )}
+      <div className="flex min-h-8 items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          {using
+            ? `${teammateName} is using ${thread.computer.name}`
+            : `${thread.computer.name}, as ${teammateName} last saw it`}
+          {' · '}
+          <time dateTime={screen.at}>{timeAgo(screen.at)}</time>
+        </p>
+        {using && thread.mayPrompt && (
+          <Button type="button" variant="outline" size="sm" onClick={() => void stop()}>
+            <Hand aria-hidden />
+            Stop
+          </Button>
+        )}
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <MediaPreview
+        media={
+          open ? { name: `${thread.computer.name}'s screen`, src: shown, kind: 'image' } : undefined
+        }
+        onClose={() => setOpen(false)}
+      />
+    </div>
+  )
+}
+
 /**
  * Beside an expanded thread, everything that is not the conversation: its
  * computer (a thumbnail of the screen that opens it, Preview, the shell, the run
@@ -332,9 +447,15 @@ export function ComputerPanel({
   details,
   actions,
   onChange,
+  screen,
+  turnId,
 }: {
   thread: Thread
   memberId: string
+  /** On a member's machine: its screen as the latest turn saw it, when that turn used it. */
+  screen?: MacScreen
+  /** The turn running now, if one is. */
+  turnId?: string
   /** The computer open, in the conversation's place. */
   onOpenComputer: () => void
   onClose: () => void
@@ -376,9 +497,17 @@ export function ComputerPanel({
               </p>
             )}
           </>
+        ) : screen ? (
+          <MacScreenView
+            thread={thread}
+            screen={screen}
+            teammateName={teammate.name}
+            turnId={turnId}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">
-            Runs on {thread.computer.name}, a member&apos;s machine: its screen is not shared here.
+            Runs on {thread.computer.name}, a member&apos;s machine. When {teammate.name} uses its
+            screen, what it sees shows here.
           </p>
         )}
         {actions}
