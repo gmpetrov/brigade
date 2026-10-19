@@ -14,6 +14,7 @@ import { linear } from './linear.js'
 import { mixpanel } from './mixpanel.js'
 import { resend } from './resend.js'
 import { replicate } from './replicate.js'
+import { openrouter } from './openrouter.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -38,6 +39,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   mixpanel,
   resend,
   replicate,
+  openrouter,
 }
 
 /**
@@ -85,6 +87,7 @@ export const triggerCatalog = () =>
         'mixpanel',
         'resend',
         'replicate',
+        'openrouter',
         'mcp',
         'webhook',
       ] as const
@@ -268,6 +271,15 @@ export const appCatalog: Record<
     developer: 'Replicate',
     category: 'Developer tools',
     // A Replicate sign-in runs models on its account's billing: kept to its member's threads until they share it.
+    personal: true,
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    description:
+      'Compare models by price, speed and benchmarks, check credits and what a generation cost, and test a prompt on any model, with OpenRouter’s MCP server.',
+    developer: 'OpenRouter',
+    category: 'Developer tools',
+    // An OpenRouter sign-in mints a key that spends its account's credits: kept to its member's threads until they share it.
     personal: true,
   },
   mcp: {

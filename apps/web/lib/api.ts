@@ -517,6 +517,7 @@ export type Connection = {
     | 'mixpanel'
     | 'resend'
     | 'replicate'
+    | 'openrouter'
     | 'mcp'
   label: string
   externalAccount: string | null

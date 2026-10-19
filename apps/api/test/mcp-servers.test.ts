@@ -16,6 +16,7 @@ const { linearAccountName } = await import('../src/connectors/linear.js')
 const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpanel.js')
 const { resendAccountName } = await import('../src/connectors/resend.js')
 const { replicateAccountName } = await import('../src/connectors/replicate.js')
+const { openrouterAccountName } = await import('../src/connectors/openrouter.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -179,6 +180,31 @@ test('a Replicate account shows as its username', () => {
   assert.equal(replicateAccountName(org.output), 'acme')
   assert.equal(replicateAccountName({}), null)
   assert.equal(replicateAccountName(null), null)
+})
+
+test('an OpenRouter account shows as personal or an organization’s', () => {
+  // GET /api/v1/key with the key OpenRouter's MCP sign-in gave (ids changed).
+  const personal = {
+    data: {
+      label: 'sk-or-v1-123...abc',
+      is_management_key: false,
+      is_provisioning_key: false,
+      limit: 10,
+      limit_remaining: 10,
+      usage: 0,
+      is_free_tier: true,
+      expires_at: '2026-10-26T16:07:25.290Z',
+      creator_user_id: 'user_2abcdefghijklmnopqrstuvwxyz',
+      organization_id: null,
+      workspace_id: 'effe5c63-0000-0000-0000-85747179a8a1',
+      allowed_data_regions: ['global'],
+    },
+  }
+  assert.equal(openrouterAccountName(personal), 'Personal account')
+  const organization = { data: { ...personal.data, organization_id: 'org_2abcdefghijklmnop' } }
+  assert.equal(openrouterAccountName(organization), 'Organization account')
+  assert.equal(openrouterAccountName({ error: { message: 'Invalid API key', code: 401 } }), null)
+  assert.equal(openrouterAccountName(null), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

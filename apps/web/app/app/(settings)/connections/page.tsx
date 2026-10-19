@@ -55,6 +55,7 @@ const BUILT_IN: Kind[] = [
   'mixpanel',
   'resend',
   'replicate',
+  'openrouter',
   'stripe',
 ]
 

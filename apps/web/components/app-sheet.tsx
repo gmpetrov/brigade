@@ -122,7 +122,8 @@ export function AppSheet({
           kind === 'linear' ||
           kind === 'mixpanel' ||
           kind === 'resend' ||
-          kind === 'replicate'
+          kind === 'replicate' ||
+          kind === 'openrouter'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
