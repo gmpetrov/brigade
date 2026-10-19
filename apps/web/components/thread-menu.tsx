@@ -154,7 +154,7 @@ export async function renameThread(id: string, current: string, next: string) {
 }
 
 /**
- * In the thread's details panel, at the end of its title's row, quiet as the sidebar row's ⋮:
+ * In the thread's details panel, beside its "Thread" heading, quiet as the sidebar row's ⋮:
  * that row's menu, for the thread open. Deleted, the thread is gone: back to Home.
  */
 export function ThreadMenu({ thread, onChanged }: { thread: Thread; onChanged: () => void }) {
