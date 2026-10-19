@@ -247,17 +247,21 @@ export const UpdateThread = z.object({
 })
 /** Continue a thread on another computer without a message: its teammate picks up where it was. */
 export const MoveThread = z.object({ computerId: z.string().min(1).max(64) })
-/** Cancel a queued message, change its text, or steer it into the running turn. */
+/**
+ * Cancel a queued message, change its text, or steer it into the running turn. parallel:
+ * steer it with the ask to hand it to a child thread at once (inParallel).
+ */
 export const QueuedMessageAction = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel') }),
   z.object({ action: z.literal('steer') }),
+  z.object({ action: z.literal('parallel') }),
   z.object({ action: z.literal('edit'), text: z.string().trim().min(1).max(100_000) }),
 ])
 export type QueuedMessageAction = z.infer<typeof QueuedMessageAction>
 
 /**
  * What a person may do with a queued message (memberId: who wrote it): steer any into the
- * running turn, but edit or cancel only one a person wrote. One nobody typed (a child's
+ * running turn, but edit, cancel or send to run in parallel only one a person wrote. One nobody typed (a child's
  * report, a wake-up, a teammate's comment) is what the teammate is owed: edited, it would
  * still read as Brigade's; cancelled, a parent waiting on its children would never wake.
  */

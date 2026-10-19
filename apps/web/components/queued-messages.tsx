@@ -1,6 +1,13 @@
 'use client'
-import { childNote, forPeople, mayChangeQueued, mentionsToText } from '@brigade/contracts'
-import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, X } from 'lucide-react'
+import {
+  asksParallel,
+  childNote,
+  forPeople,
+  mayChangeQueued,
+  mentionsToText,
+  type QueuedMessageAction,
+} from '@brigade/contracts'
+import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, Split, X } from 'lucide-react'
 import { useState } from 'react'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
@@ -26,14 +33,16 @@ export type Outgoing = {
 /**
  * Messages waiting to be read, above the composer: queued behind the running
  * turn or held until a person answers, in one collapsible list. Each can be
- * steered into the running turn until its teammate reads it, and edited or
- * cancelled when a person wrote it: Brigade's own, such as a child's report, goes as it is.
+ * steered into the running turn until its teammate reads it, and edited,
+ * cancelled or sent to run in parallel (handed to a child thread) when a person
+ * wrote it: Brigade's own, such as a child's report, goes as it is.
  */
 export function QueuedMessages({
   queued,
   outgoing,
   teammateName,
   canSteer,
+  canParallel,
   onAction,
   onResend,
   onDiscard,
@@ -44,10 +53,9 @@ export function QueuedMessages({
   teammateName: string
   /** A turn runs that a message could be steered into. */
   canSteer: boolean
-  onAction: (
-    messageId: string,
-    action: { action: 'cancel' } | { action: 'steer' } | { action: 'edit'; text: string },
-  ) => Promise<void>
+  /** The thread may start child threads: it is not one. */
+  canParallel: boolean
+  onAction: (messageId: string, action: QueuedMessageAction) => Promise<void>
   /** Put a message that never arrived back in the composer. */
   onResend: (message: Outgoing) => void
   onDiscard: (messageId: string) => void
@@ -186,13 +194,33 @@ export function QueuedMessages({
                               Steer
                             </Button>
                           )}
+                          {canSteer &&
+                            canParallel &&
+                            m.waitingFor === 'turn' &&
+                            mayChangeQueued(m.memberId, 'parallel') &&
+                            !asksParallel(m.text) && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={busy === m.messageId}
+                                onClick={() => void act(m.messageId, { action: 'parallel' })}
+                                aria-label="Run in parallel"
+                                title={`${teammateName} starts a child thread for it now and carries on with this turn`}
+                              >
+                                <Split aria-hidden />
+                                <span className="max-sm:hidden">Parallel</span>
+                              </Button>
+                            )}
                           {mayChangeQueued(m.memberId, 'edit') && (
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon-sm"
                               disabled={busy === m.messageId}
-                              onClick={() => setEditing({ messageId: m.messageId, text: m.text })}
+                              onClick={() =>
+                                setEditing({ messageId: m.messageId, text: forPeople(m.text) })
+                              }
                               aria-label="Edit queued message"
                               title="Edit"
                             >

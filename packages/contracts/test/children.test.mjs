@@ -4,7 +4,9 @@ import {
   batchNote,
   childNote,
   childPrompt,
+  asksParallel,
   forPeople,
+  inParallel,
   mayChangeQueued,
   singleNote,
   wakesParent,
@@ -103,4 +105,18 @@ test('a queued message nobody typed can be steered, not edited or cancelled', ()
   assert.equal(mayChangeQueued(null, 'steer'), true)
   assert.equal(mayChangeQueued(null, 'edit'), false)
   assert.equal(mayChangeQueued(null, 'cancel'), false)
+})
+
+test('a message sent to run in parallel asks for a child, and people read it as typed', () => {
+  const sent = inParallel('Propose six designs for the page\n')
+  assert.ok(asksParallel(sent))
+  assert.match(sent, /`start_child` now with `wait: false`/)
+  assert.equal(forPeople(sent), 'Propose six designs for the page')
+  // Sent twice, it asks once.
+  assert.equal(inParallel(sent), sent)
+  assert.equal(asksParallel('Propose six designs for the page'), false)
+  assert.equal(childNote(sent), null)
+  // Only a person's own message may go in parallel.
+  assert.equal(mayChangeQueued('m1', 'parallel'), true)
+  assert.equal(mayChangeQueued(null, 'parallel'), false)
 })

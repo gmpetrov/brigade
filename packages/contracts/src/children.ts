@@ -197,9 +197,29 @@ export function childNote(text: string): 'task' | 'report' | 'follow' | 'dry_run
   return null
 }
 
-/** A note about child threads as people read it: without what it tells the teammate to do next. */
+/**
+ * Added to a queued message a person sends to run in parallel: the teammate, in the middle of
+ * its turn, hands it to a child thread it briefs from this one, then carries on.
+ */
+const PARALLEL_HINT =
+  'The person wants this done in parallel, in a child thread, while you carry on: call ' +
+  '`start_child` now with `wait: false`, a short title and instructions that stand alone ' +
+  '(what it needs from this thread: the repository and branch, the files or page in question, ' +
+  'what was decided so far). Do not do this work yourself here. Then go back to what you were doing.'
+
+/** A person's message, to be handed to a child thread by the teammate in its running turn. */
+export const inParallel = (text: string) =>
+  asksParallel(text) ? text : `${text.trimEnd()}\n\n${PARALLEL_HINT}`
+
+/** Whether a message was sent to run in parallel (inParallel). */
+export const asksParallel = (text: string) => text.endsWith(PARALLEL_HINT)
+
+/**
+ * A note about child threads, or a message sent to run in parallel, as people read it:
+ * without what it tells the teammate to do next.
+ */
 export function forPeople(text: string) {
-  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT])
+  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT, PARALLEL_HINT])
     if (text.endsWith(hint)) return text.slice(0, -hint.length).trimEnd()
   return text
 }
