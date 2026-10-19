@@ -286,7 +286,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     }
   // And threads whose task is in Needs you, so the list agrees with the board.
   for (const t of tasks.data ?? [])
-    if (t.column === 'needs_you' && t.thread) {
+    if (t.column === 'needs_you' && t.thread && !t.thread.later) {
       needsYou[t.thread.id] ??= t.thread.openPullRequests.length ? 'review PR' : 'needs you'
       badge.add(t.thread.id)
     }

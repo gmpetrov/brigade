@@ -36,6 +36,11 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   requests waiting on a person push and count in the badge from the pull
   requests themselves (`waitingNow`), not from tasks. If nobody misses the board
   after two weeks, tasks and missions go.
+- **A thread to do later is put away, not made a task.** Its ⋮ menu's Do later
+  takes it out of the member's list and of what waits on them (Home, sidebar,
+  app badge, notifications), for them only, like a pin; the sidebar filter's
+  Later lists them, with how many. Anything new in it (a message, a turn, a
+  ticket or pull request in it or a child) brings it back (`src/later.ts`).
 - **One goal, one deliverable.** A person's attention is what is scarce: a goal
   of days or several pull requests reaches them as one finished, checked result
   (for code, one pull request), with no plan to approve and no steps to review;

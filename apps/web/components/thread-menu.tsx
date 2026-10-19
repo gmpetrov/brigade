@@ -1,16 +1,19 @@
 'use client'
-// A thread's menu: Pin, Rename, Archive and Delete, each with its letter, as in Claude: with
-// the menu open, the letter does it. The same in its sidebar row and in its details panel, so
-// a thread out of the sidebar (filtered, past "+N more", archived) can be changed from inside.
+// A thread's menu: Pin, Do later, Rename, Archive and Delete, each with its letter, as in
+// Claude: with the menu open, the letter does it. The same in its sidebar row and in its
+// details panel, so a thread out of the sidebar (filtered, past "+N more", archived, put away
+// for later) can be changed from inside.
 import {
   Archive,
   ArchiveRestore,
+  Clock,
   EllipsisVertical,
   MonitorPlay,
   Pencil,
   Pin,
   PinOff,
   Trash2,
+  Undo2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Fragment, useState, type KeyboardEvent, type ReactNode } from 'react'
@@ -27,11 +30,11 @@ import { renamedHere } from '@/components/streamed-title'
 import { useThreadPanel } from '@/components/thread-panel'
 import { api, type Thread, type ThreadSummary } from '@/lib/api'
 
-type Action = 'preview' | 'pin' | 'rename' | 'archive' | 'delete'
+type Action = 'preview' | 'pin' | 'later' | 'rename' | 'archive' | 'delete'
 
 export type MenuThread = Pick<
   ThreadSummary,
-  'id' | 'title' | 'pinnedAt' | 'archivedAt' | 'othersMayPrompt' | 'previewRunning'
+  'id' | 'title' | 'pinnedAt' | 'laterAt' | 'archivedAt' | 'othersMayPrompt' | 'previewRunning'
 > & { startedBy: { id: string } }
 
 /** What the menu shows for this member, and what each item does. */
@@ -63,6 +66,7 @@ export function useThreadMenu({
   const mayDelete = starter || admin
   const pinned = !!thread.pinnedAt
   const archived = !!thread.archivedAt
+  const later = !!thread.laterAt
 
   async function run(action: Action) {
     setOpen(false)
@@ -73,6 +77,7 @@ export function useThreadMenu({
     setBusy(true)
     try {
       if (action === 'pin') await api(`${path}/pin`, { method: pinned ? 'DELETE' : 'POST' })
+      else if (action === 'later') await api(`${path}/later`, { method: later ? 'DELETE' : 'POST' })
       else if (action === 'archive')
         await api(`${path}/archive`, { method: archived ? 'DELETE' : 'POST' })
       else {
@@ -101,6 +106,15 @@ export function useThreadMenu({
       icon: pinned ? <PinOff /> : <Pin />,
       key: 'P',
       show: true,
+    },
+    // Each member's own, like a pin: out of their list and of what waits on them, until
+    // something new happens in it. An archived thread is already put away.
+    {
+      action: 'later',
+      label: later ? 'Move back' : 'Do later',
+      icon: later ? <Undo2 /> : <Clock />,
+      key: 'L',
+      show: later || !archived,
     },
     { action: 'rename', label: 'Rename', icon: <Pencil />, key: 'R', show: mayChange },
     {
