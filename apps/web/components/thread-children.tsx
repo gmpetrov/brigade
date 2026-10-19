@@ -20,14 +20,6 @@ const REPORTS: Record<string, string> = {
   cancelled: 'cancelled',
 }
 
-/** Its status for a dot: working, waiting on a person, failed, or done (read). */
-function dotStatus(child: ThreadChild) {
-  if (child.tickets.length || child.report?.status === 'needs_person') return 'waiting'
-  if (child.report?.status === 'failed') return 'failed'
-  if (child.report) return 'done'
-  return child.status
-}
-
 /** What it is at, in a few words. */
 function stateText(child: ThreadChild) {
   if (child.tickets.length) return 'needs you'
@@ -78,29 +70,42 @@ export function SendToParent({ threadId, className }: { threadId: string; classN
   )
 }
 
-/** One child as a line: its dot, who, its title, where it is at. Opens it. */
+/** The color of its state's label: reported, working, needs you and failed stand out; the rest is grey. */
+const STATE_TONES: Record<string, string> = {
+  reported: 'bg-success/15 text-success',
+  working: 'bg-primary/15 text-primary',
+  'needs you': 'bg-warning/15 text-warning',
+  failed: 'bg-destructive/15 text-destructive-text',
+}
+
+/** One child as a line: who, its title, where it is at as a label. Opens it. */
 export function ChildLine({ child, className }: { child: ThreadChild; className?: string }) {
   const summary = child.report && child.report.status !== 'nothing' ? child.report.summary : null
   const sendable = !!child.reportDueAt && !child.report && child.mayPrompt
+  const state = stateText(child)
   const line = (
     <Link
       href={`/app/threads/${child.id}`}
       className={cn(
-        'flex min-w-0 items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent',
+        'flex min-w-0 flex-col rounded-lg px-2 py-1.5 text-sm hover:bg-accent',
         sendable ? 'flex-1' : className,
       )}
     >
-      <ThreadStatusIcon status={dotStatus(child)} unread={false} className="mt-0.5" />
-      <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="shrink-0 text-muted-foreground">{child.teammate.name}</span>
-          <span className="truncate font-medium">{child.title}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">· {stateText(child)}</span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="shrink-0 text-muted-foreground">{child.teammate.name}</span>
+        <span className="min-w-0 flex-1 truncate font-medium">{child.title}</span>
+        <span
+          className={cn(
+            'shrink-0 rounded-md px-1.5 py-0.5 text-xs leading-none font-medium',
+            STATE_TONES[state] ?? 'bg-muted text-muted-foreground',
+          )}
+        >
+          {state}
         </span>
-        {summary && (
-          <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{summary}</span>
-        )}
       </span>
+      {summary && (
+        <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{plain(summary)}</span>
+      )}
     </Link>
   )
   if (!sendable) return line
@@ -233,8 +238,10 @@ export function StartedChild({
       href={`/app/threads/${threadId}`}
       className="-mx-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
     >
-      <ThreadStatusIcon status="starting" />
-      <span className="truncate font-medium">{title}</span>
+      <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
+      <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs leading-none font-medium text-primary">
+        working
+      </span>
     </Link>
   )
 }
@@ -310,7 +317,6 @@ function ScheduleRuns({ runs }: { runs: ThreadChild[] }) {
             onClick={() => setOpen((o) => !o)}
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent"
           >
-            <ThreadStatusIcon status="done" />
             {quiet.length === 1
               ? `1 run with nothing new · ${when(quiet[0]!.createdAt)}`
               : `${quiet.length} runs with nothing new · last ${when(quiet[0]!.createdAt)}`}
