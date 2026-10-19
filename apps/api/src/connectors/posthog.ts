@@ -47,6 +47,10 @@ export const posthog: ConnectorDefinition = {
   mcp: {
     url: `https://mcp.posthog.com/mcp?mode=tools&features=${FEATURES.join(',')}`,
     scopes: [
+      // Each session starts by reading the token (introspection) and its user (user:read):
+      // without them the server refuses every request, tools/list included.
+      'introspection',
+      'user:read',
       'action:read',
       'action:write',
       'activity_log:read',
