@@ -300,8 +300,11 @@ function withAsks(threads: ThreadSummary[], needsYou: Record<string, string>) {
   return { all, asks }
 }
 
-/** Older threads are asked for this many at a time: a step's worth. */
-const OLDER_PAGE = STEP
+/**
+ * Older threads are asked for this many at a time, the most the server gives: the status
+ * filter narrows them here, so a page may hold few that match.
+ */
+const OLDER_PAGE = 100
 
 export function SidebarWork({
   teammates,
@@ -453,30 +456,33 @@ export function SidebarWork({
         return [...o, ...page.filter((t) => !ids.has(t.id))]
       })
       if (page.length < OLDER_PAGE) setExhausted((e) => [...e, query])
+    } catch {
+      // Not reachable: the list stops asking, rather than asking again at once.
+      setExhausted((e) => [...e, query])
     } finally {
       setLoadingOlder(false)
     }
   }
 
   // What the list shows: the latest thread waiting on a person, the others behind a "+N waiting on
-  // you" until asked; then the first of the rest and a "+N more" past them, which goes on
-  // past what is loaded: older threads, from the server.
+  // you" until asked; then the first of the rest and a "+N more" past them. Its N counts only
+  // threads already loaded and matching, so it never promises ones that may not exist.
   const waitingRows = archived ? [] : groups.waiting
   const waitingShown = allWaiting ? waitingRows : waitingRows.slice(0, 1)
   const ordered = [...(archived ? groups.waiting : []), ...groups.working, ...groups.rest]
   const visible = CAP + extra
   const hidden = Math.max(0, ordered.length - visible)
-  const next = mayHaveOlder && hidden < STEP ? STEP : Math.min(STEP, hidden)
   const more =
-    next > 0
-      ? {
-          label: loadingOlder ? 'Loading…' : `+${next} more`,
-          onSelect: () => {
-            setExtra((e) => e + STEP)
-            if (mayHaveOlder && hidden < STEP) void loadOlder()
-          },
-        }
+    hidden > 0
+      ? { label: `+${Math.min(STEP, hidden)} more`, onSelect: () => setExtra((e) => e + STEP) }
       : undefined
+  // Fewer than a step loaded past the list: older threads, from the server, until there are
+  // a step's worth or none left, so the next "+N more" is known before it shows.
+  useEffect(() => {
+    if (mayHaveOlder && hidden < STEP && !loadingOlder) void loadOlder()
+    // loadOlder reads the filter and list of this render, which `hidden` and `query` follow.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mayHaveOlder, hidden, loadingOlder, query])
 
   function changed() {
     void reloadThreads()
@@ -564,7 +570,6 @@ export function SidebarWork({
           <SidebarMenuButton
             size="sm"
             className="text-muted-foreground pl-8"
-            disabled={loadingOlder}
             onClick={more.onSelect}
           >
             <span>{more.label}</span>
