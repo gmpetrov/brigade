@@ -2,12 +2,18 @@
 // Child threads, shown in their parent: they are out of the sidebar. A line each
 // where a teammate started one, the runs of a schedule that reports here, the
 // asks of a child waiting on a person, and in a child, the way back to its parent.
-import type { NoteThread } from '@brigade/contracts'
-import { ChevronRight, CornerDownRight, CornerUpLeft, Eye, Send } from 'lucide-react'
+import {
+  childNote,
+  type NoteThread,
+  noteThreads,
+  type QueuedMessageAction,
+} from '@brigade/contracts'
+import { ChevronRight, Clock, CornerDownRight, CornerUpLeft, Eye, Send } from 'lucide-react'
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from '@/components/markdown'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
+import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -219,6 +225,95 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
           {open ? 'Show less' : 'Show more'}
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * A report note (a child's, or a thread this one follows) as people read it: the threads it
+ * tells about, and a line above them when it says more than the cards. null for any other text.
+ */
+export function reportNote(text: string) {
+  const kind = childNote(text)
+  if (kind !== 'report' && kind !== 'follow') return null
+  const reported = noteThreads(text)
+  if (!reported) return null
+  // “… has finished:” only repeats the cards; a schedule's run or a late one says more.
+  const head =
+    kind === 'follow'
+      ? 'From a thread this one follows'
+      : reported.head && !/finished:$/.test(reported.head)
+        ? reported.head
+        : null
+  return { head, threads: reported.threads }
+}
+
+/** A queued message that is a report: it waits in the conversation, not with people's messages. */
+export const isQueuedReport = (m: QueuedMessage) => m.memberId === null && !!reportNote(m.text)
+
+/**
+ * Reports queued for the teammate, at the end of the conversation: the cards they become
+ * once read, faded, with when the teammate reads them and Steer to give one now.
+ */
+export function QueuedReports({
+  queued,
+  teammateName,
+  canSteer,
+  onAction,
+}: {
+  queued: QueuedMessage[]
+  teammateName: string
+  /** A turn runs that a report could be steered into. */
+  canSteer: boolean
+  onAction: (messageId: string, action: QueuedMessageAction) => Promise<void>
+}) {
+  const [busy, setBusy] = useState<string>()
+  const reports = queued.flatMap((m) => {
+    const note = m.memberId === null ? reportNote(m.text) : null
+    return note ? [{ m, note }] : []
+  })
+  if (!reports.length) return null
+  return (
+    <div className="mt-4 flex flex-col gap-4">
+      {reports.map(({ m, note }) => (
+        <div key={m.messageId} className="flex flex-col gap-2">
+          <div className="flex min-h-6 items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock aria-hidden className="size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1">
+              {[
+                note.head,
+                m.waitingFor === 'person'
+                  ? `${teammateName} reads it once the pending request is answered`
+                  : `${teammateName} reads it after this turn`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            {canSteer && m.waitingFor === 'turn' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={busy === m.messageId}
+                onClick={() => {
+                  setBusy(m.messageId)
+                  void onAction(m.messageId, { action: 'steer' }).finally(() => setBusy(undefined))
+                }}
+                title={`Give it to ${teammateName} now, during this turn`}
+              >
+                <CornerDownRight aria-hidden />
+                Steer
+              </Button>
+            )}
+          </div>
+          {m.note && <p className="text-xs text-warning">{m.note}</p>}
+          <div className="flex flex-col gap-2 opacity-70">
+            {note.threads.map((t) => (
+              <ReportedThread key={t.id} thread={t} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
