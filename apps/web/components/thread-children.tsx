@@ -119,28 +119,52 @@ const NOTE_DOTS: Record<string, string> = {
 }
 
 /**
- * A thread a report note tells about, as a line that opens it: its dot, who, its title,
- * what it came to. What it said goes under it, in the note.
+ * A thread a report note tells about, as one card that opens it: its dot, who, its title,
+ * then the start of what it said. The whole report is in the thread.
  */
 export function ReportedThread({ thread }: { thread: NoteThread }) {
+  // Reported is the usual end: only another one is said in words.
+  const state = !thread.status
+    ? 'working'
+    : thread.status === 'report'
+      ? null
+      : (REPORTS[thread.status] ?? thread.status)
   return (
     <Link
       href={`/app/threads/${thread.id}`}
-      className="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-sm hover:bg-accent"
+      className="flex min-w-0 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 text-sm hover:bg-accent"
     >
-      <ThreadStatusIcon
-        status={thread.status ? (NOTE_DOTS[thread.status] ?? 'done') : 'running'}
-        unread={false}
-      />
-      {thread.teammate && <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>}
-      <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {thread.status ? (REPORTS[thread.status] ?? thread.status) : 'working'}
+      <span className="flex min-w-0 items-center gap-2">
+        {thread.status === 'report' ? (
+          <span
+            role="img"
+            aria-label="reported"
+            title="reported"
+            className="flex size-4 shrink-0 items-center justify-center"
+          >
+            <span className="size-2 rounded-full bg-success" />
+          </span>
+        ) : (
+          <ThreadStatusIcon
+            status={thread.status ? (NOTE_DOTS[thread.status] ?? 'done') : 'running'}
+            unread={false}
+          />
+        )}
+        {thread.teammate && (
+          <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>
+        )}
+        <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
+        {state && <span className="shrink-0 text-xs text-muted-foreground">{state}</span>}
+        <span className="flex shrink-0 items-center text-xs text-muted-foreground">
+          Open
+          <ChevronRight aria-hidden className="size-3.5" />
+        </span>
       </span>
-      <span className="flex shrink-0 items-center text-xs text-muted-foreground">
-        Open
-        <ChevronRight aria-hidden className="size-3.5" />
-      </span>
+      {thread.summary.trim() && (
+        <span className="line-clamp-2 pl-6 leading-relaxed wrap-anywhere text-muted-foreground">
+          {thread.summary.trim()}
+        </span>
+      )}
     </Link>
   )
 }
