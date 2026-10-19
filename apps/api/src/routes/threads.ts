@@ -8,6 +8,7 @@ import {
   DesktopClipboard,
   HandBack,
   InterruptThread,
+  inParallel,
   mayChangeQueued,
   mentionsToText,
   MESSAGE_COMMANDS,
@@ -704,7 +705,10 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
-  /** A message still queued: steer it into the running turn, or cancel or edit one a person wrote. */
+  /**
+   * A message still queued: steer it into the running turn, or cancel, edit or send to run in
+   * parallel one a person wrote.
+   */
   .post('/:id/messages/:messageId', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
@@ -721,30 +725,46 @@ export const threads = new Hono<AppEnv>()
       orderBy: { seq: 'desc' },
       select: { data: true },
     })
-    const memberId = (queued?.data as { memberId?: string | null } | undefined)?.memberId
+    const data = queued?.data as { memberId?: string | null; text?: string } | undefined
+    const memberId = data?.memberId
     if (memberId !== undefined && !mayChangeQueued(memberId, input.action))
       throw new HTTPException(409, {
         message:
-          'Brigade sent this message, so it cannot be edited or cancelled. Steer it, or write your own.',
+          'Brigade sent this message, so it cannot be edited, cancelled or run in parallel. Steer it, or write your own.',
       })
+    if (input.action === 'parallel') {
+      // A child thread cannot start children of its own (src/children.ts).
+      if (thread.parentId)
+        throw new HTTPException(409, {
+          message: 'This is a child thread, so it cannot start another one. Steer it instead.',
+        })
+      if (data?.text === undefined)
+        throw new HTTPException(409, { message: 'This message was already read.' })
+    }
     const protocol = runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 11)
       throw new HTTPException(409, {
         message: "This computer's runner is too old to change queued messages. Update it.",
       })
-    await deliver(thread.computer, {
-      type: 'thread.queued',
-      commandId: randomUUID(),
-      sessionId: thread.id,
-      messageId,
-      action: input.action,
-      ...(input.action === 'edit' ? { text: input.text } : {}),
-      memberId: scope.memberId,
-    })
+    const command = (action: 'cancel' | 'edit' | 'steer', text?: string) =>
+      deliver(thread.computer, {
+        type: 'thread.queued',
+        commandId: randomUUID(),
+        sessionId: thread.id,
+        messageId,
+        action,
+        ...(text !== undefined ? { text } : {}),
+        memberId: scope.memberId,
+      })
+    if (input.action === 'parallel') {
+      // Any runner that can steer does this: the ask goes with the message, then into the turn.
+      await command('edit', inParallel(data!.text!))
+      await command('steer')
+    } else await command(input.action, input.action === 'edit' ? input.text : undefined)
     await audit({
       ...scope,
       actor: { type: 'member', id: scope.memberId },
-      action: `thread.message_${input.action === 'cancel' ? 'cancelled' : input.action === 'edit' ? 'edited' : 'steered'}`,
+      action: `thread.message_${{ cancel: 'cancelled', edit: 'edited', steer: 'steered', parallel: 'sent_in_parallel' }[input.action]}`,
       target: { type: 'thread', id: thread.id },
       data: { messageId },
     })

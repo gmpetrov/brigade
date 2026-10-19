@@ -26,6 +26,7 @@ import {
   type Effort,
   type HarnessId,
   mentionsToText,
+  type QueuedMessageAction,
   type ReplyTo,
 } from '@brigade/contracts'
 import Link from 'next/link'
@@ -665,10 +666,8 @@ export function ThreadConversation({
     }
   }
 
-  const queueAction = (
-    messageId: string,
-    action: { action: 'cancel' } | { action: 'steer' } | { action: 'edit'; text: string },
-  ) => call(`/messages/${messageId}`, action).catch(() => undefined)
+  const queueAction = (messageId: string, action: QueuedMessageAction) =>
+    call(`/messages/${messageId}`, action).catch(() => undefined)
 
   const peopleLinks = people.map((p, i) => (
     <span key={p.id} className="flex items-center gap-1.5">
@@ -991,6 +990,7 @@ export function ThreadConversation({
                 outgoing={pendingOut}
                 teammateName={answering.name}
                 canSteer={busy}
+                canParallel={!t.parent}
                 onAction={queueAction}
                 onResend={(m) => {
                   setOutgoing((list) => list.filter((o) => o.messageId !== m.messageId))

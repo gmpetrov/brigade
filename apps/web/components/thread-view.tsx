@@ -8,6 +8,7 @@ import {
   pickedChoice,
   pickedDesignPath,
   bareToolName,
+  asksParallel,
   childNote,
   forPeople,
   formatMention,
@@ -1503,8 +1504,8 @@ export function ThreadItems({
             </div>
           )
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
-        const asked = startingCommand(item.text, skillNames)
-        const text = asked ? asked.rest : item.text
+        const asked = startingCommand(forPeople(item.text), skillNames)
+        const text = asked ? asked.rest : forPeople(item.text)
         return (
           <div
             key={item.key}
@@ -1525,7 +1526,8 @@ export function ThreadItems({
                 <MessageActions
                   text={text}
                   onReply={
-                    onReply && (() => onReply({ seq: item.seq, text: replyText(item.text) }))
+                    onReply &&
+                    (() => onReply({ seq: item.seq, text: replyText(forPeople(item.text)) }))
                   }
                 />
                 <div className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 leading-relaxed wrap-anywhere whitespace-pre-wrap text-primary-foreground">
@@ -1536,7 +1538,11 @@ export function ThreadItems({
             {item.attachments.length > 0 && (
               <MessageAttachments attachments={item.attachments} className="justify-end" />
             )}
-            {item.steeredTo && (
+            {item.steeredTo && asksParallel(item.text) ? (
+              <span className="text-xs text-muted-foreground">
+                Sent to run in parallel, in a child thread
+              </span>
+            ) : item.steeredTo ? (
               <span className="text-xs text-muted-foreground">
                 Steered into{' '}
                 {(byId.get(item.steeredTo) ?? teammate)?.name
@@ -1544,7 +1550,7 @@ export function ThreadItems({
                   : 'the'}{' '}
                 running turn
               </span>
-            )}
+            ) : null}
           </div>
         )
       }
