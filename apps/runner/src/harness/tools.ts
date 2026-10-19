@@ -262,6 +262,7 @@ export const openTicketTool = tool({
                     'mixpanel',
                     'resend',
                     'replicate',
+                    'openrouter',
                     'mcp',
                   ],
                 },

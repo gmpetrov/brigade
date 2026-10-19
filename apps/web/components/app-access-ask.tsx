@@ -48,6 +48,7 @@ export const APP_NAMES: Record<string, string> = {
   mixpanel: 'Mixpanel',
   resend: 'Resend',
   replicate: 'Replicate',
+  openrouter: 'OpenRouter',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -82,6 +83,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   mixpanel: 'mcp',
   resend: 'mcp',
   replicate: 'mcp',
+  openrouter: 'mcp',
 }
 
 /**
