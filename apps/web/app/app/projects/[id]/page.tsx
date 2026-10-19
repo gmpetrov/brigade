@@ -15,7 +15,6 @@ import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components
 import { useDocumentPanel } from '@/components/document-panel'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { useProject } from '@/components/project-shell'
-import { PriorityBadge } from '@/components/tasks'
 import { TicketRow } from '@/components/ticket-row'
 import { Card } from '@/components/ui/card'
 import {
@@ -23,7 +22,6 @@ import {
   pullHref,
   useApi,
   type PullRequestList,
-  type Task,
   type ThreadSummary,
   type Ticket,
 } from '@/lib/api'
@@ -76,7 +74,6 @@ export default function ProjectOverview() {
   const base = `/app/projects/${project.id}`
   const threads = useApi<ThreadSummary[]>(`/threads?project=${project.id}`)
   const tickets = useApi<Ticket[]>(`/tickets?project=${project.id}`)
-  const tasks = useApi<Task[]>(`/tasks?project=${project.id}`)
   const pulls = useApi<PullRequestList>(
     project.repositories.length > 0 ? `/pulls?state=open&project=${project.id}` : null,
   )
@@ -85,7 +82,6 @@ export default function ProjectOverview() {
   useLive((message) => {
     if (message.type === 'tickets.updated') void tickets.reload()
     if (message.type === 'thread.updated') void threads.reload()
-    if (message.type === 'task.updated' || message.type === 'thread.updated') void tasks.reload()
     if (message.type === 'pulls.updated') void pulls.reload()
   })
 
@@ -98,7 +94,6 @@ export default function ProjectOverview() {
 
   const running = (threads.data ?? []).filter((t) => ACTIVE.has(t.status))
   const recent = (threads.data ?? []).filter((t) => !ACTIVE.has(t.status)).slice(0, 3)
-  const openTasks = (tasks.data ?? []).filter((t) => t.column !== 'done')
   const open = tickets.data ?? []
 
   return (
@@ -157,64 +152,39 @@ export default function ProjectOverview() {
         )}
       </Box>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Box title="Open tasks" detail={tasks.data ? openTasks.length : ''} href={`${base}/tasks`}>
-          {tasks.data && openTasks.length === 0 ? (
-            <Quiet>Nothing on the board.</Quiet>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {openTasks.slice(0, 5).map((t) => (
-                <li key={t.id} className="flex items-center gap-2 text-sm">
-                  <PriorityBadge priority={t.priority} quiet />
-                  <Link
-                    href={`${base}/tasks?task=${t.id}`}
-                    className="min-w-0 flex-1 truncate hover:underline"
-                  >
-                    {t.title}
-                  </Link>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {t.teammate?.name ?? 'Unassigned'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Box>
-
-        <Box
-          title="Pull requests"
-          detail={pulls.data ? `${pulls.data.pulls.length} open` : undefined}
-          href={`${base}/pulls`}
-        >
-          {project.repositories.length === 0 ? (
-            <Quiet>
-              <Link href={`${base}/repos`} className="font-medium text-primary hover:underline">
-                Add a repository
-              </Link>{' '}
-              to see its pull requests here.
-            </Quiet>
-          ) : pulls.data && pulls.data.pulls.length === 0 ? (
-            <Quiet>None open.</Quiet>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {(pulls.data?.pulls ?? []).slice(0, 5).map((p) => (
-                <li key={`${p.repository}#${p.number}`} className="flex items-center gap-2 text-sm">
-                  <GitPullRequest className="size-4 shrink-0 text-success" aria-hidden />
-                  <Link
-                    href={pullHref(p.repository, p.number)}
-                    className="min-w-0 flex-1 truncate hover:underline"
-                  >
-                    {p.title}
-                  </Link>
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    #{p.number}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Box>
-      </div>
+      <Box
+        title="Pull requests"
+        detail={pulls.data ? `${pulls.data.pulls.length} open` : undefined}
+        href={`${base}/pulls`}
+      >
+        {project.repositories.length === 0 ? (
+          <Quiet>
+            <Link href={`${base}/repos`} className="font-medium text-primary hover:underline">
+              Add a repository
+            </Link>{' '}
+            to see its pull requests here.
+          </Quiet>
+        ) : pulls.data && pulls.data.pulls.length === 0 ? (
+          <Quiet>None open.</Quiet>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {(pulls.data?.pulls ?? []).slice(0, 5).map((p) => (
+              <li key={`${p.repository}#${p.number}`} className="flex items-center gap-2 text-sm">
+                <GitPullRequest className="size-4 shrink-0 text-success" aria-hidden />
+                <Link
+                  href={pullHref(p.repository, p.number)}
+                  className="min-w-0 flex-1 truncate hover:underline"
+                >
+                  {p.title}
+                </Link>
+                <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                  #{p.number}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Box>
 
       <Box
         title="Repos and previews"

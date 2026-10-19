@@ -17,7 +17,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  SquareKanban,
   Sun,
   UserRound,
   UsersRound,
@@ -131,7 +130,6 @@ export { isAdmin }
 const WORK_NAV = [
   { href: '/app', label: 'Home', icon: House },
   { href: '/app/tickets', label: 'Tickets', icon: Inbox },
-  { href: '/app/tasks', label: 'Tasks', icon: SquareKanban },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
   { href: '/app/automations', label: 'Automations', icon: CalendarClock },

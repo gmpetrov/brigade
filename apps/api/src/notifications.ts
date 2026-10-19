@@ -20,6 +20,7 @@ import type { NotifyPreset, PushMessage } from '@brigade/contracts'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { isLooking } from './hub.js'
+import { waitingNow } from './pull-requests.js'
 import { columnOf } from './tasks.js'
 import { sendPush, type Vapid } from './web-push.js'
 
@@ -131,7 +132,7 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
       teammate: { select: { name: true } },
     },
   }
-  const [tickets, tasks, done, merged, turns] = await Promise.all([
+  const [tickets, tasks, waitingPulls, done, merged, turns] = await Promise.all([
     prisma.ticket.findMany({
       // Not those of an archived thread: put away, they no longer wait on anyone.
       where: {
@@ -163,6 +164,24 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
           },
         },
       },
+    }),
+    // Pull requests waiting on a person, as Home lists them, whether or not a task is behind them.
+    prisma.pullRequest.findMany({
+      where: { workspaceId, ...waitingNow },
+      select: {
+        id: true,
+        repository: true,
+        number: true,
+        title: true,
+        requestedByMemberId: true,
+        session: {
+          select: {
+            ...thread.select,
+            _count: { select: { tickets: { where: { status: 'open' as const } } } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
     }),
     wantsFinished
       ? prisma.task.findMany({
@@ -257,6 +276,28 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
       body: task.title,
       url: threadUrl(workspaceId, s.id),
       tag: s.id,
+    })
+  }
+
+  // Pull requests to review: every member's Home lists them, as the badge counts them;
+  // whoever asked for the work is told, else the thread's starter. Not when the thread
+  // has a ticket open: that says whose it is.
+  for (const pr of waitingPulls) {
+    const s = pr.session
+    const key = s ? `needs:${s.id}` : `needs:pull:${pr.id}`
+    for (const m of members) counted.get(m.id)!.add(key)
+    const who = pr.requestedByMemberId ?? s?.startedByMemberId
+    if (!who || !items.has(who) || (s && s._count.tickets > 0)) continue
+    add(who, {
+      key,
+      workspaceId,
+      needs: true,
+      title: s
+        ? `${s.teammate.name} opened a pull request for you to review`
+        : 'A pull request waits for review',
+      body: `${pr.title} (${pr.repository}#${pr.number})`,
+      url: s ? threadUrl(workspaceId, s.id) : `/app/pulls?workspace=${workspaceId}`,
+      tag: s?.id ?? pr.id,
     })
   }
 

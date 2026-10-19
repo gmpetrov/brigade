@@ -30,7 +30,6 @@ export function useProject() {
 export const PROJECT_TABS = [
   { path: '', label: 'Overview' },
   { path: '/threads', label: 'Threads' },
-  { path: '/tasks', label: 'Tasks' },
   { path: '/pulls', label: 'Pull requests' },
   { path: '/library', label: 'Library' },
   { path: '/repos', label: 'Repos and previews' },

@@ -320,20 +320,21 @@ export const waitingOnPerson = {
 const AT_WORK: Prisma.SessionWhereInput['status'] = { in: ['starting', 'running'] }
 
 /**
- * Those waiting on a person, newest first, with the thread that opened each. Not
- * while that thread's teammate is still at work on it, as in the sidebar and on Tasks,
- * nor once the thread is archived.
+ * Waiting on a person now: not while the thread that opened it is still at work on
+ * it, as in the sidebar and on Tasks, nor once that thread is archived. Home lists
+ * these; notifications push and count them.
  */
+export const waitingNow = {
+  AND: [
+    waitingOnPerson,
+    { OR: [{ sessionId: null }, { session: { archivedAt: null, NOT: { status: AT_WORK } } }] },
+  ],
+} satisfies Prisma.PullRequestWhereInput
+
+/** Those waiting on a person now, newest first, with the thread that opened each. */
 export const needsAttention = (db: ScopedDb) =>
   db.pullRequest.findMany({
-    where: {
-      AND: [
-        waitingOnPerson,
-        {
-          OR: [{ sessionId: null }, { session: { archivedAt: null, NOT: { status: AT_WORK } } }],
-        },
-      ],
-    },
+    where: waitingNow,
     orderBy: { updatedAt: 'desc' },
     take: 50,
     select: {
