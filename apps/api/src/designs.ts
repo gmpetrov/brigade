@@ -24,6 +24,7 @@ import {
   type DesignPersonEdit,
   type DesignSystem,
   type DesignView,
+  type DesignWhere,
   type SaveDesignThumbnail,
   type SaveKnobs,
   type SaveDesignSystem,
@@ -653,6 +654,27 @@ export async function checkPick(db: ScopedDb, threadId: string, path: string) {
     where: { ...live, path: { startsWith: `${to}/` } },
   }))
   return { folder, options, to, replaces }
+}
+
+/**
+ * Where a design is now: itself while it is there; for an option of an options
+ * folder that has been picked from, the design it became, or the trash.
+ */
+export async function findDesign(db: ScopedDb, path: string): Promise<DesignWhere> {
+  const folder = path.replace(/\/+$/, '')
+  const here = { path: folder, trashed: false }
+  const options = designOptionsOf(folder)
+  if (!options) return here
+  const live = { kind: 'library' as const, deletedAt: null }
+  if (await db.document.findFirst({ where: { ...live, path: `${folder}/${DESIGN_ENTRY}` } }))
+    return here
+  const last = await db.auditEntry.findFirst({
+    where: { action: 'design.picked', targetId: pickedDesignPath(options) },
+    orderBy: { at: 'desc' },
+  })
+  const pick = last?.data as { from?: string; to?: string } | undefined
+  if (!pick?.to) return here
+  return pick.from === folder ? { path: pick.to, trashed: false } : { ...here, trashed: true }
 }
 
 /**

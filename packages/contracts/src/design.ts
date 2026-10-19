@@ -394,6 +394,16 @@ export const DesignView = z.object({
 })
 export type DesignView = z.infer<typeof DesignView>
 
+/**
+ * Where a design a message names is now. An option picked from an options
+ * folder moved to the design's own folder (`path`); the others are in the trash.
+ */
+export const DesignWhere = z.object({
+  path: z.string(),
+  trashed: z.boolean(),
+})
+export type DesignWhere = z.infer<typeof DesignWhere>
+
 /** A design system as a thread's teammate sees it, in its instructions. */
 export const ThreadDesignSystem = z.object({
   name: z.string(),
