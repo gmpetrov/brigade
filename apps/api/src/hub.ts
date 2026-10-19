@@ -36,6 +36,7 @@ import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
 import { noteChildEvents } from './children.js'
+import { noteDryRunEvents } from './playbook-dry-runs.js'
 import { movesOn, onReleased } from './move.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { Session } from './generated/prisma/client.js'
@@ -906,6 +907,8 @@ export function runnerSocket(runner: {
       void noteTurnsEnded(session, fresh).catch(console.error)
       // A child's report goes to its parent once its turn ends.
       if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
+      // A dry run's event is done once its turn ends: the next one starts.
+      if (session.playbookRunId) void noteDryRunEvents(session, fresh).catch(console.error)
     }
     send(ws, { type: 'ack', sessionId: session.id, seq: lastSeq })
   }

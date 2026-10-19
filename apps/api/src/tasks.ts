@@ -10,6 +10,7 @@ import {
   type RunnerToApi,
   type TaskColumn,
   type TaskDeliverable,
+  type TaskOperation,
   type TaskPriority,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -1017,6 +1018,50 @@ const listed = (task: ReturnType<typeof view>, all: ReturnType<typeof view>[]) =
   }
 }
 
+/**
+ * A playbook's run, whatever its runner offers: no call that starts or prompts a thread outside
+ * the run, which would have none of its limits (its Apps, approvals, a dry run's simulation),
+ * on the word of an untrusted event. It may read the board and write to its own children; a live
+ * run may also file a task in Backlog, assigned to nobody, and add to one there, which start
+ * nothing until a person assigns them. A dry run changes nothing on the board.
+ */
+async function playbookRefusal(
+  db: ScopedDb,
+  runId: string,
+  op: TaskOperation,
+): Promise<string | null> {
+  if (op.name === 'list' || (op.name === 'comment' && op.threadId)) return null
+  const run = await db.playbookRun.findFirst({ where: { id: runId }, select: { dryRun: true } })
+  if (!run || run.dryRun)
+    return "A dry run changes nothing on the Tasks board: say in playbook_report's summary what you would have filed."
+  if (op.name === 'create')
+    return op.assignee !== 'none'
+      ? 'A playbook\'s run hands no work to a teammate: create the task with assignee "none" (Backlog), or start a child thread.'
+      : op.mission
+        ? "A playbook's run files tasks in Backlog only, outside any mission."
+        : null
+  if (op.name === 'update') {
+    if (op.mission !== undefined)
+      return "A playbook's run does not move tasks into or out of a mission."
+    const task = await db.task.findFirst({
+      where: { id: op.taskId },
+      select: { teammateId: true, completedAt: true, trashedAt: true, archivedAt: true },
+    })
+    const started = await db.session.count({ where: { taskId: op.taskId } })
+    if (
+      !task ||
+      task.teammateId ||
+      task.completedAt ||
+      task.trashedAt ||
+      task.archivedAt ||
+      started > 0
+    )
+      return "A playbook's run changes only tasks in Backlog that nobody has started."
+    return null
+  }
+  return "A playbook's run does not assign, move, complete or write in tasks outside it: a person does, or start a child thread."
+}
+
 /** A teammate's task tool call, from its thread on this runner's computer. */
 export async function handleTaskCall(
   runner: Runner,
@@ -1044,6 +1089,10 @@ export async function handleTaskCall(
     actor: { type: 'teammate', id: teammate.id },
   }
   const op = call.operation
+  if (session.playbookRunId) {
+    const refused = await playbookRefusal(db, session.playbookRunId, op)
+    if (refused) return fail(refused)
+  }
 
   /** A teammate by id or name, so "Ada" works as well as its id. */
   const findTeammate = async (ref: string) =>

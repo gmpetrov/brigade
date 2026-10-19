@@ -336,3 +336,34 @@ export type PushDevice = Prisma.PushDeviceModel
  * sent once, reminded at most once, and its notification closed once resolved.
  */
 export type PushNotice = Prisma.PushNoticeModel
+/**
+ * Model PlaybookInstallation
+ * A playbook installed in a workspace (and a project): it runs for one teammate on its
+ * owner's accounts. Its triggers, schedules and skill pack are its own and go with it.
+ */
+export type PlaybookInstallation = Prisma.PlaybookInstallationModel
+/**
+ * Model PlaybookAction
+ * One write a playbook may make, at its level of autonomy. Its numbers come from ConnectionCall and tickets.
+ */
+export type PlaybookAction = Prisma.PlaybookActionModel
+/**
+ * Model PlaybookRun
+ * One event's work: its root thread (origin trigger or schedule) and the root's children.
+ * A later event of the same conversation continues it.
+ */
+export type PlaybookRun = Prisma.PlaybookRunModel
+/**
+ * Model PlaybookDryRun
+ * A playbook replaying past events with every write simulated, before it is activated.
+ * Its runs (PlaybookRun.dryRun) start a few at a time; the thread it was started from hears
+ * once they are all done.
+ */
+export type PlaybookDryRun = Prisma.PlaybookDryRunModel
+/**
+ * Model ThreadFollow
+ * A thread waiting on another's report without being its parent (follow_thread): three runs of
+ * a playbook whose customers hit the same bug follow the one fix. The followed thread's report
+ * wakes each follower once, like a parent (src/children.ts).
+ */
+export type ThreadFollow = Prisma.ThreadFollowModel

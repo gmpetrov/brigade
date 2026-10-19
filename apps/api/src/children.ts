@@ -5,7 +5,8 @@
 // thread wakes it only when it has something to say. The wake goes through a
 // wake-up of kind `report`, so it waits like one for a parent that is busy,
 // moving, taken over or offline. Children stay out of the sidebar: their
-// parent shows them.
+// parent shows them. Another thread of the same playbook may follow a child
+// (follow_thread): its report wakes that thread too, the same way.
 import { randomUUID } from 'node:crypto'
 import {
   batchNote,
@@ -14,6 +15,8 @@ import {
   childPrompt,
   ChildReport,
   clipReport,
+  FOLLOWERS_PER_THREAD,
+  followNote,
   type ScheduleOperation,
   singleNote,
   WAKEUPS_IN_A_ROW,
@@ -29,7 +32,10 @@ import { promptThread, startThread } from './work.js'
 
 type ChildOperation = Extract<
   ScheduleOperation,
-  { name: 'start_child' | 'list_children' | 'read_child' | 'cancel_child' | 'report' }
+  {
+    name:
+      'start_child' | 'list_children' | 'read_child' | 'cancel_child' | 'follow_thread' | 'report'
+  }
 >
 
 const CHILD_OPERATIONS = new Set([
@@ -37,6 +43,7 @@ const CHILD_OPERATIONS = new Set([
   'list_children',
   'read_child',
   'cancel_child',
+  'follow_thread',
   'report',
 ])
 
@@ -55,6 +62,8 @@ type Session = {
   private: boolean
   othersMayPrompt: boolean
   parentId: string | null
+  /** A playbook run's thread: its children are part of the run. */
+  playbookRunId: string | null
 }
 
 /** A report as stored, or null when there is none (or it is not one Brigade wrote). */
@@ -100,14 +109,21 @@ async function parentChanged(scope: Scope, parentId: string) {
   if (parent) broadcastThreadStatus(scope.workspaceId, parentId, parent.status)
 }
 
-/** Wake the parent with a note: the teammate that started the child, else the parent's own. */
-async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
-  const db = scoped(scope)
+/**
+ * The parent's wake-up with a note, stored: the teammate that started the child, else the
+ * parent's own. Null when the parent is gone. In a transaction when given one.
+ */
+async function reportWakeup(
+  db: Pick<ScopedDb, 'session' | 'wakeup'>,
+  parentId: string,
+  teammateId: string | null,
+  note: string,
+) {
   const parent = await db.session.findFirst({
     where: { id: parentId },
     select: { id: true, teammateId: true, teammates: { select: { teammateId: true } } },
   })
-  if (!parent) return
+  if (!parent) return null
   const seated = parent.teammates.some((t) => t.teammateId === teammateId)
   const wakeup = await db.wakeup.create({
     data: {
@@ -118,8 +134,14 @@ async function wakeParent(scope: Scope, parentId: string, teammateId: string | n
       wakeAt: new Date(),
     } as never,
   })
+  return wakeup.id
+}
+
+/** Wake the parent with a note: the teammate that started the child, else the parent's own. */
+async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
+  const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
   // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
-  await fireReport(wakeup.id)
+  if (id) await fireReport(id)
 }
 
 /**
@@ -209,6 +231,77 @@ export async function deliverReport(scope: Scope, childId: string) {
   )
 }
 
+/**
+ * A thread's report is in: each thread that follows it (follow_thread) hears it once, at once,
+ * whatever its parent's wait. Claiming each one (deliveredAt) and storing its wake-up are one
+ * transaction: two calls wake it once, and one that fails between them leaves the follow
+ * undelivered, for the minute's sweep to retry (wakeWaitingFollowers). The thread's next turn
+ * clears them (noteChildEvents), so a new report wakes them again.
+ */
+export async function wakeFollowers(scope: Scope, sessionId: string) {
+  const db = scoped(scope)
+  const [thread, follows] = await Promise.all([
+    db.session.findFirst({ where: { id: sessionId }, select: CHILD_SELECT }),
+    db.threadFollow.findMany({
+      where: { sessionId, deliveredAt: null },
+      select: { id: true, followerId: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ])
+  const report = reportOf(thread?.report)
+  if (!thread || !report || !follows.length) return
+  const note = followNote({
+    id: thread.id,
+    title: thread.title,
+    teammate: thread.teammate.name,
+    report,
+  })
+  for (const follow of follows) {
+    let wakeupId: string | null
+    try {
+      // The follower's own teammate; a deleted follower is claimed with no wake-up.
+      wakeupId = await db.$transaction(async (tx) => {
+        const { count } = await tx.threadFollow.updateMany({
+          where: { id: follow.id, deliveredAt: null },
+          data: { deliveredAt: new Date() },
+        })
+        return count ? reportWakeup(tx, follow.followerId, null, note) : null
+      })
+    } catch (error) {
+      console.error(`follower ${follow.followerId} of ${sessionId}: could not wake`, error)
+      continue
+    }
+    // Stored: an archived follower comes back with it, a busy one queues it, and one that
+    // cannot fire now goes at the minute's tick.
+    if (wakeupId) await fireReport(wakeupId)
+  }
+}
+
+/**
+ * Follows a report should have woken but did not (a failure before the wake-up was stored):
+ * woken now, once. Each minute, with the overdue children (settleOverdueChildren). Not while
+ * the followed thread is in a turn: a report it makes there goes when the turn ends.
+ */
+async function wakeWaitingFollowers() {
+  const waiting = await prisma.threadFollow.findMany({
+    where: {
+      deliveredAt: null,
+      session: {
+        report: { not: Prisma.DbNull },
+        status: { notIn: ['starting', 'running', 'waiting'] },
+      },
+    },
+    select: { sessionId: true, organizationId: true, workspaceId: true },
+    distinct: ['sessionId'],
+    take: 100,
+  })
+  for (const f of waiting)
+    await wakeFollowers(
+      { organizationId: f.organizationId, workspaceId: f.workspaceId },
+      f.sessionId,
+    ).catch((error: unknown) => console.error(`followers of ${f.sessionId}: could not wake`, error))
+}
+
 /** What a child's latest answer said: its report when it ended its turn without one. */
 async function lastMessage(sessionId: string) {
   const event = await prisma.sessionEvent.findFirst({
@@ -244,6 +337,11 @@ export async function noteChildEvents(
           where: { id: session.id },
           data: { report: Prisma.DbNull, reportDeliveredAt: null },
         })
+      // It works again: those that follow it hear its next report too.
+      await db.threadFollow.updateMany({
+        where: { sessionId: session.id, deliveredAt: { not: null } },
+        data: { deliveredAt: null },
+      })
     } else if (event.type === 'turn.completed' || event.type === 'error') {
       const row = await db.session.findFirst({
         where: { id: session.id },
@@ -273,6 +371,7 @@ export async function noteChildEvents(
         })
       }
       await deliverReport(scope, session.id)
+      await wakeFollowers(scope, session.id)
     }
   }
 }
@@ -293,6 +392,8 @@ export async function settleOverdueChildren() {
       ).catch((error: unknown) =>
         console.error(`children of ${c.parentId}: could not settle`, error),
       )
+  // And followers a report did not reach.
+  await wakeWaitingFollowers()
 }
 
 /** The children a thread has at work: started, and no report yet. */
@@ -334,6 +435,114 @@ const brief = (c: {
     ...(c.schedule ? { schedule: c.schedule.title } : {}),
     startedAt: c.createdAt.toISOString(),
     ...(report ? { report: { status: report.status, summary: report.summary } } : {}),
+  }
+}
+
+/** What a teammate is told about a thread it follows, or may: its own wait, not the parent's. */
+const followedBrief = (c: Parameters<typeof brief>[0], following: boolean) => ({
+  ...brief(c),
+  waitingForIt: following && !reportOf(c.report),
+  following,
+})
+
+/** How far back list_children looks for the children of a playbook's other runs. */
+const OTHER_RUNS_DAYS = 7
+
+/** The playbook installation of a run's thread; null outside one, and in a dry run (it waits for nothing). */
+async function installationOf(db: ScopedDb, playbookRunId: string | null) {
+  if (!playbookRunId) return null
+  const run = await db.playbookRun.findFirst({
+    where: { id: playbookRunId },
+    select: { installationId: true, dryRun: true },
+  })
+  return run && !run.dryRun ? run.installationId : null
+}
+
+/** A thread this one follows, by id: read like a child, but not its own to message. */
+async function followedThread(db: ScopedDb, followerId: string, id: string) {
+  return db.session.findFirst({
+    where: { id, followers: { some: { followerId } } },
+    select: CHILD_SELECT,
+  })
+}
+
+/**
+ * follow_thread: the thread is woken by another's report, as that thread's parent is. Only a
+ * child thread (it ends with a report) of a run of the same playbook installation: three runs
+ * whose customers reported the same bug wait for one fix, then each answers its own customer.
+ */
+async function followThread(
+  db: ScopedDb,
+  scope: Scope,
+  session: Session,
+  actor: Actor,
+  threadId: string,
+): Promise<object | { error: string }> {
+  if (threadId === session.id) return { error: 'A thread cannot follow itself.' }
+  const thread = await db.session.findFirst({
+    where: { id: threadId },
+    select: { ...CHILD_SELECT, playbookRunId: true },
+  })
+  if (!thread) return { error: 'No thread of this workspace has that id.' }
+  if (thread.parentId === session.id)
+    return { error: 'That is your own child thread: its report already comes to you.' }
+  if (!thread.parentId)
+    return {
+      error:
+        'Only a child thread can be followed: it is the kind that ends with a report. list_children shows those of your playbook’s other runs.',
+    }
+  const installationId = await installationOf(db, session.playbookRunId)
+  if (!installationId)
+    return {
+      error:
+        'follow_thread is for a playbook’s run, to wait for a child of another run of the same playbook. Here, start a child thread of your own.',
+    }
+  if ((await installationOf(db, thread.playbookRunId)) !== installationId)
+    return {
+      error:
+        'You may follow only a child thread of another run of this same playbook; list_children shows them.',
+    }
+  const report = reportOf(thread.report)
+  const existing = await db.threadFollow.findFirst({
+    where: { sessionId: thread.id, followerId: session.id },
+    select: { id: true },
+  })
+  if (!existing) {
+    const followers = await db.threadFollow.count({ where: { sessionId: thread.id } })
+    if (followers >= FOLLOWERS_PER_THREAD)
+      return {
+        error: `That thread already has ${followers} threads following it, the most it may. Start a child thread of your own instead.`,
+      }
+    try {
+      await db.threadFollow.create({
+        data: {
+          sessionId: thread.id,
+          followerId: session.id,
+          // Already reported: told now, below; woken only by a report after this one.
+          deliveredAt: report ? new Date() : null,
+        } as never,
+      })
+    } catch (error) {
+      // Followed by another call meanwhile: one follow is enough.
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'))
+        throw error
+    }
+    await audit({
+      ...scope,
+      actor,
+      action: 'thread.followed',
+      target: { type: 'thread', id: thread.id },
+      data: { followerId: session.id },
+    })
+    // Dashboards showing it list its followers.
+    broadcastThreadStatus(scope.workspaceId, thread.id, thread.status)
+  }
+  return {
+    following: followedBrief(thread, true),
+    note: report
+      ? 'It has already reported (above; read_child gives all of it): act on it now. If it reports again, you are woken here.'
+      : 'Following. You are woken here once, with a short note, when it reports (read_child then gives all of it). ' +
+        'Finish what you do now (e.g. tell your customer the team is on it), then end your turn: never wait or poll.',
   }
 }
 
@@ -421,12 +630,38 @@ export async function handleChildCall(
       orderBy: { createdAt: 'desc' },
       take: 50,
     })
-    return { children: children.map(brief) }
+    // In a playbook's run: its other runs' recent children too, which follow_thread may follow.
+    const installationId = await installationOf(db, session.playbookRunId)
+    if (!installationId) return { children: children.map(brief) }
+    const others = await db.session.findMany({
+      where: {
+        id: { not: session.id },
+        parentId: { not: null },
+        NOT: { parentId: session.id },
+        playbookRun: { installationId, dryRun: false },
+        createdAt: { gte: new Date(Date.now() - OTHER_RUNS_DAYS * 24 * 60 * 60_000) },
+      },
+      select: {
+        ...CHILD_SELECT,
+        followers: { where: { followerId: session.id }, select: { id: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    })
+    return {
+      children: children.map(brief),
+      fromOtherRuns: others.map((c) => followedBrief(c, c.followers.length > 0)),
+    }
   }
 
   if (op.name === 'read_child') {
-    const child = await ownChild(db, session.id, op.threadId)
-    if (!child) return { error: 'No child of this thread has that id; list_children shows them' }
+    const own = await ownChild(db, session.id, op.threadId)
+    const child = own ?? (await followedThread(db, session.id, op.threadId))
+    if (!child)
+      return {
+        error:
+          'No child of this thread, nor a thread it follows, has that id; list_children shows them',
+      }
     const [final, pulls] = await Promise.all([
       lastMessage(child.id),
       db.pullRequest.findMany({
@@ -435,15 +670,19 @@ export async function handleChildCall(
       }),
     ])
     return {
-      ...brief(child),
+      ...(own ? brief(child) : followedBrief(child, true)),
       lastMessage: clipReport(final, 8_000),
       pullRequests: pulls.map((p) => ({
         ...p,
         url: `https://github.com/${p.repository}/pull/${p.number}`,
       })),
-      next: 'To tell it more, message_thread with this threadId: it carries on and reports again.',
+      next: own
+        ? 'To tell it more, message_thread with this threadId: it carries on and reports again.'
+        : 'You follow it; it is not yours to message. If it reports again, you are woken here.',
     }
   }
+
+  if (op.name === 'follow_thread') return followThread(db, scope, session, actor, op.threadId)
 
   if (op.name === 'cancel_child') {
     const child = await ownChild(db, session.id, op.threadId)
@@ -475,6 +714,8 @@ export async function handleChildCall(
     // The others it waited for may all be in now.
     await settleAwaited(scope, session.id)
     await parentChanged(scope, session.id)
+    // Those following it no longer wait for it either.
+    await wakeFollowers(scope, child.id)
     return { cancelled: brief({ ...child, report }) }
   }
 

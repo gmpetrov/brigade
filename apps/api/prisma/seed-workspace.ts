@@ -1,8 +1,9 @@
 // Sample data for a local Brigade or a preview: the "Acme" organization, with
 // Ada (owner), Bob (admin) and Carol (member) in its workspace, its teammates,
 // projects, threads in each state, tasks in each column, tickets, library files,
-// memory, connections, credentials, a schedule and a pull request. Nothing in it
-// reaches an outside service: connection and credential secrets are placeholders.
+// memory, connections, credentials, a schedule, a pull request and a playbook with
+// its runs (seed-playbooks.ts). Nothing in it reaches an outside service:
+// connection and credential secrets are placeholders.
 // Called by seed.ts when the organization does not exist yet.
 import { randomBytes, randomUUID } from 'node:crypto'
 import { SUGGEST_REPLIES_TOOL, type AgentEvent } from '@brigade/contracts'
@@ -10,6 +11,7 @@ import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
 import { saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
 import { sealSecret } from '../src/vault.js'
+import { seedPlaybooks } from './seed-playbooks.js'
 
 export const SAMPLE_ORGANIZATION = 'acme'
 
@@ -1348,6 +1350,22 @@ export async function seedWorkspace(users: Users) {
       lastError: "None of Ada's computers was online.",
       createdAt: days(10),
     },
+  })
+
+  // The support playbook Sam runs, with its runs, approvals and dry run (seed-playbooks.ts).
+  await seedPlaybooks({
+    organizationId,
+    workspaceId,
+    ada: { memberId: ada.id, userId: users.ada.id },
+    bob: { memberId: bob.id },
+    chief: { id: chief.id, name: chief.name },
+    sam: { id: sam.id, name: sam.name },
+    computerId: computer.id,
+    accountId: adaAccount.id,
+    gmail,
+    stripeId: stripe.id,
+    projectId: support.id,
+    repository: 'acme/web',
   })
 
   console.log('created: sample organization Acme (ada owner, bob admin, carol member)')

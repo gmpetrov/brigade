@@ -37,6 +37,11 @@ export type ConnectorContext = {
   }) => Promise<ThreadAttachmentRef>
   /** A file the teammate sends with this call, by the id the runner gave its upload. */
   readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
+  /**
+   * A merge a playbook lets through on its own because its checks passed: the head commit they
+   * passed on. The merge goes through only on that commit, never on one pushed since.
+   */
+  checkedSha?: string
 }
 
 export type ConnectorKind =
@@ -115,6 +120,15 @@ export type TriggerDefinition = {
   conversation?: (event: VendorEvent) => string | undefined
   /** Files that come with the event (an email's attachments): given to its thread. */
   attachments?: (event: VendorEvent) => ExternalFile[]
+  /**
+   * The latest past events it would have started threads for, newest first, each with when
+   * it happened: what a playbook's dry run replays.
+   */
+  replay?: (
+    options: Record<string, string>,
+    ctx: Pick<ConnectorContext, 'fetch'>,
+    last: number,
+  ) => Promise<(VendorEvent & { at: string | null })[]>
 }
 
 export type ConnectorDefinition = {

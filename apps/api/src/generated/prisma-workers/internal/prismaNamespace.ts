@@ -448,7 +448,12 @@ export const ModelName = {
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
   PushDevice: 'PushDevice',
-  PushNotice: 'PushNotice'
+  PushNotice: 'PushNotice',
+  PlaybookInstallation: 'PlaybookInstallation',
+  PlaybookAction: 'PlaybookAction',
+  PlaybookRun: 'PlaybookRun',
+  PlaybookDryRun: 'PlaybookDryRun',
+  ThreadFollow: 'ThreadFollow'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -464,7 +469,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4316,6 +4321,376 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PlaybookInstallation: {
+      payload: Prisma.$PlaybookInstallationPayload<ExtArgs>
+      fields: Prisma.PlaybookInstallationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlaybookInstallationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlaybookInstallationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        findFirst: {
+          args: Prisma.PlaybookInstallationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlaybookInstallationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        findMany: {
+          args: Prisma.PlaybookInstallationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>[]
+        }
+        create: {
+          args: Prisma.PlaybookInstallationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        createMany: {
+          args: Prisma.PlaybookInstallationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlaybookInstallationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>[]
+        }
+        delete: {
+          args: Prisma.PlaybookInstallationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        update: {
+          args: Prisma.PlaybookInstallationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlaybookInstallationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlaybookInstallationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlaybookInstallationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlaybookInstallationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookInstallationPayload>
+        }
+        aggregate: {
+          args: Prisma.PlaybookInstallationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlaybookInstallation>
+        }
+        groupBy: {
+          args: Prisma.PlaybookInstallationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookInstallationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlaybookInstallationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookInstallationCountAggregateOutputType> | number
+        }
+      }
+    }
+    PlaybookAction: {
+      payload: Prisma.$PlaybookActionPayload<ExtArgs>
+      fields: Prisma.PlaybookActionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlaybookActionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlaybookActionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        findFirst: {
+          args: Prisma.PlaybookActionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlaybookActionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        findMany: {
+          args: Prisma.PlaybookActionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>[]
+        }
+        create: {
+          args: Prisma.PlaybookActionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        createMany: {
+          args: Prisma.PlaybookActionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlaybookActionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>[]
+        }
+        delete: {
+          args: Prisma.PlaybookActionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        update: {
+          args: Prisma.PlaybookActionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlaybookActionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlaybookActionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlaybookActionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlaybookActionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookActionPayload>
+        }
+        aggregate: {
+          args: Prisma.PlaybookActionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlaybookAction>
+        }
+        groupBy: {
+          args: Prisma.PlaybookActionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookActionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlaybookActionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookActionCountAggregateOutputType> | number
+        }
+      }
+    }
+    PlaybookRun: {
+      payload: Prisma.$PlaybookRunPayload<ExtArgs>
+      fields: Prisma.PlaybookRunFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlaybookRunFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlaybookRunFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        findFirst: {
+          args: Prisma.PlaybookRunFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlaybookRunFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        findMany: {
+          args: Prisma.PlaybookRunFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>[]
+        }
+        create: {
+          args: Prisma.PlaybookRunCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        createMany: {
+          args: Prisma.PlaybookRunCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlaybookRunCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>[]
+        }
+        delete: {
+          args: Prisma.PlaybookRunDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        update: {
+          args: Prisma.PlaybookRunUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlaybookRunDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlaybookRunUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlaybookRunUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlaybookRunUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookRunPayload>
+        }
+        aggregate: {
+          args: Prisma.PlaybookRunAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlaybookRun>
+        }
+        groupBy: {
+          args: Prisma.PlaybookRunGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookRunGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlaybookRunCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookRunCountAggregateOutputType> | number
+        }
+      }
+    }
+    PlaybookDryRun: {
+      payload: Prisma.$PlaybookDryRunPayload<ExtArgs>
+      fields: Prisma.PlaybookDryRunFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlaybookDryRunFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlaybookDryRunFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        findFirst: {
+          args: Prisma.PlaybookDryRunFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlaybookDryRunFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        findMany: {
+          args: Prisma.PlaybookDryRunFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>[]
+        }
+        create: {
+          args: Prisma.PlaybookDryRunCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        createMany: {
+          args: Prisma.PlaybookDryRunCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlaybookDryRunCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>[]
+        }
+        delete: {
+          args: Prisma.PlaybookDryRunDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        update: {
+          args: Prisma.PlaybookDryRunUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlaybookDryRunDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlaybookDryRunUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlaybookDryRunUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlaybookDryRunUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlaybookDryRunPayload>
+        }
+        aggregate: {
+          args: Prisma.PlaybookDryRunAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlaybookDryRun>
+        }
+        groupBy: {
+          args: Prisma.PlaybookDryRunGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookDryRunGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlaybookDryRunCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlaybookDryRunCountAggregateOutputType> | number
+        }
+      }
+    }
+    ThreadFollow: {
+      payload: Prisma.$ThreadFollowPayload<ExtArgs>
+      fields: Prisma.ThreadFollowFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadFollowFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadFollowFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadFollowFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadFollowFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        findMany: {
+          args: Prisma.ThreadFollowFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        create: {
+          args: Prisma.ThreadFollowCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        createMany: {
+          args: Prisma.ThreadFollowCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadFollowCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadFollowDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        update: {
+          args: Prisma.ThreadFollowUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadFollowDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadFollowUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadFollowUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadFollowUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadFollowAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadFollow>
+        }
+        groupBy: {
+          args: Prisma.ThreadFollowGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadFollowGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadFollowCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadFollowCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -4585,7 +4960,9 @@ export const SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
-  projectId: 'projectId'
+  projectId: 'projectId',
+  playbookRunId: 'playbookRunId',
+  surfacedAt: 'surfacedAt'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -4632,7 +5009,8 @@ export const ScheduleScalarFieldEnum = {
   projectId: 'projectId',
   parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  playbookInstallationId: 'playbookInstallationId'
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
@@ -4887,6 +5265,9 @@ export const ConnectionCallScalarFieldEnum = {
   result: 'result',
   error: 'error',
   ticketId: 'ticketId',
+  simulated: 'simulated',
+  playbookActionKey: 'playbookActionKey',
+  input: 'input',
   createdAt: 'createdAt'
 } as const
 
@@ -4907,6 +5288,7 @@ export const TriggerScalarFieldEnum = {
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
   projectId: 'projectId',
+  playbookInstallationId: 'playbookInstallationId',
   createdAt: 'createdAt'
 } as const
 
@@ -5152,7 +5534,8 @@ export const SkillPackScalarFieldEnum = {
   createdById: 'createdById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  appId: 'appId'
+  appId: 'appId',
+  playbookInstallationId: 'playbookInstallationId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
@@ -5248,6 +5631,102 @@ export const PushNoticeScalarFieldEnum = {
 } as const
 
 export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]
+
+
+export const PlaybookInstallationScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  projectId: 'projectId',
+  playbookKey: 'playbookKey',
+  version: 'version',
+  source: 'source',
+  manifest: 'manifest',
+  teammateId: 'teammateId',
+  ownerMemberId: 'ownerMemberId',
+  settings: 'settings',
+  status: 'status',
+  createdByMemberId: 'createdByMemberId',
+  activatedAt: 'activatedAt',
+  activatedByMemberId: 'activatedByMemberId',
+  pausedAt: 'pausedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PlaybookInstallationScalarFieldEnum = (typeof PlaybookInstallationScalarFieldEnum)[keyof typeof PlaybookInstallationScalarFieldEnum]
+
+
+export const PlaybookActionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  key: 'key',
+  level: 'level',
+  conditions: 'conditions',
+  limits: 'limits',
+  levelChangedAt: 'levelChangedAt',
+  levelChangedByMemberId: 'levelChangedByMemberId',
+  demotedReason: 'demotedReason'
+} as const
+
+export type PlaybookActionScalarFieldEnum = (typeof PlaybookActionScalarFieldEnum)[keyof typeof PlaybookActionScalarFieldEnum]
+
+
+export const PlaybookRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  rootSessionId: 'rootSessionId',
+  conversationKey: 'conversationKey',
+  case: 'case',
+  status: 'status',
+  outcome: 'outcome',
+  interventions: 'interventions',
+  firstResponseAt: 'firstResponseAt',
+  dryRun: 'dryRun',
+  dryRunId: 'dryRunId',
+  replay: 'replay',
+  summary: 'summary',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type PlaybookRunScalarFieldEnum = (typeof PlaybookRunScalarFieldEnum)[keyof typeof PlaybookRunScalarFieldEnum]
+
+
+export const PlaybookDryRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  startedByMemberId: 'startedByMemberId',
+  status: 'status',
+  error: 'error',
+  firstEventAt: 'firstEventAt',
+  lastEventAt: 'lastEventAt',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type PlaybookDryRunScalarFieldEnum = (typeof PlaybookDryRunScalarFieldEnum)[keyof typeof PlaybookDryRunScalarFieldEnum]
+
+
+export const ThreadFollowScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  followerId: 'followerId',
+  deliveredAt: 'deliveredAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ThreadFollowScalarFieldEnum = (typeof ThreadFollowScalarFieldEnum)[keyof typeof ThreadFollowScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -5816,6 +6295,48 @@ export type ListEnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInp
 
 
 /**
+ * Reference to a field of type 'PlaybookStatus'
+ */
+export type EnumPlaybookStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PlaybookStatus[]'
+ */
+export type ListEnumPlaybookStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PlaybookActionLevel'
+ */
+export type EnumPlaybookActionLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookActionLevel'>
+    
+
+
+/**
+ * Reference to a field of type 'PlaybookActionLevel[]'
+ */
+export type ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookActionLevel[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PlaybookRunStatus'
+ */
+export type EnumPlaybookRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookRunStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PlaybookRunStatus[]'
+ */
+export type ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlaybookRunStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -6031,6 +6552,11 @@ export type GlobalOmitConfig = {
   projectRepository?: Prisma.ProjectRepositoryOmit
   pushDevice?: Prisma.PushDeviceOmit
   pushNotice?: Prisma.PushNoticeOmit
+  playbookInstallation?: Prisma.PlaybookInstallationOmit
+  playbookAction?: Prisma.PlaybookActionOmit
+  playbookRun?: Prisma.PlaybookRunOmit
+  playbookDryRun?: Prisma.PlaybookDryRunOmit
+  threadFollow?: Prisma.ThreadFollowOmit
 }
 
 /* Types for Logging */

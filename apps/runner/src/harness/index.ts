@@ -84,6 +84,8 @@ import {
   repoTools,
   scheduleTools,
   childTools,
+  playbookTools,
+  playbookInstallTools,
   showWidgetTool,
   taskTools,
   type ComputerUse,
@@ -231,9 +233,19 @@ function createAgent(
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),
-    ...taskTools(callTask),
-    ...scheduleTools(callSchedule),
-    ...childTools(callSchedule, { child: !!spec.parent }),
+    // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
+    ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
+    // Nor a schedule, whose runs are threads outside it (wake-ups are for threads a person started).
+    ...(spec.playbook ? {} : scheduleTools(callSchedule)),
+    // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.
+    ...childTools(callSchedule, {
+      child: !!spec.parent,
+      follow: !!spec.playbook && !spec.playbook.dryRun,
+    }),
+    // A playbook run's root thread ends the run; its children report to it instead.
+    ...(spec.playbook && !spec.parent ? playbookTools(callSchedule) : {}),
+    // Elsewhere, a teammate may install one from the chat.
+    ...(!spec.playbook && !spec.parent ? playbookInstallTools(callSchedule) : {}),
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
     ...(computer ? computerUseTools(computer) : {}),

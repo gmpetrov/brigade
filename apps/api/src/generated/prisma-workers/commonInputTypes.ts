@@ -875,6 +875,57 @@ export type EnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = never> = 
   _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
 }
 
+export type EnumPlaybookStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookStatus | Prisma.EnumPlaybookStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel> | $Enums.PlaybookStatus
+}
+
+export type EnumPlaybookStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookStatus | Prisma.EnumPlaybookStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel>
+}
+
+export type EnumPlaybookActionLevelFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookActionLevel | Prisma.EnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel> | $Enums.PlaybookActionLevel
+}
+
+export type EnumPlaybookActionLevelWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookActionLevel | Prisma.EnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookActionLevelWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookActionLevel
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel>
+}
+
+export type EnumPlaybookRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookRunStatus | Prisma.EnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel> | $Enums.PlaybookRunStatus
+}
+
+export type EnumPlaybookRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookRunStatus | Prisma.EnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1693,6 +1744,57 @@ export type NestedEnumPreviewVariableKindWithAggregatesFilter<$PrismaModel = nev
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPreviewVariableKindFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaybookStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookStatus | Prisma.EnumPlaybookStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel> | $Enums.PlaybookStatus
+}
+
+export type NestedEnumPlaybookStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookStatus | Prisma.EnumPlaybookStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookStatus[] | Prisma.ListEnumPlaybookStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaybookActionLevelFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookActionLevel | Prisma.EnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel> | $Enums.PlaybookActionLevel
+}
+
+export type NestedEnumPlaybookActionLevelWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookActionLevel | Prisma.EnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookActionLevel[] | Prisma.ListEnumPlaybookActionLevelFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookActionLevelWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookActionLevel
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookActionLevelFilter<$PrismaModel>
+}
+
+export type NestedEnumPlaybookRunStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookRunStatus | Prisma.EnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel> | $Enums.PlaybookRunStatus
+}
+
+export type NestedEnumPlaybookRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlaybookRunStatus | Prisma.EnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlaybookRunStatus[] | Prisma.ListEnumPlaybookRunStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlaybookRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.PlaybookRunStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlaybookRunStatusFilter<$PrismaModel>
 }
 
 

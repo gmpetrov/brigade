@@ -76,6 +76,12 @@ import { VariablesAsk } from '@/components/preview-variables'
 import { PullMergeButton } from '@/components/pull-action'
 import { PullCard } from '@/components/pull-card'
 import { StatusBadge } from '@/components/status-badge'
+import {
+  ActivationCard,
+  DryRunProgress,
+  DryRunReport,
+  PlaybookCard,
+} from '@/components/playbook-cards'
 import { TeamProposalCard } from '@/components/team-proposal'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -115,7 +121,7 @@ export type Item =
       /** Given to this teammate during its running turn. */
       steeredTo?: string
       /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
-      brigade?: 'task' | 'report'
+      brigade?: 'task' | 'report' | 'follow' | 'dry_run'
     }
   | {
       kind: 'assistant'
@@ -647,6 +653,33 @@ function proposedTeam(item: Extract<Item, { kind: 'tool' }>) {
   return TeamProposal.safeParse(item.input).data ?? null
 }
 
+/** The playbook card one of a teammate's install tools put up (playbook-cards.tsx), once it went through. */
+function playbookCard(item: Extract<Item, { kind: 'tool' }>) {
+  if (!item.finished || item.isError) return null
+  const input = (item.input ?? {}) as { playbookKey?: unknown; installationId?: unknown }
+  const id = typeof input.installationId === 'string' ? input.installationId : null
+  switch (bareToolName(item.toolName)) {
+    case 'show_playbook':
+      return typeof input.playbookKey === 'string'
+        ? { card: 'playbook' as const, id: input.playbookKey }
+        : null
+    case 'start_dry_run':
+      return id ? { card: 'progress' as const, id } : null
+    case 'dry_run_report':
+      return id ? { card: 'report' as const, id } : null
+    case 'activate_playbook':
+      return id ? { card: 'activate' as const, id } : null
+    default:
+      return null
+  }
+}
+
+/** A playbook card a person reads or acts on after the message that explains it. */
+const playbookAction = (item: Extract<Item, { kind: 'tool' }>) => {
+  const card = playbookCard(item)?.card
+  return card === 'playbook' || card === 'activate'
+}
+
 /** The alternatives an offer_choices call put up, once it went through. */
 function offeredChoices(item: Extract<Item, { kind: 'tool' }>) {
   if (item.toolName.replace(/^mcp__.+?__/, '') !== OFFER_CHOICES_TOOL) return null
@@ -740,6 +773,7 @@ const isActivity = (item: Item): item is ActivityItem =>
     !suggestedReplies(item) &&
     !shownWidget(item) &&
     !proposedTeam(item) &&
+    !playbookCard(item) &&
     !(item.finished && !item.isError && (openedPull(item) || startedChild(item))))
 
 /**
@@ -758,6 +792,7 @@ const isActionCard = (item: Item) =>
     offeredChoices(item) ||
     suggestedReplies(item) ||
     proposedTeam(item) ||
+    playbookAction(item) ||
     (item.finished && !item.isError && openedPull(item))
   )
 
@@ -1456,7 +1491,11 @@ export function ThreadItems({
               <p className="mb-1 text-xs font-medium text-muted-foreground">
                 {item.brigade === 'report'
                   ? 'Reports from child threads'
-                  : 'Work from the parent thread'}
+                  : item.brigade === 'follow'
+                    ? 'Report from a thread this one follows'
+                    : item.brigade === 'dry_run'
+                      ? 'Dry run done'
+                      : 'Work from the parent thread'}
               </p>
               <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
                 <MessageWithCode text={forPeople(item.text)} />
@@ -1571,7 +1610,30 @@ export function ThreadItems({
         )
       case 'tool': {
         const team = proposedTeam(item)
-        if ((team || offeredChoices(item) || suggestedReplies(item)) && closingTurn(i)) return null
+        if (
+          (team || offeredChoices(item) || suggestedReplies(item) || playbookAction(item)) &&
+          closingTurn(i)
+        )
+          return null
+        const playbook = playbookCard(item)
+        if (playbook)
+          return (
+            <div key={item.key} className="pl-11">
+              {playbook.card === 'playbook' ? (
+                <PlaybookCard playbookKey={playbook.id} />
+              ) : playbook.card === 'progress' ? (
+                <DryRunProgress installationId={playbook.id} />
+              ) : playbook.card === 'report' ? (
+                <DryRunReport installationId={playbook.id} />
+              ) : (
+                <ActivationCard
+                  installationId={playbook.id}
+                  threadId={threadId}
+                  onSend={onChoose && ((text) => onChoose(text))}
+                />
+              )}
+            </div>
+          )
         if (team) {
           // Answered by the next message anyone sent: "Created the team: …" or their own words.
           const reply = items

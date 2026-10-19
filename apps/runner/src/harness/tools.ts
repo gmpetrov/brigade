@@ -6,6 +6,7 @@ import {
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
   CHIEF_NAME,
+  FOLLOWERS_PER_THREAD,
   isChiefName,
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
@@ -1151,8 +1152,79 @@ export type TaskCaller = (call: {
  * Tasks on the board: create, list, comment on, change, assign, move and
  * complete them. The API checks every call. There is no tool to assign a
  * person or move a task to Needs you: a ticket (ask) does that.
+ *
+ * A playbook's run gets none that starts or prompts a thread outside the run (create_task for a
+ * teammate, assign_task, message_thread to a task, move_task, complete_task): what started it is
+ * untrusted, and a thread outside the run has none of its limits. A live run may still file an
+ * idea in Backlog and add to a Backlog task, which start nothing; a dry run changes nothing.
  */
-export function taskTools(call: TaskCaller): Record<string, Tool> {
+export function taskTools(call: TaskCaller, playbook?: { dryRun: boolean }): Record<string, Tool> {
+  const all = boardTools(call)
+  if (!playbook) return all
+  const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
+    call({ operation, toolCallId, toolName, input })
+  const threadOnly = tool({
+    description:
+      'Write in one of your child threads (threadId, from list_children), which carries on and reports to you ' +
+      'again. Nowhere else.',
+    inputSchema: jsonSchema<{ threadId: string; text: string }>({
+      type: 'object',
+      properties: {
+        threadId: { type: 'string', description: 'One of your child threads' },
+        text: { type: 'string', description: 'The message, in Markdown' },
+      },
+      required: ['threadId', 'text'],
+    }),
+    execute: (input, { toolCallId }) =>
+      send(
+        'message_thread',
+        { name: 'comment', threadId: input.threadId, text: input.text },
+        input,
+        toolCallId,
+      ),
+  })
+  if (playbook.dryRun) return { list_tasks: all.list_tasks!, message_thread: threadOnly }
+  const backlog = tool({
+    description:
+      "Put a task in the Tasks board's Backlog, assigned to nobody, for a person to pick up: e.g. a customer's " +
+      'idea. It starts no thread. Look at list_tasks first: when one already covers it, add to it with ' +
+      'update_task instead.',
+    inputSchema: jsonSchema<{
+      title: string
+      description: string
+      priority?: 'low' | 'medium' | 'high' | 'urgent'
+    }>({
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Short and imperative' },
+        description: { type: 'string', description: 'What is asked, and by whom, in a few lines' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      },
+      required: ['title', 'description'],
+    }),
+    execute: (input, { toolCallId }) =>
+      send(
+        'create_task',
+        {
+          name: 'create',
+          title: input.title,
+          description: input.description,
+          priority: input.priority ?? 'medium',
+          assignee: 'none',
+        },
+        input,
+        toolCallId,
+      ),
+  })
+  return {
+    create_task: backlog,
+    list_tasks: all.list_tasks!,
+    update_task: all.update_task!,
+    message_thread: threadOnly,
+  }
+}
+
+function boardTools(call: TaskCaller): Record<string, Tool> {
   const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
     call({ operation, toolCallId, toolName, input })
   const priority = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] } as const
@@ -1552,13 +1624,223 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
 }
 
 /**
+ * A playbook's run: its triage case once the event is sorted, and how it ended. Through the
+ * schedule calls, which the API checks.
+ */
+export function playbookTools(call: ScheduleCaller): Record<string, Tool> {
+  return {
+    playbook_triage: tool({
+      description:
+        "Say the run's case, in the recipe's words (e.g. documented_question, bug, noise), once you have sorted " +
+        'the event and before your first write through an App: what the playbook lets you do on your own may ' +
+        'depend on it. Call it again if the case turns out to be another.',
+      inputSchema: jsonSchema<{ case: string }>({
+        type: 'object',
+        properties: {
+          case: { type: 'string', description: "The triage case, in the recipe's words" },
+        },
+        required: ['case'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'playbook_triage', case: input.case },
+          toolCallId,
+          toolName: 'playbook_triage',
+          input,
+        }),
+    }),
+    playbook_report: tool({
+      description:
+        "End a playbook's run: its case, in the recipe's words (e.g. documented_question, bug, noise), and its " +
+        'outcome: resolved (done), escalated (a person must take it; open a ticket first), noise (nothing to do) ' +
+        'or failed (say why in the summary). Call it once, when the run is done; a later event of the same ' +
+        'conversation continues the run.',
+      inputSchema: jsonSchema<{
+        case: string
+        outcome: 'resolved' | 'escalated' | 'noise' | 'failed'
+        summary?: string
+      }>({
+        type: 'object',
+        properties: {
+          case: { type: 'string', description: "The triage case, in the recipe's words" },
+          outcome: { type: 'string', enum: ['resolved', 'escalated', 'noise', 'failed'] },
+          summary: { type: 'string', description: 'One or two lines: what was done' },
+        },
+        required: ['case', 'outcome'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: {
+            name: 'playbook_report',
+            case: input.case,
+            outcome: input.outcome,
+            ...(input.summary ? { summary: input.summary } : {}),
+          },
+          toolCallId,
+          toolName: 'playbook_report',
+          input,
+        }),
+    }),
+  }
+}
+
+/**
+ * Installing a playbook from the chat: its card, its settings one by one, a dry run on real
+ * past events with every write simulated, its report, then the card that activates it.
+ * Through the schedule calls, which the API checks.
+ */
+export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool> {
+  const send = (
+    operation: ScheduleOperation,
+    toolCallId: string,
+    toolName: string,
+    input: unknown,
+  ) => call({ operation, toolCallId, toolName, input })
+  const id = { type: 'string', description: 'The installationId configure_playbook gave' } as const
+  return {
+    show_playbook: tool({
+      description:
+        'Playbooks are whole jobs Brigade ships, ready to install (support, releases…): what starts them, their ' +
+        'recipe, the Apps they need, their settings and the writes they may make. Without playbookKey: the catalog. ' +
+        'With one: its card in the thread (what it does, its Apps, its author, its version). Use it when a person ' +
+        'asks to install or see a playbook.',
+      inputSchema: jsonSchema<{ playbookKey?: string }>({
+        type: 'object',
+        properties: { playbookKey: { type: 'string', description: 'e.g. brigade/support-bugs' } },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'show_playbook',
+            ...(input.playbookKey ? { playbookKey: input.playbookKey } : {}),
+          },
+          toolCallId,
+          'show_playbook',
+          input,
+        ),
+    }),
+    configure_playbook: tool({
+      description:
+        'Install a playbook for the person in this thread, on their accounts: first with its playbookKey, then with ' +
+        'the installationId it gives. Pass the answers you have by setting key; Brigade checks each by its type ' +
+        'and says what is still missing, which question to ask next, and which Apps are missing. Ask one ' +
+        'question at a time, and never invent an answer. Nothing runs until it is activated.',
+      inputSchema: jsonSchema<{
+        playbookKey?: string
+        installationId?: string
+        teammate?: string
+        settings?: Record<string, string | number>
+      }>({
+        type: 'object',
+        properties: {
+          playbookKey: {
+            type: 'string',
+            description: 'To start installing one, e.g. brigade/support-bugs',
+          },
+          installationId: id,
+          teammate: {
+            type: 'string',
+            description: 'The teammate that runs it, by name; leave out for yourself',
+          },
+          settings: {
+            type: 'object',
+            description:
+              'Answers by setting key, e.g. { "product": "Acme", "inbox": "support@acme.com" }',
+            additionalProperties: { type: ['string', 'number'] },
+          },
+        },
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'configure_playbook',
+            ...(input.playbookKey ? { playbookKey: input.playbookKey } : {}),
+            ...(input.installationId ? { installationId: input.installationId } : {}),
+            ...(input.teammate ? { teammate: input.teammate } : {}),
+            settings: input.settings ?? {},
+          },
+          toolCallId,
+          'configure_playbook',
+          input,
+        ),
+    }),
+    start_dry_run: tool({
+      description:
+        'Try an installed playbook on real past events (for Gmail, the latest mails its search matches) before ' +
+        'it is active: each event a run of its own, every write simulated (recorded, answered with a fake ' +
+        'success, never sent) and no push. Its progress shows under your reply, and you are woken here once ' +
+        'all are done. It runs on the subscription of the person in this thread.',
+      inputSchema: jsonSchema<{ installationId: string; last?: number }>({
+        type: 'object',
+        properties: {
+          installationId: id,
+          last: {
+            type: 'number',
+            description: 'Fewer events than the playbook replays, for a quick try (at most 20)',
+          },
+        },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          {
+            name: 'start_dry_run',
+            installationId: input.installationId,
+            ...(input.last ? { last: input.last } : {}),
+          },
+          toolCallId,
+          'start_dry_run',
+          input,
+        ),
+    }),
+    dry_run_report: tool({
+      description:
+        "A playbook's latest dry run: for each event, the case found, what would have been done (each simulated " +
+        'write with what it would have sent) and its thread, and the session minutes it took with a week at that ' +
+        'pace. Shows its report in the thread, one card per event.',
+      inputSchema: jsonSchema<{ installationId: string }>({
+        type: 'object',
+        properties: { installationId: id },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'dry_run_report', installationId: input.installationId },
+          toolCallId,
+          'dry_run_report',
+          input,
+        ),
+    }),
+    activate_playbook: tool({
+      description:
+        'Show the card that activates an installed playbook: its settings, Apps, actions and their levels, and ' +
+        'whose accounts it runs on, with an Activate button. A click by an owner or admin activates it; a ' +
+        "member's asks one. Only after its settings are all answered, usually after a dry run.",
+      inputSchema: jsonSchema<{ installationId: string }>({
+        type: 'object',
+        properties: { installationId: id },
+        required: ['installationId'],
+      }),
+      execute: (input, { toolCallId }) =>
+        send(
+          { name: 'activate_playbook', installationId: input.installationId },
+          toolCallId,
+          'activate_playbook',
+          input,
+        ),
+    }),
+  }
+}
+
+/**
  * Child threads: work started beside this thread, in a fresh context, whose report
  * comes back here. A child reports with `report` and starts no children of its own.
+ * A playbook's run may also follow another run's child (follow_thread, `follow`).
  * They go through the schedule calls; the API checks the thread and its children.
  */
 export function childTools(
   call: ScheduleCaller,
-  options: { child: boolean },
+  options: { child: boolean; follow?: boolean },
 ): Record<string, Tool> {
   const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
   if (options.child)
@@ -1645,7 +1927,11 @@ export function childTools(
     }),
     list_children: tool({
       description:
-        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in.",
+        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in." +
+        (options.follow
+          ? " Also fromOtherRuns: the child threads of this playbook's other runs from the last week " +
+            '(e.g. the fix of a bug another customer reported), which follow_thread can follow.'
+          : ''),
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) =>
         call({
@@ -1657,7 +1943,8 @@ export function childTools(
     }),
     read_child: tool({
       description:
-        "A child thread's full report, its last message and the pull requests it opened.",
+        "A child thread's full report, its last message and the pull requests it opened" +
+        (options.follow ? ', or those of a thread you follow (follow_thread).' : '.'),
       inputSchema: jsonSchema<{ threadId: string }>({
         type: 'object',
         properties: { threadId },
@@ -1687,6 +1974,35 @@ export function childTools(
           input,
         }),
     }),
+    ...(options.follow
+      ? {
+          follow_thread: tool({
+            description:
+              'Wait for a child thread of another run of this playbook, instead of starting the same work again: when a bug ' +
+              'your customer reports is already being fixed there (list_children shows them in fromOtherRuns), follow ' +
+              'that fix. You are woken here once, with a short note, when it reports (and again if it reports later); ' +
+              'read_child then gives its full report. Tell your customer the team is on it, then end your turn: never ' +
+              `wait or poll. Not your own child (its report already comes to you). At most ${FOLLOWERS_PER_THREAD} threads follow one.`,
+            inputSchema: jsonSchema<{ threadId: string }>({
+              type: 'object',
+              properties: {
+                threadId: {
+                  type: 'string',
+                  description: "A thread from list_children's fromOtherRuns",
+                },
+              },
+              required: ['threadId'],
+            }),
+            execute: (input, { toolCallId }) =>
+              call({
+                operation: { name: 'follow_thread', threadId: input.threadId },
+                toolCallId,
+                toolName: 'follow_thread',
+                input,
+              }),
+          }),
+        }
+      : {}),
   }
 }
 

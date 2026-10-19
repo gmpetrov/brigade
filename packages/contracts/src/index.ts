@@ -9,6 +9,8 @@ export * from './credentials.js'
 export * from './design.js'
 export * from './events.js'
 export * from './library.js'
+export * from './playbooks.js'
+export * from './playbook-approvals.js'
 export * from './mentions.js'
 export * from './models.js'
 export * from './notifications.js'
@@ -49,8 +51,10 @@ export * from './thread-history.js'
  *     the spec's `parent`), and message_thread (a task.call comment to a thread).
  * 29: an updating runner hands its running turns over to the next one (runner.restarting).
  * 30: a thread's tab comes to the front of its teammate's browser while people watch its desktop (browser.focus).
+ * 31: playbook threads (the spec's `playbook`, and playbook_triage and playbook_report as schedule.call
+ *     operations); follow_thread (a schedule.call operation).
  */
-export const PROTOCOL_VERSION = 30
+export const PROTOCOL_VERSION = 31
 /** Runners from this version on bring a thread's tab to the front (browser.focus). */
 export const FOCUS_PROTOCOL = 30
 /** Runners from this version on take thread.note. */

@@ -2,7 +2,7 @@
 // Child threads, shown in their parent: they are out of the sidebar. A line each
 // where a teammate started one, the runs of a schedule that reports here, the
 // asks of a child waiting on a person, and in a child, the way back to its parent.
-import { CornerUpLeft } from 'lucide-react'
+import { CornerUpLeft, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
@@ -173,15 +173,44 @@ function ScheduleRuns({ runs }: { runs: ThreadChild[] }) {
   )
 }
 
-/** In a child: the thread it was started from, which its report goes to. */
-export function ParentLink({ parent }: { parent: { id: string; title: string } }) {
+/** In a child: the thread it was started from, which its report goes to, and the others it wakes. */
+export function ParentLink({
+  parent,
+  followers = [],
+}: {
+  parent: { id: string; title: string }
+  followers?: { id: string; title: string }[]
+}) {
   return (
-    <Link
-      href={`/app/threads/${parent.id}`}
-      className="mb-4 flex w-fit max-w-full items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-    >
-      <CornerUpLeft aria-hidden className="size-3.5 shrink-0" />
-      <span className="truncate">From “{parent.title}”</span>
-    </Link>
+    <div className="mb-4 flex flex-col gap-1">
+      <Link
+        href={`/app/threads/${parent.id}`}
+        className="flex w-fit max-w-full items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <CornerUpLeft aria-hidden className="size-3.5 shrink-0" />
+        <span className="truncate">From “{parent.title}”</span>
+      </Link>
+      {followers.length > 0 && <FollowedBy followers={followers} />}
+    </div>
+  )
+}
+
+/** Threads of other runs that follow it (follow_thread): its report wakes them too. */
+function FollowedBy({ followers }: { followers: { id: string; title: string }[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+      <Eye aria-hidden className="size-3.5 shrink-0" />
+      <span>
+        Followed by {followers.length} other {followers.length === 1 ? 'thread' : 'threads'}:
+      </span>
+      {followers.map((f, i) => (
+        <span key={f.id} className="flex min-w-0 items-center gap-1.5">
+          {i > 0 && <span aria-hidden>·</span>}
+          <Link href={`/app/threads/${f.id}`} className="max-w-60 truncate hover:text-foreground">
+            “{f.title}”
+          </Link>
+        </span>
+      ))}
+    </div>
   )
 }

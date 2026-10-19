@@ -43,7 +43,12 @@ const urlOf = (pathToken: string) => `${env.API_URL}/hooks/${pathToken}`
 /** Delete triggers and their signing secrets. The caller syncs the subscriptions. */
 export async function deleteTriggers(
   db: ScopedDb,
-  where: { connectionId?: string; teammateId?: string; id?: string },
+  where: {
+    connectionId?: string
+    teammateId?: string
+    id?: string
+    playbookInstallationId?: string
+  },
 ) {
   const rows = await db.trigger.findMany({ where })
   for (const row of rows) {
@@ -51,6 +56,18 @@ export async function deleteTriggers(
     if (row.verificationSecretId) await deleteSecret(db, row.verificationSecretId)
   }
   return rows
+}
+
+/** A playbook's triggers change only through it, so an update can replace them cleanly. */
+async function notThePlaybooks(db: ScopedDb, id: string) {
+  const row = await db.trigger.findFirst({
+    where: { id },
+    select: { playbookInstallationId: true },
+  })
+  if (row?.playbookInstallationId)
+    throw new HTTPException(409, {
+      message: 'This trigger belongs to a playbook: change it from the playbook, on Automations',
+    })
 }
 
 /** Re-sync after triggers went away; a vendor error here only leaves a stale subscription. */
@@ -67,7 +84,8 @@ export const triggers = new Hono<AppEnv>()
   /** ?project=<id|none>: a project's triggers, or those in none. */
   .get('/', async (c) => {
     const rows = await c.var.db.trigger.findMany({
-      where: projectWhere(c.req.query('project')),
+      // A playbook's triggers show in the playbook.
+      where: { ...projectWhere(c.req.query('project')), playbookInstallationId: null },
       include: {
         teammate: { select: { id: true, name: true } },
         project: { select: { id: true, name: true, icon: true, logo: true } },
@@ -178,6 +196,7 @@ export const triggers = new Hono<AppEnv>()
     requireRole(scope, 'owner', 'admin')
     const { projectId } = await parseBody(c.req.raw, SetProject)
     const next = (await usableProject(db, projectId)) ?? null
+    await notThePlaybooks(db, c.req.param('id'))
     const { count } = await db.trigger.updateMany({
       where: { id: c.req.param('id') },
       data: { projectId: next },
@@ -196,6 +215,7 @@ export const triggers = new Hono<AppEnv>()
   .delete('/:id', async (c) => {
     const { scope, db } = c.var
     requireRole(scope, 'owner', 'admin')
+    await notThePlaybooks(db, c.req.param('id'))
     const [row] = await deleteTriggers(db, { id: c.req.param('id') })
     if (!row) throw new HTTPException(404, { message: 'Trigger not found' })
     await resync(scope, [row.connectionId])

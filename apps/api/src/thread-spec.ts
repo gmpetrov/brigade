@@ -11,6 +11,7 @@ import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
+import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { gitAccess } from './git.js'
 import { folderRules } from './library-folders.js'
 import { projectCatalog, threadProject } from './projects.js'
@@ -101,6 +102,7 @@ export async function specFor(
     project,
     projects,
     [imageAccount],
+    playbook,
   ] = await Promise.all([
     usableAccounts(db, {
       memberId: thread.startedByMemberId,
@@ -128,6 +130,7 @@ export async function specFor(
           computerId: thread.computerId,
           provider: 'codex',
         }),
+    threadPlaybook(db, thread.playbookRunId),
   ])
   // Takeover and terminals need no usage: they may use the thread's current account as is.
   const current =
@@ -136,8 +139,18 @@ export async function specFor(
       ? await db.account.findFirst({ where: { id: thread.accountId, provider: teammate.harness } })
       : null)
   if (!current) throw noAccount(teammate.harness)
-  // A member's own account (reach mine) only in the threads they started.
-  const grants = granted.filter((g) => usableIn(g.connection, thread))
+  // A member's own account (reach mine) only in the threads they started. In a playbook's
+  // thread, only the Apps it declares, and no more than the access it declares for each: a
+  // mail written to trap it cannot reach any other App its teammate has.
+  const grants = granted
+    .filter((g) => usableIn(g.connection, thread))
+    .flatMap((g) => {
+      if (!playbook) return [g]
+      const access = playbook.access.get(g.connection.kind)
+      // Of a kind it names an account for (its inbox), that account alone.
+      if (!access || !playbookAccount(playbook, g.connection)) return []
+      return [access === 'read' ? { ...g, scope: 'read' as const } : g]
+    })
   const github = grants.some(
     (g) => g.connection.kind === 'github' && g.connection.status === 'active',
   )
@@ -179,6 +192,7 @@ export async function specFor(
     teammate.id,
     thread.projectId,
     new Set(grants.map((g) => g.connection.appId)),
+    playbook?.installationId ?? null,
   )
   return {
     connectors: specs,
@@ -204,6 +218,15 @@ export async function specFor(
     private: thread.private,
     // A child reports to it; older runners ignore it, and its last message stands for its report.
     parent: thread.parent,
+    playbook: playbook
+      ? {
+          installationId: playbook.installationId,
+          runId: playbook.runId,
+          name: playbook.name,
+          apps: playbook.apps,
+          dryRun: playbook.dryRun,
+        }
+      : null,
     attachments,
     task: thread.task
       ? { id: thread.task.id, title: thread.task.title, description: thread.task.description }

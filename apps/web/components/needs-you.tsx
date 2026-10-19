@@ -2,18 +2,27 @@
 // Home's "waiting on you": one ticket or pull request at a time, with the card that decides
 // it, the same as in its thread, so a person with enough context answers without opening it.
 // Answering stops on what was sent; the next one comes when they ask for it, so a ticket's
-// second ask is never mistaken for another ticket.
-import type { Ask, Question, QuestionAnswer, TicketAnswer } from '@brigade/contracts'
+// second ask is never mistaken for another ticket. A playbook's approvals are one item,
+// opened to decide each (PlaybookApprovals); a push about them opens Home on it (?approvals=).
+import {
+  playbookApprovalOf,
+  toApprove,
+  type Ask,
+  type Question,
+  type QuestionAnswer,
+  type TicketAnswer,
+} from '@brigade/contracts'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { PlaybookApprovals } from '@/components/playbook-approvals'
 import { PullCard } from '@/components/pull-card'
 import { QuestionCard, TicketCard } from '@/components/thread-view'
 import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { api, type PullWaiting, type Ticket } from '@/lib/api'
+import { api, waitingItemKey, type PullWaiting, type Ticket } from '@/lib/api'
 
 /** Others listed under the one shown; the rest are a link away. */
 const LISTED = 4
@@ -151,10 +160,20 @@ const withoutAsker = (title: string, name: string) =>
     title,
   )
 
-/** One thing waiting: a ticket answered here, a ticket's row, or a pull request. */
-type Waiting =
-  | { key: string; title: string; from?: string; ticket: Ticket; pull?: undefined }
-  | { key: string; title: string; from?: string; ticket?: undefined; pull: PullWaiting }
+/** A playbook's approvals, as one item. */
+type Queue = {
+  id: string
+  name: string
+  count: number
+  teammate: { id: string; name: string } | null
+}
+
+/** One thing waiting: a ticket answered here, a ticket's row, a playbook's approvals, or a pull request. */
+type Waiting = { key: string; title: string; from?: string } & (
+  | { ticket: Ticket; pull?: undefined; queue?: undefined }
+  | { ticket?: undefined; pull: PullWaiting; queue?: undefined }
+  | { ticket?: undefined; pull?: undefined; queue: Queue }
+)
 
 /** Shown in place of the one just answered, until the person moves on. */
 type Sent = { label: string; next: string | undefined }
@@ -173,18 +192,53 @@ export function NeedsYou({
   const [error, setError] = useState<string>()
   const [currentKey, setCurrentKey] = useState<string>()
   const [sent, setSent] = useState<Sent>()
+  // Opened from a push about a playbook's approvals: those first.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('approvals')
+    if (id) setCurrentKey(`playbook:${id}`)
+  }, [])
+
+  // A playbook's approvals, by the item they are together.
+  const queues = new Map<string, Ticket[]>()
+  for (const t of tickets) {
+    if (!playbookApprovalOf(t)) continue
+    const key = waitingItemKey(t)
+    queues.set(key, [...(queues.get(key) ?? []), t])
+  }
 
   const items: Waiting[] = [
-    ...tickets.map((t) => {
+    ...tickets.flatMap((t): Waiting[] => {
+      const key = waitingItemKey(t)
+      const queue = queues.get(key)
+      if (queue) {
+        // Once, where its latest approval would be.
+        if (queue[0] !== t) return []
+        const name = t.playbook?.name ?? 'Playbook'
+        return [
+          {
+            key,
+            title: `${name} · ${toApprove(t.playbook?.yours ?? queue.length)}`,
+            from: t.session?.teammate.name,
+            queue: {
+              id: playbookApprovalOf(t)!.installationId,
+              name,
+              count: t.playbook?.yours ?? queue.length,
+              teammate: t.session?.teammate ?? null,
+            },
+          },
+        ]
+      }
       const asker = t.payload.teammateId ?? t.session?.teammate.id
       const name = teammates.find((m) => m.id === asker)?.name ?? t.session?.teammate.name
-      return {
-        key: `ticket:${t.id}`,
-        // Titles start with the teammate's name, shown beside them.
-        title: name ? withoutAsker(t.title, name) : t.title,
-        from: name,
-        ticket: t,
-      }
+      return [
+        {
+          key,
+          // Titles start with the teammate's name, shown beside them.
+          title: name ? withoutAsker(t.title, name) : t.title,
+          from: name,
+          ticket: t,
+        },
+      ]
     }),
     ...pulls.map((p) => ({
       key: `pull:${p.repository}#${p.number}`,
@@ -222,13 +276,17 @@ export function NeedsYou({
         ? approved
           ? 'Skill added'
           : 'Declined'
-        : t?.payload.source === 'harness'
-          ? 'Declined'
-          : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
-            ? 'Dismissed'
-            : approved
-              ? 'Allowed'
-              : 'Denied',
+        : t?.payload.playbookActivation
+          ? approved
+            ? 'Activated'
+            : 'Declined'
+          : t?.payload.source === 'harness'
+            ? 'Declined'
+            : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
+              ? 'Dismissed'
+              : approved
+                ? 'Allowed'
+                : 'Denied',
     )
   }
 
@@ -243,7 +301,7 @@ export function NeedsYou({
 
   const others = sent ? items : items.filter((i) => i.key !== current?.key)
   const listed = others.slice(0, LISTED)
-  const moreTickets = others.slice(LISTED).filter((i) => i.ticket).length
+  const moreTickets = others.slice(LISTED).filter((i) => !i.pull).length
   const morePulls = others.length - listed.length - moreTickets
 
   return (
@@ -322,6 +380,19 @@ export function NeedsYou({
             number={current.pull.number}
             title={current.pull.title}
             open
+          />
+        </div>
+      ) : current?.queue ? (
+        <div className="flex flex-col gap-1.5">
+          <From
+            teammate={current.queue.teammate}
+            note={`${current.queue.name} · ${toApprove(current.queue.count)}`}
+          />
+          <PlaybookApprovals
+            key={current.key}
+            installationId={current.queue.id}
+            onDecided={onChange}
+            onEmptied={done}
           />
         </div>
       ) : current?.ticket && answersHere(current.ticket) ? (

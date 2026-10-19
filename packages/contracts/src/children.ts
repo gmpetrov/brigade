@@ -10,6 +10,8 @@ export const CHILDREN_AT_WORK = 5
 export const CHILD_WAIT_MINUTES = 24 * 60
 /** The longest a parent may choose to wait. */
 export const CHILD_WAIT_MAX_MINUTES = 7 * 24 * 60
+/** Threads that may follow one thread (follow_thread). */
+export const FOLLOWERS_PER_THREAD = 20
 
 /**
  * nothing: nothing worth telling (a schedule's run with nothing new). report: something to say.
@@ -53,6 +55,11 @@ export const ChildOperations = [
   z.object({ name: z.literal('list_children') }),
   z.object({ name: z.literal('read_child'), threadId: z.string() }),
   z.object({ name: z.literal('cancel_child'), threadId: z.string() }),
+  /**
+   * Be woken by another thread's report, like its parent: a child of another run of the same
+   * playbook (e.g. the fix of a bug several customers reported).
+   */
+  z.object({ name: z.literal('follow_thread'), threadId: z.string().trim().min(1) }),
   /** In a child: what it found, for its parent. Sent on when its turn ends. */
   z.object({
     name: z.literal('report'),
@@ -141,6 +148,24 @@ export function singleNote(child: {
   )
 }
 
+/** How a note to a thread that follows another begins (followNote): what says it is one. */
+const FOLLOW_HEAD = 'The thread you follow “'
+
+/** The note a thread wakes up to when a thread it follows (follow_thread) has reported. */
+export function followNote(thread: {
+  id: string
+  title: string
+  teammate: string
+  report: ChildReport
+}) {
+  return (
+    `${FOLLOW_HEAD}${thread.title}” (${thread.id}, ${thread.teammate}) ${STATUS_WORDS[thread.report.status]}:` +
+    `\n\n${clipReport(thread.report.summary, 2_000)}\n\n` +
+    '`read_child` with its threadId gives its full report and what it produced. Go on with your own work ' +
+    '(e.g. answer the person who reported it), or tell the person in a line. If it reports again, you hear again.'
+  )
+}
+
 /** A report nobody waited for wakes the parent only when it has something to say. */
 export const wakesParent = (status: ChildReportStatus) => status === 'report' || status === 'failed'
 
@@ -153,13 +178,19 @@ const REPORT_HEADS = [
   /^Your child thread “/,
 ]
 
+/** How the note that a playbook's dry run is done begins (src/playbook-dry-runs.ts in the API). */
+export const DRY_RUN_HEAD = 'The dry run of the playbook '
+
 /**
  * Whether a message nobody typed is Brigade's, about child threads: a child's work
- * from its parent (task) or reports brought to a parent (report). The dashboard shows
- * those as notes rather than as a person's message.
+ * from its parent (task), reports brought to a parent (report) or to a thread that follows
+ * one (follow); or that a playbook's dry run is done (dry_run). The dashboard shows those as
+ * notes rather than as a person's message.
  */
-export function childNote(text: string): 'task' | 'report' | null {
+export function childNote(text: string): 'task' | 'report' | 'follow' | 'dry_run' | null {
   if (REPORT_HEADS.some((head) => head.test(text))) return 'report'
+  if (text.startsWith(FOLLOW_HEAD)) return 'follow'
+  if (text.startsWith(DRY_RUN_HEAD)) return 'dry_run'
   const first = text.split('\n', 1)[0] ?? ''
   if (first.includes(` ${CHILD_TASK_MARK} “`) && first.endsWith('and waits for your report.'))
     return 'task'

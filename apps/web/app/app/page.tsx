@@ -9,6 +9,7 @@ import { NewThread, useLastTeammate } from '@/components/new-thread'
 import { Button } from '@/components/ui/button'
 import {
   useApi,
+  waitingItemKey,
   waitsOn,
   type HomeFeed,
   type PullWaiting,
@@ -33,7 +34,8 @@ function greeting(name: string) {
 export default function Home() {
   const { me, teammates } = useDashboard()
   const threads = useApi<ThreadSummary[]>('/threads')
-  const tickets = useApi<Ticket[]>('/tickets?status=all')
+  // Open ones: decided ones would only crowd out what waits.
+  const tickets = useApi<Ticket[]>('/tickets')
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const feed = useApi<HomeFeed>('/home')
   const [chosen, choose] = useLastTeammate()
@@ -51,7 +53,8 @@ export default function Home() {
   })
 
   const waiting = (tickets.data ?? []).filter((t) => waitsOn(t, me))
-  const waitingCount = waiting.length + (pulls.data?.pulls.length ?? 0)
+  // A playbook's approvals are one item, as the sidebar counts them.
+  const waitingCount = new Set(waiting.map(waitingItemKey)).size + (pulls.data?.pulls.length ?? 0)
   // Only when nothing waits: then Waiting on you is hidden, and this line says so.
   const calm =
     tickets.data && pulls.data && feed.data && waitingCount === 0

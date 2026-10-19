@@ -101,24 +101,26 @@ model Organization {
 
 /// A user's role in an organization: owner, admin or member.
 model Member {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           String       @default("member")
-  createdAt      DateTime     @default(now())
-  computers      Computer[]
-  accounts       Account[]
-  sessions       Session[]
-  tasks          Task[]
-  schedules      Schedule[]
-  threadReads    ThreadRead[]
-  threadPins     ThreadPin[]
-  homeDismissals HomeDismissal[]
+  id                    String                 @id
+  organizationId        String
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                  String                 @default("member")
+  createdAt             DateTime               @default(now())
+  computers             Computer[]
+  accounts              Account[]
+  sessions              Session[]
+  tasks                 Task[]
+  schedules             Schedule[]
+  threadReads           ThreadRead[]
+  threadPins            ThreadPin[]
+  homeDismissals        HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
-  notify         NotifyPreset @default(needed)
-  pushNotices    PushNotice[]
+  notify                NotifyPreset           @default(needed)
+  pushNotices           PushNotice[]
+  /// Playbooks that run on their accounts.
+  playbookInstallations PlaybookInstallation[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -145,52 +147,57 @@ model Invitation {
 // ---------------------------------------------------------------------------
 
 model Workspace {
-  id                  String               @id @default(cuid())
-  organizationId      String
-  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name                String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  computers           Computer[]
-  runners             Runner[]
-  teammates           Teammate[]
-  sessions            Session[]
-  sessionEvents       SessionEvent[]
-  threadSeats         ThreadTeammate[]
-  accounts            Account[]
-  comments            Comment[]
-  connections         Connection[]
-  apps                App[]
-  vaultSecrets        VaultSecret[]
-  credentials         Credential[]
-  credentialGrants    CredentialGrant[]
-  grants              Grant[]
-  connectionCalls     ConnectionCall[]
-  triggers            Trigger[]
-  subscriptions       Subscription[]
-  tickets             Ticket[]
-  documents           Document[]
-  libraryFolders      LibraryFolder[]
-  libraryFolderGrants LibraryFolderGrant[]
-  attachments         Attachment[]
-  threadAttachments   ThreadAttachment[]
-  pullRequests        PullRequest[]
-  pullRequestReviews  PullRequestReview[]
-  tasks               Task[]
-  schedules           Schedule[]
-  wakeups             Wakeup[]
-  projects            Project[]
-  projectRepositories ProjectRepository[]
-  auditEntries        AuditEntry[]
-  designSystems       DesignSystem[]
-  skills              Skill[]
-  skillPacks          SkillPack[]
-  previewRecipes      PreviewRecipe[]
-  previewVariables    PreviewVariable[]
-  threadReads         ThreadRead[]
-  threadPins          ThreadPin[]
-  homeDismissals      HomeDismissal[]
-  pushNotices         PushNotice[]
+  id                    String                 @id @default(cuid())
+  organizationId        String
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                  String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  computers             Computer[]
+  runners               Runner[]
+  teammates             Teammate[]
+  sessions              Session[]
+  sessionEvents         SessionEvent[]
+  threadSeats           ThreadTeammate[]
+  accounts              Account[]
+  comments              Comment[]
+  connections           Connection[]
+  apps                  App[]
+  vaultSecrets          VaultSecret[]
+  credentials           Credential[]
+  credentialGrants      CredentialGrant[]
+  grants                Grant[]
+  connectionCalls       ConnectionCall[]
+  triggers              Trigger[]
+  subscriptions         Subscription[]
+  tickets               Ticket[]
+  documents             Document[]
+  libraryFolders        LibraryFolder[]
+  libraryFolderGrants   LibraryFolderGrant[]
+  attachments           Attachment[]
+  threadAttachments     ThreadAttachment[]
+  pullRequests          PullRequest[]
+  pullRequestReviews    PullRequestReview[]
+  tasks                 Task[]
+  schedules             Schedule[]
+  wakeups               Wakeup[]
+  projects              Project[]
+  projectRepositories   ProjectRepository[]
+  auditEntries          AuditEntry[]
+  designSystems         DesignSystem[]
+  skills                Skill[]
+  skillPacks            SkillPack[]
+  previewRecipes        PreviewRecipe[]
+  previewVariables      PreviewVariable[]
+  threadReads           ThreadRead[]
+  threadPins            ThreadPin[]
+  homeDismissals        HomeDismissal[]
+  pushNotices           PushNotice[]
+  playbookInstallations PlaybookInstallation[]
+  playbookActions       PlaybookAction[]
+  playbookRuns          PlaybookRun[]
+  playbookDryRuns       PlaybookDryRun[]
+  threadFollows         ThreadFollow[]
 
   @@index([organizationId])
 }
@@ -270,24 +277,24 @@ enum TeammateKind {
 
 /// An AI teammate: a saved identity, not a running process.
 model Teammate {
-  id                    String               @id @default(cuid())
+  id                    String                 @id @default(cuid())
   organizationId        String
   workspaceId           String
-  workspace             Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                  String
-  kind                  TeammateKind         @default(teammate)
-  instructions          String               @default("")
-  harness               Harness              @default(claude_code)
+  kind                  TeammateKind           @default(teammate)
+  instructions          String                 @default("")
+  harness               Harness                @default(claude_code)
   model                 String?
   /// { threadsPerDay, computerHoursPerDay, writeCallsPerConnectionPerDay }
-  caps                  Json                 @default("{}")
+  caps                  Json                   @default("{}")
   /// Per kind of action: allow, ask or deny.
-  permissionPolicy      Json                 @default("{}")
+  permissionPolicy      Json                   @default("{}")
   /// Its grant on the workspace library: read and search it, or also save to it.
-  libraryAccess         LibraryAccess        @default(read)
+  libraryAccess         LibraryAccess          @default(read)
   archivedAt            DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   sessions              Session[]
   threadSeats           ThreadTeammate[]
   grants                Grant[]
@@ -297,14 +304,15 @@ model Teammate {
   connectionCalls       ConnectionCall[]
   documents             Document[]
   libraryFolderGrants   LibraryFolderGrant[]
-  pullRequestsAuthored  PullRequest[]        @relation("PullRequestAuthor")
-  pullRequestsReviewing PullRequest[]        @relation("PullRequestReviewer")
+  pullRequestsAuthored  PullRequest[]          @relation("PullRequestAuthor")
+  pullRequestsReviewing PullRequest[]          @relation("PullRequestReviewer")
   pullRequestReviews    PullRequestReview[]
   tasks                 Task[]
-  tasksCreated          Task[]               @relation("TaskCreatedByTeammate")
+  tasksCreated          Task[]                 @relation("TaskCreatedByTeammate")
   schedules             Schedule[]
-  schedulesCreated      Schedule[]           @relation("ScheduleCreatedByTeammate")
+  schedulesCreated      Schedule[]             @relation("ScheduleCreatedByTeammate")
   wakeups               Wakeup[]
+  playbookInstallations PlaybookInstallation[]
 
   @@index([workspaceId])
 }
@@ -466,6 +474,20 @@ model Session {
   wakeups              Wakeup[]
   /// Schedules whose runs report here, as its children.
   reportingSchedules   Schedule[]         @relation("ScheduleParent")
+  /// The playbook run it belongs to: its root thread and the root's children (src/playbooks.ts).
+  playbookRunId        String?
+  playbookRun          PlaybookRun?       @relation("PlaybookRunThreads", fields: [playbookRunId], references: [id], onDelete: SetNull)
+  /// The run it is the root thread of.
+  rootOfPlaybookRun    PlaybookRun?       @relation("PlaybookRunRoot")
+  /// A run's thread stays out of the sidebar's Threads until a person first takes part in it
+  /// (a message, a takeover, a pin): then this is set, and it stays there.
+  surfacedAt           DateTime?
+  /// The dry runs of a playbook started from this thread (its installation's chat).
+  playbookDryRuns      PlaybookDryRun[]
+  /// Threads it follows (follow_thread): their report wakes it, like a parent's child's.
+  following            ThreadFollow[]     @relation("ThreadFollower")
+  /// Threads that follow it.
+  followers            ThreadFollow[]     @relation("ThreadFollowed")
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -473,6 +495,7 @@ model Session {
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
   @@index([parentId, createdAt])
+  @@index([playbookRunId])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
@@ -537,39 +560,42 @@ model Task {
 /// A teammate prompted with the same instructions on a cron schedule; each
 /// firing starts a fresh thread on the owner's accounts.
 model Schedule {
-  id                  String    @id @default(cuid())
-  organizationId      String
-  workspaceId         String
-  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  teammateId          String
-  teammate            Teammate  @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  title               String
+  id                     String                @id @default(cuid())
+  organizationId         String
+  workspaceId            String
+  workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teammateId             String
+  teammate               Teammate              @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  title                  String
   /// The first message of each run.
-  instructions        String
+  instructions           String
   /// Five fields: minute, hour, day of month, month, day of week.
-  cron                String
+  cron                   String
   /// IANA, e.g. Europe/Paris: the cron's hours are in this zone.
-  timezone            String
+  timezone               String
   /// Runs on this member's accounts; only they edit it.
-  ownerMemberId       String
-  owner               Member    @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  ownerMemberId          String
+  owner                  Member                @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
   /// Set when a teammate created it from a thread.
-  createdByTeammateId String?
-  createdByTeammate   Teammate? @relation("ScheduleCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
-  pausedAt            DateTime?
+  createdByTeammateId    String?
+  createdByTeammate      Teammate?             @relation("ScheduleCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
+  pausedAt               DateTime?
   /// The next firing; null while paused.
-  nextRunAt           DateTime?
+  nextRunAt              DateTime?
   /// Why the last firing could not start; cleared by the next one that does.
-  lastError           String?
+  lastError              String?
   /// Its runs start in this project. Reporting to a thread, it is that thread's project, kept in step when the thread moves.
-  projectId           String?
-  project             Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId              String?
+  project                Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Set when made from a thread to report there: each run is a child of that thread (src/children.ts).
-  parentSessionId     String?
-  parentSession       Session?  @relation("ScheduleParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  sessions            Session[] @relation("ScheduleRuns")
+  parentSessionId        String?
+  parentSession          Session?              @relation("ScheduleParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  sessions               Session[]             @relation("ScheduleRuns")
+  /// Set when a playbook made it: changed only through the playbook, deleted with it.
+  playbookInstallationId String?
+  playbookInstallation   PlaybookInstallation? @relation(fields: [playbookInstallationId], references: [id], onDelete: Cascade)
 
   @@index([nextRunAt])
   @@index([workspaceId])
@@ -1041,25 +1067,31 @@ model Grant {
 
 /// One connector call. Append-only.
 model ConnectionCall {
-  id             String     @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  sessionId      String
-  session        Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  connectionId   String
-  connection     Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  teammateId     String
-  teammate       Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  operation      String
-  write          Boolean
-  target         String
+  id                String     @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId         String
+  session           Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  connectionId      String
+  connection        Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  teammateId        String
+  teammate          Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  operation         String
+  write             Boolean
+  target            String
   /// ok, denied, error, or awaiting_approval followed by its outcome in a later row.
-  result         String
-  error          String?
+  result            String
+  error             String?
   /// The approval ticket, when a human decided.
-  ticketId       String?
-  createdAt      DateTime   @default(now())
+  ticketId          String?
+  /// A playbook's dry run: recorded, answered with a fake success, never sent.
+  simulated         Boolean    @default(false)
+  /// In a playbook's thread: the action of its manifest the call is.
+  playbookActionKey String?
+  /// A simulated call's input, for the dry run's report: what would have been sent.
+  input             Json?
+  createdAt         DateTime   @default(now())
 
   @@index([sessionId])
   @@index([connectionId, createdAt])
@@ -1070,32 +1102,35 @@ model ConnectionCall {
 /// connector's catalog (e.g. "stripe.payment_received"), or any event posted to a
 /// custom app's URL ("webhook.received").
 model Trigger {
-  id                   String               @id @default(cuid())
-  organizationId       String
-  workspaceId          String
-  workspace            Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  connectionId         String
-  connection           Connection           @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  teammateId           String
-  teammate             Teammate             @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  label                String
+  id                     String                @id @default(cuid())
+  organizationId         String
+  workspaceId            String
+  workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectionId           String
+  connection             Connection            @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  teammateId             String
+  teammate               Teammate              @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  label                  String
   /// The catalog id, e.g. gmail.email_received.
-  event                String
+  event                  String
   /// The trigger's options from the catalog, e.g. { "query": "to:support@acme.com" }.
-  options              Json                 @default("{}")
+  options                Json                  @default("{}")
   /// Custom apps only: the unguessable part of the trigger's URL.
-  pathToken            String?              @unique
+  pathToken              String?               @unique
   /// Custom apps only: how the sender is verified.
-  verification         TriggerVerification?
+  verification           TriggerVerification?
   /// Custom apps only: the hmac signing secret, in the vault.
-  verificationSecretId String?
+  verificationSecretId   String?
   /// Runs on this member's accounts.
-  createdByMemberId    String
+  createdByMemberId      String
   /// The threads it starts are in this project.
-  projectId            String?
-  project              Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdAt            DateTime             @default(now())
-  sessions             Session[]
+  projectId              String?
+  project                Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// Set when a playbook made it: changed only through the playbook, deleted with it.
+  playbookInstallationId String?
+  playbookInstallation   PlaybookInstallation? @relation(fields: [playbookInstallationId], references: [id], onDelete: Cascade)
+  createdAt              DateTime              @default(now())
+  sessions               Session[]
 
   @@index([workspaceId])
   @@index([connectionId])
@@ -1505,25 +1540,28 @@ model Skill {
 /// Skills imported together (a GitHub repository, a zip), kept as one: one
 /// scope, written onto its skills, and one switch over theirs.
 model SkillPack {
-  id             String    @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name           String
+  id                     String                @id @default(cuid())
+  organizationId         String
+  workspaceId            String
+  workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                   String
   /// A GitHub address, or `file:<name>` for an upload: importing it again updates the pack.
-  source         String
-  everywhere     Boolean   @default(true)
-  teammateIds    String[]  @default([])
-  projectIds     String[]  @default([])
-  enabled        Boolean   @default(true)
-  createdByType  ActorType
-  createdById    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  skills         Skill[]
+  source                 String
+  everywhere             Boolean               @default(true)
+  teammateIds            String[]              @default([])
+  projectIds             String[]              @default([])
+  enabled                Boolean               @default(true)
+  createdByType          ActorType
+  createdById            String
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  skills                 Skill[]
   /// Set when the pack came with an App: its skills load only for teammates with that App.
-  appId          String?
-  app            App?      @relation(fields: [appId], references: [id], onDelete: SetNull)
+  appId                  String?
+  app                    App?                  @relation(fields: [appId], references: [id], onDelete: SetNull)
+  /// Set when a playbook installed it: its skills load only in that playbook's threads.
+  playbookInstallationId String?
+  playbookInstallation   PlaybookInstallation? @relation(fields: [playbookInstallationId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, source])
   @@index([workspaceId])
@@ -1588,10 +1626,10 @@ model PreviewVariable {
 /// A line of work inside a workspace: its threads, tasks, library folder and
 /// repositories. Organizing and context only: every workspace resource stays shared.
 model Project {
-  id                     String              @id @default(cuid())
+  id                     String                 @id @default(cuid())
   organizationId         String
   workspaceId            String
-  workspace              Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace              Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name                   String
   /// One letter or an emoji, shown in the sidebar. Unset: the name's first letter.
   icon                   String?
@@ -1601,20 +1639,21 @@ model Project {
   /// The website the project is about, if it has one.
   url                    String?
   /// Given to every thread in the project: what it is, its stack, who it is for.
-  brief                  String              @default("")
+  brief                  String                 @default("")
   /// Its library folder, e.g. "Projects/Acme web". Files belong to it by path.
   folder                 String?
   /// Connections its threads should use when several could do. A hint, not a grant.
-  preferredConnectionIds String[]            @default([])
+  preferredConnectionIds String[]               @default([])
   archivedAt             DateTime?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   repositories           ProjectRepository[]
   sessions               Session[]
   tasks                  Task[]
   schedules              Schedule[]
   triggers               Trigger[]
   documents              Document[]
+  playbookInstallations  PlaybookInstallation[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -1685,4 +1724,187 @@ model PushNotice {
 
   @@unique([memberId, key])
   @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Playbooks ("boucles"): a whole job to install (src/playbooks.ts). A template ships with
+// the API (apps/api/playbooks/<id>/playbook.yaml); an installation runs it in a workspace.
+// ---------------------------------------------------------------------------
+
+enum PlaybookStatus {
+  /// Its settings are being filled in, or it waits for an owner or admin to activate it.
+  setup
+  dry_run
+  active
+  paused
+}
+
+/// ask: a person approves each time. auto: the teammate acts alone. deny: never.
+enum PlaybookActionLevel {
+  ask
+  auto
+  deny
+}
+
+enum PlaybookRunStatus {
+  running
+  waiting_person
+  waiting_event
+  done
+  failed
+}
+
+/// A playbook installed in a workspace (and a project): it runs for one teammate on its
+/// owner's accounts. Its triggers, schedules and skill pack are its own and go with it.
+model PlaybookInstallation {
+  id                  String           @id @default(cuid())
+  organizationId      String
+  workspaceId         String
+  workspace           Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId           String?
+  project             Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// The template's id, e.g. brigade/support-bugs.
+  playbookKey         String
+  version             String
+  /// brigade: shipped with the API. Later, a GitHub repository.
+  source              String           @default("brigade")
+  /// The template as installed (PlaybookManifest).
+  manifest            Json
+  teammateId          String
+  teammate            Teammate         @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  /// Runs on this member's accounts: their Claude or Codex subscription and their own Apps.
+  ownerMemberId       String
+  owner               Member           @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  /// The answers to the template's settings, by key.
+  settings            Json             @default("{}")
+  status              PlaybookStatus   @default(setup)
+  createdByMemberId   String
+  activatedAt         DateTime?
+  activatedByMemberId String?
+  pausedAt            DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  actions             PlaybookAction[]
+  runs                PlaybookRun[]
+  triggers            Trigger[]
+  schedules           Schedule[]
+  skillPacks          SkillPack[]
+  dryRuns             PlaybookDryRun[]
+
+  @@index([workspaceId])
+  @@index([projectId])
+}
+
+/// One write a playbook may make, at its level of autonomy. Its numbers come from ConnectionCall and tickets.
+model PlaybookAction {
+  id                     String               @id @default(cuid())
+  organizationId         String
+  workspaceId            String
+  workspace              Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId         String
+  installation           PlaybookInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  key                    String
+  level                  PlaybookActionLevel
+  /// Limits on auto: { cases?: string[], checksPassed?: true, max?: { argument: number } }.
+  conditions             Json                 @default("{}")
+  /// Daily caps on auto: { count?: number, amount?: { argument: string, max: number } }. Past
+  /// one, the action asks until the next day.
+  limits                 Json                 @default("{}")
+  levelChangedAt         DateTime?
+  levelChangedByMemberId String?
+  /// Why it last went back to ask on its own: flagged, update, cap.
+  demotedReason          String?
+
+  @@unique([installationId, key])
+}
+
+/// One event's work: its root thread (origin trigger or schedule) and the root's children.
+/// A later event of the same conversation continues it.
+model PlaybookRun {
+  id              String               @id @default(cuid())
+  organizationId  String
+  workspaceId     String
+  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId  String
+  installation    PlaybookInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  /// Set once its thread started; a run whose thread could not start has none.
+  rootSessionId   String?              @unique
+  rootSession     Session?             @relation("PlaybookRunRoot", fields: [rootSessionId], references: [id], onDelete: SetNull)
+  /// The trigger's conversation (e.g. a Gmail thread): its later events continue this run.
+  conversationKey String?
+  /// The triage case the teammate reported (playbook_report).
+  case            String?
+  status          PlaybookRunStatus    @default(running)
+  /// resolved, escalated, noise or failed, from playbook_report.
+  outcome         String?
+  /// Times a person stepped in: a ticket resolved by a person, a member's message.
+  interventions   Int                  @default(0)
+  firstResponseAt DateTime?
+  dryRun          Boolean              @default(false)
+  /// A dry run's: the replay it is one event of.
+  dryRunId        String?
+  dryRunOf        PlaybookDryRun?      @relation(fields: [dryRunId], references: [id], onDelete: Cascade)
+  /// A dry run's event waiting its turn: its thread's title, first message, files and time.
+  replay          Json?
+  /// What the teammate said it did (playbook_report's summary).
+  summary         String?
+  startedAt       DateTime             @default(now())
+  endedAt         DateTime?
+  threads         Session[]            @relation("PlaybookRunThreads")
+
+  @@index([installationId, startedAt])
+  @@index([installationId, conversationKey])
+  @@index([dryRunId])
+}
+
+/// A playbook replaying past events with every write simulated, before it is activated.
+/// Its runs (PlaybookRun.dryRun) start a few at a time; the thread it was started from hears
+/// once they are all done.
+model PlaybookDryRun {
+  id                String               @id @default(cuid())
+  organizationId    String
+  workspaceId       String
+  workspace         Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installationId    String
+  installation      PlaybookInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  /// The thread it was started from, which hears when it is done.
+  sessionId         String?
+  session           Session?             @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  /// The teammate there that started it, woken with the report.
+  teammateId        String
+  startedByMemberId String
+  /// running, done, or failed (nothing to replay, or it could not start).
+  status            String               @default("running")
+  error             String?
+  /// The span of the replayed events, for the week's extrapolation.
+  firstEventAt      DateTime?
+  lastEventAt       DateTime?
+  startedAt         DateTime             @default(now())
+  endedAt           DateTime?
+  runs              PlaybookRun[]
+
+  @@index([installationId, startedAt])
+  @@index([status])
+}
+
+/// A thread waiting on another's report without being its parent (follow_thread): three runs of
+/// a playbook whose customers hit the same bug follow the one fix. The followed thread's report
+/// wakes each follower once, like a parent (src/children.ts).
+model ThreadFollow {
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// The thread followed.
+  sessionId      String
+  session        Session   @relation("ThreadFollowed", fields: [sessionId], references: [id], onDelete: Cascade)
+  /// The thread that waits.
+  followerId     String
+  follower       Session   @relation("ThreadFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  /// When the followed thread's report reached the follower; a new report clears it.
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([sessionId, followerId])
+  @@index([followerId])
 }

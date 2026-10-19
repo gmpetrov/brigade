@@ -5,6 +5,7 @@ import {
   mentionedIds,
   parseMentions,
   type Ask,
+  type PlaybookPromotionPayload,
   type Question,
   type QuestionAnswer,
   type ThreadAttachmentRef,
@@ -23,6 +24,8 @@ import { scoped, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import { accountReaching } from './repository-grant.js'
 import type { WorkspaceScope } from './scope.js'
+import { decidePromotion } from './playbook-autonomy.js'
+import { decideActivation } from './playbooks.js'
 import { decideSkillProposal } from './skills.js'
 import { loadThread, specFor, teammateIn } from './thread-spec.js'
 import { handBack, joinThread, promptThread } from './work.js'
@@ -404,6 +407,11 @@ type TicketPayload = {
   always?: boolean
   /** A teammate's skill proposal (SkillProposalPayload): an admin's call. */
   skillAction?: 'create' | 'update'
+  /** A member asks an owner or admin to activate a playbook they installed. */
+  playbookActivation?: boolean
+  playbookInstallationId?: string
+  /** Brigade proposes a playbook's action act on its own: its owner, an owner or an admin decides. */
+  playbookPromotion?: PlaybookPromotionPayload
 }
 
 /**
@@ -491,6 +499,19 @@ export async function resolveTicket(
   }
 
   if (ticket.type === 'approval') {
+    if (payload.playbookActivation) {
+      // It runs with no one checking each write it may do alone: like importing skills, an admin's call.
+      if (!isAdmin)
+        throw new HTTPException(403, { message: 'Only an owner or admin can activate a playbook' })
+      await decideActivation(db, scope, ticket, input.approved)
+      return { ok: true, live: false }
+    }
+    if (payload.playbookPromotion) {
+      // It would then act with no one checking: the playbook's owner (whose accounts it runs on)
+      // or an owner or admin decides (decidePromotion checks which).
+      await decidePromotion(db, scope, ticket, input.approved)
+      return { ok: true, live: false }
+    }
     if (payload.skillAction) {
       // A skill shapes what every teammate does: admins decide, like writing one.
       if (!isAdmin)
