@@ -1,17 +1,11 @@
 import Link from 'next/link'
-import { formatCount, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
+import { formatCount, type ProofNumbers, REPO, REPO_URL, relativeLabel } from '@/lib/github-proof'
 import { cn } from '@/lib/utils'
 import { Av, Badge, Cta, Icon, s, SIGN_IN, SIGN_UP } from './parts'
 
-const merges = [
-  ["Reply pills under the teammate's last message", 'brigade/riley-7k2p', '2h'],
-  ['Switch accounts when a plan hits its limit', 'brigade/riley-q81m', '5h'],
-  ['Continue on… chip in the composer', 'brigade/riley-c3vd', '9h'],
-  ['Needs you badge on the app icon', 'brigade/riley-m0xa', '1d'],
-]
-
 export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
-  const { mergedPrs, rileyCommits, totalCommits } = numbers
+  const { mergedPrs, rileyCommits, totalCommits, recentMerges } = numbers
+  const now = new Date()
   const commits = rileyCommits !== null && totalCommits !== null
   return (
     <section className={cn(s.sec, s.built)} aria-labelledby="built-title">
@@ -38,9 +32,9 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
             Read the code on GitHub <Icon name="arrow" />
           </a>
         </div>
-        <div className={s.reveal} aria-hidden="true">
+        <div className={s.reveal}>
           {commits && (
-            <div className={s.nums}>
+            <div className={s.nums} aria-hidden="true">
               <div>
                 <div className={s.num}>{formatCount(rileyCommits)}</div>
                 <div className={s.numL}>commits by Riley</div>
@@ -51,26 +45,33 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
               </div>
             </div>
           )}
-          <div className={s.log}>
-            <div className={s.logH}>
-              <Icon name="github" />
-              <span className={s.mono}>{REPO}</span>
-              <span className={s.sp} />
-              {mergedPrs !== null && <Badge tone="ok">{formatCount(mergedPrs)} merged</Badge>}
-            </div>
-            {merges.map(([title, branch, time]) => (
-              <div key={branch} className={s.lgr}>
-                <span className={s.mg}>
-                  <Icon name="merged" />
-                </span>
-                <div>
-                  <div className={s.tt}>{title}</div>
-                  <div className={s.mt}>{branch} · merged by a person</div>
-                </div>
-                <span className={s.tm}>{time}</span>
+          {recentMerges && (
+            <section className={s.log} aria-label="Latest merged pull requests">
+              <div className={s.logH}>
+                <Icon name="github" />
+                <span className={s.mono}>{REPO}</span>
+                <span className={s.sp} />
+                {mergedPrs !== null && <Badge tone="ok">{formatCount(mergedPrs)} merged</Badge>}
               </div>
-            ))}
-          </div>
+              {recentMerges.map((pr) => (
+                <a key={pr.number} className={s.lgr} href={pr.url}>
+                  <span className={s.mg} aria-hidden="true">
+                    <Icon name="merged" />
+                  </span>
+                  <div>
+                    <div className={s.tt}>{pr.title}</div>
+                    <div className={s.mt}>
+                      #{pr.number}
+                      {pr.branch && <> · {pr.branch}</>} · merged
+                    </div>
+                  </div>
+                  <span className={s.tm}>
+                    <time dateTime={pr.mergedAt}>{relativeLabel(new Date(pr.mergedAt), now)}</time>
+                  </span>
+                </a>
+              ))}
+            </section>
+          )}
         </div>
       </div>
     </section>
