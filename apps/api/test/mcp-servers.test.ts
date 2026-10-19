@@ -17,7 +17,7 @@ const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpan
 const { resendAccountName } = await import('../src/connectors/resend.js')
 const { replicateAccountName } = await import('../src/connectors/replicate.js')
 const { openrouterAccountName } = await import('../src/connectors/openrouter.js')
-const { posthog } = await import('../src/connectors/posthog.js')
+const { posthog, posthogAccountName } = await import('../src/connectors/posthog.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -208,7 +208,7 @@ test('an OpenRouter account shows as personal or an organization’s', () => {
   assert.equal(openrouterAccountName(null), null)
 })
 
-test('PostHog: each tool on its own, in the chosen areas, an account as its organizations', () => {
+test('PostHog: each tool on its own, in the chosen areas', () => {
   const server = posthog.mcp!
   // Without mode=tools PostHog gives an unknown client one exec tool, all reads and writes.
   const url = new URL(server.url)
@@ -217,12 +217,21 @@ test('PostHog: each tool on its own, in the chosen areas, an account as its orga
   assert.equal(server.tools['execute-sql']?.write, false)
   assert.equal(server.tools['create-feature-flag']?.write, true)
   assert.equal(server.tools['switch-project']?.write, false)
-  // organizations-get answers [{ id, name, slug, membership_level }] (PostHog's MCP source).
-  const name = server.account!.name
-  const org = { id: '0190-aaaa', name: 'Acme', slug: 'acme', membership_level: 15 }
-  assert.equal(name([org]), 'Acme')
-  assert.equal(name([org, { ...org, name: 'Beta' }]), 'Acme +1')
-  assert.equal(name([]), null)
+  assert.equal(server.account!.name, posthogAccountName)
+})
+
+test('a PostHog account shows as its organizations', () => {
+  // organizations-get's reply, as a real account gave it (id changed): TOON, not JSON.
+  const one =
+    '[1]{id,name,slug,membership_level}:\n  019f0000-0000-0000-0000-4f3fc111640d,NoCo AI,noco-ai,15'
+  assert.equal(posthogAccountName(one), 'NoCo AI')
+  const two =
+    '[2]{id,name,slug,membership_level}:\n  1,"Acme, Inc.",acme,15\n  2,"Beta \\"B\\"",beta,1'
+  assert.equal(posthogAccountName(two), 'Acme, Inc. +1')
+  assert.equal(posthogAccountName('[1]{id,name}:\n  1,"Beta \\"B\\""'), 'Beta "B"')
+  assert.equal(posthogAccountName([{ id: '1', name: 'Acme' }]), 'Acme')
+  assert.equal(posthogAccountName('[0]{id,name,slug,membership_level}:'), null)
+  assert.equal(posthogAccountName('Failed to get organizations'), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {
