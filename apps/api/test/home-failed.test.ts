@@ -5,7 +5,7 @@ import { test } from 'node:test'
 process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-test-secret-test-secret'
 process.env.VAULT_KEY ??= Buffer.alloc(32).toString('base64')
-const { failedLooseEnds } = await import('../src/home.js')
+const { failedLooseEnds, LOOSE_END_KEY } = await import('../src/home.js')
 
 const thread = {
   id: 't1',
@@ -44,4 +44,9 @@ test('set aside, it stays gone until the thread fails again', () => {
     failedLooseEnds([{ ...thread, lastSeq: 45 }], [], new Set(['failed:t1:42'])).length,
     1,
   )
+})
+
+test('a failed loose end can be set aside', () => {
+  const [end] = failedLooseEnds([{ ...thread, id: 'cmvf5ek380009psp7fzgb99ug' }], [], new Set())
+  assert.match(end!.key, LOOSE_END_KEY)
 })

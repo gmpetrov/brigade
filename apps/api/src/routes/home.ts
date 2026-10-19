@@ -1,10 +1,10 @@
 // Home's loose ends and results, for the member asking (src/home.ts).
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { dismissLooseEnd, homeFor } from '../home.js'
+import { dismissLooseEnd, homeFor, LOOSE_END_KEY } from '../home.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
-const Dismiss = z.object({ key: z.string().regex(/^(proposal|stalled|routine):[\w:-]{1,200}$/) })
+const Dismiss = z.object({ key: z.string().regex(LOOSE_END_KEY) })
 
 export const home = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)

@@ -367,6 +367,9 @@ export function failedLooseEnds(
   })
 }
 
+/** The keys a loose end can have, one prefix per kind built above. */
+export const LOOSE_END_KEY = /^(proposal|stalled|routine|failed):[\w:-]{1,200}$/
+
 /** Set a loose end aside: it stays gone until the thing it names changes. */
 export async function dismissLooseEnd(
   db: ScopedDb,
