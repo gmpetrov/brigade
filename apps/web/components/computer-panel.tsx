@@ -58,15 +58,12 @@ function Section({
 function Frame({
   teammate,
   subtitle,
-  menu,
   onClose,
   onEscape = onClose,
   children,
 }: {
   teammate: Pick<Teammate, 'id' | 'name' | 'harness'>
   subtitle: string
-  /** Beside the close button: the thread's menu. */
-  menu?: ReactNode
   onClose: () => void
   /** What Escape does: closes it, as it does the other panels beside a page, unless told else. */
   onEscape?: () => void
@@ -91,7 +88,6 @@ function Frame({
           <strong className="block truncate text-sm font-semibold">{teammate.name}</strong>
           <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
         </div>
-        {menu}
         <CloseButton label={`Close ${teammate.name}'s panel`} title="Close" onClick={onClose} />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">{children}</div>
@@ -360,8 +356,6 @@ export function ComputerPanel({
     <Frame
       teammate={{ ...teammate, harness: teammate.harness as Teammate['harness'] }}
       subtitle={`${teammateModelLabel(teammate)} on ${cloud ? 'the cloud computer' : thread.computer.name}`}
-      // Pin, rename, archive or delete it here too: it may be out of the sidebar.
-      menu={<ThreadMenu thread={thread} onChanged={onChange} />}
       onClose={onClose}
     >
       <Section title="Computer">
@@ -390,7 +384,11 @@ export function ComputerPanel({
         {actions}
       </Section>
 
-      <Section title="Details">{details}</Section>
+      {/* Pin, rename, archive or delete it here too: it may be out of the sidebar. On the
+          thread's details rather than in the header, which is the teammate's. */}
+      <Section title="Details" action={<ThreadMenu thread={thread} onChanged={onChange} />}>
+        {details}
+      </Section>
 
       {thread.wakeups.length > 0 && <Wakeups thread={thread} onChange={onChange} />}
 
