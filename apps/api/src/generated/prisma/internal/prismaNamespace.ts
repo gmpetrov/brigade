@@ -5050,6 +5050,7 @@ export const SessionScalarFieldEnum = {
   taskId: 'taskId',
   projectId: 'projectId',
   playbookRunId: 'playbookRunId',
+  playbookTeammate: 'playbookTeammate',
   surfacedAt: 'surfacedAt'
 } as const
 

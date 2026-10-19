@@ -115,14 +115,20 @@ function preferredAccount(givable: Connection[], ask: AppAsk) {
  */
 export function AppAccessAsk({
   ask,
-  askerName,
+  askerName: asker,
   onReply,
 }: {
   ask: AppAsk
   askerName: string
   onReply: (reply: AccessReply) => void
 }) {
-  const { me } = useDashboard()
+  const { me, teammates } = useDashboard()
+  // The teammate it is for: the one the ask names (a playbook's developer), else the one asking.
+  const named = ask.app.teammate?.trim().toLowerCase()
+  const askerName = named
+    ? (teammates.find((t) => t.id === ask.app.teammate || t.name.toLowerCase() === named)?.name ??
+      ask.app.teammate!)
+    : asker
   const data = useApi<ConnectionsResponse>('/connections')
   const kind = ask.app.kind as Connection['kind']
   // A GitHub repository: only the accounts whose installation reaches it, listed afresh.

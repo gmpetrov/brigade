@@ -270,6 +270,11 @@ export const Ask = z.discriminatedUnion('type', [
         repository: RepositoryName.optional(),
         /** The account the teammate means, as its row shows it (the Gmail address): picked first. */
         account: z.string().max(320).optional(),
+        /**
+         * The teammate the access is for, by id or name, when not the one asking: one a playbook
+         * it installs hands this App to (its developer). Unset: the one asking.
+         */
+        teammate: z.string().max(100).optional(),
       })
       .refine((app) => !app.repository || app.kind === 'github', {
         message: 'repository is for kind github',

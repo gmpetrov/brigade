@@ -24,8 +24,10 @@ import {
   isAdminRole,
   requireInstallation,
   roleStatuses,
+  teammateChoices,
   templates,
   templateView,
+  upgradeSetup,
   withDefaults,
 } from './playbooks.js'
 
@@ -81,9 +83,12 @@ const roleWords = (a: PlaybookAppStatus) =>
     ? a.name
     : `${a.name} (${a.kinds.map((k) => (k === MCP_KIND ? 'an MCP server added by its URL' : k)).join(' or ')})`
 
-/** What to tell the teammate about the Apps: each missing one asked for at the access declared. */
-const appsNote = (apps: PlaybookAppStatus[]) => {
-  const needed = apps.filter((a) => a.status !== 'ready' && !a.optional)
+/**
+ * What to tell the teammate about the Apps: each missing one asked for at the access declared,
+ * for the teammate that holds it. One whose teammate is not picked yet waits for that answer.
+ */
+const appsNote = (apps: PlaybookAppStatus[], asker: { id: string }) => {
+  const needed = apps.filter((a) => a.status !== 'ready' && !a.optional && a.holder)
   // An account the teammate has but its setting has not picked yet: the question picks it.
   const unpicked = needed.filter((a) => a.picks && !a.chosen && a.accounts.length > 0)
   const lacking = needed.filter((a) => !unpicked.includes(a))
@@ -96,9 +101,14 @@ const appsNote = (apps: PlaybookAppStatus[]) => {
     pickNote +
     ' Apps it still needs: ' +
     lacking
-      .map((a) => `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'})`)
+      .map(
+        (a) =>
+          `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'}` +
+          `${a.holder!.id === asker.id ? '' : `, for ${a.holder!.name}`})`,
+      )
       .join(', ') +
     '. For each, open one ticket with an access ask of kind connection and app { kind, scope }, with ' +
+    'app.teammate set to the teammate it is for when that is not you, ' +
     'the scope the playbook declares for it (read or read_write) and no more, and its account when you ' +
     'know which (the address its mail goes to, say): the person connects the ' +
     'App there, sign-in included, and grants it. A role any of several Apps can hold: first ask which ' +
@@ -161,15 +171,20 @@ export async function handlePlaybookCall(
 
     if (op.name === 'configure_playbook') {
       let installation
-      if (op.installationId) installation = await ownInstallation(db, session, op.installationId)
-      else {
+      if (op.installationId) {
+        installation = await ownInstallation(db, session, op.installationId)
+        // Not active yet: on the template's latest version.
+        const template = templates().get(installation.playbookKey)
+        if (template) installation = await upgradeSetup(db, installer, installation, template)
+      } else {
         if (!op.playbookKey)
           return {
             error: 'Give the playbookKey to start installing, or the installationId to go on',
           }
         const template = templates().get(op.playbookKey)
         if (!template) return { error: `No playbook ${op.playbookKey}; show_playbook lists them` }
-        // One being installed by this member already: go on with it rather than start a second.
+        // One being installed by this member already: go on with it rather than start a second,
+        // on the template's latest version.
         installation =
           (await db.playbookInstallation.findFirst({
             where: {
@@ -179,7 +194,11 @@ export async function handlePlaybookCall(
             },
             orderBy: { createdAt: 'desc' },
           })) ?? null
-        if (!installation) {
+        if (installation) installation = await upgradeSetup(db, installer, installation, template)
+        else {
+          // With teammate settings, the teammate named answers the one its runs start with, and
+          // until one does, the one installing it holds the place.
+          const first = template.manifest.teammate
           const ref = op.teammate
           const runner = ref
             ? ((await db.teammate.findFirst({ where: { id: ref, archivedAt: null } })) ??
@@ -192,11 +211,16 @@ export async function handlePlaybookCall(
             template,
             teammateId: runner.id,
             projectId: session.projectId,
-            settings: {},
+            settings: first && ref ? { [first]: runner.id } : {},
           })
         }
       }
-      const missing = await answerSettings(db, installer, installation.id, op.settings)
+      const first = (installation.manifest as PlaybookManifest).teammate
+      const missing = await answerSettings(db, installer, installation.id, {
+        // The teammate named answers the setting its runs start with.
+        ...(first && op.teammate && op.installationId ? { [first]: op.teammate } : {}),
+        ...op.settings,
+      })
       const view = await getInstallation(db, installation.id)
       const current = await requireInstallation(db, installation.id)
       const manifest = current.manifest as PlaybookManifest
@@ -209,6 +233,9 @@ export async function handlePlaybookCall(
             .map(async (s) => [s.key, await accountChoices(db, manifest, s)] as const),
         ),
       )
+      const crew = manifest.settings.some((s) => s.type === 'teammate' && !(s.key in answered))
+        ? await teammateChoices(db)
+        : []
       const question = (s: PlaybookManifest['settings'][number]) => ({
         key: s.key,
         type: s.type,
@@ -225,12 +252,35 @@ export async function handlePlaybookCall(
               })),
             }
           : {}),
+        ...(s.type === 'teammate' ? { teammates: crew.map((t) => t.name) } : {}),
       })
       const questions = manifest.settings.filter((s) => missing.includes(s.key)).map(question)
       // A question with a set of answers (its options, the accounts it can pick) is picked, not typed.
       const picks = questions[0]
-        ? (questions[0].options?.length ?? 0) + (questions[0].accounts?.length ?? 0)
+        ? (questions[0].options?.length ?? 0) +
+          (questions[0].accounts?.length ?? 0) +
+          (questions[0].teammates?.length ?? 0)
         : 0
+      // A teammate other than the one its runs start with: the same one, or another that never
+      // reads what starts the runs (a customer's mail). The person chooses; say what each means.
+      const asked = manifest.settings.find((s) => s.key === questions[0]?.key)
+      const runApps = playbookRoles(manifest.apps)
+        .filter((r) => !r.teammate)
+        .map((r) => r.name)
+      const ownApps = playbookRoles(manifest.apps)
+        .filter((r) => r.teammate === asked?.key)
+        .map((r) => r.name)
+      const runAsk = manifest.settings.find((s) => s.key === manifest.teammate)?.ask
+      const teammateNote =
+        asked?.type !== 'teammate'
+          ? ''
+          : asked.key === manifest.teammate
+            ? 'Its runs start with that teammate, which has its ' +
+              `${runApps.join(', ')} alone. Do not pick yourself unless the person asks for you. `
+            : `That teammate has its ${ownApps.join(', ')}, in the threads handed to it. Offer the same ` +
+              `teammate as for "${runAsk}" (simpler: one teammate holds every App) or another one ` +
+              `(safer: the teammate reading ${runApps.join(', ')} never holds ${ownApps.join(', ')}), ` +
+              'and let the person choose. '
       // Optional ones with no answer and no default (an analytics tool): asked once, at the end.
       const optional = manifest.settings
         .filter((s) => s.optional && s.default === undefined && !(s.key in answered))
@@ -248,11 +298,14 @@ export async function handlePlaybookCall(
           (questions.length
             ? `Ask the person next: "${questions[0]!.ask}" (${questions[0]!.type}), one question at a time, ` +
               'then call configure_playbook with installationId and the answer, by its key. ' +
+              teammateNote +
               (picks >= 2 && picks <= 6
                 ? 'Its answers are known: end your reply with a choices block, one option per ' +
                   (questions[0]!.accounts?.length
                     ? 'account (labelled as its row shows it, the App in its description)'
-                    : 'option') +
+                    : questions[0]!.teammates?.length
+                      ? 'teammate (by name)'
+                      : 'option') +
                   ', so the person picks one rather than typing it. '
                 : '') +
               'An account setting takes ' +
@@ -267,7 +320,7 @@ export async function handlePlaybookCall(
                   'offer'
                 : 'Offer') +
               ' a dry run on real past events, where nothing is sent (start_dry_run).') +
-          appsNote(apps),
+          appsNote(apps, teammate),
       }
     }
 
@@ -277,7 +330,7 @@ export async function handlePlaybookCall(
       const lacking = missingApps(apps)
       if (lacking.length)
         return {
-          error: `It needs ${lacking.map(roleWords).join(', ')} first.${appsNote(apps)}`,
+          error: `It needs ${lacking.map(roleWords).join(', ')} first.${appsNote(apps, teammate)}`,
         }
       const view = await startDryRun(db, scope, session, teammate, op.installationId, op.last)
       return {

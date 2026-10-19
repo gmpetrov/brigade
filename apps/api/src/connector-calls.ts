@@ -101,7 +101,7 @@ export async function handleConnectorCall(
     return result({ ok: false, error: 'Unknown connection or operation' })
 
   // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
-  const playbook = await threadPlaybook(db, session.playbookRunId)
+  const playbook = await threadPlaybook(db, session.playbookRunId, session.playbookTeammate)
   const playbookActionKey = playbook
     ? playbookActionOf(playbook.actions, connection.kind, call.operation)
     : null

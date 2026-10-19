@@ -214,8 +214,11 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
     accounts.push(
       await accountToGrant(db, scope, thread, grant.app, grant.what, grant.connectionId),
     )
+  // Each for the teammate it names (a playbook's developer), else the one asking.
+  const holders = []
+  for (const grant of grants) holders.push(await accessHolder(db, asker, grant.app.teammate))
   for (const [i, account] of accounts.entries())
-    await grantAccount(db, scope, asker.id, account, grants[i]!.app.scope)
+    await grantAccount(db, scope, holders[i]!.id, account, grants[i]!.app.scope)
   const sent = await dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
@@ -339,6 +342,19 @@ async function accountToGrant(
       : undefined
   if (!account) throw new HTTPException(400, { message: `Pick the ${entry.name} account to give` })
   return account
+}
+
+/** The teammate an access ask is for: the one it names, by id or name, else the one asking. */
+async function accessHolder(db: ScopedDb, asker: { id: string }, ref: string | undefined) {
+  if (!ref?.trim()) return asker
+  const name = ref.trim()
+  const teammate =
+    (await db.teammate.findFirst({ where: { id: name, archivedAt: null } })) ??
+    (await db.teammate.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' }, archivedAt: null },
+    }))
+  if (!teammate) throw new HTTPException(404, { message: `No teammate is called "${name}"` })
+  return teammate
 }
 
 /** Give the teammate the account; an existing read and write grant stays. */
