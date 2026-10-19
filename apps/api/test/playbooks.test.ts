@@ -185,9 +185,9 @@ rejects(
   'a role accepting an App Brigade does not have',
   (m) => {
     analytics(m)
-    m.apps[1].kinds = ['mixpanel', 'posthog']
+    m.apps[1].kinds = ['mixpanel', 'amplitude']
   },
-  /no App posthog/,
+  /no App amplitude/,
 )
 rejects(
   'a role named like another of its Apps',

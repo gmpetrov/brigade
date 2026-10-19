@@ -15,6 +15,7 @@ import { mixpanel } from './mixpanel.js'
 import { resend } from './resend.js'
 import { replicate } from './replicate.js'
 import { openrouter } from './openrouter.js'
+import { posthog } from './posthog.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -40,6 +41,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   resend,
   replicate,
   openrouter,
+  posthog,
 }
 
 /**
@@ -88,6 +90,7 @@ export const triggerCatalog = () =>
         'resend',
         'replicate',
         'openrouter',
+        'posthog',
         'mcp',
         'webhook',
       ] as const
@@ -280,6 +283,15 @@ export const appCatalog: Record<
     developer: 'OpenRouter',
     category: 'Developer tools',
     // An OpenRouter sign-in mints a key that spends its account's credits: kept to its member's threads until they share it.
+    personal: true,
+  },
+  posthog: {
+    name: 'PostHog',
+    description:
+      'Query events with SQL, trends and funnels, manage dashboards, feature flags and experiments, and debug with error tracking, logs and session replays, with PostHog’s MCP server.',
+    developer: 'PostHog',
+    category: 'Analytics',
+    // A PostHog sign-in reaches its person's organizations and projects: kept to their threads until they share it.
     personal: true,
   },
   mcp: {

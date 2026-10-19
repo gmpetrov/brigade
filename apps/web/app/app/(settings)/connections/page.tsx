@@ -56,6 +56,7 @@ const BUILT_IN: Kind[] = [
   'resend',
   'replicate',
   'openrouter',
+  'posthog',
   'stripe',
 ]
 
