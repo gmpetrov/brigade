@@ -178,6 +178,31 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
     )
   }
 
+  if (item.kind === 'failed') {
+    const href = `/app/threads/${item.thread.id}`
+    return (
+      <Row
+        icon={
+          <Icon tone="bad">
+            <CircleAlert />
+          </Icon>
+        }
+        title={item.thread.title}
+        meta={meta(
+          item.error
+            ? `${item.teammate.name} ran into a problem: ${item.error}`
+            : `${item.teammate.name} ran into a problem · ${when(item.at)}`,
+        )}
+        href={href}
+      >
+        <Button variant="outline" size="sm" className="rounded-full" asChild>
+          <Link href={href}>Open</Link>
+        </Button>
+        {dismiss}
+      </Row>
+    )
+  }
+
   const href = item.run ? `/app/threads/${item.run.id}` : '/app/routines'
   return (
     <Row

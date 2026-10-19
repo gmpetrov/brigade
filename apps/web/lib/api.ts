@@ -807,6 +807,14 @@ export type LooseEnd =
       offline: boolean
     }
   | {
+      kind: 'failed'
+      key: string
+      at: string
+      thread: { id: string; title: string }
+      teammate: { id: string; name: string }
+      error: string | null
+    }
+  | {
       kind: 'routine'
       key: string
       at: string
