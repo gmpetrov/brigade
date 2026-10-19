@@ -417,7 +417,9 @@ const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
   "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
   'person), `move_task` and ' +
-  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
+  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person. A task you create ' +
+  "goes in this thread's project; when it belongs to another project (see Projects), give `project` with that " +
+  "project's id, and move one created in the wrong project with `update_task`."
 
 /**
  * Big goals: one deliverable, however big. Nine tasks made a person follow nine

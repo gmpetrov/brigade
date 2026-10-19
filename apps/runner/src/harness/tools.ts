@@ -1113,13 +1113,16 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
         'track something on the board, or to start work in a thread of its own: your own name as assignee for a ' +
         'goal of yours that came up while talking about something else, another teammate (id or name) to hand ' +
         'them work. Either starts at once in its own thread. "none" puts it in Backlog; "self" makes this thread ' +
-        'the task. One goal is one task and one deliverable, however big: keep its parts off the board.',
+        'the task. One goal is one task and one deliverable, however big: keep its parts off the board. It goes in ' +
+        "this thread's project unless you set `project`: set it when the task belongs to another project than this " +
+        'thread (a Brigade fix that came up in a Lovarank thread goes in Brigade).',
       inputSchema: jsonSchema<{
         title: string
         description: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
         assignee?: string
         mission?: string
+        project?: string
       }>({
         type: 'object',
         properties: {
@@ -1141,6 +1144,12 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
               'The id of the mission it belongs to, from list_tasks or the create_task that made it. It takes the ' +
               "mission's project. Unset: a task of its own.",
           },
+          project: {
+            type: 'string',
+            description:
+              'The project it belongs to: its id (or name) from your instructions, or "none" for no project. ' +
+              "Unset: this thread's project. Leave it out with a mission, which gives its own project.",
+          },
         },
         required: ['title', 'description'],
       }),
@@ -1154,6 +1163,7 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
             priority: input.priority ?? 'medium',
             assignee: input.assignee || 'self',
             ...(input.mission ? { mission: input.mission } : {}),
+            ...(input.project ? { project: input.project === 'none' ? null : input.project } : {}),
           },
           input,
           toolCallId,
@@ -1195,13 +1205,16 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
     }),
     update_task: tool({
       description:
-        "Change a task's title, description or priority, or move it into or out of a mission.",
+        "Change a task's title, description or priority, move it into or out of a mission, or move it to another " +
+        "project, such as a task created in the wrong one. A task in a mission is in the mission's project: move " +
+        "the mission, or take the task out of it first. A task's thread moves with it.",
       inputSchema: jsonSchema<{
         taskId: string
         title?: string
         description?: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
         mission?: string
+        project?: string
       }>({
         type: 'object',
         properties: {
@@ -1213,18 +1226,24 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
             type: 'string',
             description: 'A mission id to move it into, or "none" to take it out of its mission',
           },
+          project: {
+            type: 'string',
+            description:
+              'A project id (or name) from your instructions to move it to, or "none" to take it out of its project',
+          },
         },
         required: ['taskId'],
       }),
-      execute: ({ mission, ...input }, { toolCallId }) =>
+      execute: ({ mission, project, ...input }, { toolCallId }) =>
         send(
           'update_task',
           {
             name: 'update',
             ...input,
             ...(mission ? { mission: mission === 'none' ? null : mission } : {}),
+            ...(project ? { project: project === 'none' ? null : project } : {}),
           },
-          { ...input, mission },
+          { ...input, mission, project },
           toolCallId,
         ),
     }),

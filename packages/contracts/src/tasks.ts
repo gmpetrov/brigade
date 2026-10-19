@@ -82,6 +82,8 @@ export const TaskOperation = z.discriminatedUnion('name', [
     assignee: z.string().default('self'),
     /** The id of the mission it goes in. */
     mission: z.string().optional(),
+    /** A project's id or name, or null: none. Unset: the calling thread's. Not with a mission. */
+    project: z.string().nullable().optional(),
   }),
   z.object({ name: z.literal('list') }),
   /** To a started task's thread (taskId), or to a child of the thread calling (threadId). */
@@ -101,6 +103,8 @@ export const TaskOperation = z.discriminatedUnion('name', [
     priority: TaskPriority.optional(),
     /** Into that mission, or null: out of its mission. */
     mission: z.string().nullable().optional(),
+    /** Into a project (id or name), or null: out of its project. Not for a task in a mission. */
+    project: z.string().nullable().optional(),
   }),
   z.object({
     name: z.literal('assign'),
