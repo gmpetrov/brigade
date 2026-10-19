@@ -33,7 +33,6 @@ import { runnerBackups } from './routes/runner-backups.js'
 import { runnerFolders } from './routes/runner-folders.js'
 import { runnerLibrary } from './routes/runner-library.js'
 import { schedules } from './routes/schedules.js'
-import { loops } from './routes/loops.js'
 import { search } from './routes/search.js'
 import { tasks } from './routes/tasks.js'
 import { tickets } from './routes/tickets.js'
@@ -93,7 +92,6 @@ app.route('/api/security', security)
 app.route('/api/tickets', tickets)
 app.route('/api/tasks', tasks)
 app.route('/api/schedules', schedules)
-app.route('/api/loops', loops)
 app.route('/api/projects', projects)
 // Before the library: its own routes would read /assets/<id> as a file id.
 app.route('/api/library/assets', documentAssets)

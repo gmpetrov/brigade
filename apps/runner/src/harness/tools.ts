@@ -1482,44 +1482,6 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
   }
 }
 
-/** A playbook's run: how it ended, with its triage case. Through the schedule calls, which the API checks. */
-export function loopTools(call: ScheduleCaller): Record<string, Tool> {
-  return {
-    loop_report: tool({
-      description:
-        "End a playbook's run: its case, in the recipe's words (e.g. documented_question, bug, noise), and its " +
-        'outcome: resolved (done), escalated (a person must take it; open a ticket first), noise (nothing to do) ' +
-        'or failed (say why in the summary). Call it once, when the run is done; a later event of the same ' +
-        'conversation continues the run.',
-      inputSchema: jsonSchema<{
-        case: string
-        outcome: 'resolved' | 'escalated' | 'noise' | 'failed'
-        summary?: string
-      }>({
-        type: 'object',
-        properties: {
-          case: { type: 'string', description: "The triage case, in the recipe's words" },
-          outcome: { type: 'string', enum: ['resolved', 'escalated', 'noise', 'failed'] },
-          summary: { type: 'string', description: 'One or two lines: what was done' },
-        },
-        required: ['case', 'outcome'],
-      }),
-      execute: (input, { toolCallId }) =>
-        call({
-          operation: {
-            name: 'loop_report',
-            case: input.case,
-            outcome: input.outcome,
-            ...(input.summary ? { summary: input.summary } : {}),
-          },
-          toolCallId,
-          toolName: 'loop_report',
-          input,
-        }),
-    }),
-  }
-}
-
 /**
  * Child threads: work started beside this thread, in a fresh context, whose report
  * comes back here. A child reports with `report` and starts no children of its own.

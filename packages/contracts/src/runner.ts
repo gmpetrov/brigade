@@ -18,7 +18,6 @@ import {
   PreviewPort,
   PreviewStartOutcome,
 } from './previews.js'
-import { ThreadLoop } from './loops.js'
 import { ScheduleOperation } from './schedules.js'
 import { SkillProposal, ThreadSkill } from './skills.js'
 import { TaskOperation } from './tasks.js'
@@ -132,8 +131,6 @@ export const ThreadSpec = z.object({
     .default([]),
   /** A private thread does not write to workspace memory, and its summary is not searchable. */
   private: z.boolean().default(false),
-  /** Set in a playbook's thread (its run's root or a child): the playbook, whose Apps alone it has. */
-  loop: ThreadLoop.nullish(),
   /** Set in a child thread: the thread it was started from, which its report goes to. */
   parent: z.object({ id: z.string(), title: z.string() }).nullish(),
   /** Set when the teammate is granted a GitHub connection: its repositories through git. */

@@ -14,7 +14,6 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
-import { beginRun, reportRun, settleRun } from './loops.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
@@ -58,14 +57,8 @@ const view = ({ sessions, ...schedule }: Awaited<ReturnType<typeof listRows>>[nu
   lastRun: sessions[0] ?? null,
 })
 
-const listRows = (
-  db: ScopedDb,
-  where: { id?: string; projectId?: string | null; loopInstallationId?: null } = {},
-) => db.schedule.findMany({ where, include: LIST, orderBy: { createdAt: 'desc' }, take: 500 })
-
-/** A playbook's schedules show in the playbook, not with the others. */
-const ownRows = (db: ScopedDb, where: { projectId?: string | null }) =>
-  listRows(db, { ...where, loopInstallationId: null })
+const listRows = (db: ScopedDb, where: { id?: string; projectId?: string | null } = {}) =>
+  db.schedule.findMany({ where, include: LIST, orderBy: { createdAt: 'desc' }, take: 500 })
 
 /** The next firing after now, or null when the expression never fires again. */
 const upcoming = (cron: string, timezone: string) => nextRun(cron, timezone) ?? null
@@ -80,7 +73,7 @@ export const localTime = (date: Date, timezone: string) =>
 
 /** `project`: a project's id, or "none". */
 export async function listSchedules(db: ScopedDb, project?: string) {
-  return (await ownRows(db, projectWhere(project))).map(view)
+  return (await listRows(db, projectWhere(project))).map(view)
 }
 
 async function getSchedule(db: ScopedDb, id: string) {
@@ -93,14 +86,6 @@ async function requireSchedule(db: ScopedDb, id: string) {
   const schedule = await findSchedule(db, id)
   if (!schedule) throw new HTTPException(404, { message: 'Schedule not found' })
   return schedule
-}
-
-/** A playbook's schedules change only through it, so an update can replace them cleanly. */
-function notThePlaybooks(schedule: { loopInstallationId: string | null }) {
-  if (schedule.loopInstallationId)
-    throw new HTTPException(409, {
-      message: 'This schedule belongs to a playbook: change it from the playbook, on Automations',
-    })
 }
 
 async function requireTeammate(db: ScopedDb, id: string) {
@@ -238,7 +223,6 @@ export async function updateSchedule(
   changes: Omit<Changes, 'paused'>,
 ) {
   const schedule = await requireSchedule(db, id)
-  notThePlaybooks(schedule)
   if (schedule.ownerMemberId !== scope.memberId)
     throw new HTTPException(403, {
       message: "This schedule runs on another member's accounts; only they can edit it",
@@ -248,7 +232,6 @@ export async function updateSchedule(
 
 export async function setPaused(db: ScopedDb, scope: WorkspaceScope, id: string, paused: boolean) {
   const schedule = await requireSchedule(db, id)
-  notThePlaybooks(schedule)
   requireManager(scope, schedule)
   return applyChanges(db, scope, schedule, { paused }, { type: 'member', id: scope.memberId })
 }
@@ -272,7 +255,6 @@ export async function runNow(db: ScopedDb, scope: WorkspaceScope, id: string) {
 /** The schedule goes; its threads stay as plain threads. */
 export async function deleteSchedule(db: ScopedDb, scope: WorkspaceScope, id: string) {
   const schedule = await requireSchedule(db, id)
-  notThePlaybooks(schedule)
   requireManager(scope, schedule)
   await db.schedule.deleteMany({ where: { id } })
   await changed(scope, { type: 'member', id: scope.memberId }, 'schedule.deleted', id, {
@@ -345,16 +327,6 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
     }))
   if (!computer) return failed('the workspace has no computer')
 
-  // A playbook's schedule: each firing a run, within its runs a day.
-  const run = schedule.loopInstallationId ? await beginRun(db, schedule.loopInstallationId) : null
-  if (run && 'skipped' in run) return { skipped: run.skipped }
-  if (run && 'limit' in run) {
-    await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: run.limit } })
-    broadcastSchedule(scope.workspaceId, schedule.id)
-    return { error: run.limit }
-  }
-  const runId = run?.runId
-
   const text = [
     `Scheduled run of "${schedule.title}", due ${localTime(dueAt, schedule.timezone)} (${schedule.timezone}). ` +
       'Nobody is watching this thread live: do the work below, and open a ticket if you need a person.' +
@@ -380,16 +352,13 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
       },
       // A run reporting to a thread is in that thread's project, wherever it has moved.
       projectId: parent ? parent.projectId : schedule.projectId,
-      ...(runId ? { loopRunId: runId } : {}),
     })
-    if (runId) await settleRun(db, runId, outcome === 'offline' ? null : thread.id)
     if (outcome === 'offline') return failed('the computer is offline')
     if (schedule.lastError)
       await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: null } })
     broadcastSchedule(scope.workspaceId, schedule.id)
     return { threadId: thread.id }
   } catch (error) {
-    if (runId) await settleRun(db, runId, null)
     if (error instanceof HTTPException) return failed(error.message)
     throw error
   }
@@ -509,11 +478,6 @@ export async function handleScheduleCall(
     const output = await handleChildCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
-  // And a playbook run's report.
-  if (op.name === 'loop_report') {
-    const output = await reportRun(db, scope, session, teammate, op)
-    return 'error' in output ? fail(output.error) : done(output)
-  }
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
   const actor: Actor = { type: 'teammate', id: teammate.id }
@@ -551,9 +515,8 @@ export async function handleScheduleCall(
       })
     }
 
-    // A playbook's schedules are the playbook's to change.
     const mine = await db.schedule.findMany({
-      where: { teammateId: teammate.id, loopInstallationId: null },
+      where: { teammateId: teammate.id },
       orderBy: { createdAt: 'desc' },
       take: 100,
     })

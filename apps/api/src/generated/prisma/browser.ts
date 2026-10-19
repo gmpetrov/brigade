@@ -312,20 +312,3 @@ export type PushDevice = Prisma.PushDeviceModel
  * sent once, reminded at most once, and its notification closed once resolved.
  */
 export type PushNotice = Prisma.PushNoticeModel
-/**
- * Model LoopInstallation
- * A playbook installed in a workspace (and a project): it runs for one teammate on its
- * owner's accounts. Its triggers, schedules and skill pack are its own and go with it.
- */
-export type LoopInstallation = Prisma.LoopInstallationModel
-/**
- * Model LoopAction
- * One write a playbook may make, at its level of autonomy. Its numbers come from ConnectionCall and tickets.
- */
-export type LoopAction = Prisma.LoopActionModel
-/**
- * Model LoopRun
- * One event's work: its root thread (origin trigger or schedule) and the root's children.
- * A later event of the same conversation continues it.
- */
-export type LoopRun = Prisma.LoopRunModel

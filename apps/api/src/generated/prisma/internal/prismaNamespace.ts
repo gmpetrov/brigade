@@ -448,10 +448,7 @@ export const ModelName = {
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
   PushDevice: 'PushDevice',
-  PushNotice: 'PushNotice',
-  LoopInstallation: 'LoopInstallation',
-  LoopAction: 'LoopAction',
-  LoopRun: 'LoopRun'
+  PushNotice: 'PushNotice'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -467,7 +464,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "loopInstallation" | "loopAction" | "loopRun"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4319,228 +4316,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    LoopInstallation: {
-      payload: Prisma.$LoopInstallationPayload<ExtArgs>
-      fields: Prisma.LoopInstallationFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.LoopInstallationFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.LoopInstallationFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        findFirst: {
-          args: Prisma.LoopInstallationFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.LoopInstallationFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        findMany: {
-          args: Prisma.LoopInstallationFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>[]
-        }
-        create: {
-          args: Prisma.LoopInstallationCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        createMany: {
-          args: Prisma.LoopInstallationCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.LoopInstallationCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>[]
-        }
-        delete: {
-          args: Prisma.LoopInstallationDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        update: {
-          args: Prisma.LoopInstallationUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        deleteMany: {
-          args: Prisma.LoopInstallationDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.LoopInstallationUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.LoopInstallationUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>[]
-        }
-        upsert: {
-          args: Prisma.LoopInstallationUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopInstallationPayload>
-        }
-        aggregate: {
-          args: Prisma.LoopInstallationAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateLoopInstallation>
-        }
-        groupBy: {
-          args: Prisma.LoopInstallationGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopInstallationGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.LoopInstallationCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopInstallationCountAggregateOutputType> | number
-        }
-      }
-    }
-    LoopAction: {
-      payload: Prisma.$LoopActionPayload<ExtArgs>
-      fields: Prisma.LoopActionFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.LoopActionFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.LoopActionFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        findFirst: {
-          args: Prisma.LoopActionFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.LoopActionFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        findMany: {
-          args: Prisma.LoopActionFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>[]
-        }
-        create: {
-          args: Prisma.LoopActionCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        createMany: {
-          args: Prisma.LoopActionCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.LoopActionCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>[]
-        }
-        delete: {
-          args: Prisma.LoopActionDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        update: {
-          args: Prisma.LoopActionUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        deleteMany: {
-          args: Prisma.LoopActionDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.LoopActionUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.LoopActionUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>[]
-        }
-        upsert: {
-          args: Prisma.LoopActionUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopActionPayload>
-        }
-        aggregate: {
-          args: Prisma.LoopActionAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateLoopAction>
-        }
-        groupBy: {
-          args: Prisma.LoopActionGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopActionGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.LoopActionCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopActionCountAggregateOutputType> | number
-        }
-      }
-    }
-    LoopRun: {
-      payload: Prisma.$LoopRunPayload<ExtArgs>
-      fields: Prisma.LoopRunFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.LoopRunFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.LoopRunFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        findFirst: {
-          args: Prisma.LoopRunFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.LoopRunFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        findMany: {
-          args: Prisma.LoopRunFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>[]
-        }
-        create: {
-          args: Prisma.LoopRunCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        createMany: {
-          args: Prisma.LoopRunCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.LoopRunCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>[]
-        }
-        delete: {
-          args: Prisma.LoopRunDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        update: {
-          args: Prisma.LoopRunUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        deleteMany: {
-          args: Prisma.LoopRunDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.LoopRunUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.LoopRunUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>[]
-        }
-        upsert: {
-          args: Prisma.LoopRunUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LoopRunPayload>
-        }
-        aggregate: {
-          args: Prisma.LoopRunAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateLoopRun>
-        }
-        groupBy: {
-          args: Prisma.LoopRunGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopRunGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.LoopRunCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LoopRunCountAggregateOutputType> | number
-        }
-      }
-    }
   }
 } & {
   other: {
@@ -4810,9 +4585,7 @@ export const SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
-  projectId: 'projectId',
-  loopRunId: 'loopRunId',
-  surfacedAt: 'surfacedAt'
+  projectId: 'projectId'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -4859,8 +4632,7 @@ export const ScheduleScalarFieldEnum = {
   projectId: 'projectId',
   parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  loopInstallationId: 'loopInstallationId'
+  updatedAt: 'updatedAt'
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
@@ -5115,8 +4887,6 @@ export const ConnectionCallScalarFieldEnum = {
   result: 'result',
   error: 'error',
   ticketId: 'ticketId',
-  simulated: 'simulated',
-  loopActionKey: 'loopActionKey',
   createdAt: 'createdAt'
 } as const
 
@@ -5137,7 +4907,6 @@ export const TriggerScalarFieldEnum = {
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
   projectId: 'projectId',
-  loopInstallationId: 'loopInstallationId',
   createdAt: 'createdAt'
 } as const
 
@@ -5383,8 +5152,7 @@ export const SkillPackScalarFieldEnum = {
   createdById: 'createdById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  appId: 'appId',
-  loopInstallationId: 'loopInstallationId'
+  appId: 'appId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
@@ -5480,65 +5248,6 @@ export const PushNoticeScalarFieldEnum = {
 } as const
 
 export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]
-
-
-export const LoopInstallationScalarFieldEnum = {
-  id: 'id',
-  organizationId: 'organizationId',
-  workspaceId: 'workspaceId',
-  projectId: 'projectId',
-  loopKey: 'loopKey',
-  version: 'version',
-  source: 'source',
-  manifest: 'manifest',
-  teammateId: 'teammateId',
-  ownerMemberId: 'ownerMemberId',
-  settings: 'settings',
-  status: 'status',
-  createdByMemberId: 'createdByMemberId',
-  activatedAt: 'activatedAt',
-  activatedByMemberId: 'activatedByMemberId',
-  pausedAt: 'pausedAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type LoopInstallationScalarFieldEnum = (typeof LoopInstallationScalarFieldEnum)[keyof typeof LoopInstallationScalarFieldEnum]
-
-
-export const LoopActionScalarFieldEnum = {
-  id: 'id',
-  organizationId: 'organizationId',
-  workspaceId: 'workspaceId',
-  installationId: 'installationId',
-  key: 'key',
-  level: 'level',
-  conditions: 'conditions',
-  levelChangedAt: 'levelChangedAt',
-  levelChangedByMemberId: 'levelChangedByMemberId'
-} as const
-
-export type LoopActionScalarFieldEnum = (typeof LoopActionScalarFieldEnum)[keyof typeof LoopActionScalarFieldEnum]
-
-
-export const LoopRunScalarFieldEnum = {
-  id: 'id',
-  organizationId: 'organizationId',
-  workspaceId: 'workspaceId',
-  installationId: 'installationId',
-  rootSessionId: 'rootSessionId',
-  conversationKey: 'conversationKey',
-  case: 'case',
-  status: 'status',
-  outcome: 'outcome',
-  interventions: 'interventions',
-  firstResponseAt: 'firstResponseAt',
-  dryRun: 'dryRun',
-  startedAt: 'startedAt',
-  endedAt: 'endedAt'
-} as const
-
-export type LoopRunScalarFieldEnum = (typeof LoopRunScalarFieldEnum)[keyof typeof LoopRunScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -6107,48 +5816,6 @@ export type ListEnumPreviewVariableKindFieldRefInput<$PrismaModel> = FieldRefInp
 
 
 /**
- * Reference to a field of type 'LoopStatus'
- */
-export type EnumLoopStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopStatus'>
-    
-
-
-/**
- * Reference to a field of type 'LoopStatus[]'
- */
-export type ListEnumLoopStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'LoopActionLevel'
- */
-export type EnumLoopActionLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopActionLevel'>
-    
-
-
-/**
- * Reference to a field of type 'LoopActionLevel[]'
- */
-export type ListEnumLoopActionLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopActionLevel[]'>
-    
-
-
-/**
- * Reference to a field of type 'LoopRunStatus'
- */
-export type EnumLoopRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopRunStatus'>
-    
-
-
-/**
- * Reference to a field of type 'LoopRunStatus[]'
- */
-export type ListEnumLoopRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LoopRunStatus[]'>
-    
-
-
-/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -6364,9 +6031,6 @@ export type GlobalOmitConfig = {
   projectRepository?: Prisma.ProjectRepositoryOmit
   pushDevice?: Prisma.PushDeviceOmit
   pushNotice?: Prisma.PushNoticeOmit
-  loopInstallation?: Prisma.LoopInstallationOmit
-  loopAction?: Prisma.LoopActionOmit
-  loopRun?: Prisma.LoopRunOmit
 }
 
 /* Types for Logging */
