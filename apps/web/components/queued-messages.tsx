@@ -5,10 +5,12 @@ import {
   forPeople,
   mayChangeQueued,
   mentionsToText,
+  noteThreads,
   type QueuedMessageAction,
 } from '@brigade/contracts'
 import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, Split, X } from 'lucide-react'
 import { useState } from 'react'
+import { REPORTS } from '@/components/thread-children'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -75,6 +77,15 @@ export function QueuedMessages({
     }
   }
   const preview = (m: QueuedMessage) => {
+    // A report: each thread's title and what it said, not the note's head with its ids.
+    const reported = m.memberId === null ? noteThreads(m.text) : null
+    if (reported)
+      return reported.threads
+        .map(
+          (t) =>
+            `“${t.title}”: ${t.summary.replace(/\s+/g, ' ').trim() || (t.status ? REPORTS[t.status] : 'still working')}`,
+        )
+        .join('\n')
     const files = m.attachments.length
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
@@ -117,7 +128,9 @@ export function QueuedMessages({
                 const from =
                   m.memberId === null &&
                   (childNote(m.text) === 'report'
-                    ? 'Reports from child threads'
+                    ? (noteThreads(m.text)?.threads.length ?? 0) > 1
+                      ? 'Reports from child threads'
+                      : 'Report from a child thread'
                     : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
                       ? 'From the parent thread'
                       : 'From Brigade')
