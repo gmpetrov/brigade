@@ -19,6 +19,9 @@ export const bareToolName = (toolName: string) => toolName.replace(/^mcp__.+?__/
 /** Tools whose calls show among what a thread made. */
 export const OUTPUT_TOOLS = [
   'save_to_library',
+  // Not shown themselves: they move or remove what was saved.
+  'move_in_library',
+  'delete_from_library',
   'save_design',
   'save_design_system',
   'github_create_pull_request',

@@ -1,14 +1,21 @@
-// A teammate's search, library saves and design systems, and the memory a quiet thread
-// leaves behind. Both come from a runner over its socket; the API checks the
-// thread is on that runner's computer and the teammate's grant.
-import { LIBRARY_SAVE_MAX, type ApiToRunner, type RunnerToApi } from '@brigade/contracts'
+// A teammate's search, library saves, moves and deletes, and design systems, and
+// the memory a quiet thread leaves behind. Both come from a runner over its socket;
+// the API checks the thread is on that runner's computer and the teammate's grant.
+import {
+  LIBRARY_SAVE_MAX,
+  TRASH_DAYS,
+  type ApiToRunner,
+  type RunnerToApi,
+} from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { scoped, type Scope } from './db.js'
 import { personEdits, saveTeammateDesignSystem } from './designs.js'
 import { notifyLibraryChanged } from './hub.js'
-import { teammateLibraryAccess } from './library-folders.js'
-import { editMemory, saveLibraryFile, saveSummary, search } from './library.js'
+import { libraryChangeRefusal } from './library-changes.js'
+import { moveFolder, teammateLibraryAccess, trashFolder } from './library-folders.js'
+import { trashLibraryFile } from './library-history.js'
+import { editMemory, moveLibraryFile, saveLibraryFile, saveSummary, search } from './library.js'
 import { proposeSkill } from './skills.js'
 import { actingTeammate } from './thread-spec.js'
 
@@ -65,6 +72,60 @@ export async function handleLibraryCall(
 
   if (op.name === 'skill_proposal')
     return done(await proposeSkill(db, scope, teammate, session.id, op.proposal))
+
+  if (op.name === 'move' || op.name === 'delete') {
+    const to = op.name === 'move' ? op.to : undefined
+    if (to === op.path) return done({ path: to, moved: 0 })
+    const file = await db.document.findFirst({
+      where: { kind: 'library', path: op.path, deletedAt: null },
+      select: { id: true },
+    })
+    const below = { OR: [{ path: op.path }, { path: { startsWith: `${op.path}/` } }] }
+    const [files, folders, projects] = file
+      ? [[], [], []]
+      : await Promise.all([
+          db.document.findMany({
+            where: { kind: 'library', deletedAt: null, path: { startsWith: `${op.path}/` } },
+            select: { path: true },
+          }),
+          db.libraryFolder.findMany({
+            where: below,
+            select: { path: true, restricted: true, _count: { select: { grants: true } } },
+          }),
+          db.project.findMany({
+            where: { OR: [{ folder: op.path }, { folder: { startsWith: `${op.path}/` } }] },
+            select: { name: true, folder: true },
+          }),
+        ])
+    if (!file && files.length === 0 && folders.length === 0)
+      return fail(`Nothing in the library at ${op.path}.`)
+    const library = await teammateLibraryAccess(db, teammate)
+    const refusal = libraryChangeRefusal(teammate.name, library.of, {
+      path: op.path,
+      to,
+      files: files.map((f) => f.path),
+      ruled: folders.filter((f) => f.restricted || f._count.grants > 0).map((f) => f.path),
+      projects: projects.map((p) => ({ name: p.name, folder: p.folder! })),
+    })
+    if (refusal) return fail(refusal)
+    const actor = { type: 'teammate' as const, id: teammate.id }
+    try {
+      if (to !== undefined) {
+        if (file) await moveLibraryFile(db, scope, actor, file.id, to)
+        else await moveFolder(db, scope, actor, op.path, to)
+        return done({ path: to, moved: file ? 1 : files.length })
+      }
+      if (file) await trashLibraryFile(db, scope, actor, file.id)
+      else await trashFolder(db, scope, actor, op.path)
+      return done({
+        trashed: file ? 1 : files.length,
+        status: `In the library's trash: a person can restore it there for ${TRASH_DAYS} days.`,
+      })
+    } catch (error) {
+      if (error instanceof HTTPException) return fail(error.message)
+      throw error
+    }
+  }
 
   const access = (await teammateLibraryAccess(db, teammate)).of(op.path)
   if (op.name === 'design_edits')
