@@ -465,18 +465,22 @@ export const threads = new Hono<AppEnv>()
       } satisfies ThreadFile)
     }
 
-    // The library: its own path, or its mirror's path on a computer (a teammate's own
-    // mirror, in a folder named after its Linux user, on runners since protocol 13).
+    // The library: its own path, its mirror's path on a computer (a teammate's own
+    // mirror, in a folder named after its Linux user, on runners since protocol 13),
+    // or a path in the thread's project folder ("decisions/x.md" for "Projects/Acme/decisions/x.md").
     const mirrored = path.startsWith('/')
       ? path.match(/\/library\/(?:bt-[a-z0-9]{1,28}\/)?(.+)$/)?.[1]
       : undefined
-    const library = await db.document.findFirst({
-      where: {
-        kind: 'library',
-        deletedAt: null,
-        path: { in: [path, ...(mirrored ? [mirrored] : [])] },
-      },
+    const project =
+      !path.startsWith('/') && thread.projectId
+        ? await db.project.findFirst({ where: { id: thread.projectId }, select: { folder: true } })
+        : null
+    const inProject = project?.folder ? `${project.folder.replace(/\/+$/, '')}/${path}` : undefined
+    const candidates = [path, ...(mirrored ? [mirrored] : []), ...(inProject ? [inProject] : [])]
+    const found = await db.document.findMany({
+      where: { kind: 'library', deletedAt: null, path: { in: candidates } },
     })
+    const library = candidates.map((p) => found.find((d) => d.path === p)).find(Boolean)
     if (library) {
       const row = library
       const editable = row.contentType.startsWith('text/') || /json|yaml|xml/.test(row.contentType)
