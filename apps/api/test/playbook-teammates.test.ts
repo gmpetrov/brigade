@@ -395,6 +395,37 @@ describe('the teammates of a playbook', { skip: !database && 'no database answer
     assert.match(said.next, /never holds github/)
   })
 
+  test('an optional App is asked for the teammate that holds it, not the one installing', async () => {
+    const { handlePlaybookCall } = await import('../src/playbook-chat.js')
+    const session = await db.session.findFirst({ where: { id: ids.chat } })
+    const manifest = {
+      ...TEAM,
+      id: 'brigade/test-team-stripe',
+      apps: [...TEAM.apps, { kind: 'stripe', access: 'read', optional: true }],
+    } satisfies PlaybookManifest
+    const installation = await db.playbookInstallation.create({
+      data: {
+        playbookKey: manifest.id,
+        version: manifest.version,
+        manifest,
+        teammateId: ids.sam,
+        ownerMemberId: ids.owner,
+        settings: { support: ids.sam, inbox: ids.gmail, developer: ids.dev },
+        status: 'setup',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    const said = (await handlePlaybookCall(db, scope, session!, { id: ids.chief, name: 'Chief' }, {
+      name: 'configure_playbook',
+      installationId: installation.id,
+      settings: {},
+    } as never)) as { missing: unknown[]; next: string; error?: string }
+    assert.equal(said.error, undefined)
+    assert.deepEqual(said.missing, [])
+    assert.match(said.next, /It can also use optional Apps: stripe \(no account, for Sam\)\./)
+    assert.match(said.next, /app\.teammate set to the teammate it is for/)
+  })
+
   test('an installation still in setup moves to the new version, its answers kept', async () => {
     const { handlePlaybookCall } = await import('../src/playbook-chat.js')
     const { templates } = await import('../src/playbooks.js')

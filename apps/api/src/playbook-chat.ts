@@ -288,9 +288,13 @@ export async function handlePlaybookCall(
       // Optional Apps its teammate cannot use yet (Stripe with no account): offered with them, as
       // appsNote speaks of required ones alone. One whose account setting can pick an account it
       // has already is that setting's question.
+      // Each for the teammate that holds it; one whose teammate is not picked yet waits.
       const optionalApps = apps.filter(
         (a) =>
-          a.optional && a.status !== 'ready' && !(a.picks && !a.chosen && a.accounts.length > 0),
+          a.optional &&
+          a.holder &&
+          a.status !== 'ready' &&
+          !(a.picks && !a.chosen && a.accounts.length > 0),
       )
       return {
         installationId: view.id,
@@ -329,13 +333,15 @@ export async function handlePlaybookCall(
                 ? `It can also use optional Apps: ${optionalApps
                     .map(
                       (a) =>
-                        `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'})`,
+                        `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'}` +
+                        `${a.holder!.id === teammate.id ? '' : `, for ${a.holder!.name}`})`,
                     )
                     .join(', ')}. Offer them once, in ${optional.length ? 'that same' : 'one'} ` +
                   'message, each with a few words on what it adds to this playbook (say, Stripe: read a ' +
                   "customer's plan and payments when answering), and that they may skip them. For each " +
                   'one they want, open one ticket with an access ask of kind connection and app { kind, ' +
-                  'scope }, with the scope the playbook declares for it (read or read_write) and no more ' +
+                  'scope }, with app.teammate set to the teammate it is for when that is not you, the ' +
+                  'scope the playbook declares for it (read or read_write) and no more ' +
                   '(a role: first ask which App they use); open none they did not ask for. Once it is ' +
                   'granted, configure_playbook again asks its account setting, if it has one. '
                 : '') +
