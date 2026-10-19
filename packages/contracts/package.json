@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "croner": "10.0.1",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "22.20.5"
