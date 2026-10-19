@@ -2,8 +2,13 @@
 // A file the thread mentions, beside it: from the library, the thread's
 // attachments, or the teammate's working folder on its computer. Takes the
 // desktop panel's place. Text shows as text, images and PDFs as themselves.
-import { designFolderOf, type ThreadFile } from '@brigade/contracts'
-import { Check, Copy, Download, FileText, Library, X } from 'lucide-react'
+import {
+  designFolderOf,
+  designOptionsOf,
+  type DesignWhere,
+  type ThreadFile,
+} from '@brigade/contracts'
+import { Check, Copy, Download, FileText, Library, Palette, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { DesignPanel } from '@/components/design-view'
@@ -39,8 +44,84 @@ type FilePanelProps = {
 export function FilePanel(props: FilePanelProps) {
   const folder = props.path.trim().replace(/\/+$/, '')
   if (!folder.startsWith('/') && designFolderOf(folder) === folder)
-    return <DesignPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
+    return designOptionsOf(folder) ? (
+      <OptionPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
+    ) : (
+      <DesignPanel folder={folder} threadId={props.threadId} onClose={props.onClose} />
+    )
   return <ThreadFilePanel {...props} />
+}
+
+/**
+ * One of a design's options, as an earlier message named it: once one is
+ * picked, it has become the design, and the others are in the trash.
+ */
+function OptionPanel({
+  folder,
+  threadId,
+  onClose,
+}: {
+  folder: string
+  threadId: string
+  onClose: () => void
+}) {
+  const [where, setWhere] = useState<DesignWhere>()
+  const [error, setError] = useState<string>()
+
+  useEffect(() => {
+    let live = true
+    setWhere(undefined)
+    setError(undefined)
+    api<DesignWhere>('/designs/where', { body: { path: folder } }).then(
+      (w) => live && setWhere(w),
+      (e: Error) => live && setError(e.message),
+    )
+    return () => {
+      live = false
+    }
+  }, [folder])
+
+  if (where && !where.trashed)
+    return <DesignPanel folder={where.path} threadId={threadId} onClose={onClose} />
+
+  const slash = folder.lastIndexOf('/')
+  return (
+    <SidePanel aria-label={`Design ${folder.slice(slash + 1)}`} onClose={onClose} raiseKey={folder}>
+      <div className="flex flex-nowrap items-center gap-2 border-b px-3 py-2.5">
+        <Palette aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <strong className="truncate text-sm font-semibold">{folder.slice(slash + 1)}</strong>
+          <span
+            className="truncate font-mono text-xs text-muted-foreground"
+            title={folder.slice(0, slash)}
+          >
+            {folder.slice(0, slash)}
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClose}
+          aria-label="Close design"
+        >
+          <X aria-hidden />
+        </Button>
+      </div>
+      {error ? (
+        <p className="p-4 text-sm text-destructive-text">{error}</p>
+      ) : where ? (
+        <p className="p-4 text-sm text-muted-foreground">
+          Another option was picked, so this one is in the trash.{' '}
+          <Link href="/app/library?tab=trash" className="font-medium text-primary hover:underline">
+            Open the trash
+          </Link>
+        </p>
+      ) : (
+        <p className="p-4 text-sm text-muted-foreground">Opening {folder}…</p>
+      )}
+    </SidePanel>
+  )
 }
 
 function ThreadFilePanel({
