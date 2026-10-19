@@ -189,8 +189,8 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
       title={item.schedule.title}
       meta={meta(
         item.error
-          ? `Automation · couldn't start: ${item.error}`
-          : `Automation · last run failed · ${when(item.at)}`,
+          ? `Routine · couldn't start: ${item.error}`
+          : `Routine · last run failed · ${when(item.at)}`,
       )}
       href={href}
     >

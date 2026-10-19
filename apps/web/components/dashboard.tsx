@@ -134,7 +134,7 @@ const WORK_NAV = [
   { href: '/app/tasks', label: 'Tasks', icon: SquareKanban },
   { href: '/app/pulls', label: 'Pull requests', icon: GitPullRequest },
   { href: '/app/library', label: 'Library', icon: Library },
-  { href: '/app/automations', label: 'Automations', icon: CalendarClock },
+  { href: '/app/automations', label: 'Routines', icon: CalendarClock },
 ]
 
 /** The setup every project shares: the Settings page's sections, its first one first. */

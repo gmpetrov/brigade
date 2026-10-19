@@ -154,7 +154,7 @@ function ScheduleRow({
   )
 }
 
-/** Automations: schedules that prompt a teammate at set times. In a project, its own. */
+/** Routines: schedules that prompt a teammate at set times. In a project, its own. */
 export function ScheduleList({ projectId }: { projectId?: string }) {
   const [filter, setFilter] = useState('')
   const schedules = useApi<Schedule[]>(`/schedules${projectQuery(projectId ?? filter)}`)
@@ -173,7 +173,7 @@ export function ScheduleList({ projectId }: { projectId?: string }) {
       <header className="flex flex-wrap items-end justify-between gap-4">
         {!projectId && (
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-extrabold tracking-tight">Automations</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">Routines</h1>
             <p className="max-w-prose text-muted-foreground">
               Work your teammates do on a schedule, each run in a fresh thread. Ask a teammate in a
               thread, or add one yourself.

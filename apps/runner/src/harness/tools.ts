@@ -1390,7 +1390,7 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
       description:
         'Change one of your schedules when the person asks: its title, instructions or timing, or pause and ' +
         'resume it (paused). Only schedules that run on the accounts of the person in this thread. ' +
-        'Deleting is done by people, on the Automations page.',
+        'Deleting is done by people, on the Routines page.',
       inputSchema: jsonSchema<{
         scheduleId: string
         title?: string

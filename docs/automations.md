@@ -1,5 +1,8 @@
 # Automations
 
+In visible text this page and its sidebar item are called **Routines**; the code, routes
+(`/app/automations`) and this spec keep the name automations.
+
 Automations are work that starts without anyone typing a message. Triggers already
 do this from events (`apps/api/src/triggers.ts`). This step adds **schedules**: a
 teammate is prompted with the same instructions on a cron schedule. Each firing
