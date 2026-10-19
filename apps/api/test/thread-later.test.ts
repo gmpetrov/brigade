@@ -42,6 +42,7 @@ const { bringBackFromLater, laterKey, latersIn, latersOf, setLater } =
   await import('../src/later.js')
 const { setThreadArchived } = await import('../src/thread-archive.js')
 const { homeFor } = await import('../src/home.js')
+const { needsAttention } = await import('../src/pull-requests.js')
 
 const id = randomUUID().slice(0, 8)
 const ids = {
@@ -189,3 +190,37 @@ test('Home’s threads leave out those put away for later', { skip }, async () =
   await setLater(scoped(scope), as(0), t, true)
   assert.equal(await listed(), false)
 })
+
+test(
+  'pull requests waiting on a person leave out those of a thread put away, and its children',
+  { skip },
+  async () => {
+    const t = await thread()
+    const child = await thread(t.id)
+    const other = await thread()
+    const pr = (sessionId: string | null, n: number) =>
+      prisma.pullRequest.create({
+        data: {
+          ...scope,
+          sessionId,
+          repository: 'acme/api',
+          number: n,
+          title: `PR ${n}`,
+          headRef: `b${n}`,
+          baseRef: 'main',
+          reviewStatus: sessionId ? 'none' : 'stuck',
+        },
+      } as never)
+    await pr(t.id, 101)
+    await pr(child.id, 102)
+    await pr(other.id, 103)
+    await pr(null, 104)
+    const numbers = async (putAway: string[]) =>
+      (await needsAttention(scoped(scope), putAway))
+        .filter((p) => p.repository === 'acme/api')
+        .map((p) => p.number)
+        .sort()
+    assert.deepEqual(await numbers([]), [101, 102, 103, 104])
+    assert.deepEqual(await numbers([t.id]), [103, 104])
+  },
+)

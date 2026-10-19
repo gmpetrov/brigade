@@ -906,12 +906,10 @@ export function runnerSocket(runner: {
         void movesOn(runner.computerId, session.id).catch(console.error)
       // Not awaited: a review loop may call GitHub and prompt the next teammate.
       void noteTurnsEnded(session, fresh).catch(console.error)
-      // A message or a turn in a thread put away for later brings it back (src/later.ts); a
-      // child's do not, a schedule's quiet runs among them: its report to the parent does.
-      if (
-        !session.parentId &&
-        fresh.some((e) => e.event.type === 'message.user' || e.event.type === 'turn.completed')
-      )
+      // A message in a thread put away for later brings it back (src/later.ts): a member's,
+      // a wake-up's or a child's report, each a new turn. Not the end of a turn already under
+      // way when it was put away. A child's do not, a schedule's quiet runs among them.
+      if (!session.parentId && fresh.some((e) => e.event.type === 'message.user'))
         void bringBackFromLater(session, session.id).catch(console.error)
       // A child's report goes to its parent once its turn ends.
       if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
