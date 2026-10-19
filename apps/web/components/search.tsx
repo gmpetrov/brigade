@@ -50,7 +50,7 @@ const GROUPS: { kind: Item['kind']; label: string; icon: LucideIcon }[] = [
   { kind: 'task', label: 'Tasks', icon: SquareKanban },
   { kind: 'pull_request', label: 'Pull requests', icon: GitPullRequest },
   { kind: 'ticket', label: 'Tickets', icon: Inbox },
-  { kind: 'automation', label: 'Automations', icon: CalendarClock },
+  { kind: 'automation', label: 'Routines', icon: CalendarClock },
   { kind: 'file', label: 'Library', icon: FileText },
   { kind: 'memory', label: 'Memory', icon: Brain },
   { kind: 'connection', label: 'Apps', icon: Plug },

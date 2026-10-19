@@ -154,7 +154,7 @@ Work
   Tasks
   Pull requests
   Library
-  Automations
+  Routines
 Projects                  +
   A  Acme web
   B  Beta app
@@ -187,7 +187,7 @@ Header: icon, name, brief, **New thread** (project preset) and a menu.
 | Pull requests      | `…/pulls`            | PRs of its threads and repositories                                                    | Existing list, filtered                       |
 | Library            | `…/library`          | The library opened at the project's folder                                             | Existing page with a root path                |
 | Repos and previews | `…/repos`            | Each repository, its saved preview, live previews                                      | `SavedPreviews`, filtered to its repositories |
-| Automations        | `…/automations`      | Its schedules and triggers                                                             | Existing page, `?project=<id>`                |
+| Routines           | `…/automations`      | Its schedules and triggers                                                             | Existing page, `?project=<id>`                |
 | Settings           | `…/settings`         | Name, icon, brief, repositories, folder, preferred connections, archive                | New form                                      |
 
 On the overview:

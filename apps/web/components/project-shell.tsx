@@ -34,7 +34,7 @@ export const PROJECT_TABS = [
   { path: '/pulls', label: 'Pull requests' },
   { path: '/library', label: 'Library' },
   { path: '/repos', label: 'Repos and previews' },
-  { path: '/automations', label: 'Automations' },
+  { path: '/automations', label: 'Routines' },
   { path: '/settings', label: 'Settings' },
 ]
 

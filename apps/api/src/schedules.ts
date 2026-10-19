@@ -526,7 +526,7 @@ export async function handleScheduleCall(
     if (!schedule) return fail('No schedule of yours has that id; list_schedules shows them')
     if (schedule.ownerMemberId !== session.startedByMemberId)
       return fail(
-        "That schedule runs on another member's accounts; only they can change it, on the Automations page",
+        "That schedule runs on another member's accounts; only they can change it, on the Routines page",
       )
     const { scheduleId: _, name: __, ...changes } = op
     const updated = await applyChanges(db, scope, { ...schedule, teammate }, changes, actor)
