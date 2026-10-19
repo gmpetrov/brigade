@@ -6,7 +6,7 @@ import type { NoteThread } from '@brigade/contracts'
 import { ChevronRight, CornerUpLeft, Eye, Send } from 'lucide-react'
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState } from 'react'
-import { MessageWithCode } from '@/components/markdown'
+import { Markdown } from '@/components/markdown'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import { Button } from '@/components/ui/button'
 import { api, type ThreadChild } from '@/lib/api'
@@ -119,6 +119,15 @@ const NOTE_DOTS: Record<string, string> = {
   needs_person: 'waiting',
 }
 
+/** Markdown as the line it reads as, for an excerpt: without its marks. */
+const plain = (markdown: string) =>
+  markdown
+    .replace(/^```.*$/gm, '')
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/(\*\*|__|~~|`)/g, '')
+    .trim()
+
 /**
  * A thread a report note tells about, as one card that opens it: its dot, who, its title,
  * then the start of what it said, which Show more unfolds in place.
@@ -184,15 +193,13 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
       </Link>
       {summary &&
         (open ? (
-          <div className="pl-6 leading-relaxed wrap-anywhere whitespace-pre-wrap text-muted-foreground">
-            <MessageWithCode text={summary} />
-          </div>
+          <Markdown text={summary} className="pl-6 text-muted-foreground" />
         ) : (
           <span
             ref={clamped}
             className="line-clamp-2 pl-6 leading-relaxed wrap-anywhere text-muted-foreground"
           >
-            {summary}
+            {plain(summary)}
           </span>
         ))}
       {summary && (long || open) && (

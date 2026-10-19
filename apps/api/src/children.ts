@@ -10,6 +10,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   batchNote,
+  parentMessage,
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
   childPrompt,
@@ -663,7 +664,7 @@ export async function messageChild(
     },
   })
   const outcome = await promptThread(db, scope, thread, {
-    text: `**${teammate.name}** wrote from the parent thread “${parent.title}”:\n\n${text}`,
+    text: parentMessage({ from: teammate.name, parentTitle: parent.title, text }),
     memberId: null,
   })
   if (outcome === 'offline') return { error: "That child thread's computer is offline." }

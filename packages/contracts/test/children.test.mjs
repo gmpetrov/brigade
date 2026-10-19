@@ -7,9 +7,11 @@ import {
   asksParallel,
   followNote,
   forPeople,
+  fromParent,
   inParallel,
   mayChangeQueued,
   noteThreads,
+  parentMessage,
   singleNote,
   wakesParent,
 } from '../dist/index.js'
@@ -220,4 +222,16 @@ test('a message sent to run in parallel asks for a child, and people read it as 
   // Only a person's own message may go in parallel.
   assert.equal(mayChangeQueued('m1', 'parallel'), true)
   assert.equal(mayChangeQueued(null, 'parallel'), false)
+})
+
+test('what a parent tells its child later is read back as its note', () => {
+  const sent = parentMessage({ from: 'Riley', parentTitle: 'Playbooks', text: 'Fetch **again**' })
+  assert.equal(childNote(sent), 'parent')
+  assert.deepEqual(fromParent(sent), {
+    from: 'Riley',
+    parentTitle: 'Playbooks',
+    text: 'Fetch **again**',
+  })
+  // A person writing the same words is still a person.
+  assert.equal(fromParent('**Riley** wrote from the parent thread'), null)
 })
