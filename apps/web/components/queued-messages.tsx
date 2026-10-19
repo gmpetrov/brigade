@@ -5,14 +5,10 @@ import {
   forPeople,
   mayChangeQueued,
   mentionsToText,
-  type NoteThread,
-  noteThreads,
   type QueuedMessageAction,
 } from '@brigade/contracts'
 import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, Split, X } from 'lucide-react'
-import Link from 'next/link'
 import { useState } from 'react'
-import { NoteDot, plain, REPORTS } from '@/components/thread-children'
 import type { QueuedMessage } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -32,23 +28,6 @@ export type Outgoing = {
   state: 'sending' | 'sent' | 'starting' | 'moving' | 'failed'
   /** The computer it goes with the thread to, by name. */
   movingTo?: string
-}
-
-/** What a reported thread said, on one line: its report, else its state. */
-const reportLine = (t: NoteThread) =>
-  plain(t.summary).replace(/\s+/g, ' ') || (t.status ? REPORTS[t.status] : 'still working')
-
-/** The queue's count: people's messages and children's reports, each by its name. */
-function queuedCount(queued: QueuedMessage[]) {
-  const reports = queued.filter((m) => m.memberId === null && noteThreads(m.text)).length
-  const messages = queued.length - reports
-  return [
-    messages && `${messages} message${messages === 1 ? '' : 's'}`,
-    reports && `${reports} report${reports === 1 ? '' : 's'} from child threads`,
-  ]
-    .filter(Boolean)
-    .join(' and ')
-    .concat(' queued')
 }
 
 /**
@@ -96,9 +75,6 @@ export function QueuedMessages({
     }
   }
   const preview = (m: QueuedMessage) => {
-    // A report: each thread's title and what it said, not the note's head with its ids.
-    const reported = m.memberId === null ? noteThreads(m.text) : null
-    if (reported) return reported.threads.map((t) => `${t.title}: ${reportLine(t)}`).join('\n')
     const files = m.attachments.length
     return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
@@ -118,7 +94,9 @@ export function QueuedMessages({
             className="flex w-full items-center gap-2 px-5 py-2.5 text-left"
             title={`${teammateName} reads them in order, after the current turn`}
           >
-            <span className="shrink-0 font-medium">{queuedCount(queued)}</span>
+            <span className="shrink-0 font-medium">
+              {queued.length} message{queued.length === 1 ? '' : 's'} queued
+            </span>
             {!open && (
               <span className="min-w-0 truncate text-muted-foreground">
                 Next: {preview(queued[0]!)}
@@ -136,11 +114,8 @@ export function QueuedMessages({
             <ul className="mx-5 divide-y border-t">
               {queued.map((m) => {
                 const files = m.attachments.length
-                // A child's report reads as the thread it comes from, not as a person's words.
-                const reported = m.memberId === null ? noteThreads(m.text) : null
                 const from =
                   m.memberId === null &&
-                  !reported &&
                   (childNote(m.text) === 'report'
                     ? 'Reports from child threads'
                     : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
@@ -188,33 +163,9 @@ export function QueuedMessages({
                     ) : (
                       <div className="flex items-center gap-2">
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          {reported ? (
-                            reported.threads.map((t) => (
-                              <Link
-                                key={t.id}
-                                href={`/app/threads/${t.id}`}
-                                className="flex min-w-0 flex-col gap-0.5 rounded-md hover:opacity-80"
-                                title="Open the child thread"
-                              >
-                                <span className="flex min-w-0 items-center gap-1.5">
-                                  <NoteDot status={t.status} />
-                                  {t.teammate && (
-                                    <span className="shrink-0 text-muted-foreground">
-                                      {t.teammate}
-                                    </span>
-                                  )}
-                                  <span className="min-w-0 truncate font-medium">{t.title}</span>
-                                </span>
-                                <span className="truncate pl-5.5 text-muted-foreground">
-                                  {reportLine(t)}
-                                </span>
-                              </Link>
-                            ))
-                          ) : (
-                            <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
-                              {preview(m)}
-                            </span>
-                          )}
+                          <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
+                            {preview(m)}
+                          </span>
                           {(from || m.waitingFor === 'person' || (files > 0 && m.text)) && (
                             <span className="text-xs text-muted-foreground">
                               {[

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-export const REPORTS: Record<string, string> = {
+const REPORTS: Record<string, string> = {
   nothing: 'nothing new',
   report: 'reported',
   needs_person: 'needs you',
@@ -126,26 +126,8 @@ const NOTE_DOTS: Record<string, string> = {
   needs_person: 'waiting',
 }
 
-/** A reported thread's dot: green when it reported, else as the sidebar shows its state. */
-export function NoteDot({ status }: { status: NoteThread['status'] }) {
-  if (status === 'report')
-    return (
-      <span
-        role="img"
-        aria-label="reported"
-        title="reported"
-        className="flex size-4 shrink-0 items-center justify-center"
-      >
-        <span className="size-2 rounded-full bg-success" />
-      </span>
-    )
-  return (
-    <ThreadStatusIcon status={status ? (NOTE_DOTS[status] ?? 'done') : 'running'} unread={false} />
-  )
-}
-
 /** Markdown as the line it reads as, for an excerpt: without its marks. */
-export const plain = (markdown: string) =>
+const plain = (markdown: string) =>
   markdown
     .replace(/^```.*$/gm, '')
     .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
@@ -194,7 +176,21 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
           !open && 'after:absolute after:inset-0 after:rounded-xl',
         )}
       >
-        <NoteDot status={thread.status} />
+        {thread.status === 'report' ? (
+          <span
+            role="img"
+            aria-label="reported"
+            title="reported"
+            className="flex size-4 shrink-0 items-center justify-center"
+          >
+            <span className="size-2 rounded-full bg-success" />
+          </span>
+        ) : (
+          <ThreadStatusIcon
+            status={thread.status ? (NOTE_DOTS[thread.status] ?? 'done') : 'running'}
+            unread={false}
+          />
+        )}
         {thread.teammate && (
           <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>
         )}
