@@ -1,36 +1,75 @@
-import Link from 'next/link'
+import type { Metadata } from 'next'
+import { BuiltBy, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
+import { Control, UnderTheHood } from '@/components/landing/control'
+import { Header, Hero, Proof } from '@/components/landing/hero'
+import { s } from '@/components/landing/parts'
+import { HowItWorks, Problem, Team } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
-import { Button } from '@/components/ui/button'
+import { getProofNumbers } from '@/lib/github-proof'
 
-export default function Landing() {
+const SITE_URL = 'https://www.brigade.lol/'
+const title = 'Brigade · AI teammates on your own Claude or ChatGPT plan'
+const description =
+  'Run a team of AI teammates on the Claude or ChatGPT plan you already pay for. They work in the background, on your Mac or in the cloud, and ask you only when it matters. Free on Mac, open source.'
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: SITE_URL },
+  openGraph: { type: 'website', url: SITE_URL, siteName: 'Brigade', title, description },
+  twitter: { card: 'summary', title, description },
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Brigade',
+  url: SITE_URL,
+  description,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'macOS, Web',
+  offers: [
+    { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
+    {
+      '@type': 'Offer',
+      name: 'Cloud',
+      price: '99',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: '99',
+        priceCurrency: 'USD',
+        unitText: 'MONTH',
+        billingDuration: 'P1M',
+      },
+    },
+  ],
+}
+
+export default async function Landing() {
+  const numbers = await getProofNumbers()
   return (
-    <main className="flex min-h-svh items-center justify-center px-4 py-12">
+    <div className={s.page}>
       <RedirectIfSignedIn />
-      <div className="flex w-full max-w-xl flex-col items-center gap-6 text-center">
-        <span
-          aria-hidden
-          className="flex size-14 items-center justify-center rounded-2xl bg-primary text-2xl font-extrabold text-primary-foreground"
-        >
-          B
-        </span>
-        <h1 className="text-4xl font-extrabold tracking-tight">Brigade</h1>
-        <p className="text-lg">
-          One place to direct AI teammates across support, sales, marketing and engineering, and to
-          see and approve what they do.
-        </p>
-        <p className="text-muted-foreground">
-          Bring your own Claude subscription. Teammates run on a computer you control, every step is
-          logged, and risky steps wait for your yes.
-        </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
-          <Button asChild size="lg">
-            <Link href="/sign-up">Get started</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-        </div>
-      </div>
-    </main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+      <Header />
+      <main>
+        <Hero />
+        <Proof numbers={numbers} />
+        <Problem />
+        <HowItWorks />
+        <Team />
+        <Control />
+        <UnderTheHood />
+        <BuiltBy numbers={numbers} />
+        <Pricing />
+        <Faq />
+        <FinalCall />
+      </main>
+      <Footer />
+    </div>
   )
 }
