@@ -3,7 +3,7 @@
 // where a teammate started one, the runs of a schedule that reports here, the
 // asks of a child waiting on a person, and in a child, the way back to its parent.
 import type { NoteThread } from '@brigade/contracts'
-import { ChevronRight, CornerUpLeft, Eye, Send } from 'lucide-react'
+import { ChevronRight, CornerDownRight, CornerUpLeft, Eye, Send } from 'lucide-react'
 import Link from 'next/link'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Markdown } from '@/components/markdown'
@@ -92,6 +92,8 @@ export function ChildLine({ child, className }: { child: ThreadChild; className?
       )}
     >
       <span className="flex min-w-0 items-center gap-1.5">
+        {/* Marks it as a child of this thread; its state stays the label at the end. */}
+        <CornerDownRight aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="shrink-0 text-muted-foreground">{child.teammate.name}</span>
         <span className="min-w-0 flex-1 truncate font-medium">{child.title}</span>
         <span
@@ -236,8 +238,9 @@ export function StartedChild({
   return (
     <Link
       href={`/app/threads/${threadId}`}
-      className="-mx-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
+      className="-mx-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
     >
+      <CornerDownRight aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
       <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs leading-none font-medium text-primary">
         working
