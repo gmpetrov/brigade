@@ -109,6 +109,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, StartedChild } from '@/components/thread-children'
 import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
+import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
 
 export type Item =
@@ -2425,7 +2426,8 @@ function BrowserAction({
 
 /**
  * A ticket the teammate opened: one or more asks, each answered with its own
- * buttons. The teammate waits; the answers go to it once every ask has one.
+ * buttons. The teammate waits; the answers go to it once every ask has one,
+ * kept in this browser until then (useTicketReplies).
  */
 export function TicketCard({
   item,
@@ -2444,7 +2446,8 @@ export function TicketCard({
   askerName: string
   onAnswer: (answer: TicketAnswer) => Promise<void>
 }) {
-  const [replies, setReplies] = useState<Record<string, AskReply>>({})
+  const done = Boolean(item.answer)
+  const [replies, setReplies, forget] = useTicketReplies(item.requestId, item.asks, done)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
 
@@ -2453,6 +2456,7 @@ export function TicketCard({
     setError(undefined)
     try {
       await onAnswer(answer)
+      forget()
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
@@ -2465,15 +2469,20 @@ export function TicketCard({
     setReplies(next)
     if (item.asks.every((a) => next[a.id])) void send({ action: 'answered', replies: next })
   }
-  const undo = (askId: string) => setReplies(({ [askId]: _, ...rest }) => rest)
+  const undo = (askId: string) => {
+    const { [askId]: _, ...rest } = replies
+    setReplies(rest)
+  }
 
   const answered = item.answer?.action === 'answered' ? item.answer.replies : undefined
-  const done = Boolean(item.answer)
   const disabled = !canAnswer || busy || done
   const soleAccess = item.asks.length === 1 && item.asks[0]!.type === 'access'
 
   const several = item.asks.length > 1
   const count = Object.keys(answered ?? replies).length
+  // Some asks answered, not all: nothing has gone to the teammate yet, access included.
+  const partly = several && !done && count > 0 && count < item.asks.length
+  const granting = Object.values(replies).some((r) => r.type === 'access' && r.granted)
 
   return (
     <Card className="gap-0 border-primary/40 px-5 py-4">
@@ -2524,6 +2533,13 @@ export function TicketCard({
           />
         </div>
       ))}
+      {partly && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {granting
+            ? `${askerName} gets the access and your answers when every ask is answered.`
+            : `Your answers go to ${askerName} when every ask is answered.`}
+        </p>
+      )}
       {error && <p className="mt-3 text-sm text-destructive-text">{error}</p>}
       {!done && !canAnswer && (
         <p className="mt-3 text-sm text-muted-foreground">
