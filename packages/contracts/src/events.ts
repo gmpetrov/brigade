@@ -499,6 +499,17 @@ export const AgentEvent = z.discriminatedUnion('type', [
     toolCallId: z.string(),
     prompt: z.string().optional(),
   }),
+  /**
+   * The member's Mac as the teammate saw it, a screenshot at `path` in its working folder;
+   * or, glance, as it was just after the teammate acted on it. The turn's latest is what the
+   * thread's panel shows.
+   */
+  z.object({
+    ...base,
+    type: z.literal('computer.screen'),
+    path: z.string(),
+    glance: z.boolean().optional(),
+  }),
   z.object({
     ...base,
     type: z.literal('usage.updated'),

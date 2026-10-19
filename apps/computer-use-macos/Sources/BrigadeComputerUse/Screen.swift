@@ -58,7 +58,11 @@ enum Screen {
     return (content, sorted)
   }
 
-  static func screenshot(display index: Int, to path: String) async throws -> [String: Any] {
+  /// jpeg and maxWidth: a glance for the thread's panel, smaller than the teammate's PNG. Its
+  /// width and height are still the display's points; the image may be scaled down.
+  static func screenshot(
+    display index: Int, to path: String, jpeg: Bool = false, maxWidth: Int? = nil
+  ) async throws -> [String: Any] {
     try await Permissions.requireScreenRecording()
     let (content, displays) = try await displays()
     guard index >= 0, index < displays.count else {
@@ -69,31 +73,35 @@ enum Screen {
     let filter = SCContentFilter(display: display, excludingApplications: mine, exceptingWindows: [])
     let config = SCStreamConfiguration()
     // In points, not pixels: smaller for the model, and the same units as clicks.
-    config.width = display.width
-    config.height = display.height
+    let scale = maxWidth.map { min(1, Double($0) / Double(display.width)) } ?? 1
+    config.width = Int((Double(display.width) * scale).rounded())
+    config.height = Int((Double(display.height) * scale).rounded())
     config.showsCursor = true
     let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-    try writePNG(image, to: path)
+    try write(image, to: path, type: jpeg ? .jpeg : .png)
     let bounds = CGDisplayBounds(display.displayID)
     return [
       "path": path,
-      "width": image.width,
-      "height": image.height,
+      "format": jpeg ? "jpeg" : "png",
+      "width": display.width,
+      "height": display.height,
       "origin": ["x": bounds.origin.x, "y": bounds.origin.y],
       "display": index,
       "displays": displays.count,
     ]
   }
 
-  private static func writePNG(_ image: CGImage, to path: String) throws {
+  private static func write(_ image: CGImage, to path: String, type: UTType) throws {
     let url = URL(fileURLWithPath: path)
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     guard
       let destination = CGImageDestinationCreateWithURL(
-        url as CFURL, UTType.png.identifier as CFString, 1, nil)
+        url as CFURL, type.identifier as CFString, 1, nil)
     else { throw HelperError("failed", "cannot write \(path)") }
-    CGImageDestinationAddImage(destination, image, nil)
+    let options: CFDictionary? =
+      type == .jpeg ? [kCGImageDestinationLossyCompressionQuality as String: 0.7] as CFDictionary : nil
+    CGImageDestinationAddImage(destination, image, options)
     guard CGImageDestinationFinalize(destination) else { throw HelperError("failed", "cannot write \(path)") }
   }
 }

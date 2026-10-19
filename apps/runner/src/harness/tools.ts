@@ -2470,7 +2470,14 @@ export type ComputerUse = {
   screenshotPath: () => { path: string; absolute: string }
   /** Show a screenshot in the thread, like a generated image. */
   share: (path: string, toolCallId: string) => void
+  /** The teammate took a screenshot (of `display`): the thread's panel shows it. */
+  seen: (path: string, display: number) => void
+  /** The teammate acted on the screen: the thread's panel shows a glance at it shortly after. */
+  acted: () => void
 }
+
+/** Requests that change what is on screen. */
+const ACTIONS = new Set(['move', 'click', 'drag', 'scroll', 'type', 'key', 'open_app'])
 
 const ABOUT_COMPUTER =
   "On the person's own Mac (this computer), through Brigade Computer Use. Coordinates are screen points " +
@@ -2490,8 +2497,11 @@ const point = {
 export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
   const act =
     (method: string) =>
-    (input: object, { abortSignal }: { abortSignal?: AbortSignal }) =>
-      computer.request(method, input as Record<string, unknown>, abortSignal)
+    async (input: object, { abortSignal }: { abortSignal?: AbortSignal }) => {
+      const result = await computer.request(method, input as Record<string, unknown>, abortSignal)
+      if (ACTIONS.has(method)) computer.acted()
+      return result
+    }
   return {
     computer_screenshot: tool({
       description:
@@ -2517,6 +2527,7 @@ export function computerUseTools(computer: ComputerUse): Record<string, Tool> {
           abortSignal,
         )) as Record<string, unknown>
         if (input.share) computer.share(path, toolCallId)
+        computer.seen(path, input.display ?? 0)
         return {
           path,
           width: shot.width,

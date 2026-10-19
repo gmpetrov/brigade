@@ -639,6 +639,16 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     turnId: z.string().optional(),
   }),
   /**
+   * Stop using the member's Mac in this turn, as the Stop on its computer-use pill does,
+   * from the thread's panel: the turn goes on, without the computer.
+   */
+  z.object({
+    type: z.literal('thread.computer.stop'),
+    commandId: z.string(),
+    sessionId: z.string(),
+    turnId: z.string().optional(),
+  }),
+  /**
    * A queued message: cancel it, change its text, or steer it into the
    * teammate's running turn (it stays queued if that cannot be done).
    */

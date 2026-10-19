@@ -906,6 +906,32 @@ export const threads = new Hono<AppEnv>()
   })
 
   /**
+   * Stop the teammate using the member's Mac in this turn, as the pill's Stop on that Mac
+   * does: from a phone, say. The turn goes on without the computer.
+   */
+  .post('/:id/computer/stop', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    if (thread.computer.kind !== 'member_machine')
+      throw new HTTPException(400, { message: 'This thread does not run on a member’s Mac' })
+    const turnId = InterruptThread.safeParse(await c.req.json().catch(() => ({}))).data?.turnId
+    await deliver(thread.computer, {
+      type: 'thread.computer.stop',
+      commandId: randomUUID(),
+      sessionId: thread.id,
+      ...(turnId ? { turnId } : {}),
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.computer_stopped',
+      target: { type: 'thread', id: thread.id },
+    })
+    return c.json({ ok: true })
+  })
+
+  /**
    * The computer's desktop: watch the teammate work, or use it after taking
    * over. Watching never wakes a stopped computer; having control does.
    */
@@ -1197,10 +1223,7 @@ export const threads = new Hono<AppEnv>()
   /** This member's pinned threads in the order they dragged them to: the ids, first to last. */
   .put('/pins/order', async (c) => {
     const { scope, db } = c.var
-    const { ids } = await parseBody(
-      c.req.raw,
-      z.object({ ids: z.array(z.string()).max(500) }),
-    )
+    const { ids } = await parseBody(c.req.raw, z.object({ ids: z.array(z.string()).max(500) }))
     // Only their own pins move; ids they did not pin are left out.
     await db.$transaction(
       ids.map((sessionId, position) =>
