@@ -23,6 +23,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { isAdmin, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
+import { AppLogos, AppRowBody } from '@/components/playbook-apps'
 import { ProjectTag } from '@/components/projects'
 import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
 import { describeCron, scheduleTime, zoneName } from '@/components/schedules'
@@ -81,18 +82,6 @@ function statusLine(p: PlaybookInstallationView) {
   ]
     .filter(Boolean)
     .join(' · ')
-}
-
-function AppLogos({ apps }: { apps: { kind: string }[] }) {
-  return (
-    <span className="flex shrink-0 -space-x-1.5">
-      {apps.slice(0, 4).map((a) => (
-        <span key={a.kind} className="grid size-7 place-items-center rounded-full border bg-card">
-          <ProviderLogo kind={a.kind as ProviderKind} className="size-4" />
-        </span>
-      ))}
-    </span>
-  )
 }
 
 function PlaybookRow({
@@ -710,6 +699,16 @@ export function PlaybookSheet({ id }: { id: string }) {
               />
             ))
           )}
+        </Section>
+      )}
+
+      {p.apps.length > 0 && (
+        <Section title="Apps">
+          {p.apps.map((a) => (
+            <Row key={a.name}>
+              <AppRowBody app={a} />
+            </Row>
+          ))}
         </Section>
       )}
 

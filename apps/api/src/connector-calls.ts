@@ -35,7 +35,7 @@ import {
   playbookVerdict,
   reserveAllowance,
 } from './playbook-autonomy.js'
-import { playbookAccount, threadPlaybook } from './playbooks.js'
+import { playbookAccepts, playbookAccount, playbookActionOf, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
@@ -102,8 +102,9 @@ export async function handleConnectorCall(
 
   // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
   const playbook = await threadPlaybook(db, session.playbookRunId)
-  const playbookActionKey =
-    playbook?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
+  const playbookActionKey = playbook
+    ? playbookActionOf(playbook.actions, connection.kind, call.operation)
+    : null
   const record = (data: {
     result: string
     target: string
@@ -152,20 +153,22 @@ export async function handleConnectorCall(
     })
   }
   if (playbook) {
-    const access = playbook.access.get(connection.kind)
-    if (!access) {
+    const role = playbookAccepts(playbook, connection.kind)
+    if (!role) {
       await record({ result: 'denied', target, error: 'not an App of the playbook' })
       return result({
         ok: false,
         error: `The playbook ${playbook.name} does not use ${connection.label}`,
       })
     }
-    // Of a kind it names an account for (its inbox), that account alone.
-    if (!playbookAccount(playbook, connection)) {
+    // An App one of its roles accepts; where a setting picks the role's account (its inbox, its
+    // analytics tool), that account alone. A server added by its URL only when picked.
+    const access = playbookAccount(playbook, connection)
+    if (!access) {
       await record({ result: 'denied', target, error: 'not the account of the playbook' })
       return result({
         ok: false,
-        error: `The playbook ${playbook.name} uses another ${connection.kind} account than ${connection.label}`,
+        error: `The playbook ${playbook.name} uses another ${role.name} account than ${connection.label}`,
       })
     }
     if (operation.write && access !== 'read_write') {

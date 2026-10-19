@@ -5,13 +5,14 @@
 // activate_playbook puts up the card whose Activate button turns it on. It runs on the accounts
 // of the member who started the thread, who owns it.
 import {
+  MCP_KIND,
   PLAYBOOK_INSTALL_TOOLS,
+  playbookRoles,
   type PlaybookAppStatus,
   type PlaybookManifest,
   type ScheduleOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
-import { usableIn } from './apps.js'
 import type { Scope, ScopedDb } from './db.js'
 import { latestDryRun, startDryRun } from './playbook-dry-runs.js'
 import {
@@ -21,6 +22,7 @@ import {
   hasParts,
   isAdminRole,
   requireInstallation,
+  roleStatuses,
   templates,
   templateView,
   withDefaults,
@@ -44,41 +46,22 @@ type Session = {
   playbookRunId: string | null
 }
 
-/** The playbook's Apps as its teammate stands with each, on the owner's accounts. */
-export async function appStatuses(
+/** The playbook's Apps and roles as its teammate stands with each, on the owner's accounts. */
+const appStatuses = (
   db: ScopedDb,
-  manifest: PlaybookManifest,
-  teammateId: string,
-  ownerMemberId: string,
-): Promise<PlaybookAppStatus[]> {
-  const grants = await db.grant.findMany({
-    where: {
-      teammateId,
-      connection: {
-        kind: { in: manifest.apps.map((a) => a.kind) as never },
-        status: 'active',
-      },
-    },
-    include: { connection: true },
-  })
-  return manifest.apps.map((app) => {
-    const usable = grants.filter(
-      (g) =>
-        g.connection.kind === app.kind &&
-        usableIn(g.connection, { startedByMemberId: ownerMemberId }),
-    )
-    const writable = usable.filter((g) => g.scope === 'read_write')
-    return {
-      ...app,
-      status: !usable.length
-        ? 'missing'
-        : app.access === 'read_write' && !writable.length
-          ? 'read_only'
-          : 'ready',
-      accounts: usable.map((g) => g.connection.externalAccount ?? g.connection.label),
-    }
-  })
-}
+  installation: { manifest: unknown; settings: unknown; teammateId: string; ownerMemberId: string },
+) =>
+  roleStatuses(
+    db,
+    installation.manifest as PlaybookManifest,
+    (installation.settings ?? {}) as Record<string, unknown>,
+    installation.teammateId,
+    installation.ownerMemberId,
+  )
+
+/** Those a dry run waits for. An optional App or role without an account blocks nothing: its runs do without it. */
+export const missingApps = (apps: PlaybookAppStatus[]) =>
+  apps.filter((a) => a.status === 'missing' && !a.optional)
 
 /** Its installation, if the thread's member owns it. */
 async function ownInstallation(db: ScopedDb, session: Session, id: string) {
@@ -91,6 +74,12 @@ async function ownInstallation(db: ScopedDb, session: Session, id: string) {
   return installation
 }
 
+/** A role as the teammate reads it: "analytics (mixpanel or an MCP server)". */
+const roleWords = (a: PlaybookAppStatus) =>
+  a.plain
+    ? a.name
+    : `${a.name} (${a.kinds.map((k) => (k === MCP_KIND ? 'an MCP server added by its URL' : k)).join(' or ')})`
+
 /** What to tell the teammate about the Apps: each missing one asked for at the access declared. */
 const appsNote = (apps: PlaybookAppStatus[]) => {
   const lacking = apps.filter((a) => a.status !== 'ready' && !a.optional)
@@ -98,11 +87,12 @@ const appsNote = (apps: PlaybookAppStatus[]) => {
   return (
     ' Apps it still needs: ' +
     lacking
-      .map((a) => `${a.kind} (${a.status === 'missing' ? 'no account' : 'read-only'})`)
+      .map((a) => `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'})`)
       .join(', ') +
     '. For each, open one ticket with an access ask of kind connection and app { kind, scope }, with ' +
     'the scope the playbook declares for it (read or read_write) and no more: the person connects the ' +
-    'App there, sign-in included, and grants it.'
+    'App there, sign-in included, and grants it. A role any of several Apps can hold: first ask which ' +
+    'one they use, then ask for that kind (an MCP server: kind mcp with its url).'
   )
 }
 
@@ -130,7 +120,9 @@ export async function handlePlaybookCall(
             name: t.manifest.name,
             version: t.manifest.version,
             description: t.manifest.description,
-            apps: t.manifest.apps.map((a) => a.kind),
+            apps: playbookRoles(t.manifest.apps).map((r) =>
+              r.plain ? r.name : `${r.name} (${r.kinds.join(' or ')})`,
+            ),
           })),
           next: 'Call show_playbook again with the playbookKey of the one the person wants, to show its card.',
         }
@@ -196,20 +188,25 @@ export async function handlePlaybookCall(
       }
       const missing = await answerSettings(db, installer, installation.id, op.settings)
       const view = await getInstallation(db, installation.id)
-      const manifest = (await requireInstallation(db, installation.id)).manifest as PlaybookManifest
-      const apps = await appStatuses(db, manifest, view.teammate.id, view.owner.id)
-      const questions = manifest.settings
-        .filter((s) => missing.includes(s.key))
-        .map((s) => ({
-          key: s.key,
-          type: s.type,
-          ask: s.ask ?? s.key,
-          ...(s.app ? { app: s.app } : {}),
-          ...(s.options ? { options: s.options } : {}),
-          ...(s.type === 'account'
-            ? { accounts: apps.find((a) => a.kind === s.app)?.accounts ?? [] }
-            : {}),
-        }))
+      const current = await requireInstallation(db, installation.id)
+      const manifest = current.manifest as PlaybookManifest
+      const apps = await appStatuses(db, current)
+      const answered = (current.settings ?? {}) as Record<string, unknown>
+      const question = (s: PlaybookManifest['settings'][number]) => ({
+        key: s.key,
+        type: s.type,
+        ask: s.ask ?? s.key,
+        ...(s.app ? { app: s.app } : {}),
+        ...(s.options ? { options: s.options } : {}),
+        ...(s.type === 'account'
+          ? { accounts: apps.find((a) => a.name === s.app)?.accounts ?? [] }
+          : {}),
+      })
+      const questions = manifest.settings.filter((s) => missing.includes(s.key)).map(question)
+      // Optional ones with no answer and no default (an analytics tool): asked once, at the end.
+      const optional = manifest.settings
+        .filter((s) => s.optional && s.default === undefined && !(s.key in answered))
+        .map(question)
       return {
         installationId: view.id,
         playbook: view.name,
@@ -217,31 +214,33 @@ export async function handlePlaybookCall(
         teammate: view.teammate.name,
         settings: view.settings.filter((s) => s.value !== null),
         missing: questions,
+        ...(optional.length ? { optional } : {}),
         apps,
         next:
           (questions.length
             ? `Ask the person next: "${questions[0]!.ask}" (${questions[0]!.type}), one question at a time, ` +
               'then call configure_playbook with installationId and the answer, by its key. An account setting takes ' +
               'the account as its row shows it (the Gmail address). Do not guess an answer you were not given.'
-            : 'Every setting has an answer: its triggers, schedules and skills are made, and nothing runs yet. ' +
-              'Offer a dry run on real past events, where nothing is sent (start_dry_run).') +
+            : 'Every setting it needs has an answer: its triggers, schedules and skills are made, and nothing ' +
+              'runs yet. ' +
+              (optional.length
+                ? `It also has optional settings (${optional.map((o) => `"${o.ask}"`).join(', ')}): ask them ` +
+                  'once, in one message, and leave out an account setting whose accounts list is empty; an ' +
+                  'answer goes to configure_playbook like the others, and without one it does without. Then ' +
+                  'offer'
+                : 'Offer') +
+              ' a dry run on real past events, where nothing is sent (start_dry_run).') +
           appsNote(apps),
       }
     }
 
     if (op.name === 'start_dry_run') {
       const installation = await ownInstallation(db, session, op.installationId)
-      const manifest = installation.manifest as PlaybookManifest
-      const apps = await appStatuses(
-        db,
-        manifest,
-        installation.teammateId,
-        installation.ownerMemberId,
-      )
-      const lacking = apps.filter((a) => a.status === 'missing' && !a.optional)
+      const apps = await appStatuses(db, installation)
+      const lacking = missingApps(apps)
       if (lacking.length)
         return {
-          error: `It needs ${lacking.map((a) => a.kind).join(', ')} first.${appsNote(apps)}`,
+          error: `It needs ${lacking.map(roleWords).join(', ')} first.${appsNote(apps)}`,
         }
       const view = await startDryRun(db, scope, session, teammate, op.installationId, op.last)
       return {
@@ -299,12 +298,7 @@ export async function handlePlaybookCall(
       installationId: view.id,
       playbook: view.name,
       settings: view.settings,
-      apps: await appStatuses(
-        db,
-        installation.manifest as PlaybookManifest,
-        view.teammate.id,
-        view.owner.id,
-      ),
+      apps: view.apps,
       actions: view.actions.map((a) => ({ label: a.label, level: a.level })),
       owner: view.owner.name,
       next:
