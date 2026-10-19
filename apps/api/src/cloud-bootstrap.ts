@@ -22,6 +22,10 @@ case "\${1:-}" in
     user_ok "$2"
     id "$2" >/dev/null 2>&1 || useradd -m -s /bin/bash -U -G "$GROUP" "$2"
     chmod 700 "/home/$2"
+    # A resumed computer's restore can bring a folder of the home back as root (boat's
+    # ~/.cache): give it back, or the teammate cannot write its caches. -h: never through a
+    # symlink the teammate put there meanwhile.
+    find "/home/$2" -mindepth 1 -maxdepth 1 -type d -user root -exec chown -h "$2:$2" {} +
     ;;
   share-account) # <accountId>: after a sign-in, let teammate users use the login
     id_ok "$2"
