@@ -6,7 +6,13 @@
 // connection and credential secrets are placeholders.
 // Called by seed.ts when the organization does not exist yet.
 import { randomBytes, randomUUID } from 'node:crypto'
-import { SUGGEST_REPLIES_TOOL, type AgentEvent } from '@brigade/contracts'
+import {
+  childPrompt,
+  parentMessage,
+  singleNote,
+  SUGGEST_REPLIES_TOOL,
+  type AgentEvent,
+} from '@brigade/contracts'
 import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
 import { saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
@@ -1094,8 +1100,18 @@ export async function seedWorkspace(users: Users) {
   // Child threads: Riley split an investigation in two and was woken once both reported;
   // one still waits on a person. A schedule made there reports its runs to it.
   const parentId = `seed-parent-${id()}`
-  const bisectId = `seed-child-${id()}`
-  const upgradeId = `seed-child-${id()}`
+  const bisectAgain = [
+    'Found the cause and a workaround; nothing pushed.',
+    '',
+    '- **First bad:** `16.3.0-canary.34` (vercel/next.js#94062)',
+    '- **Cause:** the client router cache keeps the payload of a page reached by `<Link>`, so an edit never reaches it',
+    '- **Workaround:** `experimental.staleTimes.dynamic = 0` in `next.config.ts`',
+    '',
+    'A page opened by its URL is not cached that way, which is why it still updates.',
+  ].join('\n')
+  // Ids like production's (letters and digits): a report note names its child by id.
+  const bisectId = `seedchild${id()}`
+  const upgradeId = `seedchild${id()}`
   const started = (threadId: string, title: string, instructions: string) =>
     tool(
       harness('start_child'),
@@ -1139,6 +1155,21 @@ export async function seedWorkspace(users: Users) {
         [],
         'Found it: live reload broke in Next 16.3.0-canary.34 (vercel/next.js#94062), and 16.4.2 does not fix it. Its upgrade thread asks you whether to keep 16.4.2 anyway.',
       ),
+      // Asked again (message_thread), the bisect reports once more, in Markdown.
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        singleNote({
+          id: bisectId,
+          title: 'Bisect the Next.js versions',
+          teammate: riley.name,
+          schedule: null,
+          report: { status: 'report', summary: bisectAgain, at: days(2).toISOString() },
+        }),
+        null,
+        [],
+        'Until the fix ships, `experimental.staleTimes.dynamic = 0` brings live reload back. Want me to add it to acme/web?',
+      ),
     ],
   })
   await thread({
@@ -1160,25 +1191,44 @@ export async function seedWorkspace(users: Users) {
       at: days(3).toISOString(),
     },
     reportDeliveredAt: days(3),
-    events: turn(
-      riley.id,
-      adaAccount.id,
-      'Riley started this thread from the thread “Live reload stops after navigating in the dashboard” and waits for your report.\n\nFind the first Next.js version where a page reached by a link stops updating on edit.',
-      null,
-      [
-        ...tool(
-          'Bash',
-          { command: 'node bisect.mjs 16.2.12 16.4.2' },
-          'first bad: 16.3.0-canary.34',
-        ),
-        ...tool(
-          harness('report'),
-          { status: 'report', summary: 'It broke in 16.3.0-canary.34 (vercel/next.js#94062).' },
-          { ok: true },
-        ),
-      ],
-      'Reported: 16.3.0-canary.34 is the first version that breaks.',
-    ),
+    events: [
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        childPrompt({
+          from: riley.name,
+          parentTitle: 'Live reload stops after navigating in the dashboard',
+          instructions:
+            'Find the first Next.js version where a page reached by a link stops updating on edit.',
+        }),
+        null,
+        [
+          ...tool(
+            'Bash',
+            { command: 'node bisect.mjs 16.2.12 16.4.2' },
+            'first bad: 16.3.0-canary.34',
+          ),
+          ...tool(
+            harness('report'),
+            { status: 'report', summary: 'It broke in 16.3.0-canary.34 (vercel/next.js#94062).' },
+            { ok: true },
+          ),
+        ],
+        'Reported: 16.3.0-canary.34 is the first version that breaks.',
+      ),
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        parentMessage({
+          from: riley.name,
+          parentTitle: 'Live reload stops after navigating in the dashboard',
+          text: 'Thanks. Please find **why** it broke in `16.3.0-canary.34`, and whether a setting in `next.config.ts` works around it. Then report again.',
+        }),
+        null,
+        [...tool(harness('report'), { status: 'report', summary: bisectAgain }, { ok: true })],
+        'Reported the cause and a workaround.',
+      ),
+    ],
   })
   const upgradeRequest = `call_${id()}`
   const upgradeAsks = [
