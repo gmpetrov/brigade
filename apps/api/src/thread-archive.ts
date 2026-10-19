@@ -22,6 +22,8 @@ export async function setThreadArchived(scope: Scope, threadId: string, on: bool
   })
   // Its children go and come back with it.
   await db.session.updateMany({ where: { parentId: thread.id }, data: { archivedAt: at } })
+  // Archived is put away for everyone: no longer for later for anyone (src/later.ts).
+  if (at) await db.threadLater.deleteMany({ where: { sessionId: thread.id } })
   if (thread.taskId)
     await (at
       ? archiveWithThread(scope, thread.taskId, at)

@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { answerQuestion, answerTicket, resolveTicket } from '../decide.js'
+import { latersOf } from '../later.js'
 import { waitingTickets } from '../playbook-approvals.js'
 import { projectWhere } from '../projects.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
@@ -15,14 +16,26 @@ export const tickets = new Hono<AppEnv>()
    * ?project=<id|none>: tickets of a project's threads, or of threads in none. ?status=all: the
    * decided ones too. A playbook's open approvals are one, with their count (playbook-approvals.ts).
    */
-  .get('/', async (c) =>
-    c.json(
-      await waitingTickets(c.var.scope, {
+  .get('/', async (c) => {
+    const [rows, laters] = await Promise.all([
+      waitingTickets(c.var.scope, {
         all: c.req.query('status') === 'all',
         project: projectWhere(c.req.query('project')),
       }),
-    ),
-  )
+      latersOf(c.var.db, c.var.scope.memberId),
+    ])
+    // Its thread put away for later by this member: it no longer waits on them (waitsOn),
+    // as when archived. A child's goes with its parent.
+    return c.json(
+      rows.map((t) => {
+        const thread = t.session && (t.session.parentId ?? t.session.id)
+        const laterAt = thread ? laters.get(thread) : undefined
+        return t.session
+          ? { ...t, session: { ...t.session, laterAt: laterAt?.toISOString() ?? null } }
+          : t
+      }),
+    )
+  })
 
   /** Approve, deny or dismiss. Who may depends on the kind of ticket. */
   .post('/:id/resolve', async (c) => {

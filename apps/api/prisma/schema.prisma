@@ -115,6 +115,7 @@ model Member {
   schedules             Schedule[]
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
+  threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
   notify                NotifyPreset           @default(needed)
@@ -191,6 +192,7 @@ model Workspace {
   previewVariables      PreviewVariable[]
   threadReads           ThreadRead[]
   threadPins            ThreadPin[]
+  threadLaters          ThreadLater[]
   homeDismissals        HomeDismissal[]
   pushNotices           PushNotice[]
   playbookInstallations PlaybookInstallation[]
@@ -368,6 +370,24 @@ model ThreadPin {
   @@index([sessionId])
 }
 
+/// A thread a member put away for later: out of their sidebar's list and of what waits on
+/// them, under the filter's Later. Each member's own, like a pin. Anything new in the thread
+/// after laterAt (a message, a turn, a ticket, a pull request) brings it back (src/later.ts).
+model ThreadLater {
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  laterAt        DateTime  @default(now())
+
+  @@id([memberId, sessionId])
+  @@index([sessionId])
+  @@index([workspaceId])
+}
+
 /// A loose end a member set aside on Home. Its key names the thing as it stood then (a thread's
 /// proposal by its event, a stalled thread by its last event, a routine by its failed run), so
 /// the same thing comes back once it changes.
@@ -469,6 +489,8 @@ model Session {
   reads                ThreadRead[]
   /// The members who pinned it.
   pins                 ThreadPin[]
+  /// The members who put it away for later.
+  laters               ThreadLater[]
   /// The task this thread works on. One thread per task for now.
   taskId               String?            @unique
   task                 Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)

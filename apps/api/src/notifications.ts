@@ -28,6 +28,7 @@ import {
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { isLooking } from './hub.js'
+import { laterKey, latersIn } from './later.js'
 import { waitingNow } from './pull-requests.js'
 import { columnOf } from './tasks.js'
 import { sendPush, type Vapid } from './web-push.js'
@@ -82,6 +83,7 @@ type OpenTicket = {
     id: string
     title: string
     startedByMemberId: string
+    parentId: string | null
     teammate: { name: string }
   } | null
 }
@@ -143,10 +145,12 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
       id: true,
       title: true,
       startedByMemberId: true,
+      parentId: true,
       teammate: { select: { name: true } },
     },
   }
-  const [tickets, tasks, waitingPulls, done, merged, turns] = await Promise.all([
+  const [laters, tickets, tasks, waitingPulls, done, merged, turns] = await Promise.all([
+    latersIn(workspaceId),
     prisma.ticket.findMany({
       // Not those of an archived thread: put away, they no longer wait on anyone.
       where: {
@@ -245,6 +249,9 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   ])
 
   const items = new Map<string, Item[]>(members.map((m) => [m.id, []]))
+  /** The member put the thread away for later: nothing in it waits on them (src/later.ts). */
+  const putAway = (m: { id: string }, s: { id: string; parentId: string | null } | null) =>
+    !!s && laters.has(laterKey(m.id, s.parentId ?? s.id))
   /** Added once per key: a thread with several tickets is one item. */
   const add = (memberId: string, item: Item) => {
     const list = items.get(memberId)!
@@ -263,7 +270,7 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
     }
     const key = t.session ? `needs:${t.session.id}` : `needs:ticket:${t.id}`
     for (const m of members) {
-      if (!waitsOn(t, m)) continue
+      if (!waitsOn(t, m) || putAway(m, t.session)) continue
       counted.get(m.id)!.add(key)
       if (!isFor(t, m)) continue
       add(m.id, {
@@ -319,8 +326,13 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
     const s = task.session!
     if (columnOf({ completedAt: task.completedAt, session: s }) !== 'needs_you') continue
     const key = `needs:${s.id}`
-    for (const m of members) counted.get(m.id)!.add(key)
-    if (s._count.tickets > 0 || !items.has(s.startedByMemberId)) continue
+    for (const m of members) if (!putAway(m, s)) counted.get(m.id)!.add(key)
+    if (
+      s._count.tickets > 0 ||
+      !items.has(s.startedByMemberId) ||
+      putAway({ id: s.startedByMemberId }, s)
+    )
+      continue
     const review = s.status !== 'waiting'
     add(s.startedByMemberId, {
       key,
@@ -341,9 +353,9 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   for (const pr of waitingPulls) {
     const s = pr.session
     const key = s ? `needs:${s.id}` : `needs:pull:${pr.id}`
-    for (const m of members) counted.get(m.id)!.add(key)
+    for (const m of members) if (!putAway(m, s)) counted.get(m.id)!.add(key)
     const who = pr.requestedByMemberId ?? s?.startedByMemberId
-    if (!who || !items.has(who) || (s && s._count.tickets > 0)) continue
+    if (!who || !items.has(who) || (s && s._count.tickets > 0) || putAway({ id: who }, s)) continue
     add(who, {
       key,
       workspaceId,

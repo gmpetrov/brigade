@@ -87,6 +87,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       startedByMemberId: memberId,
       parentId: null,
       archivedAt: null,
+      // Nor those the member put away for later (src/later.ts).
+      laters: { none: { memberId } },
       // A playbook's runs stay out of sight until a person takes part, as in the sidebar.
       OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
       updatedAt: { gte: new Date(now.getTime() - RECENT) },
