@@ -36,15 +36,16 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   requests waiting on a person push and count in the badge from the pull
   requests themselves (`waitingNow`), not from tasks. If nobody misses the board
   after two weeks, tasks and missions go.
-- **One goal, one task, cut in deliveries.** A person's attention is what is
-  scarce: a goal of days or several pull requests is one task, planned in one
-  to three deliveries, each a moment where the person tries something that works
-  or decides something only they can. Never one task per technical step: a
-  mission of nine tasks made a person follow nine pull requests. Its parts stay
-  off the board: the teammate does them itself (Claude Code's sub-agents for
-  parallel or side work), and starts a child thread only for what must outlive
-  its turn, is for another teammate (such as the review before a delivery) or may
-  need a person. A goal that came up in a conversation about something else gets
+- **One goal, one deliverable.** A person's attention is what is scarce: a goal
+  of days or several pull requests reaches them as one finished, checked result
+  (for code, one pull request), with no plan to approve and no steps to review;
+  they are asked only for what the work cannot go on without. A mission of nine
+  tasks made a person follow nine pull requests, and planned deliveries (tried
+  on 2026-10-19) still made them review and decide more than they wanted. Its
+  parts stay off the board: the teammate does them itself (Claude Code's
+  sub-agents for parallel or side work), and starts a child thread only for what
+  must outlive its turn, is for another teammate (such as the review before it
+  is handed over) or may need a person. A goal that came up in a conversation about something else gets
   a thread of its own: the teammate assigns the task to itself by name. The
   rules are in the session instructions (`bigGoals` in apps/runner/src/instructions.ts).
 - **Missions group tasks toward one goal, rarely.** A mission is a task with

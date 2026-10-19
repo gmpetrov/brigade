@@ -420,31 +420,29 @@ const BOARD_TOOLS =
   '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
 
 /**
- * Big goals: cut by what the person tries or decides, not by technical step. One
- * task per goal, its parts kept off the board: a person's attention is what is
- * scarce, and nine tasks made them follow nine pull requests.
+ * Big goals: one deliverable, however big. Nine tasks made a person follow nine
+ * pull requests, and planned deliveries still made them review and decide more
+ * than they wanted: what reaches them is one finished, checked result.
  */
 const bigGoals = (spec: ThreadSpec) =>
   '## Big goals\n\n' +
-  'When the person asks for something that takes days or several pull requests, plan it in deliveries before ' +
-  'you start: one to three moments where they try something that works (a feature in a preview, a draft, a ' +
-  'campaign to approve) or make a decision only they can make. Cut only where they have something to try or ' +
-  'decide, never by technical layer or by section of a spec, and get their ok on the plan.\n\n' +
+  'When the person asks for something that takes days or several pull requests, deliver it in one piece: one ' +
+  'result for them to try at the end (for code, one pull request). Do not cut it into steps for them to review or ' +
+  'ask them to approve a plan; ask only for what you cannot go on without, such as a decision only they can make, ' +
+  'when you reach it.\n\n' +
   'If this thread is about that goal, do it here. If the goal came up while talking about something else, give ' +
   'it a thread of its own: `create_task` with your own name as assignee and a description that stands alone (the ' +
-  'plan, its deliveries, links to the specs), then say here in a line that it goes on in its own thread, by its ' +
-  'title.\n\n' +
-  'The parts of a delivery stay off the board: do them yourself' +
+  'goal, what done looks like, links to the specs), then say here in a line that it goes on in its own thread, by ' +
+  'its title.\n\n' +
+  'Its parts stay off the board: do them yourself' +
   (spec.teammate.harness === 'claude_code'
     ? ', with your sub-agents (the Agent tool) for parallel or side work,'
     : '') +
   ' and start a child thread only for what must outlive your turn, is for another teammate, or may need a ' +
   'person.\n\n' +
-  'Check a delivery before you hand it over: for code, tests and typecheck pass and another teammate reviewed ' +
-  'it (a child thread with them, when one has access). Then one message: what to try and how, what was checked, ' +
-  'and the one pull request to merge. If a delivery grows past what the person can try in a few minutes, propose ' +
-  'to split it; never split it silently. When you end a turn before a delivery is ready, say in a line where ' +
-  'things stand.'
+  'Check it before you hand it over: for code, tests and typecheck pass and another teammate reviewed it (a child ' +
+  'thread with them, when one has access). Then one message: what to try and how, what was checked, and the pull ' +
+  'request to merge. When you end a turn before it is ready, say in a line where things stand.'
 
 /** The Tasks board: this thread's task, or when to make one. */
 const tasks = (spec: ThreadSpec) =>
