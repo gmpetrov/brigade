@@ -76,8 +76,9 @@ export function Control() {
           </h2>
           <p className={s.lead}>
             For each teammate, choose what it does alone and what it asks first: sending an email,
-            writing to Stripe, merging a pull request. Every request lands in one list, Needs you,
-            with what the teammate wants to do and why. Your phone buzzes, you tap, you answer.
+            changing something in Stripe, adding a change to your app. Every request lands in one
+            list, Needs you, with what the teammate wants to do and why. Your phone buzzes, you tap,
+            you answer.
           </p>
         </div>
 
@@ -169,14 +170,15 @@ export function Control() {
               Brigade types a website login for the teammate, so it never sees the password.
             </Point>
             <Point icon="list" title="Every step is logged.">
-              Open any thread to see what the teammate ran, read and changed.
+              Open any thread to see what the teammate did, read and changed.
             </Point>
             <Point icon="octagon" title="Stop it any time.">
               When a teammate uses your Mac, a pill on your screen says so, with a Stop button.
             </Point>
             <Point icon="key" title="Each teammate gets only its own keys.">
-              Give the support teammate Gmail and the engineer GitHub. A login in the vault goes to
-              the teammates you pick, and each app is read-only or read-write per teammate.
+              Give the support teammate Gmail and the developer GitHub. A login in the vault goes to
+              the teammates you pick, and for each teammate, an app can be view-only or allowed to
+              make changes.
             </Point>
             <Point icon="users" title="Roles for the people too.">
               Owners and admins set up teammates and access. An account you connect can stay in your

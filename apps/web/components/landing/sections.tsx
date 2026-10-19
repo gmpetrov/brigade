@@ -8,13 +8,13 @@ export function Problem() {
     <section className={cn(s.sec, s.problem)} aria-labelledby="problem-title">
       <div className={s.wrap}>
         <h2 className={cn(s.h2, s.reveal)} id="problem-title">
-          Your agents can do the work. You&apos;re still watching them do it.
+          Your AI can do the work. You&apos;re still watching it do it.
         </h2>
         <p className={cn(s.lead, s.reveal)}>
-          You pay for the best models there are, then spend the day switching terminal tabs to find
-          out which session finished and which one wants you. Meanwhile one of them has sat on a y/n
-          prompt for twenty minutes. And the inbox, the refunds and the follow-ups stay on your
-          desk, because you can&apos;t see what an agent would do with them.
+          You pay for the best AI there is, then spend the day checking on it: which task finished,
+          which one is stuck on a question for you. One of them has been waiting twenty minutes for
+          a yes. And the inbox, the refunds and the follow-ups stay on your desk, because you
+          can&apos;t see what an agent would do with them.
         </p>
         <div className={cn(s.tabs, s.reveal)} aria-hidden="true">
           {tabs.slice(0, 2).map((t) => (
@@ -98,8 +98,8 @@ export function HowItWorks() {
             <span className={s.n}>02</span>
             <h3>Give each teammate a job.</h3>
             <p>
-              Support, pull requests, Stripe follow-ups. Connect the apps it needs: Gmail, GitHub,
-              Stripe, Linear, Notion and more.
+              Support emails, bug fixes, Stripe follow-ups. Connect the apps it needs: Gmail,
+              GitHub, Stripe, Linear, Notion and more.
             </p>
             <div className={s.cap} aria-hidden="true">
               <div className={s.mini}>
@@ -153,7 +153,7 @@ export function Team() {
       <div className={s.wrap}>
         <div className={cn(s.secHead, s.reveal)}>
           <h2 className={s.h2} id="team-title">
-            One team, from the codebase to the inbox
+            One team, from your inbox to your app
           </h2>
         </div>
         <div className={s.jobs}>
@@ -203,7 +203,8 @@ export function Team() {
             <h3>Support inbox</h3>
             <p>
               A teammate sorts every support email into cases and drafts the answers your docs
-              already cover. It asks you before it sends. A bug report becomes a pull request.
+              already cover. It asks you before it sends. When a customer reports a bug, the
+              teammate writes the fix for you to approve.
             </p>
           </article>
 
@@ -244,11 +245,11 @@ export function Team() {
                 </div>
               </div>
             </div>
-            <h3>Pull requests</h3>
+            <h3>Fixes to your app</h3>
             <p>
-              Ask for a fix in a sentence. The teammate runs your app and you watch the change
-              appear in a live preview as it edits. Then it opens the pull request, and you merge it
-              from your phone.
+              Describe the fix in a sentence. The teammate opens your app and you watch the change
+              appear in a live preview as it works. When it looks right, you approve it from your
+              phone and it goes into your code.
             </p>
           </article>
 
@@ -284,8 +285,8 @@ export function Team() {
             <h3>Marketing</h3>
             <p>
               A teammate reads what your customers write on Reddit and what your competitors put on
-              their pages, then drafts the copy with every source linked. Give it your own skills,
-              and it works the way your team does.
+              their pages, then drafts the copy with every source linked. Write down how your team
+              does things, and it follows the same steps.
             </p>
           </article>
 

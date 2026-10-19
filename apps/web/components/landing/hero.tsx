@@ -35,16 +35,16 @@ export function Hero() {
             Hand off the work. Keep the <em>decisions.</em>
           </h1>
           <p className={s.sub}>
-            Stop babysitting terminal tabs. Brigade runs your Claude Code and Codex teammates in the
-            background, on the plan you already pay for, and puts every decision that needs you in
-            one list on your phone.
+            AI teammates sort your support inbox, research your market and fix bugs in your app
+            while you get on with your day. They run on the Claude or ChatGPT plan you already pay
+            for, and every decision that needs you lands in one list on your phone.
           </p>
           <div className={s.ctaRow}>
             <Cta href={SIGN_UP} primary large>
               Start free on your Mac
             </Cta>
           </div>
-          <p className={s.fine}>Open source (MIT) · Free on your Mac</p>
+          <p className={s.fine}>Open source · Free on your Mac</p>
         </div>
 
         <div className={s.artM} aria-hidden="true">
@@ -135,7 +135,7 @@ export function Proof({ numbers }: { numbers: ProofNumbers }) {
           {mergedPrs !== null && (
             <>
               {formatCount(mergedPrs)} pull requests merged on <code>{REPO}</code> in the last 30
-              days.{' '}
+              days, and a person approved each one.{' '}
             </>
           )}
           {rileyCommits !== null && totalCommits !== null && (

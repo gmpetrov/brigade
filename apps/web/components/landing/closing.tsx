@@ -21,7 +21,7 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
                 its {formatCount(totalCommits)} commits.{' '}
               </>
             )}
-            Every change goes through a pull request a person merges. The whole history is public.
+            A person approves every change before it goes in. The whole history is public.
           </p>
           <p className={s.lead}>
             Our marketing runs the same way: Mark, a Brigade teammate, researched this page from 107
@@ -160,8 +160,8 @@ export function Pricing() {
           </div>
         </div>
         <p className={s.prFoot}>
-          You bring the model, so we never sell credits or tokens. Brigade is open source under the
-          MIT license.
+          You use your own Claude or ChatGPT plan, so we never charge you for AI usage. Brigade is
+          open source under the MIT license.
         </p>
       </div>
     </section>
@@ -171,7 +171,7 @@ export function Pricing() {
 const faqs = [
   [
     'Do I need a Claude or ChatGPT plan?',
-    'Yes. Teammates run on Claude Code or Codex, signed in with your own account. A Claude Max or ChatGPT Pro plan gives them the most room.',
+    'Yes. Teammates use your own Claude or ChatGPT account, through Claude Code and Codex, the official tools from Anthropic and OpenAI. A Claude Max or ChatGPT Pro plan gives them the most room.',
   ],
   [
     'What happens when my Mac goes to sleep?',
@@ -183,7 +183,7 @@ const faqs = [
   ],
   [
     'Can a teammate send an email or write to Stripe without me?',
-    'Only if you let it. For each teammate you choose whether writes to your apps go ahead or wait for your yes in Needs you. Ready-made playbooks, like the support one, ask before they send.',
+    'Only if you let it. For each teammate you choose whether it can make changes in your apps on its own or waits for your yes in Needs you. Ready-made playbooks, like the support one, ask before they send.',
   ],
   [
     'Where do my passwords and API keys go?',
@@ -194,12 +194,12 @@ const faqs = [
     'Connect a second account and the teammate moves to it mid-task. With no account left, the thread waits and starts again when your limit resets.',
   ],
   [
-    'How is this different from Claude Code or Codex alone?',
-    'Claude Code runs one session for one person, in a terminal or through Remote Control. Brigade runs a team of them in the background, connected to your Gmail, GitHub and Stripe, with routines on a schedule and one list of what needs you, shared with your team.',
+    'How is this different from using Claude or ChatGPT on my own?',
+    "On your own, you start each task and stay with it until it's done. Brigade's teammates work in the background, connected to your Gmail, GitHub and Stripe, run routines on a schedule, and bring what needs you to one list your team shares.",
   ],
   [
     'Is it really open source?',
-    'Yes, the whole product is on GitHub under the MIT license, including the dashboard, the API and the Mac app.',
+    'Yes, the whole product is on GitHub under the MIT license, including the web app, the server and the Mac app.',
   ],
 ]
 
@@ -248,7 +248,7 @@ export function FinalCall() {
         <div className={cn(s.blk, s.bInk)} />
       </div>
       <div className={cn(s.wrap, s.reveal)}>
-        <h2 id="final-title">Give your agents their own desk</h2>
+        <h2 id="final-title">Give your AI teammates their own desk</h2>
         <p className={s.lead}>
           Start on your Mac today. Move to the cloud when you want them working through the night.
         </p>
