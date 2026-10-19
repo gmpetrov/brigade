@@ -78,7 +78,7 @@ function hrefOf(r: SearchResult) {
     case 'ticket':
       return r.threadId ? `/app/threads/${r.threadId}` : '/app/tickets'
     case 'automation':
-      return '/app/automations'
+      return '/app/routines'
     case 'file':
       return `/app/library?file=${r.id}`
     case 'memory':

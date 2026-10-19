@@ -103,7 +103,7 @@ function Routines({ teammate }: { teammate: Pick<Teammate, 'id'> }) {
       title="Routines"
       action={
         <Button asChild variant="outline" size="sm">
-          <Link href="/app/automations">All</Link>
+          <Link href="/app/routines">All</Link>
         </Button>
       }
     >
