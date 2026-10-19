@@ -239,8 +239,9 @@ export async function handoffThread(
   const inThread = new Set(thread.teammates.map((t) => t.teammateId))
   const from = thread.teammates.find((t) => t.teammateId === message.fromTeammateId)
   if (!from) return
-  // The chief routes work: a teammate it mentions joins the thread to answer.
-  if (from.teammate.kind === 'chief') {
+  // The chief routes work: a teammate it mentions joins the thread to answer. Not in a playbook's
+  // run: what started it is untrusted, and only a person brings another teammate in.
+  if (from.teammate.kind === 'chief' && !session.playbookRunId) {
     const joining = await db.teammate.findMany({
       where: {
         id: { in: message.teammateIds.filter((id) => !inThread.has(id)) },

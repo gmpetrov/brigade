@@ -37,6 +37,11 @@ export type ConnectorContext = {
   }) => Promise<ThreadAttachmentRef>
   /** A file the teammate sends with this call, by the id the runner gave its upload. */
   readFile: (id: string) => Promise<{ name: string; contentType: string; bytes: Uint8Array }>
+  /**
+   * A merge a playbook lets through on its own because its checks passed: the head commit they
+   * passed on. The merge goes through only on that commit, never on one pushed since.
+   */
+  checkedSha?: string
 }
 
 export type ConnectorKind =

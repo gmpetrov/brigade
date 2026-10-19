@@ -14,6 +14,7 @@ import type { ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar, timeAgo, useDashboard } from '@/components/dashboard'
 import { useDocumentPanel } from '@/components/document-panel'
 import { NewThread, useLastTeammate } from '@/components/new-thread'
+import { PlaybookApprovalsRow } from '@/components/playbook-approvals'
 import { useProject } from '@/components/project-shell'
 import { TicketRow } from '@/components/ticket-row'
 import { Card } from '@/components/ui/card'
@@ -112,9 +113,19 @@ export default function ProjectOverview() {
       {open.length > 0 && (
         <Box title="Needs you" detail={`${open.length} open`}>
           <ul className="-mx-5 divide-y border-t">
-            {open.slice(0, 5).map((t) => (
-              <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
-            ))}
+            {open.slice(0, 5).map((t) =>
+              // A playbook's approvals: one row, opened in place.
+              t.playbook ? (
+                <PlaybookApprovalsRow
+                  key={`playbook:${t.playbook.id}`}
+                  installationId={t.playbook.id}
+                  tickets={[t]}
+                  onDecided={tickets.reload}
+                />
+              ) : (
+                <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
+              ),
+            )}
           </ul>
           {open.length > 5 && (
             <Link href="/app/tickets" className="text-xs text-muted-foreground hover:underline">

@@ -231,8 +231,10 @@ function createAgent(
     ...credentialTools(credentials),
     ...libraryTools(library),
     ...(spec.git ? repoTools(checkoutRepo) : {}),
-    ...taskTools(callTask),
-    ...scheduleTools(callSchedule),
+    // A playbook's run gets no tool that starts or prompts a thread outside the run (the API refuses them too).
+    ...taskTools(callTask, spec.playbook ? { dryRun: spec.playbook.dryRun } : undefined),
+    // Nor a schedule, whose runs are threads outside it (wake-ups are for threads a person started).
+    ...(spec.playbook ? {} : scheduleTools(callSchedule)),
     // A playbook's run may wait on another run's child (follow_thread); a dry run waits for nothing.
     ...childTools(callSchedule, {
       child: !!spec.parent,

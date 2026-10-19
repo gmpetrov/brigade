@@ -34,7 +34,8 @@ function greeting(name: string) {
 export default function Home() {
   const { me, teammates } = useDashboard()
   const threads = useApi<ThreadSummary[]>('/threads')
-  const tickets = useApi<Ticket[]>('/tickets?status=all')
+  // Open ones: decided ones would only crowd out what waits.
+  const tickets = useApi<Ticket[]>('/tickets')
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const feed = useApi<HomeFeed>('/home')
   const [chosen, choose] = useLastTeammate()

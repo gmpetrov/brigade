@@ -835,6 +835,11 @@ export async function threadPlaybook(
 ): Promise<
   | (ThreadPlaybook & {
       access: Map<string, 'read' | 'read_write'>
+      /**
+       * An App kind it has an account setting for (its inbox, say): the only accounts of that
+       * kind the run may use, by connection id. Kinds without one: any account granted.
+       */
+      accounts: Map<string, Set<string>>
       actions: PlaybookManifest['actions']
       /** The action that is its first response to an event, if it times one. */
       firstResponse: string | null
@@ -845,10 +850,20 @@ export async function threadPlaybook(
   if (!playbookRunId) return null
   const run = await db.playbookRun.findFirst({
     where: { id: playbookRunId },
-    include: { installation: { select: { id: true, manifest: true } } },
+    include: { installation: { select: { id: true, manifest: true, settings: true } } },
   })
   if (!run) return null
   const manifest = run.installation.manifest as PlaybookManifest
+  const settings = (run.installation.settings ?? {}) as Record<string, unknown>
+  const accounts = new Map<string, Set<string>>()
+  for (const setting of manifest.settings)
+    if (setting.type === 'account' && setting.app) {
+      const ids = accounts.get(setting.app) ?? new Set<string>()
+      const value = settings[setting.key]
+      // Unanswered (an optional one): no account of that kind rather than every one.
+      if (typeof value === 'string' && value) ids.add(value)
+      accounts.set(setting.app, ids)
+    }
   return {
     installationId: run.installation.id,
     runId: run.id,
@@ -857,9 +872,23 @@ export async function threadPlaybook(
     dryRun: run.dryRun,
     dryRunId: run.dryRunId,
     access: new Map(manifest.apps.map((a) => [a.kind, a.access])),
+    accounts,
     actions: manifest.actions,
     firstResponse: manifest.firstResponse ?? null,
   }
+}
+
+/**
+ * Whether a playbook's thread may use this account: an App the playbook declares, and of a kind
+ * it names an account for (its inbox), that very account. Not the other inboxes its teammate has.
+ */
+export function playbookAccount(
+  playbook: { access: Map<string, unknown>; accounts: Map<string, Set<string>> },
+  connection: { id: string; kind: string },
+) {
+  if (!playbook.access.has(connection.kind)) return false
+  const only = playbook.accounts.get(connection.kind)
+  return !only || only.has(connection.id)
 }
 
 type PlaybookReport = Extract<ScheduleOperation, { name: 'playbook_report' }>

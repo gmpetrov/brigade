@@ -39,7 +39,8 @@ const skip = (await reachable()) ? false : 'no database to reach (apps/api/.env 
 
 const { childNote, FOLLOWERS_PER_THREAD } = await import('@brigade/contracts')
 const { prisma, scoped } = await import('../src/db.js')
-const { handleChildCall, noteChildEvents } = await import('../src/children.js')
+const { handleChildCall, noteChildEvents, settleOverdueChildren } =
+  await import('../src/children.js')
 
 type Row = Awaited<ReturnType<typeof prisma.session.create>>
 const id = randomUUID().slice(0, 8)
@@ -242,6 +243,65 @@ test('three runs waiting on one fix are each woken once by its report', { skip }
   await noteChildEvents(fix, [{ event: { type: 'turn.completed', at: new Date().toISOString() } }])
   for (const mail of mails) assert.equal((await notes(mail)).length, 1)
 })
+
+test(
+  'a wake-up that fails to be stored leaves the follow to the sweep, which wakes it once',
+  { skip },
+  async () => {
+    const fix = await fixOf(await runThread())
+    const mail = await runThread()
+    const kept = await runThread()
+    await follow(mail, fix)
+    await follow(kept, fix)
+    // The database refuses this follower's wake-up: a failure between claim and wake.
+    const name = `fail_wakeup_${id.replace(/-/g, '_')}`
+    await prisma.$executeRawUnsafe(
+      `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE TRIGGER ${name} BEFORE INSERT ON "Wakeup" FOR EACH ROW WHEN (NEW."sessionId" = '${mail.id}') EXECUTE FUNCTION ${name}()`,
+    )
+    try {
+      await reports(fix)
+    } finally {
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ${name} ON "Wakeup"`)
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ${name}()`)
+    }
+    // Not claimed without its wake-up; the other follower heard it.
+    const pending = await prisma.threadFollow.findFirstOrThrow({
+      where: { sessionId: fix.id, followerId: mail.id },
+    })
+    assert.equal(pending.deliveredAt, null)
+    assert.equal((await notes(mail)).length, 0)
+    assert.equal((await notes(kept)).length, 1)
+
+    // Mid-turn, the sweep leaves it to the turn's end.
+    await prisma.session.update({ where: { id: fix.id }, data: { status: 'running' } })
+    await settleOverdueChildren()
+    assert.equal((await notes(mail)).length, 0)
+
+    // Its turn over: the minute's sweep wakes it, once, however often it runs or the events repeat.
+    await prisma.session.update({ where: { id: fix.id }, data: { status: 'idle' } })
+    await Promise.all([
+      settleOverdueChildren(),
+      settleOverdueChildren(),
+      noteChildEvents(fix, [{ event: { type: 'turn.completed', at: new Date().toISOString() } }]),
+    ])
+    await settleOverdueChildren()
+    const [note, ...more] = await notes(mail)
+    assert.equal(more.length, 0)
+    assert.match(note!, /Fixed in #12, merged\./)
+    assert.equal((await notes(kept)).length, 1)
+    assert.notEqual(
+      (
+        await prisma.threadFollow.findFirstOrThrow({
+          where: { sessionId: fix.id, followerId: mail.id },
+        })
+      ).deliveredAt,
+      null,
+    )
+  },
+)
 
 test('a new report of the followed thread wakes its followers again', { skip }, async () => {
   const fix = await fixOf(await runThread())

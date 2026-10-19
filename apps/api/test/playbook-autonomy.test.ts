@@ -46,7 +46,7 @@ const judge = (input: {
   args?: unknown
   runCase?: string | null
   usage?: { count: number; sums: Record<string, number> }
-  checks?: { passed: boolean; why: string }
+  checks?: { passed: true; why: string; sha: string } | { passed: false; why: string }
 }) =>
   verdict({
     playbook: 'Support',
@@ -150,9 +150,13 @@ describe('a write in a playbook run', () => {
   })
 
   test('a merge on its own waits for its checks, even with no condition stored', async () => {
-    const passed = { passed: true, why: 'ci passed' }
-    const pending = { passed: false, why: 'ci still running' }
-    assert.deepEqual(await judge({ action: merge, checks: passed }), { level: 'auto' })
+    const passed = { passed: true as const, why: 'ci passed', sha: 'abc' }
+    const pending = { passed: false as const, why: 'ci still running' }
+    // On its own, with the head commit its checks passed on: the only one it may merge.
+    assert.deepEqual(await judge({ action: merge, checks: passed }), {
+      level: 'auto',
+      checkedSha: 'abc',
+    })
     const waiting = await judge({ action: merge, conditions: {}, checks: pending })
     assert.equal(waiting.level, 'ask')
     assert.match(
@@ -216,7 +220,7 @@ describe("a pull request's checks", () => {
       'acme/web',
       7,
     )
-    assert.deepEqual(checks, { passed: true, why: 'ci passed' })
+    assert.deepEqual(checks, { passed: true, why: 'ci passed', sha: 'abc' })
   })
 
   test('do not pass while one runs, one failed, or a required one has not reported', async () => {
@@ -255,7 +259,7 @@ describe("a pull request's checks", () => {
       'acme/web',
       7,
     )
-    assert.deepEqual(ruleset, { passed: true, why: 'build passed' })
+    assert.deepEqual(ruleset, { passed: true, why: 'build passed', sha: 'abc' })
   })
 
   test("without the Checks permission, GitHub's own verdict on the pull request decides", async () => {
@@ -268,6 +272,7 @@ describe("a pull request's checks", () => {
     assert.deepEqual(await pullChecks(unreadable('clean'), 'acme/web', 7), {
       passed: true,
       why: 'GitHub says every check passed',
+      sha: 'abc',
     })
     assert.deepEqual(await pullChecks(unreadable('blocked'), 'acme/web', 7), {
       passed: false,
@@ -297,6 +302,76 @@ describe("a pull request's checks", () => {
     )
     assert.match((await mergeRefusal(null, 'acme/web')) ?? '', /No GitHub connection/)
     assert.match((await mergeRefusal(null, null)) ?? '', /repository setting has no answer/)
+  })
+})
+
+describe('a merge on its own goes only on the commit its checks passed on', () => {
+  /** github_merge_pull_request against a pull request whose head is `head`; records each merge. */
+  const merging = async (head: string, opts: { checkedSha?: string; refuse?: boolean } = {}) => {
+    const { github: connector } = await import('../src/connectors/github.js')
+    const merges: { sha?: string }[] = []
+    const fetch = async (url: string, init: RequestInit = {}) => {
+      const { pathname } = new URL(url)
+      if (pathname === '/repos/acme/web/pulls/7' && !init.method)
+        return Response.json({
+          number: 7,
+          state: 'open',
+          draft: false,
+          merged_at: null,
+          head: { sha: head, ref: 'fix' },
+          base: { ref: 'main' },
+          html_url: 'https://github.com/acme/web/pull/7',
+        })
+      if (pathname === '/repos/acme/web/pulls/7/merge' && init.method === 'PUT') {
+        const body = JSON.parse(String(init.body)) as { sha?: string }
+        merges.push(body)
+        // GitHub's own answer when the head is no longer `sha`.
+        return opts.refuse || body.sha !== head
+          ? Response.json(
+              { message: 'Head branch was modified. Review and try the merge again.' },
+              { status: 409 },
+            )
+          : Response.json({ sha: 'merged1', merged: true, message: 'Merged' })
+      }
+      return Response.json({ message: 'Not Found' }, { status: 404 })
+    }
+    const ctx = {
+      fetch,
+      callId: 'c1',
+      keepFile: never,
+      readFile: never,
+      ...(opts.checkedSha ? { checkedSha: opts.checkedSha } : {}),
+    }
+    const run = connector.operations.github_merge_pull_request!.run(ctx as never, {
+      repository: 'acme/web',
+      number: 7,
+      method: 'squash',
+    })
+    return { run, merges }
+  }
+
+  test('its checked head: merged with that sha', async () => {
+    const { run, merges } = await merging('abc', { checkedSha: 'abc' })
+    assert.equal(((await run) as { merged: boolean }).merged, true)
+    assert.deepEqual(merges, [{ merge_method: 'squash', sha: 'abc' }])
+  })
+
+  test('a head that moved since its checks: refused before GitHub is asked to merge', async () => {
+    const { run, merges } = await merging('def', { checkedSha: 'abc' })
+    await assert.rejects(run, /its head moved since its checks passed on abc/)
+    assert.equal(merges.length, 0)
+  })
+
+  test('a head that moves between the read and the merge: GitHub refuses the sha, and it says why', async () => {
+    const { run, merges } = await merging('abc', { checkedSha: 'abc', refuse: true })
+    await assert.rejects(run, /its head moved since its checks passed on abc/)
+    assert.deepEqual(merges, [{ merge_method: 'squash', sha: 'abc' }])
+  })
+
+  test('a merge a person approved merges the head it reads, as before', async () => {
+    const { run, merges } = await merging('def')
+    assert.equal(((await run) as { merged: boolean }).merged, true)
+    assert.deepEqual(merges, [{ merge_method: 'squash', sha: 'def' }])
   })
 })
 
@@ -610,6 +685,14 @@ describe('through the database', { skip: !database && 'no database answers' }, (
     return heard
   }
   const mail = { to: ['jane@customer.test'], subject: 'Re: login', body: 'Here is how.' }
+  /** What a call on its own of action `key` reserves of its caps. */
+  const reservationFor = (key: string, args: unknown) => ({
+    installationId: ids.installation,
+    action: action({ key, label: key === 'reply' ? 'Reply to the customer' : 'Refund' }),
+    args,
+    teammateId: ids.teammate,
+    sessionId: ids.session,
+  })
   const lastCall = () =>
     db.connectionCall.findFirst({
       where: { sessionId: ids.session },
@@ -677,7 +760,11 @@ describe('through the database', { skip: !database && 'no database answers' }, (
 
   test('past its cap over 24 hours, it asks; the level stays', async () => {
     await setAction('reply', { level: 'auto', conditions: {}, limits: { count: 2 } })
-    for (let i = 0; i < 2; i++)
+    // Two calls on its own today: each took its share of the caps, then went through.
+    const { reserveAllowance } = await import('../src/playbook-autonomy.js')
+    for (let i = 0; i < 2; i++) {
+      const taken = await reserveAllowance(scope, reservationFor('reply', mail))
+      assert.ok('held' in taken && taken.held)
       await db.connectionCall.create({
         data: {
           sessionId: ids.session,
@@ -691,6 +778,7 @@ describe('through the database', { skip: !database && 'no database answers' }, (
           input: {},
         } as never,
       })
+    }
     const heard = await write('gmail_send', mail, { approved: false })
     assert.match(
       heard.find((m) => m.type === 'connector.pending')?.reason ?? '',
@@ -700,7 +788,85 @@ describe('through the database', { skip: !database && 'no database answers' }, (
       where: { installationId: ids.installation, key: 'reply' },
     })
     assert.equal(row?.level, 'auto')
+
+    // A call on its own that fails gives its share back: with room for one more, two calls in a
+    // row that both fail (no credential here) each go on their own, and neither asks.
+    await setAction('reply', { limits: { count: 3 } })
+    for (let i = 0; i < 2; i++) {
+      const again = await write('gmail_send', mail)
+      assert.equal(
+        again.some((m) => m.type === 'connector.pending'),
+        false,
+      )
+      assert.equal(again.at(-1)?.ok, false)
+    }
+    const released = await prisma.auditEntry.count({
+      where: {
+        workspaceId: ids.workspace,
+        action: 'playbook.allowance_released',
+        targetId: `${ids.installation}:reply`,
+      },
+    })
+    assert.equal(released, 2)
     await setAction('reply', { limits: {} })
+  })
+
+  test('concurrent calls on their own never go past a count cap', async () => {
+    const { reserveAllowance, releaseAllowance } = await import('../src/playbook-autonomy.js')
+    await db.playbookAction.create({
+      data: {
+        installationId: ids.installation,
+        key: 'cap-count',
+        level: 'auto',
+        limits: { count: 3 },
+      } as never,
+    })
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        reserveAllowance(scope, reservationFor('cap-count', { amount: 1 })),
+      ),
+    )
+    const held = results.flatMap((r) => ('held' in r && r.held ? [r.held] : []))
+    assert.equal(held.length, 3)
+    for (const r of results)
+      if ('reason' in r) assert.match(r.reason, /at most 3 times in 24 hours/)
+    // One given back (its call failed): exactly one more fits, even among concurrent calls.
+    await releaseAllowance(scope, held[0]!, 'failed')
+    const more = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        reserveAllowance(scope, reservationFor('cap-count', { amount: 1 })),
+      ),
+    )
+    assert.equal(more.filter((r) => 'held' in r && r.held).length, 1)
+  })
+
+  test('concurrent calls on their own never go past an amount cap', async () => {
+    const { reserveAllowance } = await import('../src/playbook-autonomy.js')
+    await db.playbookAction.create({
+      data: {
+        installationId: ids.installation,
+        key: 'cap-amount',
+        level: 'auto',
+        limits: { amount: { argument: 'amount', max: 100 } },
+      } as never,
+    })
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        reserveAllowance(scope, reservationFor('cap-amount', { amount: 30 })),
+      ),
+    )
+    assert.equal(results.filter((r) => 'held' in r && r.held).length, 3) // 90 of 100
+    const refused = results.find((r) => 'reason' in r) as { reason: string }
+    assert.match(refused.reason, /up to 100 amount in 24 hours: 90 so far, and this one is 30/)
+    // A smaller one still fits under what is left.
+    const small = await reserveAllowance(scope, reservationFor('cap-amount', { amount: 10 }))
+    assert.ok('held' in small && small.held)
+  })
+
+  test('an action with no caps takes no share', async () => {
+    const { reserveAllowance } = await import('../src/playbook-autonomy.js')
+    await setAction('reply', { limits: {} })
+    assert.deepEqual(await reserveAllowance(scope, reservationFor('reply', mail)), { held: null })
   })
 
   test("a deny in the teammate's policy wins over on its own", async () => {

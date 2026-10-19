@@ -23,7 +23,7 @@ import {
 import { HTTPException } from 'hono/http-exception'
 import { audit } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
-import type { Scope, ScopedDb } from './db.js'
+import { prisma, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { workspaceGitHub } from './git.js'
 import type { WorkspaceScope } from './scope.js'
 
@@ -76,15 +76,20 @@ export function numbersOf(input: unknown, prefix = '', depth = 0): Record<string
 // A write in a playbook's live run
 // ---------------------------------------------------------------------------
 
-/** What a write does: on its own, after a person approves it (why, when it is not plain), or never. */
+/**
+ * What a write does: on its own, after a person approves it (why, when it is not plain), or never.
+ * On its own after a merge's checks: the head commit they passed on, the only one it may merge.
+ */
 export type Verdict =
-  { level: 'auto' } | { level: 'ask'; reason?: string } | { level: 'deny'; reason: string }
+  | { level: 'auto'; checkedSha?: string }
+  | { level: 'ask'; reason?: string }
+  | { level: 'deny'; reason: string }
 
 /** An action's calls on its own over the last 24 hours: how many, and their numbers summed. */
 export type Usage = { count: number; sums: Record<string, number> }
 
-/** Whether a pull request's checks allow a merge on its own, and why not. */
-export type Checks = { passed: boolean; why: string }
+/** Whether a pull request's checks allow a merge on its own (on which head commit), and why not. */
+export type Checks = { passed: true; why: string; sha: string } | { passed: false; why: string }
 
 /**
  * What a write at its action's level does, in place of the teammate's allow or ask (a deny of
@@ -150,35 +155,42 @@ export async function verdict(input: {
         `${label} is done on its own only up to ${max} (${argument}); this one is ${value}.`,
       )
   }
-  if (limits.count !== undefined || limits.amount) {
-    const usage = await input.usage()
-    if (limits.count !== undefined && usage.count >= limits.count)
-      return ask(
-        `${label} is done on its own at most ${limits.count} times in 24 hours, and that many were done already.`,
-      )
-    if (limits.amount) {
-      const { argument, max } = limits.amount
-      const value = argumentOf(input.args, argument)
-      if (typeof value !== 'number' || !Number.isFinite(value))
-        return ask(
-          `${label} is capped at ${max} ${argument} a day on its own, and this call has no ${argument}.`,
-        )
-      const used = usage.sums[argument] ?? 0
-      if (used + value > max)
-        return ask(
-          `${label} is done on its own up to ${max} ${argument} in 24 hours: ${used} so far, and this one is ${value}.`,
-        )
-    }
+  // A first look at the caps; the call takes its share of them only once it is let through
+  // (reserveAllowance), where they are read again under a lock.
+  if (capped(limits)) {
+    const problem = capProblem(label, limits, await input.usage(), input.args)
+    if (problem) return ask(problem)
   }
-  // A merge never goes on its own without its checks, whatever its stored conditions say.
+  // A merge never goes on its own without its checks, whatever its stored conditions say, and
+  // then merges only the commit they passed on.
   if (conditions.checksPassed || needsChecks(action)) {
     const checks = await input.checks()
     if (!checks.passed)
       return ask(
         `${label} is done on its own only when every required check passed: ${checks.why}.`,
       )
+    return { level: 'auto', checkedSha: checks.sha }
   }
   return { level: 'auto' }
+}
+
+type Limits = NonNullable<ReturnType<typeof storedLimits>>
+const capped = (limits: Limits) => limits.count !== undefined || !!limits.amount
+
+/** Why a call on its own would go past its action's caps over 24 hours, or null. */
+function capProblem(label: string, limits: Limits, usage: Usage, args: unknown): string | null {
+  if (limits.count !== undefined && usage.count >= limits.count)
+    return `${label} is done on its own at most ${limits.count} times in 24 hours, and that many were done already.`
+  if (limits.amount) {
+    const { argument, max } = limits.amount
+    const value = argumentOf(args, argument)
+    if (typeof value !== 'number' || !Number.isFinite(value))
+      return `${label} is capped at ${max} ${argument} a day on its own, and this call has no ${argument}.`
+    const used = usage.sums[argument] ?? 0
+    if (used + value > max)
+      return `${label} is done on its own up to ${max} ${argument} in 24 hours: ${used} so far, and this one is ${value}.`
+  }
+  return null
 }
 
 /** Calls an installation's runs made on their own: real writes of an action no person decided. */
@@ -191,26 +203,126 @@ const autoWhere = (installationId: string) => ({
   session: { playbookRun: { installationId } },
 })
 
-/** An action's calls on its own over the last 24 hours. */
-async function usageToday(db: ScopedDb, installationId: string, key: string): Promise<Usage> {
-  const calls = await db.connectionCall.findMany({
-    where: {
-      ...autoWhere(installationId),
-      playbookActionKey: key,
-      createdAt: { gte: new Date(Date.now() - DAY_MS) },
-    },
-    select: { input: true },
+// An action's caps are a ledger in the audit log: a call let through on its own first reserves
+// its share (one call, its numbers) under a lock per installation and action, so concurrent runs
+// cannot spend the same allowance; a call that then fails gives it back with a release entry. The
+// call log is append-only and lists calls once done, which is too late to count one in flight.
+// A reservation whose call never reported (its process died) keeps counting: caps fail closed.
+const RESERVED = 'playbook.allowance_reserved'
+const RELEASED = 'playbook.allowance_released'
+const allowanceTarget = (installationId: string, key: string) => ({
+  targetType: 'playbook_action',
+  targetId: `${installationId}:${key}`,
+})
+
+/** A call's share of its action's caps, held until the call ends; released if it fails. */
+export type Reservation = { id: string; installationId: string; key: string }
+
+/** An action's calls on its own over the last 24 hours: reserved, and not given back. */
+async function usageToday(
+  client: Pick<Prisma.TransactionClient, 'auditEntry'>,
+  scope: Scope,
+  installationId: string,
+  key: string,
+): Promise<Usage> {
+  const where = {
+    organizationId: scope.organizationId,
+    workspaceId: scope.workspaceId,
+    ...allowanceTarget(installationId, key),
+    // A release always comes after its reservation, so those of the window's are in it too.
+    at: { gte: new Date(Date.now() - DAY_MS) },
+  }
+  const reserved = await client.auditEntry.findMany({
+    where: { ...where, action: RESERVED },
+    select: { id: true, data: true },
   })
+  const released = await client.auditEntry.findMany({
+    where: { ...where, action: RELEASED },
+    select: { data: true },
+  })
+  const given = new Set(
+    released.map((r) => String((r.data as { reservation?: unknown } | null)?.reservation)),
+  )
   const sums: Record<string, number> = {}
-  for (const call of calls)
-    for (const [path, value] of Object.entries(numbersOf(call.input)))
+  let count = 0
+  for (const entry of reserved) {
+    if (given.has(String(entry.id))) continue
+    count++
+    const numbers = (entry.data as { numbers?: unknown } | null)?.numbers
+    for (const [path, value] of Object.entries(numbersOf(numbers)))
       sums[path] = (sums[path] ?? 0) + value
-  return { count: calls.length, sums }
+  }
+  return { count, sums }
+}
+
+/**
+ * A call let through on its own takes its share of its action's caps, atomically: under a lock per
+ * installation and action, the caps are read again and counted with the calls still in flight.
+ * `held` null: the action has no caps, nothing to give back. `reason`: past one, the call asks.
+ */
+export async function reserveAllowance(
+  scope: Scope,
+  input: {
+    installationId: string
+    action: PlaybookActionSpec
+    args: unknown
+    teammateId: string
+    sessionId: string
+  },
+): Promise<{ held: Reservation | null } | { reason: string }> {
+  const { installationId, action } = input
+  return prisma.$transaction(async (tx) => {
+    const lock = `playbook-allowance:${scope.workspaceId}:${installationId}:${action.key}`
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lock}, 0))`
+    const row = await tx.playbookAction.findFirst({
+      where: { ...scope, installationId, key: action.key },
+      select: { limits: true },
+    })
+    const limits = storedLimits(row?.limits)
+    if (!limits)
+      return {
+        reason: `${action.label}: what limits it on its own could not be read, so a person approves it.`,
+      }
+    if (!capped(limits)) return { held: null }
+    const usage = await usageToday(tx, scope, installationId, action.key)
+    const problem = capProblem(action.label, limits, usage, input.args)
+    if (problem) return { reason: problem }
+    const entry = await tx.auditEntry.create({
+      data: {
+        organizationId: scope.organizationId,
+        workspaceId: scope.workspaceId,
+        actorType: 'teammate',
+        actorId: input.teammateId,
+        action: RESERVED,
+        ...allowanceTarget(installationId, action.key),
+        data: {
+          installationId,
+          action: action.key,
+          sessionId: input.sessionId,
+          numbers: numbersOf(input.args),
+        },
+      },
+      select: { id: true },
+    })
+    return { held: { id: String(entry.id), installationId, key: action.key } }
+  })
+}
+
+/** A reserved call that did not go through (it failed) gives its share of the caps back. */
+export async function releaseAllowance(scope: Scope, held: Reservation, why: string) {
+  await audit({
+    ...scope,
+    actor: { type: 'system', id: 'brigade' },
+    action: RELEASED,
+    target: { type: 'playbook_action', id: `${held.installationId}:${held.key}` },
+    data: { reservation: held.id, why: why.slice(0, 300) },
+  })
 }
 
 /** The verdict on a write in a playbook's live run, from what its installation and run store. */
 export async function playbookVerdict(
   db: ScopedDb,
+  scope: Scope,
   input: {
     playbook: { installationId: string; runId: string; name: string; actions: PlaybookActionSpec[] }
     actionKey: string | null
@@ -238,7 +350,7 @@ export async function playbookVerdict(
     stored,
     args: input.args,
     runCase: run?.case ?? null,
-    usage: () => usageToday(db, playbook.installationId, action!.key),
+    usage: () => usageToday(prisma, scope, playbook.installationId, action!.key),
     checks: async () => {
       const repository = argumentOf(input.args, 'repository')
       const number = argumentOf(input.args, 'number')
@@ -421,6 +533,7 @@ export async function pullChecks(
   return {
     passed: true,
     why: missing.length ? 'GitHub says every check passed' : `${required.join(', ')} passed`,
+    sha,
   }
 }
 

@@ -1096,8 +1096,79 @@ export type TaskCaller = (call: {
  * Tasks on the board: create, list, comment on, change, assign, move and
  * complete them. The API checks every call. There is no tool to assign a
  * person or move a task to Needs you: a ticket (ask) does that.
+ *
+ * A playbook's run gets none that starts or prompts a thread outside the run (create_task for a
+ * teammate, assign_task, message_thread to a task, move_task, complete_task): what started it is
+ * untrusted, and a thread outside the run has none of its limits. A live run may still file an
+ * idea in Backlog and add to a Backlog task, which start nothing; a dry run changes nothing.
  */
-export function taskTools(call: TaskCaller): Record<string, Tool> {
+export function taskTools(call: TaskCaller, playbook?: { dryRun: boolean }): Record<string, Tool> {
+  const all = boardTools(call)
+  if (!playbook) return all
+  const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
+    call({ operation, toolCallId, toolName, input })
+  const threadOnly = tool({
+    description:
+      'Write in one of your child threads (threadId, from list_children), which carries on and reports to you ' +
+      'again. Nowhere else.',
+    inputSchema: jsonSchema<{ threadId: string; text: string }>({
+      type: 'object',
+      properties: {
+        threadId: { type: 'string', description: 'One of your child threads' },
+        text: { type: 'string', description: 'The message, in Markdown' },
+      },
+      required: ['threadId', 'text'],
+    }),
+    execute: (input, { toolCallId }) =>
+      send(
+        'message_thread',
+        { name: 'comment', threadId: input.threadId, text: input.text },
+        input,
+        toolCallId,
+      ),
+  })
+  if (playbook.dryRun) return { list_tasks: all.list_tasks!, message_thread: threadOnly }
+  const backlog = tool({
+    description:
+      "Put a task in the Tasks board's Backlog, assigned to nobody, for a person to pick up: e.g. a customer's " +
+      'idea. It starts no thread. Look at list_tasks first: when one already covers it, add to it with ' +
+      'update_task instead.',
+    inputSchema: jsonSchema<{
+      title: string
+      description: string
+      priority?: 'low' | 'medium' | 'high' | 'urgent'
+    }>({
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Short and imperative' },
+        description: { type: 'string', description: 'What is asked, and by whom, in a few lines' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      },
+      required: ['title', 'description'],
+    }),
+    execute: (input, { toolCallId }) =>
+      send(
+        'create_task',
+        {
+          name: 'create',
+          title: input.title,
+          description: input.description,
+          priority: input.priority ?? 'medium',
+          assignee: 'none',
+        },
+        input,
+        toolCallId,
+      ),
+  })
+  return {
+    create_task: backlog,
+    list_tasks: all.list_tasks!,
+    update_task: all.update_task!,
+    message_thread: threadOnly,
+  }
+}
+
+function boardTools(call: TaskCaller): Record<string, Tool> {
   const send = (toolName: string, operation: TaskOperation, input: unknown, toolCallId: string) =>
     call({ operation, toolCallId, toolName, input })
   const priority = { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] } as const

@@ -29,8 +29,15 @@ import {
   type Operation,
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
-import { afterPlaybookDecision, numbersOf, playbookVerdict } from './playbook-autonomy.js'
-import { threadPlaybook } from './playbooks.js'
+import {
+  afterPlaybookDecision,
+  numbersOf,
+  playbookVerdict,
+  releaseAllowance,
+  reserveAllowance,
+  type Reservation,
+} from './playbook-autonomy.js'
+import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
@@ -155,6 +162,14 @@ export async function handleConnectorCall(
         error: `The playbook ${playbook.name} does not use ${connection.label}`,
       })
     }
+    // Of a kind it names an account for (its inbox), that account alone.
+    if (!playbookAccount(playbook, connection)) {
+      await record({ result: 'denied', target, error: 'not the account of the playbook' })
+      return result({
+        ok: false,
+        error: `The playbook ${playbook.name} uses another ${connection.kind} account than ${connection.label}`,
+      })
+    }
     if (operation.write && access !== 'read_write') {
       await record({ result: 'denied', target, error: 'read-only in the playbook' })
       return result({
@@ -205,6 +220,10 @@ export async function handleConnectorCall(
   let decision: (Decision & { ticketId: string }) | undefined
   /** A playbook's write no person decided: counted toward its action's caps and listed on its sheet. */
   let onItsOwn = false
+  /** Its share of its action's caps, given back when it fails (playbook-autonomy.ts). */
+  let reservation: Reservation | null = null
+  /** A merge on its own: the head commit its checks passed on, the only one it merges. */
+  let checkedSha: string | undefined
   if (operation.write) {
     const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
     if (policy === 'deny') {
@@ -215,7 +234,7 @@ export async function handleConnectorCall(
       })
     }
     const verdict = playbook
-      ? await playbookVerdict(db, {
+      ? await playbookVerdict(db, scope, {
           playbook,
           actionKey: playbookActionKey,
           args: input.data,
@@ -227,8 +246,29 @@ export async function handleConnectorCall(
       return result({ ok: false, error: verdict.reason })
     }
     const cap = await writeCapReached(db, teammate, connection.id)
-    const asks = verdict ? verdict.level === 'ask' : policy === 'ask'
-    onItsOwn = verdict?.level === 'auto' && !cap
+    let asks = verdict ? verdict.level === 'ask' : policy === 'ask'
+    let overCap: string | undefined
+    if (verdict?.level === 'auto' && !cap) {
+      // On its own: it first takes its share of its action's caps, atomically; past one, it asks.
+      const spec = playbook?.actions.find((a) => a.key === playbookActionKey)
+      const taken = spec
+        ? await reserveAllowance(scope, {
+            installationId: playbook!.installationId,
+            action: spec,
+            args: input.data,
+            teammateId: teammate.id,
+            sessionId: session.id,
+          })
+        : { reason: 'This is not one of the writes the playbook lists, so a person approves it.' }
+      if ('reason' in taken) {
+        asks = true
+        overCap = taken.reason
+      } else {
+        reservation = taken.held
+        onItsOwn = true
+        checkedSha = verdict.checkedSha
+      }
+    }
     if (cap || asks) {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
@@ -236,7 +276,7 @@ export async function handleConnectorCall(
         ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
         : verdict?.level === 'ask'
           ? verdict.reason
-          : undefined
+          : overCap
       const ticket = await db.ticket.create({
         data: {
           sessionId: session.id,
@@ -299,6 +339,7 @@ export async function handleConnectorCall(
 
   // Files the call brings into the thread, put in the teammate's folder before it sees the result.
   const kept: ThreadAttachmentRef[] = []
+  let sent = false
   try {
     const fetch = await authorisedFetch(db, scope, connection)
     const output = await operation.run(
@@ -322,14 +363,16 @@ export async function handleConnectorCall(
             bytes: await readAttachment(scope, row.id),
           }
         },
+        ...(checkedSha ? { checkedSha } : {}),
       },
       input.data,
     )
+    sent = true
     await record({
       result: 'ok',
       target,
       ...(decision ? { ticketId: decision.ticketId } : {}),
-      // Its numbers only: what an amount cap sums (playbook-autonomy.ts).
+      // Its numbers only, as its reservation keeps them for an amount cap (playbook-autonomy.ts).
       ...(onItsOwn ? { input: numbersOf(input.data) } : {}),
     })
     // The playbook's first response went out (on its own or approved): its run's time, set once.
@@ -352,6 +395,11 @@ export async function handleConnectorCall(
     return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
   } catch (error) {
     const message = redact(error instanceof Error ? error.message : String(error))
+    // A call on its own that did not go through gives its share of its action's caps back.
+    if (reservation && !sent)
+      await releaseAllowance(scope, reservation, message).catch((e) =>
+        console.warn(`playbook allowance release failed: ${String(e)}`),
+      )
     await record({
       result: 'error',
       target,

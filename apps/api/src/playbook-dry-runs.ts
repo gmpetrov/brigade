@@ -423,11 +423,21 @@ export async function sessionMinutes(db: ScopedDb, sessionIds: string[]) {
     list.push({ from: t.createdAt.getTime(), to: (t.resolvedAt ?? new Date()).getTime() })
     waits.set(t.sessionId, list)
   }
-  const waited = (sessionId: string, from: number, to: number) =>
-    (waits.get(sessionId) ?? []).reduce(
-      (sum, w) => sum + Math.max(0, Math.min(to, w.to) - Math.max(from, w.from)),
-      0,
-    )
+  // The union of the waits inside a turn: two approvals waiting at once count once.
+  const waited = (sessionId: string, from: number, to: number) => {
+    const spans = (waits.get(sessionId) ?? [])
+      .map((w) => ({ from: Math.max(from, w.from), to: Math.min(to, w.to) }))
+      .filter((w) => w.to > w.from)
+      .sort((a, b) => a.from - b.from)
+    let sum = 0
+    let end = -Infinity
+    for (const w of spans) {
+      const start = Math.max(w.from, end)
+      if (w.to > start) sum += w.to - start
+      end = Math.max(end, w.to)
+    }
+    return sum
+  }
   let open: { sessionId: string; at: Date } | null = null
   for (const e of events) {
     if (open && open.sessionId !== e.sessionId) open = null

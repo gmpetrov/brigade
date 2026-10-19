@@ -790,8 +790,11 @@ export type Ticket = {
     archivedAt: string | null
     teammate: { id: string; name: string }
   } | null
-  /** A playbook's approval: the playbook it is one item with, by its name. */
-  playbook?: { id: string; name: string } | null
+  /**
+   * A playbook's open approvals, listed as one: this ticket (their latest) stands for them all.
+   * `count`: how many are open; `yours`: how many of them wait on this member (waitsOn).
+   */
+  playbook?: { id: string; name: string; count: number; yours: number } | null
 }
 
 /**

@@ -308,7 +308,7 @@ export function PlaybookApprovalsRow({
   onDecided,
 }: {
   installationId: string
-  /** Its open approvals, latest first. */
+  /** Its open approvals as listed, latest first: /tickets lists one, with their count (playbook). */
   tickets: Ticket[]
   onDecided: () => Promise<void>
 }) {
@@ -320,7 +320,7 @@ export function PlaybookApprovalsRow({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="font-semibold">
-            {name} · {toApprove(tickets.length)}
+            {name} · {toApprove(latest.playbook?.count ?? tickets.length)}
           </div>
           <div className="text-sm text-muted-foreground">
             approvals · {timeAgo(latest.createdAt)}

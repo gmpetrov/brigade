@@ -94,7 +94,8 @@ export function instructions(
     PREVIEWS,
     skills(spec),
     tasks(spec),
-    schedules(spec),
+    // A playbook's run sets up none: its runs would be threads outside it.
+    !spec.playbook && schedules(spec),
     children(spec),
     spec.playbook ? playbook(spec.playbook, !!spec.parent) : !spec.parent && INSTALLING,
     credentials(browser),
@@ -445,9 +446,19 @@ const bigGoals = (spec: ThreadSpec) =>
   'thread with them, when one has access). Then one message: what to try and how, what was checked, and the pull ' +
   'request to merge. When you end a turn before it is ready, say in a line where things stand.'
 
+/** A playbook's run starts no thread outside it: no task for a teammate, no schedule. */
+const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
+  '## Tasks\n\n' +
+  (playbook.dryRun
+    ? '`list_tasks` shows the Tasks board; a dry run changes nothing on it.'
+    : '`list_tasks` shows the Tasks board. `create_task` puts a task in Backlog, assigned to nobody, for a person ' +
+      "to pick up (a customer's idea, say), and `update_task` adds to one already in Backlog. A playbook's run " +
+      'never hands work to a teammate or writes in another thread: start a child thread for what must be done.')
+
 /** The Tasks board: this thread's task, or when to make one. */
-const tasks = (spec: ThreadSpec) =>
-  [
+function tasks(spec: ThreadSpec) {
+  if (spec.playbook) return playbookBoard(spec.playbook)
+  return [
     spec.task
       ? [
           '## Your task',
@@ -471,6 +482,7 @@ const tasks = (spec: ThreadSpec) =>
   ]
     .filter(Boolean)
     .join('\n\n')
+}
 
 /** Widgets: visuals drawn in the thread, for every teammate. */
 const VISUALS =

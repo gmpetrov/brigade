@@ -415,7 +415,8 @@ describe('the first response', { skip: !database && 'no database answers' }, () 
           manifest: MANIFEST,
           teammateId: ids.teammate,
           ownerMemberId: ids.owner,
-          settings: {},
+          // Its inbox: the one Gmail account its runs may use.
+          settings: { inbox: ids.gmail },
           status: 'active',
           createdByMemberId: ids.owner,
         } as never,

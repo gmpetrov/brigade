@@ -109,14 +109,21 @@ async function parentChanged(scope: Scope, parentId: string) {
   if (parent) broadcastThreadStatus(scope.workspaceId, parentId, parent.status)
 }
 
-/** Wake the parent with a note: the teammate that started the child, else the parent's own. */
-async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
-  const db = scoped(scope)
+/**
+ * The parent's wake-up with a note, stored: the teammate that started the child, else the
+ * parent's own. Null when the parent is gone. In a transaction when given one.
+ */
+async function reportWakeup(
+  db: Pick<ScopedDb, 'session' | 'wakeup'>,
+  parentId: string,
+  teammateId: string | null,
+  note: string,
+) {
   const parent = await db.session.findFirst({
     where: { id: parentId },
     select: { id: true, teammateId: true, teammates: { select: { teammateId: true } } },
   })
-  if (!parent) return
+  if (!parent) return null
   const seated = parent.teammates.some((t) => t.teammateId === teammateId)
   const wakeup = await db.wakeup.create({
     data: {
@@ -127,8 +134,14 @@ async function wakeParent(scope: Scope, parentId: string, teammateId: string | n
       wakeAt: new Date(),
     } as never,
   })
+  return wakeup.id
+}
+
+/** Wake the parent with a note: the teammate that started the child, else the parent's own. */
+async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
+  const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
   // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
-  await fireReport(wakeup.id)
+  if (id) await fireReport(id)
 }
 
 /**
@@ -220,8 +233,10 @@ export async function deliverReport(scope: Scope, childId: string) {
 
 /**
  * A thread's report is in: each thread that follows it (follow_thread) hears it once, at once,
- * whatever its parent's wait. Claiming each one (deliveredAt) is one update, so two calls wake
- * it once; the thread's next turn clears them (noteChildEvents), so a new report wakes them again.
+ * whatever its parent's wait. Claiming each one (deliveredAt) and storing its wake-up are one
+ * transaction: two calls wake it once, and one that fails between them leaves the follow
+ * undelivered, for the minute's sweep to retry (wakeWaitingFollowers). The thread's next turn
+ * clears them (noteChildEvents), so a new report wakes them again.
  */
 export async function wakeFollowers(scope: Scope, sessionId: string) {
   const db = scoped(scope)
@@ -242,16 +257,49 @@ export async function wakeFollowers(scope: Scope, sessionId: string) {
     report,
   })
   for (const follow of follows) {
-    const { count } = await db.threadFollow.updateMany({
-      where: { id: follow.id, deliveredAt: null },
-      data: { deliveredAt: new Date() },
-    })
-    if (!count) continue
-    // The follower's own teammate; an archived follower comes back with it, a busy one queues it.
-    await wakeParent(scope, follow.followerId, null, note).catch((error: unknown) =>
-      console.error(`follower ${follow.followerId} of ${sessionId}: could not wake`, error),
-    )
+    let wakeupId: string | null
+    try {
+      // The follower's own teammate; a deleted follower is claimed with no wake-up.
+      wakeupId = await db.$transaction(async (tx) => {
+        const { count } = await tx.threadFollow.updateMany({
+          where: { id: follow.id, deliveredAt: null },
+          data: { deliveredAt: new Date() },
+        })
+        return count ? reportWakeup(tx, follow.followerId, null, note) : null
+      })
+    } catch (error) {
+      console.error(`follower ${follow.followerId} of ${sessionId}: could not wake`, error)
+      continue
+    }
+    // Stored: an archived follower comes back with it, a busy one queues it, and one that
+    // cannot fire now goes at the minute's tick.
+    if (wakeupId) await fireReport(wakeupId)
   }
+}
+
+/**
+ * Follows a report should have woken but did not (a failure before the wake-up was stored):
+ * woken now, once. Each minute, with the overdue children (settleOverdueChildren). Not while
+ * the followed thread is in a turn: a report it makes there goes when the turn ends.
+ */
+async function wakeWaitingFollowers() {
+  const waiting = await prisma.threadFollow.findMany({
+    where: {
+      deliveredAt: null,
+      session: {
+        report: { not: Prisma.DbNull },
+        status: { notIn: ['starting', 'running', 'waiting'] },
+      },
+    },
+    select: { sessionId: true, organizationId: true, workspaceId: true },
+    distinct: ['sessionId'],
+    take: 100,
+  })
+  for (const f of waiting)
+    await wakeFollowers(
+      { organizationId: f.organizationId, workspaceId: f.workspaceId },
+      f.sessionId,
+    ).catch((error: unknown) => console.error(`followers of ${f.sessionId}: could not wake`, error))
 }
 
 /** What a child's latest answer said: its report when it ended its turn without one. */
@@ -344,6 +392,8 @@ export async function settleOverdueChildren() {
       ).catch((error: unknown) =>
         console.error(`children of ${c.parentId}: could not settle`, error),
       )
+  // And followers a report did not reach.
+  await wakeWaitingFollowers()
 }
 
 /** The children a thread has at work: started, and no report yet. */

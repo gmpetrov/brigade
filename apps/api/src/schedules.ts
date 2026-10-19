@@ -527,6 +527,9 @@ export async function handleScheduleCall(
     const output = await handlePlaybookCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
+  // A playbook's run, its children included: a schedule's runs would be threads outside it.
+  if (session.playbookRunId)
+    return fail("A playbook's run sets up no schedule. Just do the work here.")
   if (session.origin !== 'member')
     return fail('Schedules are set up only from a thread a person started. Just do the work here.')
   const actor: Actor = { type: 'teammate', id: teammate.id }

@@ -217,12 +217,12 @@ export function NeedsYou({
         return [
           {
             key,
-            title: `${name} · ${toApprove(queue.length)}`,
+            title: `${name} · ${toApprove(t.playbook?.yours ?? queue.length)}`,
             from: t.session?.teammate.name,
             queue: {
               id: playbookApprovalOf(t)!.installationId,
               name,
-              count: queue.length,
+              count: t.playbook?.yours ?? queue.length,
               teammate: t.session?.teammate ?? null,
             },
           },

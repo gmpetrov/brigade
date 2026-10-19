@@ -24,7 +24,8 @@ const { prisma, scoped } = await import('../src/db.js')
 const { awaitDecision } = await import('../src/connector-calls.js')
 const { resolveTicket } = await import('../src/decide.js')
 const { sweep } = await import('../src/notifications.js')
-const { decidePlaybookApprovals, playbookApprovals } = await import('../src/playbook-approvals.js')
+const { decidePlaybookApprovals, playbookApprovals, waitingTickets } =
+  await import('../src/playbook-approvals.js')
 const { templates } = await import('../src/playbooks.js')
 
 const reachable = await prisma.$queryRawUnsafe('select 1').then(
@@ -455,3 +456,141 @@ test(
     await clear()
   },
 )
+
+test(
+  'hundreds of approvals from one playbook are one item, and crowd out nothing else',
+  { skip },
+  async () => {
+    const from = received.length
+    const t0 = Date.now() + 20 * 60 * 60_000
+    const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+    // Oldest: another playbook's approval, then a plain one; then 205 from the busy playbook.
+    const other = (
+      await db().playbookInstallation.create({
+        data: {
+          playbookKey: 'brigade/ship-and-tell',
+          version: '1.0.0',
+          manifest: { name: 'Ship and tell', apps: [], actions: [] },
+          teammateId,
+          ownerMemberId: members.owner.id,
+          createdByMemberId: members.owner.id,
+          status: 'active',
+        } as never,
+      })
+    ).id
+    const quiet = await run('Release notes')
+    const older = await approval(quiet)
+    await db().ticket.updateMany({
+      where: { id: older.id },
+      data: {
+        createdAt: ago(120),
+        payload: { ...(older.payload as object), playbookInstallationId: other } as never,
+      },
+    })
+    const plain = await plainApproval()
+    await db().ticket.updateMany({ where: { id: plain.ticket.id }, data: { createdAt: ago(60) } })
+    const busy = await run('Monday morning')
+    const template = await approval(busy)
+    await db().ticket.createMany({
+      data: Array.from({ length: 204 }, (_, i) => ({
+        sessionId: busy.threadId,
+        type: 'approval' as const,
+        title: `Sam: gmail send (${i})`,
+        payload: template.payload as never,
+        createdAt: new Date(Date.now() - (204 - i) * 1_000),
+      })) as never,
+    })
+    // An archived thread's approval waits on no one: not counted.
+    const shelved = await run('Shelved')
+    await approval(shelved)
+    await db().session.updateMany({
+      where: { id: shelved.threadId },
+      data: { archivedAt: new Date() },
+    })
+
+    const listed = await waitingTickets(as('owner') as never, { all: false, project: {} })
+    assert.equal(listed.length, 3)
+    assert.deepEqual(
+      listed.map((t) => [t.playbook?.name ?? t.title, t.playbook?.count, t.playbook?.yours]),
+      [
+        ['Support and bugs', 205, 205],
+        ['Sam: stripe refund (ch_1)', undefined, undefined],
+        ['Ship and tell', 1, 1],
+      ],
+    )
+    // With the decided ones too, every open one is still there.
+    const all = await waitingTickets(as('owner') as never, { all: true, project: {} })
+    assert.equal(all.filter((t) => t.status === 'open').length, 3)
+    // A member who started none of those threads: listed, none of them theirs.
+    const asMember = await waitingTickets(as('member') as never, { all: false, project: {} })
+    assert.deepEqual(
+      asMember.flatMap((t) => (t.playbook ? [[t.playbook.count, t.playbook.yours]] : [])),
+      [
+        [205, 0],
+        [1, 0],
+      ],
+    )
+    // The group opened holds all of them.
+    assert.equal(
+      (await playbookApprovals(db(), as('owner') as never, installationId)).items.length,
+      205,
+    )
+
+    // The badge a push carries counts what Home lists: three items.
+    await sweep(new Date(t0), organizationId)
+    await sweep(new Date(t0 + 61_000), organizationId)
+    const pushes = (await pushesSince(from)).filter((p) => p.role === 'owner')
+    assert.ok(pushes.length > 0)
+    for (const p of pushes) assert.equal(p.message.badge, listed.length)
+    // Three new at once: told together, as three things.
+    assert.deepEqual(
+      pushes.map((p) => p.message.title),
+      ['3 things need you'],
+    )
+    await clear()
+  },
+)
+
+test('the database groups exactly the tickets playbookApprovalOf groups', { skip }, async () => {
+  const r = await run('Variants')
+  const base = { playbookInstallationId: installationId, playbookRunId: r.runId }
+  const variants: [string, string, Record<string, unknown>][] = [
+    ['approval', 'grouped', { ...base, playbookActionKey: 'reply' }],
+    ['approval', 'no action', { ...base, playbookActionKey: null }],
+    ['approval', 'activation false', { ...base, playbookActivation: false }],
+    ['approval', 'activation', { ...base, playbookActivation: true }],
+    ['approval', 'promotion', { ...base, playbookPromotion: {} }],
+    ['approval', 'skill', { ...base, skillAction: 'add' }],
+    ['approval', 'credential', { ...base, credentialAction: 'use' }],
+    ['approval', 'no run', { playbookInstallationId: installationId }],
+    ['approval', 'run not a string', { ...base, playbookRunId: 1 }],
+    ['cap', 'cap', base],
+  ]
+  for (const [type, title, payload] of variants)
+    await db().ticket.create({ data: { sessionId: r.threadId, type, title, payload } as never })
+  const listed = await waitingTickets(as('owner') as never, { all: false, project: {} })
+  const own = listed.filter((t) => !t.playbook).map((t) => t.title)
+  const group = listed.find((t) => t.playbook)
+  assert.equal(
+    group?.playbook?.count,
+    variants.filter(([type, , payload]) => playbookApprovalOf({ type, payload })).length,
+  )
+  assert.deepEqual(
+    own.sort(),
+    variants
+      .filter(([type, , payload]) => !playbookApprovalOf({ type, payload }))
+      .map(([, title]) => title)
+      .sort(),
+  )
+  // By project: these threads are in none.
+  const none = await waitingTickets(as('owner') as never, {
+    all: false,
+    project: { projectId: null },
+  })
+  assert.equal(none.length, listed.length)
+  assert.deepEqual(
+    await waitingTickets(as('owner') as never, { all: true, project: { projectId: 'elsewhere' } }),
+    [],
+  )
+  await clear()
+})

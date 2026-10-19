@@ -11,7 +11,7 @@ import type { WorkspaceScope } from './scope.js'
 import { connectors, operationSpecs } from './connectors/index.js'
 import { threadDesignSystems } from './designs.js'
 import { threadSkills } from './skills.js'
-import { threadPlaybook } from './playbooks.js'
+import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { gitAccess } from './git.js'
 import { folderRules } from './library-folders.js'
 import { projectCatalog, threadProject } from './projects.js'
@@ -147,7 +147,8 @@ export async function specFor(
     .flatMap((g) => {
       if (!playbook) return [g]
       const access = playbook.access.get(g.connection.kind)
-      if (!access) return []
+      // Of a kind it names an account for (its inbox), that account alone.
+      if (!access || !playbookAccount(playbook, g.connection)) return []
       return [access === 'read' ? { ...g, scope: 'read' as const } : g]
     })
   const github = grants.some(

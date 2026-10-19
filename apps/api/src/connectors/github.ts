@@ -740,12 +740,25 @@ export const github: ConnectorDefinition = {
         if (found.merged_at) throw new Error(`#${i.number} is already merged`)
         if (found.state !== 'open') throw new Error(`#${i.number} is closed`)
         if (found.draft) throw new Error(`#${i.number} is a draft; mark it ready for review first`)
+        // On its own after its checks: only the commit they passed on. GitHub refuses the sha
+        // too, should the head move between this read and the merge.
+        const checked = ctx.checkedSha
+        const moved = () =>
+          new Error(
+            `#${i.number} was not merged: its head moved since its checks passed on ${checked!.slice(0, 7)}, ` +
+              'and a merge on its own goes only on the commit they passed on. Wait for the checks of ' +
+              'its new head and try again, or ask a person to approve the merge.',
+          )
+        if (checked && found.head.sha !== checked) throw moved()
         const merged = await send<{ sha: string; merged: boolean; message: string }>(
           ctx,
           'PUT',
           `${path}/merge`,
-          { merge_method: i.method, sha: found.head.sha },
-        )
+          { merge_method: i.method, sha: checked ?? found.head.sha },
+        ).catch((error: unknown) => {
+          if (checked && error instanceof Error && error.message.startsWith('409')) throw moved()
+          throw error
+        })
         return {
           number: i.number,
           merged: merged.merged,
