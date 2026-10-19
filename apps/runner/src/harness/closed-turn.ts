@@ -76,6 +76,25 @@ export function withoutBridge(resume: unknown): unknown {
   }
 }
 
+/**
+ * A saved turn, for an agent made with these tools. The harness continues a turn with the
+ * tools it started with, and stops it outright when one of them is gone: an App granted or
+ * removed since, or a second account of a kind, which renames that kind's tools
+ * (`github_list_repositories` becomes `github_list_repositories_acme`). Its tools changed,
+ * the turn goes on without its saved settings: the harness then takes the agent's own.
+ */
+export function withTools(resume: unknown, tools: readonly string[]): unknown {
+  const state = resume as { continueFrom?: { turnSettings?: { tools?: unknown } } } | undefined
+  const from = state?.continueFrom
+  const saved = from?.turnSettings?.tools
+  if (!from || !Array.isArray(saved)) return resume
+  const names = saved.map((t: { name?: unknown }) => t?.name)
+  const current = new Set(tools)
+  if (names.length === current.size && names.every((n) => current.has(n as string))) return resume
+  const { turnSettings: _settings, ...rest } = from
+  return { ...state, continueFrom: rest }
+}
+
 /** The harness keeps a pending call's input as JSON text. */
 const parsed = (input: unknown) => {
   if (typeof input !== 'string') return input
