@@ -17,6 +17,7 @@ const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpan
 const { resendAccountName } = await import('../src/connectors/resend.js')
 const { replicateAccountName } = await import('../src/connectors/replicate.js')
 const { openrouterAccountName } = await import('../src/connectors/openrouter.js')
+const { posthog } = await import('../src/connectors/posthog.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -205,6 +206,23 @@ test('an OpenRouter account shows as personal or an organization’s', () => {
   assert.equal(openrouterAccountName(organization), 'Organization account')
   assert.equal(openrouterAccountName({ error: { message: 'Invalid API key', code: 401 } }), null)
   assert.equal(openrouterAccountName(null), null)
+})
+
+test('PostHog: each tool on its own, in the chosen areas, an account as its organizations', () => {
+  const server = posthog.mcp!
+  // Without mode=tools PostHog gives an unknown client one exec tool, all reads and writes.
+  const url = new URL(server.url)
+  assert.equal(url.searchParams.get('mode'), 'tools')
+  assert.ok(url.searchParams.get('features')!.split(',').includes('flags'))
+  assert.equal(server.tools['execute-sql']?.write, false)
+  assert.equal(server.tools['create-feature-flag']?.write, true)
+  assert.equal(server.tools['switch-project']?.write, false)
+  // organizations-get answers [{ id, name, slug, membership_level }] (PostHog's MCP source).
+  const name = server.account!.name
+  const org = { id: '0190-aaaa', name: 'Acme', slug: 'acme', membership_level: 15 }
+  assert.equal(name([org]), 'Acme')
+  assert.equal(name([org, { ...org, name: 'Beta' }]), 'Acme +1')
+  assert.equal(name([]), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

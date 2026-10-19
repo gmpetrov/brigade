@@ -263,6 +263,7 @@ export const openTicketTool = tool({
                     'resend',
                     'replicate',
                     'openrouter',
+                    'posthog',
                     'mcp',
                   ],
                 },

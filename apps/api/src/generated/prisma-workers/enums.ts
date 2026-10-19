@@ -166,6 +166,7 @@ export const ConnectorKind = {
   resend: 'resend',
   replicate: 'replicate',
   openrouter: 'openrouter',
+  posthog: 'posthog',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics'

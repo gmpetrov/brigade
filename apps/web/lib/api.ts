@@ -525,6 +525,7 @@ export type Connection = {
     | 'resend'
     | 'replicate'
     | 'openrouter'
+    | 'posthog'
     | 'mcp'
   label: string
   externalAccount: string | null

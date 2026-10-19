@@ -11,7 +11,7 @@ export type ProviderKind = Connection['kind']
  * Console's 2025 icon, Analytics' bars, Stripe's app icon, Cloudflare's cloud, Google Cloud's
  * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
  * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
- * bars on black, OpenRouter's arrows on white, GitHub's
+ * bars on black, OpenRouter's arrows on white, PostHog's ramps and hog, GitHub's
  * Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -284,6 +284,30 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#7856ff"
           d="M6.967 9.996h3.053c-.763-.477-1.048-1.145-1.431-2.384L7.443 3.366C6.919 1.458 6.49.551 4.39.551H.004v1.145h.621c1.286 0 1.431.477 1.814 1.908L3.44 7.326c.524 1.814 1.337 2.67 3.53 2.67h-.003Zm7.06 0h3.053c2.194 0 2.956-.86 3.484-2.67l1.001-3.722c.382-1.431.57-1.908 1.814-1.908H24V.551h-4.34c-2.146 0-2.576.86-3.053 2.815l-1.145 4.246c-.384 1.286-.673 1.907-1.435 2.384Zm-4.007 4.008h4.007V9.996H10.02v4.008ZM0 23.449h4.39c2.1 0 2.529-.907 3.053-2.815l1.146-4.246c.383-1.239.668-1.907 1.431-2.384H6.967c-2.194 0-3.007.86-3.531 2.67l-1.001 3.722c-.383 1.431-.524 1.907-1.814 1.907H0v1.146Zm19.65 0h4.343v-1.146h-.622c-1.239 0-1.431-.476-1.814-1.907l-1.001-3.722c-.524-1.814-1.286-2.67-3.483-2.67h-3.046c.762.477 1.041 1.098 1.424 2.384l1.145 4.246c.477 1.955.907 2.815 3.054 2.815Z"
         />
+      </svg>
+    )
+  if (kind === 'posthog')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* PostHog's logomark: blue, orange and yellow ramps, the hog in the text color. */}
+        <g transform="translate(0 5.54) scale(0.4615)">
+          <path
+            fill="#1d4aff"
+            d="M10.74 7.16 4.54.8A2.66 2.66 0 0 0 0 2.66V7.5l10.74 11.18zM9.19 28h1.55v-9.32L0 7.5v10.73zM0 25.41A2.6 2.6 0 0 0 2.58 28H9.2L0 18.23z"
+          />
+          <path
+            fill="#f54e00"
+            d="M10.74 2.66v4.5l11.22 11.52V7.63L15.3.8a2.66 2.66 0 0 0-4.56 1.86M10.74 28h8.96l-8.96-9.32zM10.74 7.16v11.52L19.7 28h2.26v-9.32z"
+          />
+          <path
+            fill="#f9bd2b"
+            d="M21.96 2.67v4.96l11.3 11.6h.02V7.75L26.63.85a2.8 2.8 0 0 0-2-.85 2.67 2.67 0 0 0-2.67 2.67M21.96 7.63v11.05L31.03 28h2.25v-8.75zM21.96 28h9.07l-9.07-9.32z"
+          />
+          <path
+            fill="currentColor"
+            d="M51.66 25.22A1.9 1.9 0 0 0 50 23.33l-.34-.04c-1-.13-1.94-.6-2.65-1.33L33.28 7.75V28H49a2.66 2.66 0 0 0 2.67-2.67zM39.2 23.54h-.09a1.78 1.78 0 1 1 .1 0"
+          />
+        </g>
       </svg>
     )
   if (kind === 'resend')
