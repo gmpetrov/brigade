@@ -27,6 +27,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
+import { readCodexLimits } from '../codex-usage.js'
 import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
@@ -468,6 +469,13 @@ export class HarnessThread {
         await this.persist().catch((error) =>
           console.warn(`could not save thread state: ${errorMessage(error)}`),
         )
+      }
+      // Codex's harness reports no limits: read once the turn is over, without holding it up.
+      if (result && spec.teammate.harness === 'codex') {
+        const account = this.current
+        void readCodexLimits(account).then((limits) => {
+          if (limits?.length) this.emit({ type: 'usage.updated', accountId: account.id, limits })
+        })
       }
     }
   }

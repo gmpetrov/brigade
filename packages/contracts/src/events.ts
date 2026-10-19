@@ -506,6 +506,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     outputTokens: z.number().optional(),
     /** allowed, warning (close to a limit) or rejected (out of usage). */
     status: z.enum(['allowed', 'warning', 'rejected']).optional(),
+    /** The account the limits are for, when read after its turn (Codex) rather than during it. */
+    accountId: z.string().optional(),
     /** Subscription limits where the harness exposes them. utilization is 0..1. */
     limits: z
       .array(
