@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { api, harnessLabel, type Account, type AccountLogin } from '@/lib/api'
 
-const resetLabel = (iso: string | null) =>
+export const resetLabel = (iso: string | null) =>
   iso
     ? new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
     : ''
@@ -37,9 +37,15 @@ const WINDOWS: Record<string, [short: string, long: string]> = {
 const windowLabel = (w: string) => WINDOWS[w] ?? [w.replace(/_/g, ' '), w.replace(/_/g, ' ')]
 
 /** Small meters for each usage window, amber once a window is nearly used up. */
-function UsageMeters({ usage }: { usage: NonNullable<Account['lastUsage']> }) {
+export function UsageMeters({
+  usage,
+  className,
+}: {
+  usage: NonNullable<Account['lastUsage']>
+  className?: string
+}) {
   return (
-    <div className="flex w-full flex-col gap-1.5 sm:w-28">
+    <div className={cn('flex w-full flex-col gap-1.5 sm:w-28', className)}>
       {usage.map((l) => {
         const percent = Math.min(100, Math.max(0, Math.round(l.utilization * 100)))
         const [short, long] = windowLabel(l.window)
