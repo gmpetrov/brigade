@@ -343,6 +343,8 @@ export async function startThread(
           byTeammateId: string
           awaited: boolean
           awaitUntil?: Date
+          /** In a playbook's run: the teammate setting it works as, whose Apps alone it has. */
+          playbookTeammate?: string | null
         }
     /** Uploaded by the member (or, for a trigger, taken from the event), given with the first message. */
     attachmentIds?: string[]
@@ -406,6 +408,9 @@ export async function startThread(
                   awaited: input.origin.awaited,
                   ...(input.origin.awaitUntil ? { awaitUntil: input.origin.awaitUntil } : {}),
                 }),
+                ...(input.origin.playbookTeammate
+                  ? { playbookTeammate: input.origin.playbookTeammate }
+                  : {}),
               }
             : {}),
     } as never,

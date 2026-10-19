@@ -70,6 +70,7 @@ export type SessionMinAggregateOutputType = {
   taskId: string | null
   projectId: string | null
   playbookRunId: string | null
+  playbookTeammate: string | null
   surfacedAt: Date | null
 }
 
@@ -107,6 +108,7 @@ export type SessionMaxAggregateOutputType = {
   taskId: string | null
   projectId: string | null
   playbookRunId: string | null
+  playbookTeammate: string | null
   surfacedAt: Date | null
 }
 
@@ -146,6 +148,7 @@ export type SessionCountAggregateOutputType = {
   taskId: number
   projectId: number
   playbookRunId: number
+  playbookTeammate: number
   surfacedAt: number
   _all: number
 }
@@ -195,6 +198,7 @@ export type SessionMinAggregateInputType = {
   taskId?: true
   projectId?: true
   playbookRunId?: true
+  playbookTeammate?: true
   surfacedAt?: true
 }
 
@@ -232,6 +236,7 @@ export type SessionMaxAggregateInputType = {
   taskId?: true
   projectId?: true
   playbookRunId?: true
+  playbookTeammate?: true
   surfacedAt?: true
 }
 
@@ -271,6 +276,7 @@ export type SessionCountAggregateInputType = {
   taskId?: true
   projectId?: true
   playbookRunId?: true
+  playbookTeammate?: true
   surfacedAt?: true
   _all?: true
 }
@@ -397,6 +403,7 @@ export type SessionGroupByOutputType = {
   taskId: string | null
   projectId: string | null
   playbookRunId: string | null
+  playbookTeammate: string | null
   surfacedAt: Date | null
   _count: SessionCountAggregateOutputType | null
   _avg: SessionAvgAggregateOutputType | null
@@ -459,6 +466,7 @@ export type SessionWhereInput = {
   taskId?: Prisma.StringNullableFilter<"Session"> | string | null
   projectId?: Prisma.StringNullableFilter<"Session"> | string | null
   playbookRunId?: Prisma.StringNullableFilter<"Session"> | string | null
+  playbookTeammate?: Prisma.StringNullableFilter<"Session"> | string | null
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
@@ -528,6 +536,7 @@ export type SessionOrderByWithRelationInput = {
   taskId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   playbookRunId?: Prisma.SortOrderInput | Prisma.SortOrder
+  playbookTeammate?: Prisma.SortOrderInput | Prisma.SortOrder
   surfacedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
@@ -600,6 +609,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Session"> | Date | string
   projectId?: Prisma.StringNullableFilter<"Session"> | string | null
   playbookRunId?: Prisma.StringNullableFilter<"Session"> | string | null
+  playbookTeammate?: Prisma.StringNullableFilter<"Session"> | string | null
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
@@ -669,6 +679,7 @@ export type SessionOrderByWithAggregationInput = {
   taskId?: Prisma.SortOrderInput | Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
   playbookRunId?: Prisma.SortOrderInput | Prisma.SortOrder
+  playbookTeammate?: Prisma.SortOrderInput | Prisma.SortOrder
   surfacedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SessionCountOrderByAggregateInput
   _avg?: Prisma.SessionAvgOrderByAggregateInput
@@ -716,6 +727,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   taskId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   projectId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   playbookRunId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
+  playbookTeammate?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   surfacedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
 }
 
@@ -744,6 +756,7 @@ export type SessionCreateInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -813,6 +826,7 @@ export type SessionUncheckedCreateInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -860,6 +874,7 @@ export type SessionUpdateInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -929,6 +944,7 @@ export type SessionUncheckedUpdateInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -987,6 +1003,7 @@ export type SessionCreateManyInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -1015,6 +1032,7 @@ export type SessionUpdateManyMutationInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -1054,6 +1072,7 @@ export type SessionUncheckedUpdateManyInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -1113,6 +1132,7 @@ export type SessionCountOrderByAggregateInput = {
   taskId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   playbookRunId?: Prisma.SortOrder
+  playbookTeammate?: Prisma.SortOrder
   surfacedAt?: Prisma.SortOrder
 }
 
@@ -1155,6 +1175,7 @@ export type SessionMaxOrderByAggregateInput = {
   taskId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   playbookRunId?: Prisma.SortOrder
+  playbookTeammate?: Prisma.SortOrder
   surfacedAt?: Prisma.SortOrder
 }
 
@@ -1192,6 +1213,7 @@ export type SessionMinOrderByAggregateInput = {
   taskId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   playbookRunId?: Prisma.SortOrder
+  playbookTeammate?: Prisma.SortOrder
   surfacedAt?: Prisma.SortOrder
 }
 
@@ -1967,6 +1989,7 @@ export type SessionCreateWithoutStartedByInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -2034,6 +2057,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2121,6 +2145,7 @@ export type SessionScalarWhereInput = {
   taskId?: Prisma.StringNullableFilter<"Session"> | string | null
   projectId?: Prisma.StringNullableFilter<"Session"> | string | null
   playbookRunId?: Prisma.StringNullableFilter<"Session"> | string | null
+  playbookTeammate?: Prisma.StringNullableFilter<"Session"> | string | null
   surfacedAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
 }
 
@@ -2149,6 +2174,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -2216,6 +2242,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2289,6 +2316,7 @@ export type SessionCreateWithoutComputerInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -2356,6 +2384,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2429,6 +2458,7 @@ export type SessionCreateWithoutTeammateInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   startedBy: Prisma.MemberCreateNestedOneWithoutSessionsInput
@@ -2496,6 +2526,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2569,6 +2600,7 @@ export type SessionCreateWithoutReadsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -2637,6 +2669,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2699,6 +2732,7 @@ export type SessionUpdateWithoutReadsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -2767,6 +2801,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -2813,6 +2848,7 @@ export type SessionCreateWithoutPinsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -2881,6 +2917,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -2943,6 +2980,7 @@ export type SessionUpdateWithoutPinsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -3011,6 +3049,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -3057,6 +3096,7 @@ export type SessionCreateWithoutLatersInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -3125,6 +3165,7 @@ export type SessionUncheckedCreateWithoutLatersInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -3187,6 +3228,7 @@ export type SessionUpdateWithoutLatersInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -3255,6 +3297,7 @@ export type SessionUncheckedUpdateWithoutLatersInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -3301,6 +3344,7 @@ export type SessionCreateWithoutChildrenInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -3369,6 +3413,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
   teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
@@ -3420,6 +3465,7 @@ export type SessionCreateWithoutParentInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -3487,6 +3533,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -3555,6 +3602,7 @@ export type SessionUpdateWithoutChildrenInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -3623,6 +3671,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
@@ -3685,6 +3734,7 @@ export type SessionCreateWithoutTaskInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -3752,6 +3802,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   updatedAt?: Date | string
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -3815,6 +3866,7 @@ export type SessionUpdateWithoutTaskInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -3882,6 +3934,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -3929,6 +3982,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -3997,6 +4051,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -4048,6 +4103,7 @@ export type SessionCreateWithoutScheduleInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -4115,6 +4171,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -4183,6 +4240,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -4251,6 +4309,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -4313,6 +4372,7 @@ export type SessionCreateWithoutWakeupsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -4381,6 +4441,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -4443,6 +4504,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -4511,6 +4573,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -4557,6 +4620,7 @@ export type SessionCreateWithoutTeammatesInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -4625,6 +4689,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -4687,6 +4752,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -4755,6 +4821,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -4801,6 +4868,7 @@ export type SessionCreateWithoutEventsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -4869,6 +4937,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   teammates?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutSessionInput
@@ -4931,6 +5000,7 @@ export type SessionUpdateWithoutEventsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -4999,6 +5069,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   teammates?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutSessionNestedInput
@@ -5045,6 +5116,7 @@ export type SessionCreateWithoutAccountInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -5112,6 +5184,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -5185,6 +5258,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -5253,6 +5327,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -5315,6 +5390,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -5383,6 +5459,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -5429,6 +5506,7 @@ export type SessionCreateWithoutCommentsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -5497,6 +5575,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -5559,6 +5638,7 @@ export type SessionUpdateWithoutCommentsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -5627,6 +5707,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -5673,6 +5754,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -5741,6 +5823,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -5803,6 +5886,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -5871,6 +5955,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -5917,6 +6002,7 @@ export type SessionCreateWithoutTriggerInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -5984,6 +6070,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -6057,6 +6144,7 @@ export type SessionCreateWithoutTicketsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -6125,6 +6213,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -6187,6 +6276,7 @@ export type SessionUpdateWithoutTicketsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -6255,6 +6345,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -6301,6 +6392,7 @@ export type SessionCreateWithoutDocumentsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -6369,6 +6461,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -6431,6 +6524,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -6499,6 +6593,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -6545,6 +6640,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -6613,6 +6709,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -6675,6 +6772,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -6743,6 +6841,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -6789,6 +6888,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -6857,6 +6957,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -6919,6 +7020,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -6987,6 +7089,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -7033,6 +7136,7 @@ export type SessionCreateWithoutProjectInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7100,6 +7204,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   updatedAt?: Date | string
   taskId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -7173,6 +7278,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7241,6 +7347,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -7292,6 +7399,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7359,6 +7467,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   updatedAt?: Date | string
   taskId?: string | null
   projectId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -7427,6 +7536,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -7495,6 +7605,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -7557,6 +7668,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7625,6 +7737,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -7687,6 +7800,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -7755,6 +7869,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -7801,6 +7916,7 @@ export type SessionCreateWithoutFollowersInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7869,6 +7985,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -7920,6 +8037,7 @@ export type SessionCreateWithoutFollowingInput = {
   effort?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutSessionsInput
   teammate: Prisma.TeammateCreateNestedOneWithoutSessionsInput
@@ -7988,6 +8106,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
   children?: Prisma.SessionUncheckedCreateNestedManyWithoutParentInput
   events?: Prisma.SessionEventUncheckedCreateNestedManyWithoutSessionInput
@@ -8050,6 +8169,7 @@ export type SessionUpdateWithoutFollowersInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -8118,6 +8238,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -8175,6 +8296,7 @@ export type SessionUpdateWithoutFollowingInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -8243,6 +8365,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -8299,6 +8422,7 @@ export type SessionCreateManyStartedByInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -8327,6 +8451,7 @@ export type SessionUpdateWithoutStartedByInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -8394,6 +8519,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -8451,6 +8577,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -8489,6 +8616,7 @@ export type SessionCreateManyWorkspaceInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -8517,6 +8645,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -8584,6 +8713,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -8641,6 +8771,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -8679,6 +8810,7 @@ export type SessionCreateManyComputerInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -8707,6 +8839,7 @@ export type SessionUpdateWithoutComputerInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -8774,6 +8907,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -8831,6 +8965,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -8869,6 +9004,7 @@ export type SessionCreateManyTeammateInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -8897,6 +9033,7 @@ export type SessionUpdateWithoutTeammateInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   startedBy?: Prisma.MemberUpdateOneRequiredWithoutSessionsNestedInput
@@ -8964,6 +9101,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9021,6 +9159,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -9059,6 +9198,7 @@ export type SessionCreateManyParentInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -9087,6 +9227,7 @@ export type SessionUpdateWithoutParentInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -9154,6 +9295,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9211,6 +9353,7 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -9249,6 +9392,7 @@ export type SessionCreateManyScheduleInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -9277,6 +9421,7 @@ export type SessionUpdateWithoutScheduleInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -9344,6 +9489,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9401,6 +9547,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -9439,6 +9586,7 @@ export type SessionCreateManyAccountInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -9467,6 +9615,7 @@ export type SessionUpdateWithoutAccountInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -9534,6 +9683,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9591,6 +9741,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -9629,6 +9780,7 @@ export type SessionCreateManyTriggerInput = {
   taskId?: string | null
   projectId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -9657,6 +9809,7 @@ export type SessionUpdateWithoutTriggerInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -9724,6 +9877,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9781,6 +9935,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -9819,6 +9974,7 @@ export type SessionCreateManyProjectInput = {
   updatedAt?: Date | string
   taskId?: string | null
   playbookRunId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -9847,6 +10003,7 @@ export type SessionUpdateWithoutProjectInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -9914,6 +10071,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -9971,6 +10129,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   playbookRunId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -10009,6 +10168,7 @@ export type SessionCreateManyPlaybookRunInput = {
   updatedAt?: Date | string
   taskId?: string | null
   projectId?: string | null
+  playbookTeammate?: string | null
   surfacedAt?: Date | string | null
 }
 
@@ -10037,6 +10197,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   effort?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSessionsNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutSessionsNestedInput
@@ -10104,6 +10265,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   children?: Prisma.SessionUncheckedUpdateManyWithoutParentNestedInput
   events?: Prisma.SessionEventUncheckedUpdateManyWithoutSessionNestedInput
@@ -10161,6 +10323,7 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  playbookTeammate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   surfacedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
@@ -10384,6 +10547,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   taskId?: boolean
   projectId?: boolean
   playbookRunId?: boolean
+  playbookTeammate?: boolean
   surfacedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -10454,6 +10618,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   taskId?: boolean
   projectId?: boolean
   playbookRunId?: boolean
+  playbookTeammate?: boolean
   surfacedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -10504,6 +10669,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   taskId?: boolean
   projectId?: boolean
   playbookRunId?: boolean
+  playbookTeammate?: boolean
   surfacedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -10554,10 +10720,11 @@ export type SessionSelectScalar = {
   taskId?: boolean
   projectId?: boolean
   playbookRunId?: boolean
+  playbookTeammate?: boolean
   surfacedAt?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "surfacedAt", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "playbookTeammate" | "surfacedAt", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -10787,6 +10954,11 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * The playbook run it belongs to: its root thread and the root's children (src/playbooks.ts).
      */
     playbookRunId: string | null
+    /**
+     * In a playbook's run: the teammate setting this thread works as (a fix handed to its
+     * developer), whose Apps alone it has. Null: the one its runs start with.
+     */
+    playbookTeammate: string | null
     /**
      * A run's thread stays out of the sidebar's Threads until a person first takes part in it
      * (a message, a takeover, a pin): then this is set, and it stays there.
@@ -11280,6 +11452,7 @@ export interface SessionFieldRefs {
   readonly taskId: Prisma.FieldRef<"Session", 'String'>
   readonly projectId: Prisma.FieldRef<"Session", 'String'>
   readonly playbookRunId: Prisma.FieldRef<"Session", 'String'>
+  readonly playbookTeammate: Prisma.FieldRef<"Session", 'String'>
   readonly surfacedAt: Prisma.FieldRef<"Session", 'DateTime'>
 }
     

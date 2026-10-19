@@ -282,6 +282,11 @@ export const openTicketTool = tool({
                   description:
                     'The account you mean, as its row shows it (e.g. the Gmail address), when you know which: the ticket picks it first',
                 },
+                teammate: {
+                  type: 'string',
+                  description:
+                    'The teammate the access is for, by name, when it is not you: e.g. the one a playbook you install hands this App to',
+                },
               },
               required: ['kind', 'scope'],
             },
@@ -1903,7 +1908,8 @@ export function childTools(
           instructions: { type: 'string', description: 'The work, standing alone' },
           teammate: {
             type: 'string',
-            description: 'Who does it: a teammate id or name (list_tasks lists them). Unset: you.',
+            description:
+              "Who does it: a teammate id or name (list_tasks lists them). In a playbook's thread, one of its teammates by its key (e.g. developer). Unset: you.",
           },
           wait: {
             type: 'boolean',

@@ -130,7 +130,7 @@ export async function specFor(
           computerId: thread.computerId,
           provider: 'codex',
         }),
-    threadPlaybook(db, thread.playbookRunId),
+    threadPlaybook(db, thread.playbookRunId, thread.playbookTeammate),
   ])
   // Takeover and terminals need no usage: they may use the thread's current account as is.
   const current =
@@ -236,6 +236,7 @@ export async function specFor(
               }
             }),
           dryRun: playbook.dryRun,
+          ...(playbook.teammates ? { teammates: playbook.teammates } : {}),
         }
       : null,
     attachments,

@@ -10,6 +10,7 @@ import {
   MCP_KIND,
   PlaybookManifest,
   playbookRoles,
+  roleOfTeammate,
   nextRun,
   parseSkillMarkdown,
   SkillName,
@@ -196,6 +197,15 @@ export async function accountChoices(
   }))
 }
 
+/** The teammates a teammate setting may take: the workspace's, the chief left out (it routes work). */
+export async function teammateChoices(db: ScopedDb) {
+  return db.teammate.findMany({
+    where: { archivedAt: null, kind: { not: 'chief' } },
+    select: { id: true, name: true },
+    orderBy: { createdAt: 'asc' },
+  })
+}
+
 /** "mixpanel or MCP server": the Apps a role accepts, as a sentence says them. */
 const kindsWords = (kinds: readonly string[]) =>
   kinds.map((k) => (k === MCP_KIND ? 'MCP server' : k)).join(' or ')
@@ -282,6 +292,21 @@ export async function checkSettings(
         values[setting.key] = account!.id
         break
       }
+      case 'teammate': {
+        // By id or name, as a person would say it; the chief only when named.
+        const teammate =
+          (await db.teammate.findFirst({ where: { id: text, archivedAt: null } })) ??
+          (await db.teammate.findFirst({
+            where: { name: { equals: text, mode: 'insensitive' }, archivedAt: null },
+          }))
+        if (!teammate)
+          bad(
+            setting,
+            `needs one of the workspace's teammates: ${(await teammateChoices(db)).map((t) => t.name).join(', ')}`,
+          )
+        values[setting.key] = teammate!.id
+        break
+      }
     }
   }
   return values
@@ -356,6 +381,7 @@ export async function createInstallation(
   })
   if (!teammate) throw new HTTPException(404, { message: 'Teammate not found or archived' })
   const projectId = (await usableProject(db, input.projectId)) ?? null
+  const settings = await checkSettings(db, manifest, input.settings)
   const installation = await db.playbookInstallation.create({
     data: {
       projectId,
@@ -363,9 +389,11 @@ export async function createInstallation(
       version: manifest.version,
       source: SOURCE,
       manifest: manifest as never,
-      teammateId: teammate.id,
+      // The teammate its runs start with, once its setting has an answer; until then, the one
+      // installing it holds the place (nothing runs before every setting has an answer).
+      teammateId: runTeammate(manifest, settings) ?? teammate.id,
       ownerMemberId: scope.memberId,
-      settings: await checkSettings(db, manifest, input.settings),
+      settings,
       status: 'setup',
       createdByMemberId: scope.memberId,
     } as never,
@@ -548,7 +576,14 @@ export async function answerSettings(
   const { values, missing } = withDefaults(manifest, answers)
   const changed = Object.keys(given).length > 0
   if (changed)
-    await db.playbookInstallation.updateMany({ where: { id }, data: { settings: answers } })
+    await db.playbookInstallation.updateMany({
+      where: { id },
+      data: {
+        settings: answers,
+        // Its runs start with the teammate its setting names.
+        ...(runTeammate(manifest, answers) ? { teammateId: runTeammate(manifest, answers)! } : {}),
+      },
+    })
   if (!missing.length) {
     // Defaults filled in are answers from now on.
     await db.playbookInstallation.updateMany({ where: { id }, data: { settings: values } })
@@ -558,18 +593,65 @@ export async function answerSettings(
 }
 
 /**
+ * One not active yet, on its template's latest version: a new version's manifest replaces its
+ * own, the answers it still asks for are kept, and its parts are made again once every setting
+ * has an answer. It goes back to setup, as an earlier dry run tried the old one.
+ */
+export async function upgradeSetup<T extends { id: string; version: string; status: string }>(
+  db: ScopedDb,
+  scope: Installer,
+  installation: T,
+  template: Template,
+): Promise<T> {
+  const { manifest } = template
+  if (installation.version === manifest.version) return installation
+  if (installation.status !== 'setup' && installation.status !== 'dry_run') return installation
+  const current = await requireInstallation(db, installation.id)
+  const kept = Object.fromEntries(
+    Object.entries((current.settings ?? {}) as Record<string, string | number>).filter(([key]) =>
+      manifest.settings.some((s) => s.key === key),
+    ),
+  )
+  await resync(scope, await removeParts(db, scope, installation.id))
+  await db.playbookInstallation.updateMany({
+    where: { id: installation.id },
+    data: {
+      manifest: manifest as never,
+      version: manifest.version,
+      settings: kept,
+      status: 'setup',
+      ...(runTeammate(manifest, kept) ? { teammateId: runTeammate(manifest, kept)! } : {}),
+    },
+  })
+  await audit({
+    ...scope,
+    actor: { type: 'member', id: scope.memberId },
+    action: 'playbook.upgraded',
+    target: { type: 'playbook', id: installation.id },
+    data: { from: installation.version, to: manifest.version },
+  })
+  return (await requireInstallation(db, installation.id)) as unknown as T
+}
+
+/**
  * Install a template with all its answers at once (the API's POST /playbooks): in setup, its
  * parts made. Activating it is a step of its own (activatePlaybook).
  */
 export async function installPlaybook(db: ScopedDb, scope: WorkspaceScope, input: InstallPlaybook) {
   const template = templates().get(input.playbookKey)
   if (!template) throw new HTTPException(404, { message: `No playbook ${input.playbookKey}` })
-  await resolveSettings(db, template.manifest, input.settings)
+  // The teammate it is installed for answers the setting its runs start with.
+  const first = template.manifest.teammate
+  const settings =
+    first && !(first in input.settings)
+      ? { ...input.settings, [first]: input.teammateId }
+      : input.settings
+  await resolveSettings(db, template.manifest, settings)
   const installation = await createInstallation(db, scope, {
     template,
     teammateId: input.teammateId,
     projectId: input.projectId,
-    settings: input.settings,
+    settings,
   })
   try {
     await answerSettings(db, scope, installation.id, {})
@@ -889,19 +971,34 @@ export async function surface(
  */
 export type RunRole = PlaybookRole & { accounts: Set<string> | null }
 
-/** Its roles, each with the accounts its settings picked (their connection ids). */
-export function runRoles(manifest: PlaybookManifest, settings: Record<string, unknown>): RunRole[] {
-  return playbookRoles(manifest.apps).map((role) => {
-    const picks = manifest.settings.filter((s) => s.type === 'account' && s.app === role.name)
-    if (!picks.length) return { ...role, accounts: null }
-    const ids = new Set<string>()
-    for (const setting of picks) {
-      const value = settings[setting.key]
-      // Unanswered (an optional one): no account rather than every one.
-      if (typeof value === 'string' && value) ids.add(value)
-    }
-    return { ...role, accounts: ids }
-  })
+/** The teammate its runs start with, by its setting's answer; null without one. */
+export function runTeammate(manifest: PlaybookManifest, settings: Record<string, unknown>) {
+  const value = manifest.teammate ? settings[manifest.teammate] : undefined
+  return typeof value === 'string' && value ? value : null
+}
+
+/**
+ * Its roles, each with the accounts its settings picked (their connection ids). With `thread`,
+ * a thread's teammate setting (null: the one its runs start with): only the roles of its Apps.
+ */
+export function runRoles(
+  manifest: PlaybookManifest,
+  settings: Record<string, unknown>,
+  thread?: { teammate: string | null },
+): RunRole[] {
+  return playbookRoles(manifest.apps)
+    .filter((role) => !thread || roleOfTeammate(role, manifest, thread.teammate))
+    .map((role) => {
+      const picks = manifest.settings.filter((s) => s.type === 'account' && s.app === role.name)
+      if (!picks.length) return { ...role, accounts: null }
+      const ids = new Set<string>()
+      for (const setting of picks) {
+        const value = settings[setting.key]
+        // Unanswered (an optional one): no account rather than every one.
+        if (typeof value === 'string' && value) ids.add(value)
+      }
+      return { ...role, accounts: ids }
+    })
 }
 
 /**
@@ -952,10 +1049,14 @@ export function playbookActionOf(
   return actions.find((a) => a.tools.includes(tool))?.key ?? null
 }
 
-/** The playbook a thread is part of, for its spec: its run, name and Apps. */
+/**
+ * The playbook a thread is part of, for its spec: its run, name and Apps. `teammate`: the
+ * thread's teammate setting (null: the one its runs start with), whose Apps alone it has.
+ */
 export async function threadPlaybook(
   db: ScopedDb,
   playbookRunId: string | null,
+  teammate: string | null = null,
 ): Promise<
   | (Omit<ThreadPlaybook, 'roles'> & {
       roles: RunRole[]
@@ -974,18 +1075,52 @@ export async function threadPlaybook(
   if (!run) return null
   const manifest = run.installation.manifest as PlaybookManifest
   const settings = (run.installation.settings ?? {}) as Record<string, unknown>
-  const roles = runRoles(manifest, settings)
+  const roles = runRoles(manifest, settings, { teammate })
+  const teammates = await playbookTeammates(db, manifest, settings, teammate)
   return {
     installationId: run.installation.id,
     runId: run.id,
     name: manifest.name,
     apps: roles.map((r) => r.name),
+    ...(teammates.length > 1 ? { teammates } : {}),
     dryRun: run.dryRun,
     dryRunId: run.dryRunId,
     roles,
     actions: manifest.actions,
     firstResponse: manifest.firstResponse ?? null,
   }
+}
+
+/**
+ * Its teammate settings, the one its runs start with first: each with its teammate's name and
+ * its Apps, and `here` for the thread's (`teammate`, null: the first). Empty without any.
+ */
+export async function playbookTeammates(
+  db: ScopedDb,
+  manifest: PlaybookManifest,
+  settings: Record<string, unknown>,
+  teammate: string | null,
+) {
+  // Stored manifests are kept as they were written: an old one may lack its settings.
+  const keys = (manifest.settings ?? [])
+    .filter((s) => s.type === 'teammate')
+    .map((s) => s.key)
+    .sort((a, b) => Number(b === manifest.teammate) - Number(a === manifest.teammate))
+  if (!keys.length) return []
+  const ids = keys.map((k) => settings[k]).filter((v): v is string => typeof v === 'string')
+  const rows = await db.teammate.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true },
+  })
+  const here = teammate ?? manifest.teammate
+  return keys.map((key) => ({
+    key,
+    name: rows.find((r) => r.id === settings[key])?.name ?? 'not picked yet',
+    apps: playbookRoles(manifest.apps)
+      .filter((r) => roleOfTeammate(r, manifest, key))
+      .map((r) => r.name),
+    here: key === here,
+  }))
 }
 
 /**
@@ -1003,10 +1138,18 @@ export async function roleStatuses(
   const roles = runRoles(manifest, settings)
   const kinds = [...new Set(roles.flatMap((r) => r.kinds))]
   const picked = [...new Set(roles.flatMap((r) => [...(r.accounts ?? [])]))]
-  const [grants, chosen] = await Promise.all([
+  // Each role's teammate: the one its setting names, else the one its runs start with. A
+  // teammate setting not answered yet holds none, and its Apps wait for it.
+  const holderOf = (role: { teammate: string | null }) => {
+    if (!role.teammate) return manifest.teammate ? runTeammate(manifest, settings) : teammateId
+    const value = settings[role.teammate]
+    return typeof value === 'string' && value ? value : null
+  }
+  const holders = [...new Set(roles.map(holderOf).filter((id): id is string => !!id))]
+  const [grants, chosen, teammates] = await Promise.all([
     db.grant.findMany({
       where: {
-        teammateId,
+        teammateId: { in: holders },
         connection: { kind: { in: kinds as never }, status: 'active' },
       },
       include: { connection: true },
@@ -1017,12 +1160,15 @@ export async function roleStatuses(
           select: { id: true, kind: true, label: true, externalAccount: true },
         })
       : [],
+    db.teammate.findMany({ where: { id: { in: holders } }, select: { id: true, name: true } }),
   ])
   return roles.map(({ accounts, ...role }) => {
+    const holder = teammates.find((t) => t.id === holderOf(role)) ?? null
     // The accounts it could use, those its setting may pick among; within a role, a server added
     // by its URL only where a setting picks the account.
     const candidates = grants.filter(
       (g) =>
+        g.teammateId === holder?.id &&
         role.kinds.includes(g.connection.kind) &&
         (accounts || role.plain || g.connection.kind !== MCP_KIND) &&
         usableIn(g.connection, { startedByMemberId: ownerMemberId }),
@@ -1042,6 +1188,7 @@ export async function roleStatuses(
       accounts: candidates.map((g) => g.connection.externalAccount ?? g.connection.label),
       picks: accounts !== null,
       chosen: pick ? { name: pick.externalAccount ?? pick.label, kind: pick.kind } : null,
+      holder,
     }
   })
 }
@@ -1175,13 +1322,20 @@ async function toView(
   const picked = manifest.settings
     .filter((s) => s.type === 'account' && typeof settings[s.key] === 'string')
     .map((s) => settings[s.key] as string)
-  const [apps, accounts] = await Promise.all([
+  // And teammate settings the teammate's name.
+  const named = manifest.settings
+    .filter((s) => s.type === 'teammate' && typeof settings[s.key] === 'string')
+    .map((s) => settings[s.key] as string)
+  const [apps, accounts, teammates] = await Promise.all([
     roleStatuses(db, manifest, settings, row.teammate.id, row.owner.id),
     picked.length
       ? db.connection.findMany({
           where: { id: { in: picked } },
           select: { id: true, label: true, externalAccount: true },
         })
+      : [],
+    named.length
+      ? db.teammate.findMany({ where: { id: { in: named } }, select: { id: true, name: true } })
       : [],
   ])
   const recentRuns: PlaybookRunView[] = recent.map((run) => ({
@@ -1209,11 +1363,15 @@ async function toView(
     settings: manifest.settings.map((s) => {
       const account =
         s.type === 'account' ? accounts.find((a) => a.id === settings[s.key]) : undefined
+      const teammate =
+        s.type === 'teammate' ? teammates.find((t) => t.id === settings[s.key]) : undefined
       return {
         key: s.key,
         type: s.type,
         ...(s.ask ? { ask: s.ask } : {}),
-        value: account ? (account.externalAccount ?? account.label) : (settings[s.key] ?? null),
+        value: account
+          ? (account.externalAccount ?? account.label)
+          : (teammate?.name ?? settings[s.key] ?? null),
       }
     }),
     actions,

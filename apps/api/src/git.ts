@@ -17,6 +17,7 @@ import {
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { onDefaultBranch, pushRule } from './git-refs.js'
 import { openSecret } from './vault.js'
+import { playbookAccepts, threadPlaybook } from './playbooks.js'
 
 export { BACKUP_PREFIX, PUSH_PREFIX } from './git-refs.js'
 
@@ -294,13 +295,19 @@ export async function authorize(
       where: { id: claims.sessionId, computerId: claims.computerId },
     })
     if (!row) throw new GitRefused('Brigade: unknown thread')
-    // A playbook's dry run: its work stays in its folder.
+    // A playbook's dry run: its work stays in its folder. A playbook's thread whose teammate
+    // does not have its GitHub App (the one reading customers' mail) reaches no repository.
     const run = row.playbookRunId
       ? await db.playbookRun.findFirst({
           where: { id: row.playbookRunId },
           select: { dryRun: true },
         })
       : null
+    const playbook = run ? await threadPlaybook(db, row.playbookRunId, row.playbookTeammate) : null
+    if (playbook && !playbookAccepts(playbook, 'github'))
+      throw new GitRefused(
+        `Brigade: in this thread, ${playbook.name} has no GitHub; hand code work to the teammate that has it`,
+      )
     session = { id: row.id, origin: row.origin, dryRun: !!run?.dryRun }
     const seat = await db.threadTeammate.findFirst({
       where: { sessionId: session.id, teammateId: claims.teammateId },

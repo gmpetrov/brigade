@@ -19,6 +19,7 @@ import {
   FOLLOWERS_PER_THREAD,
   followNote,
   REPORT_AFTER_PERSON_MINUTES,
+  type PlaybookManifest,
   type ScheduleOperation,
   singleNote,
   WAKEUPS_IN_A_ROW,
@@ -66,6 +67,8 @@ type Session = {
   parentId: string | null
   /** A playbook run's thread: its children are part of the run. */
   playbookRunId: string | null
+  /** In a playbook's run: the teammate setting it works as; null, the one its runs start with. */
+  playbookTeammate?: string | null
 }
 
 /** A report as stored, or null when there is none (or it is not one Brigade wrote). */
@@ -534,6 +537,61 @@ const followedBrief = (c: Parameters<typeof brief>[0], following: boolean) => ({
 /** How far back list_children looks for the children of a playbook's other runs. */
 const OTHER_RUNS_DAYS = 7
 
+/**
+ * Who a child of a playbook's thread goes to, when the playbook has teammate settings: by a
+ * setting's key (developer), the teammate it names, working as that key; by name, one of its
+ * teammates, as a key it holds (this thread's first); unset, this thread's own teammate and key.
+ * `key` null: the one its runs start with. Outside such a playbook: nothing to change.
+ */
+async function playbookHandoff(
+  db: ScopedDb,
+  session: Session,
+  ref: string | undefined,
+): Promise<{ teammateId?: string; key?: string | null } | { error: string }> {
+  if (!session.playbookRunId) return {}
+  const run = await db.playbookRun.findFirst({
+    where: { id: session.playbookRunId },
+    include: { installation: { select: { manifest: true, settings: true } } },
+  })
+  if (!run) return {}
+  const manifest = run.installation.manifest as PlaybookManifest
+  const settings = (run.installation.settings ?? {}) as Record<string, unknown>
+  const keys = (manifest.settings ?? []).filter((s) => s.type === 'teammate').map((s) => s.key)
+  if (!keys.length) return {}
+  const as = (key: string) => (key === manifest.teammate ? null : key)
+  const idOf = (key: string) =>
+    typeof settings[key] === 'string' ? (settings[key] as string) : undefined
+  if (!ref) return { key: session.playbookTeammate ?? null }
+  const byKey = keys.find((k) => k === ref.toLowerCase())
+  if (byKey) {
+    const teammateId = idOf(byKey)
+    if (!teammateId) return { error: `${manifest.name} has no teammate picked as ${byKey} yet` }
+    return { teammateId, key: as(byKey) }
+  }
+  const named = await db.teammate.findFirst({
+    where: {
+      OR: [{ id: ref }, { name: { equals: ref, mode: 'insensitive' } }],
+      archivedAt: null,
+    },
+  })
+  const held = named ? keys.filter((k) => idOf(k) === named.id) : []
+  if (!named || !held.length) {
+    const names = await db.teammate.findMany({
+      where: { id: { in: keys.map(idOf).filter((id): id is string => !!id) } },
+      select: { id: true, name: true },
+    })
+    return {
+      error:
+        `In a run of ${manifest.name}, hand work to one of its teammates, by its key: ` +
+        keys
+          .map((k) => `${k} (${names.find((n) => n.id === idOf(k))?.name ?? 'not picked'})`)
+          .join(', '),
+    }
+  }
+  const own = session.playbookTeammate ?? manifest.teammate!
+  return { teammateId: named.id, key: as(held.includes(own) ? own : held[0]!) }
+}
+
 /** The playbook installation of a run's thread; null outside one, and in a dry run (it waits for nothing). */
 async function installationOf(db: ScopedDb, playbookRunId: string | null) {
   if (!playbookRunId) return null
@@ -824,12 +882,18 @@ export async function handleChildCall(
       error: `This thread already has ${working} child threads at work, the most it may. Wait for their reports, or cancel one.`,
     }
   const ref = op.teammate?.trim()
-  const assignee = ref
-    ? ((await db.teammate.findFirst({ where: { id: ref, archivedAt: null } })) ??
-      (await db.teammate.findFirst({
-        where: { name: { equals: ref, mode: 'insensitive' }, archivedAt: null },
-      })))
-    : await db.teammate.findFirst({ where: { id: teammate.id } })
+  // In a playbook's run, work goes to one of its teammates, by its setting's key (developer):
+  // the child has that teammate's Apps alone.
+  const handoff = await playbookHandoff(db, session, ref)
+  if ('error' in handoff) return handoff
+  const assignee = handoff.teammateId
+    ? await db.teammate.findFirst({ where: { id: handoff.teammateId, archivedAt: null } })
+    : ref
+      ? ((await db.teammate.findFirst({ where: { id: ref, archivedAt: null } })) ??
+        (await db.teammate.findFirst({
+          where: { name: { equals: ref, mode: 'insensitive' }, archivedAt: null },
+        })))
+      : await db.teammate.findFirst({ where: { id: teammate.id } })
   if (!assignee) return { error: `No teammate is called "${ref}"; list_tasks lists them` }
   const parent = await loadThread(db, session.id)
   try {
@@ -850,6 +914,7 @@ export async function handleChildCall(
         byTeammateId: teammate.id,
         awaited: op.wait,
         ...(op.wait ? { awaitUntil: waitUntil(op.timeoutMinutes) } : {}),
+        ...(handoff.key !== undefined ? { playbookTeammate: handoff.key } : {}),
       },
       projectId: session.projectId,
       effort: (parent.effort as never) ?? null,

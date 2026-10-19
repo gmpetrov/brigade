@@ -504,6 +504,9 @@ model Session {
   /// The playbook run it belongs to: its root thread and the root's children (src/playbooks.ts).
   playbookRunId        String?
   playbookRun          PlaybookRun?       @relation("PlaybookRunThreads", fields: [playbookRunId], references: [id], onDelete: SetNull)
+  /// In a playbook's run: the teammate setting this thread works as (a fix handed to its
+  /// developer), whose Apps alone it has. Null: the one its runs start with.
+  playbookTeammate     String?
   /// The run it is the root thread of.
   rootOfPlaybookRun    PlaybookRun?       @relation("PlaybookRunRoot")
   /// A run's thread stays out of the sidebar's Threads until a person first takes part in it
