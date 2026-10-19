@@ -829,6 +829,13 @@ await check('uninstalled, its dry run goes with it', async () => {
 // =============================================================================
 
 let live
+// Earlier checks (and earlier runs of this script today) use up Sam's daily write cap on the
+// mailbox, which would turn every reply below into a cap ticket: lift it while they run.
+const [{ caps: samCaps }] = await q(`select caps from "Teammate" where id = $1`, [sam.id])
+await q(
+  `update "Teammate" set caps = caps || '{"writeCallsPerConnectionPerDay": 100000}'::jsonb where id = $1`,
+  [sam.id],
+)
 const sends = {}
 // A run's mail: it sorts the mail as `case`, then replies; what the reply call returned is kept.
 const replying = (marker, cas) =>
@@ -1025,6 +1032,7 @@ await check('two runs wait on one fix: the second follows it and hears its repor
   await call(`/playbooks/${live.id}`, { method: 'DELETE' })
 })
 
+await q(`update "Teammate" set caps = $2 where id = $1`, [sam.id, samCaps])
 console.log(results.join('\n'))
 clearInterval(heartbeat)
 ws.close()
