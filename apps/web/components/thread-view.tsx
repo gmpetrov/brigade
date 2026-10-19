@@ -2505,7 +2505,9 @@ function AskView({
     ask.type === 'approval' || ask.type === 'action'
       ? ask.title
       : ask.type === 'access'
-        ? `Access to ${ask.app ? (APP_NAMES[ask.app.kind] ?? ask.what) : ask.what}`
+        ? ask.app?.repository
+          ? `Access to ${ask.app.repository} on GitHub`
+          : `Access to ${ask.app ? (APP_NAMES[ask.app.kind] ?? ask.what) : ask.what}`
         : ask.type === 'variables'
           ? `Values for the preview of ${ask.repository}`
           : ask.question

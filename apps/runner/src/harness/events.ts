@@ -153,7 +153,9 @@ export function ticketResult(asks: Ask[], answer: TicketAnswer) {
                     `The person gave you ${ask.app.scope === 'read' ? 'read' : 'read and write'} access to ${ask.what} from the ticket. ` +
                     (ask.app.kind === 'mcp'
                       ? 'Its tools are yours in this thread from now on: carry on with them.'
-                      : `Its tools (${ask.app.kind}_…) are yours in this thread from now on: carry on with them.`),
+                      : ask.app.repository
+                        ? `It reaches ${ask.app.repository}: check it out with checkout_repository and carry on.`
+                        : `Its tools (${ask.app.kind}_…) are yours in this thread from now on: carry on with them.`),
                 }
               : {}),
             ...(reply.granted && reply.credential
@@ -403,7 +405,8 @@ export class EventMapper {
             toolName: part.toolName,
             error:
               'Invalid ticket: give a title and 1 to 6 asks, each with the fields its type needs ' +
-              '(approval: title, draft; decision: question; access: kind, what; action: title; input: question).',
+              '(approval: title, draft; decision: question; access: kind, what; action: title; input: question). ' +
+              'An app.repository is for kind github only, as owner/name.',
           })
         }
         this.emit({

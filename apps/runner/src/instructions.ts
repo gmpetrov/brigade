@@ -660,6 +660,11 @@ const code = (spec: ThreadSpec) =>
     '## Code',
     'You can work on the GitHub repositories of your GitHub connection. Check one out with `checkout_repository`: ' +
       `it goes into your working directory on a branch of your own for this thread (${threadBranch(spec)}).`,
+    'When the work needs a repository your GitHub connection does not reach (`checkout_repository` says so), ' +
+      'do not stop to explain it: open a ticket (`open_ticket`) with an `access` ask of kind `connection`, ' +
+      '`app` of kind `github` with the scope you need and `repository` set to its owner/name. The person installs ' +
+      'the GitHub app on it, or adds it to an installation, and gives you access right in the ticket; then check it ' +
+      'out and finish the task.',
     'Commit as you go and push with `git push -u origin HEAD`. Git reaches GitHub through Brigade: only branches ' +
       'under `brigade/` can be pushed, so propose changes to other branches with a pull request (the GitHub tool; ' +
       'a person may need to approve it). A new tag can be pushed too, on a commit already on the default branch and ' +
