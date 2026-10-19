@@ -85,6 +85,13 @@ const REQUIRED = {
   ],
 } satisfies PlaybookManifest
 
+/** With Stripe too, optional and with no setting, as support-bugs declares it. */
+const WITH_STRIPE = {
+  ...MANIFEST,
+  id: 'brigade/test-roles-stripe',
+  apps: [...MANIFEST.apps, { kind: 'stripe', access: 'read', optional: true }],
+} satisfies PlaybookManifest
+
 /** As main once allowed: every MCP server granted, by its kind alone, no account setting. */
 const ANY_MCP = {
   ...BY_KIND,
@@ -133,7 +140,10 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     | 'required'
     | 'anyMcp'
     | 'chat'
-    | 'setup',
+    | 'setup'
+    | 'gmailOnly'
+    | 'stripe'
+    | 'stripeGmailOnly',
     string
   >
   let db: ReturnType<typeof scoped>
@@ -247,11 +257,17 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
       await db.grant.create({
         data: { teammateId: ids.teammate, connectionId, scope: 'read_write' } as never,
       })
+    // A teammate with the inbox alone: no analytics tool, no Stripe.
+    ids.gmailOnly = (await db.teammate.create({ data: { name: 'Lee' } as never })).id
+    await db.grant.create({
+      data: { teammateId: ids.gmailOnly, connectionId: ids.support, scope: 'read_write' } as never,
+    })
 
     const install = async (
       manifest: PlaybookManifest,
       settings: Record<string, string>,
       status = 'active',
+      teammateId = ids.teammate,
     ) =>
       (
         await db.playbookInstallation.create({
@@ -259,7 +275,7 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
             playbookKey: manifest.id,
             version: manifest.version,
             manifest,
-            teammateId: ids.teammate,
+            teammateId,
             ownerMemberId: ids.owner,
             settings,
             status,
@@ -272,6 +288,8 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     ids.required = await install(REQUIRED, { inbox: ids.support })
     ids.anyMcp = await install(ANY_MCP, { inbox: ids.support })
     ids.setup = await install(MANIFEST, { inbox: ids.support }, 'setup')
+    ids.stripe = await install(WITH_STRIPE, { inbox: ids.support }, 'setup')
+    ids.stripeGmailOnly = await install(WITH_STRIPE, { inbox: ids.support }, 'setup', ids.gmailOnly)
     // A member's thread, where playbooks are installed from.
     ids.chat = (
       await db.session.create({
@@ -579,6 +597,44 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
       { id: ids.posthog, app: 'MCP', name: 'PostHog' },
       { id: ids.otherServer, app: 'MCP', name: 'Other server' },
     ])
+  })
+
+  test('configure_playbook offers an optional App its teammate has no account of, once all is answered', async () => {
+    const { handlePlaybookCall } = await import('../src/playbook-chat.js')
+    const session = await db.session.findFirst({ where: { id: ids.chat } })
+    const configure = async (installationId: string) =>
+      (await handlePlaybookCall(
+        db,
+        scope,
+        session!,
+        { id: ids.teammate, name: 'Sam' },
+        { name: 'configure_playbook', installationId, settings: {} },
+      )) as { missing: unknown[]; next: string; error?: string }
+    /** The sentence offering the optional Apps, alone. */
+    const offer = (next: string) => /It can also use optional Apps: ([^.]*)\./.exec(next)?.[1]
+
+    // Its teammate has analytics accounts: its setting asks which; Stripe, without one, is offered.
+    const sam = await configure(ids.stripe)
+    assert.equal(sam.error, undefined)
+    assert.deepEqual(sam.missing, [])
+    assert.equal(offer(sam.next), 'stripe (no account)')
+    assert.match(sam.next, /Offer them once, in that same message/)
+    assert.match(sam.next, /open none they did not ask for/)
+    assert.match(sam.next, /Then offer a dry run/)
+    // Optional: nothing it asks for unasked, and no dry run waits for it.
+    assert.doesNotMatch(sam.next, /Apps it still needs/)
+
+    // One with the inbox alone: the analytics tool is offered too, as an App to connect.
+    const lee = await configure(ids.stripeGmailOnly)
+    assert.equal(lee.error, undefined)
+    assert.equal(
+      offer(lee.next),
+      'analytics (mixpanel or an MCP server added by its URL) (no account), stripe (no account)',
+    )
+    assert.doesNotMatch(lee.next, /Apps it still needs/)
+
+    // Without optional Apps, nothing is offered.
+    assert.equal(offer((await configure(ids.setup)).next), undefined)
   })
 
   test('an old manifest with { kind: mcp } still parses and reaches every server granted', async () => {
