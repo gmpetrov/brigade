@@ -105,8 +105,7 @@ export const posthog: ConnectorDefinition = {
       'web_analytics:write',
     ],
     // A sign-in reaches the person's organizations: an account shows as their names.
-    // organizations-get answers [{ id, name, slug, membership_level }].
-    account: { tool: 'organizations-get', name: organizationsName },
+    account: { tool: 'organizations-get', name: posthogAccountName },
     // PostHog's own marks, from its tool definitions. Switching the organization or project
     // only changes which one the next calls read, so Brigade counts it as a read.
     tools: {
@@ -160,6 +159,10 @@ export const posthog: ConnectorDefinition = {
       'dashboard-update-text-tile': write('Update dashboard text tile.'),
       'dashboard-widget-catalog-list': read('List dashboard widget catalog.'),
       'dashboards-bulk-delete': write('Delete dashboards in bulk.'),
+      // Behind a PostHog feature flag, which a real account had on.
+      'dashboard-widgets-batch-add': write('Add dashboard widgets.'),
+      'dashboard-widgets-batch-update': write('Update dashboard widget settings.'),
+      'dashboard-widgets-run': read('Run dashboard widgets.'),
       'dashboards-get-all': read('Get all dashboards.'),
       'create-feature-flag': write('Create feature flag.'),
       'delete-feature-flag': write('Delete feature flag.'),
@@ -236,6 +239,10 @@ export const posthog: ConnectorDefinition = {
       'experiment-unarchive': write('Unarchive experiment.'),
       'experiment-unfreeze-exposure': write('Unfreeze experiment exposure.'),
       'experiment-update': write('Update experiment.'),
+      // Behind a PostHog feature flag, which a real account had on.
+      'experiments-session-event-deltas-create': read(
+        'Find recordings worth watching per variant.',
+      ),
       'experiments-bulk-update-tags-create': write('Bulk update tags on experiments.'),
       'error-tracking-alerts-create': write('Create error tracking alert.'),
       'error-tracking-alerts-delete': write('Delete error tracking alert.'),
@@ -376,4 +383,38 @@ export const posthog: ConnectorDefinition = {
       'agent-feedback': read('Send feedback about any PostHog product, this MCP, or the docs.'),
     },
   },
+}
+
+/**
+ * The PostHog account as a row shows it: its organizations' names. organizations-get answers
+ * in TOON, PostHog's compact table, as a real account showed:
+ * `[1]{id,name,slug,membership_level}:` then one comma-separated row per organization,
+ * a value holding a comma in double quotes. A JSON array, should it answer one, works too.
+ */
+export function posthogAccountName(output: unknown): string | null {
+  if (typeof output !== 'string') return organizationsName(output)
+  const [header, ...rows] = output.trim().split('\n')
+  const fields = header?.match(/^\[\d+\]\{(.*)\}:$/)?.[1]?.split(',')
+  const column = fields?.indexOf('name') ?? -1
+  if (column < 0) return null
+  const organizations = rows.map((row) => ({ name: toonCells(row.trim())[column] }))
+  return organizationsName(organizations)
+}
+
+/** A TOON row's cells: split at commas, a quoted cell kept whole and unescaped. */
+function toonCells(row: string) {
+  const cells: string[] = []
+  let cell = ''
+  let quoted = false
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i]!
+    if (quoted && char === '\\') cell += row[++i] ?? ''
+    else if (char === '"') quoted = !quoted
+    else if (char === ',' && !quoted) {
+      cells.push(cell)
+      cell = ''
+    } else cell += char
+  }
+  cells.push(cell)
+  return cells
 }
