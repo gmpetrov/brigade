@@ -554,6 +554,27 @@ export async function hasParts(db: ScopedDb, id: string) {
   return triggers + schedules > 0
 }
 
+/** Its teammate settings whose teammate is archived or gone, by key. */
+async function archivedTeammates(
+  db: ScopedDb,
+  manifest: PlaybookManifest,
+  answers: Record<string, unknown>,
+) {
+  const keys = (manifest.settings ?? [])
+    .filter((s) => s.type === 'teammate' && typeof answers[s.key] === 'string')
+    .map((s) => s.key)
+  if (!keys.length) return []
+  const live = new Set(
+    (
+      await db.teammate.findMany({
+        where: { id: { in: keys.map((k) => answers[k] as string) }, archivedAt: null },
+        select: { id: true },
+      })
+    ).map((t) => t.id),
+  )
+  return keys.filter((k) => !live.has(answers[k] as string))
+}
+
 /**
  * New answers for an installation not yet active: checked by kind, kept with the earlier ones.
  * Once every setting has one, its parts are made (again, when they were). Returns what still
@@ -573,8 +594,11 @@ export async function answerSettings(
   const manifest = installation.manifest as PlaybookManifest
   const given = await checkSettings(db, manifest, input)
   const answers = { ...(installation.settings as Record<string, string | number>), ...given }
+  // A teammate archived since it was picked is no answer: its question comes again.
+  const gone = await archivedTeammates(db, manifest, answers)
+  for (const key of gone) delete answers[key]
   const { values, missing } = withDefaults(manifest, answers)
-  const changed = Object.keys(given).length > 0
+  const changed = Object.keys(given).length > 0 || gone.length > 0
   if (changed)
     await db.playbookInstallation.updateMany({
       where: { id },
@@ -606,6 +630,13 @@ export async function upgradeSetup<T extends { id: string; version: string; stat
   const { manifest } = template
   if (installation.version === manifest.version) return installation
   if (installation.status !== 'setup' && installation.status !== 'dry_run') return installation
+  // A dry run under way replays its events on the parts it has: it moves once that one is done.
+  if (
+    await db.playbookDryRun.count({
+      where: { installationId: installation.id, status: 'running' },
+    })
+  )
+    return installation
   const current = await requireInstallation(db, installation.id)
   const kept = Object.fromEntries(
     Object.entries((current.settings ?? {}) as Record<string, string | number>).filter(([key]) =>
@@ -1160,7 +1191,11 @@ export async function roleStatuses(
           select: { id: true, kind: true, label: true, externalAccount: true },
         })
       : [],
-    db.teammate.findMany({ where: { id: { in: holders } }, select: { id: true, name: true } }),
+    // An archived teammate holds nothing: its Apps are missing until another is picked.
+    db.teammate.findMany({
+      where: { id: { in: holders }, archivedAt: null },
+      select: { id: true, name: true },
+    }),
   ])
   return roles.map(({ accounts, ...role }) => {
     const holder = teammates.find((t) => t.id === holderOf(role)) ?? null

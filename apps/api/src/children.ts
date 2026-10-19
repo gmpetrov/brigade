@@ -565,7 +565,14 @@ async function playbookHandoff(
   const byKey = keys.find((k) => k === ref.toLowerCase())
   if (byKey) {
     const teammateId = idOf(byKey)
-    if (!teammateId) return { error: `${manifest.name} has no teammate picked as ${byKey} yet` }
+    const live =
+      teammateId && (await db.teammate.findFirst({ where: { id: teammateId, archivedAt: null } }))
+    if (!live)
+      return {
+        error:
+          `${manifest.name}'s ${byKey} is not picked, or its teammate is archived: open a ticket ` +
+          'so a person picks another, and say what is waiting on it.',
+      }
     return { teammateId, key: as(byKey) }
   }
   const named = await db.teammate.findFirst({

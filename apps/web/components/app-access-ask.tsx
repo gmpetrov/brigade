@@ -123,11 +123,10 @@ export function AppAccessAsk({
   onReply: (reply: AccessReply) => void
 }) {
   const { me, teammates } = useDashboard()
-  // The teammate it is for: the one the ask names (a playbook's developer), else the one asking.
-  const named = ask.app.teammate?.trim().toLowerCase()
-  const askerName = named
-    ? (teammates.find((t) => t.id === ask.app.teammate || t.name.toLowerCase() === named)?.name ??
-      ask.app.teammate!)
+  // The teammate it is for: the one the ask names (a playbook's developer), by the id Brigade
+  // put there when it stored the ticket, as granting reads it; else the one asking.
+  const askerName = ask.app.teammate
+    ? (teammates.find((t) => t.id === ask.app.teammate)?.name ?? ask.app.teammate)
     : asker
   const data = useApi<ConnectionsResponse>('/connections')
   const kind = ask.app.kind as Connection['kind']

@@ -395,6 +395,145 @@ describe('the teammates of a playbook', { skip: !database && 'no database answer
     assert.match(said.next, /never holds github/)
   })
 
+  test('an optional App is asked for the teammate that holds it, not the one installing', async () => {
+    const { handlePlaybookCall } = await import('../src/playbook-chat.js')
+    const session = await db.session.findFirst({ where: { id: ids.chat } })
+    const manifest = {
+      ...TEAM,
+      id: 'brigade/test-team-stripe',
+      apps: [...TEAM.apps, { kind: 'stripe', access: 'read', optional: true }],
+    } satisfies PlaybookManifest
+    const installation = await db.playbookInstallation.create({
+      data: {
+        playbookKey: manifest.id,
+        version: manifest.version,
+        manifest,
+        teammateId: ids.sam,
+        ownerMemberId: ids.owner,
+        settings: { support: ids.sam, inbox: ids.gmail, developer: ids.dev },
+        status: 'setup',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    const said = (await handlePlaybookCall(db, scope, session!, { id: ids.chief, name: 'Chief' }, {
+      name: 'configure_playbook',
+      installationId: installation.id,
+      settings: {},
+    } as never)) as { missing: unknown[]; next: string; error?: string }
+    assert.equal(said.error, undefined)
+    assert.deepEqual(said.missing, [])
+    assert.match(said.next, /It can also use optional Apps: stripe \(no account, for Sam\)\./)
+    assert.match(said.next, /app\.teammate set to the teammate it is for/)
+  })
+
+  test('an access ask for another teammate names it by id from the moment it is stored', async () => {
+    const { withTeammateIds } = await import('../src/hub.js')
+    // A teammate named after another's id: by id first, as granting reads it.
+    const tricky = await db.teammate.create({ data: { name: ids.dev } as never })
+    const twin = await db.teammate.create({ data: { name: 'Sam' } as never })
+    try {
+      const ticket = (teammate: string) => ({
+        sessionId: 's',
+        seq: 1,
+        event: {
+          type: 'ticket.opened',
+          at: new Date().toISOString(),
+          requestId: 'r',
+          title: 'Access',
+          asks: [
+            {
+              id: 'a',
+              type: 'access',
+              kind: 'connection',
+              what: 'GitHub',
+              app: { kind: 'github', scope: 'read_write', teammate },
+            },
+            { id: 'b', type: 'input', question: 'Which repository?' },
+          ],
+        },
+      })
+      const teammateOf = async (ref: string) => {
+        const [stored] = await withTeammateIds(scope, [ticket(ref)] as never)
+        const ask = (stored!.event as { asks: { app?: { teammate?: string } }[] }).asks[0]!
+        return ask.app?.teammate
+      }
+      assert.equal(await teammateOf(ids.dev), ids.dev)
+      assert.equal(await teammateOf('dev'), ids.dev)
+      // Two called Sam: neither, as written, and granting refuses it.
+      assert.equal(await teammateOf('Sam'), 'Sam')
+      assert.equal(await teammateOf('Nobody'), 'Nobody')
+    } finally {
+      await db.teammate.deleteMany({ where: { id: { in: [tricky.id, twin.id] } } })
+    }
+  })
+
+  test('a teammate archived since it was picked is asked again, and holds no App', async () => {
+    const { handlePlaybookCall } = await import('../src/playbook-chat.js')
+    const session = await db.session.findFirst({ where: { id: ids.chat } })
+    const gone = await db.teammate.create({ data: { name: 'Gone' } as never })
+    const installation = await db.playbookInstallation.create({
+      data: {
+        playbookKey: TEAM.id,
+        version: TEAM.version,
+        manifest: TEAM,
+        teammateId: ids.sam,
+        ownerMemberId: ids.owner,
+        settings: { support: ids.sam, inbox: ids.gmail, developer: gone.id },
+        status: 'setup',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    await db.teammate.updateMany({ where: { id: gone.id }, data: { archivedAt: new Date() } })
+    const said = (await handlePlaybookCall(db, scope, session!, { id: ids.chief, name: 'Chief' }, {
+      name: 'configure_playbook',
+      installationId: installation.id,
+      settings: {},
+    } as never)) as {
+      missing: { key: string }[]
+      apps: { name: string; holder: unknown; status: string }[]
+    }
+    assert.deepEqual(
+      said.missing.map((q) => q.key),
+      ['developer'],
+    )
+    const github = said.apps.find((a) => a.name === 'github')!
+    assert.equal(github.holder, null)
+    assert.equal(github.status, 'missing')
+  })
+
+  test('an installation in a dry run under way waits for it before moving to the new version', async () => {
+    const { upgradeSetup, templates } = await import('../src/playbooks.js')
+    const template = templates().get('brigade/support-bugs')!
+    const installation = await db.playbookInstallation.create({
+      data: {
+        playbookKey: template.manifest.id,
+        version: '1.0.0',
+        manifest: template.manifest,
+        teammateId: ids.sam,
+        ownerMemberId: ids.owner,
+        settings: {},
+        status: 'dry_run',
+        createdByMemberId: ids.owner,
+      } as never,
+    })
+    const dryRun = await db.playbookDryRun.create({
+      data: {
+        installationId: installation.id,
+        teammateId: ids.sam,
+        startedByMemberId: ids.owner,
+        status: 'running',
+      } as never,
+    })
+    const installer = { ...scope, memberId: ids.owner }
+    assert.equal((await upgradeSetup(db, installer, installation, template)).version, '1.0.0')
+    await db.playbookDryRun.updateMany({ where: { id: dryRun.id }, data: { status: 'done' } })
+    assert.equal(
+      (await upgradeSetup(db, installer, installation, template)).version,
+      template.manifest.version,
+    )
+    await db.playbookInstallation.deleteMany({ where: { id: installation.id } })
+  })
+
   test('an installation still in setup moves to the new version, its answers kept', async () => {
     const { handlePlaybookCall } = await import('../src/playbook-chat.js')
     const { templates } = await import('../src/playbooks.js')

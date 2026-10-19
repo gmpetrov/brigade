@@ -496,7 +496,9 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     ]
     assert.equal(playbookActionOf(actions, 'gmail', 'gmail_send'), 'reply')
     assert.equal(playbookActionOf(actions, 'mixpanel', 'mixpanel_annotate'), 'annotate')
-    assert.equal(playbookActionOf(actions, 'mcp', 'posthog_annotate'), 'annotate')
+    // PostHog is a built-in App now: a server added by its URL naming its tools after it is not it.
+    assert.equal(playbookActionOf(actions, 'posthog', 'posthog_annotate'), 'annotate')
+    assert.equal(playbookActionOf(actions, 'mcp', 'posthog_annotate'), null)
     // A server added by its URL whose tool falls in a built-in App's names: an unlisted write.
     assert.equal(playbookActionOf(actions, 'mcp', 'github_merge_pull_request'), null)
     assert.equal(playbookActionOf(actions, 'mcp', 'mixpanel_annotate'), null)
@@ -624,12 +626,13 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     // Optional: nothing it asks for unasked, and no dry run waits for it.
     assert.doesNotMatch(sam.next, /Apps it still needs/)
 
-    // One with the inbox alone: the analytics tool is offered too, as an App to connect.
+    // One with the inbox alone: the analytics tool is offered too, as an App to connect, for Lee
+    // (its teammate), not for Sam who installs it.
     const lee = await configure(ids.stripeGmailOnly)
     assert.equal(lee.error, undefined)
     assert.equal(
       offer(lee.next),
-      'analytics (mixpanel or an MCP server added by its URL) (no account), stripe (no account)',
+      'analytics (mixpanel or an MCP server added by its URL) (no account, for Lee), stripe (no account, for Lee)',
     )
     assert.doesNotMatch(lee.next, /Apps it still needs/)
 

@@ -344,16 +344,17 @@ async function accountToGrant(
   return account
 }
 
-/** The teammate an access ask is for: the one it names, by id or name, else the one asking. */
+/**
+ * The teammate an access ask is for: the one it names, else the one asking. Brigade put its id
+ * there when the ticket was stored (withTeammateIds), which the card shows too: by id alone.
+ */
 async function accessHolder(db: ScopedDb, asker: { id: string }, ref: string | undefined) {
   if (!ref?.trim()) return asker
-  const name = ref.trim()
-  const teammate =
-    (await db.teammate.findFirst({ where: { id: name, archivedAt: null } })) ??
-    (await db.teammate.findFirst({
-      where: { name: { equals: name, mode: 'insensitive' }, archivedAt: null },
-    }))
-  if (!teammate) throw new HTTPException(404, { message: `No teammate is called "${name}"` })
+  const teammate = await db.teammate.findFirst({ where: { id: ref.trim(), archivedAt: null } })
+  if (!teammate)
+    throw new HTTPException(404, {
+      message: `This access is for "${ref}", which is not one of the workspace's teammates (or is archived). Decline it, and the teammate asks again.`,
+    })
   return teammate
 }
 
