@@ -554,3 +554,7 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   Every teammate acts as the GitHub App, and GitHub refuses a verdict on the app's own pull request, so there a
   review is a comment that starts with the verdict, and the verdict itself lives in Brigade. A repository requiring
   an approving review needs a person to approve on GitHub, or the app allowed to bypass the rule.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
