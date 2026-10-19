@@ -10,6 +10,7 @@ import {
   bareToolName,
   asksParallel,
   childNote,
+  fromParent,
   forPeople,
   noteThreads,
   formatMention,
@@ -123,7 +124,7 @@ export type Item =
       /** Given to this teammate during its running turn. */
       steeredTo?: string
       /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
-      brigade?: 'task' | 'report' | 'follow' | 'dry_run'
+      brigade?: NonNullable<ReturnType<typeof childNote>>
     }
   | {
       kind: 'assistant'
@@ -1504,6 +1505,8 @@ export function ThreadItems({
               </div>
             )
           }
+          // What the parent's teammate wrote later: who, above their words.
+          const parent = item.brigade === 'parent' ? fromParent(item.text) : null
           return (
             <div
               key={item.key}
@@ -1511,17 +1514,18 @@ export function ThreadItems({
               className="rounded-xl border bg-card px-4 py-3 text-sm"
             >
               <p className="mb-1 text-xs font-medium text-muted-foreground">
-                {item.brigade === 'report'
-                  ? 'Reports from child threads'
-                  : item.brigade === 'follow'
-                    ? 'Report from a thread this one follows'
-                    : item.brigade === 'dry_run'
-                      ? 'Dry run done'
-                      : 'Work from the parent thread'}
+                {parent
+                  ? `${parent.from} wrote from the parent thread “${parent.parentTitle}”`
+                  : item.brigade === 'report'
+                    ? 'Reports from child threads'
+                    : item.brigade === 'follow'
+                      ? 'Report from a thread this one follows'
+                      : item.brigade === 'dry_run'
+                        ? 'Dry run done'
+                        : 'Work from the parent thread'}
               </p>
-              <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                <MessageWithCode text={forPeople(item.text)} />
-              </div>
+              {/* A teammate or Brigade wrote it, not a person: Markdown, like a teammate's reply. */}
+              <Markdown text={parent ? parent.text : forPeople(item.text)} />
             </div>
           )
         }

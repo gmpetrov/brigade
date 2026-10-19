@@ -118,8 +118,8 @@ export function QueuedMessages({
                   m.memberId === null &&
                   (childNote(m.text) === 'report'
                     ? 'Reports from child threads'
-                    : childNote(m.text) === 'task'
-                      ? 'Work from the parent thread'
+                    : childNote(m.text) === 'task' || childNote(m.text) === 'parent'
+                      ? 'From the parent thread'
                       : 'From Brigade')
                 return (
                   <li key={m.messageId} className="py-2.5">

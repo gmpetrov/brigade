@@ -201,14 +201,30 @@ const REPORT_HEADS = [
 /** How the note that a playbook's dry run is done begins (src/playbook-dry-runs.ts in the API). */
 export const DRY_RUN_HEAD = 'The dry run of the playbook '
 
+/** How a message from the parent's teammate to its child (message_thread) begins: who, and the parent's title. */
+const PARENT_HEAD = /^\*\*(.+?)\*\* wrote from the parent thread “(.*)”:\n\n/
+
+/** What a parent's teammate tells its child later (message_thread), as the child receives it. */
+export const parentMessage = (input: { from: string; parentTitle: string; text: string }) =>
+  `**${input.from}** wrote from the parent thread “${input.parentTitle}”:\n\n${input.text}`
+
+/** A message from the parent (parentMessage) read back: who wrote it, from where, and what. */
+export function fromParent(text: string) {
+  const m = PARENT_HEAD.exec(text)
+  return m ? { from: m[1]!, parentTitle: m[2]!, text: text.slice(m[0].length) } : null
+}
+
 /**
  * Whether a message nobody typed is Brigade's, about child threads: a child's work
- * from its parent (task), reports brought to a parent (report) or to a thread that follows
- * one (follow); or that a playbook's dry run is done (dry_run). The dashboard shows those as
- * notes rather than as a person's message.
+ * from its parent (task) and what its parent tells it later (parent), reports brought to a
+ * parent (report) or to a thread that follows one (follow); or that a playbook's dry run is
+ * done (dry_run). The dashboard shows those as notes rather than as a person's message.
  */
-export function childNote(text: string): 'task' | 'report' | 'follow' | 'dry_run' | null {
+export function childNote(
+  text: string,
+): 'task' | 'parent' | 'report' | 'follow' | 'dry_run' | null {
   if (REPORT_HEADS.some((head) => head.test(text))) return 'report'
+  if (PARENT_HEAD.test(text)) return 'parent'
   if (text.startsWith(FOLLOW_HEAD)) return 'follow'
   if (text.startsWith(DRY_RUN_HEAD)) return 'dry_run'
   const first = text.split('\n', 1)[0] ?? ''
