@@ -824,6 +824,208 @@ await check('uninstalled, its dry run goes with it', async () => {
   await q(`delete from "Connection" where id = $1`, [github.id])
 })
 
+// =============================================================================
+// Autonomy per action, grouped approvals, follow_thread
+// =============================================================================
+
+let live
+const sends = {}
+// A run's mail: it sorts the mail as `case`, then replies; what the reply call returned is kept.
+const replying = (marker, cas) =>
+  scripts.unshift((p) =>
+    p.text.includes(marker)
+      ? async (p) => {
+          const t = await schedule(p, { name: 'playbook_triage', case: cas })
+          assert.ok(t.ok, JSON.stringify(t))
+          sends[marker] = await connector(p, gmail.id, 'gmail_send', {
+            to: ['kim@customer.test'],
+            subject: `Re: ${marker}`,
+            body: 'Thanks for writing. Here is how.',
+          })
+          return 'Replied.'
+        }
+      : undefined,
+  )
+const mail = (marker) =>
+  receive({
+    id: `a${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+    threadId: `ta-${marker.replace(/\W+/g, '-')}`,
+    from: 'Kim <kim@customer.test>',
+    to: 'support@acme.test',
+    subject: marker,
+    body: marker,
+  })
+const openApproval = (runMarker) =>
+  until(
+    `the approval for “${runMarker}”`,
+    async () =>
+      (
+        await q(
+          `select t.id, t.payload from "Ticket" t join "Session" s on s.id = t."sessionId"
+           where t.status = 'open' and t.payload->>'playbookInstallationId' = $1 and s.title like $2`,
+          [live.id, `%${runMarker}%`],
+        )
+      )[0],
+    150_000,
+  )
+
+await check(
+  'a reply asks first; its approval waits in the playbook’s group, decided in bulk',
+  async () => {
+    live = await call('/playbooks', {
+      body: {
+        playbookKey: 'brigade/support-bugs',
+        teammateId: sam.id,
+        settings: {
+          product: 'Acme',
+          inbox: gmail.id,
+          address: 'support@acme.test',
+          docs: 'https://docs.acme.test',
+          repo: 'acme/web',
+        },
+      },
+    })
+    live = (await call(`/playbooks/${live.id}/activate`, { body: {} })).playbook
+    assert.equal(live.actions.find((a) => a.key === 'reply').level, 'ask')
+    // The mailbox's events held back by the earlier cap reach this playbook first: wait until a
+    // fresh mail of its own has started a run, so the checks below see their runs in time.
+    mail('Warm-up')
+    await until(
+      'the inbox to catch up',
+      async () =>
+        (
+          await q(
+            `select id from "Session" where title like '%Warm-up%' and "createdAt" > now() - interval '15 minutes'`,
+          )
+        ).length > 0,
+      600_000,
+    )
+    replying('Can I pay yearly?', 'documented_question')
+    mail('Can I pay yearly?')
+    const ticket = await openApproval('Can I pay yearly?')
+    assert.equal(ticket.payload.playbookActionKey, 'reply')
+    assert.ok(ticket.payload.playbookRunId)
+    // One group for the playbook, listing the draft.
+    const group = await call(`/playbooks/${live.id}/approvals`)
+    const item = group.items.find((i) => i.ticketId === ticket.id)
+    assert.ok(item, 'in the group')
+    assert.equal(item.action.key, 'reply')
+    assert.ok(item.canDecide)
+    const listed = (await call('/tickets')).find((t) => t.id === ticket.id)
+    assert.equal(listed?.playbook?.id, live.id)
+    // Approved in bulk: it goes, and does not count toward letting it reply alone.
+    const decided = await call(`/playbooks/${live.id}/approvals/decide`, {
+      body: { ticketIds: [ticket.id], approve: true },
+    })
+    assert.deepEqual(decided.decided, [ticket.id])
+    await until('the reply', () => sends['Can I pay yearly?'], 30_000)
+    assert.ok(sends['Can I pay yearly?'].ok, JSON.stringify(sends['Can I pay yearly?']))
+    const [after] = await q(`select payload from "Ticket" where id = $1`, [ticket.id])
+    assert.equal(after.payload.decidedInBulk, true)
+    const reply = (await call(`/playbooks/${live.id}`)).actions.find((a) => a.key === 'reply')
+    assert.equal(reply.approved, 0, 'a bulk approval is not counted')
+  },
+)
+
+await check(
+  'on its own for documented questions: replies alone there, asks elsewhere; flagged, it asks again',
+  async () => {
+    const set = await call(`/playbooks/${live.id}/actions/reply`, {
+      method: 'PATCH',
+      body: { level: 'auto', conditions: { cases: ['documented_question'] } },
+    })
+    assert.equal(set.actions.find((a) => a.key === 'reply').level, 'auto')
+    // A documented question: no ticket, the reply goes.
+    replying('Where are your docs?', 'documented_question')
+    mail('Where are your docs?')
+    await until('the reply alone', () => sends['Where are your docs?'], 150_000)
+    assert.ok(sends['Where are your docs?'].ok, JSON.stringify(sends['Where are your docs?']))
+    const tickets = await q(
+      `select t.id from "Ticket" t join "Session" s on s.id = t."sessionId" where s.title like '%Where are your docs?%'`,
+    )
+    assert.equal(tickets.length, 0, 'nobody was asked')
+    // Another case: it asks; denied, nothing is sent.
+    replying('My account is locked', 'account_problem')
+    mail('My account is locked')
+    const ticket = await openApproval('My account is locked')
+    await call(`/tickets/${ticket.id}/resolve`, { body: { approved: false } })
+    await until('the denied reply', () => sends['My account is locked'], 30_000)
+    assert.equal(sends['My account is locked'].ok, false)
+    // The sheet lists what it did alone; marked as wrong, the reply asks again.
+    const sheet = await call(`/playbooks/${live.id}`)
+    const alone = sheet.autoCalls.find((c) => c.actionKey === 'reply')
+    assert.ok(alone, 'listed under Done on its own')
+    const flagged = await call(`/playbooks/${live.id}/calls/${alone.id}/flag`, { body: {} })
+    const back = (flagged.actions ?? (await call(`/playbooks/${live.id}`)).actions).find(
+      (a) => a.key === 'reply',
+    )
+    assert.equal(back.level, 'ask')
+    assert.equal(back.demotedReason, 'flagged')
+  },
+)
+
+await check('two runs wait on one fix: the second follows it and hears its report', async () => {
+  const ids = {}
+  scripts.unshift((p) =>
+    p.text.includes('Export fails for us')
+      ? async (p) => {
+          await schedule(p, { name: 'playbook_triage', case: 'bug' })
+          const r = await schedule(p, {
+            name: 'start_child',
+            title: 'Fix the CSV export',
+            instructions: 'Fix the CSV export that fails with a 500 for every customer.',
+            wait: false,
+          })
+          assert.ok(r.ok, JSON.stringify(r))
+          ids.fix = r.output.threadId
+          ids.first = p.sessionId
+          return 'A fix is on its way.'
+        }
+      : undefined,
+  )
+  // The fix finishes only once the second run follows it.
+  scripts.unshift((p) =>
+    p.text.includes('Fix the CSV export that fails')
+      ? async () => {
+          await until('the follow', () => ids.followed, 150_000)
+          return 'Fixed in acme/web#12: the export streams its rows now.'
+        }
+      : undefined,
+  )
+  scripts.unshift((p) =>
+    p.text.includes('Export is broken here too')
+      ? async (p) => {
+          await schedule(p, { name: 'playbook_triage', case: 'bug' })
+          const listed = await schedule(p, { name: 'list_children' })
+          assert.ok(listed.ok, JSON.stringify(listed))
+          ids.listed = listed.output.fromOtherRuns.some((c) => c.threadId === ids.fix)
+          const f = await schedule(p, { name: 'follow_thread', threadId: ids.fix })
+          assert.ok(f.ok, JSON.stringify(f))
+          ids.second = p.sessionId
+          ids.followed = true
+          return 'Following the fix another conversation started.'
+        }
+      : undefined,
+  )
+  mail('Export fails for us')
+  await until('the fix', () => ids.fix, 150_000)
+  mail('Export is broken here too')
+  await until('the follow', () => ids.followed, 150_000)
+  assert.ok(ids.listed, 'list_children shows the other run’s fix')
+  const woken = await until(
+    'the follower woken by the report',
+    () => promptsTo(ids.second).find((x) => x.text.includes('The thread you follow')),
+    60_000,
+  )
+  assert.match(woken.text, /Fix the CSV export/)
+  const view = await call(`/threads/${ids.fix}`)
+  assert.ok(
+    view.followers?.some((f) => f.id === ids.second),
+    'shown as followed',
+  )
+  await call(`/playbooks/${live.id}`, { method: 'DELETE' })
+})
+
 console.log(results.join('\n'))
 clearInterval(heartbeat)
 ws.close()

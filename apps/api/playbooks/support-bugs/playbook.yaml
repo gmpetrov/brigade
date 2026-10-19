@@ -61,6 +61,9 @@ actions:
     ceiling: auto
     conditions: [checks_passed]
 
+# The reply sent to the customer is its first response: the sheet times it from the mail.
+firstResponse: reply
+
 limits: { runsPerDay: 100 }
 promotion: { decisions: 30, approvedRate: 0.95 }
 dryRun: { replay: { entry: 0, last: 20 } }

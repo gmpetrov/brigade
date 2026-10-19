@@ -131,6 +131,7 @@ export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Reco
           ]
         }
       ],
+      "firstResponse": "reply",
       "limits": {
         "runsPerDay": 100
       },

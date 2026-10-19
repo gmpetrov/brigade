@@ -53,6 +53,8 @@ test('every playbook shipped with the API loads', () => {
     support.skills.map((s) => s.name),
     ['support-triage', 'bug-fix'],
   )
+  // Its reply to the customer times the first response.
+  assert.equal(support.manifest.firstResponse, 'reply')
 })
 
 test('reads a template: its manifest with defaults, its skills and their files', () => {
@@ -127,6 +129,11 @@ rejects(
   /skills\/missing has no SKILL\.md/,
 )
 rejects('no entries', (m) => (m.entries = []), /entries/)
+rejects(
+  'a first response that is not one of its actions',
+  (m) => (m.firstResponse = 'answer'),
+  /firstResponse: answer is not one of its actions/,
+)
 
 test('fill puts settings in, and leaves unknown ones', () => {
   assert.equal(fill('to:{{ address }} {{other}}', { address: 'a@b.c' }), 'to:a@b.c {{other}}')

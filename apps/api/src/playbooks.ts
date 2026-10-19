@@ -31,6 +31,7 @@ import { usableProject } from './projects.js'
 import { deleteTriggers, resync } from './routes/triggers.js'
 import { actionViews, recentAutoCalls } from './playbook-autonomy.js'
 import { dryRunView } from './playbook-dry-runs.js'
+import { playbookMetrics } from './playbook-metrics.js'
 import { createSchedule, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
 import { savePack, storeSkillFile } from './skills.js'
@@ -835,6 +836,8 @@ export async function threadPlaybook(
   | (ThreadPlaybook & {
       access: Map<string, 'read' | 'read_write'>
       actions: PlaybookManifest['actions']
+      /** The action that is its first response to an event, if it times one. */
+      firstResponse: string | null
       dryRunId: string | null
     })
   | null
@@ -855,6 +858,7 @@ export async function threadPlaybook(
     dryRunId: run.dryRunId,
     access: new Map(manifest.apps.map((a) => [a.kind, a.access])),
     actions: manifest.actions,
+    firstResponse: manifest.firstResponse ?? null,
   }
 }
 
@@ -943,19 +947,18 @@ async function toView(
   viewer?: Viewer,
 ): Promise<PlaybookInstallationView> {
   const manifest = row.manifest as PlaybookManifest
-  const week = new Date(Date.now() - 7 * DAY_MS)
   const day = new Date(Date.now() - DAY_MS)
-  const [recent, weekRuns, actions, autoCalls, dryRun, ticket] = await Promise.all([
+  const [recent, runsToday, metrics, actions, autoCalls, dryRun, ticket] = await Promise.all([
     db.playbookRun.findMany({
       where: { installationId: row.id, dryRun: false },
       orderBy: { startedAt: 'desc' },
       take: runsTaken,
       include: { rootSession: { select: { id: true, title: true, status: true } } },
     }),
-    db.playbookRun.findMany({
-      where: { installationId: row.id, dryRun: false, startedAt: { gte: week } },
-      select: { startedAt: true, endedAt: true, interventions: true },
+    db.playbookRun.count({
+      where: { installationId: row.id, dryRun: false, startedAt: { gte: day } },
     }),
+    playbookMetrics(db, row),
     actionViews(db, row, viewer),
     recentAutoCalls(db, row.id, manifest),
     db.playbookDryRun.findFirst({
@@ -965,7 +968,6 @@ async function toView(
     }),
     activationTicket(db, row.id),
   ])
-  const ended = weekRuns.filter((r) => r.endedAt)
   const settings = (row.settings ?? {}) as Record<string, string | number>
   const { missing } = withDefaults(manifest, settings)
   const recentRuns: PlaybookRunView[] = recent.map((run) => ({
@@ -1021,12 +1023,12 @@ async function toView(
         nextRunAt: s.nextRunAt?.toISOString() ?? null,
       })),
     ],
-    runsThisWeek: weekRuns.length,
-    runsToday: weekRuns.filter((r) => r.startedAt >= day).length,
+    runsThisWeek: metrics.week.runs,
+    runsToday,
     runsPerDay: manifest.limits.runsPerDay,
-    unattended: ended.length
-      ? ended.filter((r) => r.interventions === 0).length / ended.length
-      : null,
+    // The same count as its numbers: a person's message, takeover or decision is stepping in.
+    unattended: metrics.week.unattended,
+    metrics,
     recentRuns,
     autoCalls,
     ready: !missing.length && row.triggers.length + row.schedules.length > 0,

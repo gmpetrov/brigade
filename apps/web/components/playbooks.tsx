@@ -5,6 +5,8 @@ import {
   type PlaybookAutoCallView,
   type PlaybookInstallationView,
   type PlaybookLevel,
+  type PlaybookMetrics,
+  type PlaybookNumbers,
   type PlaybookRunView,
   type PlaybookTemplate,
 } from '@brigade/contracts'
@@ -377,6 +379,105 @@ function ActionRow({
   )
 }
 
+/** "45 sec", "12 min", "2.5 h", "1.5 days". */
+function duration(minutes: number) {
+  const one = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 })
+  if (minutes < 1) return `${Math.round(minutes * 60)} sec`
+  if (minutes < 60) return `${Math.round(minutes)} min`
+  if (minutes < 24 * 60) return `${one(minutes / 60)} h`
+  const days = one(minutes / (24 * 60))
+  return `${days} day${days === '1' ? '' : 's'}`
+}
+const percent = (share: number | null) => (share === null ? null : `${Math.round(share * 100)}%`)
+const decimal = (n: number | null) =>
+  n === null ? null : n.toLocaleString(undefined, { maximumFractionDigits: 1 })
+/** A triage case as the recipe names it, read as words: "documented question". */
+const caseName = (name: string | null) => (name === null ? 'No case yet' : name.replace(/_/g, ' '))
+
+type Figure = { label: string; value: (n: PlaybookNumbers) => string | null }
+
+/** The figures it shows: a first response only when it times one, bugs only when it can fix some. */
+function figures(m: PlaybookMetrics): Figure[] {
+  const all: (Figure | false)[] = [
+    { label: 'Runs', value: (n) => String(n.runs) },
+    { label: 'Unattended', value: (n) => percent(n.unattended) },
+    m.responds && {
+      label: 'First response',
+      value: (n) => (n.firstResponseMinutes === null ? null : duration(n.firstResponseMinutes)),
+    },
+    { label: 'Interventions per run', value: (n) => decimal(n.interventionsPerRun) },
+    { label: 'Escalated', value: (n) => String(n.escalations) },
+    { label: 'Writes denied', value: (n) => String(n.denied) },
+    m.fixesBugs && { label: 'Bugs fixed', value: (n) => String(n.bugsFixed) },
+    { label: 'Session minutes', value: (n) => String(Math.round(n.minutes)) },
+  ]
+  return all.filter((f): f is Figure => !!f)
+}
+
+/**
+ * Its numbers over the last 7 days, each with the 7 days before when it ran then, and a small
+ * table by triage case. First response is the median; session minutes are on its owner's plan.
+ */
+function Numbers({ metrics: m }: { metrics: PlaybookMetrics }) {
+  const sorted = m.cases.some((c) => c.case !== null)
+  return (
+    <>
+      <section className="flex flex-col gap-2">
+        <h3 className="px-1 text-sm font-medium text-muted-foreground">This week</h3>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-muted/60 px-4 py-3 sm:grid-cols-4">
+          {figures(m).map((f) => {
+            const last = m.lastWeek && f.value(m.lastWeek)
+            return (
+              <div key={f.label} className="flex min-w-0 flex-col">
+                <dt className="truncate text-xs text-muted-foreground">{f.label}</dt>
+                <dd className="text-lg font-semibold tabular-nums">{f.value(m.week) ?? '—'}</dd>
+                {last && (
+                  <dd className="truncate text-xs text-muted-foreground tabular-nums">
+                    {last} last week
+                  </dd>
+                )}
+              </div>
+            )
+          })}
+        </dl>
+      </section>
+      {sorted && (
+        <section className="flex flex-col gap-2">
+          <h3 className="px-1 text-sm font-medium text-muted-foreground">By case</h3>
+          <div className="rounded-xl bg-muted/60 pb-1.5">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 pt-3 pb-1 text-left font-normal">Case</th>
+                  <th className="px-2 pt-3 pb-1 text-right font-normal">Runs</th>
+                  <th className="px-2 pt-3 pb-1 text-right font-normal">Unattended</th>
+                  {m.responds && (
+                    <th className="px-4 pt-3 pb-1 text-right font-normal">First response</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {m.cases.map((c) => (
+                  <tr key={c.case ?? ''}>
+                    <td className="w-full max-w-0 truncate px-4 py-1.5">{caseName(c.case)}</td>
+                    <td className="px-2 py-1.5 text-right">{c.runs}</td>
+                    <td className="px-2 py-1.5 text-right">{percent(c.unattended) ?? '—'}</td>
+                    {m.responds && (
+                      <td className="px-4 py-1.5 text-right whitespace-nowrap">
+                        {c.firstResponseMinutes === null ? '—' : duration(c.firstResponseMinutes)}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
 /** A write it made on its own: its thread, and a ⋮ to mark it as wrong. */
 function AutoCallRow({
   call: c,
@@ -577,6 +678,8 @@ export function PlaybookSheet({ id }: { id: string }) {
       )}
       {error && <p className="text-sm text-destructive-text">{error}</p>}
       <p className="text-sm">{p.description}</p>
+
+      {(p.metrics.week.runs > 0 || p.metrics.lastWeek) && <Numbers metrics={p.metrics} />}
 
       {p.actions.length > 0 && (
         <Section title="Actions">

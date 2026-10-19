@@ -169,6 +169,8 @@ export const PlaybookManifest = z
       })
       .optional(),
     metrics: z.array(z.string()).default([]),
+    /** The action that answers an event (e.g. reply): its first real call in a run times the first response. */
+    firstResponse: Key.optional(),
   })
   .superRefine((m, ctx) => {
     const issue = (message: string, path: (string | number)[]) =>
@@ -205,6 +207,8 @@ export const PlaybookManifest = z
     })
     if (m.dryRun && !m.entries[m.dryRun.replay.entry])
       issue('dryRun replays an entry it does not have', ['dryRun', 'replay', 'entry'])
+    if (m.firstResponse && !m.actions.some((a) => a.key === m.firstResponse))
+      issue(`firstResponse: ${m.firstResponse} is not one of its actions`, ['firstResponse'])
   })
 export type PlaybookManifest = z.infer<typeof PlaybookManifest>
 
@@ -459,6 +463,59 @@ export type PlaybookEntryView =
       nextRunAt: string | null
     }
 
+/**
+ * A playbook's numbers over 7 days (spec "Les chiffres"), dry runs left out. A person steps in
+ * with a message or a takeover in one of a run's threads, or by deciding a ticket there.
+ */
+export type PlaybookNumbers = {
+  runs: number
+  /** Runs that ended (reported, or failed). */
+  finished: number
+  /** Share of finished runs no person stepped in, 0 to 1; null with none finished. */
+  unattended: number | null
+  /** Times a person stepped in, per run; null with no runs. */
+  interventionsPerRun: number | null
+  /** Median minutes from the event to its first response (the manifest's firstResponse); null with none. */
+  firstResponseMinutes: number | null
+  /** Runs that ended handed to a person (outcome escalated). */
+  escalations: number
+  /** Writes people refused. */
+  denied: number
+  /** Pull requests opened from its runs' threads, now merged. */
+  bugsFixed: number
+  /** Session minutes on its owner's subscription, child threads included. */
+  minutes: number
+}
+
+export type PlaybookMetrics = {
+  /** It times a first response: its manifest names a firstResponse action. */
+  responds: boolean
+  /** It can open pull requests (it has the GitHub App), so bugs fixed mean something. */
+  fixesBugs: boolean
+  /** The last 7 days. */
+  week: PlaybookNumbers
+  /** The 7 days before, to compare; null when it had no runs then. */
+  lastWeek: PlaybookNumbers | null
+  /** The last 7 days by triage case, most runs first; runs with no case yet last, as null. */
+  cases: (PlaybookNumbers & { case: string | null })[]
+}
+
+/** A playbook's last 7 days on Home: "Support and bugs: 46 mails, 41 handled on its own, 5 approved by you". */
+export type PlaybookHomeLine = {
+  /** Its installation: the line opens its sheet. */
+  id: string
+  name: string
+  /** What it counts: mails when its trigger is Gmail's (its schedules' runs left out), else runs. */
+  unit: 'mail' | 'run'
+  count: number
+  /** Ended with no person stepping in. */
+  onItsOwn: number
+  /** Those in which the member reading approved a write. */
+  approvedByYou: number
+  /** The others in which a person stepped in. */
+  withPerson: number
+}
+
 export type PlaybookInstallationView = {
   id: string
   playbookKey: string
@@ -484,6 +541,8 @@ export type PlaybookInstallationView = {
   runsPerDay: number
   /** Share of this week's finished runs with no person stepping in, 0 to 1; null with none. */
   unattended: number | null
+  /** Its numbers this week, the week before and by triage case. */
+  metrics: PlaybookMetrics
   recentRuns: PlaybookRunView[]
   /** Its latest writes on its own, newest first. */
   autoCalls: PlaybookAutoCallView[]

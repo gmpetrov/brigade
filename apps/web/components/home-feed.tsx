@@ -1,8 +1,10 @@
 'use client'
 // Home under Waiting on you: loose ends, shown as Needs a nudge (nobody is blocked, but
-// nothing moves on its own), then what came back since the member last looked. Each section
-// shows only when it has something, so a quiet day leaves the composer alone on the page.
-import { CircleAlert, Clock, MessageCircleQuestion, X } from 'lucide-react'
+// nothing moves on its own), then what came back since the member last looked, led by a line
+// per playbook that ran this week. Each section shows only when it has something, so a quiet
+// day leaves the composer alone on the page.
+import type { PlaybookHomeLine } from '@brigade/contracts'
+import { BookOpenCheck, CircleAlert, Clock, MessageCircleQuestion, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { StatusBadge, TeammateAvatar } from '@/components/dashboard'
@@ -284,8 +286,34 @@ function ResultRow({ item }: { item: HomeResult }) {
   )
 }
 
+/** "This week: 46 mails, 41 handled on its own, 5 approved by you". */
+function playbookWeek(line: PlaybookHomeLine) {
+  const parts = [
+    `${line.count} ${line.unit}${line.count === 1 ? '' : 's'}`,
+    `${line.onItsOwn} handled on its own`,
+    line.approvedByYou > 0 && `${line.approvedByYou} approved by you`,
+    line.withPerson > 0 && `${line.withPerson} needed a person`,
+  ]
+  return `This week: ${parts.filter(Boolean).join(', ')}`
+}
+
+/** A playbook's week, opening its sheet. Its line wraps rather than cut what people did. */
+function PlaybookLineRow({ line }: { line: PlaybookHomeLine }) {
+  return (
+    <li className="flex items-center gap-3 px-4 py-2.5">
+      <Icon>
+        <BookOpenCheck />
+      </Icon>
+      <Link href={`/app/routines/playbooks/${line.id}`} className="min-w-0 flex-1 rounded-sm">
+        <p className="truncate text-sm font-semibold">{line.name}</p>
+        <p className="text-xs text-muted-foreground">{playbookWeek(line)}</p>
+      </Link>
+    </li>
+  )
+}
+
 export function SinceAway({ feed }: { feed: HomeFeed }) {
-  if (!feed.results.length) return null
+  if (!feed.results.length && !feed.playbooks.length) return null
   return (
     <section aria-labelledby="since-away" className="flex flex-col gap-3">
       <SectionTitle
@@ -303,6 +331,9 @@ export function SinceAway({ feed }: { feed: HomeFeed }) {
       </SectionTitle>
       <Card className="gap-0 overflow-hidden py-0">
         <ul className="divide-y">
+          {feed.playbooks.map((line) => (
+            <PlaybookLineRow key={line.id} line={line} />
+          ))}
           {feed.results.map((item) => (
             <ResultRow key={item.thread.id} item={item} />
           ))}

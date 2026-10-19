@@ -15,6 +15,7 @@ import type {
   CredentialKind,
   CredentialSummary,
   DocumentAsset,
+  PlaybookHomeLine,
   PlaybookPromotionPayload,
   SkillProposalPayload,
   TaskColumn,
@@ -853,7 +854,12 @@ export type HomeResult = {
   pull: { repository: string; number: number; state: string } | null
 }
 
-export type HomeFeed = { looseEnds: LooseEnd[]; results: HomeResult[] }
+export type HomeFeed = {
+  looseEnds: LooseEnd[]
+  results: HomeResult[]
+  /** A line per active playbook that ran in the last 7 days. */
+  playbooks: PlaybookHomeLine[]
+}
 
 export const isAdmin = (me: Me) => me.role === 'owner' || me.role === 'admin'
 

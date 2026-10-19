@@ -72,6 +72,11 @@ globalThis.fetch = async (input, init) => {
       .slice(0, max)
     return json({ messages: found.map((m) => ({ id: m.id, threadId: m.threadId })) })
   }
+  // A send goes nowhere: it answers like Gmail, so a playbook's reply succeeds.
+  if (path === '/messages/send' && init?.method === 'POST') {
+    const sent = JSON.parse(String(init.body ?? '{}'))
+    return json({ id: `sent${Date.now()}`, threadId: sent.threadId ?? `sent${Date.now()}` })
+  }
   const one = path.match(/^\/messages\/([^/]+)$/)
   if (one) {
     const m = all.find((x) => x.id === decodeURIComponent(one[1]))

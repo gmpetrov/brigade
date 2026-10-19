@@ -2,7 +2,8 @@
 // nothing moves on its own) and what came back since they last looked. Only what
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
 // with no event for a while, a routine whose last run failed. Pull requests and
-// tickets that wait on a person are Waiting on you, not here.
+// tickets that wait on a person are Waiting on you, not here. With the results, a line
+// per active playbook that ran this week (playbook-metrics.ts).
 import {
   bareToolName,
   OFFER_CHOICES_TOOL,
@@ -13,6 +14,7 @@ import {
 } from '@brigade/contracts'
 import type { ScopedDb } from './db.js'
 import { eventsWaitingSince } from './hub.js'
+import { playbookLines } from './playbook-metrics.js'
 import { waitingOnPerson } from './pull-requests.js'
 
 const MINUTE = 60_000
@@ -89,7 +91,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     },
   })
   const ids = threads.map((t) => t.id)
-  const [latest, reads, tickets, pullsWaiting, dismissed, schedules] = await Promise.all([
+  const [latest, reads, tickets, pullsWaiting, dismissed, schedules, lines] = await Promise.all([
     ids.length
       ? db.sessionEvent.groupBy({
           by: ['sessionId', 'type'],
@@ -135,6 +137,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
         },
       },
     }),
+    // A line per active playbook that ran this week, shown with the results.
+    playbookLines(db, memberId, now),
   ])
   const max = (id: string, type: string) =>
     latest.find((l) => l.sessionId === id && l.type === type)?._max
@@ -305,7 +309,7 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     })
     .sort((a, b) => b.at.localeCompare(a.at))
 
-  return { looseEnds: loose, results: results.slice(0, LISTED) }
+  return { looseEnds: loose, results: results.slice(0, LISTED), playbooks: lines }
 }
 
 /** Set a loose end aside: it stays gone until the thing it names changes. */

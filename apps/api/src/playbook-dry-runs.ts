@@ -398,8 +398,8 @@ const minutesText = (minutes: number) =>
     ? 'under a minute'
     : `${Math.round(minutes)} minute${Math.round(minutes) === 1 ? '' : 's'}`
 
-/** Session minutes of each thread: its turns, from start to end. */
-async function sessionMinutes(db: ScopedDb, sessionIds: string[]) {
+/** Session minutes of each thread: its turns, from start to end. The playbook's numbers count them too. */
+export async function sessionMinutes(db: ScopedDb, sessionIds: string[]) {
   const minutes = new Map<string, number>()
   if (!sessionIds.length) return minutes
   const events = await db.sessionEvent.findMany({

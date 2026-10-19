@@ -332,6 +332,14 @@ export async function handleConnectorCall(
       // Its numbers only: what an amount cap sums (playbook-autonomy.ts).
       ...(onItsOwn ? { input: numbersOf(input.data) } : {}),
     })
+    // The playbook's first response went out (on its own or approved): its run's time, set once.
+    if (playbook?.firstResponse && !playbook.dryRun && playbookActionKey === playbook.firstResponse)
+      await db.playbookRun
+        .updateMany({
+          where: { id: playbook.runId, firstResponseAt: null },
+          data: { firstResponseAt: new Date() },
+        })
+        .catch((error) => console.warn(`first response bookkeeping failed: ${String(error)}`))
     // Pull requests a teammate opens or reviews feed the review loop.
     if (connection.kind === 'github')
       await notePullRequestCall(db, scope, {
