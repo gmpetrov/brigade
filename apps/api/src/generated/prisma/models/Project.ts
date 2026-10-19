@@ -250,6 +250,7 @@ export type ProjectWhereInput = {
   schedules?: Prisma.ScheduleListRelationFilter
   triggers?: Prisma.TriggerListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
+  playbookInstallations?: Prisma.PlaybookInstallationListRelationFilter
 }
 
 export type ProjectOrderByWithRelationInput = {
@@ -273,6 +274,7 @@ export type ProjectOrderByWithRelationInput = {
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   triggers?: Prisma.TriggerOrderByRelationAggregateInput
   documents?: Prisma.DocumentOrderByRelationAggregateInput
+  playbookInstallations?: Prisma.PlaybookInstallationOrderByRelationAggregateInput
 }
 
 export type ProjectWhereUniqueInput = Prisma.AtLeast<{
@@ -300,6 +302,7 @@ export type ProjectWhereUniqueInput = Prisma.AtLeast<{
   schedules?: Prisma.ScheduleListRelationFilter
   triggers?: Prisma.TriggerListRelationFilter
   documents?: Prisma.DocumentListRelationFilter
+  playbookInstallations?: Prisma.PlaybookInstallationListRelationFilter
 }, "id" | "workspaceId_name">
 
 export type ProjectOrderByWithAggregationInput = {
@@ -360,6 +363,7 @@ export type ProjectCreateInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateInput = {
@@ -382,6 +386,7 @@ export type ProjectUncheckedCreateInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUpdateInput = {
@@ -404,6 +409,7 @@ export type ProjectUpdateInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateInput = {
@@ -426,6 +432,7 @@ export type ProjectUncheckedUpdateInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateManyInput = {
@@ -691,6 +698,22 @@ export type ProjectUpdateOneRequiredWithoutRepositoriesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ProjectUpdateToOneWithWhereWithoutRepositoriesInput, Prisma.ProjectUpdateWithoutRepositoriesInput>, Prisma.ProjectUncheckedUpdateWithoutRepositoriesInput>
 }
 
+export type ProjectCreateNestedOneWithoutPlaybookInstallationsInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedCreateWithoutPlaybookInstallationsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutPlaybookInstallationsInput
+  connect?: Prisma.ProjectWhereUniqueInput
+}
+
+export type ProjectUpdateOneWithoutPlaybookInstallationsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedCreateWithoutPlaybookInstallationsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutPlaybookInstallationsInput
+  upsert?: Prisma.ProjectUpsertWithoutPlaybookInstallationsInput
+  disconnect?: Prisma.ProjectWhereInput | boolean
+  delete?: Prisma.ProjectWhereInput | boolean
+  connect?: Prisma.ProjectWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProjectUpdateToOneWithWhereWithoutPlaybookInstallationsInput, Prisma.ProjectUpdateWithoutPlaybookInstallationsInput>, Prisma.ProjectUncheckedUpdateWithoutPlaybookInstallationsInput>
+}
+
 export type ProjectCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -710,6 +733,7 @@ export type ProjectCreateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutWorkspaceInput = {
@@ -731,6 +755,7 @@ export type ProjectUncheckedCreateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutWorkspaceInput = {
@@ -797,6 +822,7 @@ export type ProjectCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutSessionsInput = {
@@ -818,6 +844,7 @@ export type ProjectUncheckedCreateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutSessionsInput = {
@@ -855,6 +882,7 @@ export type ProjectUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutSessionsInput = {
@@ -876,6 +904,7 @@ export type ProjectUncheckedUpdateWithoutSessionsInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutTasksInput = {
@@ -897,6 +926,7 @@ export type ProjectCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutTasksInput = {
@@ -918,6 +948,7 @@ export type ProjectUncheckedCreateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutTasksInput = {
@@ -955,6 +986,7 @@ export type ProjectUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutTasksInput = {
@@ -976,6 +1008,7 @@ export type ProjectUncheckedUpdateWithoutTasksInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutSchedulesInput = {
@@ -997,6 +1030,7 @@ export type ProjectCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutSchedulesInput = {
@@ -1018,6 +1052,7 @@ export type ProjectUncheckedCreateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutSchedulesInput = {
@@ -1055,6 +1090,7 @@ export type ProjectUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutSchedulesInput = {
@@ -1076,6 +1112,7 @@ export type ProjectUncheckedUpdateWithoutSchedulesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutTriggersInput = {
@@ -1097,6 +1134,7 @@ export type ProjectCreateWithoutTriggersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutTriggersInput = {
@@ -1118,6 +1156,7 @@ export type ProjectUncheckedCreateWithoutTriggersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutTriggersInput = {
@@ -1155,6 +1194,7 @@ export type ProjectUpdateWithoutTriggersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutTriggersInput = {
@@ -1176,6 +1216,7 @@ export type ProjectUncheckedUpdateWithoutTriggersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutDocumentsInput = {
@@ -1197,6 +1238,7 @@ export type ProjectCreateWithoutDocumentsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutDocumentsInput = {
@@ -1218,6 +1260,7 @@ export type ProjectUncheckedCreateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutDocumentsInput = {
@@ -1255,6 +1298,7 @@ export type ProjectUpdateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutDocumentsInput = {
@@ -1276,6 +1320,7 @@ export type ProjectUncheckedUpdateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutRepositoriesInput = {
@@ -1297,6 +1342,7 @@ export type ProjectCreateWithoutRepositoriesInput = {
   schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutRepositoriesInput = {
@@ -1318,6 +1364,7 @@ export type ProjectUncheckedCreateWithoutRepositoriesInput = {
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
   documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutRepositoriesInput = {
@@ -1355,6 +1402,7 @@ export type ProjectUpdateWithoutRepositoriesInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutRepositoriesInput = {
@@ -1371,6 +1419,111 @@ export type ProjectUncheckedUpdateWithoutRepositoriesInput = {
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectCreateWithoutPlaybookInstallationsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  icon?: string | null
+  logo?: string | null
+  url?: string | null
+  brief?: string
+  folder?: string | null
+  preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutProjectsInput
+  repositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutProjectInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutProjectInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutProjectInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectUncheckedCreateWithoutPlaybookInstallationsInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  name: string
+  icon?: string | null
+  logo?: string | null
+  url?: string | null
+  brief?: string
+  folder?: string | null
+  preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  archivedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  repositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutProjectInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutProjectInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutProjectInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectCreateOrConnectWithoutPlaybookInstallationsInput = {
+  where: Prisma.ProjectWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedCreateWithoutPlaybookInstallationsInput>
+}
+
+export type ProjectUpsertWithoutPlaybookInstallationsInput = {
+  update: Prisma.XOR<Prisma.ProjectUpdateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedUpdateWithoutPlaybookInstallationsInput>
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedCreateWithoutPlaybookInstallationsInput>
+  where?: Prisma.ProjectWhereInput
+}
+
+export type ProjectUpdateToOneWithWhereWithoutPlaybookInstallationsInput = {
+  where?: Prisma.ProjectWhereInput
+  data: Prisma.XOR<Prisma.ProjectUpdateWithoutPlaybookInstallationsInput, Prisma.ProjectUncheckedUpdateWithoutPlaybookInstallationsInput>
+}
+
+export type ProjectUpdateWithoutPlaybookInstallationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  brief?: Prisma.StringFieldUpdateOperationsInput | string
+  folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutProjectsNestedInput
+  repositories?: Prisma.ProjectRepositoryUpdateManyWithoutProjectNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectUncheckedUpdateWithoutPlaybookInstallationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  brief?: Prisma.StringFieldUpdateOperationsInput | string
+  folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  repositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutProjectNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutProjectNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
@@ -1412,6 +1565,7 @@ export type ProjectUpdateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
@@ -1433,6 +1587,7 @@ export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutProjectNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutProjectNestedInput
   documents?: Prisma.DocumentUncheckedUpdateManyWithoutProjectNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -1462,6 +1617,7 @@ export type ProjectCountOutputType = {
   schedules: number
   triggers: number
   documents: number
+  playbookInstallations: number
 }
 
 export type ProjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1471,6 +1627,7 @@ export type ProjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   schedules?: boolean | ProjectCountOutputTypeCountSchedulesArgs
   triggers?: boolean | ProjectCountOutputTypeCountTriggersArgs
   documents?: boolean | ProjectCountOutputTypeCountDocumentsArgs
+  playbookInstallations?: boolean | ProjectCountOutputTypeCountPlaybookInstallationsArgs
 }
 
 /**
@@ -1525,6 +1682,13 @@ export type ProjectCountOutputTypeCountDocumentsArgs<ExtArgs extends runtime.Typ
   where?: Prisma.DocumentWhereInput
 }
 
+/**
+ * ProjectCountOutputType without action
+ */
+export type ProjectCountOutputTypeCountPlaybookInstallationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlaybookInstallationWhereInput
+}
+
 
 export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1547,6 +1711,7 @@ export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   schedules?: boolean | Prisma.Project$schedulesArgs<ExtArgs>
   triggers?: boolean | Prisma.Project$triggersArgs<ExtArgs>
   documents?: boolean | Prisma.Project$documentsArgs<ExtArgs>
+  playbookInstallations?: boolean | Prisma.Project$playbookInstallationsArgs<ExtArgs>
   _count?: boolean | Prisma.ProjectCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["project"]>
 
@@ -1609,6 +1774,7 @@ export type ProjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   schedules?: boolean | Prisma.Project$schedulesArgs<ExtArgs>
   triggers?: boolean | Prisma.Project$triggersArgs<ExtArgs>
   documents?: boolean | Prisma.Project$documentsArgs<ExtArgs>
+  playbookInstallations?: boolean | Prisma.Project$playbookInstallationsArgs<ExtArgs>
   _count?: boolean | Prisma.ProjectCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ProjectIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1628,6 +1794,7 @@ export type $ProjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     triggers: Prisma.$TriggerPayload<ExtArgs>[]
     documents: Prisma.$DocumentPayload<ExtArgs>[]
+    playbookInstallations: Prisma.$PlaybookInstallationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2063,6 +2230,7 @@ export interface Prisma__ProjectClient<T, Null = never, ExtArgs extends runtime.
   schedules<T extends Prisma.Project$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   triggers<T extends Prisma.Project$triggersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$triggersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   documents<T extends Prisma.Project$documentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$documentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  playbookInstallations<T extends Prisma.Project$playbookInstallationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$playbookInstallationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookInstallationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2647,6 +2815,30 @@ export type Project$documentsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.DocumentScalarFieldEnum | Prisma.DocumentScalarFieldEnum[]
+}
+
+/**
+ * Project.playbookInstallations
+ */
+export type Project$playbookInstallationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlaybookInstallation
+   */
+  select?: Prisma.PlaybookInstallationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlaybookInstallation
+   */
+  omit?: Prisma.PlaybookInstallationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlaybookInstallationInclude<ExtArgs> | null
+  where?: Prisma.PlaybookInstallationWhereInput
+  orderBy?: Prisma.PlaybookInstallationOrderByWithRelationInput | Prisma.PlaybookInstallationOrderByWithRelationInput[]
+  cursor?: Prisma.PlaybookInstallationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlaybookInstallationScalarFieldEnum | Prisma.PlaybookInstallationScalarFieldEnum[]
 }
 
 /**

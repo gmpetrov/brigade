@@ -1,0 +1,67 @@
+id: brigade/support-bugs
+name: Support and bugs
+version: 1.0.0
+description: Sorts the support inbox, answers customers, fixes the bugs they report and tells them when it is fixed.
+
+apps:
+  - { kind: gmail, access: read_write }
+  - { kind: github, access: read_write }
+  - { kind: stripe, access: read, optional: true }
+  - { kind: mixpanel, access: read, optional: true }
+
+settings:
+  - { key: product, type: text, ask: 'Which product does this support cover?' }
+  - { key: inbox, type: account, app: gmail, ask: 'Which Gmail account receives the support mail?' }
+  - { key: address, type: email, ask: 'Which address do customers write to?' }
+  - { key: docs, type: url, ask: 'Where is the public documentation?' }
+  - { key: repo, type: repository, ask: 'In which repository should bugs be fixed?' }
+  - { key: signature, type: text, default: 'The {{product}} team' }
+
+entries:
+  - {
+      trigger: gmail.email_received,
+      account: '{{inbox}}',
+      options: { query: 'to:{{address}}' },
+      label: 'Support mail',
+    }
+  - {
+      schedule: '0 8 * * 1',
+      title: 'Weekly support review',
+      instructions: "Review last week's support for {{product}}: the cases, what was answered, what is still open, and what the recipe should learn. Write it in a few lines.",
+    }
+
+skills: [skills/support-triage, skills/bug-fix]
+
+actions:
+  - key: reply
+    label: Reply to the customer
+    tools: [gmail_send]
+    start: ask
+    ceiling: auto
+    conditions: [case]
+  - key: draft
+    label: Draft a reply
+    tools: [gmail_create_draft]
+    start: auto
+    ceiling: auto
+  - key: label
+    label: Label the mail
+    tools: [gmail_modify_labels]
+    start: auto
+    ceiling: auto
+  - key: open_pr
+    label: Open a pull request
+    tools: [github_create_pull_request]
+    start: auto
+    ceiling: auto
+  - key: merge
+    label: Merge a pull request
+    tools: [github_merge_pull_request]
+    start: ask
+    ceiling: auto
+    conditions: [checks_passed]
+
+limits: { runsPerDay: 100 }
+promotion: { decisions: 30, approvedRate: 0.95 }
+dryRun: { replay: { entry: 0, last: 20 } }
+metrics: [unattended, firstResponse, bugsFixed]

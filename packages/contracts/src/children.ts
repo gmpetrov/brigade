@@ -149,13 +149,17 @@ const REPORT_HEADS = [
   /^Your child thread “/,
 ]
 
+/** How the note that a playbook's dry run is done begins (src/playbook-dry-runs.ts in the API). */
+export const DRY_RUN_HEAD = 'The dry run of the playbook '
+
 /**
  * Whether a message nobody typed is Brigade's, about child threads: a child's work
- * from its parent (task) or reports brought to a parent (report). The dashboard shows
- * those as notes rather than as a person's message.
+ * from its parent (task) or reports brought to a parent (report); or that a playbook's
+ * dry run is done (dry_run). The dashboard shows those as notes rather than as a person's message.
  */
-export function childNote(text: string): 'task' | 'report' | null {
+export function childNote(text: string): 'task' | 'report' | 'dry_run' | null {
   if (REPORT_HEADS.some((head) => head.test(text))) return 'report'
+  if (text.startsWith(DRY_RUN_HEAD)) return 'dry_run'
   const first = text.split('\n', 1)[0] ?? ''
   if (first.includes(` ${CHILD_TASK_MARK} “`) && first.endsWith('and waits for your report.'))
     return 'task'

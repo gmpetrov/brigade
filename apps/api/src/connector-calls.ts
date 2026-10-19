@@ -29,6 +29,7 @@ import {
   type Operation,
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
+import { threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
 import { actingTeammate } from './thread-spec.js'
@@ -93,7 +94,17 @@ export async function handleConnectorCall(
   if (!connection || !operation)
     return result({ ok: false, error: 'Unknown connection or operation' })
 
-  const record = (data: { result: string; target: string; error?: string; ticketId?: string }) =>
+  // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
+  const playbook = await threadPlaybook(db, session.playbookRunId)
+  const playbookActionKey = playbook?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
+  const record = (data: {
+    result: string
+    target: string
+    error?: string
+    ticketId?: string
+    simulated?: boolean
+    input?: unknown
+  }) =>
     db.connectionCall.create({
       data: {
         sessionId: session.id,
@@ -101,6 +112,7 @@ export async function handleConnectorCall(
         teammateId: teammate.id,
         operation: call.operation,
         write: operation.write,
+        ...(playbookActionKey ? { playbookActionKey } : {}),
         ...data,
       } as never,
     })
@@ -132,6 +144,23 @@ export async function handleConnectorCall(
       error: `${connection.label} belongs to another member and is used only in their threads`,
     })
   }
+  if (playbook) {
+    const access = playbook.access.get(connection.kind)
+    if (!access) {
+      await record({ result: 'denied', target, error: 'not an App of the playbook' })
+      return result({
+        ok: false,
+        error: `The playbook ${playbook.name} does not use ${connection.label}`,
+      })
+    }
+    if (operation.write && access !== 'read_write') {
+      await record({ result: 'denied', target, error: 'read-only in the playbook' })
+      return result({
+        ok: false,
+        error: `The playbook ${playbook.name} only reads ${connection.label}`,
+      })
+    }
+  }
   if (connection.app.disabledTools.includes(call.operation)) {
     await record({ result: 'denied', target, error: 'tool turned off' })
     return result({ ok: false, error: `${call.operation} is turned off for ${connection.label}` })
@@ -141,6 +170,30 @@ export async function handleConnectorCall(
     return result({
       ok: false,
       error: `${teammate.name} has read-only access to ${connection.label}`,
+    })
+  }
+
+  // A playbook's dry run: the write is recorded with what it would have sent, and answered
+  // as if it went through. Nothing leaves, and nobody is asked. A deny still stands.
+  if (operation.write && playbook?.dryRun) {
+    const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
+    if (policy === 'deny') {
+      await record({ result: 'denied', target, error: 'policy denies connector writes' })
+      return result({
+        ok: false,
+        error: `${teammate.name} may not make changes through connectors`,
+      })
+    }
+    await record({ result: 'ok', target, simulated: true, input: input.data })
+    return result({
+      ok: true,
+      output: {
+        simulated: true,
+        id: `dry-run-${call.callId}`,
+        note:
+          `Dry run: ${call.operation} (${target}) was recorded for the report and not sent. Carry on as if ` +
+          'it went through.',
+      },
     })
   }
 

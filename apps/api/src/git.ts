@@ -216,7 +216,7 @@ export type GitRequest = {
   scope: Scope
   db: ScopedDb
   /** Unset for a fetch-only token outside any thread. */
-  session?: { id: string; origin: string }
+  session?: { id: string; origin: string; dryRun?: boolean }
   teammate: { id: string; name: string; caps: unknown; permissionPolicy: unknown }
   fullName: string
   /** Unset for a public repository no connection reaches: anonymous reads only. */
@@ -247,11 +247,15 @@ export async function authorize(
   let session: GitRequest['session']
   let teammate: GitRequest['teammate'] | null
   if (claims.sessionId) {
-    session =
-      (await db.session.findFirst({
-        where: { id: claims.sessionId, computerId: claims.computerId },
-      })) ?? undefined
-    if (!session) throw new GitRefused('Brigade: unknown thread')
+    const row = await db.session.findFirst({
+      where: { id: claims.sessionId, computerId: claims.computerId },
+    })
+    if (!row) throw new GitRefused('Brigade: unknown thread')
+    // A playbook's dry run: its work stays in its folder.
+    const run = row.playbookRunId
+      ? await db.playbookRun.findFirst({ where: { id: row.playbookRunId }, select: { dryRun: true } })
+      : null
+    session = { id: row.id, origin: row.origin, dryRun: !!run?.dryRun }
     const seat = await db.threadTeammate.findFirst({
       where: { sessionId: session.id, teammateId: claims.teammateId },
       include: { teammate: true },
@@ -314,6 +318,8 @@ export async function authorize(
 export function pushRefusal(request: GitRequest) {
   const { teammate, via, fullName } = request
   if (!request.session) return 'Brigade: this token only fetches'
+  if (request.session.dryRun)
+    return "Brigade: this is a playbook's dry run, so nothing is pushed: the work stays in this folder"
   if (!via) return `Brigade: ${fullName} is public and not in a GitHub connection; it is read-only`
   if (!via.write) return `Brigade: ${teammate.name} has read-only access to this GitHub connection`
   const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'

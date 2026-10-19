@@ -306,3 +306,33 @@ export const NotifyPreset = {
 } as const
 
 export type NotifyPreset = (typeof NotifyPreset)[keyof typeof NotifyPreset]
+
+
+export const PlaybookStatus = {
+  setup: 'setup',
+  dry_run: 'dry_run',
+  active: 'active',
+  paused: 'paused'
+} as const
+
+export type PlaybookStatus = (typeof PlaybookStatus)[keyof typeof PlaybookStatus]
+
+
+export const PlaybookActionLevel = {
+  ask: 'ask',
+  auto: 'auto',
+  deny: 'deny'
+} as const
+
+export type PlaybookActionLevel = (typeof PlaybookActionLevel)[keyof typeof PlaybookActionLevel]
+
+
+export const PlaybookRunStatus = {
+  running: 'running',
+  waiting_person: 'waiting_person',
+  waiting_event: 'waiting_event',
+  done: 'done',
+  failed: 'failed'
+} as const
+
+export type PlaybookRunStatus = (typeof PlaybookRunStatus)[keyof typeof PlaybookRunStatus]

@@ -43,6 +43,7 @@ export type ScheduleMinAggregateOutputType = {
   parentSessionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  playbookInstallationId: string | null
 }
 
 export type ScheduleMaxAggregateOutputType = {
@@ -63,6 +64,7 @@ export type ScheduleMaxAggregateOutputType = {
   parentSessionId: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  playbookInstallationId: string | null
 }
 
 export type ScheduleCountAggregateOutputType = {
@@ -83,6 +85,7 @@ export type ScheduleCountAggregateOutputType = {
   parentSessionId: number
   createdAt: number
   updatedAt: number
+  playbookInstallationId: number
   _all: number
 }
 
@@ -105,6 +108,7 @@ export type ScheduleMinAggregateInputType = {
   parentSessionId?: true
   createdAt?: true
   updatedAt?: true
+  playbookInstallationId?: true
 }
 
 export type ScheduleMaxAggregateInputType = {
@@ -125,6 +129,7 @@ export type ScheduleMaxAggregateInputType = {
   parentSessionId?: true
   createdAt?: true
   updatedAt?: true
+  playbookInstallationId?: true
 }
 
 export type ScheduleCountAggregateInputType = {
@@ -145,6 +150,7 @@ export type ScheduleCountAggregateInputType = {
   parentSessionId?: true
   createdAt?: true
   updatedAt?: true
+  playbookInstallationId?: true
   _all?: true
 }
 
@@ -238,6 +244,7 @@ export type ScheduleGroupByOutputType = {
   parentSessionId: string | null
   createdAt: Date
   updatedAt: Date
+  playbookInstallationId: string | null
   _count: ScheduleCountAggregateOutputType | null
   _min: ScheduleMinAggregateOutputType | null
   _max: ScheduleMaxAggregateOutputType | null
@@ -279,6 +286,7 @@ export type ScheduleWhereInput = {
   parentSessionId?: Prisma.StringNullableFilter<"Schedule"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
+  playbookInstallationId?: Prisma.StringNullableFilter<"Schedule"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   owner?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
@@ -286,6 +294,7 @@ export type ScheduleWhereInput = {
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   parentSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
+  playbookInstallation?: Prisma.XOR<Prisma.PlaybookInstallationNullableScalarRelationFilter, Prisma.PlaybookInstallationWhereInput> | null
 }
 
 export type ScheduleOrderByWithRelationInput = {
@@ -306,6 +315,7 @@ export type ScheduleOrderByWithRelationInput = {
   parentSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  playbookInstallationId?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
   owner?: Prisma.MemberOrderByWithRelationInput
@@ -313,6 +323,7 @@ export type ScheduleOrderByWithRelationInput = {
   project?: Prisma.ProjectOrderByWithRelationInput
   parentSession?: Prisma.SessionOrderByWithRelationInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
+  playbookInstallation?: Prisma.PlaybookInstallationOrderByWithRelationInput
 }
 
 export type ScheduleWhereUniqueInput = Prisma.AtLeast<{
@@ -336,6 +347,7 @@ export type ScheduleWhereUniqueInput = Prisma.AtLeast<{
   parentSessionId?: Prisma.StringNullableFilter<"Schedule"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
+  playbookInstallationId?: Prisma.StringNullableFilter<"Schedule"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   owner?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
@@ -343,6 +355,7 @@ export type ScheduleWhereUniqueInput = Prisma.AtLeast<{
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
   parentSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
+  playbookInstallation?: Prisma.XOR<Prisma.PlaybookInstallationNullableScalarRelationFilter, Prisma.PlaybookInstallationWhereInput> | null
 }, "id">
 
 export type ScheduleOrderByWithAggregationInput = {
@@ -363,6 +376,7 @@ export type ScheduleOrderByWithAggregationInput = {
   parentSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  playbookInstallationId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.ScheduleCountOrderByAggregateInput
   _max?: Prisma.ScheduleMaxOrderByAggregateInput
   _min?: Prisma.ScheduleMinOrderByAggregateInput
@@ -389,6 +403,7 @@ export type ScheduleScalarWhereWithAggregatesInput = {
   parentSessionId?: Prisma.StringNullableWithAggregatesFilter<"Schedule"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Schedule"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Schedule"> | Date | string
+  playbookInstallationId?: Prisma.StringNullableWithAggregatesFilter<"Schedule"> | string | null
 }
 
 export type ScheduleCreateInput = {
@@ -410,6 +425,7 @@ export type ScheduleCreateInput = {
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateInput = {
@@ -430,6 +446,7 @@ export type ScheduleUncheckedCreateInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -452,6 +469,7 @@ export type ScheduleUpdateInput = {
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateInput = {
@@ -472,6 +490,7 @@ export type ScheduleUncheckedUpdateInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -493,6 +512,7 @@ export type ScheduleCreateManyInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateManyMutationInput = {
@@ -527,6 +547,7 @@ export type ScheduleUncheckedUpdateManyInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleListRelationFilter = {
@@ -562,6 +583,7 @@ export type ScheduleCountOrderByAggregateInput = {
   parentSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  playbookInstallationId?: Prisma.SortOrder
 }
 
 export type ScheduleMaxOrderByAggregateInput = {
@@ -582,6 +604,7 @@ export type ScheduleMaxOrderByAggregateInput = {
   parentSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  playbookInstallationId?: Prisma.SortOrder
 }
 
 export type ScheduleMinOrderByAggregateInput = {
@@ -602,6 +625,7 @@ export type ScheduleMinOrderByAggregateInput = {
   parentSessionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  playbookInstallationId?: Prisma.SortOrder
 }
 
 export type ScheduleCreateNestedManyWithoutOwnerInput = {
@@ -872,6 +896,48 @@ export type ScheduleUncheckedUpdateManyWithoutProjectNestedInput = {
   deleteMany?: Prisma.ScheduleScalarWhereInput | Prisma.ScheduleScalarWhereInput[]
 }
 
+export type ScheduleCreateNestedManyWithoutPlaybookInstallationInput = {
+  create?: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput> | Prisma.ScheduleCreateWithoutPlaybookInstallationInput[] | Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput[]
+  connectOrCreate?: Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput | Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput[]
+  createMany?: Prisma.ScheduleCreateManyPlaybookInstallationInputEnvelope
+  connect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+}
+
+export type ScheduleUncheckedCreateNestedManyWithoutPlaybookInstallationInput = {
+  create?: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput> | Prisma.ScheduleCreateWithoutPlaybookInstallationInput[] | Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput[]
+  connectOrCreate?: Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput | Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput[]
+  createMany?: Prisma.ScheduleCreateManyPlaybookInstallationInputEnvelope
+  connect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+}
+
+export type ScheduleUpdateManyWithoutPlaybookInstallationNestedInput = {
+  create?: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput> | Prisma.ScheduleCreateWithoutPlaybookInstallationInput[] | Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput[]
+  connectOrCreate?: Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput | Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput[]
+  upsert?: Prisma.ScheduleUpsertWithWhereUniqueWithoutPlaybookInstallationInput | Prisma.ScheduleUpsertWithWhereUniqueWithoutPlaybookInstallationInput[]
+  createMany?: Prisma.ScheduleCreateManyPlaybookInstallationInputEnvelope
+  set?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  disconnect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  delete?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  connect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  update?: Prisma.ScheduleUpdateWithWhereUniqueWithoutPlaybookInstallationInput | Prisma.ScheduleUpdateWithWhereUniqueWithoutPlaybookInstallationInput[]
+  updateMany?: Prisma.ScheduleUpdateManyWithWhereWithoutPlaybookInstallationInput | Prisma.ScheduleUpdateManyWithWhereWithoutPlaybookInstallationInput[]
+  deleteMany?: Prisma.ScheduleScalarWhereInput | Prisma.ScheduleScalarWhereInput[]
+}
+
+export type ScheduleUncheckedUpdateManyWithoutPlaybookInstallationNestedInput = {
+  create?: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput> | Prisma.ScheduleCreateWithoutPlaybookInstallationInput[] | Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput[]
+  connectOrCreate?: Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput | Prisma.ScheduleCreateOrConnectWithoutPlaybookInstallationInput[]
+  upsert?: Prisma.ScheduleUpsertWithWhereUniqueWithoutPlaybookInstallationInput | Prisma.ScheduleUpsertWithWhereUniqueWithoutPlaybookInstallationInput[]
+  createMany?: Prisma.ScheduleCreateManyPlaybookInstallationInputEnvelope
+  set?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  disconnect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  delete?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  connect?: Prisma.ScheduleWhereUniqueInput | Prisma.ScheduleWhereUniqueInput[]
+  update?: Prisma.ScheduleUpdateWithWhereUniqueWithoutPlaybookInstallationInput | Prisma.ScheduleUpdateWithWhereUniqueWithoutPlaybookInstallationInput[]
+  updateMany?: Prisma.ScheduleUpdateManyWithWhereWithoutPlaybookInstallationInput | Prisma.ScheduleUpdateManyWithWhereWithoutPlaybookInstallationInput[]
+  deleteMany?: Prisma.ScheduleScalarWhereInput | Prisma.ScheduleScalarWhereInput[]
+}
+
 export type ScheduleCreateWithoutOwnerInput = {
   id?: string
   organizationId: string
@@ -890,6 +956,7 @@ export type ScheduleCreateWithoutOwnerInput = {
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutOwnerInput = {
@@ -909,6 +976,7 @@ export type ScheduleUncheckedCreateWithoutOwnerInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -959,6 +1027,7 @@ export type ScheduleScalarWhereInput = {
   parentSessionId?: Prisma.StringNullableFilter<"Schedule"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Schedule"> | Date | string
+  playbookInstallationId?: Prisma.StringNullableFilter<"Schedule"> | string | null
 }
 
 export type ScheduleCreateWithoutWorkspaceInput = {
@@ -979,6 +1048,7 @@ export type ScheduleCreateWithoutWorkspaceInput = {
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutWorkspaceInput = {
@@ -998,6 +1068,7 @@ export type ScheduleUncheckedCreateWithoutWorkspaceInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -1045,6 +1116,7 @@ export type ScheduleCreateWithoutTeammateInput = {
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutTeammateInput = {
@@ -1064,6 +1136,7 @@ export type ScheduleUncheckedCreateWithoutTeammateInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -1095,6 +1168,7 @@ export type ScheduleCreateWithoutCreatedByTeammateInput = {
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutCreatedByTeammateInput = {
@@ -1114,6 +1188,7 @@ export type ScheduleUncheckedCreateWithoutCreatedByTeammateInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -1177,6 +1252,7 @@ export type ScheduleCreateWithoutSessionsInput = {
   createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSchedulesCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutSessionsInput = {
@@ -1197,6 +1273,7 @@ export type ScheduleUncheckedCreateWithoutSessionsInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleCreateOrConnectWithoutSessionsInput = {
@@ -1222,6 +1299,7 @@ export type ScheduleCreateWithoutParentSessionInput = {
   createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSchedulesCreatedInput
   project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutParentSessionInput = {
@@ -1241,6 +1319,7 @@ export type ScheduleUncheckedCreateWithoutParentSessionInput = {
   projectId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -1283,6 +1362,7 @@ export type ScheduleUpdateWithoutSessionsInput = {
   createdByTeammate?: Prisma.TeammateUpdateOneWithoutSchedulesCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutSessionsInput = {
@@ -1303,6 +1383,7 @@ export type ScheduleUncheckedUpdateWithoutSessionsInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleUpsertWithWhereUniqueWithoutParentSessionInput = {
@@ -1339,6 +1420,7 @@ export type ScheduleCreateWithoutProjectInput = {
   createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSchedulesCreatedInput
   parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
   sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+  playbookInstallation?: Prisma.PlaybookInstallationCreateNestedOneWithoutSchedulesInput
 }
 
 export type ScheduleUncheckedCreateWithoutProjectInput = {
@@ -1358,6 +1440,7 @@ export type ScheduleUncheckedCreateWithoutProjectInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
 }
 
@@ -1387,6 +1470,74 @@ export type ScheduleUpdateManyWithWhereWithoutProjectInput = {
   data: Prisma.XOR<Prisma.ScheduleUpdateManyMutationInput, Prisma.ScheduleUncheckedUpdateManyWithoutProjectInput>
 }
 
+export type ScheduleCreateWithoutPlaybookInstallationInput = {
+  id?: string
+  organizationId: string
+  title: string
+  instructions: string
+  cron: string
+  timezone: string
+  pausedAt?: Date | string | null
+  nextRunAt?: Date | string | null
+  lastError?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutSchedulesInput
+  teammate: Prisma.TeammateCreateNestedOneWithoutSchedulesInput
+  owner: Prisma.MemberCreateNestedOneWithoutSchedulesInput
+  createdByTeammate?: Prisma.TeammateCreateNestedOneWithoutSchedulesCreatedInput
+  project?: Prisma.ProjectCreateNestedOneWithoutSchedulesInput
+  parentSession?: Prisma.SessionCreateNestedOneWithoutReportingSchedulesInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutScheduleInput
+}
+
+export type ScheduleUncheckedCreateWithoutPlaybookInstallationInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  title: string
+  instructions: string
+  cron: string
+  timezone: string
+  ownerMemberId: string
+  createdByTeammateId?: string | null
+  pausedAt?: Date | string | null
+  nextRunAt?: Date | string | null
+  lastError?: string | null
+  projectId?: string | null
+  parentSessionId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutScheduleInput
+}
+
+export type ScheduleCreateOrConnectWithoutPlaybookInstallationInput = {
+  where: Prisma.ScheduleWhereUniqueInput
+  create: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput>
+}
+
+export type ScheduleCreateManyPlaybookInstallationInputEnvelope = {
+  data: Prisma.ScheduleCreateManyPlaybookInstallationInput | Prisma.ScheduleCreateManyPlaybookInstallationInput[]
+  skipDuplicates?: boolean
+}
+
+export type ScheduleUpsertWithWhereUniqueWithoutPlaybookInstallationInput = {
+  where: Prisma.ScheduleWhereUniqueInput
+  update: Prisma.XOR<Prisma.ScheduleUpdateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedUpdateWithoutPlaybookInstallationInput>
+  create: Prisma.XOR<Prisma.ScheduleCreateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedCreateWithoutPlaybookInstallationInput>
+}
+
+export type ScheduleUpdateWithWhereUniqueWithoutPlaybookInstallationInput = {
+  where: Prisma.ScheduleWhereUniqueInput
+  data: Prisma.XOR<Prisma.ScheduleUpdateWithoutPlaybookInstallationInput, Prisma.ScheduleUncheckedUpdateWithoutPlaybookInstallationInput>
+}
+
+export type ScheduleUpdateManyWithWhereWithoutPlaybookInstallationInput = {
+  where: Prisma.ScheduleScalarWhereInput
+  data: Prisma.XOR<Prisma.ScheduleUpdateManyMutationInput, Prisma.ScheduleUncheckedUpdateManyWithoutPlaybookInstallationInput>
+}
+
 export type ScheduleCreateManyOwnerInput = {
   id?: string
   organizationId: string
@@ -1404,6 +1555,7 @@ export type ScheduleCreateManyOwnerInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateWithoutOwnerInput = {
@@ -1424,6 +1576,7 @@ export type ScheduleUpdateWithoutOwnerInput = {
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutOwnerInput = {
@@ -1443,6 +1596,7 @@ export type ScheduleUncheckedUpdateWithoutOwnerInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1463,6 +1617,7 @@ export type ScheduleUncheckedUpdateManyWithoutOwnerInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleCreateManyWorkspaceInput = {
@@ -1482,6 +1637,7 @@ export type ScheduleCreateManyWorkspaceInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateWithoutWorkspaceInput = {
@@ -1502,6 +1658,7 @@ export type ScheduleUpdateWithoutWorkspaceInput = {
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutWorkspaceInput = {
@@ -1521,6 +1678,7 @@ export type ScheduleUncheckedUpdateWithoutWorkspaceInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1541,6 +1699,7 @@ export type ScheduleUncheckedUpdateManyWithoutWorkspaceInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleCreateManyTeammateInput = {
@@ -1560,6 +1719,7 @@ export type ScheduleCreateManyTeammateInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleCreateManyCreatedByTeammateInput = {
@@ -1579,6 +1739,7 @@ export type ScheduleCreateManyCreatedByTeammateInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateWithoutTeammateInput = {
@@ -1599,6 +1760,7 @@ export type ScheduleUpdateWithoutTeammateInput = {
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutTeammateInput = {
@@ -1618,6 +1780,7 @@ export type ScheduleUncheckedUpdateWithoutTeammateInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1638,6 +1801,7 @@ export type ScheduleUncheckedUpdateManyWithoutTeammateInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleUpdateWithoutCreatedByTeammateInput = {
@@ -1658,6 +1822,7 @@ export type ScheduleUpdateWithoutCreatedByTeammateInput = {
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutCreatedByTeammateInput = {
@@ -1677,6 +1842,7 @@ export type ScheduleUncheckedUpdateWithoutCreatedByTeammateInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1697,6 +1863,7 @@ export type ScheduleUncheckedUpdateManyWithoutCreatedByTeammateInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleCreateManyParentSessionInput = {
@@ -1716,6 +1883,7 @@ export type ScheduleCreateManyParentSessionInput = {
   projectId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateWithoutParentSessionInput = {
@@ -1736,6 +1904,7 @@ export type ScheduleUpdateWithoutParentSessionInput = {
   createdByTeammate?: Prisma.TeammateUpdateOneWithoutSchedulesCreatedNestedInput
   project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutParentSessionInput = {
@@ -1755,6 +1924,7 @@ export type ScheduleUncheckedUpdateWithoutParentSessionInput = {
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1775,6 +1945,7 @@ export type ScheduleUncheckedUpdateManyWithoutParentSessionInput = {
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ScheduleCreateManyProjectInput = {
@@ -1794,6 +1965,7 @@ export type ScheduleCreateManyProjectInput = {
   parentSessionId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  playbookInstallationId?: string | null
 }
 
 export type ScheduleUpdateWithoutProjectInput = {
@@ -1814,6 +1986,7 @@ export type ScheduleUpdateWithoutProjectInput = {
   createdByTeammate?: Prisma.TeammateUpdateOneWithoutSchedulesCreatedNestedInput
   parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+  playbookInstallation?: Prisma.PlaybookInstallationUpdateOneWithoutSchedulesNestedInput
 }
 
 export type ScheduleUncheckedUpdateWithoutProjectInput = {
@@ -1833,6 +2006,7 @@ export type ScheduleUncheckedUpdateWithoutProjectInput = {
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
 }
 
@@ -1850,6 +2024,89 @@ export type ScheduleUncheckedUpdateManyWithoutProjectInput = {
   pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   nextRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  playbookInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ScheduleCreateManyPlaybookInstallationInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  teammateId: string
+  title: string
+  instructions: string
+  cron: string
+  timezone: string
+  ownerMemberId: string
+  createdByTeammateId?: string | null
+  pausedAt?: Date | string | null
+  nextRunAt?: Date | string | null
+  lastError?: string | null
+  projectId?: string | null
+  parentSessionId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ScheduleUpdateWithoutPlaybookInstallationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  cron?: Prisma.StringFieldUpdateOperationsInput | string
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  nextRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutSchedulesNestedInput
+  teammate?: Prisma.TeammateUpdateOneRequiredWithoutSchedulesNestedInput
+  owner?: Prisma.MemberUpdateOneRequiredWithoutSchedulesNestedInput
+  createdByTeammate?: Prisma.TeammateUpdateOneWithoutSchedulesCreatedNestedInput
+  project?: Prisma.ProjectUpdateOneWithoutSchedulesNestedInput
+  parentSession?: Prisma.SessionUpdateOneWithoutReportingSchedulesNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutScheduleNestedInput
+}
+
+export type ScheduleUncheckedUpdateWithoutPlaybookInstallationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  cron?: Prisma.StringFieldUpdateOperationsInput | string
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  nextRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutScheduleNestedInput
+}
+
+export type ScheduleUncheckedUpdateManyWithoutPlaybookInstallationInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  instructions?: Prisma.StringFieldUpdateOperationsInput | string
+  cron?: Prisma.StringFieldUpdateOperationsInput | string
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdByTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  nextRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parentSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1904,6 +2161,7 @@ export type ScheduleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   parentSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  playbookInstallationId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   owner?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -1911,6 +2169,7 @@ export type ScheduleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
   sessions?: boolean | Prisma.Schedule$sessionsArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
   _count?: boolean | Prisma.ScheduleCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["schedule"]>
 
@@ -1932,12 +2191,14 @@ export type ScheduleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   parentSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  playbookInstallationId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   owner?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   createdByTeammate?: boolean | Prisma.Schedule$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
 }, ExtArgs["result"]["schedule"]>
 
 export type ScheduleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1958,12 +2219,14 @@ export type ScheduleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   parentSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  playbookInstallationId?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   owner?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   createdByTeammate?: boolean | Prisma.Schedule$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
 }, ExtArgs["result"]["schedule"]>
 
 export type ScheduleSelectScalar = {
@@ -1984,9 +2247,10 @@ export type ScheduleSelectScalar = {
   parentSessionId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  playbookInstallationId?: boolean
 }
 
-export type ScheduleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "title" | "instructions" | "cron" | "timezone" | "ownerMemberId" | "createdByTeammateId" | "pausedAt" | "nextRunAt" | "lastError" | "projectId" | "parentSessionId" | "createdAt" | "updatedAt", ExtArgs["result"]["schedule"]>
+export type ScheduleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "title" | "instructions" | "cron" | "timezone" | "ownerMemberId" | "createdByTeammateId" | "pausedAt" | "nextRunAt" | "lastError" | "projectId" | "parentSessionId" | "createdAt" | "updatedAt" | "playbookInstallationId", ExtArgs["result"]["schedule"]>
 export type ScheduleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -1995,6 +2259,7 @@ export type ScheduleInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
   sessions?: boolean | Prisma.Schedule$sessionsArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
   _count?: boolean | Prisma.ScheduleCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ScheduleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2004,6 +2269,7 @@ export type ScheduleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   createdByTeammate?: boolean | Prisma.Schedule$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
 }
 export type ScheduleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
@@ -2012,6 +2278,7 @@ export type ScheduleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   createdByTeammate?: boolean | Prisma.Schedule$createdByTeammateArgs<ExtArgs>
   project?: boolean | Prisma.Schedule$projectArgs<ExtArgs>
   parentSession?: boolean | Prisma.Schedule$parentSessionArgs<ExtArgs>
+  playbookInstallation?: boolean | Prisma.Schedule$playbookInstallationArgs<ExtArgs>
 }
 
 export type $SchedulePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2024,6 +2291,7 @@ export type $SchedulePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     project: Prisma.$ProjectPayload<ExtArgs> | null
     parentSession: Prisma.$SessionPayload<ExtArgs> | null
     sessions: Prisma.$SessionPayload<ExtArgs>[]
+    playbookInstallation: Prisma.$PlaybookInstallationPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2070,6 +2338,10 @@ export type $SchedulePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     parentSessionId: string | null
     createdAt: Date
     updatedAt: Date
+    /**
+     * Set when a playbook made it: changed only through the playbook, deleted with it.
+     */
+    playbookInstallationId: string | null
   }, ExtArgs["result"]["schedule"]>
   composites: {}
 }
@@ -2471,6 +2743,7 @@ export interface Prisma__ScheduleClient<T, Null = never, ExtArgs extends runtime
   project<T extends Prisma.Schedule$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Schedule$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   parentSession<T extends Prisma.Schedule$parentSessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Schedule$parentSessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.Schedule$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Schedule$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  playbookInstallation<T extends Prisma.Schedule$playbookInstallationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Schedule$playbookInstallationArgs<ExtArgs>>): Prisma.Prisma__PlaybookInstallationClient<runtime.Types.Result.GetResult<Prisma.$PlaybookInstallationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2517,6 +2790,7 @@ export interface ScheduleFieldRefs {
   readonly parentSessionId: Prisma.FieldRef<"Schedule", 'String'>
   readonly createdAt: Prisma.FieldRef<"Schedule", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Schedule", 'DateTime'>
+  readonly playbookInstallationId: Prisma.FieldRef<"Schedule", 'String'>
 }
     
 
@@ -2996,6 +3270,25 @@ export type Schedule$sessionsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
+}
+
+/**
+ * Schedule.playbookInstallation
+ */
+export type Schedule$playbookInstallationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlaybookInstallation
+   */
+  select?: Prisma.PlaybookInstallationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlaybookInstallation
+   */
+  omit?: Prisma.PlaybookInstallationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlaybookInstallationInclude<ExtArgs> | null
+  where?: Prisma.PlaybookInstallationWhereInput
 }
 
 /**

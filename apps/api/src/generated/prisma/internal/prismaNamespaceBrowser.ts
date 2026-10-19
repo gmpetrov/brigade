@@ -102,7 +102,11 @@ export const ModelName = {
   Project: 'Project',
   ProjectRepository: 'ProjectRepository',
   PushDevice: 'PushDevice',
-  PushNotice: 'PushNotice'
+  PushNotice: 'PushNotice',
+  PlaybookInstallation: 'PlaybookInstallation',
+  PlaybookAction: 'PlaybookAction',
+  PlaybookRun: 'PlaybookRun',
+  PlaybookDryRun: 'PlaybookDryRun'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -351,7 +355,9 @@ export const SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   taskId: 'taskId',
-  projectId: 'projectId'
+  projectId: 'projectId',
+  playbookRunId: 'playbookRunId',
+  surfacedAt: 'surfacedAt'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -398,7 +404,8 @@ export const ScheduleScalarFieldEnum = {
   projectId: 'projectId',
   parentSessionId: 'parentSessionId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  playbookInstallationId: 'playbookInstallationId'
 } as const
 
 export type ScheduleScalarFieldEnum = (typeof ScheduleScalarFieldEnum)[keyof typeof ScheduleScalarFieldEnum]
@@ -653,6 +660,9 @@ export const ConnectionCallScalarFieldEnum = {
   result: 'result',
   error: 'error',
   ticketId: 'ticketId',
+  simulated: 'simulated',
+  playbookActionKey: 'playbookActionKey',
+  input: 'input',
   createdAt: 'createdAt'
 } as const
 
@@ -673,6 +683,7 @@ export const TriggerScalarFieldEnum = {
   verificationSecretId: 'verificationSecretId',
   createdByMemberId: 'createdByMemberId',
   projectId: 'projectId',
+  playbookInstallationId: 'playbookInstallationId',
   createdAt: 'createdAt'
 } as const
 
@@ -918,7 +929,8 @@ export const SkillPackScalarFieldEnum = {
   createdById: 'createdById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  appId: 'appId'
+  appId: 'appId',
+  playbookInstallationId: 'playbookInstallationId'
 } as const
 
 export type SkillPackScalarFieldEnum = (typeof SkillPackScalarFieldEnum)[keyof typeof SkillPackScalarFieldEnum]
@@ -1014,6 +1026,87 @@ export const PushNoticeScalarFieldEnum = {
 } as const
 
 export type PushNoticeScalarFieldEnum = (typeof PushNoticeScalarFieldEnum)[keyof typeof PushNoticeScalarFieldEnum]
+
+
+export const PlaybookInstallationScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  projectId: 'projectId',
+  playbookKey: 'playbookKey',
+  version: 'version',
+  source: 'source',
+  manifest: 'manifest',
+  teammateId: 'teammateId',
+  ownerMemberId: 'ownerMemberId',
+  settings: 'settings',
+  status: 'status',
+  createdByMemberId: 'createdByMemberId',
+  activatedAt: 'activatedAt',
+  activatedByMemberId: 'activatedByMemberId',
+  pausedAt: 'pausedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PlaybookInstallationScalarFieldEnum = (typeof PlaybookInstallationScalarFieldEnum)[keyof typeof PlaybookInstallationScalarFieldEnum]
+
+
+export const PlaybookActionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  key: 'key',
+  level: 'level',
+  conditions: 'conditions',
+  levelChangedAt: 'levelChangedAt',
+  levelChangedByMemberId: 'levelChangedByMemberId'
+} as const
+
+export type PlaybookActionScalarFieldEnum = (typeof PlaybookActionScalarFieldEnum)[keyof typeof PlaybookActionScalarFieldEnum]
+
+
+export const PlaybookRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  rootSessionId: 'rootSessionId',
+  conversationKey: 'conversationKey',
+  case: 'case',
+  status: 'status',
+  outcome: 'outcome',
+  interventions: 'interventions',
+  firstResponseAt: 'firstResponseAt',
+  dryRun: 'dryRun',
+  dryRunId: 'dryRunId',
+  replay: 'replay',
+  summary: 'summary',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type PlaybookRunScalarFieldEnum = (typeof PlaybookRunScalarFieldEnum)[keyof typeof PlaybookRunScalarFieldEnum]
+
+
+export const PlaybookDryRunScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  installationId: 'installationId',
+  sessionId: 'sessionId',
+  teammateId: 'teammateId',
+  startedByMemberId: 'startedByMemberId',
+  status: 'status',
+  error: 'error',
+  firstEventAt: 'firstEventAt',
+  lastEventAt: 'lastEventAt',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt'
+} as const
+
+export type PlaybookDryRunScalarFieldEnum = (typeof PlaybookDryRunScalarFieldEnum)[keyof typeof PlaybookDryRunScalarFieldEnum]
 
 
 export const SortOrder = {
