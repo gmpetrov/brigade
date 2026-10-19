@@ -194,8 +194,9 @@ function chief(spec: ThreadSpec) {
       '- Work whose result should come back to you here, long or in parallel (research, a check across several ' +
         'things, one part each for several teammates): `start_child` with the teammate, one child each, then end ' +
         'your turn. You are woken once all of them reported: put their answers together for the person.',
-      '- Several separate pieces of work that the board should track, or that go on in their own thread: ' +
-        '`create_task` with the teammate as assignee, one task each, and say in a line what you handed to whom.',
+      '- Separate goals that the board should track, or that go on in their own thread: `create_task` with the ' +
+        'teammate as assignee, one task per goal, never one per step (see Big goals), and say in a line what you ' +
+        'handed to whom.',
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
         'it needs.',
     ].join('\n'),
@@ -417,33 +418,65 @@ const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
   "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
   'person), `move_task` and ' +
-  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.\n\n' +
-  'One deliverable (one spec, one pull request) is one task, with its steps in the description, never one task ' +
-  'per step. When you create two or more tasks toward one goal (different teammates, parallel work, separate ' +
-  'pull requests), group them in a mission: create the mission first, a task with the goal and what done looks ' +
-  'like, then each task with `mission` set to its id. The board shows them as one card, done when they all are.'
+  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
+
+/**
+ * Big goals: cut by what the person tries or decides, not by technical step. One
+ * task per goal, its parts kept off the board: a person's attention is what is
+ * scarce, and nine tasks made them follow nine pull requests.
+ */
+const bigGoals = (spec: ThreadSpec) =>
+  '## Big goals\n\n' +
+  'When the person asks for something that takes days or several pull requests, plan it in deliveries before ' +
+  'you start: one to three moments where they try something that works (a feature in a preview, a draft, a ' +
+  'campaign to approve) or make a decision only they can make. Cut only where they have something to try or ' +
+  'decide, never by technical layer or by section of a spec, and get their ok on the plan.\n\n' +
+  'The goal is then one task, with its deliveries in the description. If this thread is about that goal, it ' +
+  'becomes the task (assignee "self"). If the goal came up while talking about something else, give it a thread ' +
+  'of its own: `create_task` with your own name as assignee and a description that stands alone (the plan, its ' +
+  'deliveries, links to the specs), then say here in a line that it goes on in its own thread, by its title.\n\n' +
+  'The parts of a delivery stay off the board: do them yourself' +
+  (spec.teammate.harness === 'claude_code'
+    ? ', with your sub-agents (the Agent tool) for parallel or side work,'
+    : '') +
+  ' and start a child thread only for what must outlive your turn, is for another teammate, or may need a ' +
+  'person.\n\n' +
+  'Check a delivery before you hand it over: for code, tests and typecheck pass and another teammate reviewed ' +
+  'it (a child thread with them, when one has access). Then one message: what to try and how, what was checked, ' +
+  'and the one pull request to merge. If a delivery grows past what the person can try in a few minutes, propose ' +
+  'to split it; never split it silently. When you end a turn before a delivery is ready, say in a line where ' +
+  'things stand.\n\n' +
+  'A mission groups tasks on the board, only when several teammates each own a delivery the person follows on ' +
+  'its own: create the mission first (the goal and what done looks like, titled without the word "Mission"), ' +
+  'then each task with `mission` set to its id.'
 
 /** The Tasks board: this thread's task, or when to make one. */
 const tasks = (spec: ThreadSpec) =>
-  spec.task
-    ? [
-        '## Your task',
-        `This thread is the task **${spec.task.title}** on the workspace's Tasks board.`,
-        spec.task.description,
-        'Put what you produce where others can reach it: push your branch or open a pull request, attach files ' +
-          'to the thread, or save them to the library. Another teammate may take the task over, and it does not ' +
-          'see your working folder. When the work is finished and delivered, call `complete_task` with a short ' +
-          'summary and links to what you produced.',
+  [
+    spec.task
+      ? [
+          '## Your task',
+          `This thread is the task **${spec.task.title}** on the workspace's Tasks board.`,
+          spec.task.description,
+          'Put what you produce where others can reach it: push your branch or open a pull request, attach files ' +
+            'to the thread, or save them to the library. Another teammate may take the task over, and it does not ' +
+            'see your working folder. When the work is finished and delivered, call `complete_task` with a short ' +
+            'summary and links to what you produced.',
+          BOARD_TOOLS,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      : '## Tasks\n\n' +
+        "The workspace tracks bigger work as tasks on its Tasks board. Call `create_task` when this thread's work " +
+        'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
+        'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
+        'Do not ask first: create it, say so in one line, and do the work.\n\n' +
         BOARD_TOOLS,
-      ]
-        .filter(Boolean)
-        .join('\n\n')
-    : '## Tasks\n\n' +
-      "The workspace tracks bigger work as tasks on its Tasks board. Call `create_task` when this thread's work " +
-      'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
-      'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
-      'Do not ask first: create it, say so in one line, and do the work.\n\n' +
-      BOARD_TOOLS
+    // A child or a playbook's run does its part: the thread that started it plans.
+    !spec.parent && !spec.loop && bigGoals(spec),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 
 /** Widgets: visuals drawn in the thread, for every teammate. */
 const VISUALS =
@@ -577,12 +610,16 @@ const children = (spec: ThreadSpec) =>
       'here. When only a person can decide, open a ticket and report needs_person. You cannot start child threads ' +
       'of your own.'
     : '## Child threads\n\n' +
-      'For work that is long, can run in parallel, or is for another teammate, start a child thread with ' +
-      '`start_child`: a fresh context beside this thread, shown here and not in the sidebar. It does not see this ' +
-      'conversation, so its instructions must stand alone. Start every child you need, then end your turn: you are ' +
-      'woken here once, with one note, when all those you wait for have reported. Then `read_child` for the details, ' +
-      '`message_thread` with its threadId to tell one more (it carries on and reports again), and tell the person ' +
-      'where things stand. Quick work you do yourself.'
+      'A child thread (`start_child`) is work in a fresh context beside this thread, shown here and not in the ' +
+      'sidebar. Start one when the work must outlive your turn (hours of work, or waiting on something), is for ' +
+      'another teammate (a review, other skills or access), or may need a person. Otherwise do it yourself' +
+      (spec.teammate.harness === 'claude_code'
+        ? ', with your sub-agents (the Agent tool) for parallel or side work: they share your folder and your turn'
+        : '') +
+      '. A child does not see this conversation, so its instructions must stand alone. Start every child you need, ' +
+      'then end your turn: you are woken here once, with one note, when all those you wait for have reported. Then ' +
+      '`read_child` for the details, `message_thread` with its threadId to tell one more (it carries on and reports ' +
+      'again), and tell the person where things stand.'
 
 /** A playbook's thread: what the run is, the Apps it has, and how it ends (loop_report). */
 const playbook = (loop: NonNullable<ThreadSpec['loop']>, child: boolean) =>
