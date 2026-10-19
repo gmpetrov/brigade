@@ -48,6 +48,7 @@ import {
   sameCall,
   waitingOn,
   withoutBridge,
+  withTools,
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
@@ -1218,7 +1219,8 @@ export class HarnessThread {
       // The harness the runner before handed over, which this session attaches to: stopped with it.
       ...(adopt.length ? { adopt } : {}),
     })
-    const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
+    const saved = this.saved?.accountId === account.id ? this.saved.resume : undefined
+    const resume = saved ? withTools(saved, tools) : undefined
     const session = await agent.createSession({
       sessionId: this.key,
       sandboxSession: sandbox,
