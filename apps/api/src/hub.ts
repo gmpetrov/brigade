@@ -1214,7 +1214,9 @@ async function noteAccountState(
   let accountId = session.accountId
   for (const e of events) {
     if (e.event.type === 'turn.started') accountId = e.event.accountId
-    if (accountId) byAccount.set(accountId, [...(byAccount.get(accountId) ?? []), e])
+    // Limits read after a turn (Codex's) say whose they are.
+    const owner = (e.event.type === 'usage.updated' && e.event.accountId) || accountId
+    if (owner) byAccount.set(owner, [...(byAccount.get(owner) ?? []), e])
     // What follows a switch is the new account's.
     if (e.event.type === 'account.switched' && e.event.toAccountId) accountId = e.event.toAccountId
   }
