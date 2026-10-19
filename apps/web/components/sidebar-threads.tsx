@@ -443,8 +443,38 @@ export function SidebarWork({
     // The list now has the order itself (or, failed, goes back to where it was).
     setPinOrder(undefined)
   }
-  // A pinned row's drag: picked up anywhere on it, dropped before or after another, with a
-  // line where it would land.
+  // A pinned row's drag: picked up anywhere on it, it lands before or after the row last under
+  // the pointer, where the line shows. The whole sidebar takes the drop, so past the first or
+  // last row it lands where the line still is; out of the sidebar, the line goes and so does
+  // the drop. On the window, as the sidebar's padding and edge are in no row or group.
+  const drop = useRef(dropAt)
+  drop.current = dropAt
+  useEffect(() => {
+    if (!dragged) return
+    const inSidebar = (e: DragEvent) =>
+      e.target instanceof Element && !!e.target.closest('[data-slot="sidebar-inner"]')
+    const over = (e: DragEvent) => {
+      if (!inSidebar(e)) return setDropAt(undefined)
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = drop.current ? 'move' : 'none'
+    }
+    const dropped = (e: DragEvent) => {
+      if (!inSidebar(e)) return
+      e.preventDefault()
+      const to = drop.current
+      if (to && to.id !== dragged) void movePin(dragged, to)
+      setDragged(undefined)
+      setDropAt(undefined)
+    }
+    window.addEventListener('dragover', over)
+    window.addEventListener('drop', dropped)
+    return () => {
+      window.removeEventListener('dragover', over)
+      window.removeEventListener('drop', dropped)
+    }
+    // movePin reads the pinned list of this render; a drag starts and ends within one list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragged])
   const pinDrag = (id: string): ComponentProps<'li'> => ({
     draggable: true,
     onDragStart: (e) => {
@@ -453,19 +483,12 @@ export function SidebarWork({
       e.dataTransfer.setDragImage(e.currentTarget, 16, 16)
       setDragged(id)
     },
+    // The window's handler then accepts it and takes the drop.
     onDragOver: (e) => {
       if (!dragged) return
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
       const box = e.currentTarget.getBoundingClientRect()
       const after = e.clientY > box.top + box.height / 2
       if (dropAt?.id !== id || dropAt.after !== after) setDropAt({ id, after })
-    },
-    onDrop: (e) => {
-      e.preventDefault()
-      if (dragged && dropAt && dragged !== dropAt.id) void movePin(dragged, dropAt)
-      setDragged(undefined)
-      setDropAt(undefined)
     },
     onDragEnd: () => {
       setDragged(undefined)
