@@ -226,6 +226,10 @@ export async function handlePlaybookCall(
           : {}),
       })
       const questions = manifest.settings.filter((s) => missing.includes(s.key)).map(question)
+      // A question with a set of answers (its options, the accounts it can pick) is picked, not typed.
+      const picks = questions[0]
+        ? (questions[0].options?.length ?? 0) + (questions[0].accounts?.length ?? 0)
+        : 0
       // Optional ones with no answer and no default (an analytics tool): asked once, at the end.
       const optional = manifest.settings
         .filter((s) => s.optional && s.default === undefined && !(s.key in answered))
@@ -242,7 +246,15 @@ export async function handlePlaybookCall(
         next:
           (questions.length
             ? `Ask the person next: "${questions[0]!.ask}" (${questions[0]!.type}), one question at a time, ` +
-              'then call configure_playbook with installationId and the answer, by its key. An account setting takes ' +
+              'then call configure_playbook with installationId and the answer, by its key. ' +
+              (picks >= 2 && picks <= 6
+                ? 'Its answers are known: end your reply with a choices block, one option per ' +
+                  (questions[0]!.accounts?.length
+                    ? 'account (labelled as its row shows it, the App in its description)'
+                    : 'option') +
+                  ', so the person picks one rather than typing it. '
+                : '') +
+              'An account setting takes ' +
               'the account as its row shows it (the Gmail address), or its id from accounts when two share a name ' +
               '(say which App each is). Do not guess an answer you were not given.'
             : 'Every setting it needs has an answer: its triggers, schedules and skills are made, and nothing ' +
