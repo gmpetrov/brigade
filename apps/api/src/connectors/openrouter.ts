@@ -8,8 +8,9 @@ const write = (description: string) => ({ description, write: true })
  * account's credits, generations, presets and batches, and requests to any model (text,
  * images, speech, transcription). OpenRouter registers Brigade as a client itself (dynamic
  * client registration); on its consent page the person approves a key for this connection
- * alone, with a spend cap ($10 by default). The key lasts 7 days and comes with no refresh token, so the account then asks to reconnect. What runs a
- * model spends the account's credits, so it counts as a write, as the server marks it.
+ * alone, with a spend cap ($10 by default). The key lasts 7 days and comes with no refresh
+ * token, so the account then asks to reconnect. What runs a model spends the account's
+ * credits, so it counts as a write, as the server marks it.
  */
 export const openrouter: ConnectorDefinition = {
   kind: 'openrouter',
@@ -18,7 +19,9 @@ export const openrouter: ConnectorDefinition = {
   operations: {},
   mcp: {
     url: 'https://mcp.openrouter.ai/mcp',
-    // The token is an OpenRouter API key: the key's own route says which one it is.
+    // The token is an OpenRouter API key, and no tool says whose: the key's own route tells a
+    // personal account from an organization's, though without a name or email (those need a
+    // management key).
     account: { url: 'https://openrouter.ai/api/v1/key', name: openrouterAccountName },
     tools: {
       'send-message': write('Send a message to a model and get its reply, billed to the account.'),
@@ -54,8 +57,14 @@ export const openrouter: ConnectorDefinition = {
   },
 }
 
-/** The OpenRouter account as a row shows it. TODO: from a real reply. */
+/**
+ * The OpenRouter account as a row shows it: personal, or an organization's. GET /api/v1/key
+ * answers { data: { label, limit, usage, expires_at, creator_user_id, organization_id,
+ * workspace_id, ... } }, with organization_id null for a person's own account. Its names are
+ * only for management keys.
+ */
 export function openrouterAccountName(output: unknown): string | null {
-  void output
-  return null
+  const key = (output as { data?: { organization_id?: unknown } } | null)?.data
+  if (!key || !('organization_id' in key)) return null
+  return key.organization_id ? 'Organization account' : 'Personal account'
 }
