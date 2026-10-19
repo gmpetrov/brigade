@@ -107,6 +107,13 @@ export type ThreadRead = Prisma.ThreadReadModel
  */
 export type ThreadPin = Prisma.ThreadPinModel
 /**
+ * Model ThreadLater
+ * A thread a member put away for later: out of their sidebar's list and of what waits on
+ * them, under the filter's Later. Each member's own, like a pin. Anything new in the thread
+ * after laterAt (a message, a turn, a ticket, a pull request) brings it back (src/later.ts).
+ */
+export type ThreadLater = Prisma.ThreadLaterModel
+/**
  * Model HomeDismissal
  * A loose end a member set aside on Home. Its key names the thing as it stood then (a thread's
  * proposal by its event, a stalled thread by its last event, a routine by its failed run), so

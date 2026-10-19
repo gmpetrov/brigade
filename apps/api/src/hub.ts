@@ -36,6 +36,7 @@ import { reviewTurnEnded } from './pull-requests.js'
 import { handoffThread, titleThread } from './work.js'
 import { historyContext, pageStart } from './thread-history.js'
 import { noteChildEvents } from './children.js'
+import { bringBackFromLater } from './later.js'
 import { noteDryRunEvents } from './playbook-dry-runs.js'
 import { movesOn, onReleased } from './move.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
@@ -905,6 +906,13 @@ export function runnerSocket(runner: {
         void movesOn(runner.computerId, session.id).catch(console.error)
       // Not awaited: a review loop may call GitHub and prompt the next teammate.
       void noteTurnsEnded(session, fresh).catch(console.error)
+      // A message or a turn in a thread put away for later brings it back (src/later.ts); a
+      // child's do not, a schedule's quiet runs among them: its report to the parent does.
+      if (
+        !session.parentId &&
+        fresh.some((e) => e.event.type === 'message.user' || e.event.type === 'turn.completed')
+      )
+        void bringBackFromLater(session, session.id).catch(console.error)
       // A child's report goes to its parent once its turn ends.
       if (session.parentId) void noteChildEvents(session, fresh).catch(console.error)
       // A dry run's event is done once its turn ends: the next one starts.

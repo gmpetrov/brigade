@@ -1,6 +1,8 @@
 import { AssignTask, CompleteTask, CreateTask, UpdateTask } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
+import type { ScopedDb } from '../db.js'
+import { latersOf } from '../later.js'
 import {
   archiveDoneTasks,
   archiveTask,
@@ -21,6 +23,14 @@ import {
 } from '../tasks.js'
 
 /** The Tasks board: work to see finished, each with at most one thread. */
+/** The board, each thread saying whether this member put it away for later (src/later.ts). */
+async function board(db: ScopedDb, memberId: string, project?: string) {
+  const [rows, laters] = await Promise.all([listTasks(db, project), latersOf(db, memberId)])
+  return rows.map((t) =>
+    t.thread ? { ...t, thread: { ...t.thread, later: laters.has(t.thread.id) } } : t,
+  )
+}
+
 export const tasks = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
@@ -34,7 +44,7 @@ export const tasks = new Hono<AppEnv>()
         ? await listArchivedTasks(c.var.db, c.req.query('before'))
         : c.req.query('trashed') === 'true'
           ? await listTrashedTasks(c.var.db)
-          : await listTasks(c.var.db, c.req.query('project')),
+          : await board(c.var.db, c.var.scope.memberId, c.req.query('project')),
     ),
   )
 

@@ -75,6 +75,7 @@ import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
+import { latersOf, setLater } from '../later.js'
 import { descendants, reportConversation } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
@@ -211,9 +212,13 @@ export const threads = new Hono<AppEnv>()
       where: { memberId: c.var.scope.memberId },
       select: { sessionId: true, pinnedAt: true, position: true },
     })
+    // And those they put away for later, all of them too: the filter's Later lists them.
+    const laters = await latersOf(c.var.db, c.var.scope.memberId)
     if (!limit && !teammateId && !c.req.query('project') && c.req.query('archived') !== '1') {
       const loaded = new Set(rows.map((r) => r.id))
-      const missing = pins.map((p) => p.sessionId).filter((id) => !loaded.has(id))
+      const missing = [...new Set([...pins.map((p) => p.sessionId), ...laters.keys()])].filter(
+        (id) => !loaded.has(id),
+      )
       if (missing.length)
         rows.push(
           ...(await c.var.db.session.findMany({
@@ -286,6 +291,7 @@ export const threads = new Hono<AppEnv>()
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
           pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
+          laterAt: laters.get(row.id)?.toISOString() ?? null,
           eventsWaitingSince: eventsWaitingSince(row.id),
           previewRunning:
             !!previews.get(row.id) && !previewOffline({ id: row.computerId, ...row.computer }),
@@ -359,14 +365,16 @@ export const threads = new Hono<AppEnv>()
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
-    // This member's pin, for the thread's menu in its details.
-    const pin = await c.var.db.threadPin.findUnique({
-      where: { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } },
-      select: { pinnedAt: true },
-    })
+    // This member's pin and later, for the thread's menu in its details.
+    const mine = { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } }
+    const [pin, later] = await Promise.all([
+      c.var.db.threadPin.findUnique({ where: mine, select: { pinnedAt: true } }),
+      c.var.db.threadLater.findUnique({ where: mine, select: { laterAt: true } }),
+    ])
     return c.json({
       ...thread,
       pinnedAt: pin?.pinnedAt.toISOString() ?? null,
+      laterAt: later?.laterAt.toISOString() ?? null,
       // Where it is going, not the message that goes with it.
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
@@ -1197,10 +1205,7 @@ export const threads = new Hono<AppEnv>()
   /** This member's pinned threads in the order they dragged them to: the ids, first to last. */
   .put('/pins/order', async (c) => {
     const { scope, db } = c.var
-    const { ids } = await parseBody(
-      c.req.raw,
-      z.object({ ids: z.array(z.string()).max(500) }),
-    )
+    const { ids } = await parseBody(c.req.raw, z.object({ ids: z.array(z.string()).max(500) }))
     // Only their own pins move; ids they did not pin are left out.
     await db.$transaction(
       ids.map((sessionId, position) =>
@@ -1241,6 +1246,25 @@ export const threads = new Hono<AppEnv>()
     await db.threadPin.deleteMany({
       where: { memberId: scope.memberId, sessionId: c.req.param('id') },
     })
+    return c.json({ ok: true })
+  })
+
+  /**
+   * Put it away for later: out of this member's list and of what waits on them, until
+   * something new happens in it (src/later.ts); DELETE puts it back. Each member's own.
+   */
+  .post('/:id/later', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    if (thread.parentId)
+      throw new HTTPException(409, { message: 'A child thread shows in its parent.' })
+    if (thread.archivedAt) throw new HTTPException(409, { message: 'Unarchive the thread first.' })
+    await setLater(db, scope, thread, true)
+    return c.json({ ok: true })
+  })
+  .delete('/:id/later', async (c) => {
+    const { scope, db } = c.var
+    await setLater(db, scope, await loadThread(db, c.req.param('id')), false)
     return c.json({ ok: true })
   })
 
