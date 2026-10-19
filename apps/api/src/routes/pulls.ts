@@ -73,13 +73,12 @@ export const pulls = new Hono<AppEnv>()
    * Database only, no GitHub call.
    */
   .get('/attention', async (c) => {
-    const [all, open, laters] = await Promise.all([
-      needsAttention(c.var.db),
-      openCount(c.var.db),
-      latersOf(c.var.db, c.var.scope.memberId),
-    ])
     // Not those of a thread this member put away for later (src/later.ts).
-    const waiting = all.filter((pr) => !pr.session || !laters.has(pr.session.id))
+    const laters = await latersOf(c.var.db, c.var.scope.memberId)
+    const [waiting, open] = await Promise.all([
+      needsAttention(c.var.db, [...laters.keys()]),
+      openCount(c.var.db),
+    ])
     return c.json({ count: waiting.length, open, pulls: waiting })
   })
 

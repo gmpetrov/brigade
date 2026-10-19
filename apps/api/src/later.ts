@@ -1,8 +1,8 @@
 // Later: a member puts a thread away for later, for themselves only, as they pin one. It
 // leaves their sidebar's list (the filter's Later shows it) and what waits on them: its
 // tickets and pull requests leave their Home, sidebar, app badge and notifications. Like
-// an archive, anything new there brings it back: a message or a teammate's turn in it, or
-// a ticket or pull request opened in it or one of its children.
+// an archive, anything new there brings it back: a message in it (a member's, a wake-up's,
+// a child's report), or a ticket or pull request opened in it or one of its children.
 import { onScopedWrite, prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, notifyList } from './hub.js'
 

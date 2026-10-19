@@ -35,7 +35,7 @@ type Action = 'preview' | 'pin' | 'later' | 'rename' | 'archive' | 'delete'
 export type MenuThread = Pick<
   ThreadSummary,
   'id' | 'title' | 'pinnedAt' | 'laterAt' | 'archivedAt' | 'othersMayPrompt' | 'previewRunning'
-> & { startedBy: { id: string } }
+> & { startedBy: { id: string }; parent?: { id: string } | null }
 
 /** What the menu shows for this member, and what each item does. */
 export function useThreadMenu({
@@ -114,7 +114,7 @@ export function useThreadMenu({
       label: later ? 'Move back' : 'Do later',
       icon: later ? <Undo2 /> : <Clock />,
       key: 'L',
-      show: later || !archived,
+      show: later || (!archived && !thread.parent),
     },
     { action: 'rename', label: 'Rename', icon: <Pencil />, key: 'R', show: mayChange },
     {

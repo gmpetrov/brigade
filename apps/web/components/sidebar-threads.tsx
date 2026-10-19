@@ -590,6 +590,9 @@ export function SidebarWork({
   function changed() {
     void reloadThreads()
     if (archived) void loadArchived()
+    // Older pages may hold the thread as it was (put away for later, say): asked for again.
+    setOlder([])
+    setExhausted([])
   }
   function deleted(id: string) {
     setOlder((o) => o.filter((t) => t.id !== id))

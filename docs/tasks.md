@@ -39,8 +39,9 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
 - **A thread to do later is put away, not made a task.** Its ⋮ menu's Do later
   takes it out of the member's list and of what waits on them (Home, sidebar,
   app badge, notifications), for them only, like a pin; the sidebar filter's
-  Later lists them, with how many. Anything new in it (a message, a turn, a
-  ticket or pull request in it or a child) brings it back (`src/later.ts`).
+  Later lists them, with how many. Anything new in it (a message, or a ticket
+  or pull request in it or a child) brings it back (`src/later.ts`). On the
+  board, its task is in Doing rather than Needs you, for that member.
 - **One goal, one deliverable.** A person's attention is what is scarce: a goal
   of days or several pull requests reaches them as one finished, checked result
   (for code, one pull request), with no plan to approve and no steps to review;

@@ -331,10 +331,29 @@ export const waitingNow = {
   ],
 } satisfies Prisma.PullRequestWhereInput
 
-/** Those waiting on a person now, newest first, with the thread that opened each. */
-export const needsAttention = (db: ScopedDb) =>
+/**
+ * Those waiting on a person now, newest first, with the thread that opened each. `putAway`:
+ * threads the member put away for later (src/later.ts), whose pull requests and their
+ * children's are left out.
+ */
+export const needsAttention = (db: ScopedDb, putAway: string[] = []) =>
   db.pullRequest.findMany({
-    where: waitingNow,
+    where: putAway.length
+      ? {
+          AND: [
+            waitingNow,
+            {
+              OR: [
+                { sessionId: null },
+                {
+                  sessionId: { notIn: putAway },
+                  session: { OR: [{ parentId: null }, { parentId: { notIn: putAway } }] },
+                },
+              ],
+            },
+          ],
+        }
+      : waitingNow,
     orderBy: { updatedAt: 'desc' },
     take: 50,
     select: {
