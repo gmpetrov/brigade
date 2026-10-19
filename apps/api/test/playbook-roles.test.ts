@@ -75,6 +75,26 @@ const BY_KIND = {
   settings: [{ key: 'inbox', type: 'account', app: 'gmail' }],
 } satisfies PlaybookManifest
 
+/** An analytics role it cannot do without, though its account setting is optional. */
+const REQUIRED = {
+  ...MANIFEST,
+  id: 'brigade/test-roles-required',
+  apps: [
+    { kind: 'gmail', access: 'read_write' },
+    { role: 'analytics', kinds: ['mixpanel', 'mcp'], access: 'read' },
+  ],
+} satisfies PlaybookManifest
+
+/** As main once allowed: every MCP server granted, by its kind alone, no account setting. */
+const ANY_MCP = {
+  ...BY_KIND,
+  id: 'brigade/test-roles-mcp',
+  apps: [
+    { kind: 'gmail', access: 'read_write' },
+    { kind: 'mcp', access: 'read' },
+  ],
+} satisfies PlaybookManifest
+
 const TOOLS = [
   { name: 'query', description: 'Run a query', annotations: { readOnlyHint: true } },
   { name: 'annotate', description: 'Annotate a chart' },
@@ -109,7 +129,11 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     | 'posthog'
     | 'otherServer'
     | 'installation'
-    | 'byKind',
+    | 'byKind'
+    | 'required'
+    | 'anyMcp'
+    | 'chat'
+    | 'setup',
     string
   >
   let db: ReturnType<typeof scoped>
@@ -224,7 +248,11 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
         data: { teammateId: ids.teammate, connectionId, scope: 'read_write' } as never,
       })
 
-    const install = async (manifest: PlaybookManifest, settings: Record<string, string>) =>
+    const install = async (
+      manifest: PlaybookManifest,
+      settings: Record<string, string>,
+      status = 'active',
+    ) =>
       (
         await db.playbookInstallation.create({
           data: {
@@ -234,13 +262,28 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
             teammateId: ids.teammate,
             ownerMemberId: ids.owner,
             settings,
-            status: 'active',
+            status,
             createdByMemberId: ids.owner,
           } as never,
         })
       ).id
     ids.installation = await install(MANIFEST, { inbox: ids.support })
     ids.byKind = await install(BY_KIND, { inbox: ids.support })
+    ids.required = await install(REQUIRED, { inbox: ids.support })
+    ids.anyMcp = await install(ANY_MCP, { inbox: ids.support })
+    ids.setup = await install(MANIFEST, { inbox: ids.support }, 'setup')
+    // A member's thread, where playbooks are installed from.
+    ids.chat = (
+      await db.session.create({
+        data: {
+          teammateId: ids.teammate,
+          startedByMemberId: ids.owner,
+          computerId: ids.computer,
+          title: 'Chat',
+          origin: 'member',
+        } as never,
+      })
+    ).id
   })
 
   after(async () => {
@@ -440,5 +483,124 @@ describe('the roles of a playbook', { skip: !database && 'no database answers' }
     assert.equal(playbookActionOf(actions, 'mcp', 'github_merge_pull_request'), null)
     assert.equal(playbookActionOf(actions, 'mcp', 'mixpanel_annotate'), null)
     assert.equal(playbookActionOf(actions, 'mcp', 'posthog_delete'), null)
+  })
+
+  test('a required role whose account setting is unanswered is missing, so no dry run', async () => {
+    const { getInstallation } = await import('../src/playbooks.js')
+    const { missingApps } = await import('../src/playbook-chat.js')
+    // Its teammate has Mixpanel and MCP accounts, yet no setting picked one: its runs reach none.
+    const analytics = (await getInstallation(db, ids.required)).apps.find(
+      (a) => a.name === 'analytics',
+    )!
+    assert.deepEqual([analytics.status, analytics.optional], ['missing', false])
+    assert.ok(analytics.accounts.length > 0)
+    assert.deepEqual(
+      missingApps([analytics]).map((a) => a.name),
+      ['analytics'],
+    )
+    const thread = await runThread(ids.required)
+    assert.deepEqual(await connectors(thread), { [ids.support]: 'read_write' })
+    await db.playbookInstallation.updateMany({
+      where: { id: ids.required },
+      data: { settings: { inbox: ids.support, analytics: ids.mixpanel } },
+    })
+    const picked = (await getInstallation(db, ids.required)).apps.find(
+      (a) => a.name === 'analytics',
+    )!
+    assert.deepEqual([picked.status, missingApps([picked]).length], ['ready', 0])
+    await db.playbookInstallation.updateMany({
+      where: { id: ids.required },
+      data: { settings: { inbox: ids.support } },
+    })
+  })
+
+  test('a name two accounts share picks neither: the answer names one by its id', async () => {
+    const { checkSettings } = await import('../src/playbooks.js')
+    const posthog = await db.connection.findFirst({ where: { id: ids.posthog } })
+    const gmail = await db.connection.findFirst({ where: { id: ids.support } })
+    // An MCP server called like the Mixpanel organization, and a second Gmail of the same address.
+    const sameName = (
+      await db.connection.create({
+        data: { appId: posthog!.appId, kind: 'mcp', label: 'Acme', createdByMemberId: ids.owner },
+      } as never)
+    ).id
+    const sameInbox = (
+      await db.connection.create({
+        data: {
+          appId: gmail!.appId,
+          kind: 'gmail',
+          label: 'Support',
+          externalAccount: 'support@acme.test',
+          createdByMemberId: ids.owner,
+        },
+      } as never)
+    ).id
+    try {
+      await assert.rejects(
+        checkSettings(db, MANIFEST, { analytics: 'acme' }),
+        new RegExp(
+          `matches 2 accounts; answer with one of their ids: Mixpanel · Acme \\(id ${ids.mixpanel}\\), MCP · Acme \\(id ${sameName}\\)`,
+        ),
+      )
+      assert.deepEqual(await checkSettings(db, MANIFEST, { analytics: sameName }), {
+        analytics: sameName,
+      })
+      assert.deepEqual(await checkSettings(db, MANIFEST, { analytics: ids.mixpanel }), {
+        analytics: ids.mixpanel,
+      })
+      // One App alone too.
+      await assert.rejects(
+        checkSettings(db, MANIFEST, { inbox: 'support@acme.test' }),
+        /matches 2 accounts; answer with one of their ids: Gmail · support@acme\.test \(id /,
+      )
+      assert.deepEqual(await checkSettings(db, MANIFEST, { inbox: sameInbox }), {
+        inbox: sameInbox,
+      })
+    } finally {
+      await db.connection.deleteMany({ where: { id: { in: [sameName, sameInbox] } } })
+    }
+  })
+
+  test("configure_playbook lists an account setting's accounts by App and id", async () => {
+    const { handlePlaybookCall } = await import('../src/playbook-chat.js')
+    const session = await db.session.findFirst({ where: { id: ids.chat } })
+    const said = (await handlePlaybookCall(
+      db,
+      scope,
+      session!,
+      { id: ids.teammate, name: 'Sam' },
+      { name: 'configure_playbook', installationId: ids.setup, settings: {} },
+    )) as { optional?: { key: string; accounts: unknown[] }[]; next: string; error?: string }
+    assert.equal(said.error, undefined)
+    const question = said.optional?.find((q) => q.key === 'analytics')
+    assert.deepEqual(question?.accounts, [
+      { id: ids.mixpanel, app: 'Mixpanel', name: 'Acme' },
+      { id: ids.mixpanelOther, app: 'Mixpanel', name: 'Side project' },
+      { id: ids.posthog, app: 'MCP', name: 'PostHog' },
+      { id: ids.otherServer, app: 'MCP', name: 'Other server' },
+    ])
+  })
+
+  test('an old manifest with { kind: mcp } still parses and reaches every server granted', async () => {
+    const { PlaybookManifest } = await import('@brigade/contracts')
+    // As stored; a template needs an entry to load, which the stored copy had.
+    const parsed = PlaybookManifest.safeParse({
+      ...ANY_MCP,
+      entries: [{ schedule: '0 8 * * 1', instructions: 'Review the week.' }],
+    })
+    assert.equal(parsed.success, true, parsed.error?.message)
+    const thread = await runThread(ids.anyMcp)
+    assert.deepEqual(await connectors(thread), {
+      [ids.support]: 'read_write',
+      [ids.posthog]: 'read',
+      [ids.otherServer]: 'read',
+    })
+    assert.equal((await call(thread, ids.otherServer, 'other_query')).ok, true)
+    assert.equal((await call(thread, ids.posthog, 'posthog_query')).ok, true)
+    // Its access stands: reading only.
+    assert.equal(
+      (await call(thread, ids.posthog, 'posthog_annotate')).row?.error,
+      'read-only in the playbook',
+    )
   })
 })

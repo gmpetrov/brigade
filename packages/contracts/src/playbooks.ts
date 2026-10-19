@@ -244,7 +244,9 @@ export const PlaybookManifest = z
       m.settings.filter((s) => s.type === 'account').map((s) => s.app as string),
     )
     roles.forEach((r, i) => {
-      if (r.kinds.includes(MCP_KIND) && !accountRoles.has(r.name))
+      // A plain { kind: mcp } reaches every server granted, as it always did; a role may hold
+      // any server only through the one its account setting picks.
+      if (!r.plain && r.kinds.includes(MCP_KIND) && !accountRoles.has(r.name))
         issue(
           `${r.name} accepts an MCP server, so an account setting must name it (app: ${r.name})`,
           ['apps', i, 'kinds'],

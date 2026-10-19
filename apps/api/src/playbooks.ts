@@ -160,6 +160,42 @@ export const fill = (text: string, settings: Record<string, string | number>) =>
     key in settings ? String(settings[key]) : whole,
   )
 
+/** The App kinds an account setting takes an account of: its role's, or its one App's. */
+const settingKinds = (manifest: PlaybookManifest, setting: { app?: string }) =>
+  (playbookRoles(manifest.apps).find((r) => r.name === setting.app)?.kinds ?? [
+    setting.app!,
+  ]) as ConnectorKind[]
+
+/** An App's name as its accounts are told apart: Mixpanel, MCP. */
+const providerName = (kind: string) =>
+  kind === MCP_KIND ? 'MCP' : (connectors[kind as ConnectorKind]?.label ?? kind)
+
+/** One account an account setting may take: its id, its App and what its row shows. */
+export type AccountChoice = { id: string; kind: string; app: string; name: string; label: string }
+
+/** "Mixpanel · Acme (id c123)": an account told apart from others of the same name. */
+const choiceWords = (a: AccountChoice) => `${a.app} · ${a.name} (id ${a.id})`
+
+/** The workspace's accounts an account setting may take, of any App its role accepts. */
+export async function accountChoices(
+  db: ScopedDb,
+  manifest: PlaybookManifest,
+  setting: { app?: string },
+): Promise<AccountChoice[]> {
+  const rows = await db.connection.findMany({
+    where: { kind: { in: settingKinds(manifest, setting) }, status: { not: 'removed' } },
+    select: { id: true, kind: true, externalAccount: true, label: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  return rows.map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    app: providerName(r.kind),
+    name: r.externalAccount ?? r.label,
+    label: r.label,
+  }))
+}
+
 /** "mixpanel or MCP server": the Apps a role accepts, as a sentence says them. */
 const kindsWords = (kinds: readonly string[]) =>
   kinds.map((k) => (k === MCP_KIND ? 'MCP server' : k)).join(' or ')
@@ -221,23 +257,26 @@ export async function checkSettings(
         break
       case 'account': {
         // Its id, or what its row shows (the Gmail address), as a person would say it: an
-        // account of one of the Apps its role accepts.
-        const role = playbookRoles(manifest.apps).find((r) => r.name === setting.app)
-        const kinds = (role?.kinds ?? [setting.app!]) as ConnectorKind[]
-        const accounts = await db.connection.findMany({
-          where: { kind: { in: kinds }, status: { not: 'removed' } },
-          select: { id: true, externalAccount: true, label: true },
-        })
+        // account of one of the Apps its role accepts. A name two accounts share (a Mixpanel
+        // organization and an MCP server both called Acme) picks neither: it takes the id.
+        const kinds = settingKinds(manifest, setting)
+        const accounts = await accountChoices(db, manifest, setting)
         const lower = text.toLowerCase()
-        const account =
-          accounts.find((a) => a.id === text) ??
-          accounts.find((a) => a.externalAccount?.toLowerCase() === lower) ??
-          accounts.find((a) => a.label.toLowerCase() === lower)
+        const byId = accounts.find((a) => a.id === text)
+        const named = accounts.filter(
+          (a) => a.name.toLowerCase() === lower || a.label.toLowerCase() === lower,
+        )
+        if (!byId && named.length > 1)
+          bad(
+            setting,
+            `matches ${named.length} accounts; answer with one of their ids: ${named.map(choiceWords).join(', ')}`,
+          )
+        const account = byId ?? named[0]
         if (!account)
           bad(
             setting,
             accounts.length
-              ? `needs one of the workspace's ${kindsWords(kinds)} accounts: ${accounts.map((a) => a.externalAccount ?? a.label).join(', ')}`
+              ? `needs one of the workspace's ${kindsWords(kinds)} accounts: ${accounts.map(choiceWords).join(', ')}`
               : `needs a ${kindsWords(kinds)} account, and the workspace has none yet`,
           )
         values[setting.key] = account!.id
@@ -868,8 +907,9 @@ export function runRoles(manifest: PlaybookManifest, settings: Record<string, un
 /**
  * The access a playbook's thread has to this account, or null when it may not use it: an App one
  * of its roles accepts, and where that role's account setting picked one (its inbox), that very
- * account, not the other inboxes its teammate has. A server added by its URL counts only as the
- * account a setting picked. Old manifests (Apps by kind alone) read the same: a kind is a role.
+ * account, not the other inboxes its teammate has. Within a role, a server added by its URL
+ * counts only as the account a setting picked. Old manifests (Apps by kind alone) read the same:
+ * a kind is a role, and a plain `{ kind: mcp }` still reaches every server granted.
  */
 export function playbookAccount(
   playbook: { roles: RunRole[] },
@@ -878,7 +918,9 @@ export function playbookAccount(
   let access: 'read' | 'read_write' | null = null
   for (const role of playbook.roles) {
     if (!role.kinds.includes(connection.kind)) continue
-    const allowed = role.accounts ? role.accounts.has(connection.id) : connection.kind !== MCP_KIND
+    const allowed = role.accounts
+      ? role.accounts.has(connection.id)
+      : role.plain || connection.kind !== MCP_KIND
     if (allowed && access !== 'read_write') access = role.access
   }
   return access
@@ -977,18 +1019,17 @@ export async function roleStatuses(
       : [],
   ])
   return roles.map(({ accounts, ...role }) => {
-    // The accounts it could use, those its setting may pick among; a server added by its URL
-    // only where a setting picks the account.
+    // The accounts it could use, those its setting may pick among; within a role, a server added
+    // by its URL only where a setting picks the account.
     const candidates = grants.filter(
       (g) =>
         role.kinds.includes(g.connection.kind) &&
-        (accounts || g.connection.kind !== MCP_KIND) &&
+        (accounts || role.plain || g.connection.kind !== MCP_KIND) &&
         usableIn(g.connection, { startedByMemberId: ownerMemberId }),
     )
-    // Picked: that account alone; not yet (the question is still to come): any it could pick.
-    const usable = accounts?.size
-      ? candidates.filter((g) => accounts.has(g.connection.id))
-      : candidates
+    // What its runs reach, as playbookAccount decides: where a setting picks its account, that
+    // one alone, and none while it is unanswered.
+    const usable = accounts ? candidates.filter((g) => accounts.has(g.connection.id)) : candidates
     const writable = usable.filter((g) => g.scope === 'read_write')
     const pick = chosen.find((c) => accounts?.has(c.id))
     return {
