@@ -625,7 +625,7 @@ const INSTALLING =
   'woken with its report (`dry_run_report`); `activate_playbook` puts up the card whose Activate button turns it on. ' +
   'It runs on the accounts and subscription of the person in this thread.'
 
-/** A playbook's thread: what the run is, the Apps it has, and how it ends (playbook_report). */
+/** A playbook's thread: what the run is, the Apps it has, its case (playbook_triage) and how it ends (playbook_report). */
 const playbook = (playbook: NonNullable<ThreadSpec['playbook']>, child: boolean) =>
   '## Playbook\n\n' +
   `This thread is part of a run of the playbook **${playbook.name}**, installed in the workspace. It is not in the ` +
@@ -642,9 +642,19 @@ const playbook = (playbook: NonNullable<ThreadSpec['playbook']>, child: boolean)
     : '') +
   (child
     ? ''
-    : "\n\nWhen the run is done, call `playbook_report` once with its case (in the recipe's words) and its outcome: " +
+    : "\n\nOnce you have sorted the event, call `playbook_triage` with its case (in the recipe's words), before " +
+      'your first write through an App: what the playbook lets you do on your own may depend on the case, and ' +
+      'until it knows the case such a write asks a person first. ' +
+      'When the run is done, call `playbook_report` once with its case and its outcome: ' +
       'resolved, escalated (a person must take it), noise (nothing to do) or failed. A later event of the same ' +
-      'conversation continues this thread and the run.')
+      'conversation continues this thread and the run.') +
+  (child || playbook.dryRun
+    ? ''
+    : '\n\nSeveral customers may report the same bug. Before you start a child thread to fix one, look at ' +
+      "`list_children`'s fromOtherRuns: when a child of another run of this playbook already fixes the same bug, " +
+      '`follow_thread` it instead of starting another fix, tell your customer the team is on it, and end your turn. ' +
+      'You are woken here when it reports (`read_child` gives its full report): then answer your own customer, ' +
+      'and end the run.')
 
 /**
  * The teammate's own browser, which website logins need: ready, none on this

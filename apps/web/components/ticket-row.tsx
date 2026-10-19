@@ -76,6 +76,31 @@ export function TicketRow({
     ) : (
       <span className="text-sm text-muted-foreground">Waiting for an owner or admin</span>
     )
+  } else if (open && t.type === 'approval' && t.payload.playbookPromotion) {
+    // Brigade proposes a playbook's action act on its own: it runs on its owner's accounts, so
+    // they decide, or an owner or admin.
+    const promotion = t.payload.playbookPromotion
+    actions =
+      admin || promotion.ownerMemberId === me.memberId ? (
+        <>
+          <Button size="sm" onClick={() => void onResolve(t.id, true)}>
+            Let it act on its own
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void onResolve(t.id, false)}>
+            Keep asking first
+          </Button>
+          <Link
+            href={`/app/routines/playbooks/${promotion.installationId}`}
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Open the playbook
+          </Link>
+        </>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          Waiting for the playbook&apos;s owner or an admin
+        </span>
+      )
   } else if (open && t.type === 'approval' && t.payload.skillAction) {
     // A teammate's skill: it shapes what every teammate does, so an admin decides.
     actions = admin ? (

@@ -88,6 +88,7 @@ import {
   api,
   isAdmin,
   useApi,
+  waitingItemKey,
   waitsOn,
   type Me,
   type ProjectSummary,
@@ -261,19 +262,29 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const workspace = data.workspaces.find((w) => w.id === data.activeWorkspaceId)
   const organization = data.organizations.find((o) => o.id === data.activeOrganizationId)
   // What Home's Waiting on you holds, counted beside Home in the sidebar: the one count of
-  // what waits on this member (folded sections show none).
+  // what waits on this member (folded sections show none). A playbook's approvals are one.
   const waitingOnYou =
-    (tickets.data ?? []).filter((t) => waitsOn(t, data)).length + (pulls.data?.pulls.length ?? 0)
+    new Set((tickets.data ?? []).filter((t) => waitsOn(t, data)).map(waitingItemKey)).size +
+    (pulls.data?.pulls.length ?? 0)
   // Threads with a ticket waiting on this member, and what the ticket asks of them.
   const needsYou: Record<string, string> = {}
+  // What the app icon badge counts: those threads, but a playbook's approvals once, whichever
+  // of its runs (out of the sidebar) ask.
+  const badge = new Set<string>()
   // A child thread is out of the sidebar: its ticket marks its parent, which shows it.
   for (const t of tickets.data ?? [])
-    if (t.session && waitsOn(t, data))
-      needsYou[t.session.parentId ?? t.session.id] ??= TICKET_ASKS[t.type] ?? 'needs you'
+    if (t.session && waitsOn(t, data)) {
+      const thread = t.session.parentId ?? t.session.id
+      needsYou[thread] ??= TICKET_ASKS[t.type] ?? 'needs you'
+      const item = waitingItemKey(t)
+      badge.add(item.startsWith('playbook:') ? item : thread)
+    }
   // And threads whose task is in Needs you, so the list agrees with the board.
   for (const t of tasks.data ?? [])
-    if (t.column === 'needs_you' && t.thread)
+    if (t.column === 'needs_you' && t.thread) {
       needsYou[t.thread.id] ??= t.thread.openPullRequests.length ? 'review PR' : 'needs you'
+      badge.add(t.thread.id)
+    }
 
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
@@ -548,7 +559,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <SearchDialog open={searching} onOpenChange={setSearching} />
           <ShortcutsDialog />
           <NotificationsDialog />
-          <AppNotifications needsYou={Object.keys(needsYou).length} />
+          <AppNotifications needsYou={badge.size} />
           <NewProjectDialog open={creatingProject} onOpenChange={setCreatingProject} />
         </ThreadPanelProvider>
       </DocumentPanelProvider>

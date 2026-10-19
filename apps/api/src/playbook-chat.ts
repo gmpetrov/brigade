@@ -162,7 +162,9 @@ export async function handlePlaybookCall(
       if (op.installationId) installation = await ownInstallation(db, session, op.installationId)
       else {
         if (!op.playbookKey)
-          return { error: 'Give the playbookKey to start installing, or the installationId to go on' }
+          return {
+            error: 'Give the playbookKey to start installing, or the installationId to go on',
+          }
         const template = templates().get(op.playbookKey)
         if (!template) return { error: `No playbook ${op.playbookKey}; show_playbook lists them` }
         // One being installed by this member already: go on with it rather than start a second.

@@ -12,11 +12,19 @@
 // - nothing is sent while the member has a dashboard in view, or had one in
 //   the last 2 minutes: it is in front of them;
 // - one notification per thread (its tag), closed by the next push once it no
-//   longer waits; the app icon badge counts what waits, as the sidebar does.
+//   longer waits; the app icon badge counts what waits, as the sidebar does;
+// - a playbook's approvals are one item: one push when its queue fills, nothing
+//   more (not even a reminder) while it stays full, a new one once it emptied.
 // Apple drops subscriptions that receive pushes showing nothing, so every push
 // shows a notification: closing and the badge ride along with real ones, and
 // the dashboard catches both up when it opens.
-import type { NotifyPreset, PushMessage } from '@brigade/contracts'
+import {
+  playbookApprovalOf,
+  toApprove,
+  type NotifyPreset,
+  type PlaybookManifest,
+  type PushMessage,
+} from '@brigade/contracts'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { isLooking } from './hub.js'
@@ -57,6 +65,8 @@ type Item = {
   tag: string
   /** Waits on the member: counts in the badge, is reminded and closed once resolved. */
   needs: boolean
+  /** Sent once while it waits, never reminded: a playbook's queue. */
+  once?: boolean
 }
 
 type Recipient = { id: string; role: string; notify: NotifyPreset }
@@ -209,11 +219,15 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
     wantsReplies
       ? prisma.sessionEvent.findMany({
           // A child's turns go to its parent, which says what matters: no push of their own.
+          // Nor a playbook's run nobody joined: out of the sidebar, what it needs is its queue.
           where: {
             workspaceId,
             type: 'turn.completed',
             at: { gt: fresh },
-            session: { parentId: null },
+            session: {
+              parentId: null,
+              OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
+            },
           },
           select: {
             at: true,
@@ -239,7 +253,14 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
   /** Items that count in the badge but are someone else's to answer. */
   const counted = new Map<string, Set<string>>(members.map((m) => [m.id, new Set()]))
 
+  // A playbook's approvals, by its installation: one item each, below.
+  const queues = new Map<string, OpenTicket[]>()
   for (const t of tickets) {
+    const playbook = playbookApprovalOf(t)
+    if (playbook) {
+      queues.set(playbook.installationId, [...(queues.get(playbook.installationId) ?? []), t])
+      continue
+    }
     const key = t.session ? `needs:${t.session.id}` : `needs:ticket:${t.id}`
     for (const m of members) {
       if (!waitsOn(t, m)) continue
@@ -257,6 +278,37 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
           ? threadUrl(workspaceId, t.session.id)
           : `/app/tickets?workspace=${workspaceId}`,
         tag: t.session?.id ?? t.id,
+      })
+    }
+  }
+
+  // A playbook's queue: one item, counted once in the badge, and told to whoever its approvals
+  // are for (as each ticket's own would be). Its key stays while the queue is not empty, so a
+  // second approval sends nothing; emptied, the item goes, and the next one is sent again.
+  const playbooks = queues.size
+    ? await prisma.playbookInstallation.findMany({
+        where: { workspaceId, id: { in: [...queues.keys()] } },
+        select: { id: true, manifest: true },
+      })
+    : []
+  for (const [installationId, queue] of queues) {
+    const key = `needs:playbook:${installationId}`
+    const manifest = playbooks.find((p) => p.id === installationId)?.manifest as
+      PlaybookManifest | undefined
+    for (const m of members) {
+      if (!queue.some((t) => waitsOn(t, m))) continue
+      counted.get(m.id)!.add(key)
+      const theirs = queue.filter((t) => isFor(t, m))
+      if (!theirs.length) continue
+      add(m.id, {
+        key,
+        workspaceId,
+        needs: true,
+        once: true,
+        title: `${manifest?.name ?? 'A playbook'} · ${toApprove(theirs.length)}`,
+        body: theirs[theirs.length - 1]!.title,
+        url: `/app?workspace=${workspaceId}&approvals=${installationId}`,
+        tag: installationId,
       })
     }
   }
@@ -376,12 +428,12 @@ export function watchNotifications() {
   }, SWEEP_MS)
 }
 
-/** One pass over every member with a device that receives pushes. */
-export async function sweep(now = new Date()) {
+/** One pass over every member with a device that receives pushes (in one organization: tests). */
+export async function sweep(now = new Date(), organizationId?: string) {
   const keys = vapid()
   if (!keys) return
   const members = await prisma.member.findMany({
-    where: { user: { pushDevices: { some: {} } } },
+    where: { ...(organizationId ? { organizationId } : {}), user: { pushDevices: { some: {} } } },
     select: { id: true, organizationId: true, role: true, notify: true, userId: true },
   })
   const byOrganization = new Map<string, typeof members>()
@@ -476,7 +528,14 @@ async function settle(
   })
   const remind = items.filter((i) => {
     const n = known.get(i.key)
-    return i.needs && n?.pushed && n.sentAt && !n.remindedAt && at - n.sentAt.getTime() >= REMIND_MS
+    return (
+      i.needs &&
+      !i.once &&
+      n?.pushed &&
+      n.sentAt &&
+      !n.remindedAt &&
+      at - n.sentAt.getTime() >= REMIND_MS
+    )
   })
   if (!due.length && !remind.length) return
 
@@ -543,10 +602,10 @@ async function settle(
   })
 }
 
-/** The tag of a notice's notification, from its key: a thread's id, else the ticket's, task's or pull request's. */
+/** The tag of a notice's notification, from its key: a thread's id, else the ticket's, playbook's, task's or pull request's. */
 const tagOf = (key: string) => {
   const [, id, more] = key.split(':')
-  return key.startsWith('needs:ticket:') ? more! : id!
+  return key.startsWith('needs:ticket:') || key.startsWith('needs:playbook:') ? more! : id!
 }
 
 /** One push for everything due: the thing itself, or how many and which. */

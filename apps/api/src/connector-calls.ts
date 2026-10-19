@@ -29,6 +29,7 @@ import {
   type Operation,
 } from './connectors/types.js'
 import { writeCapReached } from './caps.js'
+import { afterPlaybookDecision, numbersOf, playbookVerdict } from './playbook-autonomy.js'
 import { threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
@@ -96,7 +97,8 @@ export async function handleConnectorCall(
 
   // In a playbook's thread: its Apps alone, and the action of its manifest the call is.
   const playbook = await threadPlaybook(db, session.playbookRunId)
-  const playbookActionKey = playbook?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
+  const playbookActionKey =
+    playbook?.actions.find((a) => a.tools.includes(call.operation))?.key ?? null
   const record = (data: {
     result: string
     target: string
@@ -197,9 +199,12 @@ export async function handleConnectorCall(
     })
   }
 
-  // Approval and caps: the teammate's policy for connector writes (allow unless
-  // set otherwise), then its daily write cap.
+  // Approval and caps: the teammate's policy for connector writes (allow unless set otherwise),
+  // in a playbook's live run its action's level instead (a deny of the teammate's still stands),
+  // then the teammate's daily write cap.
   let decision: (Decision & { ticketId: string }) | undefined
+  /** A playbook's write no person decided: counted toward its action's caps and listed on its sheet. */
+  let onItsOwn = false
   if (operation.write) {
     const policy = (teammate.permissionPolicy as PermissionPolicy).connectorWrites ?? 'allow'
     if (policy === 'deny') {
@@ -209,13 +214,29 @@ export async function handleConnectorCall(
         error: `${teammate.name} may not make changes through connectors`,
       })
     }
+    const verdict = playbook
+      ? await playbookVerdict(db, {
+          playbook,
+          actionKey: playbookActionKey,
+          args: input.data,
+          github: () => authorisedFetch(db, scope, connection),
+        })
+      : null
+    if (verdict?.level === 'deny') {
+      await record({ result: 'denied', target, error: 'the playbook never does this' })
+      return result({ ok: false, error: verdict.reason })
+    }
     const cap = await writeCapReached(db, teammate, connection.id)
-    if (cap || policy === 'ask') {
+    const asks = verdict ? verdict.level === 'ask' : policy === 'ask'
+    onItsOwn = verdict?.level === 'auto' && !cap
+    if (cap || asks) {
       const action = `${call.operation.replace(/_/g, ' ')} (${target})`
       const where = connection.externalAccount ?? connection.label
       const reason = cap
         ? `${teammate.name} reached its cap of ${cap.limit} write calls today on ${where}. Approving allows this one call.`
-        : undefined
+        : verdict?.level === 'ask'
+          ? verdict.reason
+          : undefined
       const ticket = await db.ticket.create({
         data: {
           sessionId: session.id,
@@ -231,6 +252,15 @@ export async function handleConnectorCall(
             input: input.data,
             ...(cap ?? {}),
             ...(reason ? { reason } : {}),
+            // A playbook's: grouped by its installation wherever it waits, and its action's
+            // decisions measure trust (playbook-autonomy.ts). Null key: a write no action lists.
+            ...(playbook
+              ? {
+                  playbookInstallationId: playbook.installationId,
+                  playbookActionKey,
+                  playbookRunId: playbook.runId,
+                }
+              : {}),
           },
         } as never,
       })
@@ -295,7 +325,13 @@ export async function handleConnectorCall(
       },
       input.data,
     )
-    await record({ result: 'ok', target, ...(decision ? { ticketId: decision.ticketId } : {}) })
+    await record({
+      result: 'ok',
+      target,
+      ...(decision ? { ticketId: decision.ticketId } : {}),
+      // Its numbers only: what an amount cap sums (playbook-autonomy.ts).
+      ...(onItsOwn ? { input: numbersOf(input.data) } : {}),
+    })
     // Pull requests a teammate opens or reviews feed the review loop.
     if (connection.kind === 'github')
       await notePullRequestCall(db, scope, {
@@ -476,5 +512,8 @@ export async function decideTicket(
     ...(decision.reason ? { reason: decision.reason } : {}),
     ...(decision.always && decision.approved ? { always: true } : {}),
   })
+  // A person's decision on a playbook's approval measures its action's trust: enough approvals
+  // propose it act on its own (one decided in bulk is marked first, and does not count).
+  if (resolve) await afterPlaybookDecision(db, scope, ticket)
   return Boolean(resolve)
 }

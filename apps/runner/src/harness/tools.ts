@@ -6,6 +6,7 @@ import {
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
   CHIEF_NAME,
+  FOLLOWERS_PER_THREAD,
   isChiefName,
   DESIGN_ENTRY,
   DESIGN_FILES_MAX,
@@ -1476,9 +1477,32 @@ export function scheduleTools(call: ScheduleCaller): Record<string, Tool> {
   }
 }
 
-/** A playbook's run: how it ended, with its triage case. Through the schedule calls, which the API checks. */
+/**
+ * A playbook's run: its triage case once the event is sorted, and how it ended. Through the
+ * schedule calls, which the API checks.
+ */
 export function playbookTools(call: ScheduleCaller): Record<string, Tool> {
   return {
+    playbook_triage: tool({
+      description:
+        "Say the run's case, in the recipe's words (e.g. documented_question, bug, noise), once you have sorted " +
+        'the event and before your first write through an App: what the playbook lets you do on your own may ' +
+        'depend on it. Call it again if the case turns out to be another.',
+      inputSchema: jsonSchema<{ case: string }>({
+        type: 'object',
+        properties: {
+          case: { type: 'string', description: "The triage case, in the recipe's words" },
+        },
+        required: ['case'],
+      }),
+      execute: (input, { toolCallId }) =>
+        call({
+          operation: { name: 'playbook_triage', case: input.case },
+          toolCallId,
+          toolName: 'playbook_triage',
+          input,
+        }),
+    }),
     playbook_report: tool({
       description:
         "End a playbook's run: its case, in the recipe's words (e.g. documented_question, bug, noise), and its " +
@@ -1540,7 +1564,10 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
       }),
       execute: (input, { toolCallId }) =>
         send(
-          { name: 'show_playbook', ...(input.playbookKey ? { playbookKey: input.playbookKey } : {}) },
+          {
+            name: 'show_playbook',
+            ...(input.playbookKey ? { playbookKey: input.playbookKey } : {}),
+          },
           toolCallId,
           'show_playbook',
           input,
@@ -1662,11 +1689,12 @@ export function playbookInstallTools(call: ScheduleCaller): Record<string, Tool>
 /**
  * Child threads: work started beside this thread, in a fresh context, whose report
  * comes back here. A child reports with `report` and starts no children of its own.
+ * A playbook's run may also follow another run's child (follow_thread, `follow`).
  * They go through the schedule calls; the API checks the thread and its children.
  */
 export function childTools(
   call: ScheduleCaller,
-  options: { child: boolean },
+  options: { child: boolean; follow?: boolean },
 ): Record<string, Tool> {
   const threadId = { type: 'string', description: 'A child thread, from list_children' } as const
   if (options.child)
@@ -1753,7 +1781,11 @@ export function childTools(
     }),
     list_children: tool({
       description:
-        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in.",
+        "This thread's child threads, newest first: who, status, whether you wait for it, and its report once in." +
+        (options.follow
+          ? " Also fromOtherRuns: the child threads of this playbook's other runs from the last week " +
+            '(e.g. the fix of a bug another customer reported), which follow_thread can follow.'
+          : ''),
       inputSchema: jsonSchema<Record<string, never>>({ type: 'object', properties: {} }),
       execute: (input, { toolCallId }) =>
         call({
@@ -1765,7 +1797,8 @@ export function childTools(
     }),
     read_child: tool({
       description:
-        "A child thread's full report, its last message and the pull requests it opened.",
+        "A child thread's full report, its last message and the pull requests it opened" +
+        (options.follow ? ', or those of a thread you follow (follow_thread).' : '.'),
       inputSchema: jsonSchema<{ threadId: string }>({
         type: 'object',
         properties: { threadId },
@@ -1795,6 +1828,35 @@ export function childTools(
           input,
         }),
     }),
+    ...(options.follow
+      ? {
+          follow_thread: tool({
+            description:
+              'Wait for a child thread of another run of this playbook, instead of starting the same work again: when a bug ' +
+              'your customer reports is already being fixed there (list_children shows them in fromOtherRuns), follow ' +
+              'that fix. You are woken here once, with a short note, when it reports (and again if it reports later); ' +
+              'read_child then gives its full report. Tell your customer the team is on it, then end your turn: never ' +
+              `wait or poll. Not your own child (its report already comes to you). At most ${FOLLOWERS_PER_THREAD} threads follow one.`,
+            inputSchema: jsonSchema<{ threadId: string }>({
+              type: 'object',
+              properties: {
+                threadId: {
+                  type: 'string',
+                  description: "A thread from list_children's fromOtherRuns",
+                },
+              },
+              required: ['threadId'],
+            }),
+            execute: (input, { toolCallId }) =>
+              call({
+                operation: { name: 'follow_thread', threadId: input.threadId },
+                toolCallId,
+                toolName: 'follow_thread',
+                input,
+              }),
+          }),
+        }
+      : {}),
   }
 }
 

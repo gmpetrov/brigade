@@ -467,9 +467,13 @@ export function ThreadConversation({
       !(ticket.type === 'cap' && ticket.payload.connectionId),
   )
   // A skill the teammate proposed has no event in the thread: its ticket shows at the end, where the reply that mentions it is.
+  // So does Brigade's proposal to let a playbook's action act on its own, after the decision that earned it.
   const proposals = t.tickets.filter(
     (ticket) =>
-      ticket.type === 'approval' && (ticket.payload.skillAction || ticket.payload.playbookActivation),
+      ticket.type === 'approval' &&
+      (ticket.payload.skillAction ||
+        ticket.payload.playbookActivation ||
+        ticket.payload.playbookPromotion),
   )
   const ticketCard = (tickets: typeof t.tickets, className: string) => (
     <Card className={cn('gap-0 overflow-hidden py-0', className)}>
@@ -886,7 +890,7 @@ export function ThreadConversation({
         {top}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
-            {t.parent && <ParentLink parent={t.parent} />}
+            {t.parent && <ParentLink parent={t.parent} followers={t.followers} />}
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
 

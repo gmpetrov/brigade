@@ -40,7 +40,12 @@ const urlOf = (pathToken: string) => `${env.API_URL}/hooks/${pathToken}`
 /** Delete triggers and their signing secrets. The caller syncs the subscriptions. */
 export async function deleteTriggers(
   db: ScopedDb,
-  where: { connectionId?: string; teammateId?: string; id?: string; playbookInstallationId?: string },
+  where: {
+    connectionId?: string
+    teammateId?: string
+    id?: string
+    playbookInstallationId?: string
+  },
 ) {
   const rows = await db.trigger.findMany({ where })
   for (const row of rows) {
@@ -52,7 +57,10 @@ export async function deleteTriggers(
 
 /** A playbook's triggers change only through it, so an update can replace them cleanly. */
 async function notThePlaybooks(db: ScopedDb, id: string) {
-  const row = await db.trigger.findFirst({ where: { id }, select: { playbookInstallationId: true } })
+  const row = await db.trigger.findFirst({
+    where: { id },
+    select: { playbookInstallationId: true },
+  })
   if (row?.playbookInstallationId)
     throw new HTTPException(409, {
       message: 'This trigger belongs to a playbook: change it from the playbook, on Automations',

@@ -190,10 +190,8 @@ ALTER TABLE "PlaybookDryRun" ADD CONSTRAINT "PlaybookDryRun_installationId_fkey"
 -- AddForeignKey
 ALTER TABLE "PlaybookDryRun" ADD CONSTRAINT "PlaybookDryRun_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Autonomy (flags and daily caps) and follow_thread
--- AlterTable
-ALTER TABLE "ConnectionCall" ADD COLUMN     "flaggedAt" TIMESTAMP(3),
-ADD COLUMN     "flaggedByMemberId" TEXT;
+-- Autonomy (daily caps; a call flagged as wrong is an audit entry, the call log being
+-- append-only) and follow_thread
 
 -- AlterTable
 ALTER TABLE "PlaybookAction" ADD COLUMN     "demotedReason" TEXT,

@@ -1,12 +1,22 @@
 'use client'
-import type {
-  PlaybookActionView,
-  PlaybookInstallationView,
-  PlaybookLevel,
-  PlaybookRunView,
-  PlaybookTemplate,
+import {
+  withinCeiling,
+  type PlaybookActionView,
+  type PlaybookAutoCallView,
+  type PlaybookInstallationView,
+  type PlaybookLevel,
+  type PlaybookRunView,
+  type PlaybookTemplate,
 } from '@brigade/contracts'
-import { ArrowLeft, BookOpenCheck, MoreHorizontal, Pause, Play, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  BookOpenCheck,
+  EllipsisVertical,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Trash2,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -22,12 +32,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, projectQuery, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
+import { cn } from '@/lib/utils'
 
 const STATUS_WORDS: Record<PlaybookInstallationView['status'], string> = {
   setup: 'Being set up',
@@ -43,10 +57,11 @@ const STATUS_DOTS: Record<PlaybookInstallationView['status'], string> = {
   paused: 'paused',
 }
 const LEVEL_WORDS: Record<PlaybookLevel, string> = {
-  ask: 'Ask first',
+  ask: 'Asks first',
   auto: 'On its own',
   deny: 'Never',
 }
+const LEVELS: PlaybookLevel[] = ['ask', 'auto', 'deny']
 const RUN_DOTS: Record<PlaybookRunView['status'], string> = {
   running: 'running',
   waiting_person: 'waiting',
@@ -111,7 +126,9 @@ function PlaybookRow({
 
 /** Playbooks: whole jobs installed in the workspace, above the schedules. In a project, its own. */
 export function PlaybookList({ projectId, filter }: { projectId?: string; filter?: string }) {
-  const playbooks = useApi<PlaybookInstallationView[]>(`/playbooks${projectQuery(projectId ?? filter)}`)
+  const playbooks = useApi<PlaybookInstallationView[]>(
+    `/playbooks${projectQuery(projectId ?? filter)}`,
+  )
   const catalog = useApi<PlaybookTemplate[]>('/playbooks/catalog')
   const reload = playbooks.reload
   useLive((message) => {
@@ -238,19 +255,172 @@ function Row({ children }: { children: ReactNode }) {
   return <div className="flex min-w-0 items-center gap-3 px-4 py-3 text-sm">{children}</div>
 }
 
-function ActionRow({ action: a }: { action: PlaybookActionView }) {
+/** A quiet row's dot, in the tone of what it says (also on hover). */
+function Dot({
+  tone,
+  label,
+}: {
+  tone: 'success' | 'warning' | 'destructive' | 'neutral'
+  label: string
+}) {
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn(
+        'size-2 shrink-0 rounded-full',
+        tone === 'success'
+          ? 'bg-success'
+          : tone === 'warning'
+            ? 'bg-warning'
+            : tone === 'destructive'
+              ? 'bg-destructive'
+              : 'bg-muted-foreground',
+      )}
+    />
+  )
+}
+
+function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span className="shrink-0 rounded-md border bg-card px-2 py-0.5 text-xs text-muted-foreground">
+      {children}
+    </span>
+  )
+}
+
+/** What limits it on its own, in a few words: "only for documented_question, at most 20 a day". */
+function limitsWords(a: PlaybookActionView) {
+  const { conditions: c, limits } = a
+  return [
+    c.cases?.length && `only for ${c.cases.join(', ')}`,
+    (c.checksPassed || a.needsChecks) && 'when checks pass',
+    ...Object.entries(c.max ?? {}).map(([argument, max]) => `up to ${max} ${argument}`),
+    limits.count !== undefined && `at most ${limits.count} a day`,
+    limits.amount && `at most ${limits.amount.max} ${limits.amount.argument} a day`,
+  ]
+    .filter(Boolean)
+    .join(', ')
+}
+
+/** Its one line: why it asks again, people's decisions, its limits and what it did today. */
+function actionLine(a: PlaybookActionView) {
   const decided = a.approved + a.denied
+  const line = [
+    a.level === 'ask' &&
+      a.demotedReason === 'flagged' &&
+      'Asks again since a call was marked as wrong',
+    decided > 0 && `${a.approved}/${decided} approved`,
+    a.promotionTicketId && 'proposed to act on its own, waiting for a decision',
+    a.level === 'auto' && limitsWords(a),
+    a.autoToday > 0 && `${a.autoToday} on its own today`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return line || (a.level === 'deny' ? 'Never done' : 'Nothing yet')
+}
+
+/** An action: its level as one chip, its numbers, and a ⋮ to change the level within its ceiling. */
+function ActionRow({
+  action: a,
+  admin,
+  onLevel,
+}: {
+  action: PlaybookActionView
+  admin: boolean
+  onLevel: (a: PlaybookActionView, level: PlaybookLevel) => void
+}) {
+  // A merge on its own waits for GitHub's checks, and only an owner or admin sets it.
+  const choices = LEVELS.filter(
+    (level) => withinCeiling(level, a.ceiling) && (level !== 'auto' || !a.needsChecks || admin),
+  )
   return (
     <Row>
-      <span className="min-w-0 flex-1 truncate">{a.label}</span>
-      {decided > 0 && (
-        <span className="font-mono text-xs text-muted-foreground">
-          {a.approved}/{decided} approved
-        </span>
+      {a.promotionTicketId ? (
+        <Dot tone="warning" label="Waiting for a decision" />
+      ) : (
+        <Dot tone={a.level === 'auto' ? 'success' : 'neutral'} label={LEVEL_WORDS[a.level]} />
       )}
-      <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium">
-        {LEVEL_WORDS[a.level]}
-      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate">{a.label}</span>
+        <span className="truncate text-xs text-muted-foreground">{actionLine(a)}</span>
+      </div>
+      <Chip>{LEVEL_WORDS[a.level]}</Chip>
+      {a.canChange && choices.length > 1 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={`${a.label} options`}>
+              <EllipsisVertical aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              {a.label}
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={a.level}
+              onValueChange={(level) => onLevel(a, level as PlaybookLevel)}
+            >
+              {choices.map((level) => (
+                <DropdownMenuRadioItem key={level} value={level}>
+                  {level === 'auto' && a.needsChecks
+                    ? 'On its own when checks pass'
+                    : LEVEL_WORDS[level]}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </Row>
+  )
+}
+
+/** A write it made on its own: its thread, and a ⋮ to mark it as wrong. */
+function AutoCallRow({
+  call: c,
+  manages,
+  onFlag,
+}: {
+  call: PlaybookAutoCallView
+  manages: boolean
+  onFlag: (c: PlaybookAutoCallView) => void
+}) {
+  return (
+    <Row>
+      <Dot
+        tone={c.flagged ? 'destructive' : 'success'}
+        label={c.flagged ? 'Marked as wrong' : 'Done'}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <Link href={`/app/threads/${c.threadId}`} className="truncate hover:underline">
+          {c.action}
+        </Link>
+        <span className="truncate text-xs text-muted-foreground">
+          {c.target} · {timeAgo(c.at)}
+        </span>
+      </div>
+      {c.flagged && <Chip>Marked as wrong</Chip>}
+      {manages && !c.flagged && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={`${c.action} options`}>
+              <EllipsisVertical aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem asChild>
+              <Link href={`/app/threads/${c.threadId}`}>Open the thread</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onFlag(c)}>Mark as wrong</DropdownMenuItem>
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              {c.action} then asks first again.
+            </DropdownMenuLabel>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </Row>
   )
 }
@@ -280,6 +450,36 @@ export function PlaybookSheet({ id }: { id: string }) {
       await api(`/playbooks/${id}`, init)
       if (init.method === 'DELETE') router.push('/app/routines')
       else await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  // Its owner, an owner or an admin; a merge on its own always waits for its checks.
+  async function setLevel(a: PlaybookActionView, level: PlaybookLevel) {
+    setError(undefined)
+    try {
+      await api(`/playbooks/${id}/actions/${a.key}`, {
+        method: 'PATCH',
+        body: {
+          level,
+          ...(level === 'auto' && a.needsChecks
+            ? { conditions: { ...a.conditions, checksPassed: true } }
+            : {}),
+        },
+      })
+      await reload()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  // A write it made on its own was wrong: its action asks first again.
+  async function flag(c: PlaybookAutoCallView) {
+    setError(undefined)
+    try {
+      await api(`/playbooks/${id}/calls/${c.id}/flag`, { body: {} })
+      await reload()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -381,8 +581,32 @@ export function PlaybookSheet({ id }: { id: string }) {
       {p.actions.length > 0 && (
         <Section title="Actions">
           {p.actions.map((a) => (
-            <ActionRow key={a.key} action={a} />
+            <ActionRow
+              key={a.key}
+              action={a}
+              admin={isAdmin(me)}
+              onLevel={(action, level) => void setLevel(action, level)}
+            />
           ))}
+        </Section>
+      )}
+
+      {(p.autoCalls.length > 0 || p.actions.some((a) => a.level === 'auto')) && (
+        <Section title="Done on its own">
+          {p.autoCalls.length === 0 ? (
+            <Row>
+              <span className="text-muted-foreground">Nothing yet.</span>
+            </Row>
+          ) : (
+            p.autoCalls.map((c) => (
+              <AutoCallRow
+                key={c.id}
+                call={c}
+                manages={manages}
+                onFlag={(call) => void flag(call)}
+              />
+            ))
+          )}
         </Section>
       )}
 

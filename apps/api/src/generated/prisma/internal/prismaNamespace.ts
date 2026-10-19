@@ -5268,8 +5268,6 @@ export const ConnectionCallScalarFieldEnum = {
   simulated: 'simulated',
   playbookActionKey: 'playbookActionKey',
   input: 'input',
-  flaggedAt: 'flaggedAt',
-  flaggedByMemberId: 'flaggedByMemberId',
   createdAt: 'createdAt'
 } as const
 

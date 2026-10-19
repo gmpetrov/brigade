@@ -242,7 +242,8 @@ async function check(name, fn) {
 let playbook
 await check('installed through the API: its triggers, schedule, skills and actions', async () => {
   // Whatever an earlier run left.
-  for (const old of await call('/playbooks')) await call(`/playbooks/${old.id}`, { method: 'DELETE' })
+  for (const old of await call('/playbooks'))
+    await call(`/playbooks/${old.id}`, { method: 'DELETE' })
   playbook = await call('/playbooks', {
     body: {
       playbookKey: 'brigade/support-bugs',
@@ -280,7 +281,9 @@ await check('installed through the API: its triggers, schedule, skills and actio
     ['bug-fix', 'support-triage'],
   )
   // A playbook's schedule and trigger are changed through it only.
-  const [s] = await q(`select id from "Schedule" where "playbookInstallationId" = $1`, [playbook.id])
+  const [s] = await q(`select id from "Schedule" where "playbookInstallationId" = $1`, [
+    playbook.id,
+  ])
   await assert.rejects(call(`/schedules/${s.id}`, { method: 'DELETE' }), /belongs to a playbook/)
   // And they show in the playbook, not in the lists of schedules and triggers.
   assert.ok(!(await call('/schedules')).some((x) => x.id === s.id))
@@ -386,7 +389,9 @@ await check('a reply in the same Gmail thread continues the run', async () => {
     body: 'Thanks, and for Webflow?',
   })
   await until('the second prompt', () => promptsTo(runThread).length >= 2, 150_000)
-  const runs = await q(`select status from "PlaybookRun" where "installationId" = $1`, [playbook.id])
+  const runs = await q(`select status from "PlaybookRun" where "installationId" = $1`, [
+    playbook.id,
+  ])
   assert.equal(runs.length, 1)
   assert.equal(runs[0].status, 'running')
 })
@@ -423,7 +428,9 @@ await check('a child of the run is part of it', async () => {
     (await call('/threads')).some((t) => t.id === runThread),
     'now in the sidebar',
   )
-  const [run] = await q(`select interventions from "PlaybookRun" where id = $1`, [root.playbookRunId])
+  const [run] = await q(`select interventions from "PlaybookRun" where id = $1`, [
+    root.playbookRunId,
+  ])
   assert.equal(run.interventions, 1)
 })
 
@@ -443,7 +450,9 @@ await check('past its runs a day, the event waits and the owner gets a ticket', 
   await until(
     'the second run',
     async () => {
-      const runs = await q(`select id from "PlaybookRun" where "installationId" = $1`, [playbook.id])
+      const runs = await q(`select id from "PlaybookRun" where "installationId" = $1`, [
+        playbook.id,
+      ])
       return runs.length === 2
     },
     150_000,
@@ -471,7 +480,10 @@ await check('past its runs a day, the event waits and the owner gets a ticket', 
 })
 
 await check('pausing stops its schedule; uninstalling removes all it made', async () => {
-  const paused = await call(`/playbooks/${playbook.id}`, { method: 'PATCH', body: { paused: true } })
+  const paused = await call(`/playbooks/${playbook.id}`, {
+    method: 'PATCH',
+    body: { paused: true },
+  })
   assert.equal(paused.status, 'paused')
   const [s] = await q(`select "pausedAt" from "Schedule" where "playbookInstallationId" = $1`, [
     playbook.id,
@@ -484,7 +496,8 @@ await check('pausing stops its schedule; uninstalling removes all it made', asyn
   await call(`/playbooks/${playbook.id}`, { method: 'DELETE' })
   for (const table of ['Trigger', 'Schedule', 'SkillPack'])
     assert.equal(
-      (await q(`select id from "${table}" where "playbookInstallationId" = $1`, [playbook.id])).length,
+      (await q(`select id from "${table}" where "playbookInstallationId" = $1`, [playbook.id]))
+        .length,
       0,
       table,
     )
@@ -649,7 +662,9 @@ await check('installed from the chat: its card, then its settings one by one', a
   assert.match(said.bad.error, /web address/)
   assert.deepEqual(said.rest.missing, [])
   assert.equal(said.rest.apps.find((a) => a.kind === 'github').status, 'ready')
-  const [row] = await q(`select settings from "PlaybookInstallation" where id = $1`, [installationId])
+  const [row] = await q(`select settings from "PlaybookInstallation" where id = $1`, [
+    installationId,
+  ])
   assert.equal(row.settings.inbox, gmail.id)
   assert.equal(row.settings.address, 'support@acme.test')
   assert.equal(row.settings.repo, 'acme/web')
@@ -802,7 +817,8 @@ await check('a member asks an owner or admin in one ticket, which activates it',
 await check('uninstalled, its dry run goes with it', async () => {
   await call(`/playbooks/${installationId}`, { method: 'DELETE' })
   assert.equal(
-    (await q(`select id from "PlaybookDryRun" where "installationId" = $1`, [installationId])).length,
+    (await q(`select id from "PlaybookDryRun" where "installationId" = $1`, [installationId]))
+      .length,
     0,
   )
   await q(`delete from "Connection" where id = $1`, [github.id])

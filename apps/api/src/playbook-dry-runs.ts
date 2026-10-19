@@ -124,7 +124,9 @@ export async function startDryRun(
     }
   } else {
     // A schedule's past is its next firing: one run of its instructions.
-    const schedule = await db.schedule.findFirst({ where: { playbookInstallationId: installationId } })
+    const schedule = await db.schedule.findFirst({
+      where: { playbookInstallationId: installationId },
+    })
     if (!schedule) throw new HTTPException(409, { message: 'Its schedule is not made yet' })
     events.push({
       title: schedule.title,
@@ -283,7 +285,12 @@ async function startEvent(
  * and the next event starts. A run that ended without playbook_report takes its thread's word.
  */
 export async function noteDryRunEvents(
-  session: { id: string; organizationId: string; workspaceId: string; playbookRunId: string | null },
+  session: {
+    id: string
+    organizationId: string
+    workspaceId: string
+    playbookRunId: string | null
+  },
   events: { event: { type: string; message?: string } }[],
 ) {
   if (!session.playbookRunId) return

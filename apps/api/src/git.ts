@@ -253,7 +253,10 @@ export async function authorize(
     if (!row) throw new GitRefused('Brigade: unknown thread')
     // A playbook's dry run: its work stays in its folder.
     const run = row.playbookRunId
-      ? await db.playbookRun.findFirst({ where: { id: row.playbookRunId }, select: { dryRun: true } })
+      ? await db.playbookRun.findFirst({
+          where: { id: row.playbookRunId },
+          select: { dryRun: true },
+        })
       : null
     session = { id: row.id, origin: row.origin, dryRun: !!run?.dryRun }
     const seat = await db.threadTeammate.findFirst({

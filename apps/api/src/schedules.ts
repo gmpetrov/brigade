@@ -15,6 +15,7 @@ import { audit, type Actor } from './audit.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { handleChildCall, isChildOperation } from './children.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
+import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
@@ -347,7 +348,9 @@ export async function fire(schedule: Schedule, dueAt: Date): Promise<Firing> {
   if (!computer) return failed('the workspace has no computer')
 
   // A playbook's schedule: each firing a run, within its runs a day.
-  const run = schedule.playbookInstallationId ? await beginRun(db, schedule.playbookInstallationId) : null
+  const run = schedule.playbookInstallationId
+    ? await beginRun(db, schedule.playbookInstallationId)
+    : null
   if (run && 'skipped' in run) return { skipped: run.skipped }
   if (run && 'limit' in run) {
     await db.schedule.updateMany({ where: { id: schedule.id }, data: { lastError: run.limit } })
@@ -510,7 +513,11 @@ export async function handleScheduleCall(
     const output = await handleChildCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
-  // And a playbook run's report.
+  // And a playbook run's case, once its event is sorted, and its report.
+  if (op.name === 'playbook_triage') {
+    const output = await triageRun(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
   if (op.name === 'playbook_report') {
     const output = await reportRun(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)

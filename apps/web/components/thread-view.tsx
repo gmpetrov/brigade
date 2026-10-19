@@ -120,7 +120,7 @@ export type Item =
       /** Given to this teammate during its running turn. */
       steeredTo?: string
       /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
-      brigade?: 'task' | 'report' | 'dry_run'
+      brigade?: 'task' | 'report' | 'follow' | 'dry_run'
     }
   | {
       kind: 'assistant'
@@ -1487,9 +1487,11 @@ export function ThreadItems({
               <p className="mb-1 text-xs font-medium text-muted-foreground">
                 {item.brigade === 'report'
                   ? 'Reports from child threads'
-                  : item.brigade === 'dry_run'
-                    ? 'Dry run done'
-                    : 'Work from the parent thread'}
+                  : item.brigade === 'follow'
+                    ? 'Report from a thread this one follows'
+                    : item.brigade === 'dry_run'
+                      ? 'Dry run done'
+                      : 'Work from the parent thread'}
               </p>
               <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
                 <MessageWithCode text={item.text} />

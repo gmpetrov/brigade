@@ -39,8 +39,6 @@ export type ConnectionCallMinAggregateOutputType = {
   ticketId: string | null
   simulated: boolean | null
   playbookActionKey: string | null
-  flaggedAt: Date | null
-  flaggedByMemberId: string | null
   createdAt: Date | null
 }
 
@@ -59,8 +57,6 @@ export type ConnectionCallMaxAggregateOutputType = {
   ticketId: string | null
   simulated: boolean | null
   playbookActionKey: string | null
-  flaggedAt: Date | null
-  flaggedByMemberId: string | null
   createdAt: Date | null
 }
 
@@ -80,8 +76,6 @@ export type ConnectionCallCountAggregateOutputType = {
   simulated: number
   playbookActionKey: number
   input: number
-  flaggedAt: number
-  flaggedByMemberId: number
   createdAt: number
   _all: number
 }
@@ -102,8 +96,6 @@ export type ConnectionCallMinAggregateInputType = {
   ticketId?: true
   simulated?: true
   playbookActionKey?: true
-  flaggedAt?: true
-  flaggedByMemberId?: true
   createdAt?: true
 }
 
@@ -122,8 +114,6 @@ export type ConnectionCallMaxAggregateInputType = {
   ticketId?: true
   simulated?: true
   playbookActionKey?: true
-  flaggedAt?: true
-  flaggedByMemberId?: true
   createdAt?: true
 }
 
@@ -143,8 +133,6 @@ export type ConnectionCallCountAggregateInputType = {
   simulated?: true
   playbookActionKey?: true
   input?: true
-  flaggedAt?: true
-  flaggedByMemberId?: true
   createdAt?: true
   _all?: true
 }
@@ -237,8 +225,6 @@ export type ConnectionCallGroupByOutputType = {
   simulated: boolean
   playbookActionKey: string | null
   input: runtime.JsonValue | null
-  flaggedAt: Date | null
-  flaggedByMemberId: string | null
   createdAt: Date
   _count: ConnectionCallCountAggregateOutputType | null
   _min: ConnectionCallMinAggregateOutputType | null
@@ -279,8 +265,6 @@ export type ConnectionCallWhereInput = {
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   playbookActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   input?: Prisma.JsonNullableFilter<"ConnectionCall">
-  flaggedAt?: Prisma.DateTimeNullableFilter<"ConnectionCall"> | Date | string | null
-  flaggedByMemberId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -304,8 +288,6 @@ export type ConnectionCallOrderByWithRelationInput = {
   simulated?: Prisma.SortOrder
   playbookActionKey?: Prisma.SortOrderInput | Prisma.SortOrder
   input?: Prisma.SortOrderInput | Prisma.SortOrder
-  flaggedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  flaggedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
@@ -332,8 +314,6 @@ export type ConnectionCallWhereUniqueInput = Prisma.AtLeast<{
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   playbookActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   input?: Prisma.JsonNullableFilter<"ConnectionCall">
-  flaggedAt?: Prisma.DateTimeNullableFilter<"ConnectionCall"> | Date | string | null
-  flaggedByMemberId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -357,8 +337,6 @@ export type ConnectionCallOrderByWithAggregationInput = {
   simulated?: Prisma.SortOrder
   playbookActionKey?: Prisma.SortOrderInput | Prisma.SortOrder
   input?: Prisma.SortOrderInput | Prisma.SortOrder
-  flaggedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  flaggedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ConnectionCallCountOrderByAggregateInput
   _max?: Prisma.ConnectionCallMaxOrderByAggregateInput
@@ -384,8 +362,6 @@ export type ConnectionCallScalarWhereWithAggregatesInput = {
   simulated?: Prisma.BoolWithAggregatesFilter<"ConnectionCall"> | boolean
   playbookActionKey?: Prisma.StringNullableWithAggregatesFilter<"ConnectionCall"> | string | null
   input?: Prisma.JsonNullableWithAggregatesFilter<"ConnectionCall">
-  flaggedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ConnectionCall"> | Date | string | null
-  flaggedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"ConnectionCall"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ConnectionCall"> | Date | string
 }
 
@@ -401,8 +377,6 @@ export type ConnectionCallCreateInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -426,8 +400,6 @@ export type ConnectionCallUncheckedCreateInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -443,8 +415,6 @@ export type ConnectionCallUpdateInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -468,8 +438,6 @@ export type ConnectionCallUncheckedUpdateInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -489,8 +457,6 @@ export type ConnectionCallCreateManyInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -506,8 +472,6 @@ export type ConnectionCallUpdateManyMutationInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -527,8 +491,6 @@ export type ConnectionCallUncheckedUpdateManyInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -558,8 +520,6 @@ export type ConnectionCallCountOrderByAggregateInput = {
   simulated?: Prisma.SortOrder
   playbookActionKey?: Prisma.SortOrder
   input?: Prisma.SortOrder
-  flaggedAt?: Prisma.SortOrder
-  flaggedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -578,8 +538,6 @@ export type ConnectionCallMaxOrderByAggregateInput = {
   ticketId?: Prisma.SortOrder
   simulated?: Prisma.SortOrder
   playbookActionKey?: Prisma.SortOrder
-  flaggedAt?: Prisma.SortOrder
-  flaggedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -598,8 +556,6 @@ export type ConnectionCallMinOrderByAggregateInput = {
   ticketId?: Prisma.SortOrder
   simulated?: Prisma.SortOrder
   playbookActionKey?: Prisma.SortOrder
-  flaggedAt?: Prisma.SortOrder
-  flaggedByMemberId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -783,8 +739,6 @@ export type ConnectionCallCreateWithoutWorkspaceInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
   connection: Prisma.ConnectionCreateNestedOneWithoutCallsInput
@@ -806,8 +760,6 @@ export type ConnectionCallUncheckedCreateWithoutWorkspaceInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -856,8 +808,6 @@ export type ConnectionCallScalarWhereInput = {
   simulated?: Prisma.BoolFilter<"ConnectionCall"> | boolean
   playbookActionKey?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   input?: Prisma.JsonNullableFilter<"ConnectionCall">
-  flaggedAt?: Prisma.DateTimeNullableFilter<"ConnectionCall"> | Date | string | null
-  flaggedByMemberId?: Prisma.StringNullableFilter<"ConnectionCall"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ConnectionCall"> | Date | string
 }
 
@@ -873,8 +823,6 @@ export type ConnectionCallCreateWithoutTeammateInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -896,8 +844,6 @@ export type ConnectionCallUncheckedCreateWithoutTeammateInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -939,8 +885,6 @@ export type ConnectionCallCreateWithoutSessionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   connection: Prisma.ConnectionCreateNestedOneWithoutCallsInput
@@ -962,8 +906,6 @@ export type ConnectionCallUncheckedCreateWithoutSessionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1005,8 +947,6 @@ export type ConnectionCallCreateWithoutConnectionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionCallsInput
   session: Prisma.SessionCreateNestedOneWithoutConnectionCallsInput
@@ -1028,8 +968,6 @@ export type ConnectionCallUncheckedCreateWithoutConnectionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1074,8 +1012,6 @@ export type ConnectionCallCreateManyWorkspaceInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1091,8 +1027,6 @@ export type ConnectionCallUpdateWithoutWorkspaceInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutCallsNestedInput
@@ -1114,8 +1048,6 @@ export type ConnectionCallUncheckedUpdateWithoutWorkspaceInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1134,8 +1066,6 @@ export type ConnectionCallUncheckedUpdateManyWithoutWorkspaceInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1154,8 +1084,6 @@ export type ConnectionCallCreateManyTeammateInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1171,8 +1099,6 @@ export type ConnectionCallUpdateWithoutTeammateInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -1194,8 +1120,6 @@ export type ConnectionCallUncheckedUpdateWithoutTeammateInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1214,8 +1138,6 @@ export type ConnectionCallUncheckedUpdateManyWithoutTeammateInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1234,8 +1156,6 @@ export type ConnectionCallCreateManySessionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1251,8 +1171,6 @@ export type ConnectionCallUpdateWithoutSessionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutCallsNestedInput
@@ -1274,8 +1192,6 @@ export type ConnectionCallUncheckedUpdateWithoutSessionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1294,8 +1210,6 @@ export type ConnectionCallUncheckedUpdateManyWithoutSessionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1314,8 +1228,6 @@ export type ConnectionCallCreateManyConnectionInput = {
   simulated?: boolean
   playbookActionKey?: string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Date | string | null
-  flaggedByMemberId?: string | null
   createdAt?: Date | string
 }
 
@@ -1331,8 +1243,6 @@ export type ConnectionCallUpdateWithoutConnectionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionCallsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutConnectionCallsNestedInput
@@ -1354,8 +1264,6 @@ export type ConnectionCallUncheckedUpdateWithoutConnectionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1374,8 +1282,6 @@ export type ConnectionCallUncheckedUpdateManyWithoutConnectionInput = {
   simulated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   playbookActionKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   input?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  flaggedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  flaggedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1397,8 +1303,6 @@ export type ConnectionCallSelect<ExtArgs extends runtime.Types.Extensions.Intern
   simulated?: boolean
   playbookActionKey?: boolean
   input?: boolean
-  flaggedAt?: boolean
-  flaggedByMemberId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1422,8 +1326,6 @@ export type ConnectionCallSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   simulated?: boolean
   playbookActionKey?: boolean
   input?: boolean
-  flaggedAt?: boolean
-  flaggedByMemberId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1447,8 +1349,6 @@ export type ConnectionCallSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   simulated?: boolean
   playbookActionKey?: boolean
   input?: boolean
-  flaggedAt?: boolean
-  flaggedByMemberId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1472,12 +1372,10 @@ export type ConnectionCallSelectScalar = {
   simulated?: boolean
   playbookActionKey?: boolean
   input?: boolean
-  flaggedAt?: boolean
-  flaggedByMemberId?: boolean
   createdAt?: boolean
 }
 
-export type ConnectionCallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "connectionId" | "teammateId" | "operation" | "write" | "target" | "result" | "error" | "ticketId" | "simulated" | "playbookActionKey" | "input" | "flaggedAt" | "flaggedByMemberId" | "createdAt", ExtArgs["result"]["connectionCall"]>
+export type ConnectionCallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "sessionId" | "connectionId" | "teammateId" | "operation" | "write" | "target" | "result" | "error" | "ticketId" | "simulated" | "playbookActionKey" | "input" | "createdAt", ExtArgs["result"]["connectionCall"]>
 export type ConnectionCallInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -1536,11 +1434,6 @@ export type $ConnectionCallPayload<ExtArgs extends runtime.Types.Extensions.Inte
      * A simulated call's input, for the dry run's report: what would have been sent.
      */
     input: runtime.JsonValue | null
-    /**
-     * A playbook action done alone that a person marked as wrong: its action goes back to ask.
-     */
-    flaggedAt: Date | null
-    flaggedByMemberId: string | null
     createdAt: Date
   }, ExtArgs["result"]["connectionCall"]>
   composites: {}
@@ -1984,8 +1877,6 @@ export interface ConnectionCallFieldRefs {
   readonly simulated: Prisma.FieldRef<"ConnectionCall", 'Boolean'>
   readonly playbookActionKey: Prisma.FieldRef<"ConnectionCall", 'String'>
   readonly input: Prisma.FieldRef<"ConnectionCall", 'Json'>
-  readonly flaggedAt: Prisma.FieldRef<"ConnectionCall", 'DateTime'>
-  readonly flaggedByMemberId: Prisma.FieldRef<"ConnectionCall", 'String'>
   readonly createdAt: Prisma.FieldRef<"ConnectionCall", 'DateTime'>
 }
     

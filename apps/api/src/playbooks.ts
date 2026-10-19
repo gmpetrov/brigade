@@ -29,6 +29,7 @@ import { PLAYBOOK_TEMPLATES } from './generated/playbooks.js'
 import { isMcp } from './mcp-tools.js'
 import { usableProject } from './projects.js'
 import { deleteTriggers, resync } from './routes/triggers.js'
+import { actionViews, recentAutoCalls } from './playbook-autonomy.js'
 import { dryRunView } from './playbook-dry-runs.js'
 import { createSchedule, memberTimezone } from './schedules.js'
 import type { WorkspaceScope } from './scope.js'
@@ -66,7 +67,9 @@ export function readTemplate(
   if (!parsed.success)
     fail(
       folder,
-      parsed.error.issues.map((i) => `${i.path.join('.') || 'playbook.yaml'}: ${i.message}`).join('; '),
+      parsed.error.issues
+        .map((i) => `${i.path.join('.') || 'playbook.yaml'}: ${i.message}`)
+        .join('; '),
     )
   const manifest = parsed.data!
   if (manifest.id !== `${SOURCE}/${folder}`)
@@ -380,7 +383,10 @@ export async function buildParts(db: ScopedDb, scope: Installer, id: string) {
         projectIds: [],
         skills,
       })
-      await db.skillPack.updateMany({ where: { id: pack.id }, data: { playbookInstallationId: id } })
+      await db.skillPack.updateMany({
+        where: { id: pack.id },
+        data: { playbookInstallationId: id },
+      })
     }
 
     for (const entry of manifest.entries) {
@@ -480,15 +486,15 @@ export async function answerSettings(
   const installation = await requireInstallation(db, id)
   if (installation.status === 'active' || installation.status === 'paused')
     throw new HTTPException(409, {
-      message:
-        'This playbook is already active: its settings change from its sheet, on Routines',
+      message: 'This playbook is already active: its settings change from its sheet, on Routines',
     })
   const manifest = installation.manifest as PlaybookManifest
   const given = await checkSettings(db, manifest, input)
   const answers = { ...(installation.settings as Record<string, string | number>), ...given }
   const { values, missing } = withDefaults(manifest, answers)
   const changed = Object.keys(given).length > 0
-  if (changed) await db.playbookInstallation.updateMany({ where: { id }, data: { settings: answers } })
+  if (changed)
+    await db.playbookInstallation.updateMany({ where: { id }, data: { settings: answers } })
   if (!missing.length) {
     // Defaults filled in are answers from now on.
     await db.playbookInstallation.updateMany({ where: { id }, data: { settings: values } })
@@ -927,11 +933,19 @@ type Row = NonNullable<Awaited<ReturnType<typeof findRows>>>[number]
 const findRows = (db: ScopedDb, where: { id?: string; projectId?: string | null }) =>
   db.playbookInstallation.findMany({ where, include: INCLUDE, orderBy: { createdAt: 'asc' } })
 
-async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookInstallationView> {
+/** Who looks at it: whether they may change its actions' levels. Unset (a teammate): no one. */
+type Viewer = { memberId: string; role: string }
+
+async function toView(
+  db: ScopedDb,
+  row: Row,
+  runsTaken = 10,
+  viewer?: Viewer,
+): Promise<PlaybookInstallationView> {
   const manifest = row.manifest as PlaybookManifest
   const week = new Date(Date.now() - 7 * DAY_MS)
   const day = new Date(Date.now() - DAY_MS)
-  const [recent, weekRuns, calls, dryRun, ticket] = await Promise.all([
+  const [recent, weekRuns, actions, autoCalls, dryRun, ticket] = await Promise.all([
     db.playbookRun.findMany({
       where: { installationId: row.id, dryRun: false },
       orderBy: { startedAt: 'desc' },
@@ -942,14 +956,8 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookI
       where: { installationId: row.id, dryRun: false, startedAt: { gte: week } },
       select: { startedAt: true, endedAt: true, interventions: true },
     }),
-    db.connectionCall.findMany({
-      where: {
-        playbookActionKey: { not: null },
-        simulated: false,
-        session: { playbookRun: { installationId: row.id } },
-      },
-      select: { playbookActionKey: true, result: true, ticketId: true },
-    }),
+    actionViews(db, row, viewer),
+    recentAutoCalls(db, row.id, manifest),
     db.playbookDryRun.findFirst({
       where: { installationId: row.id },
       orderBy: { startedAt: 'desc' },
@@ -958,10 +966,6 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookI
     activationTicket(db, row.id),
   ])
   const ended = weekRuns.filter((r) => r.endedAt)
-  // A call a person decided carries its ticket: approved, or denied. One without, done alone.
-  const count = (key: string, result: 'ok' | 'denied', decided: boolean) =>
-    calls.filter((c) => c.playbookActionKey === key && c.result === result && !!c.ticketId === decided)
-      .length
   const settings = (row.settings ?? {}) as Record<string, string | number>
   const { missing } = withDefaults(manifest, settings)
   const recentRuns: PlaybookRunView[] = recent.map((run) => ({
@@ -998,13 +1002,7 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookI
             null)
           : (settings[s.key] ?? null),
     })),
-    actions: manifest.actions.map((a) => ({
-      ...a,
-      level: row.actions.find((r) => r.key === a.key)?.level ?? a.start,
-      approved: count(a.key, 'ok', true),
-      denied: count(a.key, 'denied', true),
-      auto: count(a.key, 'ok', false),
-    })),
+    actions,
     entries: [
       ...row.triggers.map((t) => ({
         kind: 'trigger' as const,
@@ -1030,6 +1028,7 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookI
       ? ended.filter((r) => r.interventions === 0).length / ended.length
       : null,
     recentRuns,
+    autoCalls,
     ready: !missing.length && row.triggers.length + row.schedules.length > 0,
     missing,
     dryRun: dryRun ? await dryRunView(db, dryRun.id) : null,
@@ -1041,13 +1040,13 @@ async function toView(db: ScopedDb, row: Row, runsTaken = 10): Promise<PlaybookI
 }
 
 /** `project`: a project's id, or "none". */
-export async function listInstallations(db: ScopedDb, project?: string) {
+export async function listInstallations(db: ScopedDb, project?: string, viewer?: Viewer) {
   const rows = await findRows(db, project ? { projectId: project === 'none' ? null : project } : {})
-  return Promise.all(rows.map((row) => toView(db, row, 5)))
+  return Promise.all(rows.map((row) => toView(db, row, 5, viewer)))
 }
 
-export async function getInstallation(db: ScopedDb, id: string) {
+export async function getInstallation(db: ScopedDb, id: string, viewer?: Viewer) {
   const [row] = await findRows(db, { id })
   if (!row) throw new HTTPException(404, { message: 'Playbook not found' })
-  return toView(db, row, 30)
+  return toView(db, row, 30, viewer)
 }

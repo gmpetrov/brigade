@@ -5,6 +5,7 @@ import {
   mentionedIds,
   parseMentions,
   type Ask,
+  type PlaybookPromotionPayload,
   type Question,
   type QuestionAnswer,
   type ThreadAttachmentRef,
@@ -21,6 +22,7 @@ import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
+import { decidePromotion } from './playbook-autonomy.js'
 import { decideActivation } from './playbooks.js'
 import { decideSkillProposal } from './skills.js'
 import { loadThread, specFor, teammateIn } from './thread-spec.js'
@@ -374,6 +376,8 @@ type TicketPayload = {
   /** A member asks an owner or admin to activate a playbook they installed. */
   playbookActivation?: boolean
   playbookInstallationId?: string
+  /** Brigade proposes a playbook's action act on its own: its owner, an owner or an admin decides. */
+  playbookPromotion?: PlaybookPromotionPayload
 }
 
 /**
@@ -466,6 +470,12 @@ export async function resolveTicket(
       if (!isAdmin)
         throw new HTTPException(403, { message: 'Only an owner or admin can activate a playbook' })
       await decideActivation(db, scope, ticket, input.approved)
+      return { ok: true, live: false }
+    }
+    if (payload.playbookPromotion) {
+      // It would then act with no one checking: the playbook's owner (whose accounts it runs on)
+      // or an owner or admin decides (decidePromotion checks which).
+      await decidePromotion(db, scope, ticket, input.approved)
       return { ok: true, live: false }
     }
     if (payload.skillAction) {

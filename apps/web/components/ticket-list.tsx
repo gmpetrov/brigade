@@ -1,8 +1,10 @@
 'use client'
+import { playbookApprovalOf } from '@brigade/contracts'
 import { Inbox } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useDashboard } from '@/components/dashboard'
+import { PlaybookApprovalsRow } from '@/components/playbook-approvals'
 import { ProjectFilter } from '@/components/projects'
 import { TicketRow } from '@/components/ticket-row'
 import { Button } from '@/components/ui/button'
@@ -48,6 +50,13 @@ export function TicketList({ projectId }: { projectId?: string }) {
   }
 
   const shown = (tickets.data ?? []).filter((t) => !type || t.type === type)
+  // A playbook's open approvals are one row, opened in place; decided ones stay rows of their own.
+  const queues = new Map<string, Ticket[]>()
+  for (const t of shown) {
+    const playbook = t.status === 'open' ? playbookApprovalOf(t) : null
+    if (playbook)
+      queues.set(playbook.installationId, [...(queues.get(playbook.installationId) ?? []), t])
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -109,9 +118,20 @@ export function TicketList({ projectId }: { projectId?: string }) {
       {shown.length > 0 && (
         <Card className="gap-0 overflow-hidden py-0">
           <ul className="divide-y">
-            {shown.map((t) => (
-              <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
-            ))}
+            {shown.map((t) => {
+              const playbook = t.status === 'open' ? playbookApprovalOf(t) : null
+              const queue = playbook && queues.get(playbook.installationId)
+              if (!queue) return <TicketRow key={t.id} ticket={t} me={me} onResolve={resolve} />
+              // Once, where its latest approval would be.
+              return queue[0] === t ? (
+                <PlaybookApprovalsRow
+                  key={`playbook:${playbook.installationId}`}
+                  installationId={playbook.installationId}
+                  tickets={queue}
+                  onDecided={tickets.reload}
+                />
+              ) : null
+            })}
           </ul>
         </Card>
       )}

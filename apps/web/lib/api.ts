@@ -1,5 +1,11 @@
 'use client'
-import { type Effort, HarnessId, modelLabel, type FolderRule } from '@brigade/contracts'
+import {
+  type Effort,
+  HarnessId,
+  modelLabel,
+  playbookApprovalOf,
+  type FolderRule,
+} from '@brigade/contracts'
 import type {
   ChildReport,
   ProjectSummary,
@@ -9,6 +15,7 @@ import type {
   CredentialKind,
   CredentialSummary,
   DocumentAsset,
+  PlaybookPromotionPayload,
   SkillProposalPayload,
   TaskColumn,
   TaskPriority,
@@ -326,6 +333,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   schedule: { id: string; title: string } | null
   /** The thread it was started from: it reports there, and is shown there rather than in the sidebar. */
   parent: { id: string; title: string } | null
+  /** Other threads its report wakes too (follow_thread), oldest first. */
+  followers: { id: string; title: string }[]
   /** Its child threads, newest first. */
   children: ThreadChild[]
   /** Schedules whose runs report here, as its children. */
@@ -730,6 +739,13 @@ export type Ticket = {
     /** A member asks an owner or admin to activate a playbook they installed. */
     playbookActivation?: boolean
     playbookInstallationId?: string
+    /** An approval a playbook's run asked for: grouped with its playbook's (playbookApprovalOf). */
+    playbookRunId?: string
+    playbookActionKey?: string | null
+    /** Decided with others at once: left out of the playbook's measured trust. */
+    decidedInBulk?: boolean
+    /** Brigade proposes a playbook's action act on its own: its owner, an owner or an admin decides. */
+    playbookPromotion?: PlaybookPromotionPayload
     source?: 'harness'
     toolName?: string
     /** A harness ticket's teammate, and what it asks: a question's or a ticket's asks. */
@@ -773,6 +789,17 @@ export type Ticket = {
     archivedAt: string | null
     teammate: { id: string; name: string }
   } | null
+  /** A playbook's approval: the playbook it is one item with, by its name. */
+  playbook?: { id: string; name: string } | null
+}
+
+/**
+ * What a ticket is one item of, wherever things waiting on a person are listed or counted
+ * (Home, the sidebar's count, the badge): itself, or its playbook's approvals, all as one.
+ */
+export const waitingItemKey = (t: Ticket) => {
+  const playbook = playbookApprovalOf(t)
+  return playbook ? `playbook:${playbook.installationId}` : `ticket:${t.id}`
 }
 
 /** A pull request that waits on a person, from /pulls/attention. */

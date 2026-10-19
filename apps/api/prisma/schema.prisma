@@ -1086,9 +1086,6 @@ model ConnectionCall {
   playbookActionKey String?
   /// A simulated call's input, for the dry run's report: what would have been sent.
   input             Json?
-  /// A playbook action done alone that a person marked as wrong: its action goes back to ask.
-  flaggedAt         DateTime?
-  flaggedByMemberId String?
   createdAt         DateTime   @default(now())
 
   @@index([sessionId])

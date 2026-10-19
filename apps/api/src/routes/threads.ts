@@ -332,6 +332,11 @@ export const threads = new Hono<AppEnv>()
           take: 100,
         },
         reportingSchedules: { select: { id: true, title: true, pausedAt: true } },
+        // Threads its report wakes besides its parent (follow_thread).
+        followers: {
+          select: { follower: { select: { id: true, title: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
         tickets: {
           where: { status: 'open' },
           select: { id: true, type: true, title: true, payload: true, createdAt: true },
@@ -353,6 +358,7 @@ export const threads = new Hono<AppEnv>()
       // Where it is going, not the message that goes with it.
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
+      followers: thread.followers.map((f) => f.follower),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
       eventsWaitingSince: eventsWaitingSince(thread.id),
     })

@@ -1,4 +1,10 @@
-import { QuestionAnswer, ResolveTicket, TicketAnswer } from '@brigade/contracts'
+import {
+  playbookApprovalOf,
+  QuestionAnswer,
+  ResolveTicket,
+  TicketAnswer,
+  type PlaybookManifest,
+} from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
@@ -38,7 +44,24 @@ export const tickets = new Hono<AppEnv>()
       orderBy: { createdAt: 'desc' },
       take: 200,
     })
-    return c.json(rows)
+    // A playbook's approvals are one item wherever they wait (playbook-approvals.ts), named after it.
+    const ids = [...new Set(rows.flatMap((t) => playbookApprovalOf(t)?.installationId ?? []))]
+    const installations = ids.length
+      ? await c.var.db.playbookInstallation.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, manifest: true },
+        })
+      : []
+    const names = new Map(
+      installations.map((i) => [i.id, (i.manifest as PlaybookManifest).name] as const),
+    )
+    return c.json(
+      rows.map((t) => {
+        const id = playbookApprovalOf(t)?.installationId
+        const name = id && names.get(id)
+        return { ...t, playbook: name ? { id, name } : null }
+      }),
+    )
   })
 
   /** Approve, deny or dismiss. Who may depends on the kind of ticket. */

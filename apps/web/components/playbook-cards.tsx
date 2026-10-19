@@ -36,7 +36,7 @@ const APP_NAMES: Record<string, string> = {
 const appName = (kind: string) => APP_NAMES[kind] ?? kind.replace(/_/g, ' ')
 
 const LEVEL_WORDS: Record<PlaybookLevel, string> = {
-  ask: 'Ask first',
+  ask: 'Asks first',
   auto: 'On its own',
   deny: 'Never',
 }

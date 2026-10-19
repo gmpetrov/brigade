@@ -68,7 +68,8 @@ const ScheduleEntry = z.object({
 })
 export const PlaybookEntry = z.union([TriggerEntry, ScheduleEntry])
 export type PlaybookEntry = z.infer<typeof PlaybookEntry>
-export const isTriggerEntry = (e: PlaybookEntry): e is z.infer<typeof TriggerEntry> => 'trigger' in e
+export const isTriggerEntry = (e: PlaybookEntry): e is z.infer<typeof TriggerEntry> =>
+  'trigger' in e
 
 export const PlaybookActionSpec = z
   .object({
@@ -87,6 +88,53 @@ export const PlaybookActionSpec = z
     path: ['start'],
   })
 export type PlaybookActionSpec = z.infer<typeof PlaybookActionSpec>
+
+/** A template's action that merges: on its own only while GitHub's required checks pass. */
+export const needsChecks = (action: { conditions: string[] }) =>
+  action.conditions.includes('checks_passed')
+
+const Argument = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/, 'an argument name, e.g. amount')
+  .max(100)
+
+/**
+ * What limits an action on its own at an installation; unset, nothing does. Each is one the
+ * template allows (its action's `conditions`). The API checks them on the real call and on what
+ * it stores, never on what the teammate says.
+ */
+export const PlaybookActionConditions = z
+  .object({
+    /** Only in runs of these triage cases (playbook_triage). */
+    cases: z.array(z.string().trim().min(1).max(80)).min(1).max(50).optional(),
+    /** Only when every required check of the pull request passed (a merge). */
+    checksPassed: z.literal(true).optional(),
+    /** Only when the call's argument is at most this, by argument name, e.g. { amount: 50 }. */
+    max: z.record(Argument, z.number().nonnegative()).optional(),
+  })
+  .strict()
+export type PlaybookActionConditions = z.infer<typeof PlaybookActionConditions>
+
+/** Caps on an action on its own over the last 24 hours; past one, it asks until it is under again. */
+export const PlaybookActionLimits = z
+  .object({
+    /** Calls on its own. */
+    count: z.number().int().positive().max(100_000).optional(),
+    /** The sum of one argument over its calls on its own, e.g. 100 refunded. */
+    amount: z.object({ argument: Argument, max: z.number().positive() }).strict().optional(),
+  })
+  .strict()
+export type PlaybookActionLimits = z.infer<typeof PlaybookActionLimits>
+
+/** PATCH /playbooks/:id/actions/:key: its level, and what limits it on its own. */
+export const UpdatePlaybookAction = z.object({
+  level: PlaybookLevel,
+  /** Unset: kept as they are. */
+  conditions: PlaybookActionConditions.optional(),
+  limits: PlaybookActionLimits.optional(),
+})
+export type UpdatePlaybookAction = z.infer<typeof UpdatePlaybookAction>
 
 export const PlaybookApp = z.object({
   /** A built-in App's kind, e.g. gmail. */
@@ -182,11 +230,16 @@ const SettingValues = z.record(z.string(), z.union([z.string(), z.number()]))
 export const DRY_RUN_MAX = 20
 
 /**
- * The playbook operations of a teammate's schedule tools: playbook_report in a playbook's thread;
- * the others to install one from a member's thread (show_playbook, configure_playbook,
+ * The playbook operations of a teammate's schedule tools: playbook_triage and playbook_report in
+ * a playbook's thread; the others to install one from a member's thread (show_playbook, configure_playbook,
  * start_dry_run, dry_run_report, activate_playbook).
  */
 export const PlaybookOperations = [
+  /** The run's case, once the teammate sorted the event and before its first write. */
+  z.object({
+    name: z.literal('playbook_triage'),
+    case: z.string().trim().min(1).max(80),
+  }),
   z.object({
     name: z.literal('playbook_report'),
     /** The triage case, in the recipe's words (e.g. documented_question, bug). */
@@ -333,11 +386,58 @@ export type PlaybookRunView = {
   endedAt: string | null
 }
 
-export type PlaybookActionView = PlaybookActionSpec & {
+export type PlaybookActionView = Omit<PlaybookActionSpec, 'conditions'> & {
+  /** The template's: what may limit it on its own (case, checks_passed, an argument's name). */
+  templateConditions: string[]
   level: PlaybookLevel
+  /** What limits it on its own at this installation. */
+  conditions: PlaybookActionConditions
+  /** Its caps on its own over 24 hours. */
+  limits: PlaybookActionLimits
+  /**
+   * People's decisions on its approvals, the latest `window` of them (the template's promotion
+   * window); approvals made in bulk are left out, as they do not count toward trust.
+   */
   approved: number
   denied: number
+  window: number
+  /** Calls it made on its own: in all, and over the last 24 hours. */
   auto: number
+  autoToday: number
+  /** Why it last went back to asking without a person choosing it (flagged), else null. */
+  demotedReason: string | null
+  /** The open ticket proposing it act on its own, else null. */
+  promotionTicketId: string | null
+  /** A merge: on its own only while GitHub's required checks pass, set by an owner or admin. */
+  needsChecks: boolean
+  /** Whether the person viewing may change its level: the playbook's owner, an owner or an admin. */
+  canChange: boolean
+}
+
+/** A write a playbook made on its own: what its sheet lists, to mark one as wrong. */
+export type PlaybookAutoCallView = {
+  id: string
+  actionKey: string
+  /** The action's label, e.g. "Reply to the customer". */
+  action: string
+  target: string
+  at: string
+  threadId: string
+  /** A person marked it as wrong: its action went back to asking. */
+  flagged: boolean
+}
+
+/** A ticket proposing a playbook's action act on its own: its payload's `playbookPromotion`. */
+export type PlaybookPromotionPayload = {
+  installationId: string
+  actionKey: string
+  /** Over the latest `decided` decisions people made on its approvals. */
+  approved: number
+  decided: number
+  /** For its card: the action's label and the playbook's name. */
+  label: string
+  playbook: string
+  ownerMemberId: string
 }
 
 export type PlaybookEntryView =
@@ -371,7 +471,12 @@ export type PlaybookInstallationView = {
   owner: { id: string; name: string }
   project: { id: string; name: string; icon: string | null; logo: string | null } | null
   apps: PlaybookApp[]
-  settings: { key: string; type: PlaybookSettingType; ask?: string; value: string | number | null }[]
+  settings: {
+    key: string
+    type: PlaybookSettingType
+    ask?: string
+    value: string | number | null
+  }[]
   actions: PlaybookActionView[]
   entries: PlaybookEntryView[]
   runsThisWeek: number
@@ -380,6 +485,8 @@ export type PlaybookInstallationView = {
   /** Share of this week's finished runs with no person stepping in, 0 to 1; null with none. */
   unattended: number | null
   recentRuns: PlaybookRunView[]
+  /** Its latest writes on its own, newest first. */
+  autoCalls: PlaybookAutoCallView[]
   /** Every setting it needs has an answer, and its triggers, schedules and skills are made. */
   ready: boolean
   /** Its settings still without an answer. */
