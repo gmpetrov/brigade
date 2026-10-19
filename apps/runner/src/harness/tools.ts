@@ -1108,8 +1108,7 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
         'track something on the board, or to start work in a thread of its own: your own name as assignee for a ' +
         'goal of yours that came up while talking about something else, another teammate (id or name) to hand ' +
         'them work. Either starts at once in its own thread. "none" puts it in Backlog; "self" makes this thread ' +
-        'the task. One goal is one task, however many pull requests it takes: plan it in deliveries (moments ' +
-        'where the person tries something or decides) and keep its parts off the board.',
+        'the task. One goal is one task and one deliverable, however big: keep its parts off the board.',
       inputSchema: jsonSchema<{
         title: string
         description: string
