@@ -33,9 +33,7 @@ import {
   afterPlaybookDecision,
   numbersOf,
   playbookVerdict,
-  releaseAllowance,
   reserveAllowance,
-  type Reservation,
 } from './playbook-autonomy.js'
 import { playbookAccount, threadPlaybook } from './playbooks.js'
 import { notePullRequestCall } from './pull-requests.js'
@@ -220,8 +218,6 @@ export async function handleConnectorCall(
   let decision: (Decision & { ticketId: string }) | undefined
   /** A playbook's write no person decided: counted toward its action's caps and listed on its sheet. */
   let onItsOwn = false
-  /** Its share of its action's caps, given back when it fails (playbook-autonomy.ts). */
-  let reservation: Reservation | null = null
   /** A merge on its own: the head commit its checks passed on, the only one it merges. */
   let checkedSha: string | undefined
   if (operation.write) {
@@ -264,7 +260,6 @@ export async function handleConnectorCall(
         asks = true
         overCap = taken.reason
       } else {
-        reservation = taken.held
         onItsOwn = true
         checkedSha = verdict.checkedSha
       }
@@ -339,7 +334,6 @@ export async function handleConnectorCall(
 
   // Files the call brings into the thread, put in the teammate's folder before it sees the result.
   const kept: ThreadAttachmentRef[] = []
-  let sent = false
   try {
     const fetch = await authorisedFetch(db, scope, connection)
     const output = await operation.run(
@@ -367,7 +361,6 @@ export async function handleConnectorCall(
       },
       input.data,
     )
-    sent = true
     await record({
       result: 'ok',
       target,
@@ -395,11 +388,8 @@ export async function handleConnectorCall(
     return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
   } catch (error) {
     const message = redact(error instanceof Error ? error.message : String(error))
-    // A call on its own that did not go through gives its share of its action's caps back.
-    if (reservation && !sent)
-      await releaseAllowance(scope, reservation, message).catch((e) =>
-        console.warn(`playbook allowance release failed: ${String(e)}`),
-      )
+    // A call on its own keeps its share of its action's caps even when it fails: the provider
+    // may have done the write before its answer was lost, and a retry must not go past the cap.
     await record({
       result: 'error',
       target,

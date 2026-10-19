@@ -203,62 +203,51 @@ const autoWhere = (installationId: string) => ({
   session: { playbookRun: { installationId } },
 })
 
-// An action's caps are a ledger in the audit log: a call let through on its own first reserves
-// its share (one call, its numbers) under a lock per installation and action, so concurrent runs
-// cannot spend the same allowance; a call that then fails gives it back with a release entry. The
-// call log is append-only and lists calls once done, which is too late to count one in flight.
-// A reservation whose call never reported (its process died) keeps counting: caps fail closed.
+// An action's caps are a ledger in the audit log: every call let through on its own first
+// reserves its share (one call, its numbers) under a lock per installation and action, so
+// concurrent runs cannot spend the same allowance, and a cap set later counts what was done. A
+// share is never given back, even when its call fails: the provider may have made the write
+// before its answer was lost. The call log is append-only and lists calls once done, which is too
+// late to count one in flight. Caps fail closed.
 const RESERVED = 'playbook.allowance_reserved'
-const RELEASED = 'playbook.allowance_released'
 const allowanceTarget = (installationId: string, key: string) => ({
   targetType: 'playbook_action',
   targetId: `${installationId}:${key}`,
 })
 
-/** A call's share of its action's caps, held until the call ends; released if it fails. */
+/** A call's share of its action's caps: kept, whatever the call's result. */
 export type Reservation = { id: string; installationId: string; key: string }
 
-/** An action's calls on its own over the last 24 hours: reserved, and not given back. */
+/** An action's calls on its own over the last 24 hours, as reserved. */
 async function usageToday(
   client: Pick<Prisma.TransactionClient, 'auditEntry'>,
   scope: Scope,
   installationId: string,
   key: string,
 ): Promise<Usage> {
-  const where = {
-    organizationId: scope.organizationId,
-    workspaceId: scope.workspaceId,
-    ...allowanceTarget(installationId, key),
-    // A release always comes after its reservation, so those of the window's are in it too.
-    at: { gte: new Date(Date.now() - DAY_MS) },
-  }
   const reserved = await client.auditEntry.findMany({
-    where: { ...where, action: RESERVED },
-    select: { id: true, data: true },
-  })
-  const released = await client.auditEntry.findMany({
-    where: { ...where, action: RELEASED },
+    where: {
+      organizationId: scope.organizationId,
+      workspaceId: scope.workspaceId,
+      ...allowanceTarget(installationId, key),
+      action: RESERVED,
+      at: { gte: new Date(Date.now() - DAY_MS) },
+    },
     select: { data: true },
   })
-  const given = new Set(
-    released.map((r) => String((r.data as { reservation?: unknown } | null)?.reservation)),
-  )
   const sums: Record<string, number> = {}
-  let count = 0
   for (const entry of reserved) {
-    if (given.has(String(entry.id))) continue
-    count++
     const numbers = (entry.data as { numbers?: unknown } | null)?.numbers
     for (const [path, value] of Object.entries(numbersOf(numbers)))
       sums[path] = (sums[path] ?? 0) + value
   }
-  return { count, sums }
+  return { count: reserved.length, sums }
 }
 
 /**
  * A call let through on its own takes its share of its action's caps, atomically: under a lock per
  * installation and action, the caps are read again and counted with the calls still in flight.
- * `held` null: the action has no caps, nothing to give back. `reason`: past one, the call asks.
+ * Every call takes one, capped or not, so a cap set later counts it. `reason`: past one, it asks.
  */
 export async function reserveAllowance(
   scope: Scope,
@@ -269,7 +258,7 @@ export async function reserveAllowance(
     teammateId: string
     sessionId: string
   },
-): Promise<{ held: Reservation | null } | { reason: string }> {
+): Promise<{ held: Reservation } | { reason: string }> {
   const { installationId, action } = input
   return prisma.$transaction(async (tx) => {
     const lock = `playbook-allowance:${scope.workspaceId}:${installationId}:${action.key}`
@@ -283,10 +272,13 @@ export async function reserveAllowance(
       return {
         reason: `${action.label}: what limits it on its own could not be read, so a person approves it.`,
       }
-    if (!capped(limits)) return { held: null }
-    const usage = await usageToday(tx, scope, installationId, action.key)
-    const problem = capProblem(action.label, limits, usage, input.args)
-    if (problem) return { reason: problem }
+    // Every call on its own is in the ledger, capped or not, so a cap set later in the day
+    // counts what was already done.
+    if (capped(limits)) {
+      const usage = await usageToday(tx, scope, installationId, action.key)
+      const problem = capProblem(action.label, limits, usage, input.args)
+      if (problem) return { reason: problem }
+    }
     const entry = await tx.auditEntry.create({
       data: {
         organizationId: scope.organizationId,
@@ -305,17 +297,6 @@ export async function reserveAllowance(
       select: { id: true },
     })
     return { held: { id: String(entry.id), installationId, key: action.key } }
-  })
-}
-
-/** A reserved call that did not go through (it failed) gives its share of the caps back. */
-export async function releaseAllowance(scope: Scope, held: Reservation, why: string) {
-  await audit({
-    ...scope,
-    actor: { type: 'system', id: 'brigade' },
-    action: RELEASED,
-    target: { type: 'playbook_action', id: `${held.installationId}:${held.key}` },
-    data: { reservation: held.id, why: why.slice(0, 300) },
   })
 }
 

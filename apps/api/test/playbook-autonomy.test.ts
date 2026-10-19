@@ -693,6 +693,15 @@ describe('through the database', { skip: !database && 'no database answers' }, (
     teammateId: ids.teammate,
     sessionId: ids.session,
   })
+  /** The shares of action `key`'s caps its calls on its own took: one per call, kept. */
+  const reserved = (key: string) =>
+    prisma.auditEntry.count({
+      where: {
+        workspaceId: ids.workspace,
+        action: 'playbook.allowance_reserved',
+        targetId: `${ids.installation}:${key}`,
+      },
+    })
   const lastCall = () =>
     db.connectionCall.findFirst({
       where: { sessionId: ids.session },
@@ -759,12 +768,15 @@ describe('through the database', { skip: !database && 'no database answers' }, (
   })
 
   test('past its cap over 24 hours, it asks; the level stays', async () => {
-    await setAction('reply', { level: 'auto', conditions: {}, limits: { count: 2 } })
-    // Two calls on its own today: each took its share of the caps, then went through.
+    // The reply on its own above failed, with no cap set: it still took its share, so a cap set
+    // now counts it.
+    assert.equal(await reserved('reply'), 1)
+    await setAction('reply', { level: 'auto', conditions: {}, limits: { count: 3 } })
+    // Two more calls on its own today: each took its share of the caps, then went through.
     const { reserveAllowance } = await import('../src/playbook-autonomy.js')
     for (let i = 0; i < 2; i++) {
       const taken = await reserveAllowance(scope, reservationFor('reply', mail))
-      assert.ok('held' in taken && taken.held)
+      assert.ok('held' in taken)
       await db.connectionCall.create({
         data: {
           sessionId: ids.session,
@@ -782,16 +794,17 @@ describe('through the database', { skip: !database && 'no database answers' }, (
     const heard = await write('gmail_send', mail, { approved: false })
     assert.match(
       heard.find((m) => m.type === 'connector.pending')?.reason ?? '',
-      /at most 2 times in 24 hours/,
+      /at most 3 times in 24 hours/,
     )
     const row = await db.playbookAction.findFirst({
       where: { installationId: ids.installation, key: 'reply' },
     })
     assert.equal(row?.level, 'auto')
 
-    // A call on its own that fails gives its share back: with room for one more, two calls in a
-    // row that both fail (no credential here) each go on their own, and neither asks.
-    await setAction('reply', { limits: { count: 3 } })
+    // A call on its own that fails keeps its share (the provider may have made the write before
+    // its answer was lost): with room for two more, two calls that both fail (no credential here)
+    // go on their own, and the third asks.
+    await setAction('reply', { limits: { count: 5 } })
     for (let i = 0; i < 2; i++) {
       const again = await write('gmail_send', mail)
       assert.equal(
@@ -800,19 +813,17 @@ describe('through the database', { skip: !database && 'no database answers' }, (
       )
       assert.equal(again.at(-1)?.ok, false)
     }
-    const released = await prisma.auditEntry.count({
-      where: {
-        workspaceId: ids.workspace,
-        action: 'playbook.allowance_released',
-        targetId: `${ids.installation}:reply`,
-      },
-    })
-    assert.equal(released, 2)
+    const third = await write('gmail_send', mail, { approved: false })
+    assert.match(
+      third.find((m) => m.type === 'connector.pending')?.reason ?? '',
+      /at most 5 times in 24 hours/,
+    )
+    assert.equal(await reserved('reply'), 5)
     await setAction('reply', { limits: {} })
   })
 
   test('concurrent calls on their own never go past a count cap', async () => {
-    const { reserveAllowance, releaseAllowance } = await import('../src/playbook-autonomy.js')
+    const { reserveAllowance } = await import('../src/playbook-autonomy.js')
     await db.playbookAction.create({
       data: {
         installationId: ids.installation,
@@ -826,18 +837,17 @@ describe('through the database', { skip: !database && 'no database answers' }, (
         reserveAllowance(scope, reservationFor('cap-count', { amount: 1 })),
       ),
     )
-    const held = results.flatMap((r) => ('held' in r && r.held ? [r.held] : []))
-    assert.equal(held.length, 3)
+    assert.equal(results.filter((r) => 'held' in r).length, 3)
     for (const r of results)
       if ('reason' in r) assert.match(r.reason, /at most 3 times in 24 hours/)
-    // One given back (its call failed): exactly one more fits, even among concurrent calls.
-    await releaseAllowance(scope, held[0]!, 'failed')
+    // Shares are kept whatever their calls did: none fits any more, and the refused took none.
     const more = await Promise.all(
       Array.from({ length: 5 }, () =>
         reserveAllowance(scope, reservationFor('cap-count', { amount: 1 })),
       ),
     )
-    assert.equal(more.filter((r) => 'held' in r && r.held).length, 1)
+    assert.equal(more.filter((r) => 'held' in r).length, 0)
+    assert.equal(await reserved('cap-count'), 3)
   })
 
   test('concurrent calls on their own never go past an amount cap', async () => {
@@ -855,18 +865,29 @@ describe('through the database', { skip: !database && 'no database answers' }, (
         reserveAllowance(scope, reservationFor('cap-amount', { amount: 30 })),
       ),
     )
-    assert.equal(results.filter((r) => 'held' in r && r.held).length, 3) // 90 of 100
+    assert.equal(results.filter((r) => 'held' in r).length, 3) // 90 of 100
     const refused = results.find((r) => 'reason' in r) as { reason: string }
     assert.match(refused.reason, /up to 100 amount in 24 hours: 90 so far, and this one is 30/)
     // A smaller one still fits under what is left.
     const small = await reserveAllowance(scope, reservationFor('cap-amount', { amount: 10 }))
-    assert.ok('held' in small && small.held)
+    assert.ok('held' in small)
+    assert.equal(await reserved('cap-amount'), 4)
   })
 
-  test('an action with no caps takes no share', async () => {
+  test('an action with no caps still takes a share per call, which a cap set later counts', async () => {
     const { reserveAllowance } = await import('../src/playbook-autonomy.js')
-    await setAction('reply', { limits: {} })
-    assert.deepEqual(await reserveAllowance(scope, reservationFor('reply', mail)), { held: null })
+    await db.playbookAction.create({
+      data: { installationId: ids.installation, key: 'uncapped', level: 'auto' } as never,
+    })
+    for (let i = 0; i < 3; i++)
+      assert.ok('held' in (await reserveAllowance(scope, reservationFor('uncapped', mail))))
+    assert.equal(await reserved('uncapped'), 3)
+    await setAction('uncapped', { limits: { count: 3 } })
+    const refused = await reserveAllowance(scope, reservationFor('uncapped', mail))
+    assert.match((refused as { reason: string }).reason, /at most 3 times in 24 hours/)
+    await setAction('uncapped', { limits: { count: 4 } })
+    assert.ok('held' in (await reserveAllowance(scope, reservationFor('uncapped', mail))))
+    assert.equal(await reserved('uncapped'), 4)
   })
 
   test("a deny in the teammate's policy wins over on its own", async () => {

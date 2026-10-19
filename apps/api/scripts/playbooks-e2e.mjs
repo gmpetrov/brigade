@@ -889,16 +889,13 @@ await check(
     assert.equal(live.actions.find((a) => a.key === 'reply').level, 'ask')
     // The mailbox's events held back by the earlier cap reach this playbook first: wait until a
     // fresh mail of its own has started a run, so the checks below see their runs in time.
-    mail('Warm-up')
+    const warmUp = `Warm-up ${Date.now()}`
+    mail(warmUp)
     await until(
       'the inbox to catch up',
       async () =>
-        (
-          await q(
-            `select id from "Session" where title like '%Warm-up%' and "createdAt" > now() - interval '15 minutes'`,
-          )
-        ).length > 0,
-      600_000,
+        (await q(`select id from "Session" where title like $1`, [`%${warmUp}%`])).length > 0,
+      900_000,
     )
     replying('Can I pay yearly?', 'documented_question')
     mail('Can I pay yearly?')
@@ -941,7 +938,9 @@ await check(
     await until('the reply alone', () => sends['Where are your docs?'], 150_000)
     assert.ok(sends['Where are your docs?'].ok, JSON.stringify(sends['Where are your docs?']))
     const tickets = await q(
-      `select t.id from "Ticket" t join "Session" s on s.id = t."sessionId" where s.title like '%Where are your docs?%'`,
+      `select t.id from "Ticket" t join "Session" s on s.id = t."sessionId"
+       where s.title like '%Where are your docs?%' and t.payload->>'playbookInstallationId' = $1`,
+      [live.id],
     )
     assert.equal(tickets.length, 0, 'nobody was asked')
     // Another case: it asks; denied, nothing is sent.
