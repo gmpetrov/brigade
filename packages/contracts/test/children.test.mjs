@@ -5,9 +5,11 @@ import {
   childNote,
   childPrompt,
   asksParallel,
+  followNote,
   forPeople,
   inParallel,
   mayChangeQueued,
+  noteThreads,
   singleNote,
   wakesParent,
 } from '../dist/index.js'
@@ -105,6 +107,72 @@ test('a queued message nobody typed can be steered, not edited or cancelled', ()
   assert.equal(mayChangeQueued(null, 'steer'), true)
   assert.equal(mayChangeQueued(null, 'edit'), false)
   assert.equal(mayChangeQueued(null, 'cancel'), false)
+})
+
+test('people see each thread a report note tells about, to open it', () => {
+  const batch = batchNote(
+    [
+      {
+        id: 'c1',
+        title: 'Review PR #51 (AI SDK 7)',
+        teammate: 'Cody',
+        report: report('failed', 'HTTP 403 (no access).'),
+      },
+      { id: 'c2', title: 'Upgrade', teammate: 'Sam', report: report('needs_person', 'Asked') },
+    ],
+    [{ id: 'c3', title: 'Slow', teammate: 'Riley' }],
+  )
+  assert.deepEqual(noteThreads(batch), {
+    head: '2 child threads you were waiting for have finished:',
+    threads: [
+      {
+        id: 'c1',
+        title: 'Review PR #51 (AI SDK 7)',
+        teammate: 'Cody',
+        status: 'failed',
+        summary: 'HTTP 403 (no access).',
+      },
+      { id: 'c2', title: 'Upgrade', teammate: 'Sam', status: 'needs_person', summary: 'Asked' },
+      { id: 'c3', title: 'Slow', teammate: 'Riley', status: null, summary: '' },
+    ],
+  })
+  const run = singleNote({
+    id: 'c4',
+    title: 'Run',
+    teammate: 'Riley',
+    schedule: 'Watch',
+    report: report('report', 'line one\nline two'),
+  })
+  assert.deepEqual(noteThreads(run), {
+    head: 'A run of the schedule “Watch”',
+    threads: [
+      { id: 'c4', title: 'Run', teammate: '', status: 'report', summary: 'line one\nline two' },
+    ],
+  })
+  const late = singleNote({
+    id: 'c5',
+    title: 'Late',
+    teammate: 'Riley',
+    schedule: null,
+    report: report('failed', 'x'),
+  })
+  assert.equal(noteThreads(late)?.threads[0]?.id, 'c5')
+  assert.equal(noteThreads(late)?.threads[0]?.teammate, 'Riley')
+  const follow = followNote({
+    id: 'c6',
+    title: 'Fix',
+    teammate: 'Sam',
+    report: report('report', 'Done'),
+  })
+  assert.deepEqual(noteThreads(follow), {
+    head: null,
+    threads: [{ id: 'c6', title: 'Fix', teammate: 'Sam', status: 'report', summary: 'Done' }],
+  })
+  assert.equal(
+    noteThreads('The child thread you were waiting for has finished:\nsomething else'),
+    null,
+  )
+  assert.equal(noteThreads('Hello'), null)
 })
 
 test('a message sent to run in parallel asks for a child, and people read it as typed', () => {

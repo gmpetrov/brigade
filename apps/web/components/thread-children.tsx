@@ -2,7 +2,8 @@
 // Child threads, shown in their parent: they are out of the sidebar. A line each
 // where a teammate started one, the runs of a schedule that reports here, the
 // asks of a child waiting on a person, and in a child, the way back to its parent.
-import { CornerUpLeft, Eye } from 'lucide-react'
+import type { NoteThread } from '@brigade/contracts'
+import { ChevronRight, CornerUpLeft, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
@@ -62,6 +63,39 @@ export function ChildLine({ child, className }: { child: ThreadChild; className?
         {summary && (
           <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{summary}</span>
         )}
+      </span>
+    </Link>
+  )
+}
+
+/** Its dot in a report note: as it was when the note was written. */
+const NOTE_DOTS: Record<string, string> = {
+  failed: 'failed',
+  needs_person: 'waiting',
+}
+
+/**
+ * A thread a report note tells about, as a line that opens it: its dot, who, its title,
+ * what it came to. What it said goes under it, in the note.
+ */
+export function ReportedThread({ thread }: { thread: NoteThread }) {
+  return (
+    <Link
+      href={`/app/threads/${thread.id}`}
+      className="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-sm hover:bg-accent"
+    >
+      <ThreadStatusIcon
+        status={thread.status ? (NOTE_DOTS[thread.status] ?? 'done') : 'running'}
+        unread={false}
+      />
+      {thread.teammate && <span className="shrink-0 text-muted-foreground">{thread.teammate}</span>}
+      <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {thread.status ? (REPORTS[thread.status] ?? thread.status) : 'working'}
+      </span>
+      <span className="flex shrink-0 items-center text-xs text-muted-foreground">
+        Open
+        <ChevronRight aria-hidden className="size-3.5" />
       </span>
     </Link>
   )
