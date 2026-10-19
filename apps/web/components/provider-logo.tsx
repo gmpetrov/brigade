@@ -11,7 +11,7 @@ export type ProviderKind = Connection['kind']
  * Console's 2025 icon, Analytics' bars, Stripe's app icon, Cloudflare's cloud, Google Cloud's
  * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
  * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
- * bars on black, GitHub's
+ * bars on black, OpenRouter's arrows on white, GitHub's
  * Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -307,6 +307,18 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#fff"
           transform="translate(6 6) scale(0.5)"
           d="M24 10.262v2.712h-9.518V24h-3.034V10.262zm0-5.131v2.717H8.755V24H5.722V5.131zM24 0v2.717H3.034V24H0V0z"
+        />
+      </svg>
+    )
+  if (kind === 'openrouter')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* OpenRouter's arrows, black on a white tile in both themes. */}
+        <rect width="24" height="24" rx="5.5" fill="#fff" />
+        <path
+          fill="#000"
+          transform="translate(4.8 4.8) scale(0.6)"
+          d="M16.778 1.844v1.919q-.569-.026-1.138-.032-.708-.008-1.415.037c-1.93.126-4.023.728-6.149 2.237-2.911 2.066-2.731 1.95-4.14 2.75-.396.223-1.342.574-2.185.798-.841.225-1.753.333-1.751.333v4.229s.768.108 1.61.333c.842.224 1.789.575 2.185.799 1.41.798 1.228.683 4.14 2.75 2.126 1.509 4.22 2.11 6.148 2.236.88.058 1.716.041 2.555.005v1.918l7.222-4.168-7.222-4.17v2.176c-.86.038-1.611.065-2.278.021-1.364-.09-2.417-.357-3.979-1.465-2.244-1.593-2.866-2.027-3.68-2.508.889-.518 1.449-.906 3.822-2.59 1.56-1.109 2.614-1.377 3.978-1.466.667-.044 1.418-.017 2.278.02v2.176L24 6.014Z"
         />
       </svg>
     )

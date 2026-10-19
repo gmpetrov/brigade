@@ -165,6 +165,7 @@ export const ConnectorKind = {
   mixpanel: 'mixpanel',
   resend: 'resend',
   replicate: 'replicate',
+  openrouter: 'openrouter',
   mcp: 'mcp',
   google_search_console: 'google_search_console',
   google_analytics: 'google_analytics'

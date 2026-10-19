@@ -65,6 +65,7 @@ export type ConnectorKind =
   | 'mixpanel'
   | 'resend'
   | 'replicate'
+  | 'openrouter'
   | 'mcp'
 
 /** A vendor API key, entered once in the dashboard and kept in the vault. */

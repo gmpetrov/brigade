@@ -482,7 +482,11 @@ export async function authorisedFetch(
     }
     await replaceSecret(db, scope, secretId, credential)
   }
-  if (credential.expiresAt < Date.now() + 60_000) await refresh()
+  // A token with nothing to refresh it (OpenRouter's 7-day key) is tried until the server
+  // refuses it: refreshing would only fail, and the hour assumed for a token sent without
+  // expires_in would ask for a reconnect days early.
+  const refreshable = !mcp || (credential as McpCredential).refreshToken
+  if (refreshable && credential.expiresAt < Date.now() + 60_000) await refresh()
   const authorised = async (url: string, init: RequestInit = {}) => {
     const send = () =>
       fetch(url, {

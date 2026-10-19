@@ -34,6 +34,7 @@ const KINDS: ConnectorKind[] = [
   'mixpanel',
   'resend',
   'replicate',
+  'openrouter',
   'mcp',
   'webhook',
 ]
