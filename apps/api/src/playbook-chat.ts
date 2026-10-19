@@ -5,7 +5,7 @@
 // activate_playbook puts up the card whose Activate button turns it on. It runs on the accounts
 // of the member who started the thread, who owns it.
 import {
-  LOOP_INSTALL_TOOLS,
+  PLAYBOOK_INSTALL_TOOLS,
   type PlaybookAppStatus,
   type PlaybookManifest,
   type ScheduleOperation,
@@ -28,11 +28,11 @@ import {
 
 type PlaybookInstallOperation = Extract<
   ScheduleOperation,
-  { name: (typeof LOOP_INSTALL_TOOLS)[number] }
+  { name: (typeof PLAYBOOK_INSTALL_TOOLS)[number] }
 >
 
 export const isPlaybookInstallOperation = (op: ScheduleOperation): op is PlaybookInstallOperation =>
-  (LOOP_INSTALL_TOOLS as readonly string[]).includes(op.name)
+  (PLAYBOOK_INSTALL_TOOLS as readonly string[]).includes(op.name)
 
 type Session = {
   id: string

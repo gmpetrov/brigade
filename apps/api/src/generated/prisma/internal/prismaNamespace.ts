@@ -452,7 +452,8 @@ export const ModelName = {
   PlaybookInstallation: 'PlaybookInstallation',
   PlaybookAction: 'PlaybookAction',
   PlaybookRun: 'PlaybookRun',
-  PlaybookDryRun: 'PlaybookDryRun'
+  PlaybookDryRun: 'PlaybookDryRun',
+  ThreadFollow: 'ThreadFollow'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -468,7 +469,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun"
+    modelProps: "user" | "authSession" | "authAccount" | "verification" | "organization" | "member" | "invitation" | "workspace" | "computer" | "runner" | "teammate" | "threadRead" | "threadPin" | "homeDismissal" | "session" | "task" | "schedule" | "wakeup" | "threadTeammate" | "sessionEvent" | "account" | "pullRequest" | "pullRequestReview" | "comment" | "mcpClient" | "app" | "connection" | "vaultSecret" | "credential" | "credentialGrant" | "grant" | "connectionCall" | "trigger" | "subscription" | "ticket" | "document" | "documentVersion" | "libraryFolder" | "libraryFolderGrant" | "documentAsset" | "auditEntry" | "attachment" | "threadAttachment" | "designSystem" | "skill" | "skillPack" | "previewRecipe" | "previewVariable" | "project" | "projectRepository" | "pushDevice" | "pushNotice" | "playbookInstallation" | "playbookAction" | "playbookRun" | "playbookDryRun" | "threadFollow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -4616,6 +4617,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ThreadFollow: {
+      payload: Prisma.$ThreadFollowPayload<ExtArgs>
+      fields: Prisma.ThreadFollowFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ThreadFollowFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ThreadFollowFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        findFirst: {
+          args: Prisma.ThreadFollowFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ThreadFollowFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        findMany: {
+          args: Prisma.ThreadFollowFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        create: {
+          args: Prisma.ThreadFollowCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        createMany: {
+          args: Prisma.ThreadFollowCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ThreadFollowCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        delete: {
+          args: Prisma.ThreadFollowDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        update: {
+          args: Prisma.ThreadFollowUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        deleteMany: {
+          args: Prisma.ThreadFollowDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ThreadFollowUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ThreadFollowUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>[]
+        }
+        upsert: {
+          args: Prisma.ThreadFollowUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ThreadFollowPayload>
+        }
+        aggregate: {
+          args: Prisma.ThreadFollowAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateThreadFollow>
+        }
+        groupBy: {
+          args: Prisma.ThreadFollowGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadFollowGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ThreadFollowCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ThreadFollowCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -5193,6 +5268,8 @@ export const ConnectionCallScalarFieldEnum = {
   simulated: 'simulated',
   playbookActionKey: 'playbookActionKey',
   input: 'input',
+  flaggedAt: 'flaggedAt',
+  flaggedByMemberId: 'flaggedByMemberId',
   createdAt: 'createdAt'
 } as const
 
@@ -5590,8 +5667,10 @@ export const PlaybookActionScalarFieldEnum = {
   key: 'key',
   level: 'level',
   conditions: 'conditions',
+  limits: 'limits',
   levelChangedAt: 'levelChangedAt',
-  levelChangedByMemberId: 'levelChangedByMemberId'
+  levelChangedByMemberId: 'levelChangedByMemberId',
+  demotedReason: 'demotedReason'
 } as const
 
 export type PlaybookActionScalarFieldEnum = (typeof PlaybookActionScalarFieldEnum)[keyof typeof PlaybookActionScalarFieldEnum]
@@ -5637,6 +5716,19 @@ export const PlaybookDryRunScalarFieldEnum = {
 } as const
 
 export type PlaybookDryRunScalarFieldEnum = (typeof PlaybookDryRunScalarFieldEnum)[keyof typeof PlaybookDryRunScalarFieldEnum]
+
+
+export const ThreadFollowScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  followerId: 'followerId',
+  deliveredAt: 'deliveredAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ThreadFollowScalarFieldEnum = (typeof ThreadFollowScalarFieldEnum)[keyof typeof ThreadFollowScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -6466,6 +6558,7 @@ export type GlobalOmitConfig = {
   playbookAction?: Prisma.PlaybookActionOmit
   playbookRun?: Prisma.PlaybookRunOmit
   playbookDryRun?: Prisma.PlaybookDryRunOmit
+  threadFollow?: Prisma.ThreadFollowOmit
 }
 
 /* Types for Logging */

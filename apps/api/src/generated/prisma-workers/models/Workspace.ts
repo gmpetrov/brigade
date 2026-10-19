@@ -227,6 +227,7 @@ export type WorkspaceWhereInput = {
   playbookActions?: Prisma.PlaybookActionListRelationFilter
   playbookRuns?: Prisma.PlaybookRunListRelationFilter
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
+  threadFollows?: Prisma.ThreadFollowListRelationFilter
 }
 
 export type WorkspaceOrderByWithRelationInput = {
@@ -280,6 +281,7 @@ export type WorkspaceOrderByWithRelationInput = {
   playbookActions?: Prisma.PlaybookActionOrderByRelationAggregateInput
   playbookRuns?: Prisma.PlaybookRunOrderByRelationAggregateInput
   playbookDryRuns?: Prisma.PlaybookDryRunOrderByRelationAggregateInput
+  threadFollows?: Prisma.ThreadFollowOrderByRelationAggregateInput
 }
 
 export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
@@ -336,6 +338,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   playbookActions?: Prisma.PlaybookActionListRelationFilter
   playbookRuns?: Prisma.PlaybookRunListRelationFilter
   playbookDryRuns?: Prisma.PlaybookDryRunListRelationFilter
+  threadFollows?: Prisma.ThreadFollowListRelationFilter
 }, "id">
 
 export type WorkspaceOrderByWithAggregationInput = {
@@ -410,6 +413,7 @@ export type WorkspaceCreateInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateInput = {
@@ -462,6 +466,7 @@ export type WorkspaceUncheckedCreateInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUpdateInput = {
@@ -514,6 +519,7 @@ export type WorkspaceUpdateInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateInput = {
@@ -566,6 +572,7 @@ export type WorkspaceUncheckedUpdateInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateManyInput = {
@@ -1295,6 +1302,20 @@ export type WorkspaceUpdateOneRequiredWithoutPlaybookDryRunsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPlaybookDryRunsInput, Prisma.WorkspaceUpdateWithoutPlaybookDryRunsInput>, Prisma.WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput>
 }
 
+export type WorkspaceCreateNestedOneWithoutThreadFollowsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadFollowsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutThreadFollowsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutThreadFollowsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadFollowsInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutThreadFollowsInput
+  upsert?: Prisma.WorkspaceUpsertWithoutThreadFollowsInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutThreadFollowsInput, Prisma.WorkspaceUpdateWithoutThreadFollowsInput>, Prisma.WorkspaceUncheckedUpdateWithoutThreadFollowsInput>
+}
+
 export type WorkspaceCreateWithoutOrganizationInput = {
   id?: string
   name: string
@@ -1344,6 +1365,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
@@ -1395,6 +1417,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutOrganizationInput = {
@@ -1483,6 +1506,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutComputersInput = {
@@ -1534,6 +1558,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutComputersInput = {
@@ -1601,6 +1626,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutComputersInput = {
@@ -1652,6 +1678,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutRunnersInput = {
@@ -1703,6 +1730,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutRunnersInput = {
@@ -1754,6 +1782,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutRunnersInput = {
@@ -1821,6 +1850,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
@@ -1872,6 +1902,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTeammatesInput = {
@@ -1923,6 +1954,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
@@ -1974,6 +2006,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTeammatesInput = {
@@ -2041,6 +2074,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
@@ -2092,6 +2126,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadReadsInput = {
@@ -2143,6 +2178,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
@@ -2194,6 +2230,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadReadsInput = {
@@ -2261,6 +2298,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
@@ -2312,6 +2350,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadPinsInput = {
@@ -2363,6 +2402,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
@@ -2414,6 +2454,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadPinsInput = {
@@ -2481,6 +2522,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
@@ -2532,6 +2574,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutHomeDismissalsInput = {
@@ -2583,6 +2626,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
@@ -2634,6 +2678,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutHomeDismissalsInput = {
@@ -2701,6 +2746,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
@@ -2752,6 +2798,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionsInput = {
@@ -2803,6 +2850,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionsInput = {
@@ -2854,6 +2902,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionsInput = {
@@ -2921,6 +2970,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
@@ -2972,6 +3022,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTasksInput = {
@@ -3023,6 +3074,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTasksInput = {
@@ -3074,6 +3126,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTasksInput = {
@@ -3141,6 +3194,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTasksInput = {
@@ -3192,6 +3246,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSchedulesInput = {
@@ -3243,6 +3298,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
@@ -3294,6 +3350,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSchedulesInput = {
@@ -3361,6 +3418,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
@@ -3412,6 +3470,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutWakeupsInput = {
@@ -3463,6 +3522,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
@@ -3514,6 +3574,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutWakeupsInput = {
@@ -3581,6 +3642,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
@@ -3632,6 +3694,7 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadSeatsInput = {
@@ -3683,6 +3746,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
@@ -3734,6 +3798,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadSeatsInput = {
@@ -3801,6 +3866,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
@@ -3852,6 +3918,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSessionEventsInput = {
@@ -3903,6 +3970,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
@@ -3954,6 +4022,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSessionEventsInput = {
@@ -4021,6 +4090,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
@@ -4072,6 +4142,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAccountsInput = {
@@ -4123,6 +4194,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAccountsInput = {
@@ -4174,6 +4246,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAccountsInput = {
@@ -4241,6 +4314,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
@@ -4292,6 +4366,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestsInput = {
@@ -4343,6 +4418,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
@@ -4394,6 +4470,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestsInput = {
@@ -4461,6 +4538,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
@@ -4512,6 +4590,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPullRequestReviewsInput = {
@@ -4563,6 +4642,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
@@ -4614,6 +4694,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPullRequestReviewsInput = {
@@ -4681,6 +4762,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
@@ -4732,6 +4814,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCommentsInput = {
@@ -4783,6 +4866,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCommentsInput = {
@@ -4834,6 +4918,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCommentsInput = {
@@ -4901,6 +4986,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
@@ -4952,6 +5038,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAppsInput = {
@@ -5003,6 +5090,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAppsInput = {
@@ -5054,6 +5142,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAppsInput = {
@@ -5121,6 +5210,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAppsInput = {
@@ -5172,6 +5262,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionsInput = {
@@ -5223,6 +5314,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
@@ -5274,6 +5366,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionsInput = {
@@ -5341,6 +5434,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
@@ -5392,6 +5486,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutVaultSecretsInput = {
@@ -5443,6 +5538,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
@@ -5494,6 +5590,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutVaultSecretsInput = {
@@ -5561,6 +5658,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
@@ -5612,6 +5710,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialsInput = {
@@ -5663,6 +5762,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
@@ -5714,6 +5814,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialsInput = {
@@ -5781,6 +5882,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
@@ -5832,6 +5934,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutCredentialGrantsInput = {
@@ -5883,6 +5986,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
@@ -5934,6 +6038,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutCredentialGrantsInput = {
@@ -6001,6 +6106,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
@@ -6052,6 +6158,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutGrantsInput = {
@@ -6103,6 +6210,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutGrantsInput = {
@@ -6154,6 +6262,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutGrantsInput = {
@@ -6221,6 +6330,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
@@ -6272,6 +6382,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutConnectionCallsInput = {
@@ -6323,6 +6434,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
@@ -6374,6 +6486,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutConnectionCallsInput = {
@@ -6441,6 +6554,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
@@ -6492,6 +6606,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTriggersInput = {
@@ -6543,6 +6658,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTriggersInput = {
@@ -6594,6 +6710,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTriggersInput = {
@@ -6661,6 +6778,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
@@ -6712,6 +6830,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSubscriptionsInput = {
@@ -6763,6 +6882,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
@@ -6814,6 +6934,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSubscriptionsInput = {
@@ -6881,6 +7002,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
@@ -6932,6 +7054,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutTicketsInput = {
@@ -6983,6 +7106,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutTicketsInput = {
@@ -7034,6 +7158,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutTicketsInput = {
@@ -7101,6 +7226,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
@@ -7152,6 +7278,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDocumentsInput = {
@@ -7203,6 +7330,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
@@ -7254,6 +7382,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDocumentsInput = {
@@ -7321,6 +7450,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
@@ -7372,6 +7502,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFoldersInput = {
@@ -7423,6 +7554,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
@@ -7474,6 +7606,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFoldersInput = {
@@ -7541,6 +7674,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
@@ -7592,6 +7726,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
@@ -7643,6 +7778,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
@@ -7694,6 +7830,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutLibraryFolderGrantsInput = {
@@ -7761,6 +7898,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
@@ -7812,6 +7950,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAuditEntriesInput = {
@@ -7863,6 +8002,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
@@ -7914,6 +8054,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAuditEntriesInput = {
@@ -7981,6 +8122,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
@@ -8032,6 +8174,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutAttachmentsInput = {
@@ -8083,6 +8226,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
@@ -8134,6 +8278,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutAttachmentsInput = {
@@ -8201,6 +8346,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
@@ -8252,6 +8398,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutThreadAttachmentsInput = {
@@ -8303,6 +8450,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
@@ -8354,6 +8502,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutThreadAttachmentsInput = {
@@ -8421,6 +8570,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
@@ -8472,6 +8622,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutDesignSystemsInput = {
@@ -8523,6 +8674,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
@@ -8574,6 +8726,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutDesignSystemsInput = {
@@ -8641,6 +8794,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
@@ -8692,6 +8846,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillsInput = {
@@ -8743,6 +8898,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillsInput = {
@@ -8794,6 +8950,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillsInput = {
@@ -8861,6 +9018,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
@@ -8912,6 +9070,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutSkillPacksInput = {
@@ -8963,6 +9122,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
@@ -9014,6 +9174,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutSkillPacksInput = {
@@ -9081,6 +9242,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
@@ -9132,6 +9294,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPreviewRecipesInput = {
@@ -9183,6 +9346,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
@@ -9234,6 +9398,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewRecipesInput = {
@@ -9301,6 +9466,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
@@ -9352,6 +9518,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPreviewVariablesInput = {
@@ -9403,6 +9570,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
@@ -9454,6 +9622,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPreviewVariablesInput = {
@@ -9521,6 +9690,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
@@ -9572,6 +9742,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectsInput = {
@@ -9623,6 +9794,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectsInput = {
@@ -9674,6 +9846,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectsInput = {
@@ -9741,6 +9914,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
@@ -9792,6 +9966,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutProjectRepositoriesInput = {
@@ -9843,6 +10018,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
@@ -9894,6 +10070,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutProjectRepositoriesInput = {
@@ -9961,6 +10138,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
@@ -10012,6 +10190,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPushNoticesInput = {
@@ -10063,6 +10242,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
@@ -10114,6 +10294,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPushNoticesInput = {
@@ -10181,6 +10362,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
@@ -10232,6 +10414,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
@@ -10283,6 +10466,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
@@ -10334,6 +10518,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookInstallationsInput = {
@@ -10401,6 +10586,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
@@ -10452,6 +10638,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookActionsInput = {
@@ -10503,6 +10690,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
@@ -10554,6 +10742,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookActionsInput = {
@@ -10621,6 +10810,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
@@ -10672,6 +10862,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookRunsInput = {
@@ -10723,6 +10914,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
@@ -10774,6 +10966,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookRunsInput = {
@@ -10841,6 +11034,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
@@ -10892,6 +11086,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
@@ -10943,6 +11138,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
   playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
@@ -10994,6 +11190,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
   playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
 }
 
 export type WorkspaceCreateOrConnectWithoutPlaybookDryRunsInput = {
@@ -11061,6 +11258,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
@@ -11112,6 +11310,231 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutThreadFollowsInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutThreadFollowsInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadFollowsInput>
+}
+
+export type WorkspaceUpsertWithoutThreadFollowsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedUpdateWithoutThreadFollowsInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedCreateWithoutThreadFollowsInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutThreadFollowsInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutThreadFollowsInput, Prisma.WorkspaceUncheckedUpdateWithoutThreadFollowsInput>
+}
+
+export type WorkspaceUpdateWithoutThreadFollowsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceCreateManyOrganizationInput = {
@@ -11170,6 +11593,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
@@ -11221,6 +11645,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
   playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
 }
 
 export type WorkspaceUncheckedUpdateManyWithoutOrganizationInput = {
@@ -11280,6 +11705,7 @@ export type WorkspaceCountOutputType = {
   playbookActions: number
   playbookRuns: number
   playbookDryRuns: number
+  threadFollows: number
 }
 
 export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -11327,6 +11753,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   playbookActions?: boolean | WorkspaceCountOutputTypeCountPlaybookActionsArgs
   playbookRuns?: boolean | WorkspaceCountOutputTypeCountPlaybookRunsArgs
   playbookDryRuns?: boolean | WorkspaceCountOutputTypeCountPlaybookDryRunsArgs
+  threadFollows?: boolean | WorkspaceCountOutputTypeCountThreadFollowsArgs
 }
 
 /**
@@ -11647,6 +12074,13 @@ export type WorkspaceCountOutputTypeCountPlaybookDryRunsArgs<ExtArgs extends run
   where?: Prisma.PlaybookDryRunWhereInput
 }
 
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountThreadFollowsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ThreadFollowWhereInput
+}
+
 
 export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -11699,6 +12133,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   playbookActions?: boolean | Prisma.Workspace$playbookActionsArgs<ExtArgs>
   playbookRuns?: boolean | Prisma.Workspace$playbookRunsArgs<ExtArgs>
   playbookDryRuns?: boolean | Prisma.Workspace$playbookDryRunsArgs<ExtArgs>
+  threadFollows?: boolean | Prisma.Workspace$threadFollowsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspace"]>
 
@@ -11775,6 +12210,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   playbookActions?: boolean | Prisma.Workspace$playbookActionsArgs<ExtArgs>
   playbookRuns?: boolean | Prisma.Workspace$playbookRunsArgs<ExtArgs>
   playbookDryRuns?: boolean | Prisma.Workspace$playbookDryRunsArgs<ExtArgs>
+  threadFollows?: boolean | Prisma.Workspace$threadFollowsArgs<ExtArgs>
   _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WorkspaceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -11832,6 +12268,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     playbookActions: Prisma.$PlaybookActionPayload<ExtArgs>[]
     playbookRuns: Prisma.$PlaybookRunPayload<ExtArgs>[]
     playbookDryRuns: Prisma.$PlaybookDryRunPayload<ExtArgs>[]
+    threadFollows: Prisma.$ThreadFollowPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -12278,6 +12715,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   playbookActions<T extends Prisma.Workspace$playbookActionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$playbookActionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playbookRuns<T extends Prisma.Workspace$playbookRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$playbookRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   playbookDryRuns<T extends Prisma.Workspace$playbookDryRunsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$playbookDryRunsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlaybookDryRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  threadFollows<T extends Prisma.Workspace$threadFollowsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$threadFollowsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ThreadFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -13766,6 +14204,30 @@ export type Workspace$playbookDryRunsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.PlaybookDryRunScalarFieldEnum | Prisma.PlaybookDryRunScalarFieldEnum[]
+}
+
+/**
+ * Workspace.threadFollows
+ */
+export type Workspace$threadFollowsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ThreadFollow
+   */
+  select?: Prisma.ThreadFollowSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ThreadFollow
+   */
+  omit?: Prisma.ThreadFollowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ThreadFollowInclude<ExtArgs> | null
+  where?: Prisma.ThreadFollowWhereInput
+  orderBy?: Prisma.ThreadFollowOrderByWithRelationInput | Prisma.ThreadFollowOrderByWithRelationInput[]
+  cursor?: Prisma.ThreadFollowWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ThreadFollowScalarFieldEnum | Prisma.ThreadFollowScalarFieldEnum[]
 }
 
 /**

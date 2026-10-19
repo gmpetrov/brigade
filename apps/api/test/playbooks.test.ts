@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { LOOP_TEMPLATES } from '../src/generated/playbooks.js'
+import { PLAYBOOK_TEMPLATES } from '../src/generated/playbooks.js'
 
 // playbooks.ts reads the API's config when imported; nothing here reaches a database or the vault.
 process.env.DATABASE_URL ??= 'postgresql://test@localhost/test'
@@ -44,9 +44,9 @@ const template = (change: (m: Record<string, any>) => void = () => {}) => {
 }
 
 test('every playbook shipped with the API loads', () => {
-  assert.ok(Object.keys(LOOP_TEMPLATES).length > 0)
+  assert.ok(Object.keys(PLAYBOOK_TEMPLATES).length > 0)
   const all = templates()
-  assert.equal(all.size, Object.keys(LOOP_TEMPLATES).length)
+  assert.equal(all.size, Object.keys(PLAYBOOK_TEMPLATES).length)
   const support = all.get('brigade/support-bugs')
   assert.ok(support)
   assert.deepEqual(

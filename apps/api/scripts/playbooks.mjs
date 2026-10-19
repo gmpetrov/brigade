@@ -45,5 +45,5 @@ mkdirSync(join(root, 'src/generated'), { recursive: true })
 writeFileSync(
   out,
   '// Written by scripts/playbooks.mjs from playbooks/: do not edit.\n' +
-    `export const LOOP_TEMPLATES: Record<string, { manifest: unknown; files: Record<string, string> }> = ${JSON.stringify(templates, null, 2)}\n`,
+    `export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Record<string, string> }> = ${JSON.stringify(templates, null, 2)}\n`,
 )

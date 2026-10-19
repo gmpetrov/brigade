@@ -357,3 +357,10 @@ export type PlaybookRun = Prisma.PlaybookRunModel
  * once they are all done.
  */
 export type PlaybookDryRun = Prisma.PlaybookDryRunModel
+/**
+ * Model ThreadFollow
+ * A thread waiting on another's report without being its parent (follow_thread): three runs of
+ * a playbook whose customers hit the same bug follow the one fix. The followed thread's report
+ * wakes each follower once, like a parent (src/children.ts).
+ */
+export type ThreadFollow = Prisma.ThreadFollowModel

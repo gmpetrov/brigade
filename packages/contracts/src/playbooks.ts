@@ -216,14 +216,14 @@ export const PlaybookOperations = [
 ] as const
 
 /** The tools of the teammate that installs a playbook, by the operation each one is. */
-export const LOOP_INSTALL_TOOLS = [
+export const PLAYBOOK_INSTALL_TOOLS = [
   'show_playbook',
   'configure_playbook',
   'start_dry_run',
   'dry_run_report',
   'activate_playbook',
 ] as const
-export type PlaybookInstallTool = (typeof LOOP_INSTALL_TOOLS)[number]
+export type PlaybookInstallTool = (typeof PLAYBOOK_INSTALL_TOOLS)[number]
 
 /** A playbook's thread, as its runner sees it (ThreadSpec.playbook). */
 export const ThreadPlaybook = z.object({

@@ -189,3 +189,40 @@ ALTER TABLE "PlaybookDryRun" ADD CONSTRAINT "PlaybookDryRun_installationId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "PlaybookDryRun" ADD CONSTRAINT "PlaybookDryRun_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Autonomy (flags and daily caps) and follow_thread
+-- AlterTable
+ALTER TABLE "ConnectionCall" ADD COLUMN     "flaggedAt" TIMESTAMP(3),
+ADD COLUMN     "flaggedByMemberId" TEXT;
+
+-- AlterTable
+ALTER TABLE "PlaybookAction" ADD COLUMN     "demotedReason" TEXT,
+ADD COLUMN     "limits" JSONB NOT NULL DEFAULT '{}';
+
+-- CreateTable
+CREATE TABLE "ThreadFollow" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "followerId" TEXT NOT NULL,
+    "deliveredAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ThreadFollow_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "ThreadFollow_followerId_idx" ON "ThreadFollow"("followerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ThreadFollow_sessionId_followerId_key" ON "ThreadFollow"("sessionId", "followerId");
+
+-- AddForeignKey
+ALTER TABLE "ThreadFollow" ADD CONSTRAINT "ThreadFollow_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ThreadFollow" ADD CONSTRAINT "ThreadFollow_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ThreadFollow" ADD CONSTRAINT "ThreadFollow_followerId_fkey" FOREIGN KEY ("followerId") REFERENCES "Session"("id") ON DELETE CASCADE ON UPDATE CASCADE;

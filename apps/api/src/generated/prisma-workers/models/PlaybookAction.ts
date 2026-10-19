@@ -33,6 +33,7 @@ export type PlaybookActionMinAggregateOutputType = {
   level: $Enums.PlaybookActionLevel | null
   levelChangedAt: Date | null
   levelChangedByMemberId: string | null
+  demotedReason: string | null
 }
 
 export type PlaybookActionMaxAggregateOutputType = {
@@ -44,6 +45,7 @@ export type PlaybookActionMaxAggregateOutputType = {
   level: $Enums.PlaybookActionLevel | null
   levelChangedAt: Date | null
   levelChangedByMemberId: string | null
+  demotedReason: string | null
 }
 
 export type PlaybookActionCountAggregateOutputType = {
@@ -54,8 +56,10 @@ export type PlaybookActionCountAggregateOutputType = {
   key: number
   level: number
   conditions: number
+  limits: number
   levelChangedAt: number
   levelChangedByMemberId: number
+  demotedReason: number
   _all: number
 }
 
@@ -69,6 +73,7 @@ export type PlaybookActionMinAggregateInputType = {
   level?: true
   levelChangedAt?: true
   levelChangedByMemberId?: true
+  demotedReason?: true
 }
 
 export type PlaybookActionMaxAggregateInputType = {
@@ -80,6 +85,7 @@ export type PlaybookActionMaxAggregateInputType = {
   level?: true
   levelChangedAt?: true
   levelChangedByMemberId?: true
+  demotedReason?: true
 }
 
 export type PlaybookActionCountAggregateInputType = {
@@ -90,8 +96,10 @@ export type PlaybookActionCountAggregateInputType = {
   key?: true
   level?: true
   conditions?: true
+  limits?: true
   levelChangedAt?: true
   levelChangedByMemberId?: true
+  demotedReason?: true
   _all?: true
 }
 
@@ -175,8 +183,10 @@ export type PlaybookActionGroupByOutputType = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions: runtime.JsonValue
+  limits: runtime.JsonValue
   levelChangedAt: Date | null
   levelChangedByMemberId: string | null
+  demotedReason: string | null
   _count: PlaybookActionCountAggregateOutputType | null
   _min: PlaybookActionMinAggregateOutputType | null
   _max: PlaybookActionMaxAggregateOutputType | null
@@ -208,8 +218,10 @@ export type PlaybookActionWhereInput = {
   key?: Prisma.StringFilter<"PlaybookAction"> | string
   level?: Prisma.EnumPlaybookActionLevelFilter<"PlaybookAction"> | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonFilter<"PlaybookAction">
+  limits?: Prisma.JsonFilter<"PlaybookAction">
   levelChangedAt?: Prisma.DateTimeNullableFilter<"PlaybookAction"> | Date | string | null
   levelChangedByMemberId?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
+  demotedReason?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   installation?: Prisma.XOR<Prisma.PlaybookInstallationScalarRelationFilter, Prisma.PlaybookInstallationWhereInput>
 }
@@ -222,8 +234,10 @@ export type PlaybookActionOrderByWithRelationInput = {
   key?: Prisma.SortOrder
   level?: Prisma.SortOrder
   conditions?: Prisma.SortOrder
+  limits?: Prisma.SortOrder
   levelChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   levelChangedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  demotedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   installation?: Prisma.PlaybookInstallationOrderByWithRelationInput
 }
@@ -240,8 +254,10 @@ export type PlaybookActionWhereUniqueInput = Prisma.AtLeast<{
   key?: Prisma.StringFilter<"PlaybookAction"> | string
   level?: Prisma.EnumPlaybookActionLevelFilter<"PlaybookAction"> | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonFilter<"PlaybookAction">
+  limits?: Prisma.JsonFilter<"PlaybookAction">
   levelChangedAt?: Prisma.DateTimeNullableFilter<"PlaybookAction"> | Date | string | null
   levelChangedByMemberId?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
+  demotedReason?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   installation?: Prisma.XOR<Prisma.PlaybookInstallationScalarRelationFilter, Prisma.PlaybookInstallationWhereInput>
 }, "id" | "installationId_key">
@@ -254,8 +270,10 @@ export type PlaybookActionOrderByWithAggregationInput = {
   key?: Prisma.SortOrder
   level?: Prisma.SortOrder
   conditions?: Prisma.SortOrder
+  limits?: Prisma.SortOrder
   levelChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   levelChangedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
+  demotedReason?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.PlaybookActionCountOrderByAggregateInput
   _max?: Prisma.PlaybookActionMaxOrderByAggregateInput
   _min?: Prisma.PlaybookActionMinOrderByAggregateInput
@@ -272,8 +290,10 @@ export type PlaybookActionScalarWhereWithAggregatesInput = {
   key?: Prisma.StringWithAggregatesFilter<"PlaybookAction"> | string
   level?: Prisma.EnumPlaybookActionLevelWithAggregatesFilter<"PlaybookAction"> | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonWithAggregatesFilter<"PlaybookAction">
+  limits?: Prisma.JsonWithAggregatesFilter<"PlaybookAction">
   levelChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PlaybookAction"> | Date | string | null
   levelChangedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"PlaybookAction"> | string | null
+  demotedReason?: Prisma.StringNullableWithAggregatesFilter<"PlaybookAction"> | string | null
 }
 
 export type PlaybookActionCreateInput = {
@@ -282,8 +302,10 @@ export type PlaybookActionCreateInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPlaybookActionsInput
   installation: Prisma.PlaybookInstallationCreateNestedOneWithoutActionsInput
 }
@@ -296,8 +318,10 @@ export type PlaybookActionUncheckedCreateInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionUpdateInput = {
@@ -306,8 +330,10 @@ export type PlaybookActionUpdateInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPlaybookActionsNestedInput
   installation?: Prisma.PlaybookInstallationUpdateOneRequiredWithoutActionsNestedInput
 }
@@ -320,8 +346,10 @@ export type PlaybookActionUncheckedUpdateInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionCreateManyInput = {
@@ -332,8 +360,10 @@ export type PlaybookActionCreateManyInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionUpdateManyMutationInput = {
@@ -342,8 +372,10 @@ export type PlaybookActionUpdateManyMutationInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionUncheckedUpdateManyInput = {
@@ -354,8 +386,10 @@ export type PlaybookActionUncheckedUpdateManyInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionListRelationFilter = {
@@ -381,8 +415,10 @@ export type PlaybookActionCountOrderByAggregateInput = {
   key?: Prisma.SortOrder
   level?: Prisma.SortOrder
   conditions?: Prisma.SortOrder
+  limits?: Prisma.SortOrder
   levelChangedAt?: Prisma.SortOrder
   levelChangedByMemberId?: Prisma.SortOrder
+  demotedReason?: Prisma.SortOrder
 }
 
 export type PlaybookActionMaxOrderByAggregateInput = {
@@ -394,6 +430,7 @@ export type PlaybookActionMaxOrderByAggregateInput = {
   level?: Prisma.SortOrder
   levelChangedAt?: Prisma.SortOrder
   levelChangedByMemberId?: Prisma.SortOrder
+  demotedReason?: Prisma.SortOrder
 }
 
 export type PlaybookActionMinOrderByAggregateInput = {
@@ -405,6 +442,7 @@ export type PlaybookActionMinOrderByAggregateInput = {
   level?: Prisma.SortOrder
   levelChangedAt?: Prisma.SortOrder
   levelChangedByMemberId?: Prisma.SortOrder
+  demotedReason?: Prisma.SortOrder
 }
 
 export type PlaybookActionCreateNestedManyWithoutWorkspaceInput = {
@@ -501,8 +539,10 @@ export type PlaybookActionCreateWithoutWorkspaceInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
   installation: Prisma.PlaybookInstallationCreateNestedOneWithoutActionsInput
 }
 
@@ -513,8 +553,10 @@ export type PlaybookActionUncheckedCreateWithoutWorkspaceInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionCreateOrConnectWithoutWorkspaceInput = {
@@ -554,8 +596,10 @@ export type PlaybookActionScalarWhereInput = {
   key?: Prisma.StringFilter<"PlaybookAction"> | string
   level?: Prisma.EnumPlaybookActionLevelFilter<"PlaybookAction"> | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonFilter<"PlaybookAction">
+  limits?: Prisma.JsonFilter<"PlaybookAction">
   levelChangedAt?: Prisma.DateTimeNullableFilter<"PlaybookAction"> | Date | string | null
   levelChangedByMemberId?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
+  demotedReason?: Prisma.StringNullableFilter<"PlaybookAction"> | string | null
 }
 
 export type PlaybookActionCreateWithoutInstallationInput = {
@@ -564,8 +608,10 @@ export type PlaybookActionCreateWithoutInstallationInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPlaybookActionsInput
 }
 
@@ -576,8 +622,10 @@ export type PlaybookActionUncheckedCreateWithoutInstallationInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionCreateOrConnectWithoutInstallationInput = {
@@ -613,8 +661,10 @@ export type PlaybookActionCreateManyWorkspaceInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionUpdateWithoutWorkspaceInput = {
@@ -623,8 +673,10 @@ export type PlaybookActionUpdateWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   installation?: Prisma.PlaybookInstallationUpdateOneRequiredWithoutActionsNestedInput
 }
 
@@ -635,8 +687,10 @@ export type PlaybookActionUncheckedUpdateWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -646,8 +700,10 @@ export type PlaybookActionUncheckedUpdateManyWithoutWorkspaceInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionCreateManyInstallationInput = {
@@ -657,8 +713,10 @@ export type PlaybookActionCreateManyInstallationInput = {
   key: string
   level: $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Date | string | null
   levelChangedByMemberId?: string | null
+  demotedReason?: string | null
 }
 
 export type PlaybookActionUpdateWithoutInstallationInput = {
@@ -667,8 +725,10 @@ export type PlaybookActionUpdateWithoutInstallationInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPlaybookActionsNestedInput
 }
 
@@ -679,8 +739,10 @@ export type PlaybookActionUncheckedUpdateWithoutInstallationInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type PlaybookActionUncheckedUpdateManyWithoutInstallationInput = {
@@ -690,8 +752,10 @@ export type PlaybookActionUncheckedUpdateManyWithoutInstallationInput = {
   key?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumPlaybookActionLevelFieldUpdateOperationsInput | $Enums.PlaybookActionLevel
   conditions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  limits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   levelChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   levelChangedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  demotedReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -704,8 +768,10 @@ export type PlaybookActionSelect<ExtArgs extends runtime.Types.Extensions.Intern
   key?: boolean
   level?: boolean
   conditions?: boolean
+  limits?: boolean
   levelChangedAt?: boolean
   levelChangedByMemberId?: boolean
+  demotedReason?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.PlaybookInstallationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playbookAction"]>
@@ -718,8 +784,10 @@ export type PlaybookActionSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   key?: boolean
   level?: boolean
   conditions?: boolean
+  limits?: boolean
   levelChangedAt?: boolean
   levelChangedByMemberId?: boolean
+  demotedReason?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.PlaybookInstallationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playbookAction"]>
@@ -732,8 +800,10 @@ export type PlaybookActionSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   key?: boolean
   level?: boolean
   conditions?: boolean
+  limits?: boolean
   levelChangedAt?: boolean
   levelChangedByMemberId?: boolean
+  demotedReason?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.PlaybookInstallationDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["playbookAction"]>
@@ -746,11 +816,13 @@ export type PlaybookActionSelectScalar = {
   key?: boolean
   level?: boolean
   conditions?: boolean
+  limits?: boolean
   levelChangedAt?: boolean
   levelChangedByMemberId?: boolean
+  demotedReason?: boolean
 }
 
-export type PlaybookActionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "installationId" | "key" | "level" | "conditions" | "levelChangedAt" | "levelChangedByMemberId", ExtArgs["result"]["playbookAction"]>
+export type PlaybookActionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "installationId" | "key" | "level" | "conditions" | "limits" | "levelChangedAt" | "levelChangedByMemberId" | "demotedReason", ExtArgs["result"]["playbookAction"]>
 export type PlaybookActionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   installation?: boolean | Prisma.PlaybookInstallationDefaultArgs<ExtArgs>
@@ -778,11 +850,20 @@ export type $PlaybookActionPayload<ExtArgs extends runtime.Types.Extensions.Inte
     key: string
     level: $Enums.PlaybookActionLevel
     /**
-     * Limits on auto: { cases?: string[], ... }.
+     * Limits on auto: { cases?: string[], checksPassed?: true, max?: { argument: number } }.
      */
     conditions: runtime.JsonValue
+    /**
+     * Daily caps on auto: { count?: number, amount?: { argument: string, max: number } }. Past
+     * one, the action asks until the next day.
+     */
+    limits: runtime.JsonValue
     levelChangedAt: Date | null
     levelChangedByMemberId: string | null
+    /**
+     * Why it last went back to ask on its own: flagged, update, cap.
+     */
+    demotedReason: string | null
   }, ExtArgs["result"]["playbookAction"]>
   composites: {}
 }
@@ -1215,8 +1296,10 @@ export interface PlaybookActionFieldRefs {
   readonly key: Prisma.FieldRef<"PlaybookAction", 'String'>
   readonly level: Prisma.FieldRef<"PlaybookAction", 'PlaybookActionLevel'>
   readonly conditions: Prisma.FieldRef<"PlaybookAction", 'Json'>
+  readonly limits: Prisma.FieldRef<"PlaybookAction", 'Json'>
   readonly levelChangedAt: Prisma.FieldRef<"PlaybookAction", 'DateTime'>
   readonly levelChangedByMemberId: Prisma.FieldRef<"PlaybookAction", 'String'>
+  readonly demotedReason: Prisma.FieldRef<"PlaybookAction", 'String'>
 }
     
 

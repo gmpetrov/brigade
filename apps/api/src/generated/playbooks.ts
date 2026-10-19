@@ -1,5 +1,5 @@
 // Written by scripts/playbooks.mjs from playbooks/: do not edit.
-export const LOOP_TEMPLATES: Record<string, { manifest: unknown; files: Record<string, string> }> = {
+export const PLAYBOOK_TEMPLATES: Record<string, { manifest: unknown; files: Record<string, string> }> = {
   "support-bugs": {
     "manifest": {
       "id": "brigade/support-bugs",

@@ -25,7 +25,7 @@ import { audit, type Actor } from './audit.js'
 import { connectors, triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import type { Scope, ScopedDb } from './db.js'
-import { LOOP_TEMPLATES } from './generated/playbooks.js'
+import { PLAYBOOK_TEMPLATES } from './generated/playbooks.js'
 import { isMcp } from './mcp-tools.js'
 import { usableProject } from './projects.js'
 import { deleteTriggers, resync } from './routes/triggers.js'
@@ -121,7 +121,7 @@ let catalog: Map<string, Template> | undefined
 /** The templates shipped with the API, by id, checked once. */
 export function templates(): Map<string, Template> {
   catalog ??= new Map(
-    Object.entries(LOOP_TEMPLATES).map(([folder, raw]) => {
+    Object.entries(PLAYBOOK_TEMPLATES).map(([folder, raw]) => {
       const template = readTemplate(folder, raw)
       return [template.manifest.id, template]
     }),

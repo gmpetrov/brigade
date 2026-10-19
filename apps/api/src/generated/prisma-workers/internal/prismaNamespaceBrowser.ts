@@ -106,7 +106,8 @@ export const ModelName = {
   PlaybookInstallation: 'PlaybookInstallation',
   PlaybookAction: 'PlaybookAction',
   PlaybookRun: 'PlaybookRun',
-  PlaybookDryRun: 'PlaybookDryRun'
+  PlaybookDryRun: 'PlaybookDryRun',
+  ThreadFollow: 'ThreadFollow'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -663,6 +664,8 @@ export const ConnectionCallScalarFieldEnum = {
   simulated: 'simulated',
   playbookActionKey: 'playbookActionKey',
   input: 'input',
+  flaggedAt: 'flaggedAt',
+  flaggedByMemberId: 'flaggedByMemberId',
   createdAt: 'createdAt'
 } as const
 
@@ -1060,8 +1063,10 @@ export const PlaybookActionScalarFieldEnum = {
   key: 'key',
   level: 'level',
   conditions: 'conditions',
+  limits: 'limits',
   levelChangedAt: 'levelChangedAt',
-  levelChangedByMemberId: 'levelChangedByMemberId'
+  levelChangedByMemberId: 'levelChangedByMemberId',
+  demotedReason: 'demotedReason'
 } as const
 
 export type PlaybookActionScalarFieldEnum = (typeof PlaybookActionScalarFieldEnum)[keyof typeof PlaybookActionScalarFieldEnum]
@@ -1107,6 +1112,19 @@ export const PlaybookDryRunScalarFieldEnum = {
 } as const
 
 export type PlaybookDryRunScalarFieldEnum = (typeof PlaybookDryRunScalarFieldEnum)[keyof typeof PlaybookDryRunScalarFieldEnum]
+
+
+export const ThreadFollowScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  sessionId: 'sessionId',
+  followerId: 'followerId',
+  deliveredAt: 'deliveredAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ThreadFollowScalarFieldEnum = (typeof ThreadFollowScalarFieldEnum)[keyof typeof ThreadFollowScalarFieldEnum]
 
 
 export const SortOrder = {
