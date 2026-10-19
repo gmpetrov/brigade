@@ -75,7 +75,7 @@ import { waitingOnPerson } from '../pull-requests.js'
 import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
-import { descendants } from '../children.js'
+import { descendants, reportConversation } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
 import { cancelWakeup } from '../wakeups.js'
 import { surface } from '../playbooks.js'
@@ -322,7 +322,10 @@ export const threads = new Hono<AppEnv>()
             awaited: true,
             report: true,
             reportDeliveredAt: true,
+            reportDueAt: true,
             createdAt: true,
+            startedByMemberId: true,
+            othersMayPrompt: true,
             teammate: { select: { id: true, name: true } },
             schedule: { select: { id: true, title: true } },
             tickets: {
@@ -367,6 +370,11 @@ export const threads = new Hono<AppEnv>()
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       followers: thread.followers.map((f) => f.follower),
+      // Whether this member may send a child's report now (POST /:id/report), as in the child itself.
+      children: thread.children.map(({ startedByMemberId, othersMayPrompt, ...child }) => ({
+        ...child,
+        mayPrompt: startedByMemberId === c.var.scope.memberId || othersMayPrompt,
+      })),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
       eventsWaitingSince: eventsWaitingSince(thread.id),
     })
@@ -849,6 +857,30 @@ export const threads = new Hono<AppEnv>()
     })
     if (!ticket) throw new HTTPException(404, { message: 'Ticket not found or already answered' })
     return c.json(await answerTicket(scope, ticket.id, input.answer))
+  })
+
+  /**
+   * A child a person talked with: its last message goes to its parent now, as its report,
+   * rather than once the person has been quiet a while (src/children.ts).
+   */
+  .post('/:id/report', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    if (!thread.parentId)
+      throw new HTTPException(409, { message: 'This thread has no parent to send it to.' })
+    if (!(await reportConversation(scope, thread.id)))
+      throw new HTTPException(409, {
+        message: 'There is nothing to send: it already reported, or it is working.',
+      })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.report_sent',
+      target: { type: 'thread', id: thread.id },
+      data: { parentId: thread.parentId },
+    })
+    return c.json({ ok: true })
   })
 
   .post('/:id/interrupt', async (c) => {

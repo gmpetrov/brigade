@@ -890,7 +890,14 @@ export function ThreadConversation({
         {top}
         <div ref={scroller} className="scroll-fade min-h-0 flex-1 overflow-y-auto">
           <div className={cn(column, top ? 'pt-16' : expanded ? 'pt-6 md:pt-8' : 'pt-4', 'pb-12')}>
-            {t.parent && <ParentLink parent={t.parent} followers={t.followers} />}
+            {t.parent && (
+              <ParentLink
+                threadId={t.id}
+                parent={t.parent}
+                followers={t.followers}
+                reportDueAt={t.mayPrompt ? t.reportDueAt : null}
+              />
+            )}
 
             {notices.length > 0 && ticketCard(notices, 'mb-4')}
 

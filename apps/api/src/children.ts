@@ -17,6 +17,7 @@ import {
   clipReport,
   FOLLOWERS_PER_THREAD,
   followNote,
+  REPORT_AFTER_PERSON_MINUTES,
   type ScheduleOperation,
   singleNote,
   WAKEUPS_IN_A_ROW,
@@ -79,6 +80,7 @@ const CHILD_SELECT = {
   awaitUntil: true,
   report: true,
   reportDeliveredAt: true,
+  reportDueAt: true,
   parentId: true,
   parentTeammateId: true,
   createdAt: true,
@@ -227,6 +229,8 @@ export async function deliverReport(scope: Scope, childId: string) {
       teammate: child.teammate.name,
       schedule: child.schedule?.title ?? null,
       report,
+      // It was waited for once (start_child, message_thread), and the wait ran out.
+      late: !!child.awaitUntil,
     }),
   )
 }
@@ -312,10 +316,55 @@ async function lastMessage(sessionId: string) {
   return (event?.data as { text?: string } | undefined)?.text?.trim() ?? ''
 }
 
+/** Whether the latest message the child read is a person's, not Brigade's (its task, its parent's, a wake-up). */
+async function lastFromPerson(sessionId: string) {
+  const event = await prisma.sessionEvent.findFirst({
+    where: { sessionId, type: 'message.user' },
+    orderBy: { seq: 'desc' },
+    select: { data: true },
+  })
+  return !!(event?.data as { memberId?: string | null } | undefined)?.memberId
+}
+
+/**
+ * A conversation a person had with a child, closed: its last message goes to its parent as its
+ * report, once. When the person has been quiet long enough (settleOverdueChildren) or asks for
+ * it (POST /threads/:id/report). False when there is none to close: it reported, or works again.
+ */
+export async function reportConversation(scope: Scope, childId: string) {
+  const db = scoped(scope)
+  const report: ChildReport = {
+    status: 'report',
+    summary: clipReport((await lastMessage(childId)) || 'It ended without a word.', 2_000),
+    at: new Date().toISOString(),
+    fromLastMessage: true,
+    afterPerson: true,
+  }
+  // Claimed by clearing its due time: the sweep and a person's click send it once.
+  const { count } = await db.session.updateMany({
+    where: {
+      id: childId,
+      reportDueAt: { not: null },
+      reportDeliveredAt: null,
+      status: { notIn: ['starting', 'running', 'waiting'] },
+    },
+    data: { report, reportDueAt: null },
+  })
+  if (!count) return false
+  // Its own page no longer offers to send it.
+  await parentChanged(scope, childId)
+  await deliverReport(scope, childId)
+  await wakeFollowers(scope, childId)
+  return true
+}
+
 /**
  * A child's stored events (src/hub.ts): a new message clears its report, as the
  * child works again; the end of its turn settles its report (its last message
  * stands in for one it did not make) and sends it on; an error is a failed report.
+ * A turn that answered a person, with no report, sends nothing yet: they may still be
+ * talking it through, so its last message goes once they have been quiet a while
+ * (reportConversation).
  */
 export async function noteChildEvents(
   session: { id: string; organizationId: string; workspaceId: string; parentId: string | null },
@@ -337,6 +386,11 @@ export async function noteChildEvents(
           where: { id: session.id },
           data: { report: Prisma.DbNull, reportDeliveredAt: null },
         })
+      // It works again: a conversation's report waits for its next quiet time.
+      await db.session.updateMany({
+        where: { id: session.id, reportDueAt: { not: null } },
+        data: { reportDueAt: null },
+      })
       // It works again: those that follow it hear its next report too.
       await db.threadFollow.updateMany({
         where: { sessionId: session.id, deliveredAt: { not: null } },
@@ -348,6 +402,22 @@ export async function noteChildEvents(
         select: { report: true, reportDeliveredAt: true },
       })
       if (!row || row.reportDeliveredAt) continue
+      if (
+        !reportOf(row.report) &&
+        event.type === 'turn.completed' &&
+        (await lastFromPerson(session.id))
+      ) {
+        await db.session.updateMany({
+          where: { id: session.id, reportDeliveredAt: null },
+          data: {
+            reportDueAt: new Date(Date.parse(event.at) + REPORT_AFTER_PERSON_MINUTES * 60_000),
+          },
+        })
+        // It and its parent show it as in a conversation, with a way to send it now.
+        await parentChanged(scope, session.id)
+        await parentChanged(scope, session.parentId)
+        continue
+      }
       if (!reportOf(row.report)) {
         const report: ChildReport =
           event.type === 'error'
@@ -392,6 +462,21 @@ export async function settleOverdueChildren() {
       ).catch((error: unknown) =>
         console.error(`children of ${c.parentId}: could not settle`, error),
       )
+  // Conversations with a person gone quiet: their last word goes to the parent.
+  const quiet = await prisma.session.findMany({
+    where: {
+      reportDueAt: { lte: new Date() },
+      reportDeliveredAt: null,
+      status: { notIn: ['starting', 'running', 'waiting'] },
+    },
+    select: { id: true, organizationId: true, workspaceId: true },
+    take: 100,
+  })
+  for (const c of quiet)
+    await reportConversation(
+      { organizationId: c.organizationId, workspaceId: c.workspaceId },
+      c.id,
+    ).catch((error: unknown) => console.error(`child ${c.id}: could not report`, error))
   // And followers a report did not reach.
   await wakeWaitingFollowers()
 }
@@ -569,6 +654,7 @@ export async function messageChild(
     data: {
       report: Prisma.DbNull,
       reportDeliveredAt: null,
+      reportDueAt: null,
       awaited: true,
       awaitUntil: waitUntil(undefined),
       parentTeammateId: teammate.id,
@@ -615,7 +701,7 @@ export async function handleChildCall(
     }
     await db.session.updateMany({
       where: { id: session.id },
-      data: { report, reportDeliveredAt: null },
+      data: { report, reportDeliveredAt: null, reportDueAt: null },
     })
     return {
       ok: true,

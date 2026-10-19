@@ -12,6 +12,11 @@ export const CHILD_WAIT_MINUTES = 24 * 60
 export const CHILD_WAIT_MAX_MINUTES = 7 * 24 * 60
 /** Threads that may follow one thread (follow_thread). */
 export const FOLLOWERS_PER_THREAD = 20
+/**
+ * A child a person talks with does not report each answer: once they have been quiet this
+ * long without it calling `report`, its last message goes to its parent as its report.
+ */
+export const REPORT_AFTER_PERSON_MINUTES = 30
 
 /**
  * nothing: nothing worth telling (a schedule's run with nothing new). report: something to say.
@@ -34,6 +39,8 @@ export const ChildReport = z.object({
   at: z.string(),
   /** It ended its turn without calling report: its last message stands for it. */
   fromLastMessage: z.boolean().optional(),
+  /** It ends a conversation a person had with it in the child (REPORT_AFTER_PERSON_MINUTES, or sent by them). */
+  afterPerson: z.boolean().optional(),
 })
 export type ChildReport = z.infer<typeof ChildReport>
 
@@ -95,6 +102,11 @@ const BATCH_HINT =
 const SINGLE_HINT =
   '`read_child` gives its full report and what it produced. Act on it if it needs you to, ' +
   'or tell the person in a line.'
+/** After a person talked it through in the child: what they settled there is not asked again. */
+const AFTER_PERSON_HINT =
+  'A person talked it through with it in that thread, and this is where they left it: do not ask ' +
+  'them the same again. ' +
+  SINGLE_HINT
 
 /** What the child is told with its work: where it comes from and how to finish. */
 export function childPrompt(input: { from: string; parentTitle: string; instructions: string }) {
@@ -131,20 +143,25 @@ export function batchNote(
   return lines.join('\n')
 }
 
-/** The note for one report nobody was waiting for: a schedule's run, or a child after its wait ran out. */
+/**
+ * The note for one report nobody was waiting for: a schedule's run, a child started without
+ * waiting for it, or one after its wait ran out (late).
+ */
 export function singleNote(child: {
   id: string
   title: string
   teammate: string
   schedule: string | null
   report: ChildReport
+  late?: boolean
 }) {
+  const status = STATUS_WORDS[child.report.status]
   return (
     (child.schedule
-      ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${STATUS_WORDS[child.report.status]}:`
-      : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${STATUS_WORDS[child.report.status]} after you stopped waiting for it:`) +
+      ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${status}:`
+      : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${status}${child.late ? ' after you stopped waiting for it' : ''}:`) +
     `\n\n${clipReport(child.report.summary, 2_000)}\n\n` +
-    SINGLE_HINT
+    (child.report.afterPerson ? AFTER_PERSON_HINT : SINGLE_HINT)
   )
 }
 
@@ -224,6 +241,7 @@ const SCHEDULE_HEAD = new RegExp(
 const LATE_HEAD = new RegExp(
   `^Your child thread “(.*)” \\(${ID}, (.+?)\\) ${STATUS} after you stopped waiting for it:\n\n`,
 )
+const CHILD_HEAD = new RegExp(`^Your child thread “(.*)” \\(${ID}, (.+?)\\) ${STATUS}:\n\n`)
 const FOLLOW_LINE = new RegExp(`^${FOLLOW_HEAD}(.*)” \\(${ID}, (.+?)\\) ${STATUS}:\n\n`)
 
 /**
@@ -261,7 +279,7 @@ export function noteThreads(text: string): { head: string | null; threads: NoteT
         },
       ],
     }
-  m = FOLLOW_LINE.exec(note)
+  m = CHILD_HEAD.exec(note) ?? FOLLOW_LINE.exec(note)
   if (m)
     return {
       head: null,
@@ -318,7 +336,14 @@ export const asksParallel = (text: string) => text.endsWith(PARALLEL_HINT)
  * without what it tells the teammate to do next.
  */
 export function forPeople(text: string) {
-  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT, FOLLOW_HINT, PARALLEL_HINT])
+  for (const hint of [
+    CHILD_HINT,
+    BATCH_HINT,
+    AFTER_PERSON_HINT,
+    SINGLE_HINT,
+    FOLLOW_HINT,
+    PARALLEL_HINT,
+  ])
     if (text.endsWith(hint)) return text.slice(0, -hint.length).trimEnd()
   return text
 }

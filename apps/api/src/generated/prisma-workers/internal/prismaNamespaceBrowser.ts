@@ -343,6 +343,7 @@ export const SessionScalarFieldEnum = {
   awaitUntil: 'awaitUntil',
   report: 'report',
   reportDeliveredAt: 'reportDeliveredAt',
+  reportDueAt: 'reportDueAt',
   triggerId: 'triggerId',
   conversationKey: 'conversationKey',
   scheduleId: 'scheduleId',

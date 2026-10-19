@@ -55,6 +55,7 @@ export type SessionMinAggregateOutputType = {
   awaited: boolean | null
   awaitUntil: Date | null
   reportDeliveredAt: Date | null
+  reportDueAt: Date | null
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
@@ -91,6 +92,7 @@ export type SessionMaxAggregateOutputType = {
   awaited: boolean | null
   awaitUntil: Date | null
   reportDeliveredAt: Date | null
+  reportDueAt: Date | null
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
@@ -128,6 +130,7 @@ export type SessionCountAggregateOutputType = {
   awaitUntil: number
   report: number
   reportDeliveredAt: number
+  reportDueAt: number
   triggerId: number
   conversationKey: number
   scheduleId: number
@@ -177,6 +180,7 @@ export type SessionMinAggregateInputType = {
   awaited?: true
   awaitUntil?: true
   reportDeliveredAt?: true
+  reportDueAt?: true
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
@@ -213,6 +217,7 @@ export type SessionMaxAggregateInputType = {
   awaited?: true
   awaitUntil?: true
   reportDeliveredAt?: true
+  reportDueAt?: true
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
@@ -250,6 +255,7 @@ export type SessionCountAggregateInputType = {
   awaitUntil?: true
   report?: true
   reportDeliveredAt?: true
+  reportDueAt?: true
   triggerId?: true
   conversationKey?: true
   scheduleId?: true
@@ -375,6 +381,7 @@ export type SessionGroupByOutputType = {
   awaitUntil: Date | null
   report: runtime.JsonValue | null
   reportDeliveredAt: Date | null
+  reportDueAt: Date | null
   triggerId: string | null
   conversationKey: string | null
   scheduleId: string | null
@@ -436,6 +443,7 @@ export type SessionWhereInput = {
   awaitUntil?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   report?: Prisma.JsonNullableFilter<"Session">
   reportDeliveredAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  reportDueAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -503,6 +511,7 @@ export type SessionOrderByWithRelationInput = {
   awaitUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   report?: Prisma.SortOrderInput | Prisma.SortOrder
   reportDeliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reportDueAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   conversationKey?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -574,6 +583,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<{
   awaitUntil?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   report?: Prisma.JsonNullableFilter<"Session">
   reportDeliveredAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  reportDueAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -640,6 +650,7 @@ export type SessionOrderByWithAggregationInput = {
   awaitUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   report?: Prisma.SortOrderInput | Prisma.SortOrder
   reportDeliveredAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  reportDueAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerId?: Prisma.SortOrderInput | Prisma.SortOrder
   conversationKey?: Prisma.SortOrderInput | Prisma.SortOrder
   scheduleId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -686,6 +697,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   awaitUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   report?: Prisma.JsonNullableWithAggregatesFilter<"Session">
   reportDeliveredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
+  reportDueAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
   triggerId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableWithAggregatesFilter<"Session"> | string | null
@@ -718,6 +730,7 @@ export type SessionCreateInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -780,6 +793,7 @@ export type SessionUncheckedCreateInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -830,6 +844,7 @@ export type SessionUpdateInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -892,6 +907,7 @@ export type SessionUncheckedUpdateInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -948,6 +964,7 @@ export type SessionCreateManyInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -980,6 +997,7 @@ export type SessionUpdateManyMutationInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1013,6 +1031,7 @@ export type SessionUncheckedUpdateManyInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1071,6 +1090,7 @@ export type SessionCountOrderByAggregateInput = {
   awaitUntil?: Prisma.SortOrder
   report?: Prisma.SortOrder
   reportDeliveredAt?: Prisma.SortOrder
+  reportDueAt?: Prisma.SortOrder
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
@@ -1113,6 +1133,7 @@ export type SessionMaxOrderByAggregateInput = {
   awaited?: Prisma.SortOrder
   awaitUntil?: Prisma.SortOrder
   reportDeliveredAt?: Prisma.SortOrder
+  reportDueAt?: Prisma.SortOrder
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
@@ -1149,6 +1170,7 @@ export type SessionMinOrderByAggregateInput = {
   awaited?: Prisma.SortOrder
   awaitUntil?: Prisma.SortOrder
   reportDeliveredAt?: Prisma.SortOrder
+  reportDueAt?: Prisma.SortOrder
   triggerId?: Prisma.SortOrder
   conversationKey?: Prisma.SortOrder
   scheduleId?: Prisma.SortOrder
@@ -1921,6 +1943,7 @@ export type SessionCreateWithoutStartedByInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -1981,6 +2004,7 @@ export type SessionUncheckedCreateWithoutStartedByInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2066,6 +2090,7 @@ export type SessionScalarWhereInput = {
   awaitUntil?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   report?: Prisma.JsonNullableFilter<"Session">
   reportDeliveredAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
+  reportDueAt?: Prisma.DateTimeNullableFilter<"Session"> | Date | string | null
   triggerId?: Prisma.StringNullableFilter<"Session"> | string | null
   conversationKey?: Prisma.StringNullableFilter<"Session"> | string | null
   scheduleId?: Prisma.StringNullableFilter<"Session"> | string | null
@@ -2098,6 +2123,7 @@ export type SessionCreateWithoutWorkspaceInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -2158,6 +2184,7 @@ export type SessionUncheckedCreateWithoutWorkspaceInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2234,6 +2261,7 @@ export type SessionCreateWithoutComputerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -2294,6 +2322,7 @@ export type SessionUncheckedCreateWithoutComputerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2370,6 +2399,7 @@ export type SessionCreateWithoutTeammateInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -2430,6 +2460,7 @@ export type SessionUncheckedCreateWithoutTeammateInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2506,6 +2537,7 @@ export type SessionCreateWithoutReadsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -2567,6 +2599,7 @@ export type SessionUncheckedCreateWithoutReadsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2632,6 +2665,7 @@ export type SessionUpdateWithoutReadsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2693,6 +2727,7 @@ export type SessionUncheckedUpdateWithoutReadsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2742,6 +2777,7 @@ export type SessionCreateWithoutPinsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -2803,6 +2839,7 @@ export type SessionUncheckedCreateWithoutPinsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -2868,6 +2905,7 @@ export type SessionUpdateWithoutPinsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2929,6 +2967,7 @@ export type SessionUncheckedUpdateWithoutPinsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2978,6 +3017,7 @@ export type SessionCreateWithoutChildrenInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -3039,6 +3079,7 @@ export type SessionUncheckedCreateWithoutChildrenInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -3093,6 +3134,7 @@ export type SessionCreateWithoutParentInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -3153,6 +3195,7 @@ export type SessionUncheckedCreateWithoutParentInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -3224,6 +3267,7 @@ export type SessionUpdateWithoutChildrenInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3285,6 +3329,7 @@ export type SessionUncheckedUpdateWithoutChildrenInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3350,6 +3395,7 @@ export type SessionCreateWithoutTaskInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -3411,6 +3457,7 @@ export type SessionUncheckedCreateWithoutTaskInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -3476,6 +3523,7 @@ export type SessionUpdateWithoutTaskInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3537,6 +3585,7 @@ export type SessionUncheckedUpdateWithoutTaskInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3586,6 +3635,7 @@ export type SessionCreateWithoutReportingSchedulesInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -3647,6 +3697,7 @@ export type SessionUncheckedCreateWithoutReportingSchedulesInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -3701,6 +3752,7 @@ export type SessionCreateWithoutScheduleInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -3762,6 +3814,7 @@ export type SessionUncheckedCreateWithoutScheduleInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
@@ -3832,6 +3885,7 @@ export type SessionUpdateWithoutReportingSchedulesInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3893,6 +3947,7 @@ export type SessionUncheckedUpdateWithoutReportingSchedulesInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3958,6 +4013,7 @@ export type SessionCreateWithoutWakeupsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -4019,6 +4075,7 @@ export type SessionUncheckedCreateWithoutWakeupsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -4084,6 +4141,7 @@ export type SessionUpdateWithoutWakeupsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4145,6 +4203,7 @@ export type SessionUncheckedUpdateWithoutWakeupsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4194,6 +4253,7 @@ export type SessionCreateWithoutTeammatesInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -4255,6 +4315,7 @@ export type SessionUncheckedCreateWithoutTeammatesInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -4320,6 +4381,7 @@ export type SessionUpdateWithoutTeammatesInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4381,6 +4443,7 @@ export type SessionUncheckedUpdateWithoutTeammatesInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4430,6 +4493,7 @@ export type SessionCreateWithoutEventsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -4491,6 +4555,7 @@ export type SessionUncheckedCreateWithoutEventsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -4556,6 +4621,7 @@ export type SessionUpdateWithoutEventsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4617,6 +4683,7 @@ export type SessionUncheckedUpdateWithoutEventsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -4666,6 +4733,7 @@ export type SessionCreateWithoutAccountInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -4726,6 +4794,7 @@ export type SessionUncheckedCreateWithoutAccountInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -4802,6 +4871,7 @@ export type SessionCreateWithoutPullRequestsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -4863,6 +4933,7 @@ export type SessionUncheckedCreateWithoutPullRequestsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -4928,6 +4999,7 @@ export type SessionUpdateWithoutPullRequestsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4989,6 +5061,7 @@ export type SessionUncheckedUpdateWithoutPullRequestsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5038,6 +5111,7 @@ export type SessionCreateWithoutCommentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -5099,6 +5173,7 @@ export type SessionUncheckedCreateWithoutCommentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -5164,6 +5239,7 @@ export type SessionUpdateWithoutCommentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -5225,6 +5301,7 @@ export type SessionUncheckedUpdateWithoutCommentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5274,6 +5351,7 @@ export type SessionCreateWithoutConnectionCallsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -5335,6 +5413,7 @@ export type SessionUncheckedCreateWithoutConnectionCallsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -5400,6 +5479,7 @@ export type SessionUpdateWithoutConnectionCallsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -5461,6 +5541,7 @@ export type SessionUncheckedUpdateWithoutConnectionCallsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5510,6 +5591,7 @@ export type SessionCreateWithoutTriggerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -5571,6 +5653,7 @@ export type SessionUncheckedCreateWithoutTriggerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   scheduleId?: string | null
   archivedAt?: Date | string | null
@@ -5646,6 +5729,7 @@ export type SessionCreateWithoutTicketsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -5707,6 +5791,7 @@ export type SessionUncheckedCreateWithoutTicketsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -5772,6 +5857,7 @@ export type SessionUpdateWithoutTicketsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -5833,6 +5919,7 @@ export type SessionUncheckedUpdateWithoutTicketsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -5882,6 +5969,7 @@ export type SessionCreateWithoutDocumentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -5943,6 +6031,7 @@ export type SessionUncheckedCreateWithoutDocumentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6008,6 +6097,7 @@ export type SessionUpdateWithoutDocumentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -6069,6 +6159,7 @@ export type SessionUncheckedUpdateWithoutDocumentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6118,6 +6209,7 @@ export type SessionCreateWithoutSentAttachmentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -6179,6 +6271,7 @@ export type SessionUncheckedCreateWithoutSentAttachmentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6244,6 +6337,7 @@ export type SessionUpdateWithoutSentAttachmentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -6305,6 +6399,7 @@ export type SessionUncheckedUpdateWithoutSentAttachmentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6354,6 +6449,7 @@ export type SessionCreateWithoutAttachmentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -6415,6 +6511,7 @@ export type SessionUncheckedCreateWithoutAttachmentsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6480,6 +6577,7 @@ export type SessionUpdateWithoutAttachmentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -6541,6 +6639,7 @@ export type SessionUncheckedUpdateWithoutAttachmentsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -6590,6 +6689,7 @@ export type SessionCreateWithoutProjectInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -6651,6 +6751,7 @@ export type SessionUncheckedCreateWithoutProjectInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6726,6 +6827,7 @@ export type SessionCreateWithoutRootOfPlaybookRunInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -6787,6 +6889,7 @@ export type SessionUncheckedCreateWithoutRootOfPlaybookRunInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6841,6 +6944,7 @@ export type SessionCreateWithoutPlaybookRunInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -6902,6 +7006,7 @@ export type SessionUncheckedCreateWithoutPlaybookRunInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -6972,6 +7077,7 @@ export type SessionUpdateWithoutRootOfPlaybookRunInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -7033,6 +7139,7 @@ export type SessionUncheckedUpdateWithoutRootOfPlaybookRunInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7098,6 +7205,7 @@ export type SessionCreateWithoutPlaybookDryRunsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -7159,6 +7267,7 @@ export type SessionUncheckedCreateWithoutPlaybookDryRunsInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -7224,6 +7333,7 @@ export type SessionUpdateWithoutPlaybookDryRunsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -7285,6 +7395,7 @@ export type SessionUncheckedUpdateWithoutPlaybookDryRunsInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7334,6 +7445,7 @@ export type SessionCreateWithoutFollowersInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -7395,6 +7507,7 @@ export type SessionUncheckedCreateWithoutFollowersInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -7449,6 +7562,7 @@ export type SessionCreateWithoutFollowingInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
   lastSeq?: number
@@ -7510,6 +7624,7 @@ export type SessionUncheckedCreateWithoutFollowingInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -7575,6 +7690,7 @@ export type SessionUpdateWithoutFollowersInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -7636,6 +7752,7 @@ export type SessionUncheckedUpdateWithoutFollowersInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7696,6 +7813,7 @@ export type SessionUpdateWithoutFollowingInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -7757,6 +7875,7 @@ export type SessionUncheckedUpdateWithoutFollowingInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7811,6 +7930,7 @@ export type SessionCreateManyStartedByInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -7843,6 +7963,7 @@ export type SessionUpdateWithoutStartedByInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -7903,6 +8024,7 @@ export type SessionUncheckedUpdateWithoutStartedByInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7958,6 +8080,7 @@ export type SessionUncheckedUpdateManyWithoutStartedByInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -7995,6 +8118,7 @@ export type SessionCreateManyWorkspaceInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -8027,6 +8151,7 @@ export type SessionUpdateWithoutWorkspaceInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -8087,6 +8212,7 @@ export type SessionUncheckedUpdateWithoutWorkspaceInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8142,6 +8268,7 @@ export type SessionUncheckedUpdateManyWithoutWorkspaceInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8179,6 +8306,7 @@ export type SessionCreateManyComputerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -8211,6 +8339,7 @@ export type SessionUpdateWithoutComputerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -8271,6 +8400,7 @@ export type SessionUncheckedUpdateWithoutComputerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8326,6 +8456,7 @@ export type SessionUncheckedUpdateManyWithoutComputerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8363,6 +8494,7 @@ export type SessionCreateManyTeammateInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -8395,6 +8527,7 @@ export type SessionUpdateWithoutTeammateInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -8455,6 +8588,7 @@ export type SessionUncheckedUpdateWithoutTeammateInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8510,6 +8644,7 @@ export type SessionUncheckedUpdateManyWithoutTeammateInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8547,6 +8682,7 @@ export type SessionCreateManyParentInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -8579,6 +8715,7 @@ export type SessionUpdateWithoutParentInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -8639,6 +8776,7 @@ export type SessionUncheckedUpdateWithoutParentInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8694,6 +8832,7 @@ export type SessionUncheckedUpdateManyWithoutParentInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -8732,6 +8871,7 @@ export type SessionCreateManyScheduleInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   archivedAt?: Date | string | null
@@ -8763,6 +8903,7 @@ export type SessionUpdateWithoutScheduleInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -8824,6 +8965,7 @@ export type SessionUncheckedUpdateWithoutScheduleInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8879,6 +9021,7 @@ export type SessionUncheckedUpdateManyWithoutScheduleInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8915,6 +9058,7 @@ export type SessionCreateManyAccountInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -8947,6 +9091,7 @@ export type SessionUpdateWithoutAccountInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -9007,6 +9152,7 @@ export type SessionUncheckedUpdateWithoutAccountInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9062,6 +9208,7 @@ export type SessionUncheckedUpdateManyWithoutAccountInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9100,6 +9247,7 @@ export type SessionCreateManyTriggerInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   conversationKey?: string | null
   scheduleId?: string | null
   archivedAt?: Date | string | null
@@ -9131,6 +9279,7 @@ export type SessionUpdateWithoutTriggerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -9192,6 +9341,7 @@ export type SessionUncheckedUpdateWithoutTriggerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9247,6 +9397,7 @@ export type SessionUncheckedUpdateManyWithoutTriggerInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9284,6 +9435,7 @@ export type SessionCreateManyProjectInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -9315,6 +9467,7 @@ export type SessionUpdateWithoutProjectInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -9376,6 +9529,7 @@ export type SessionUncheckedUpdateWithoutProjectInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9431,6 +9585,7 @@ export type SessionUncheckedUpdateManyWithoutProjectInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9468,6 +9623,7 @@ export type SessionCreateManyPlaybookRunInput = {
   awaitUntil?: Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Date | string | null
+  reportDueAt?: Date | string | null
   triggerId?: string | null
   conversationKey?: string | null
   scheduleId?: string | null
@@ -9499,6 +9655,7 @@ export type SessionUpdateWithoutPlaybookRunInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastSeq?: Prisma.IntFieldUpdateOperationsInput | number
@@ -9560,6 +9717,7 @@ export type SessionUncheckedUpdateWithoutPlaybookRunInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9615,6 +9773,7 @@ export type SessionUncheckedUpdateManyWithoutPlaybookRunInput = {
   awaitUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   report?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   reportDeliveredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  reportDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   conversationKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scheduleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -9827,6 +9986,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   awaitUntil?: boolean
   report?: boolean
   reportDeliveredAt?: boolean
+  reportDueAt?: boolean
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
@@ -9895,6 +10055,7 @@ export type SessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   awaitUntil?: boolean
   report?: boolean
   reportDeliveredAt?: boolean
+  reportDueAt?: boolean
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
@@ -9944,6 +10105,7 @@ export type SessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   awaitUntil?: boolean
   report?: boolean
   reportDeliveredAt?: boolean
+  reportDueAt?: boolean
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
@@ -9993,6 +10155,7 @@ export type SessionSelectScalar = {
   awaitUntil?: boolean
   report?: boolean
   reportDeliveredAt?: boolean
+  reportDueAt?: boolean
   triggerId?: boolean
   conversationKey?: boolean
   scheduleId?: boolean
@@ -10011,7 +10174,7 @@ export type SessionSelectScalar = {
   surfacedAt?: boolean
 }
 
-export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "surfacedAt", ExtArgs["result"]["session"]>
+export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "teammateId" | "startedByMemberId" | "computerId" | "accountId" | "title" | "status" | "private" | "othersMayPrompt" | "controlledByMemberId" | "origin" | "parentId" | "parentTeammateId" | "awaited" | "awaitUntil" | "report" | "reportDeliveredAt" | "reportDueAt" | "triggerId" | "conversationKey" | "scheduleId" | "archivedAt" | "lastSeq" | "move" | "movedAt" | "movedFrom" | "movedSeq" | "effort" | "createdAt" | "updatedAt" | "taskId" | "projectId" | "playbookRunId" | "surfacedAt", ExtArgs["result"]["session"]>
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
@@ -10189,6 +10352,11 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * When its report reached the parent (or was settled without waking it). A new turn clears both.
      */
     reportDeliveredAt: Date | null
+    /**
+     * A turn that answered a person ended without a report: its last message goes to the parent at
+     * this time, unless the person writes again first (REPORT_AFTER_PERSON_MINUTES).
+     */
+    reportDueAt: Date | null
     triggerId: string | null
     /**
      * The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
@@ -10707,6 +10875,7 @@ export interface SessionFieldRefs {
   readonly awaitUntil: Prisma.FieldRef<"Session", 'DateTime'>
   readonly report: Prisma.FieldRef<"Session", 'Json'>
   readonly reportDeliveredAt: Prisma.FieldRef<"Session", 'DateTime'>
+  readonly reportDueAt: Prisma.FieldRef<"Session", 'DateTime'>
   readonly triggerId: Prisma.FieldRef<"Session", 'String'>
   readonly conversationKey: Prisma.FieldRef<"Session", 'String'>
   readonly scheduleId: Prisma.FieldRef<"Session", 'String'>

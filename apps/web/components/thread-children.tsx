@@ -3,11 +3,12 @@
 // where a teammate started one, the runs of a schedule that reports here, the
 // asks of a child waiting on a person, and in a child, the way back to its parent.
 import type { NoteThread } from '@brigade/contracts'
-import { ChevronRight, CornerUpLeft, Eye } from 'lucide-react'
+import { ChevronRight, CornerUpLeft, Eye, Send } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
-import type { ThreadChild } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const REPORTS: Record<string, string> = {
@@ -31,9 +32,13 @@ function stateText(child: ThreadChild) {
   if (child.tickets.length) return 'needs you'
   if (child.report) return REPORTS[child.report.status] ?? child.report.status
   if (child.status === 'starting' || child.status === 'running') return 'working'
+  if (child.reportDueAt) return 'in conversation'
   if (child.status === 'failed') return 'failed'
   return child.awaited ? 'working' : 'idle'
 }
+
+const time = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
 const when = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, {
@@ -42,15 +47,46 @@ const when = (iso: string) =>
     day: 'numeric',
   })
 
+/**
+ * Send a child's last message to its parent now, as its report: a person talked with it there
+ * and is done, rather than waiting until they have been quiet a while.
+ */
+export function SendToParent({ threadId, className }: { threadId: string; className?: string }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+  if (state === 'sent')
+    return <span className={cn('text-xs text-muted-foreground', className)}>Sent</span>
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className={className}
+      disabled={state === 'sending'}
+      title="Send its last message to the parent thread now, as its report"
+      onClick={() => {
+        setState('sending')
+        api(`/threads/${threadId}/report`, { body: {} }).then(
+          () => setState('sent'),
+          () => setState('failed'),
+        )
+      }}
+    >
+      <Send aria-hidden />
+      {state === 'failed' ? 'Try again' : 'Send to parent'}
+    </Button>
+  )
+}
+
 /** One child as a line: its dot, who, its title, where it is at. Opens it. */
 export function ChildLine({ child, className }: { child: ThreadChild; className?: string }) {
   const summary = child.report && child.report.status !== 'nothing' ? child.report.summary : null
-  return (
+  const sendable = !!child.reportDueAt && !child.report && child.mayPrompt
+  const line = (
     <Link
       href={`/app/threads/${child.id}`}
       className={cn(
         'flex min-w-0 items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent',
-        className,
+        sendable ? 'flex-1' : className,
       )}
     >
       <ThreadStatusIcon status={dotStatus(child)} unread={false} className="mt-0.5" />
@@ -65,6 +101,14 @@ export function ChildLine({ child, className }: { child: ThreadChild; className?
         )}
       </span>
     </Link>
+  )
+  if (!sendable) return line
+  return (
+    <div className={cn('flex min-w-0 items-center gap-1', className)}>
+      {line}
+      {/* A new conversation offers it again. */}
+      <SendToParent key={child.reportDueAt} threadId={child.id} className="shrink-0" />
+    </div>
   )
 }
 
@@ -209,21 +253,34 @@ function ScheduleRuns({ runs }: { runs: ThreadChild[] }) {
 
 /** In a child: the thread it was started from, which its report goes to, and the others it wakes. */
 export function ParentLink({
+  threadId,
   parent,
   followers = [],
+  reportDueAt = null,
 }: {
+  threadId: string
   parent: { id: string; title: string }
   followers?: { id: string; title: string }[]
+  /** A person talked with it here: its last message goes to the parent then, or now from here. */
+  reportDueAt?: string | null
 }) {
   return (
     <div className="mb-4 flex flex-col gap-1">
-      <Link
-        href={`/app/threads/${parent.id}`}
-        className="flex w-fit max-w-full items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <CornerUpLeft aria-hidden className="size-3.5 shrink-0" />
-        <span className="truncate">From “{parent.title}”</span>
-      </Link>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <Link
+          href={`/app/threads/${parent.id}`}
+          className="flex w-fit max-w-full min-w-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <CornerUpLeft aria-hidden className="size-3.5 shrink-0" />
+          <span className="truncate">From “{parent.title}”</span>
+        </Link>
+        {reportDueAt && (
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            Its last message goes to the parent at {time(reportDueAt)}, unless someone writes here
+            <SendToParent key={reportDueAt} threadId={threadId} />
+          </span>
+        )}
+      </div>
       {followers.length > 0 && <FollowedBy followers={followers} />}
     </div>
   )

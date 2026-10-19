@@ -158,6 +158,39 @@ test('people see each thread a report note tells about, to open it', () => {
   })
   assert.equal(noteThreads(late)?.threads[0]?.id, 'c5')
   assert.equal(noteThreads(late)?.threads[0]?.teammate, 'Riley')
+  assert.doesNotMatch(late, /stopped waiting/)
+  const lateRead = singleNote({
+    id: 'c7',
+    title: 'Late',
+    teammate: 'Riley',
+    schedule: null,
+    report: report('report', 'x'),
+    late: true,
+  })
+  assert.match(lateRead, /reports after you stopped waiting for it:/)
+  assert.equal(noteThreads(lateRead)?.head, 'Finished after the wait for it ran out')
+  // After a person talked it through in the child: the parent does not ask them again; people
+  // read only what it said.
+  const talked = singleNote({
+    id: 'c8',
+    title: 'Designs',
+    teammate: 'Riley',
+    schedule: null,
+    report: { ...report('report', 'They picked 3.'), afterPerson: true },
+  })
+  assert.match(talked, /do not ask them the same again/)
+  assert.deepEqual(noteThreads(talked), {
+    head: null,
+    threads: [
+      {
+        id: 'c8',
+        title: 'Designs',
+        teammate: 'Riley',
+        status: 'report',
+        summary: 'They picked 3.',
+      },
+    ],
+  })
   const follow = followNote({
     id: 'c6',
     title: 'Fix',
