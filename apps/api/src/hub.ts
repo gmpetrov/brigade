@@ -819,7 +819,7 @@ export function runnerSocket(runner: {
     })
     if (!session)
       return console.warn(`runner ${runner.id} sent events for a thread it does not run`)
-    await insertEvents(session, events)
+    await insertEvents(session, await withTeammateIds(session, events))
     await advance(session, ws)
   }
 
@@ -1288,6 +1288,46 @@ async function noteOneAccount(
           : {}),
     },
   })
+}
+
+/**
+ * An access ask for another teammate (`app.teammate`, by id or name, as the teammate wrote it)
+ * names it by id from the start, so the card and the grant always mean the same teammate, even
+ * if one is renamed or two share a name: by its id, else the only one of that name. One no
+ * teammate matches, or several do, stays as written, and granting it is refused.
+ */
+export async function withTeammateIds(
+  session: { organizationId: string; workspaceId: string },
+  events: SequencedEvent[],
+): Promise<SequencedEvent[]> {
+  if (!events.some((e) => e.event.type === 'ticket.opened')) return events
+  const db = scoped(session)
+  const resolve = async (ref: string) => {
+    const byId = await db.teammate.findFirst({ where: { id: ref }, select: { id: true } })
+    if (byId) return byId.id
+    const named = await db.teammate.findMany({
+      where: { name: { equals: ref.trim(), mode: 'insensitive' }, archivedAt: null },
+      select: { id: true },
+      take: 2,
+    })
+    return named.length === 1 ? named[0]!.id : ref
+  }
+  const out: SequencedEvent[] = []
+  for (const e of events) {
+    if (e.event.type !== 'ticket.opened') {
+      out.push(e)
+      continue
+    }
+    const asks = []
+    for (const ask of e.event.asks)
+      asks.push(
+        ask.type === 'access' && ask.app?.teammate
+          ? { ...ask, app: { ...ask.app, teammate: await resolve(ask.app.teammate) } }
+          : ask,
+      )
+    out.push({ ...e, event: { ...e.event, asks } })
+  }
+  return out
 }
 
 /**
