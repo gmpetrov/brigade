@@ -5,7 +5,8 @@
 import type { NoteThread } from '@brigade/contracts'
 import { ChevronRight, CornerUpLeft, Eye, Send } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { MessageWithCode } from '@/components/markdown'
 import { ThreadStatusIcon } from '@/components/sidebar-threads'
 import { Button } from '@/components/ui/button'
 import { api, type ThreadChild } from '@/lib/api'
@@ -120,9 +121,23 @@ const NOTE_DOTS: Record<string, string> = {
 
 /**
  * A thread a report note tells about, as one card that opens it: its dot, who, its title,
- * then the start of what it said. The whole report is in the thread.
+ * then the start of what it said, which Show more unfolds in place.
  */
 export function ReportedThread({ thread }: { thread: NoteThread }) {
+  const summary = thread.summary.trim()
+  const [open, setOpen] = useState(false)
+  // Show more only when the report runs past its two lines.
+  const [long, setLong] = useState(false)
+  const clamped = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const el = clamped.current
+    if (!el) return
+    const measure = () => setLong(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [summary, open])
   // Reported is the usual end: only another one is said in words.
   const state = !thread.status
     ? 'working'
@@ -130,11 +145,21 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
       ? null
       : (REPORTS[thread.status] ?? thread.status)
   return (
-    <Link
-      href={`/app/threads/${thread.id}`}
-      className="flex min-w-0 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 text-sm hover:bg-accent"
+    <div
+      className={cn(
+        'relative flex min-w-0 flex-col gap-1.5 rounded-xl border bg-card px-3.5 py-3 text-sm',
+        // Folded, the whole card opens the thread; unfolded, only its top line, so the
+        // report can be selected and its code copied.
+        !open && 'hover:bg-accent',
+      )}
     >
-      <span className="flex min-w-0 items-center gap-2">
+      <Link
+        href={`/app/threads/${thread.id}`}
+        className={cn(
+          'flex min-w-0 items-center gap-2',
+          !open && 'after:absolute after:inset-0 after:rounded-xl',
+        )}
+      >
         {thread.status === 'report' ? (
           <span
             role="img"
@@ -155,17 +180,32 @@ export function ReportedThread({ thread }: { thread: NoteThread }) {
         )}
         <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
         {state && <span className="shrink-0 text-xs text-muted-foreground">{state}</span>}
-        <span className="flex shrink-0 items-center text-xs text-muted-foreground">
-          Open
-          <ChevronRight aria-hidden className="size-3.5" />
-        </span>
-      </span>
-      {thread.summary.trim() && (
-        <span className="line-clamp-2 pl-6 leading-relaxed wrap-anywhere text-muted-foreground">
-          {thread.summary.trim()}
-        </span>
+        <ChevronRight aria-label="Open" className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+      {summary &&
+        (open ? (
+          <div className="pl-6 leading-relaxed wrap-anywhere whitespace-pre-wrap text-muted-foreground">
+            <MessageWithCode text={summary} />
+          </div>
+        ) : (
+          <span
+            ref={clamped}
+            className="line-clamp-2 pl-6 leading-relaxed wrap-anywhere text-muted-foreground"
+          >
+            {summary}
+          </span>
+        ))}
+      {summary && (long || open) && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className="relative z-10 ml-6 self-start text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          {open ? 'Show less' : 'Show more'}
+        </button>
       )}
-    </Link>
+    </div>
   )
 }
 
