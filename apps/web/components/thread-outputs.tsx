@@ -9,6 +9,7 @@ import {
   designName,
   DELIVERABLE_FILE as DELIVERABLE,
   EMAIL_TOOL,
+  isOperation,
   PROPOSE_SKILL_TOOL,
   type SequencedEvent,
 } from '@brigade/contracts'
@@ -245,7 +246,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               file: { path: output.preview },
             })
-          } else if (tool === 'github_create_pull_request') {
+          } else if (isOperation(tool, 'github_create_pull_request')) {
             const found = json(e.output).match(
               /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/,
             )
