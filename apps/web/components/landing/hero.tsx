@@ -59,7 +59,7 @@ export function Hero() {
               <span className={s.msg}>
                 <Av>R</Av>Riley <span className={s.k}>· checks passed</span>
               </span>
-              <span className={cn(s.msg, s.waiting)}>
+              <span className={cn(s.msg, s.waiting, 'dark')}>
                 <Av sam>S</Av>Sam <span className={s.k}>· draft ready, waiting on you</span>
               </span>
             </div>

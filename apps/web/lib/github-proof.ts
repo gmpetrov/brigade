@@ -1,11 +1,14 @@
-// The landing's live proof: how much of Brigade its own teammates build, read from
-// GitHub's public REST API (no token) and cached for an hour. A number GitHub does not
-// give back is null, and the page leaves out the sentence that needs it.
+// The landing's proof: how much of Brigade its own teammates build, read from GitHub's
+// REST API once, when the dashboard is built. next.config.ts calls fetchProofNumbers()
+// and inlines the result into the build as BRIGADE_LANDING_PROOF; the page reads it with
+// getProofNumbers(). So the numbers are as of the last deploy, and a visitor never waits on
+// GitHub or spends its rate limit, even where the host renders the page per request
+// (OpenNext on Workers). A number GitHub does not give back is null, and the page leaves
+// out the sentence that needs it. GITHUB_TOKEN, when set at build, raises GitHub's limit.
 
 export const REPO = 'gmpetrov/brigade'
 export const REPO_URL = `https://github.com/${REPO}`
 const API = 'https://api.github.com'
-const REVALIDATE = 3600
 
 export type ProofNumbers = {
   /** Pull requests merged in the last 30 days. */
@@ -64,13 +67,14 @@ export function rileyShare(riley: number, total: number) {
   return `${formatCount(riley)} of its ${formatCount(total)} commits`
 }
 
-/** How long ago `then` was, the way the design labels it: "12m", "2h", "1d". */
-export function relativeLabel(then: Date, now: Date) {
-  const minutes = Math.max(0, Math.floor((now.getTime() - then.getTime()) / 60_000))
-  if (minutes < 60) return `${Math.max(1, minutes)}m`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
+/** The day a pull request merged, in UTC: "Oct 19". A date, not "2h ago", since the page
+ * keeps it until the next deploy. */
+export function mergeDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
 }
 
 /** The `count` most recently merged pull requests in a pulls API reply, newest first. */
@@ -94,13 +98,14 @@ export function pickRecentMerges(items: PullsItem[], count = 4): RecentMerge[] {
 }
 
 function get(path: string) {
+  const token = process.env.GITHUB_TOKEN
   return fetch(`${API}${path}`, {
     headers: {
       Accept: 'application/vnd.github+json',
       'User-Agent': 'brigade-landing',
       'X-GitHub-Api-Version': '2022-11-28',
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
-    next: { revalidate: REVALIDATE },
     signal: AbortSignal.timeout(5000),
   })
 }
@@ -144,7 +149,15 @@ async function recentMerges() {
   }
 }
 
-export async function getProofNumbers(now = new Date()): Promise<ProofNumbers> {
+const none: ProofNumbers = {
+  mergedPrs: null,
+  rileyCommits: null,
+  totalCommits: null,
+  recentMerges: null,
+}
+
+/** Asks GitHub for the numbers. For next.config.ts, at build: never call it from a page. */
+export async function fetchProofNumbers(now = new Date()): Promise<ProofNumbers> {
   const [mergedPrs, rileyCommits, totalCommits, merges] = await Promise.all([
     searchCount('issues', mergedPrsQuery(now)),
     searchCount('commits', rileyCommitsQuery),
@@ -159,4 +172,40 @@ export async function getProofNumbers(now = new Date()): Promise<ProofNumbers> {
     totalCommits: commits ? totalCommits : null,
     recentMerges: merges,
   }
+}
+
+const count = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null)
+
+/** Reads the numbers baked into the build (see fetchProofNumbers); none when absent or malformed. */
+export function parseProofNumbers(json: string | undefined): ProofNumbers {
+  if (!json) return none
+  try {
+    const raw = JSON.parse(json) as Record<string, unknown>
+    const rileyCommits = count(raw.rileyCommits)
+    const totalCommits = count(raw.totalCommits)
+    const commits = rileyCommits !== null && totalCommits !== null && rileyCommits <= totalCommits
+    const merges = Array.isArray(raw.recentMerges)
+      ? pickRecentMerges(
+          (raw.recentMerges as Partial<RecentMerge>[]).map((m) => ({
+            number: m.number,
+            title: m.title,
+            html_url: m.url,
+            merged_at: m.mergedAt,
+            head: { ref: m.branch },
+          })),
+        )
+      : []
+    return {
+      mergedPrs: count(raw.mergedPrs),
+      rileyCommits: commits ? rileyCommits : null,
+      totalCommits: commits ? totalCommits : null,
+      recentMerges: merges.length > 0 ? merges : null,
+    }
+  } catch {
+    return none
+  }
+}
+
+export function getProofNumbers(): ProofNumbers {
+  return parseProofNumbers(process.env.BRIGADE_LANDING_PROOF)
 }
