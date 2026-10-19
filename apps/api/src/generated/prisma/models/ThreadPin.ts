@@ -20,8 +20,18 @@ export type ThreadPinModel = runtime.Types.Result.DefaultSelection<Prisma.$Threa
 
 export type AggregateThreadPin = {
   _count: ThreadPinCountAggregateOutputType | null
+  _avg: ThreadPinAvgAggregateOutputType | null
+  _sum: ThreadPinSumAggregateOutputType | null
   _min: ThreadPinMinAggregateOutputType | null
   _max: ThreadPinMaxAggregateOutputType | null
+}
+
+export type ThreadPinAvgAggregateOutputType = {
+  position: number | null
+}
+
+export type ThreadPinSumAggregateOutputType = {
+  position: number | null
 }
 
 export type ThreadPinMinAggregateOutputType = {
@@ -30,6 +40,7 @@ export type ThreadPinMinAggregateOutputType = {
   memberId: string | null
   sessionId: string | null
   pinnedAt: Date | null
+  position: number | null
 }
 
 export type ThreadPinMaxAggregateOutputType = {
@@ -38,6 +49,7 @@ export type ThreadPinMaxAggregateOutputType = {
   memberId: string | null
   sessionId: string | null
   pinnedAt: Date | null
+  position: number | null
 }
 
 export type ThreadPinCountAggregateOutputType = {
@@ -46,9 +58,18 @@ export type ThreadPinCountAggregateOutputType = {
   memberId: number
   sessionId: number
   pinnedAt: number
+  position: number
   _all: number
 }
 
+
+export type ThreadPinAvgAggregateInputType = {
+  position?: true
+}
+
+export type ThreadPinSumAggregateInputType = {
+  position?: true
+}
 
 export type ThreadPinMinAggregateInputType = {
   organizationId?: true
@@ -56,6 +77,7 @@ export type ThreadPinMinAggregateInputType = {
   memberId?: true
   sessionId?: true
   pinnedAt?: true
+  position?: true
 }
 
 export type ThreadPinMaxAggregateInputType = {
@@ -64,6 +86,7 @@ export type ThreadPinMaxAggregateInputType = {
   memberId?: true
   sessionId?: true
   pinnedAt?: true
+  position?: true
 }
 
 export type ThreadPinCountAggregateInputType = {
@@ -72,6 +95,7 @@ export type ThreadPinCountAggregateInputType = {
   memberId?: true
   sessionId?: true
   pinnedAt?: true
+  position?: true
   _all?: true
 }
 
@@ -113,6 +137,18 @@ export type ThreadPinAggregateArgs<ExtArgs extends runtime.Types.Extensions.Inte
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ThreadPinAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ThreadPinSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ThreadPinMinAggregateInputType
@@ -143,6 +179,8 @@ export type ThreadPinGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   _count?: ThreadPinCountAggregateInputType | true
+  _avg?: ThreadPinAvgAggregateInputType
+  _sum?: ThreadPinSumAggregateInputType
   _min?: ThreadPinMinAggregateInputType
   _max?: ThreadPinMaxAggregateInputType
 }
@@ -153,7 +191,10 @@ export type ThreadPinGroupByOutputType = {
   memberId: string
   sessionId: string
   pinnedAt: Date
+  position: number
   _count: ThreadPinCountAggregateOutputType | null
+  _avg: ThreadPinAvgAggregateOutputType | null
+  _sum: ThreadPinSumAggregateOutputType | null
   _min: ThreadPinMinAggregateOutputType | null
   _max: ThreadPinMaxAggregateOutputType | null
 }
@@ -182,6 +223,7 @@ export type ThreadPinWhereInput = {
   memberId?: Prisma.StringFilter<"ThreadPin"> | string
   sessionId?: Prisma.StringFilter<"ThreadPin"> | string
   pinnedAt?: Prisma.DateTimeFilter<"ThreadPin"> | Date | string
+  position?: Prisma.IntFilter<"ThreadPin"> | number
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -193,6 +235,7 @@ export type ThreadPinOrderByWithRelationInput = {
   memberId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   pinnedAt?: Prisma.SortOrder
+  position?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   member?: Prisma.MemberOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
@@ -208,6 +251,7 @@ export type ThreadPinWhereUniqueInput = Prisma.AtLeast<{
   memberId?: Prisma.StringFilter<"ThreadPin"> | string
   sessionId?: Prisma.StringFilter<"ThreadPin"> | string
   pinnedAt?: Prisma.DateTimeFilter<"ThreadPin"> | Date | string
+  position?: Prisma.IntFilter<"ThreadPin"> | number
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   member?: Prisma.XOR<Prisma.MemberScalarRelationFilter, Prisma.MemberWhereInput>
   session?: Prisma.XOR<Prisma.SessionScalarRelationFilter, Prisma.SessionWhereInput>
@@ -219,9 +263,12 @@ export type ThreadPinOrderByWithAggregationInput = {
   memberId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   pinnedAt?: Prisma.SortOrder
+  position?: Prisma.SortOrder
   _count?: Prisma.ThreadPinCountOrderByAggregateInput
+  _avg?: Prisma.ThreadPinAvgOrderByAggregateInput
   _max?: Prisma.ThreadPinMaxOrderByAggregateInput
   _min?: Prisma.ThreadPinMinOrderByAggregateInput
+  _sum?: Prisma.ThreadPinSumOrderByAggregateInput
 }
 
 export type ThreadPinScalarWhereWithAggregatesInput = {
@@ -233,11 +280,13 @@ export type ThreadPinScalarWhereWithAggregatesInput = {
   memberId?: Prisma.StringWithAggregatesFilter<"ThreadPin"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"ThreadPin"> | string
   pinnedAt?: Prisma.DateTimeWithAggregatesFilter<"ThreadPin"> | Date | string
+  position?: Prisma.IntWithAggregatesFilter<"ThreadPin"> | number
 }
 
 export type ThreadPinCreateInput = {
   organizationId: string
   pinnedAt?: Date | string
+  position?: number
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadPinsInput
   member: Prisma.MemberCreateNestedOneWithoutThreadPinsInput
   session: Prisma.SessionCreateNestedOneWithoutPinsInput
@@ -249,11 +298,13 @@ export type ThreadPinUncheckedCreateInput = {
   memberId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinUpdateInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadPinsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutThreadPinsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutPinsNestedInput
@@ -265,6 +316,7 @@ export type ThreadPinUncheckedUpdateInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinCreateManyInput = {
@@ -273,11 +325,13 @@ export type ThreadPinCreateManyInput = {
   memberId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinUpdateManyMutationInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinUncheckedUpdateManyInput = {
@@ -286,6 +340,7 @@ export type ThreadPinUncheckedUpdateManyInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinListRelationFilter = {
@@ -309,6 +364,11 @@ export type ThreadPinCountOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   pinnedAt?: Prisma.SortOrder
+  position?: Prisma.SortOrder
+}
+
+export type ThreadPinAvgOrderByAggregateInput = {
+  position?: Prisma.SortOrder
 }
 
 export type ThreadPinMaxOrderByAggregateInput = {
@@ -317,6 +377,7 @@ export type ThreadPinMaxOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   pinnedAt?: Prisma.SortOrder
+  position?: Prisma.SortOrder
 }
 
 export type ThreadPinMinOrderByAggregateInput = {
@@ -325,6 +386,11 @@ export type ThreadPinMinOrderByAggregateInput = {
   memberId?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   pinnedAt?: Prisma.SortOrder
+  position?: Prisma.SortOrder
+}
+
+export type ThreadPinSumOrderByAggregateInput = {
+  position?: Prisma.SortOrder
 }
 
 export type ThreadPinCreateNestedManyWithoutMemberInput = {
@@ -411,6 +477,14 @@ export type ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   deleteMany?: Prisma.ThreadPinScalarWhereInput | Prisma.ThreadPinScalarWhereInput[]
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type ThreadPinCreateNestedManyWithoutSessionInput = {
   create?: Prisma.XOR<Prisma.ThreadPinCreateWithoutSessionInput, Prisma.ThreadPinUncheckedCreateWithoutSessionInput> | Prisma.ThreadPinCreateWithoutSessionInput[] | Prisma.ThreadPinUncheckedCreateWithoutSessionInput[]
   connectOrCreate?: Prisma.ThreadPinCreateOrConnectWithoutSessionInput | Prisma.ThreadPinCreateOrConnectWithoutSessionInput[]
@@ -456,6 +530,7 @@ export type ThreadPinUncheckedUpdateManyWithoutSessionNestedInput = {
 export type ThreadPinCreateWithoutMemberInput = {
   organizationId: string
   pinnedAt?: Date | string
+  position?: number
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadPinsInput
   session: Prisma.SessionCreateNestedOneWithoutPinsInput
 }
@@ -465,6 +540,7 @@ export type ThreadPinUncheckedCreateWithoutMemberInput = {
   workspaceId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinCreateOrConnectWithoutMemberInput = {
@@ -502,11 +578,13 @@ export type ThreadPinScalarWhereInput = {
   memberId?: Prisma.StringFilter<"ThreadPin"> | string
   sessionId?: Prisma.StringFilter<"ThreadPin"> | string
   pinnedAt?: Prisma.DateTimeFilter<"ThreadPin"> | Date | string
+  position?: Prisma.IntFilter<"ThreadPin"> | number
 }
 
 export type ThreadPinCreateWithoutWorkspaceInput = {
   organizationId: string
   pinnedAt?: Date | string
+  position?: number
   member: Prisma.MemberCreateNestedOneWithoutThreadPinsInput
   session: Prisma.SessionCreateNestedOneWithoutPinsInput
 }
@@ -516,6 +594,7 @@ export type ThreadPinUncheckedCreateWithoutWorkspaceInput = {
   memberId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinCreateOrConnectWithoutWorkspaceInput = {
@@ -547,6 +626,7 @@ export type ThreadPinUpdateManyWithWhereWithoutWorkspaceInput = {
 export type ThreadPinCreateWithoutSessionInput = {
   organizationId: string
   pinnedAt?: Date | string
+  position?: number
   workspace: Prisma.WorkspaceCreateNestedOneWithoutThreadPinsInput
   member: Prisma.MemberCreateNestedOneWithoutThreadPinsInput
 }
@@ -556,6 +636,7 @@ export type ThreadPinUncheckedCreateWithoutSessionInput = {
   workspaceId: string
   memberId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinCreateOrConnectWithoutSessionInput = {
@@ -589,11 +670,13 @@ export type ThreadPinCreateManyMemberInput = {
   workspaceId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinUpdateWithoutMemberInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadPinsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutPinsNestedInput
 }
@@ -603,6 +686,7 @@ export type ThreadPinUncheckedUpdateWithoutMemberInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinUncheckedUpdateManyWithoutMemberInput = {
@@ -610,6 +694,7 @@ export type ThreadPinUncheckedUpdateManyWithoutMemberInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinCreateManyWorkspaceInput = {
@@ -617,11 +702,13 @@ export type ThreadPinCreateManyWorkspaceInput = {
   memberId: string
   sessionId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinUpdateWithoutWorkspaceInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
   member?: Prisma.MemberUpdateOneRequiredWithoutThreadPinsNestedInput
   session?: Prisma.SessionUpdateOneRequiredWithoutPinsNestedInput
 }
@@ -631,6 +718,7 @@ export type ThreadPinUncheckedUpdateWithoutWorkspaceInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -638,6 +726,7 @@ export type ThreadPinUncheckedUpdateManyWithoutWorkspaceInput = {
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinCreateManySessionInput = {
@@ -645,11 +734,13 @@ export type ThreadPinCreateManySessionInput = {
   workspaceId: string
   memberId: string
   pinnedAt?: Date | string
+  position?: number
 }
 
 export type ThreadPinUpdateWithoutSessionInput = {
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutThreadPinsNestedInput
   member?: Prisma.MemberUpdateOneRequiredWithoutThreadPinsNestedInput
 }
@@ -659,6 +750,7 @@ export type ThreadPinUncheckedUpdateWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ThreadPinUncheckedUpdateManyWithoutSessionInput = {
@@ -666,6 +758,7 @@ export type ThreadPinUncheckedUpdateManyWithoutSessionInput = {
   workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
   memberId?: Prisma.StringFieldUpdateOperationsInput | string
   pinnedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 
@@ -676,6 +769,7 @@ export type ThreadPinSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   memberId?: boolean
   sessionId?: boolean
   pinnedAt?: boolean
+  position?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -687,6 +781,7 @@ export type ThreadPinSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   memberId?: boolean
   sessionId?: boolean
   pinnedAt?: boolean
+  position?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -698,6 +793,7 @@ export type ThreadPinSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   memberId?: boolean
   sessionId?: boolean
   pinnedAt?: boolean
+  position?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
   session?: boolean | Prisma.SessionDefaultArgs<ExtArgs>
@@ -709,9 +805,10 @@ export type ThreadPinSelectScalar = {
   memberId?: boolean
   sessionId?: boolean
   pinnedAt?: boolean
+  position?: boolean
 }
 
-export type ThreadPinOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "memberId" | "sessionId" | "pinnedAt", ExtArgs["result"]["threadPin"]>
+export type ThreadPinOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"organizationId" | "workspaceId" | "memberId" | "sessionId" | "pinnedAt" | "position", ExtArgs["result"]["threadPin"]>
 export type ThreadPinInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   member?: boolean | Prisma.MemberDefaultArgs<ExtArgs>
@@ -741,6 +838,10 @@ export type $ThreadPinPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     memberId: string
     sessionId: string
     pinnedAt: Date
+    /**
+     * Where it sits under Pinned, as the member dragged it: lowest first, then by pinnedAt.
+     */
+    position: number
   }, ExtArgs["result"]["threadPin"]>
   composites: {}
 }
@@ -1172,6 +1273,7 @@ export interface ThreadPinFieldRefs {
   readonly memberId: Prisma.FieldRef<"ThreadPin", 'String'>
   readonly sessionId: Prisma.FieldRef<"ThreadPin", 'String'>
   readonly pinnedAt: Prisma.FieldRef<"ThreadPin", 'DateTime'>
+  readonly position: Prisma.FieldRef<"ThreadPin", 'Int'>
 }
     
 

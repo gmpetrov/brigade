@@ -136,7 +136,7 @@ export function useThreadMenu({
     </Fragment>
   ))
 
-  return { title, open, setOpen, busy, onMenuKey, content }
+  return { title, open, setOpen, busy, onMenuKey, content, mayRename: mayChange }
 }
 
 /** A new title for it, from the sidebar row's field or the panel's prompt. */

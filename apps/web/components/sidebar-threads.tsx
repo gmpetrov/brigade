@@ -5,7 +5,8 @@
 // teammate or project without going anywhere. The list shows its first few threads (waiting
 // on a person first, then working, then the rest) and folds the others into a "+N" row, so
 // the teammates and projects stay in reach however many there are; older ones load on asking.
-// Threads this member pinned sit above them, under Pinned; archived ones are out of both,
+// Threads this member pinned sit above them, under Pinned, in the order they drag them to;
+// archived ones are out of both,
 // and the filter lists them. Pinned and Threads each fold to their label alone (what waits
 // on a person is counted once, beside Home), and this browser remembers which are folded.
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
@@ -22,7 +23,14 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
@@ -346,6 +354,11 @@ export function SidebarWork({
   const [older, setOlder] = useState<ThreadSummary[]>([])
   const [exhausted, setExhausted] = useState<string[]>([])
   const [loadingOlder, setLoadingOlder] = useState(false)
+  // Pinned as just dragged, until the list comes back in that order; and the drag under way:
+  // the row dragged, and where it would land (before or after the row under the pointer).
+  const [pinOrder, setPinOrder] = useState<string[]>()
+  const [dragged, setDragged] = useState<string>()
+  const [dropAt, setDropAt] = useState<{ id: string; after: boolean }>()
   const live = projects.filter((p) => !p.archivedAt)
   const teammate = teammates.find((t) => t.id === filter.teammateId)
   const project = live.find((p) => p.id === filter.projectId)
@@ -401,14 +414,71 @@ export function SidebarWork({
       needsYou,
     )
   }, [threads, older, needsYou, archived])
-  // Pinned: in the order they were pinned, whatever the filter.
-  const pinned = useMemo(
-    () =>
-      archived
-        ? []
-        : all.filter((t) => t.pinnedAt).sort((a, b) => a.pinnedAt!.localeCompare(b.pinnedAt!)),
-    [all, archived],
-  )
+  // Pinned: where the member dragged them, else in the order they were pinned, whatever the
+  // filter. Pinned since the last drag, at the end.
+  const pinned = useMemo(() => {
+    if (archived) return []
+    const rank = (t: ThreadSummary) => {
+      const i = pinOrder?.indexOf(t.id) ?? -1
+      return pinOrder ? (i < 0 ? pinOrder.length : i) : (t.pinPosition ?? 0)
+    }
+    return all
+      .filter((t) => t.pinnedAt)
+      .sort((a, b) => rank(a) - rank(b) || a.pinnedAt!.localeCompare(b.pinnedAt!))
+  }, [all, archived, pinOrder])
+
+  async function movePin(id: string, to: { id: string; after: boolean }) {
+    const ids = pinned.map((t) => t.id).filter((x) => x !== id)
+    const at = ids.indexOf(to.id)
+    if (at < 0) return
+    ids.splice(at + (to.after ? 1 : 0), 0, id)
+    if (ids.every((x, i) => x === pinned[i]?.id)) return
+    setPinOrder(ids)
+    try {
+      await api('/threads/pins/order', { method: 'PUT', body: { ids } })
+      await reloadThreads()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    }
+    // The list now has the order itself (or, failed, goes back to where it was).
+    setPinOrder(undefined)
+  }
+  // A pinned row's drag: picked up anywhere on it, dropped before or after another, with a
+  // line where it would land.
+  const pinDrag = (id: string): ComponentProps<'li'> => ({
+    draggable: true,
+    onDragStart: (e) => {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('application/x-brigade-pin', id)
+      e.dataTransfer.setDragImage(e.currentTarget, 16, 16)
+      setDragged(id)
+    },
+    onDragOver: (e) => {
+      if (!dragged) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      const box = e.currentTarget.getBoundingClientRect()
+      const after = e.clientY > box.top + box.height / 2
+      if (dropAt?.id !== id || dropAt.after !== after) setDropAt({ id, after })
+    },
+    onDrop: (e) => {
+      e.preventDefault()
+      if (dragged && dropAt && dragged !== dropAt.id) void movePin(dragged, dropAt)
+      setDragged(undefined)
+      setDropAt(undefined)
+    },
+    onDragEnd: () => {
+      setDragged(undefined)
+      setDropAt(undefined)
+    },
+    className: cn(
+      dragged === id && 'opacity-50',
+      dropAt?.id === id &&
+        dragged !== id &&
+        'before:bg-primary before:pointer-events-none before:absolute before:inset-x-2 before:z-10 before:h-0.5 before:rounded-full',
+      dropAt?.id === id && (dropAt.after ? 'before:-bottom-px' : 'before:-top-px'),
+    ),
+  })
   const shown = useMemo(
     () =>
       all.filter(
@@ -492,7 +562,7 @@ export function SidebarWork({
     setOlder((o) => o.filter((t) => t.id !== id))
     if (threadId === id) router.push('/app')
   }
-  function row(t: ThreadSummary) {
+  function row(t: ThreadSummary, drag?: ComponentProps<'li'>) {
     const href = `/app/threads/${t.id}`
     return (
       <ThreadRow
@@ -516,6 +586,7 @@ export function SidebarWork({
         admin={admin}
         onChanged={changed}
         onDeleted={deleted}
+        drag={drag}
       />
     )
   }
@@ -551,7 +622,7 @@ export function SidebarWork({
           {archived ? 'No archived threads.' : filtered ? 'No threads match.' : 'No threads yet.'}
         </li>
       )}
-      {waitingShown.map(row)}
+      {waitingShown.map((t) => row(t))}
       {/* No dot: a control, not a thread; its text lines up with the titles. */}
       {waitingShown.length < waitingRows.length && (
         <SidebarMenuItem>
@@ -564,7 +635,7 @@ export function SidebarWork({
           </SidebarMenuButton>
         </SidebarMenuItem>
       )}
-      {ordered.slice(0, visible).map(row)}
+      {ordered.slice(0, visible).map((t) => row(t))}
       {more && (
         <SidebarMenuItem>
           <SidebarMenuButton
@@ -593,7 +664,7 @@ export function SidebarWork({
             {pinned.length > 0 && (
               <>
                 <SidebarGroupLabel className="h-6">Pinned</SidebarGroupLabel>
-                <SidebarMenu>{pinned.map(row)}</SidebarMenu>
+                <SidebarMenu>{pinned.map((t) => row(t))}</SidebarMenu>
                 <hr className="border-sidebar-border mx-2 my-1" />
               </>
             )}
@@ -648,7 +719,7 @@ export function SidebarWork({
           </SidebarGroupLabel>
           {!folded.pinned && (
             <SidebarGroupContent>
-              <SidebarMenu>{pinned.map(row)}</SidebarMenu>
+              <SidebarMenu>{pinned.map((t) => row(t, pinDrag(t.id)))}</SidebarMenu>
             </SidebarGroupContent>
           )}
         </SidebarGroup>
