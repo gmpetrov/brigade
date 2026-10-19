@@ -16,6 +16,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { Scope, ScopedDb } from './db.js'
 import { latestDryRun, startDryRun } from './playbook-dry-runs.js'
 import {
+  accountChoices,
   answerSettings,
   createInstallation,
   getInstallation,
@@ -82,9 +83,17 @@ const roleWords = (a: PlaybookAppStatus) =>
 
 /** What to tell the teammate about the Apps: each missing one asked for at the access declared. */
 const appsNote = (apps: PlaybookAppStatus[]) => {
-  const lacking = apps.filter((a) => a.status !== 'ready' && !a.optional)
-  if (!lacking.length) return ''
+  const needed = apps.filter((a) => a.status !== 'ready' && !a.optional)
+  // An account the teammate has but its setting has not picked yet: the question picks it.
+  const unpicked = needed.filter((a) => a.picks && !a.chosen && a.accounts.length > 0)
+  const lacking = needed.filter((a) => !unpicked.includes(a))
+  const pickNote = unpicked.length
+    ? ` ${unpicked.map(roleWords).join(', ')}: its account setting picks one of the accounts it has; ` +
+      'until it is answered its runs reach none.'
+    : ''
+  if (!lacking.length) return pickNote
   return (
+    pickNote +
     ' Apps it still needs: ' +
     lacking
       .map((a) => `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'})`)
@@ -192,6 +201,13 @@ export async function handlePlaybookCall(
       const manifest = current.manifest as PlaybookManifest
       const apps = await appStatuses(db, current)
       const answered = (current.settings ?? {}) as Record<string, unknown>
+      const choices = new Map(
+        await Promise.all(
+          manifest.settings
+            .filter((s) => s.type === 'account' && !(s.key in answered))
+            .map(async (s) => [s.key, await accountChoices(db, manifest, s)] as const),
+        ),
+      )
       const question = (s: PlaybookManifest['settings'][number]) => ({
         key: s.key,
         type: s.type,
@@ -199,7 +215,14 @@ export async function handlePlaybookCall(
         ...(s.app ? { app: s.app } : {}),
         ...(s.options ? { options: s.options } : {}),
         ...(s.type === 'account'
-          ? { accounts: apps.find((a) => a.name === s.app)?.accounts ?? [] }
+          ? {
+              // Told apart by App and id: two accounts may show the same name.
+              accounts: (choices.get(s.key) ?? []).map((c) => ({
+                id: c.id,
+                app: c.app,
+                name: c.name,
+              })),
+            }
           : {}),
       })
       const questions = manifest.settings.filter((s) => missing.includes(s.key)).map(question)
@@ -220,7 +243,8 @@ export async function handlePlaybookCall(
           (questions.length
             ? `Ask the person next: "${questions[0]!.ask}" (${questions[0]!.type}), one question at a time, ` +
               'then call configure_playbook with installationId and the answer, by its key. An account setting takes ' +
-              'the account as its row shows it (the Gmail address). Do not guess an answer you were not given.'
+              'the account as its row shows it (the Gmail address), or its id from accounts when two share a name ' +
+              '(say which App each is). Do not guess an answer you were not given.'
             : 'Every setting it needs has an answer: its triggers, schedules and skills are made, and nothing ' +
               'runs yet. ' +
               (optional.length

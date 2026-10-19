@@ -167,6 +167,15 @@ test('a role of one built-in App needs no account setting', () => {
   )
 })
 
+test('a plain MCP App, as older playbooks declared it, needs no account setting', () => {
+  assert.doesNotThrow(() =>
+    readTemplate(
+      'inbox',
+      template((m) => m.apps.push({ kind: 'mcp', access: 'read' })),
+    ),
+  )
+})
+
 rejects(
   'a role accepting an MCP server with no account setting naming it',
   (m) => m.apps.push({ role: 'analytics', kinds: ['mixpanel', 'mcp'], access: 'read' }),
