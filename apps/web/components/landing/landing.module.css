@@ -7,8 +7,6 @@
   --hero-size: 84px;
   --block-accent: var(--chart-1);
   --block-radius: 26px;
-  /* The product's "needs you" yellow (the dark theme's --warning) */
-  --yellow: oklch(0.83 0.13 75);
   --page: 1280px;
   --gutter: 80px;
 
@@ -168,7 +166,8 @@ a.btn.pri:hover {
 }
 .av.sam {
   background: color-mix(in oklch, var(--chart-3) 22%, transparent);
-  color: oklch(0.55 0.17 50);
+  /* Sam's orange, a shade darker than the chart colour so the initial reads on its tint. */
+  color: oklch(from var(--chart-3) calc(l - 0.18) c h);
 }
 .tile {
   width: 26px;
@@ -333,6 +332,8 @@ a.btn.pri:hover {
   height: 44px;
   padding: 0 18px 0 8px;
   border-radius: 999px;
+  /* The pills are always white (--primary-foreground in both themes), so their text stays
+   * dark in the dark theme too. */
   background: var(--primary-foreground);
   color: oklch(0 0 0);
   font-size: 14px;
@@ -347,14 +348,17 @@ a.btn.pri:hover {
   color: oklch(0.44 0 0);
   font-weight: 500;
 }
+/* The product's "needs you" yellow is the dark theme's --warning: this pill carries the
+ * `dark` class (hero.tsx), so --warning here is that yellow in either page theme. */
 .msg.waiting {
-  background: var(--yellow);
+  background: var(--warning);
 }
 .msg.waiting .k {
   color: oklch(0.32 0.06 70);
 }
 .msg.waiting .av.sam {
   background: oklch(1 0 0 / 0.55);
+  color: oklch(from var(--warning) calc(l - 0.4) c h);
 }
 
 /* Home card laid over the blocks (faithful to home.design) */
@@ -1591,7 +1595,9 @@ a.btn.pri:hover {
 .night .msg .when {
   font-family: var(--font-mono);
   font-weight: 500;
-  color: oklch(0.5393 0.2713 286.7462);
+  /* The band is always dark but the pills are white: the dark theme's lighter violet,
+   * darkened back to the light theme's contrast on white. */
+  color: oklch(from var(--primary) calc(l - 0.075) c h);
   font-size: 12.5px;
   padding-left: 10px;
 }

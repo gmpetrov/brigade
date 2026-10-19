@@ -1,11 +1,10 @@
 import Link from 'next/link'
-import { formatCount, type ProofNumbers, REPO, REPO_URL, relativeLabel } from '@/lib/github-proof'
+import { formatCount, type ProofNumbers, REPO, REPO_URL, mergeDate } from '@/lib/github-proof'
 import { cn } from '@/lib/utils'
 import { Av, Badge, Cta, Icon, s, SIGN_IN, SIGN_UP } from './parts'
 
 export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
   const { mergedPrs, rileyCommits, totalCommits, recentMerges } = numbers
-  const now = new Date()
   const commits = rileyCommits !== null && totalCommits !== null
   return (
     <section className={cn(s.sec, s.built)} aria-labelledby="built-title">
@@ -66,7 +65,7 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
                     </div>
                   </div>
                   <span className={s.tm}>
-                    <time dateTime={pr.mergedAt}>{relativeLabel(new Date(pr.mergedAt), now)}</time>
+                    <time dateTime={pr.mergedAt}>{mergeDate(pr.mergedAt)}</time>
                   </span>
                 </a>
               ))}

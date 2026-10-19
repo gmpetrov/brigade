@@ -12,6 +12,11 @@ const title = 'Brigade · AI teammates on your own Claude or ChatGPT plan'
 const description =
   'Run a team of AI teammates on the Claude or ChatGPT plan you already pay for. They work in the background, on your Mac or in the cloud, and ask you only when it matters. Free on Mac, open source.'
 
+// Static: prerendered at build, never revalidated. Its GitHub numbers are read at build
+// too (next.config.ts, lib/github-proof.ts), so rendering it never calls GitHub.
+export const dynamic = 'force-static'
+export const revalidate = false
+
 export const metadata: Metadata = {
   title,
   description,
@@ -46,8 +51,8 @@ const jsonLd = {
   ],
 }
 
-export default async function Landing() {
-  const numbers = await getProofNumbers()
+export default function Landing() {
+  const numbers = getProofNumbers()
   return (
     <div className={s.page}>
       <RedirectIfSignedIn />
