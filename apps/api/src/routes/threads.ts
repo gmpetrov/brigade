@@ -346,8 +346,14 @@ export const threads = new Hono<AppEnv>()
       },
     })
     if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+    // This member's pin, for the thread's menu in its details.
+    const pin = await c.var.db.threadPin.findUnique({
+      where: { memberId_sessionId: { memberId: c.var.scope.memberId, sessionId: thread.id } },
+      select: { pinnedAt: true },
+    })
     return c.json({
       ...thread,
+      pinnedAt: pin?.pinnedAt.toISOString() ?? null,
       // Where it is going, not the message that goes with it.
       move: movePublic(thread.move),
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
