@@ -89,15 +89,18 @@ export class GitRefused extends Error {}
 
 type Repository = { fullName: string; private: boolean }
 const REPOS_TTL_MS = 5 * 60_000
-const repoLists = new Map<number, { repos: Map<string, Repository>; until: number }>()
+const repoLists = new Map<number, { repos: Map<string, Repository>; at: number }>()
 
 /** The installation's repositories changed on GitHub: list them again on the next request. */
 export const forgetInstallation = (installationId: number) => repoLists.delete(installationId)
 
-/** The repositories an installation reaches, cached for a few minutes. */
-async function installationRepos(installationId: number) {
+/**
+ * The repositories an installation reaches, cached for a few minutes, or for at most
+ * maxAgeMs when a person may just have changed them on GitHub.
+ */
+async function installationRepos(installationId: number, maxAgeMs = REPOS_TTL_MS) {
   const cached = repoLists.get(installationId)
-  if (cached && cached.until > Date.now()) return cached.repos
+  if (cached && Date.now() - cached.at < Math.min(maxAgeMs, REPOS_TTL_MS)) return cached.repos
   const token = await installationToken(installationId)
   const repos = new Map<string, Repository>()
   for (let page = 1; page <= 50; page++) {
@@ -113,7 +116,7 @@ async function installationRepos(installationId: number) {
       repos.set(r.full_name.toLowerCase(), { fullName: r.full_name, private: r.private })
     if (body.repositories.length < 100) break
   }
-  repoLists.set(installationId, { repos, until: Date.now() + REPOS_TTL_MS })
+  repoLists.set(installationId, { repos, at: Date.now() })
   return repos
 }
 
@@ -167,6 +170,46 @@ export async function workspaceGitHub(db: ScopedDb, scope: Scope, repo: string) 
     if (found) return { connectionId: connection.id, installationId, fullName: found.fullName }
   }
   return null
+}
+
+/**
+ * The workspace's active GitHub connections whose installation reaches a repository, listed
+ * again when older than maxAgeMs. A connection whose installation is gone is marked for reconnecting.
+ */
+export async function connectionsReaching(
+  db: ScopedDb,
+  scope: Scope,
+  repo: string,
+  maxAgeMs = REPOS_TTL_MS,
+  ids?: string[],
+) {
+  const connections = await db.connection.findMany({
+    where: {
+      kind: 'github',
+      status: 'active',
+      vaultSecretId: { not: null },
+      ...(ids ? { id: { in: ids } } : {}),
+    },
+  })
+  const reaching: string[] = []
+  for (const connection of connections) {
+    const { installationId } = await openSecret<GitHubCredential>(
+      db,
+      scope,
+      connection.vaultSecretId!,
+    )
+    try {
+      if ((await installationRepos(installationId, maxAgeMs)).has(repo))
+        reaching.push(connection.id)
+    } catch (error) {
+      if (!(error instanceof GitHubInstallationGone)) throw error
+      await db.connection.updateMany({
+        where: { id: connection.id },
+        data: { status: 'needs_reauth' },
+      })
+    }
+  }
+  return reaching
 }
 
 /** Whether a teammate's GitHub grants reach a repository, and with write access. */
@@ -306,7 +349,9 @@ export async function authorize(
   if (fullName) return { scope, db, session, teammate, fullName }
   throw new GitRefused(
     `Brigade: ${teammate.name} has no GitHub connection that reaches ${owner}/${name}. ` +
-      'A person can install the GitHub app on it and grant the connection.',
+      'Do not stop to explain it: open a ticket (open_ticket) with an access ask of kind connection, ' +
+      `app { kind: "github", scope: "read_write", repository: "${owner}/${name}" }. ` +
+      'A person installs the GitHub app on it, or adds it to an installation, and gives you access from the ticket.',
   )
 }
 

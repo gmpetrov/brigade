@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { AgentEvent, Widget, WIDGET_HTML_MAX } from '../dist/events.js'
+import { AgentEvent, Ask, Widget, WIDGET_HTML_MAX } from '../dist/events.js'
 
 const at = '2026-10-13T08:00:00.000Z'
 
@@ -35,6 +35,26 @@ test('reads a widget, and refuses one without HTML or with too much', () => {
   assert.equal(Widget.safeParse({ ...widget, title: '' }).success, false)
   assert.equal(
     Widget.safeParse({ ...widget, html: 'x'.repeat(WIDGET_HTML_MAX + 1) }).success,
+    false,
+  )
+})
+
+test('a GitHub access ask may name the repository it needs, as owner/name', () => {
+  const ask = (app) => ({ id: 'a1', type: 'access', kind: 'connection', what: 'GitHub', app })
+  const parsed = Ask.parse(
+    ask({ kind: 'github', scope: 'read_write', repository: 'TheWrappingCompany/lovadesk.git' }),
+  )
+  assert.equal(parsed.app.repository, 'thewrappingcompany/lovadesk')
+  assert.equal(Ask.parse(ask({ kind: 'github', scope: 'read' })).app.repository, undefined)
+  for (const repository of ['lovadesk', 'https://github.com/acme/web', 'acme/..'])
+    assert.equal(
+      Ask.safeParse(ask({ kind: 'github', scope: 'read', repository })).success,
+      false,
+      repository,
+    )
+  // Only GitHub has repositories.
+  assert.equal(
+    Ask.safeParse(ask({ kind: 'linear', scope: 'read', repository: 'acme/web' })).success,
     false,
   )
 })

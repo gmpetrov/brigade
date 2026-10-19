@@ -12,7 +12,7 @@ import {
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
-import { workspaceRepositories } from '../git.js'
+import { connectionsReaching, workspaceRepositories } from '../git.js'
 import { listVariables, removeVariable, setVariables } from '../preview-variables.js'
 import { parseBody, requireUser, requireWorkspace, type AppEnv } from '../scope.js'
 
@@ -26,6 +26,21 @@ function repositoryParam(owner: string, name: string) {
 export const repositories = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
   .get('/', async (c) => c.json(await workspaceRepositories(c.var.db, c.var.scope).catch(() => [])))
+
+  /**
+   * The GitHub connections that reach a repository, for a ticket asking for it. fresh: listed
+   * again when a few seconds old, while a person adds it on GitHub.
+   */
+  .get('/:owner/:name/reach', async (c) => {
+    const repository = repositoryParam(c.req.param('owner'), c.req.param('name'))
+    const maxAge = c.req.query('fresh') ? 5_000 : undefined
+    const connections = await connectionsReaching(c.var.db, c.var.scope, repository, maxAge).catch(
+      () => {
+        throw new HTTPException(502, { message: 'GitHub did not answer. Try again.' })
+      },
+    )
+    return c.json({ connections })
+  })
 
   /** How each repository's preview starts, as a teammate saved it, and the variables people gave it. */
   .get('/previews', async (c) => {

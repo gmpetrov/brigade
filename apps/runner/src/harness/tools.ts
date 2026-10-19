@@ -265,6 +265,11 @@ export const openTicketTool = tool({
                   type: 'string',
                   description: 'kind mcp: the MCP server URL, e.g. https://mcp.example.com/mcp',
                 },
+                repository: {
+                  type: 'string',
+                  description:
+                    'kind github: the repository you need, as owner/name (e.g. acme/web), such as one checkout_repository could not reach. The person installs the GitHub app on it, or adds it, from the ticket',
+                },
               },
               required: ['kind', 'scope'],
             },
