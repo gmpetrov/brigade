@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { api, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-const REPORTS: Record<string, string> = {
+export const REPORTS: Record<string, string> = {
   nothing: 'nothing new',
   report: 'reported',
   needs_person: 'needs you',
