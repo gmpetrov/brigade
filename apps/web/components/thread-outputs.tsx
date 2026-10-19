@@ -239,7 +239,7 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               label: input.title,
               detail: typeof input.cron === 'string' ? `Schedule · ${input.cron}` : 'Schedule',
               at: e.at,
-              href: '/app/automations',
+              href: '/app/routines',
             })
           } else if (tool === PROPOSE_SKILL_TOOL) {
             // A proposal waits for an admin in Tickets; once approved it is on the Connections page.

@@ -178,7 +178,7 @@ function LooseEndRow({ item, onChange }: { item: LooseEnd; onChange: () => Promi
     )
   }
 
-  const href = item.run ? `/app/threads/${item.run.id}` : '/app/automations'
+  const href = item.run ? `/app/threads/${item.run.id}` : '/app/routines'
   return (
     <Row
       icon={

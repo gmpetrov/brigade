@@ -748,7 +748,7 @@ export function ThreadConversation({
             <>
               Schedule{' '}
               {t.schedule ? (
-                <Link href="/app/automations" className="hover:underline">
+                <Link href="/app/routines" className="hover:underline">
                   &ldquo;{t.schedule.title}&rdquo;
                 </Link>
               ) : (

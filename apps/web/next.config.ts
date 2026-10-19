@@ -41,6 +41,13 @@ const nextConfig: NextConfig = {
         destination: 'https://www.brigade.lol/:path+',
         permanent: true,
       },
+      // Automations became Routines: links saved before still open the page.
+      { source: '/app/automations', destination: '/app/routines', permanent: false },
+      {
+        source: '/app/projects/:id/automations',
+        destination: '/app/projects/:id/routines',
+        permanent: false,
+      },
     ]
   },
 }

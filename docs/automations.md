@@ -1,7 +1,8 @@
 # Automations
 
-In visible text this page and its sidebar item are called **Routines**; the code, routes
-(`/app/automations`) and this spec keep the name automations.
+In visible text this page and its sidebar item are called **Routines**, at `/app/routines`
+(`/app/automations` redirects there); the code, the API and this spec keep the names
+automations and schedules.
 
 Automations are work that starts without anyone typing a message. Triggers already
 do this from events (`apps/api/src/triggers.ts`). This step adds **schedules**: a
