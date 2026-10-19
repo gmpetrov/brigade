@@ -99,7 +99,8 @@ const appsNote = (apps: PlaybookAppStatus[]) => {
       .map((a) => `${roleWords(a)} (${a.status === 'missing' ? 'no account' : 'read-only'})`)
       .join(', ') +
     '. For each, open one ticket with an access ask of kind connection and app { kind, scope }, with ' +
-    'the scope the playbook declares for it (read or read_write) and no more: the person connects the ' +
+    'the scope the playbook declares for it (read or read_write) and no more, and its account when you ' +
+    'know which (the address its mail goes to, say): the person connects the ' +
     'App there, sign-in included, and grants it. A role any of several Apps can hold: first ask which ' +
     'one they use, then ask for that kind (an MCP server: kind mcp with its url).'
   )
