@@ -6,14 +6,15 @@
 // on a person first, then working, then the rest) and folds the others into a "+N" row, so
 // the teammates and projects stay in reach however many there are; older ones load on asking.
 // Threads this member pinned sit above them, under Pinned, in the order they drag them to;
-// archived ones are out of both,
-// and the filter lists them. Pinned and Threads each fold to their label alone (what waits
+// archived ones are out of both, and so are those the member put away for later, and the
+// filter lists each (Later with how many). Pinned and Threads each fold to their label alone (what waits
 // on a person is counted once, beside Home), and this browser remembers which are folded.
 // Inside Threads, the latest thread waiting on a person shows first, and the others behind a
 // "+N waiting on you".
 import {
   Archive,
   ChevronDown,
+  Clock,
   ChevronUp,
   ListFilter,
   MessagesSquare,
@@ -23,14 +24,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { TeammateAvatar } from '@/components/dashboard'
 import { ProjectIcon } from '@/components/projects'
 import { RailPanel } from '@/components/rail-menu'
@@ -247,9 +241,9 @@ type Filter = {
   byRow?: 'teammate' | 'project'
 }
 
-/** The filter this browser last set, and whether it showed the archived threads. */
+/** The filter this browser last set, and whether it showed the archived or later threads. */
 const FILTER_KEY = 'brigade:sidebar-filter'
-type SavedFilter = Filter & { archived?: boolean }
+type SavedFilter = Filter & { archived?: boolean; later?: boolean }
 
 /** Whether `pathname` is the page a filter from a row goes with. */
 function onOwnPage(filter: Filter, pathname: string) {
@@ -278,7 +272,7 @@ function readFilter(pathname: string): SavedFilter | undefined {
       else filter.projectId = undefined
       filter.byRow = undefined
     }
-    return { ...filter, archived: saved.archived === true }
+    return { ...filter, archived: saved.archived === true, later: saved.later === true }
   } catch {
     // Nothing saved, or not readable: no filter.
   }
@@ -342,8 +336,14 @@ export function SidebarWork({
   const [filter, setFilter] = useState<Filter>({ statuses: [] })
   // The archived threads, while the list shows them instead (from the filter).
   const [archived, setArchived] = useState<ThreadSummary[]>()
-  const loadArchived = () =>
-    api<ThreadSummary[]>('/threads?archived=1').then(setArchived, () => setArchived([]))
+  const loadArchived = () => {
+    setLater(false)
+    return api<ThreadSummary[]>('/threads?archived=1').then(setArchived, () => setArchived([]))
+  }
+  // Whether the list shows the threads this member put away for later instead (the filter's
+  // Later). They are in the panel's list, all of them, out of the usual one.
+  const [later, setLater] = useState(false)
+  const putAway = useMemo(() => (threads ?? []).filter((t) => t.laterAt), [threads])
   // How many more than the cap the list shows: a step at a time.
   const [extra, setExtra] = useState(0)
   const [folded, toggleFolded] = useFolded()
@@ -362,7 +362,15 @@ export function SidebarWork({
   const live = projects.filter((p) => !p.archivedAt)
   const teammate = teammates.find((t) => t.id === filter.teammateId)
   const project = live.find((p) => p.id === filter.projectId)
-  const filtered = !!(filter.teammateId || filter.projectId || filter.statuses.length || archived)
+  const filtered = !!(
+    filter.teammateId ||
+    filter.projectId ||
+    filter.statuses.length ||
+    archived ||
+    later
+  )
+  // The archived or later threads instead of the usual list: in one list, as they come.
+  const instead = !!archived || later
 
   // The filter this browser last set comes back with the page: read after the first render,
   // so the server's page and the browser's agree, and saved from then on.
@@ -370,17 +378,18 @@ export function SidebarWork({
   useEffect(() => {
     const saved = readFilter(pathname)
     if (saved) {
-      const { archived, ...rest } = saved
+      const { archived, later, ...rest } = saved
       setFilter(rest)
       if (archived) void loadArchived()
+      else if (later) setLater(true)
     }
     setRestored(true)
     // Once, on load: later pages keep the filter as it is.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
-    if (restored) saveFilter({ ...filter, archived: !!archived })
-  }, [restored, filter, archived])
+    if (restored) saveFilter({ ...filter, archived: !!archived, later })
+  }, [restored, filter, archived, later])
   // A teammate or project since removed filters nothing in: it goes, once the lists are in.
   useEffect(() => {
     if (filter.teammateId && teammates.length && !teammate)
@@ -417,15 +426,15 @@ export function SidebarWork({
   // Pinned: where the member dragged them, else in the order they were pinned, whatever the
   // filter. Pinned since the last drag, at the end.
   const pinned = useMemo(() => {
-    if (archived) return []
+    if (instead) return []
     const rank = (t: ThreadSummary) => {
       const i = pinOrder?.indexOf(t.id) ?? -1
       return pinOrder ? (i < 0 ? pinOrder.length : i) : (t.pinPosition ?? 0)
     }
     return all
-      .filter((t) => t.pinnedAt)
+      .filter((t) => t.pinnedAt && !t.laterAt)
       .sort((a, b) => rank(a) - rank(b) || a.pinnedAt!.localeCompare(b.pinnedAt!))
-  }, [all, archived, pinOrder])
+  }, [all, instead, pinOrder])
 
   async function movePin(id: string, to: { id: string; after: boolean }) {
     const ids = pinned.map((t) => t.id).filter((x) => x !== id)
@@ -506,12 +515,13 @@ export function SidebarWork({
     () =>
       all.filter(
         (t) =>
-          (archived || !t.pinnedAt) &&
+          (instead || !t.pinnedAt) &&
+          (later ? !!t.laterAt : !t.laterAt) &&
           (!filter.teammateId || inThread(t, filter.teammateId)) &&
           (!filter.projectId || t.projectId === filter.projectId) &&
           (!filter.statuses.length || filter.statuses.includes(statusKey(t)!)),
       ),
-    [all, filter],
+    [all, filter, instead, later],
   )
   const groups = useMemo(() => {
     const by: Record<Group, ThreadSummary[]> = { waiting: [], working: [], rest: [] }
@@ -531,7 +541,7 @@ export function SidebarWork({
   }`
   // Fewer than the panel's latest 100, unfiltered: there are none older.
   const mayHaveOlder =
-    !archived && !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
+    !instead && !!threads && !exhausted.includes(query) && (!!query || threads.length >= 100)
   async function loadOlder() {
     const matching = all.filter(
       (t) =>
@@ -560,9 +570,9 @@ export function SidebarWork({
   // What the list shows: the latest thread waiting on a person, the others behind a "+N waiting on
   // you" until asked; then the first of the rest and a "+N more" past them. Its N counts only
   // threads already loaded and matching, so it never promises ones that may not exist.
-  const waitingRows = archived ? [] : groups.waiting
+  const waitingRows = instead ? [] : groups.waiting
   const waitingShown = allWaiting ? waitingRows : waitingRows.slice(0, 1)
-  const ordered = [...(archived ? groups.waiting : []), ...groups.working, ...groups.rest]
+  const ordered = [...(instead ? groups.waiting : []), ...groups.working, ...groups.rest]
   const visible = CAP + extra
   const hidden = Math.max(0, ordered.length - visible)
   const more =
@@ -640,9 +650,15 @@ export function SidebarWork({
   // "+N more", which grows it in both.
   const list = (
     <>
-      {threads && shown.length === 0 && (archived || !pinned.length) && (
+      {threads && shown.length === 0 && (instead || !pinned.length) && (
         <li className="text-muted-foreground px-2 py-1.5 text-xs">
-          {archived ? 'No archived threads.' : filtered ? 'No threads match.' : 'No threads yet.'}
+          {archived
+            ? 'No archived threads.'
+            : later
+              ? 'Nothing put away for later.'
+              : filtered
+                ? 'No threads match.'
+                : 'No threads yet.'}
         </li>
       )}
       {waitingShown.map((t) => row(t))}
@@ -781,6 +797,7 @@ export function SidebarWork({
             />
           )}
           {archived && <FilterChip label="Archived" onClear={() => setArchived(undefined)} />}
+          {later && <FilterChip label="Later" onClear={() => setLater(false)} />}
           {filter.statuses.length > 0 && (
             <FilterChip
               label={
@@ -878,6 +895,22 @@ export function SidebarWork({
                 </>
               )}
               <DropdownMenuSeparator />
+              {/* How many: a plain count, so what was put away is not forgotten. */}
+              <DropdownMenuCheckboxItem
+                checked={later}
+                onCheckedChange={(on) => {
+                  setLater(on)
+                  if (on) setArchived(undefined)
+                }}
+              >
+                <Clock />
+                Later
+                {putAway.length > 0 && (
+                  <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+                    {putAway.length}
+                  </span>
+                )}
+              </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={!!archived}
                 onCheckedChange={(on) => (on ? void loadArchived() : setArchived(undefined))}
@@ -892,6 +925,7 @@ export function SidebarWork({
                     onSelect={() => {
                       setFilter({ statuses: [] })
                       setArchived(undefined)
+                      setLater(false)
                     }}
                   >
                     Clear filters

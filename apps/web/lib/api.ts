@@ -286,6 +286,11 @@ export type ThreadSummary = {
   pinPosition?: number | null
   /** Set while archived: out of the sidebar until someone writes in it. */
   archivedAt?: string | null
+  /**
+   * When this member put it away for later: out of their list (the filter's Later shows it)
+   * and of what waits on them, until something new happens in it.
+   */
+  laterAt?: string | null
   /** Others than its starter may write in it, so rename and archive it. */
   othersMayPrompt?: boolean
   /** Since when its events have not reached Brigade: its computer keeps sending them. */
@@ -436,6 +441,8 @@ export type Task = {
     openTickets: number
     /** What it opened that waits on review and merge. */
     openPullRequests: { repository: string; number: number }[]
+    /** This member put it away for later: it does not count as needing them. */
+    later?: boolean
   } | null
 }
 
@@ -800,6 +807,8 @@ export type Ticket = {
     parentId: string | null
     /** Archived: its tickets no longer wait on anyone, until it comes back. */
     archivedAt: string | null
+    /** Its thread (a child's: its parent) put away for later by this member: none waits on them. */
+    laterAt?: string | null
     teammate: { id: string; name: string }
   } | null
   /**
@@ -892,7 +901,7 @@ export const credentialManagersOnly = (t: Ticket) =>
 
 /** Whether an open ticket waits on this member: the same rules that give them actions below. */
 export function waitsOn(t: Ticket, me: Me) {
-  if (t.status !== 'open' || t.session?.archivedAt) return false
+  if (t.status !== 'open' || t.session?.archivedAt || t.session?.laterAt) return false
   const admin = isAdmin(me)
   const starter = t.session?.startedByMemberId === me.memberId
   // A skill shapes what every teammate does, and a playbook acts alone: an admin's call.
