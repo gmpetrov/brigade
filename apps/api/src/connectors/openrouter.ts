@@ -31,12 +31,16 @@ export const openrouter: ConnectorDefinition = {
       'list-models': read('Search the model catalog by price, context, modality and benchmarks.'),
       'get-model': read('Read a model’s full details.'),
       'list-model-endpoints': read('The providers serving a model: price, latency, data policy.'),
-      'get-endpoint-uptime-history': read('Each provider’s hourly uptime for a model, over 72 hours.'),
+      'get-endpoint-uptime-history': read(
+        'Each provider’s hourly uptime for a model, over 72 hours.',
+      ),
       'list-providers': read('List the providers requests can be routed to.'),
       'list-daily-model-rankings': read('The most used and trending models by tokens.'),
       'list-app-rankings': read('The apps sending the most traffic to OpenRouter.'),
       'list-benchmarks': read('Quality scores from Artificial Analysis and Design Arena.'),
-      'list-task-classifications': read('What OpenRouter traffic is used for, with the top models.'),
+      'list-task-classifications': read(
+        'What OpenRouter traffic is used for, with the top models.',
+      ),
       'get-credits': read('The account’s remaining credits.'),
       'get-generation': read('A generation’s cost, tokens and provider.'),
       'list-presets': read('List the saved presets: model, system prompt and settings.'),
