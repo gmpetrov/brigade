@@ -10,6 +10,7 @@ import {
   bareToolName,
   childNote,
   forPeople,
+  noteThreads,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -104,7 +105,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { StartedChild } from '@/components/thread-children'
+import { ReportedThread, StartedChild } from '@/components/thread-children'
 import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -1481,7 +1482,10 @@ export function ThreadItems({
     switch (item.kind) {
       case 'user': {
         // Brigade's own words about child threads: a note, not a person's message.
-        if (item.brigade)
+        if (item.brigade) {
+          // A report: each thread it tells about is a line that opens it.
+          const reported =
+            item.brigade === 'report' || item.brigade === 'follow' ? noteThreads(item.text) : null
           return (
             <div
               key={item.key}
@@ -1497,11 +1501,28 @@ export function ThreadItems({
                       ? 'Dry run done'
                       : 'Work from the parent thread'}
               </p>
-              <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                <MessageWithCode text={forPeople(item.text)} />
-              </div>
+              {reported ? (
+                <div className="flex flex-col gap-3">
+                  {reported.head && <p className="leading-relaxed">{reported.head}</p>}
+                  {reported.threads.map((t) => (
+                    <div key={t.id} className="flex flex-col gap-1.5">
+                      <ReportedThread thread={t} />
+                      {t.summary && (
+                        <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                          <MessageWithCode text={t.summary} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                  <MessageWithCode text={forPeople(item.text)} />
+                </div>
+              )}
             </div>
           )
+        }
         // A command it starts with (/design, a skill) is a label above it: what was asked for.
         const asked = startingCommand(item.text, skillNames)
         const text = asked ? asked.rest : item.text

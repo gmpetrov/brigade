@@ -151,6 +151,10 @@ export function singleNote(child: {
 /** How a note to a thread that follows another begins (followNote): what says it is one. */
 const FOLLOW_HEAD = 'The thread you follow “'
 
+const FOLLOW_HINT =
+  '`read_child` with its threadId gives its full report and what it produced. Go on with your own work ' +
+  '(e.g. answer the person who reported it), or tell the person in a line. If it reports again, you hear again.'
+
 /** The note a thread wakes up to when a thread it follows (follow_thread) has reported. */
 export function followNote(thread: {
   id: string
@@ -161,8 +165,7 @@ export function followNote(thread: {
   return (
     `${FOLLOW_HEAD}${thread.title}” (${thread.id}, ${thread.teammate}) ${STATUS_WORDS[thread.report.status]}:` +
     `\n\n${clipReport(thread.report.summary, 2_000)}\n\n` +
-    '`read_child` with its threadId gives its full report and what it produced. Go on with your own work ' +
-    '(e.g. answer the person who reported it), or tell the person in a line. If it reports again, you hear again.'
+    FOLLOW_HINT
   )
 }
 
@@ -197,9 +200,105 @@ export function childNote(text: string): 'task' | 'report' | 'follow' | 'dry_run
   return null
 }
 
+/** A thread a note tells about: the dashboard shows it as a line that opens it. */
+export type NoteThread = {
+  id: string
+  title: string
+  teammate: string
+  /** null: still working when the note was written. */
+  status: ChildReportStatus | null
+  summary: string
+}
+
+const ID = '([a-z0-9]+)'
+const STATUS = `(${Object.values(STATUS_WORDS)
+  .map((w) => w.replace(/[()]/g, '\\$&'))
+  .join('|')})`
+const statusOf = (words: string) =>
+  (Object.keys(STATUS_WORDS) as ChildReportStatus[]).find((s) => STATUS_WORDS[s] === words)!
+const FINISHED_LINE = new RegExp(`^- (.+?) · “(.*?)” \\(${ID}\\): ${STATUS}\\. ?(.*)$`)
+const UNFINISHED_LINE = new RegExp(`^- (.+?) · “(.*)” \\(${ID}\\)$`)
+const SCHEDULE_HEAD = new RegExp(
+  `^A run of your schedule “(.*?)” \\(child thread “(.*)”, ${ID}\\) ${STATUS}:\n\n`,
+)
+const LATE_HEAD = new RegExp(
+  `^Your child thread “(.*)” \\(${ID}, (.+?)\\) ${STATUS} after you stopped waiting for it:\n\n`,
+)
+const FOLLOW_LINE = new RegExp(`^${FOLLOW_HEAD}(.*)” \\(${ID}, (.+?)\\) ${STATUS}:\n\n`)
+
+/**
+ * The threads a report note (batchNote, singleNote, followNote) tells about, read back from
+ * its text for people: a line above them (`head`), then each thread with what it said.
+ * null for any other text, which is then shown as it is.
+ */
+export function noteThreads(text: string): { head: string | null; threads: NoteThread[] } | null {
+  const note = forPeople(text)
+  let m = SCHEDULE_HEAD.exec(note)
+  if (m)
+    return {
+      head: `A run of the schedule “${m[1]}”`,
+      threads: [
+        {
+          id: m[3]!,
+          title: m[2]!,
+          teammate: '',
+          status: statusOf(m[4]!),
+          summary: note.slice(m[0].length),
+        },
+      ],
+    }
+  m = LATE_HEAD.exec(note)
+  if (m)
+    return {
+      head: 'Finished after the wait for it ran out',
+      threads: [
+        {
+          id: m[2]!,
+          title: m[1]!,
+          teammate: m[3]!,
+          status: statusOf(m[4]!),
+          summary: note.slice(m[0].length),
+        },
+      ],
+    }
+  m = FOLLOW_LINE.exec(note)
+  if (m)
+    return {
+      head: null,
+      threads: [
+        {
+          id: m[2]!,
+          title: m[1]!,
+          teammate: m[3]!,
+          status: statusOf(m[4]!),
+          summary: note.slice(m[0].length),
+        },
+      ],
+    }
+  if (!REPORT_HEADS.slice(0, 3).some((h) => h.test(note))) return null
+  const [head, ...rest] = note.split('\n')
+  const threads: NoteThread[] = []
+  for (const l of rest) {
+    const f = FINISHED_LINE.exec(l)
+    const u = f ? null : UNFINISHED_LINE.exec(l)
+    if (f)
+      threads.push({
+        id: f[3]!,
+        title: f[2]!,
+        teammate: f[1]!,
+        status: statusOf(f[4]!),
+        summary: f[5]!,
+      })
+    else if (u)
+      threads.push({ id: u[3]!, title: u[2]!, teammate: u[1]!, status: null, summary: '' })
+    else if (l.trim() && !l.startsWith('Still working past')) return null
+  }
+  return threads.length ? { head: head!, threads } : null
+}
+
 /** A note about child threads as people read it: without what it tells the teammate to do next. */
 export function forPeople(text: string) {
-  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT])
+  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT, FOLLOW_HINT])
     if (text.endsWith(hint)) return text.slice(0, -hint.length).trimEnd()
   return text
 }
