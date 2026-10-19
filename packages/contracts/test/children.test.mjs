@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { batchNote, childNote, childPrompt, singleNote, wakesParent } from '../dist/index.js'
+import {
+  batchNote,
+  childNote,
+  childPrompt,
+  forPeople,
+  mayChangeQueued,
+  singleNote,
+  wakesParent,
+} from '../dist/index.js'
 
 const report = (status, summary) => ({ status, summary, at: '2026-10-18T09:00:00.000Z' })
 
@@ -62,4 +70,37 @@ test('only a report or a failure wakes a parent that was not waiting', () => {
     true,
     false,
   ])
+})
+
+test('people read a note without what it tells the teammate to do next', () => {
+  const one = [{ id: 'c1', title: 'A', teammate: 'Cody', report: report('report', 'All good') }]
+  const batch = forPeople(batchNote(one, []))
+  assert.equal(
+    batch,
+    'The child thread you were waiting for has finished:\n- Cody · “A” (c1): reports. All good',
+  )
+  const single = forPeople(
+    singleNote({
+      id: 'c1',
+      title: 'Run',
+      teammate: 'Cody',
+      schedule: 'Watch',
+      report: report('report', 'x'),
+    }),
+  )
+  assert.doesNotMatch(single, /read_child/)
+  assert.match(single, /\n\nx$/)
+  const task = forPeople(childPrompt({ from: 'Riley', parentTitle: 'P', instructions: 'Do it' }))
+  assert.match(task, /\n\nDo it$/)
+  // The teammate still gets them, and a person's own words are left as they are.
+  assert.match(batchNote(one, []), /`read_child`/)
+  assert.equal(forPeople('Call `report` when done.'), 'Call `report` when done.')
+})
+
+test('a queued message nobody typed can be steered, not edited or cancelled', () => {
+  for (const action of ['steer', 'edit', 'cancel'])
+    assert.equal(mayChangeQueued('m1', action), true)
+  assert.equal(mayChangeQueued(null, 'steer'), true)
+  assert.equal(mayChangeQueued(null, 'edit'), false)
+  assert.equal(mayChangeQueued(null, 'cancel'), false)
 })

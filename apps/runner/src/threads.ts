@@ -2,7 +2,8 @@
 // turns of a thread in order (several teammates answer one after another), and
 // at most `concurrency` turns at once across threads. A member's message that
 // comes in while the thread is busy waits in its queue, shown as queued, until
-// its turn starts; meanwhile it can be cancelled, edited or steered into the running turn.
+// its turn starts; meanwhile it can be steered into the running turn, and cancelled or
+// edited when a person wrote it.
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -12,6 +13,7 @@ import {
   attachmentLines,
   bareToolName,
   commandPrompt,
+  mayChangeQueued,
   mentionedIds,
   MessageAttachment,
   THREAD_NOTE_SOURCE,
@@ -904,6 +906,8 @@ export class Threads {
     const message = thread?.messages.get(command.messageId)
     // Already read, or never here (a restart): the thread shows what became of it.
     if (!thread || !message || message.state === 'steering') return
+    // Brigade's own (a child's report, a wake-up) goes to the teammate as it was.
+    if (!mayChangeQueued(message.memberId, command.action)) return
     if (command.action === 'cancel')
       return this.cancel(command.sessionId, thread, message, command.memberId)
     if (command.action === 'edit') {

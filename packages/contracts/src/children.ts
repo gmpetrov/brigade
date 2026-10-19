@@ -79,12 +79,22 @@ const STATUS_WORDS: Record<ChildReportStatus, string> = {
   cancelled: 'cancelled',
 }
 
+/** How each note ends: what to do next, for the teammate only (forPeople leaves it out). */
+const CHILD_HINT = 'When you are done, call `report` once with what you found, then end your turn.'
+const BATCH_HINT =
+  '`read_child` gives a child’s full report and what it produced. To tell one more, ' +
+  '`message_thread` with its threadId: it carries on and reports again. ' +
+  'Then go on with the work or tell the person where things stand.'
+const SINGLE_HINT =
+  '`read_child` gives its full report and what it produced. Act on it if it needs you to, ' +
+  'or tell the person in a line.'
+
 /** What the child is told with its work: where it comes from and how to finish. */
 export function childPrompt(input: { from: string; parentTitle: string; instructions: string }) {
   return (
     `${input.from} ${CHILD_TASK_MARK} “${input.parentTitle}” and waits for your report.\n\n` +
     `${input.instructions}\n\n` +
-    'When you are done, call `report` once with what you found, then end your turn.'
+    CHILD_HINT
   )
 }
 
@@ -110,12 +120,7 @@ export function batchNote(
       'Still working past the time you gave them (each tells you later, only if it has something to say):',
       ...unfinished.map((c) => `- ${c.teammate} · “${c.title}” (${c.id})`),
     )
-  lines.push(
-    '',
-    '`read_child` gives a child’s full report and what it produced. To tell one more, ' +
-      '`message_thread` with its threadId: it carries on and reports again. ' +
-      'Then go on with the work or tell the person where things stand.',
-  )
+  lines.push('', BATCH_HINT)
   return lines.join('\n')
 }
 
@@ -132,8 +137,7 @@ export function singleNote(child: {
       ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${STATUS_WORDS[child.report.status]}:`
       : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${STATUS_WORDS[child.report.status]} after you stopped waiting for it:`) +
     `\n\n${clipReport(child.report.summary, 2_000)}\n\n` +
-    '`read_child` gives its full report and what it produced. Act on it if it needs you to, ' +
-    'or tell the person in a line.'
+    SINGLE_HINT
   )
 }
 
@@ -160,4 +164,11 @@ export function childNote(text: string): 'task' | 'report' | null {
   if (first.includes(` ${CHILD_TASK_MARK} “`) && first.endsWith('and waits for your report.'))
     return 'task'
   return null
+}
+
+/** A note about child threads as people read it: without what it tells the teammate to do next. */
+export function forPeople(text: string) {
+  for (const hint of [CHILD_HINT, BATCH_HINT, SINGLE_HINT])
+    if (text.endsWith(hint)) return text.slice(0, -hint.length).trimEnd()
+  return text
 }

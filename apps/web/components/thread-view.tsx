@@ -9,6 +9,7 @@ import {
   pickedDesignPath,
   bareToolName,
   childNote,
+  forPeople,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -205,6 +206,8 @@ const COMMAND_TASKS = new Set(['local_bash', 'monitor_mcp'])
 export type QueuedMessage = {
   messageId: string
   text: string
+  /** Who wrote it: none for Brigade's own, such as a child's report. */
+  memberId: string | null
   attachments: MessageAttachment[]
   waitingFor: 'turn' | 'person'
   note?: string
@@ -262,6 +265,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
           queued.set(e.messageId, {
             messageId: e.messageId,
             text: e.text,
+            memberId: e.memberId,
             attachments: e.attachments ?? [],
             waitingFor: e.waitingFor,
             ...(e.note ? { note: e.note } : {}),
@@ -1455,7 +1459,7 @@ export function ThreadItems({
                   : 'Work from the parent thread'}
               </p>
               <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                <MessageWithCode text={item.text} />
+                <MessageWithCode text={forPeople(item.text)} />
               </div>
             </div>
           )
