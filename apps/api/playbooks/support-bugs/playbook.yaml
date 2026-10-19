@@ -7,7 +7,7 @@ apps:
   - { kind: gmail, access: read_write }
   - { kind: github, access: read_write }
   - { kind: stripe, access: read, optional: true }
-  - { kind: mixpanel, access: read, optional: true }
+  - { role: analytics, kinds: [mixpanel, mcp], access: read, optional: true }
 
 settings:
   - { key: product, type: text, ask: 'Which product does this support cover?' }
@@ -16,6 +16,13 @@ settings:
   - { key: docs, type: url, ask: 'Where is the public documentation?' }
   - { key: repo, type: repository, ask: 'In which repository should bugs be fixed?' }
   - { key: signature, type: text, default: 'The {{product}} team' }
+  - {
+      key: analytics,
+      type: account,
+      app: analytics,
+      optional: true,
+      ask: "Which analytics tool should be checked for a customer's account?",
+    }
 
 entries:
   - {

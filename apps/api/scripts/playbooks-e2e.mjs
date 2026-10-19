@@ -656,12 +656,12 @@ await check('installed from the chat: its card, then its settings one by one', a
     said.first.missing.map((m) => m.key),
     ['inbox', 'address', 'docs', 'repo'],
   )
-  assert.equal(said.first.apps.find((a) => a.kind === 'github').status, 'missing')
+  assert.equal(said.first.apps.find((a) => a.name === 'github').status, 'missing')
   assert.match(said.first.next, /scope the playbook declares/)
   assert.equal(said.bad.ok, false)
   assert.match(said.bad.error, /web address/)
   assert.deepEqual(said.rest.missing, [])
-  assert.equal(said.rest.apps.find((a) => a.kind === 'github').status, 'ready')
+  assert.equal(said.rest.apps.find((a) => a.name === 'github').status, 'ready')
   const [row] = await q(`select settings from "PlaybookInstallation" where id = $1`, [
     installationId,
   ])

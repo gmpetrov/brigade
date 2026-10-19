@@ -13,7 +13,7 @@ import { BookOpenCheck, ChevronRight, FlaskConical, Power } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
-import { ProviderLogo, type ProviderKind } from '@/components/provider-logo'
+import { AppList } from '@/components/playbook-apps'
 import { StatusBadge, StatusDot } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -21,19 +21,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, useApi } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
-
-const APP_NAMES: Record<string, string> = {
-  gmail: 'Gmail',
-  github: 'GitHub',
-  stripe: 'Stripe',
-  mixpanel: 'Mixpanel',
-  google_calendar: 'Google Calendar',
-  google_drive: 'Google Drive',
-  resend: 'Resend',
-  linear: 'Linear',
-  notion: 'Notion',
-}
-const appName = (kind: string) => APP_NAMES[kind] ?? kind.replace(/_/g, ' ')
 
 const LEVEL_WORDS: Record<PlaybookLevel, string> = {
   ask: 'Asks first',
@@ -50,23 +37,6 @@ function Label({ icon, children }: { icon: React.ReactNode; children: React.Reac
       {icon}
       {children}
     </div>
-  )
-}
-
-function AppList({ apps }: { apps: { kind: string; access: string; optional?: boolean }[] }) {
-  return (
-    <ul className="flex flex-col divide-y rounded-lg bg-muted/60">
-      {apps.map((a) => (
-        <li key={a.kind} className="flex items-center gap-2.5 px-3 py-2 text-sm">
-          <ProviderLogo kind={a.kind as ProviderKind} className="size-4" />
-          <span className="min-w-0 flex-1 truncate">{appName(a.kind)}</span>
-          <span className="text-xs text-muted-foreground">
-            {a.access === 'read' ? 'Reads' : 'Reads and writes'}
-            {a.optional ? ' · optional' : ''}
-          </span>
-        </li>
-      ))}
-    </ul>
   )
 }
 

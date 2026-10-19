@@ -36,7 +36,7 @@ export const PlaybookSetting = z
     ask: Text.max(300).optional(),
     /** May hold {{other}} settings. */
     default: z.union([z.string(), z.number()]).optional(),
-    /** An account setting: the App kind it is an account of. */
+    /** An account setting: the App it is an account of, by its kind or its role's name. */
     app: z.string().optional(),
     /** A choice setting: its values. */
     options: z.array(Text).min(1).optional(),
@@ -136,13 +136,63 @@ export const UpdatePlaybookAction = z.object({
 })
 export type UpdatePlaybookAction = z.infer<typeof UpdatePlaybookAction>
 
-export const PlaybookApp = z.object({
-  /** A built-in App's kind, e.g. gmail. */
-  kind: z.string().regex(/^[a-z_]+$/),
-  access: z.enum(['read', 'read_write']),
-  optional: z.boolean().optional(),
-})
+const AppKind = z.string().regex(/^[a-z_]+$/)
+const Access = z.enum(['read', 'read_write'])
+
+/**
+ * An App it needs: one App by its kind (`{ kind: gmail }`), or a role any of several Apps can
+ * hold (`{ role: analytics, kinds: [mixpanel, mcp] }`), whose account the installation picks.
+ * A kind is the role named after it that accepts only it.
+ */
+export const PlaybookApp = z.union([
+  z.object({
+    /** A built-in App's kind, e.g. gmail. */
+    kind: AppKind,
+    access: Access,
+    optional: z.boolean().optional(),
+  }),
+  z.object({
+    /** Its name, as its account setting names it (`app: analytics`). */
+    role: Key,
+    /** The App kinds that may hold it; mcp: a server added by its URL, chosen by an account setting. */
+    kinds: z.array(AppKind).min(1).max(20),
+    access: Access,
+    optional: z.boolean().optional(),
+  }),
+])
 export type PlaybookApp = z.infer<typeof PlaybookApp>
+
+/** A playbook's App as a role: a plain kind is the role of its name that accepts only it. */
+export type PlaybookRole = {
+  name: string
+  kinds: string[]
+  access: 'read' | 'read_write'
+  optional: boolean
+  /** Declared as one App (`kind`) rather than a role. */
+  plain: boolean
+}
+
+export const playbookRole = (app: PlaybookApp): PlaybookRole =>
+  'role' in app
+    ? {
+        name: app.role,
+        kinds: app.kinds,
+        access: app.access,
+        optional: Boolean(app.optional),
+        plain: false,
+      }
+    : {
+        name: app.kind,
+        kinds: [app.kind],
+        access: app.access,
+        optional: Boolean(app.optional),
+        plain: true,
+      }
+
+export const playbookRoles = (apps: readonly PlaybookApp[]) => apps.map(playbookRole)
+
+/** A server added by its URL: it may hold a role only through an account setting naming it. */
+export const MCP_KIND = 'mcp'
 
 export const PlaybookManifest = z
   .object({
@@ -180,8 +230,26 @@ export const PlaybookManifest = z
       issue(`two settings are called ${key}`, ['settings'])
     for (const key of dupes(m.actions.map((a) => a.key)))
       issue(`two actions are called ${key}`, ['actions'])
-    for (const kind of dupes(m.apps.map((a) => a.kind)))
-      issue(`${kind} is declared twice`, ['apps'])
+    const roles = playbookRoles(m.apps)
+    for (const name of dupes(roles.map((r) => r.name))) issue(`${name} is declared twice`, ['apps'])
+    roles.forEach((r, i) => {
+      for (const kind of dupes(r.kinds))
+        issue(`${r.name} lists ${kind} twice`, ['apps', i, 'kinds'])
+    })
+    // One account and one access per App: a kind held by two roles would be ambiguous. Servers
+    // added by their URL are the exception, as each role names its own by an account setting.
+    for (const kind of dupes(roles.flatMap((r) => [...new Set(r.kinds)])))
+      if (kind !== MCP_KIND) issue(`${kind} is accepted by two of its apps`, ['apps'])
+    const accountRoles = new Set(
+      m.settings.filter((s) => s.type === 'account').map((s) => s.app as string),
+    )
+    roles.forEach((r, i) => {
+      if (r.kinds.includes(MCP_KIND) && !accountRoles.has(r.name))
+        issue(
+          `${r.name} accepts an MCP server, so an account setting must name it (app: ${r.name})`,
+          ['apps', i, 'kinds'],
+        )
+    })
     const keys = new Set(m.settings.map((s) => s.key))
     // Every {{setting}} it uses is one of its settings.
     const refs = (text: string, path: (string | number)[]) => {
@@ -190,16 +258,23 @@ export const PlaybookManifest = z
     }
     m.settings.forEach((s, i) => {
       if (typeof s.default === 'string') refs(s.default, ['settings', i, 'default'])
-      if (s.type === 'account' && !m.apps.some((a) => a.kind === s.app))
+      if (s.type === 'account' && !roles.some((r) => r.name === s.app))
         issue(`${s.app} is not among its apps`, ['settings', i, 'app'])
     })
     m.entries.forEach((e, i) => {
       if (isTriggerEntry(e)) {
         refs(e.account, ['entries', i, 'account'])
         Object.values(e.options).forEach((v) => refs(v, ['entries', i, 'options']))
-        const kind = e.trigger.split('.')[0]
-        if (!m.apps.some((a) => a.kind === kind))
-          issue(`${kind} is not among its apps`, ['entries', i, 'trigger'])
+        // A trigger is an App's event: its App is declared by its kind, not as a role, whose
+        // account could be of another kind.
+        const kind = e.trigger.split('.')[0]!
+        if (!roles.some((r) => r.plain && r.name === kind))
+          issue(
+            roles.some((r) => r.kinds.includes(kind))
+              ? `${kind} starts it, so it is declared as an App ({ kind: ${kind} }), not within a role`
+              : `${kind} is not among its apps`,
+            ['entries', i, 'trigger'],
+          )
       } else {
         // Its cron is checked where the template loads (schedules.ts imports this file).
         refs(e.instructions, ['entries', i, 'instructions'])
@@ -287,8 +362,21 @@ export const ThreadPlaybook = z.object({
   installationId: z.string(),
   runId: z.string(),
   name: z.string(),
-  /** The Apps it declares: the thread has only theirs. */
+  /** The Apps it declares, by kind or role name: the thread has only theirs. */
   apps: z.array(z.string()).default([]),
+  /**
+   * Its roles any of several Apps can hold (an analytics tool): the account each uses here, by
+   * what its row shows, or null when none was picked. Older runners ignore it.
+   */
+  roles: z
+    .array(
+      z.object({
+        name: z.string(),
+        kinds: z.array(z.string()),
+        account: z.string().nullable(),
+      }),
+    )
+    .optional(),
   /** A dry run's: every write is simulated, nothing is pushed, nobody is asked. */
   dryRun: z.boolean().default(false),
 })
@@ -330,11 +418,18 @@ export const UpdatePlaybook = z.object({
 /** The Activate button: from the thread it was installed in, where a member's ticket goes. */
 export const ActivatePlaybook = z.object({ threadId: z.string().optional() })
 
-/** What an App of a playbook stands at for its teammate: usable, missing, or read-only where it writes. */
-export type PlaybookAppStatus = PlaybookApp & {
+/**
+ * What an App or role of a playbook stands at for its teammate, on its owner's accounts: usable,
+ * missing, or read-only where it writes.
+ */
+export type PlaybookAppStatus = PlaybookRole & {
   status: 'ready' | 'missing' | 'read_only'
-  /** The accounts the teammate can use, by what they show (a Gmail address). */
+  /** The accounts the teammate can use for it, by what they show (a Gmail address). */
   accounts: string[]
+  /** An account setting picks its account: the run uses that one alone. */
+  picks: boolean
+  /** The account that setting picked (what its row shows, and its kind), else null. */
+  chosen: { name: string; kind: string } | null
 }
 
 /** One event of a dry run: the case found, what would have been done, its thread. */
@@ -527,7 +622,8 @@ export type PlaybookInstallationView = {
   teammate: { id: string; name: string }
   owner: { id: string; name: string }
   project: { id: string; name: string; icon: string | null; logo: string | null } | null
-  apps: PlaybookApp[]
+  /** Its Apps and roles, each with the account it uses or that one is missing. */
+  apps: PlaybookAppStatus[]
   settings: {
     key: string
     type: PlaybookSettingType

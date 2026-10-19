@@ -146,9 +146,10 @@ export async function specFor(
     .filter((g) => usableIn(g.connection, thread))
     .flatMap((g) => {
       if (!playbook) return [g]
-      const access = playbook.access.get(g.connection.kind)
-      // Of a kind it names an account for (its inbox), that account alone.
-      if (!access || !playbookAccount(playbook, g.connection)) return []
+      // An App one of its roles accepts; where a setting picks the role's account (its inbox,
+      // its analytics tool), that account alone. A server added by its URL only when picked.
+      const access = playbookAccount(playbook, g.connection)
+      if (!access) return []
       return [access === 'read' ? { ...g, scope: 'read' as const } : g]
     })
   const github = grants.some(
@@ -224,6 +225,16 @@ export async function specFor(
           runId: playbook.runId,
           name: playbook.name,
           apps: playbook.apps,
+          roles: playbook.roles
+            .filter((r) => !r.plain)
+            .map((r) => {
+              const picked = grants.find((g) => r.accounts?.has(g.connection.id))?.connection
+              return {
+                name: r.name,
+                kinds: r.kinds,
+                account: picked ? (picked.externalAccount ?? picked.label) : null,
+              }
+            }),
           dryRun: playbook.dryRun,
         }
       : null,

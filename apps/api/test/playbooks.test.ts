@@ -135,6 +135,78 @@ rejects(
   /firstResponse: answer is not one of its actions/,
 )
 
+// Roles: an App any of several can hold, its account picked by a setting.
+const analytics = (m: Record<string, any>) => {
+  m.apps.push({ role: 'analytics', kinds: ['mixpanel', 'mcp'], access: 'read', optional: true })
+  m.settings.push({ key: 'analytics', type: 'account', app: 'analytics', optional: true })
+}
+
+test('reads a template with a role, and its shipped one names Mixpanel or an MCP server', () => {
+  const { manifest } = readTemplate('inbox', template(analytics))
+  assert.deepEqual(manifest.apps[1], {
+    role: 'analytics',
+    kinds: ['mixpanel', 'mcp'],
+    access: 'read',
+    optional: true,
+  })
+  const support = templates().get('brigade/support-bugs')!.manifest
+  assert.deepEqual(
+    support.apps.map((a) => ('role' in a ? `${a.role}:${a.kinds.join('|')}` : a.kind)),
+    ['gmail', 'github', 'stripe', 'analytics:mixpanel|mcp'],
+  )
+  const setting = support.settings.find((s) => s.key === 'analytics')
+  assert.deepEqual([setting?.type, setting?.app, setting?.optional], ['account', 'analytics', true])
+})
+
+test('a role of one built-in App needs no account setting', () => {
+  assert.doesNotThrow(() =>
+    readTemplate(
+      'inbox',
+      template((m) => m.apps.push({ role: 'analytics', kinds: ['mixpanel'], access: 'read' })),
+    ),
+  )
+})
+
+rejects(
+  'a role accepting an MCP server with no account setting naming it',
+  (m) => m.apps.push({ role: 'analytics', kinds: ['mixpanel', 'mcp'], access: 'read' }),
+  /analytics accepts an MCP server, so an account setting must name it/,
+)
+rejects(
+  'a role accepting an App Brigade does not have',
+  (m) => {
+    analytics(m)
+    m.apps[1].kinds = ['mixpanel', 'posthog']
+  },
+  /no App posthog/,
+)
+rejects(
+  'a role named like another of its Apps',
+  (m) => m.apps.push({ role: 'gmail', kinds: ['mixpanel'], access: 'read' }),
+  /gmail is declared twice/,
+)
+rejects(
+  'an App accepted by two of its Apps',
+  (m) => m.apps.push({ role: 'mail', kinds: ['gmail'], access: 'read' }),
+  /gmail is accepted by two of its apps/,
+)
+rejects(
+  'an account setting naming a role it does not have',
+  (m) => {
+    analytics(m)
+    m.settings[2].app = 'crm'
+  },
+  /crm is not among its apps/,
+)
+rejects(
+  'a trigger on an App it holds only within a role',
+  (m) => {
+    m.apps = [{ role: 'mail', kinds: ['gmail'], access: 'read_write' }]
+    m.settings[0].app = 'mail'
+  },
+  /gmail starts it, so it is declared as an App/,
+)
+
 test('fill puts settings in, and leaves unknown ones', () => {
   assert.equal(fill('to:{{ address }} {{other}}', { address: 'a@b.c' }), 'to:a@b.c {{other}}')
 })

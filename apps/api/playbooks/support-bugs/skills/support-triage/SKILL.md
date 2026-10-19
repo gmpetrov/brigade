@@ -23,6 +23,9 @@ Give the mail exactly one case:
 | `billing_or_data`     | Refunds, cancellations, data export or deletion | Escalate: these belong to a future billing playbook.                |
 | `noise`               | Spam, cold outreach, automatic replies          | Do nothing, and report it as noise.                                 |
 
+For an account problem, also look at the customer's usage in the analytics tool, when the playbook has
+one: its account is named in your instructions, and you only read it.
+
 A reply in an ongoing conversation continues this thread: read what was already said before answering.
 
 ## 2. Answer

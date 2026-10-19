@@ -7,13 +7,17 @@
 import {
   cronProblem,
   isTriggerEntry,
+  MCP_KIND,
   PlaybookManifest,
+  playbookRoles,
   nextRun,
   parseSkillMarkdown,
   SkillName,
   type InstallPlaybook,
+  type PlaybookAppStatus,
   type PlaybookEntry,
   type PlaybookInstallationView,
+  type PlaybookRole,
   type PlaybookRunStatus,
   type PlaybookRunView,
   type PlaybookTemplate,
@@ -26,6 +30,7 @@ import { connectors, triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { Prisma, type Scope, type ScopedDb } from './db.js'
 import { PLAYBOOK_TEMPLATES } from './generated/playbooks.js'
+import { usableIn } from './apps.js'
 import { isMcp } from './mcp-tools.js'
 import { usableProject } from './projects.js'
 import { deleteTriggers, resync } from './routes/triggers.js'
@@ -75,8 +80,11 @@ export function readTemplate(
   const manifest = parsed.data!
   if (manifest.id !== `${SOURCE}/${folder}`)
     fail(folder, `its id must be ${SOURCE}/${folder}, not ${manifest.id}`)
-  for (const app of manifest.apps)
-    if (!connectors[app.kind as ConnectorKind]) fail(folder, `there is no App ${app.kind}`)
+  // Each App a role accepts is built in, or a server added by its URL (mcp).
+  const roles = playbookRoles(manifest.apps)
+  for (const kind of roles.flatMap((r) => r.kinds))
+    if (kind !== MCP_KIND && !connectors[kind as ConnectorKind])
+      fail(folder, `there is no App ${kind}`)
   manifest.entries.forEach((entry, i) => {
     if (isTriggerEntry(entry)) {
       const [kind, event] = entry.trigger.split('.') as [ConnectorKind, string]
@@ -93,10 +101,9 @@ export function readTemplate(
   // Each tool of an action is one of its Apps'; an MCP App's tools come from its server.
   for (const action of manifest.actions)
     for (const tool of action.tools) {
-      const owner = manifest.apps.find((a) => {
-        const kind = a.kind as ConnectorKind
-        return isMcp(kind) || connectors[kind]?.operations[tool]
-      })
+      const owner = roles
+        .flatMap((r) => r.kinds as ConnectorKind[])
+        .find((kind) => isMcp(kind) || connectors[kind]?.operations[tool])
       if (!owner) fail(folder, `action ${action.key}: no App of it has the tool ${tool}`)
     }
   const skills = manifest.skills.map((path): TemplateSkill => {
@@ -152,6 +159,10 @@ export const fill = (text: string, settings: Record<string, string | number>) =>
   text.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (whole, key: string) =>
     key in settings ? String(settings[key]) : whole,
   )
+
+/** "mixpanel or MCP server": the Apps a role accepts, as a sentence says them. */
+const kindsWords = (kinds: readonly string[]) =>
+  kinds.map((k) => (k === MCP_KIND ? 'MCP server' : k)).join(' or ')
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const REPOSITORY = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/
@@ -209,9 +220,12 @@ export async function checkSettings(
         values[setting.key] = text
         break
       case 'account': {
-        // Its id, or what its row shows (the Gmail address), as a person would say it.
+        // Its id, or what its row shows (the Gmail address), as a person would say it: an
+        // account of one of the Apps its role accepts.
+        const role = playbookRoles(manifest.apps).find((r) => r.name === setting.app)
+        const kinds = (role?.kinds ?? [setting.app!]) as ConnectorKind[]
         const accounts = await db.connection.findMany({
-          where: { kind: setting.app as ConnectorKind, status: { not: 'removed' } },
+          where: { kind: { in: kinds }, status: { not: 'removed' } },
           select: { id: true, externalAccount: true, label: true },
         })
         const lower = text.toLowerCase()
@@ -223,8 +237,8 @@ export async function checkSettings(
           bad(
             setting,
             accounts.length
-              ? `needs one of the workspace's ${setting.app} accounts: ${accounts.map((a) => a.externalAccount ?? a.label).join(', ')}`
-              : `needs a ${setting.app} account, and the workspace has none yet`,
+              ? `needs one of the workspace's ${kindsWords(kinds)} accounts: ${accounts.map((a) => a.externalAccount ?? a.label).join(', ')}`
+              : `needs a ${kindsWords(kinds)} account, and the workspace has none yet`,
           )
         values[setting.key] = account!.id
         break
@@ -828,18 +842,81 @@ export async function surface(
     })
 }
 
+/**
+ * A role of a playbook as its runs may use it: the Apps it accepts, at its access, and the
+ * accounts its account settings picked. `accounts` null: it has no account setting, so any
+ * account of its kinds granted to the teammate (never a server added by its URL). A set, empty
+ * while unanswered (an optional one): those accounts alone.
+ */
+export type RunRole = PlaybookRole & { accounts: Set<string> | null }
+
+/** Its roles, each with the accounts its settings picked (their connection ids). */
+export function runRoles(manifest: PlaybookManifest, settings: Record<string, unknown>): RunRole[] {
+  return playbookRoles(manifest.apps).map((role) => {
+    const picks = manifest.settings.filter((s) => s.type === 'account' && s.app === role.name)
+    if (!picks.length) return { ...role, accounts: null }
+    const ids = new Set<string>()
+    for (const setting of picks) {
+      const value = settings[setting.key]
+      // Unanswered (an optional one): no account rather than every one.
+      if (typeof value === 'string' && value) ids.add(value)
+    }
+    return { ...role, accounts: ids }
+  })
+}
+
+/**
+ * The access a playbook's thread has to this account, or null when it may not use it: an App one
+ * of its roles accepts, and where that role's account setting picked one (its inbox), that very
+ * account, not the other inboxes its teammate has. A server added by its URL counts only as the
+ * account a setting picked. Old manifests (Apps by kind alone) read the same: a kind is a role.
+ */
+export function playbookAccount(
+  playbook: { roles: RunRole[] },
+  connection: { id: string; kind: string },
+): 'read' | 'read_write' | null {
+  let access: 'read' | 'read_write' | null = null
+  for (const role of playbook.roles) {
+    if (!role.kinds.includes(connection.kind)) continue
+    const allowed = role.accounts ? role.accounts.has(connection.id) : connection.kind !== MCP_KIND
+    if (allowed && access !== 'read_write') access = role.access
+  }
+  return access
+}
+
+/** Whether one of its roles accepts this kind of App at all (to tell a wrong account from a wrong App). */
+export const playbookAccepts = (playbook: { roles: RunRole[] }, kind: string) =>
+  playbook.roles.find((r) => r.kinds.includes(kind)) ?? null
+
+/**
+ * The action of its manifest a call is, by the tool's name as teammates call it (gmail_send,
+ * mixpanel_run_query, posthog_create_annotation), else null: an unlisted write, which asks. A
+ * server added by its URL names its tools after itself; one whose names fall in a built-in App's
+ * (a server called "GitHub merge" calling a tool github_merge_pull_request) is never taken for
+ * that App's action.
+ */
+export function playbookActionOf(
+  actions: PlaybookManifest['actions'],
+  kind: string,
+  tool: string,
+): string | null {
+  if (
+    kind === MCP_KIND &&
+    Object.entries(connectors).some(
+      ([builtIn, definition]) => tool.startsWith(`${builtIn}_`) || definition?.operations[tool],
+    )
+  )
+    return null
+  return actions.find((a) => a.tools.includes(tool))?.key ?? null
+}
+
 /** The playbook a thread is part of, for its spec: its run, name and Apps. */
 export async function threadPlaybook(
   db: ScopedDb,
   playbookRunId: string | null,
 ): Promise<
-  | (ThreadPlaybook & {
-      access: Map<string, 'read' | 'read_write'>
-      /**
-       * An App kind it has an account setting for (its inbox, say): the only accounts of that
-       * kind the run may use, by connection id. Kinds without one: any account granted.
-       */
-      accounts: Map<string, Set<string>>
+  | (Omit<ThreadPlaybook, 'roles'> & {
+      roles: RunRole[]
       actions: PlaybookManifest['actions']
       /** The action that is its first response to an event, if it times one. */
       firstResponse: string | null
@@ -855,40 +932,77 @@ export async function threadPlaybook(
   if (!run) return null
   const manifest = run.installation.manifest as PlaybookManifest
   const settings = (run.installation.settings ?? {}) as Record<string, unknown>
-  const accounts = new Map<string, Set<string>>()
-  for (const setting of manifest.settings)
-    if (setting.type === 'account' && setting.app) {
-      const ids = accounts.get(setting.app) ?? new Set<string>()
-      const value = settings[setting.key]
-      // Unanswered (an optional one): no account of that kind rather than every one.
-      if (typeof value === 'string' && value) ids.add(value)
-      accounts.set(setting.app, ids)
-    }
+  const roles = runRoles(manifest, settings)
   return {
     installationId: run.installation.id,
     runId: run.id,
     name: manifest.name,
-    apps: manifest.apps.map((a) => a.kind),
+    apps: roles.map((r) => r.name),
     dryRun: run.dryRun,
     dryRunId: run.dryRunId,
-    access: new Map(manifest.apps.map((a) => [a.kind, a.access])),
-    accounts,
+    roles,
     actions: manifest.actions,
     firstResponse: manifest.firstResponse ?? null,
   }
 }
 
 /**
- * Whether a playbook's thread may use this account: an App the playbook declares, and of a kind
- * it names an account for (its inbox), that very account. Not the other inboxes its teammate has.
+ * The playbook's Apps and roles as its teammate stands with each, on its owner's accounts: the
+ * accounts it may use for each (only the one picked, where a setting picks one), and whether
+ * that is enough for the access the role declares.
  */
-export function playbookAccount(
-  playbook: { access: Map<string, unknown>; accounts: Map<string, Set<string>> },
-  connection: { id: string; kind: string },
-) {
-  if (!playbook.access.has(connection.kind)) return false
-  const only = playbook.accounts.get(connection.kind)
-  return !only || only.has(connection.id)
+export async function roleStatuses(
+  db: ScopedDb,
+  manifest: PlaybookManifest,
+  settings: Record<string, unknown>,
+  teammateId: string,
+  ownerMemberId: string,
+): Promise<PlaybookAppStatus[]> {
+  const roles = runRoles(manifest, settings)
+  const kinds = [...new Set(roles.flatMap((r) => r.kinds))]
+  const picked = [...new Set(roles.flatMap((r) => [...(r.accounts ?? [])]))]
+  const [grants, chosen] = await Promise.all([
+    db.grant.findMany({
+      where: {
+        teammateId,
+        connection: { kind: { in: kinds as never }, status: 'active' },
+      },
+      include: { connection: true },
+    }),
+    picked.length
+      ? db.connection.findMany({
+          where: { id: { in: picked }, status: { not: 'removed' } },
+          select: { id: true, kind: true, label: true, externalAccount: true },
+        })
+      : [],
+  ])
+  return roles.map(({ accounts, ...role }) => {
+    // The accounts it could use, those its setting may pick among; a server added by its URL
+    // only where a setting picks the account.
+    const candidates = grants.filter(
+      (g) =>
+        role.kinds.includes(g.connection.kind) &&
+        (accounts || g.connection.kind !== MCP_KIND) &&
+        usableIn(g.connection, { startedByMemberId: ownerMemberId }),
+    )
+    // Picked: that account alone; not yet (the question is still to come): any it could pick.
+    const usable = accounts?.size
+      ? candidates.filter((g) => accounts.has(g.connection.id))
+      : candidates
+    const writable = usable.filter((g) => g.scope === 'read_write')
+    const pick = chosen.find((c) => accounts?.has(c.id))
+    return {
+      ...role,
+      status: !usable.length
+        ? 'missing'
+        : role.access === 'read_write' && !writable.length
+          ? 'read_only'
+          : 'ready',
+      accounts: candidates.map((g) => g.connection.externalAccount ?? g.connection.label),
+      picks: accounts !== null,
+      chosen: pick ? { name: pick.externalAccount ?? pick.label, kind: pick.kind } : null,
+    }
+  })
 }
 
 type PlaybookReport = Extract<ScheduleOperation, { name: 'playbook_report' }>
@@ -1016,6 +1130,19 @@ async function toView(
   ])
   const settings = (row.settings ?? {}) as Record<string, string | number>
   const { missing } = withDefaults(manifest, settings)
+  // Account settings show the account as its row does (the Gmail address), not its id.
+  const picked = manifest.settings
+    .filter((s) => s.type === 'account' && typeof settings[s.key] === 'string')
+    .map((s) => settings[s.key] as string)
+  const [apps, accounts] = await Promise.all([
+    roleStatuses(db, manifest, settings, row.teammate.id, row.owner.id),
+    picked.length
+      ? db.connection.findMany({
+          where: { id: { in: picked } },
+          select: { id: true, label: true, externalAccount: true },
+        })
+      : [],
+  ])
   const recentRuns: PlaybookRunView[] = recent.map((run) => ({
     id: run.id,
     title: run.rootSession?.title ?? 'Run',
@@ -1037,19 +1164,17 @@ async function toView(
     teammate: row.teammate,
     owner: { id: row.owner.id, name: row.owner.user.name },
     project: row.project,
-    apps: manifest.apps,
-    settings: manifest.settings.map((s) => ({
-      key: s.key,
-      type: s.type,
-      ...(s.ask ? { ask: s.ask } : {}),
-      value:
-        s.type === 'account'
-          ? (row.triggers.find((t) => t.connectionId === settings[s.key])?.connection
-              .externalAccount ??
-            settings[s.key] ??
-            null)
-          : (settings[s.key] ?? null),
-    })),
+    apps,
+    settings: manifest.settings.map((s) => {
+      const account =
+        s.type === 'account' ? accounts.find((a) => a.id === settings[s.key]) : undefined
+      return {
+        key: s.key,
+        type: s.type,
+        ...(s.ask ? { ask: s.ask } : {}),
+        value: account ? (account.externalAccount ?? account.label) : (settings[s.key] ?? null),
+      }
+    }),
     actions,
     entries: [
       ...row.triggers.map((t) => ({

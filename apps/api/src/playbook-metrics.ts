@@ -5,6 +5,7 @@
 // same runs, so "handled on its own" there is the sheet's "unattended".
 import {
   isTriggerEntry,
+  playbookRoles,
   type PlaybookHomeLine,
   type PlaybookManifest,
   type PlaybookMetrics,
@@ -197,7 +198,7 @@ export async function playbookMetrics(
   const byCase = group(week, (r) => r.case?.trim().toLowerCase() || null)
   return {
     responds: !!manifest.firstResponse,
-    fixesBugs: manifest.apps.some((a) => a.kind === 'github'),
+    fixesBugs: playbookRoles(manifest.apps).some((r) => r.kinds.includes('github')),
     week: tally(week, byRun),
     lastWeek: before.length ? tally(before, byRun) : null,
     cases: [...byCase]

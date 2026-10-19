@@ -262,17 +262,15 @@ describe('the bounds of a playbook run', { skip: !database && 'no database answe
   })
 
   test('an account setting left unanswered allows no account of its App, not every one', async () => {
-    const { playbookAccount, threadPlaybook } = await import('../src/playbooks.js')
+    const { playbookAccount, runRoles, threadPlaybook } = await import('../src/playbooks.js')
     const playbook = await threadPlaybook(db, ids.liveRun)
-    assert.deepEqual([...(playbook?.accounts.get('gmail') ?? [])], [ids.support])
-    assert.equal(playbook?.accounts.has('github'), false)
-    const unanswered = {
-      access: playbook!.access,
-      accounts: new Map([['gmail', new Set<string>()]]),
-    }
-    assert.equal(playbookAccount(unanswered, { id: ids.support, kind: 'gmail' }), false)
-    assert.equal(playbookAccount(unanswered, { id: ids.github, kind: 'github' }), true)
-    assert.equal(playbookAccount(unanswered, { id: 'x', kind: 'slack' }), false)
+    const role = (name: string) => playbook?.roles.find((r) => r.name === name)
+    assert.deepEqual([...(role('gmail')?.accounts ?? [])], [ids.support])
+    assert.equal(role('github')?.accounts, null)
+    const unanswered = { roles: runRoles(MANIFEST, {}) }
+    assert.equal(playbookAccount(unanswered, { id: ids.support, kind: 'gmail' }), null)
+    assert.equal(playbookAccount(unanswered, { id: ids.github, kind: 'github' }), 'read')
+    assert.equal(playbookAccount(unanswered, { id: 'x', kind: 'slack' }), null)
   })
 
   // -------------------------------------------------------------------------
