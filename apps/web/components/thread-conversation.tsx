@@ -14,6 +14,7 @@ import {
   CornerDownLeft,
   FolderKanban,
   Laptop,
+  MessageSquare,
   Reply,
   LoaderCircle,
   SquareKanban,
@@ -66,12 +67,14 @@ import {
 } from '@/components/preview-panel'
 import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
+import { StreamedTitle } from '@/components/streamed-title'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
 import { ChildrenWaiting, ParentLink } from '@/components/thread-children'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { useThreadPanel } from '@/components/thread-panel'
+import { ThreadMenu } from '@/components/thread-menu'
 import { ThreadSkeleton } from '@/components/thread-skeleton'
 import { ThreadItems, useThreadItems } from '@/components/thread-view'
 import { Button } from '@/components/ui/button'
@@ -686,11 +689,21 @@ export function ThreadConversation({
 
   // Expanded, what is not the conversation sits in the panel beside it: the thread's
   // computer (with Preview), its details, then what it made.
-  // One row per fact, an icon for its kind: who is in it, its project, its task, who started it.
+  // One row per fact, an icon for its kind: the thread itself, who is in it, its project, its
+  // task, who started it.
   const fact = 'flex min-w-0 items-center gap-2.5'
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
     <div className="flex flex-col gap-2 text-sm">
+      {/* Its title and menu: pin, rename, archive or delete it here too, as it may be out of
+          the sidebar. On its own row, so the menu is plainly the thread's, not the teammate's. */}
+      <div className={fact}>
+        <MessageSquare aria-label="Thread" className={factIcon} />
+        <span className="min-w-0 flex-1 truncate font-semibold" title={t.title}>
+          <StreamedTitle threadId={t.id} text={t.title || 'New thread'} />
+        </span>
+        <ThreadMenu thread={t} onChanged={() => void thread.reload()} />
+      </div>
       <div className={fact}>
         <UsersRound aria-label="Teammates" className={factIcon} />
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{peopleLinks}</div>
