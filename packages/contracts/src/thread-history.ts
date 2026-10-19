@@ -16,6 +16,13 @@ export const DELIVERABLE_FILE = new RegExp(`\\.(?:${DELIVERABLE_EXTENSIONS})$`, 
 /** The bare tool name, without an MCP server's `mcp__server__` prefix. */
 export const bareToolName = (toolName: string) => toolName.replace(/^mcp__.+?__/, '')
 
+/**
+ * Whether a bare tool name is a connector's operation. With several connections of one
+ * kind, each operation's tool name ends in its account (`github_create_pull_request_acme`).
+ */
+export const isOperation = (tool: string, operation: string) =>
+  tool === operation || tool.startsWith(`${operation}_`)
+
 /** Tools whose calls show among what a thread made. */
 export const OUTPUT_TOOLS = [
   'save_to_library',
@@ -29,9 +36,13 @@ export const OUTPUT_TOOLS = [
   'propose_skill',
 ]
 /** Email a teammate sent or drafted: a bare tool name, from a tool whose full name says mail. */
-export const EMAIL_TOOL = /^(?:gmail_)?(?:send|send_message|create_draft|reply|forward)$/
+export const EMAIL_TOOL = /^(?:gmail_)?(?:send|send_message|create_draft|reply|forward)(?:_\w+)?$/
 
 export function isOutputTool(toolName: string) {
   const tool = bareToolName(toolName)
-  return OUTPUT_TOOLS.includes(tool) || (EMAIL_TOOL.test(tool) && /gmail|mail/i.test(toolName))
+  return (
+    OUTPUT_TOOLS.includes(tool) ||
+    isOperation(tool, 'github_create_pull_request') ||
+    (EMAIL_TOOL.test(tool) && /gmail|mail/i.test(toolName))
+  )
 }
