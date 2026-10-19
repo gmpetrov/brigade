@@ -24,7 +24,7 @@ import { HTTPException } from 'hono/http-exception'
 import { audit, type Actor } from './audit.js'
 import { connectors, triggersOf } from './connectors/index.js'
 import type { ConnectorKind } from './connectors/types.js'
-import type { Scope, ScopedDb } from './db.js'
+import { Prisma, type Scope, type ScopedDb } from './db.js'
 import { PLAYBOOK_TEMPLATES } from './generated/playbooks.js'
 import { isMcp } from './mcp-tools.js'
 import { usableProject } from './projects.js'
@@ -904,9 +904,11 @@ export async function reportRun(
 /** Unreported, a run's state is its root thread's. */
 function runStatus(
   run: { status: PlaybookRunStatus; outcome: string | null },
-  thread: { status: string } | null,
+  thread: { status: string; children?: unknown[]; following?: unknown[] } | null,
 ): PlaybookRunStatus {
   if (run.outcome || !thread) return run.status
+  // Its own thread is quiet, but a fix it started or follows has not reported yet.
+  const waitsOnFix = Boolean(thread.children?.length || thread.following?.length)
   switch (thread.status) {
     case 'starting':
     case 'running':
@@ -917,7 +919,7 @@ function runStatus(
     case 'failed':
       return 'failed'
     default:
-      return 'done'
+      return waitsOnFix ? 'waiting_event' : 'done'
   }
 }
 
@@ -953,7 +955,22 @@ async function toView(
       where: { installationId: row.id, dryRun: false },
       orderBy: { startedAt: 'desc' },
       take: runsTaken,
-      include: { rootSession: { select: { id: true, title: true, status: true } } },
+      include: {
+        rootSession: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            // A fix it started or follows that has not reported: the run waits on it.
+            children: {
+              where: { report: { equals: Prisma.DbNull } },
+              select: { id: true },
+              take: 1,
+            },
+            following: { where: { deliveredAt: null }, select: { id: true }, take: 1 },
+          },
+        },
+      },
     }),
     db.playbookRun.count({
       where: { installationId: row.id, dryRun: false, startedAt: { gte: day } },

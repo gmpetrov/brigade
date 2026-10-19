@@ -410,12 +410,32 @@ export async function sessionMinutes(db: ScopedDb, sessionIds: string[]) {
     orderBy: [{ sessionId: 'asc' }, { seq: 'asc' }],
     select: { sessionId: true, type: true, at: true },
   })
+  // A turn stays open while it waits on a person's decision (an approval, a cap): that time
+  // uses no subscription, so it is taken out.
+  const tickets = await db.ticket.findMany({
+    where: { sessionId: { in: sessionIds }, type: { in: ['approval', 'cap'] } },
+    select: { sessionId: true, createdAt: true, resolvedAt: true },
+  })
+  const waits = new Map<string, { from: number; to: number }[]>()
+  for (const t of tickets) {
+    if (!t.sessionId) continue
+    const list = waits.get(t.sessionId) ?? []
+    list.push({ from: t.createdAt.getTime(), to: (t.resolvedAt ?? new Date()).getTime() })
+    waits.set(t.sessionId, list)
+  }
+  const waited = (sessionId: string, from: number, to: number) =>
+    (waits.get(sessionId) ?? []).reduce(
+      (sum, w) => sum + Math.max(0, Math.min(to, w.to) - Math.max(from, w.from)),
+      0,
+    )
   let open: { sessionId: string; at: Date } | null = null
   for (const e of events) {
     if (open && open.sessionId !== e.sessionId) open = null
     if (e.type === 'turn.started') open ??= { sessionId: e.sessionId, at: e.at }
     else if (open) {
-      const ms = Math.max(0, e.at.getTime() - open.at.getTime())
+      const from = open.at.getTime()
+      const to = e.at.getTime()
+      const ms = Math.max(0, to - from - waited(e.sessionId, from, to))
       minutes.set(e.sessionId, (minutes.get(e.sessionId) ?? 0) + ms / 60_000)
       open = null
     }

@@ -78,6 +78,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       startedByMemberId: memberId,
       parentId: null,
       archivedAt: null,
+      // A playbook's runs stay out of sight until a person takes part, as in the sidebar.
+      OR: [{ playbookRunId: null }, { surfacedAt: { not: null } }],
       updatedAt: { gte: new Date(now.getTime() - RECENT) },
     },
     orderBy: { updatedAt: 'desc' },
