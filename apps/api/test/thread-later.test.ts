@@ -104,28 +104,36 @@ const later = (member: number) => latersOf(scoped(scope), ids.members[member]!)
 /** The scoped write hooks run after the write, not awaited: let them finish. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 200))
 
-test('putting a thread away for later is each member’s own, and Move back undoes it', { skip }, async () => {
-  const t = await thread()
-  await setLater(scoped(scope), as(0), t, true)
-  assert.ok((await later(0)).has(t.id))
-  assert.equal((await later(1)).has(t.id), false)
-  assert.ok((await latersIn(scope.workspaceId)).has(laterKey(ids.members[0]!, t.id)))
-  await setLater(scoped(scope), as(0), t, false)
-  assert.equal((await later(0)).has(t.id), false)
-})
+test(
+  'putting a thread away for later is each member’s own, and Move back undoes it',
+  { skip },
+  async () => {
+    const t = await thread()
+    await setLater(scoped(scope), as(0), t, true)
+    assert.ok((await later(0)).has(t.id))
+    assert.equal((await later(1)).has(t.id), false)
+    assert.ok((await latersIn(scope.workspaceId)).has(laterKey(ids.members[0]!, t.id)))
+    await setLater(scoped(scope), as(0), t, false)
+    assert.equal((await later(0)).has(t.id), false)
+  },
+)
 
-test('a ticket opened in it, or in one of its children, brings it back for everyone', { skip }, async () => {
-  const t = await thread()
-  const child = await thread(t.id)
-  await setLater(scoped(scope), as(0), t, true)
-  await setLater(scoped(scope), as(1), t, true)
-  await scoped(scope).ticket.create({
-    data: { ...scope, sessionId: child.id, type: 'question', title: 'Which plan?' },
-  } as never)
-  await settle()
-  assert.equal((await later(0)).has(t.id), false)
-  assert.equal((await later(1)).has(t.id), false)
-})
+test(
+  'a ticket opened in it, or in one of its children, brings it back for everyone',
+  { skip },
+  async () => {
+    const t = await thread()
+    const child = await thread(t.id)
+    await setLater(scoped(scope), as(0), t, true)
+    await setLater(scoped(scope), as(1), t, true)
+    await scoped(scope).ticket.create({
+      data: { ...scope, sessionId: child.id, type: 'question', title: 'Which plan?' },
+    } as never)
+    await settle()
+    assert.equal((await later(0)).has(t.id), false)
+    assert.equal((await later(1)).has(t.id), false)
+  },
+)
 
 test('a pull request opened in it brings it back', { skip }, async () => {
   const t = await thread()
@@ -145,12 +153,16 @@ test('a pull request opened in it brings it back', { skip }, async () => {
   assert.equal((await later(0)).has(t.id), false)
 })
 
-test('a message or a turn brings it back (what the hub calls on its events)', { skip }, async () => {
-  const t = await thread()
-  await setLater(scoped(scope), as(0), t, true)
-  await bringBackFromLater(scope, t.id)
-  assert.equal((await later(0)).has(t.id), false)
-})
+test(
+  'a message or a turn brings it back (what the hub calls on its events)',
+  { skip },
+  async () => {
+    const t = await thread()
+    await setLater(scoped(scope), as(0), t, true)
+    await bringBackFromLater(scope, t.id)
+    assert.equal((await later(0)).has(t.id), false)
+  },
+)
 
 test('archiving it is no longer for later', { skip }, async () => {
   const t = await thread()
