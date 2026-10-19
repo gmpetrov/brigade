@@ -840,6 +840,8 @@ enum ConnectorKind {
   mixpanel
   /// Resend, through Resend's own MCP server and its OAuth.
   resend
+  /// Replicate, through Replicate's own MCP server and its OAuth.
+  replicate
   /// An MCP server a member added by its URL. Its App keeps the server (App.mcp).
   mcp
   /// Search Console and Analytics (GA4), on Brigade's Google client like Gmail.

@@ -260,6 +260,7 @@ export const openTicketTool = tool({
                     'linear',
                     'mixpanel',
                     'resend',
+                    'replicate',
                     'mcp',
                   ],
                 },

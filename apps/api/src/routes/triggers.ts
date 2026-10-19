@@ -33,6 +33,7 @@ const KINDS: ConnectorKind[] = [
   'linear',
   'mixpanel',
   'resend',
+  'replicate',
   'mcp',
   'webhook',
 ]

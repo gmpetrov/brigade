@@ -47,6 +47,7 @@ export const APP_NAMES: Record<string, string> = {
   linear: 'Linear',
   mixpanel: 'Mixpanel',
   resend: 'Resend',
+  replicate: 'Replicate',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -80,6 +81,7 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   linear: 'mcp',
   mixpanel: 'mcp',
   resend: 'mcp',
+  replicate: 'mcp',
 }
 
 /**
