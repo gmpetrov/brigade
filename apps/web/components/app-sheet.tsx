@@ -121,7 +121,8 @@ export function AppSheet({
           kind === 'notion' ||
           kind === 'linear' ||
           kind === 'mixpanel' ||
-          kind === 'resend'
+          kind === 'resend' ||
+          kind === 'replicate'
         ? 'mcp'
         : kind === 'github'
           ? 'github'

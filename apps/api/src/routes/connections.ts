@@ -97,6 +97,7 @@ type OAuthState = {
     | 'linear'
     | 'mixpanel'
     | 'resend'
+    | 'replicate'
     | 'mcp'
   /** mcp: the App of the server added by its URL. */
   appId?: string
@@ -441,6 +442,7 @@ export const connections = new Hono<AppEnv>()
         linear: true,
         mixpanel: true,
         resend: true,
+        replicate: true,
         mcp: true,
         webhook: true,
       },

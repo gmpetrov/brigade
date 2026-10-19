@@ -498,6 +498,7 @@ export type Connection = {
     | 'linear'
     | 'mixpanel'
     | 'resend'
+    | 'replicate'
     | 'mcp'
   label: string
   externalAccount: string | null

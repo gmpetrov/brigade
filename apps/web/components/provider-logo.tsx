@@ -10,7 +10,8 @@ export type ProviderKind = Connection['kind']
  * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Search
  * Console's 2025 icon, Analytics' bars, Stripe's app icon, Cloudflare's cloud, Google Cloud's
  * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
- * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, GitHub's
+ * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
+ * bars on black, GitHub's
  * Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
@@ -294,6 +295,18 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#fff"
           transform="translate(5.4 5.4) scale(0.55)"
           d="M14.679 0c4.648 0 7.413 2.765 7.413 6.434s-2.765 6.434-7.413 6.434H12.33L24 24h-8.245l-8.88-8.44c-.636-.588-.93-1.273-.93-1.86 0-.831.587-1.565 1.713-1.883l4.574-1.224c1.737-.465 2.936-1.81 2.936-3.572 0-2.153-1.761-3.4-3.939-3.4H0V0z"
+        />
+      </svg>
+    )
+  if (kind === 'replicate')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* Replicate's three bars on its black tile, in both themes. */}
+        <rect width="24" height="24" rx="5.5" fill="#000" />
+        <path
+          fill="#fff"
+          transform="translate(6 6) scale(0.5)"
+          d="M24 10.262v2.712h-9.518V24h-3.034V10.262zm0-5.131v2.717H8.755V24H5.722V5.131zM24 0v2.717H3.034V24H0V0z"
         />
       </svg>
     )

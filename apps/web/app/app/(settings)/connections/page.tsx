@@ -54,6 +54,7 @@ const BUILT_IN: Kind[] = [
   'linear',
   'mixpanel',
   'resend',
+  'replicate',
   'stripe',
 ]
 

@@ -13,6 +13,7 @@ import { notion } from './notion.js'
 import { linear } from './linear.js'
 import { mixpanel } from './mixpanel.js'
 import { resend } from './resend.js'
+import { replicate } from './replicate.js'
 import { googleSearchConsole } from './google-search-console.js'
 import { stripe } from './stripe.js'
 import { supabase } from './supabase.js'
@@ -36,6 +37,7 @@ export const connectors: Partial<Record<ConnectorDefinition['kind'], ConnectorDe
   linear,
   mixpanel,
   resend,
+  replicate,
 }
 
 /**
@@ -82,6 +84,7 @@ export const triggerCatalog = () =>
         'linear',
         'mixpanel',
         'resend',
+        'replicate',
         'mcp',
         'webhook',
       ] as const
@@ -256,6 +259,15 @@ export const appCatalog: Record<
     developer: 'Resend',
     category: 'Developer tools',
     // A Resend sign-in reaches a team that sends from its domains: kept to its member's threads until they share it.
+    personal: true,
+  },
+  replicate: {
+    name: 'Replicate',
+    description:
+      'Find and compare AI models, run them to make images, video, audio and text, and manage deployments and fine-tunes, with Replicate’s MCP server.',
+    developer: 'Replicate',
+    category: 'Developer tools',
+    // A Replicate sign-in runs models on its account's billing: kept to its member's threads until they share it.
     personal: true,
   },
   mcp: {
