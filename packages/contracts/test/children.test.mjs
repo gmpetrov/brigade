@@ -4,8 +4,10 @@ import {
   batchNote,
   childNote,
   childPrompt,
+  asksParallel,
   followNote,
   forPeople,
+  inParallel,
   mayChangeQueued,
   noteThreads,
   singleNote,
@@ -171,4 +173,18 @@ test('people see each thread a report note tells about, to open it', () => {
     null,
   )
   assert.equal(noteThreads('Hello'), null)
+})
+
+test('a message sent to run in parallel asks for a child, and people read it as typed', () => {
+  const sent = inParallel('Propose six designs for the page\n')
+  assert.ok(asksParallel(sent))
+  assert.match(sent, /`start_child` now with `wait: false`/)
+  assert.equal(forPeople(sent), 'Propose six designs for the page')
+  // Sent twice, it asks once.
+  assert.equal(inParallel(sent), sent)
+  assert.equal(asksParallel('Propose six designs for the page'), false)
+  assert.equal(childNote(sent), null)
+  // Only a person's own message may go in parallel.
+  assert.equal(mayChangeQueued('m1', 'parallel'), true)
+  assert.equal(mayChangeQueued(null, 'parallel'), false)
 })
