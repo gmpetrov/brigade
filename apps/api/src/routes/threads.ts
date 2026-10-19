@@ -8,6 +8,7 @@ import {
   DesktopClipboard,
   HandBack,
   InterruptThread,
+  mayChangeQueued,
   mentionsToText,
   MESSAGE_COMMANDS,
   messageCommand,
@@ -686,12 +687,29 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
-  /** A message still queued: cancel it, change its text, or steer it into the running turn. */
+  /** A message still queued: steer it into the running turn, or cancel or edit one a person wrote. */
   .post('/:id/messages/:messageId', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     requireMayPrompt(scope, thread)
     const input = await parseBody(c.req.raw, QueuedMessageAction)
+    const messageId = c.req.param('messageId')
+    // Who wrote it, from the latest time it was queued: the runner refuses as well.
+    const queued = await db.sessionEvent.findFirst({
+      where: {
+        sessionId: thread.id,
+        type: 'message.queued',
+        data: { path: ['messageId'], equals: messageId },
+      },
+      orderBy: { seq: 'desc' },
+      select: { data: true },
+    })
+    const memberId = (queued?.data as { memberId?: string | null } | undefined)?.memberId
+    if (memberId !== undefined && !mayChangeQueued(memberId, input.action))
+      throw new HTTPException(409, {
+        message:
+          'Brigade sent this message, so it cannot be edited or cancelled. Steer it, or write your own.',
+      })
     const protocol = runnerProtocol(thread.computer.id)
     if (protocol !== undefined && protocol < 11)
       throw new HTTPException(409, {
@@ -701,7 +719,7 @@ export const threads = new Hono<AppEnv>()
       type: 'thread.queued',
       commandId: randomUUID(),
       sessionId: thread.id,
-      messageId: c.req.param('messageId'),
+      messageId,
       action: input.action,
       ...(input.action === 'edit' ? { text: input.text } : {}),
       memberId: scope.memberId,
@@ -711,7 +729,7 @@ export const threads = new Hono<AppEnv>()
       actor: { type: 'member', id: scope.memberId },
       action: `thread.message_${input.action === 'cancel' ? 'cancelled' : input.action === 'edit' ? 'edited' : 'steered'}`,
       target: { type: 'thread', id: thread.id },
-      data: { messageId: c.req.param('messageId') },
+      data: { messageId },
     })
     return c.json({ ok: true })
   })

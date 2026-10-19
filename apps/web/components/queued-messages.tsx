@@ -1,5 +1,5 @@
 'use client'
-import { mentionsToText } from '@brigade/contracts'
+import { childNote, forPeople, mayChangeQueued, mentionsToText } from '@brigade/contracts'
 import { ChevronDown, Clock, CornerDownRight, Pencil, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 import type { QueuedMessage } from '@/components/thread-view'
@@ -26,7 +26,8 @@ export type Outgoing = {
 /**
  * Messages waiting to be read, above the composer: queued behind the running
  * turn or held until a person answers, in one collapsible list. Each can be
- * steered into the running turn, edited or cancelled until its teammate reads it.
+ * steered into the running turn until its teammate reads it, and edited or
+ * cancelled when a person wrote it: Brigade's own, such as a child's report, goes as it is.
  */
 export function QueuedMessages({
   queued,
@@ -67,8 +68,9 @@ export function QueuedMessages({
   }
   const preview = (m: QueuedMessage) => {
     const files = m.attachments.length
-    return mentionsToText(m.text) || `${files} file${files === 1 ? '' : 's'}`
+    return mentionsToText(forPeople(m.text)) || `${files} file${files === 1 ? '' : 's'}`
   }
+  const cancellable = queued.filter((m) => mayChangeQueued(m.memberId, 'cancel'))
 
   return (
     <div className="mb-2 flex flex-col gap-1.5">
@@ -104,6 +106,13 @@ export function QueuedMessages({
             <ul className="mx-5 divide-y border-t">
               {queued.map((m) => {
                 const files = m.attachments.length
+                const from =
+                  m.memberId === null &&
+                  (childNote(m.text) === 'report'
+                    ? 'Reports from child threads'
+                    : childNote(m.text) === 'task'
+                      ? 'Work from the parent thread'
+                      : 'From Brigade')
                 return (
                   <li key={m.messageId} className="py-2.5">
                     {editing?.messageId === m.messageId ? (
@@ -149,9 +158,10 @@ export function QueuedMessages({
                           <span className="line-clamp-2 wrap-anywhere whitespace-pre-wrap">
                             {preview(m)}
                           </span>
-                          {(m.waitingFor === 'person' || (files > 0 && m.text)) && (
+                          {(from || m.waitingFor === 'person' || (files > 0 && m.text)) && (
                             <span className="text-xs text-muted-foreground">
                               {[
+                                from,
                                 m.waitingFor === 'person' &&
                                   'Runs once the pending request is answered',
                                 files > 0 && m.text && `${files} file${files === 1 ? '' : 's'}`,
@@ -176,28 +186,32 @@ export function QueuedMessages({
                               Steer
                             </Button>
                           )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={busy === m.messageId}
-                            onClick={() => setEditing({ messageId: m.messageId, text: m.text })}
-                            aria-label="Edit queued message"
-                            title="Edit"
-                          >
-                            <Pencil aria-hidden />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={busy === m.messageId}
-                            onClick={() => void act(m.messageId, { action: 'cancel' })}
-                            aria-label="Cancel queued message"
-                            title="Cancel: it will not be sent"
-                          >
-                            <X aria-hidden />
-                          </Button>
+                          {mayChangeQueued(m.memberId, 'edit') && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={busy === m.messageId}
+                              onClick={() => setEditing({ messageId: m.messageId, text: m.text })}
+                              aria-label="Edit queued message"
+                              title="Edit"
+                            >
+                              <Pencil aria-hidden />
+                            </Button>
+                          )}
+                          {mayChangeQueued(m.memberId, 'cancel') && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={busy === m.messageId}
+                              onClick={() => void act(m.messageId, { action: 'cancel' })}
+                              aria-label="Cancel queued message"
+                              title="Cancel: it will not be sent"
+                            >
+                              <X aria-hidden />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -206,7 +220,7 @@ export function QueuedMessages({
               })}
             </ul>
           )}
-          {open && queued.length > 1 && (
+          {open && cancellable.length > 1 && (
             <div className="mx-5 flex justify-end border-t py-1">
               <Button
                 type="button"
@@ -214,7 +228,9 @@ export function QueuedMessages({
                 size="xs"
                 disabled={busy !== undefined}
                 onClick={() =>
-                  void Promise.all(queued.map((m) => onAction(m.messageId, { action: 'cancel' })))
+                  void Promise.all(
+                    cancellable.map((m) => onAction(m.messageId, { action: 'cancel' })),
+                  )
                 }
               >
                 Clear all
