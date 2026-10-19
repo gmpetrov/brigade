@@ -1,10 +1,11 @@
 'use client'
 // A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of the time,
-// or a right-click on the row. Rename edits the title in the row itself. A thread whose
+// or a right-click on the row. Rename, or a double-click on the title, edits the title in the
+// row itself. Under Pinned, a row can be dragged to another place (`drag`). A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
 import { EllipsisVertical, Laptop, MonitorPlay } from 'lucide-react'
 import Link from 'next/link'
-import { useState, type ReactNode } from 'react'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ export function ThreadRow({
   admin,
   onChanged,
   onDeleted,
+  drag,
 }: {
   thread: ThreadSummary
   href: string
@@ -38,10 +40,12 @@ export function ThreadRow({
   admin: boolean
   onChanged: () => void
   onDeleted: (id: string) => void
+  /** Under Pinned: the row's drag handlers and the drop line's class. */
+  drag?: ComponentProps<'li'>
 }) {
   const [renaming, setRenaming] = useState(false)
   const { openPreview } = useThreadPanel()
-  const { title, open, setOpen, busy, onMenuKey, content } = useThreadMenu({
+  const { title, open, setOpen, busy, onMenuKey, content, mayRename } = useThreadMenu({
     thread,
     memberId,
     admin,
@@ -81,7 +85,7 @@ export function ThreadRow({
     )
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem {...drag}>
       <SidebarMenuButton
         asChild
         isActive={active}
@@ -97,6 +101,12 @@ export function ThreadRow({
           onContextMenu={(e) => {
             e.preventDefault()
             setOpen(true)
+          }}
+          // The first click opened the thread; the second edits its title, as Rename does.
+          onDoubleClick={(e) => {
+            if (!mayRename) return
+            e.preventDefault()
+            setRenaming(true)
           }}
         >
           {icon}

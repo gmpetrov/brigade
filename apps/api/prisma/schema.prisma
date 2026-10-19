@@ -361,6 +361,8 @@ model ThreadPin {
   sessionId      String
   session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   pinnedAt       DateTime  @default(now())
+  /// Where it sits under Pinned, as the member dragged it: lowest first, then by pinnedAt.
+  position       Int       @default(0)
 
   @@id([memberId, sessionId])
   @@index([sessionId])

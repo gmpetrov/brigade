@@ -209,7 +209,7 @@ export const threads = new Hono<AppEnv>()
     // long ago it was active.
     const pins = await c.var.db.threadPin.findMany({
       where: { memberId: c.var.scope.memberId },
-      select: { sessionId: true, pinnedAt: true },
+      select: { sessionId: true, pinnedAt: true, position: true },
     })
     if (!limit && !teammateId && !c.req.query('project') && c.req.query('archived') !== '1') {
       const loaded = new Set(rows.map((r) => r.id))
@@ -285,6 +285,7 @@ export const threads = new Hono<AppEnv>()
           pullsWaiting: pulls.find((p) => p.sessionId === row.id)?._count._all ?? 0,
           childrenWorking: working.find((w) => w.parentId === row.id)?._count._all ?? 0,
           pinnedAt: pins.find((p) => p.sessionId === row.id)?.pinnedAt.toISOString() ?? null,
+          pinPosition: pins.find((p) => p.sessionId === row.id)?.position ?? null,
           eventsWaitingSince: eventsWaitingSince(row.id),
           previewRunning:
             !!previews.get(row.id) && !previewOffline({ id: row.computerId, ...row.computer }),
@@ -1193,11 +1194,35 @@ export const threads = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
+  /** This member's pinned threads in the order they dragged them to: the ids, first to last. */
+  .put('/pins/order', async (c) => {
+    const { scope, db } = c.var
+    const { ids } = await parseBody(
+      c.req.raw,
+      z.object({ ids: z.array(z.string()).max(500) }),
+    )
+    // Only their own pins move; ids they did not pin are left out.
+    await db.$transaction(
+      ids.map((sessionId, position) =>
+        db.threadPin.updateMany({
+          where: { memberId: scope.memberId, sessionId },
+          data: { position },
+        }),
+      ),
+    )
+    return c.json({ ok: true })
+  })
+
   /** Pin it to the top of this member's sidebar; DELETE unpins it. Each member's own. */
   .post('/:id/pin', async (c) => {
     const { scope, db } = c.var
     const thread = await loadThread(db, c.req.param('id'))
     await surface(db, thread)
+    // At the end of Pinned, below those the member placed.
+    const last = await db.threadPin.aggregate({
+      where: { memberId: scope.memberId },
+      _max: { position: true },
+    })
     await db.threadPin.upsert({
       where: { memberId_sessionId: { memberId: scope.memberId, sessionId: thread.id } },
       create: {
@@ -1205,6 +1230,7 @@ export const threads = new Hono<AppEnv>()
         workspaceId: scope.workspaceId,
         memberId: scope.memberId,
         sessionId: thread.id,
+        position: (last._max.position ?? -1) + 1,
       },
       update: {},
     })

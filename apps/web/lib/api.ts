@@ -282,6 +282,8 @@ export type ThreadSummary = {
   unread?: boolean
   /** When this member pinned it: under Pinned in their sidebar. */
   pinnedAt?: string | null
+  /** Where this member dragged it under Pinned: lowest first, then by when pinned. */
+  pinPosition?: number | null
   /** Set while archived: out of the sidebar until someone writes in it. */
   archivedAt?: string | null
   /** Others than its starter may write in it, so rename and archive it. */

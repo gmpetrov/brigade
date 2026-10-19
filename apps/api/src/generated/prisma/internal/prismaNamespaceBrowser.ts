@@ -306,7 +306,8 @@ export const ThreadPinScalarFieldEnum = {
   workspaceId: 'workspaceId',
   memberId: 'memberId',
   sessionId: 'sessionId',
-  pinnedAt: 'pinnedAt'
+  pinnedAt: 'pinnedAt',
+  position: 'position'
 } as const
 
 export type ThreadPinScalarFieldEnum = (typeof ThreadPinScalarFieldEnum)[keyof typeof ThreadPinScalarFieldEnum]

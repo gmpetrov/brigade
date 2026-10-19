@@ -1417,14 +1417,6 @@ export type EnumSessionOriginFieldUpdateOperationsInput = {
   set?: $Enums.SessionOrigin
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type SessionUpdateOneWithoutChildrenNestedInput = {
   create?: Prisma.XOR<Prisma.SessionCreateWithoutChildrenInput, Prisma.SessionUncheckedCreateWithoutChildrenInput>
   connectOrCreate?: Prisma.SessionCreateOrConnectWithoutChildrenInput
