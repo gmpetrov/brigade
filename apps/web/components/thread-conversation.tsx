@@ -68,7 +68,12 @@ import { usePreviewStart } from '@/components/preview-start'
 import { ThreadProjectMenu } from '@/components/projects'
 import { QueuedMessages, type Outgoing } from '@/components/queued-messages'
 import { Takeover } from '@/components/takeover'
-import { ChildrenWaiting, ParentLink } from '@/components/thread-children'
+import {
+  ChildrenWaiting,
+  isQueuedReport,
+  ParentLink,
+  QueuedReports,
+} from '@/components/thread-children'
 import { TicketRow } from '@/components/ticket-row'
 import { useThreadOutputs } from '@/components/thread-outputs'
 import { useThreadPanel } from '@/components/thread-panel'
@@ -969,6 +974,14 @@ export function ThreadConversation({
                         : undefined
                     }
                   />
+                  {t.mayPrompt && !t.controlledByMemberId && (
+                    <QueuedReports
+                      queued={queued}
+                      teammateName={answering.name}
+                      canSteer={busy}
+                      onAction={queueAction}
+                    />
+                  )}
                   {proposals.length > 0 && ticketCard(proposals, 'mt-4')}
                   <ChildrenWaiting children={t.children} />
                 </FileLinksProvider>
@@ -992,7 +1005,7 @@ export function ThreadConversation({
             <>
               {!atEnd && <JumpToEnd onClick={() => toEnd('smooth')} />}
               <QueuedMessages
-                queued={queued}
+                queued={queued.filter((m) => !isQueuedReport(m))}
                 outgoing={pendingOut}
                 teammateName={answering.name}
                 canSteer={busy}

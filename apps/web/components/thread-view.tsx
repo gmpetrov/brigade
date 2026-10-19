@@ -12,7 +12,6 @@ import {
   childNote,
   fromParent,
   forPeople,
-  noteThreads,
   formatMention,
   mentionsToText,
   OFFER_CHOICES_TOOL,
@@ -107,7 +106,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
-import { ReportedThread, StartedChild } from '@/components/thread-children'
+import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
 import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
@@ -1487,19 +1486,11 @@ export function ThreadItems({
         // Brigade's own words about child threads: a note, not a person's message.
         if (item.brigade) {
           // A report: one card per thread it tells about, that opens it.
-          const reported =
-            item.brigade === 'report' || item.brigade === 'follow' ? noteThreads(item.text) : null
+          const reported = reportNote(item.text)
           if (reported) {
-            // “… has finished:” only repeats the cards; a schedule's run or a late one says more.
-            const head =
-              item.brigade === 'follow'
-                ? 'From a thread this one follows'
-                : reported.head && !/finished:$/.test(reported.head)
-                  ? reported.head
-                  : null
             return (
               <div key={item.key} data-seq={item.seq} className="flex flex-col gap-2">
-                {head && <p className="text-xs text-muted-foreground">{head}</p>}
+                {reported.head && <p className="text-xs text-muted-foreground">{reported.head}</p>}
                 {reported.threads.map((t) => (
                   <ReportedThread key={t.id} thread={t} />
                 ))}
