@@ -15,12 +15,14 @@ import { HTTPException } from 'hono/http-exception'
 import { usableIn } from './apps.js'
 import { audit } from './audit.js'
 import { decideTicket } from './connector-calls.js'
+import { connectionsReaching } from './git.js'
 import { appCatalog } from './connectors/index.js'
 import { mcpAppKey } from './mcp-servers.js'
 import type { ConnectorKind } from './connectors/types.js'
 import { mayManage, type CredentialAction } from './credentials.js'
 import { scoped, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
+import { accountReaching } from './repository-grant.js'
 import type { WorkspaceScope } from './scope.js'
 import { decidePromotion } from './playbook-autonomy.js'
 import { decideActivation } from './playbooks.js'
@@ -205,9 +207,15 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
     throw new HTTPException(409, {
       message: 'Another member has control of this thread. It can be answered once they hand back.',
     })
-  // Before the answer goes out, so the spec it carries has the App's tools.
+  // Every account checked before any is given, then given before the answer goes out, so the
+  // spec it carries has the App's tools.
+  const accounts = []
   for (const grant of grants)
-    await grantApp(db, scope, thread, asker.id, grant.app, grant.what, grant.connectionId)
+    accounts.push(
+      await accountToGrant(db, scope, thread, grant.app, grant.what, grant.connectionId),
+    )
+  for (const [i, account] of accounts.entries())
+    await grantAccount(db, scope, asker.id, account, grants[i]!.app.scope)
   const sent = await dispatch(thread.computer, {
     type: 'thread.ticket',
     commandId: randomUUID(),
@@ -247,17 +255,15 @@ export async function answerTicket(scope: WorkspaceScope, ticketId: string, answ
 }
 
 /**
- * Give the teammate that asked access to one of an App's accounts, from its
- * ticket. The account must be one the person may give (theirs, or any for an
- * owner or admin) and usable in this thread; an existing read and write grant
- * stays.
+ * The App's account to give the teammate that asked, from its ticket. It must be
+ * one the person may give (theirs, or any for an owner or admin), usable in this
+ * thread and, for a GitHub ask naming a repository, one whose installation reaches it.
  */
-async function grantApp(
+async function accountToGrant(
   db: ScopedDb,
   scope: WorkspaceScope,
   thread: { startedByMemberId: string },
-  teammateId: string,
-  app: { kind: string; scope: 'read' | 'read_write'; url?: string },
+  app: { kind: string; scope: 'read' | 'read_write'; url?: string; repository?: string },
   what: string,
   connectionId: string | undefined,
 ) {
@@ -312,26 +318,54 @@ async function grantApp(
     throw new HTTPException(409, {
       message: `This ${entry.name} account is kept to its owner's threads. Open it to every thread first, from Apps.`,
     })
+  if (app.kind === 'github' && app.repository) {
+    // Listed again if a few seconds old: the person may just have added it on GitHub.
+    const reaching = await connectionsReaching(
+      db,
+      scope,
+      app.repository,
+      REACH_MAX_AGE_MS,
+      usable.map((c) => c.id),
+    ).catch((error) => {
+      if (error instanceof HTTPException) throw error
+      throw new HTTPException(502, { message: 'GitHub did not answer. Try again.' })
+    })
+    return accountReaching(app.repository, usable, new Set(reaching), connectionId)
+  }
   const account = connectionId
     ? usable.find((c) => c.id === connectionId)
     : usable.length === 1
       ? usable[0]
       : undefined
   if (!account) throw new HTTPException(400, { message: `Pick the ${entry.name} account to give` })
+  return account
+}
+
+/** Give the teammate the account; an existing read and write grant stays. */
+async function grantAccount(
+  db: ScopedDb,
+  scope: WorkspaceScope,
+  teammateId: string,
+  account: { id: string },
+  access: 'read' | 'read_write',
+) {
   const existing = await db.grant.findFirst({ where: { teammateId, connectionId: account.id } })
-  if (existing?.scope === 'read_write' || existing?.scope === app.scope) return
+  if (existing?.scope === 'read_write' || existing?.scope === access) return
   await db.grant.deleteMany({ where: { teammateId, connectionId: account.id } })
   await db.grant.create({
-    data: { teammateId, connectionId: account.id, scope: app.scope } as never,
+    data: { teammateId, connectionId: account.id, scope: access } as never,
   })
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
     action: 'grant.set',
     target: { type: 'teammate', id: teammateId },
-    data: { connectionId: account.id, scope: app.scope, from: 'ticket' },
+    data: { connectionId: account.id, scope: access, from: 'ticket' },
   })
 }
+
+/** How old a repository list may be when a person gives access for one of its repositories. */
+const REACH_MAX_AGE_MS = 10_000
 
 /** An answer made only of credential mentions: it names vault entries, not secrets. */
 const onlyCredentialMentions = (text: string) => {

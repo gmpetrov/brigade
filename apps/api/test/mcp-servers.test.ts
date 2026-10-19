@@ -15,6 +15,7 @@ const { notionAccountName } = await import('../src/connectors/notion.js')
 const { linearAccountName } = await import('../src/connectors/linear.js')
 const { mixpanel, mixpanelAccountName } = await import('../src/connectors/mixpanel.js')
 const { resendAccountName } = await import('../src/connectors/resend.js')
+const { replicateAccountName } = await import('../src/connectors/replicate.js')
 const { mcpOutput } = await import('../src/connectors/mcp-output.js')
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void
@@ -151,6 +152,33 @@ test('a Resend account shows as its domains', () => {
   const none = mcpOutput({ content: [{ type: 'text', text: 'No domains found.' }] })
   assert.equal(resendAccountName(none.output), null)
   assert.equal(resendAccountName({}), null)
+})
+
+test('a Replicate account shows as its username', () => {
+  // get_account's reply: Replicate's GET /v1/account as JSON text, which mcpOutput parses.
+  const user = mcpOutput({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          type: 'user',
+          username: 'zeke',
+          name: 'Zeke Sikelianos',
+          avatar_url: 'https://github.com/zeke.png',
+          github_url: 'https://github.com/zeke',
+        }),
+      },
+    ],
+  })
+  assert.equal(replicateAccountName(user.output), 'zeke')
+  const org = mcpOutput({
+    content: [
+      { type: 'text', text: '{"type":"organization","username":"acme","name":"Acme Corp, Inc."}' },
+    ],
+  })
+  assert.equal(replicateAccountName(org.output), 'acme')
+  assert.equal(replicateAccountName({}), null)
+  assert.equal(replicateAccountName(null), null)
 })
 
 test("a Mixpanel account keeps its region's server", async () => {

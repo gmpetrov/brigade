@@ -28,6 +28,8 @@ const CONNECTION_KIND: Record<string, string> = {
   google_drive: 'Google Drive',
   google_docs: 'Google Docs',
   google_sheets: 'Google Sheets',
+  google_search_console: 'Google Search Console',
+  google_analytics: 'Google Analytics',
   stripe: 'Stripe',
   github: 'GitHub',
   webhook: 'Custom app',

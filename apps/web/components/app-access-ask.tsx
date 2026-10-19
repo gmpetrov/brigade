@@ -34,6 +34,8 @@ export const APP_NAMES: Record<string, string> = {
   google_drive: 'Google Drive',
   google_docs: 'Google Docs',
   google_sheets: 'Google Sheets',
+  google_search_console: 'Google Search Console',
+  google_analytics: 'Google Analytics',
   stripe: 'Stripe',
   github: 'GitHub',
   cloudflare: 'Cloudflare',
@@ -45,6 +47,7 @@ export const APP_NAMES: Record<string, string> = {
   linear: 'Linear',
   mixpanel: 'Mixpanel',
   resend: 'Resend',
+  replicate: 'Replicate',
 }
 
 /** The same MCP server however its URL was typed, as the API compares them. */
@@ -66,6 +69,8 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   google_drive: 'google',
   google_docs: 'google',
   google_sheets: 'google',
+  google_search_console: 'google',
+  google_analytics: 'google',
   github: 'github',
   cloudflare: 'mcp',
   google_cloud: 'mcp',
@@ -76,12 +81,15 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
   linear: 'mcp',
   mixpanel: 'mcp',
   resend: 'mcp',
+  replicate: 'mcp',
 }
 
 /**
  * A teammate asks for an App: Give it the access (the API grants it as the
  * ticket is answered), or Decline. With no account yet, Connect signs in in a
- * window of its own and gives the access as soon as the account is there.
+ * window of its own and gives the access as soon as the account is there. A
+ * GitHub ask for a repository no account reaches: install the GitHub app on its
+ * owner, or add it to an installation, and the access goes once it is reachable.
  */
 export function AppAccessAsk({
   ask,
@@ -95,6 +103,11 @@ export function AppAccessAsk({
   const { me } = useDashboard()
   const data = useApi<ConnectionsResponse>('/connections')
   const kind = ask.app.kind as Connection['kind']
+  // A GitHub repository: only the accounts whose installation reaches it, listed afresh.
+  const repository = kind === 'github' ? ask.app.repository : undefined
+  const reach = useApi<{ connections: string[] }>(
+    repository ? `/repositories/${repository}/reach?fresh=1` : null,
+  )
   // An MCP server, by the URL the teammate gave: its App once someone has added it. With no
   // URL, the server added under the name it asked for, as the API finds it.
   const serverUrl = kind === 'mcp' ? ask.app.url : undefined
@@ -107,16 +120,29 @@ export function AppAccessAsk({
             (a) => a.mcp && a.name?.toLowerCase() === ask.what.trim().toLowerCase(),
           )
   const name = server?.name ?? (serverUrl ? ask.what : data.data?.catalog[kind]?.name) ?? ask.what
-  const accounts = (data.data?.connections ?? []).filter(
+  const connected = (data.data?.connections ?? []).filter(
     (c) =>
       c.kind === kind &&
       c.status === 'active' &&
       (!(serverUrl || server) || c.appId === server?.id),
   )
+  const mayGive = (c: Connection) =>
+    c.createdByMemberId === me.memberId || (isAdmin(me) && c.reach === 'workspace')
+  const accounts = repository
+    ? connected.filter((c) => reach.data?.connections.includes(c.id))
+    : connected
   // Those this person may give. Another member's own account is left out: it is used only in
   // their threads. The API checks again that the account is usable in this thread.
-  const givable = accounts.filter(
-    (c) => c.createdByMemberId === me.memberId || (isAdmin(me) && c.reach === 'workspace'),
+  const givable = accounts.filter(mayGive)
+  // The installation on the repository's owner, if any, to add the repository to on GitHub. An
+  // installation reaches only its own account's repositories: otherwise, install on the owner.
+  const owner = repository?.split('/')[0]
+  const addTo = connected.filter(
+    (c) =>
+      owner &&
+      mayGive(c) &&
+      c.externalUrl &&
+      c.externalAccount?.split(' ')[0]?.toLowerCase() === owner,
   )
   const [picked, setPicked] = useState<string>()
   const [waiting, setWaiting] = useState(false)
@@ -125,15 +151,22 @@ export function AppAccessAsk({
   const give = (connectionId: string | undefined) =>
     onReply({ type: 'access', granted: true, ...(connectionId ? { connectionId } : {}) })
 
-  // Signing in in its own window: once the account shows up, the access goes with the answer.
+  // Signing in in its own window, or changing the repositories on GitHub: once the account shows
+  // up (reaching the repository), the access goes with the answer.
   useEffect(() => {
     if (!waiting) return
     if (givable.length > 0) {
       setWaiting(false)
-      give(givable.length === 1 ? givable[0]!.id : undefined)
+      give(givable.length === 1 || repository ? givable[0]!.id : undefined)
       return
     }
-    const timer = setInterval(() => void data.reload(), 2000)
+    const timer = setInterval(
+      () => {
+        void data.reload()
+        if (repository) void reach.reload()
+      },
+      repository ? 3000 : 2000,
+    )
     return () => clearInterval(timer)
   }, [waiting, givable.length])
 
@@ -163,7 +196,7 @@ export function AppAccessAsk({
       Decline
     </Button>
   )
-  if (!data.data) return null
+  if (!data.data || (repository && !reach.data && !reach.error)) return null
 
   return (
     <div className="flex flex-col gap-2">
@@ -190,6 +223,36 @@ export function AppAccessAsk({
             <Button size="sm" onClick={() => give(picked ?? givable[0]!.id)}>
               Give {askerName} {access} access
             </Button>
+            {decline}
+          </>
+        ) : repository && accounts.length === 0 ? (
+          // No account reaches the repository: install the app on its owner, or add it on GitHub.
+          <>
+            <span className="text-sm text-muted-foreground">
+              No {name} account here reaches <code>{repository}</code>.
+            </span>
+            {addTo.length === 0 ? (
+              <Button
+                size="sm"
+                disabled={waiting || !data.data.available[kind]}
+                onClick={() => void connect()}
+              >
+                Install {name} on {owner}
+              </Button>
+            ) : (
+              addTo.map((c) => (
+                <Button key={c.id} size="sm" asChild>
+                  <a
+                    href={c.externalUrl!}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setWaiting(true)}
+                  >
+                    Add it on GitHub{addTo.length > 1 ? ` (${c.externalAccount ?? c.label})` : ''}
+                  </a>
+                </Button>
+              ))
+            )}
             {decline}
           </>
         ) : accounts.length === 0 && serverUrl ? (
@@ -242,12 +305,19 @@ export function AppAccessAsk({
           </>
         )}
       </div>
-      {waiting && (
+      {waiting && repository && (
+        <p className="text-sm text-muted-foreground">
+          Pick <code>{repository}</code> on GitHub, in the tab that opened. {askerName} gets{' '}
+          {access} access as soon as an account reaches it.
+        </p>
+      )}
+      {waiting && !repository && (
         <p className="text-sm text-muted-foreground">
           Finish signing in in the tab that opened. {askerName} gets {access} access as soon as{' '}
           {name} is connected.
         </p>
       )}
+      {reach.error && <p className="text-sm text-destructive-text">{reach.error.message}</p>}
       {waiting && kind === 'atlassian' && <AtlassianDomainHint />}
       {waiting && kind === 'mixpanel' && <MixpanelMcpHint />}
       {error && <p className="text-sm text-destructive-text">{error}</p>}

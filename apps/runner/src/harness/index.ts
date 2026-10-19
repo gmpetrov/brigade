@@ -27,6 +27,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ShotResult } from '../design-shot.js'
 import { accountEnv, accountToken } from '../accounts.js'
+import { readCodexLimits } from '../codex-usage.js'
 import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
@@ -48,6 +49,7 @@ import {
   sameCall,
   waitingOn,
   withoutBridge,
+  withTools,
   type WaitingApproval,
   type WaitingCall,
 } from './closed-turn.js'
@@ -479,6 +481,13 @@ export class HarnessThread {
         await this.persist().catch((error) =>
           console.warn(`could not save thread state: ${errorMessage(error)}`),
         )
+      }
+      // Codex's harness reports no limits: read once the turn is over, without holding it up.
+      if (result && spec.teammate.harness === 'codex') {
+        const account = this.current
+        void readCodexLimits(account).then((limits) => {
+          if (limits?.length) this.emit({ type: 'usage.updated', accountId: account.id, limits })
+        })
       }
     }
   }
@@ -1230,7 +1239,8 @@ export class HarnessThread {
       // The harness the runner before handed over, which this session attaches to: stopped with it.
       ...(adopt.length ? { adopt } : {}),
     })
-    const resume = this.saved?.accountId === account.id ? this.saved.resume : undefined
+    const saved = this.saved?.accountId === account.id ? this.saved.resume : undefined
+    const resume = saved ? withTools(saved, tools) : undefined
     const session = await agent.createSession({
       sessionId: this.key,
       sandboxSession: sandbox,

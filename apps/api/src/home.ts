@@ -1,9 +1,9 @@
 // Home under the composer, for one member: their loose ends (nobody is blocked, but
 // nothing moves on its own) and what came back since they last looked. Only what
 // Brigade knows for sure: a reply ending on buttons nobody clicked, a running thread
-// with no event for a while, a routine whose last run failed. Pull requests and
-// tickets that wait on a person are Waiting on you, not here. With the results, a line
-// per active playbook that ran this week (playbook-metrics.ts).
+// with no event for a while, a thread that failed, a routine whose last run failed. Pull requests and
+// tickets that wait on a person are Waiting on you, not here. With the results, a line per active
+// playbook that ran this week (playbook-metrics.ts).
 import {
   bareToolName,
   OFFER_CHOICES_TOOL,
@@ -53,6 +53,15 @@ export type LooseEnd =
       offline: boolean
     }
   | {
+      kind: 'failed'
+      key: string
+      at: string
+      thread: { id: string; title: string }
+      teammate: { id: string; name: string }
+      /** What the teammate's last error said, when it said something. */
+      error: string | null
+    }
+  | {
       kind: 'routine'
       key: string
       at: string
@@ -89,6 +98,8 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
       title: true,
       status: true,
       lastSeq: true,
+      updatedAt: true,
+      scheduleId: true,
       teammate: { select: { id: true, name: true } },
     },
   })
@@ -247,6 +258,19 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
     })
   }
 
+  // Threads that failed: until someone writes in them again, nothing moves. A routine's
+  // run is its routine's loose end, below.
+  const failed = threads.filter((t) => t.status === 'failed' && !t.scheduleId && !held.has(t.id))
+  const errors = failed.length
+    ? await db.sessionEvent.findMany({
+        where: { sessionId: { in: failed.map((t) => t.id) }, type: 'error' },
+        orderBy: { seq: 'desc' },
+        distinct: ['sessionId'],
+        select: { sessionId: true, at: true, data: true },
+      })
+    : []
+  loose.push(...failedLooseEnds(failed, errors, gone))
+
   // Routines whose last firing could not start, or whose last run failed.
   for (const s of schedules) {
     const run = s.sessions[0]
@@ -313,6 +337,44 @@ export async function homeFor(db: ScopedDb, memberId: string, now = new Date()) 
 
   return { looseEnds: loose, results: results.slice(0, LISTED), playbooks: lines }
 }
+
+/**
+ * Failed threads as loose ends: reading one does not mend it, so it stays until the thread
+ * runs again (it is no longer failed) or the member sets it aside. Its last error says
+ * when and why; a thread that never ran (its computer offline) has no error event.
+ */
+export function failedLooseEnds(
+  failed: {
+    id: string
+    title: string
+    lastSeq: number
+    updatedAt: Date
+    teammate: { id: string; name: string }
+  }[],
+  errors: { sessionId: string; at: Date; data: unknown }[],
+  gone: Set<string>,
+): LooseEnd[] {
+  return failed.flatMap((t): LooseEnd[] => {
+    // The thread's events so far: a new failure after another message is a new loose end.
+    const key = `failed:${t.id}:${t.lastSeq}`
+    if (gone.has(key)) return []
+    const error = errors.find((e) => e.sessionId === t.id)
+    const message = (error?.data as { message?: unknown } | undefined)?.message
+    return [
+      {
+        kind: 'failed',
+        key,
+        at: (error?.at ?? t.updatedAt).toISOString(),
+        thread: { id: t.id, title: t.title },
+        teammate: t.teammate,
+        error: typeof message === 'string' && message.trim() ? message.trim() : null,
+      },
+    ]
+  })
+}
+
+/** The keys a loose end can have, one prefix per kind built above. */
+export const LOOSE_END_KEY = /^(proposal|stalled|routine|failed):[\w:-]{1,200}$/
 
 /** Set a loose end aside: it stays gone until the thing it names changes. */
 export async function dismissLooseEnd(

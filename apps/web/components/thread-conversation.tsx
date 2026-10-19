@@ -9,7 +9,6 @@ import {
   ArrowDown,
   CalendarClock,
   CircleStop,
-  Cloud,
   CloudUpload,
   CornerDownLeft,
   FolderKanban,
@@ -691,38 +690,40 @@ export function ThreadConversation({
 
   // Expanded, what is not the conversation sits in the panel beside it: the thread's
   // computer (with Preview), its details, then what it made.
-  // One row per fact, an icon for its kind: who is in it, its project, its task, who started it.
+  // One row per fact, an icon for its kind: who is in it, where it runs, its project, its task,
+  // who started it. Not what the page already says: its title is in the pill, its teammate and
+  // the cloud computer in the panel's header.
   const fact = 'flex min-w-0 items-center gap-2.5'
   const factIcon = 'size-4 shrink-0 text-muted-foreground'
   const details = (
     <div className="flex flex-col gap-2 text-sm">
-      <div className={fact}>
-        <UsersRound aria-label="Teammates" className={factIcon} />
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{peopleLinks}</div>
-      </div>
-      {/* Where it runs: a member's machine says whether its runner is there. */}
-      <div className={fact}>
-        {t.computer.kind === 'cloud' ? (
-          <Cloud aria-label="Computer" className={factIcon} />
-        ) : (
+      {people.length > 1 && (
+        <div className={fact}>
+          <UsersRound aria-label="Teammates" className={factIcon} />
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{peopleLinks}</div>
+        </div>
+      )}
+      {/* A member's machine: whether its runner is there, which the header does not say. */}
+      {t.computer.kind !== 'cloud' && (
+        <div className={fact}>
           <Laptop aria-label="Computer" className={factIcon} />
-        )}
-        <span className="min-w-0 truncate" title={computerName(t.computer)}>
-          {computerName(t.computer)}
-        </span>
-        {t.computer.kind !== 'cloud' && machineOnline !== undefined && (
-          <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-            <span
-              aria-hidden
-              className={cn(
-                'size-1.5 rounded-full',
-                machineOnline ? 'bg-success' : 'bg-muted-foreground/50',
-              )}
-            />
-            {machineOnline ? 'online' : 'offline'}
+          <span className="min-w-0 truncate" title={computerName(t.computer)}>
+            {computerName(t.computer)}
           </span>
-        )}
-      </div>
+          {machineOnline !== undefined && (
+            <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
+              <span
+                aria-hidden
+                className={cn(
+                  'size-1.5 rounded-full',
+                  machineOnline ? 'bg-success' : 'bg-muted-foreground/50',
+                )}
+              />
+              {machineOnline ? 'online' : 'offline'}
+            </span>
+          )}
+        </div>
+      )}
       {/* The menu stays away while there is no project to move it to. */}
       {(t.project || projects.some((p) => !p.archivedAt)) && (
         <div className={fact}>

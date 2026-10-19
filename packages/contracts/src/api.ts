@@ -64,7 +64,15 @@ export const ReturnTo = z
   .max(300)
   .regex(/^\/app\/[\w\-/?=&.%]*$/, 'A dashboard path')
 export const ConnectGoogle = z.object({
-  kind: z.enum(['gmail', 'google_calendar', 'google_drive', 'google_docs', 'google_sheets']),
+  kind: z.enum([
+    'gmail',
+    'google_calendar',
+    'google_drive',
+    'google_docs',
+    'google_sheets',
+    'google_search_console',
+    'google_analytics',
+  ]),
   returnTo: ReturnTo.optional(),
 })
 export const ConnectGitHub = z.object({ returnTo: ReturnTo.optional() })
@@ -80,6 +88,7 @@ export const ConnectMcp = z.object({
     'linear',
     'mixpanel',
     'resend',
+    'replicate',
   ]),
   /** For an App with a server per data region (Mixpanel): the region's id. Default: the first. */
   region: z.string().max(20).optional(),
@@ -244,6 +253,16 @@ export const QueuedMessageAction = z.discriminatedUnion('action', [
   z.object({ action: z.literal('steer') }),
   z.object({ action: z.literal('edit'), text: z.string().trim().min(1).max(100_000) }),
 ])
+export type QueuedMessageAction = z.infer<typeof QueuedMessageAction>
+
+/**
+ * What a person may do with a queued message (memberId: who wrote it): steer any into the
+ * running turn, but edit or cancel only one a person wrote. One nobody typed (a child's
+ * report, a wake-up, a teammate's comment) is what the teammate is owed: edited, it would
+ * still read as Brigade's; cancelled, a parent waiting on its children would never wake.
+ */
+export const mayChangeQueued = (memberId: string | null, action: QueuedMessageAction['action']) =>
+  action === 'steer' || memberId !== null
 export const InterruptThread = z.object({ turnId: z.string().max(64).optional() })
 export const ResolveApproval = z.object({
   approvalId: z.string(),

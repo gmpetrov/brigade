@@ -1,36 +1,21 @@
 'use client'
-// A thread in the sidebar, with its menu: ⋮ on hover in place of the time, or a right-click
-// on the row. Pin, Rename, Archive and Delete, each with its letter, as in Claude: with the
-// menu open, the letter does it. Rename edits the title in the row itself. A thread whose
+// A thread in the sidebar, with its menu (thread-menu.tsx): ⋮ on hover in place of the time,
+// or a right-click on the row. Rename edits the title in the row itself. A thread whose
 // preview is up shows its icon, which opens the preview on hover (and in the menu on phones).
-import {
-  Archive,
-  ArchiveRestore,
-  EllipsisVertical,
-  Laptop,
-  MonitorPlay,
-  Pencil,
-  Pin,
-  PinOff,
-  Trash2,
-} from 'lucide-react'
+import { EllipsisVertical, Laptop, MonitorPlay } from 'lucide-react'
 import Link from 'next/link'
-import { Fragment, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
-import { renamedHere, StreamedTitle } from '@/components/streamed-title'
+import { StreamedTitle } from '@/components/streamed-title'
+import { renameThread, useThreadMenu } from '@/components/thread-menu'
 import { useThreadPanel } from '@/components/thread-panel'
-import { api, type Thread, type ThreadSummary } from '@/lib/api'
+import { type ThreadSummary } from '@/lib/api'
 import { cn } from '@/lib/utils'
-
-type Action = 'preview' | 'pin' | 'rename' | 'archive' | 'delete'
 
 export function ThreadRow({
   thread,
@@ -54,89 +39,20 @@ export function ThreadRow({
   onChanged: () => void
   onDeleted: (id: string) => void
 }) {
-  const title = thread.title || 'New thread'
-  const [open, setOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
-  const [busy, setBusy] = useState(false)
   const { openPreview } = useThreadPanel()
-
-  const starter = thread.startedBy.id === memberId
-  // As the API decides (routes/threads.ts): who may write in it renames and archives it,
-  // its starter deletes it, and admins do all of them.
-  const mayChange = starter || !!thread.othersMayPrompt || admin
-  const mayDelete = starter || admin
-  const pinned = !!thread.pinnedAt
-  const archived = !!thread.archivedAt
-
-  async function run(action: Action) {
-    setOpen(false)
-    if (action === 'preview') return openPreview(thread.id)
-    if (action === 'rename') return setRenaming(true)
-    if (action === 'delete' && !confirm(await deleteQuestion(thread.id, title))) return
-    const path = `/threads/${thread.id}`
-    setBusy(true)
-    try {
-      if (action === 'pin') await api(`${path}/pin`, { method: pinned ? 'DELETE' : 'POST' })
-      else if (action === 'archive')
-        await api(`${path}/archive`, { method: archived ? 'DELETE' : 'POST' })
-      else {
-        await api(path, { method: 'DELETE' })
-        onDeleted(thread.id)
-      }
-      onChanged()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { title, open, setOpen, busy, onMenuKey, content } = useThreadMenu({
+    thread,
+    memberId,
+    admin,
+    onRename: () => setRenaming(true),
+    onChanged,
+    onDeleted,
+  })
 
   async function rename(next: string) {
     setRenaming(false)
-    const value = next.trim()
-    if (!value || value === thread.title) return
-    try {
-      renamedHere(thread.id, value)
-      await api(`/threads/${thread.id}/title`, { method: 'PUT', body: { title: value } })
-      onChanged()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : String(e))
-    }
-  }
-
-  const items: { action: Action; label: string; icon: ReactNode; key: string; show: boolean }[] = [
-    {
-      action: 'preview',
-      label: 'Open preview',
-      icon: <MonitorPlay />,
-      key: 'O',
-      show: !!thread.previewRunning,
-    },
-    {
-      action: 'pin',
-      label: pinned ? 'Unpin' : 'Pin',
-      icon: pinned ? <PinOff /> : <Pin />,
-      key: 'P',
-      show: true,
-    },
-    { action: 'rename', label: 'Rename', icon: <Pencil />, key: 'R', show: mayChange },
-    {
-      action: 'archive',
-      label: archived ? 'Unarchive' : 'Archive',
-      icon: archived ? <ArchiveRestore /> : <Archive />,
-      key: 'A',
-      show: mayChange,
-    },
-    { action: 'delete', label: 'Delete', icon: <Trash2 />, key: 'D', show: mayDelete },
-  ]
-  const shown = items.filter((i) => i.show)
-
-  function onMenuKey(e: KeyboardEvent) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return
-    const item = shown.find((i) => i.key === e.key.toUpperCase())
-    if (!item) return
-    e.preventDefault()
-    void run(item.action)
+    if (await renameThread(thread.id, thread.title, next)) onChanged()
   }
 
   if (renaming)
@@ -245,36 +161,9 @@ export function ThreadRow({
           // Rename puts the focus in its field instead.
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          {shown.map((item) => (
-            <Fragment key={item.action}>
-              {item.action === 'delete' && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                variant={item.action === 'delete' ? 'destructive' : 'default'}
-                onSelect={() => void run(item.action)}
-              >
-                {item.icon}
-                {item.label}
-                <DropdownMenuShortcut>{item.key}</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </Fragment>
-          ))}
+          {content}
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
   )
-}
-
-/** Delete's confirmation: the schedules reporting to the thread go with it, so it says so. */
-async function deleteQuestion(id: string, title: string) {
-  const schedules = await api<Thread>(`/threads/${id}`)
-    .then((t) => t.reportingSchedules)
-    .catch(() => [])
-  const names = schedules.map((s) => `“${s.title}”`).join(', ')
-  const also =
-    schedules.length === 0
-      ? ''
-      : schedules.length === 1
-        ? `\n\nThe schedule ${names} reports here: it will be deleted too, with its runs.`
-        : `\n\nThe schedules ${names} report here: they will be deleted too, with their runs.`
-  return `Delete “${title}” for good, with its files? This can't be undone.${also}`
 }

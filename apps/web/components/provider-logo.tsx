@@ -7,10 +7,12 @@ import { cn } from '@/lib/utils'
 export type ProviderKind = Connection['kind']
 
 /**
- * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Stripe's
- * app icon, Cloudflare's cloud, Google Cloud's four-color cloud, Neon's square N, Supabase's
- * bolt, Atlassian's two-part A, Notion's black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, GitHub's Invertocat (in the text
- * color, so it reads in both themes), and a
+ * Each service's own mark: Google's Gmail, Calendar, Drive, Docs and Sheets icons, Search
+ * Console's 2025 icon, Analytics' bars, Stripe's app icon, Cloudflare's cloud, Google Cloud's
+ * four-color cloud, Neon's square N, Supabase's bolt, Atlassian's two-part A, Notion's
+ * black-on-white cube, Linear's violet mark, Mixpanel's violet x, Resend's R on black, Replicate's
+ * bars on black, GitHub's
+ * Invertocat (in the text color, so it reads in both themes), and a
  * generic webhook mark for custom apps.
  */
 export function ProviderLogo({ kind, className }: { kind: ProviderKind; className?: string }) {
@@ -66,6 +68,49 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
             d="M196.25,43.618V12.039c0-8.724-7.066-15.789-15.789-15.789h-31.579v47.368H196.25z"
           />
         </g>
+      </svg>
+    )
+  if (kind === 'google_search_console')
+    return (
+      <svg viewBox="4.45 4.15 31.4 31.4" {...common}>
+        <path
+          fill="#fbbc04"
+          d="m11.081 30.527-4.72 4.721a.933.933 0 0 1-1.317 0l-.292-.292a.933.933 0 0 1 0-1.316l4.72-4.721a.933.933 0 0 1 1.318 0l.291.291a.93.93 0 0 1 0 1.317"
+        />
+        <path
+          fill="#4285f4"
+          d="M23.75 32.5h6.042a6.04 6.04 0 0 0 6.041-6.042v-16.25a6.04 6.04 0 0 0-6.041-6.041 6.04 6.04 0 0 0-6.042 6.041z"
+        />
+        <path
+          fill="#fbbc04"
+          d="M13.75 32.5a6.04 6.04 0 0 0 6.042-6.042 6.04 6.04 0 0 0-6.042-6.041 6.04 6.04 0 0 0-6.042 6.041A6.04 6.04 0 0 0 13.75 32.5"
+        />
+        <path
+          fill="#34a853"
+          d="M27.97 32.5h-5.887a6.04 6.04 0 0 1-6.041-6.042v-7.916a6.04 6.04 0 0 1 6.041-6.042 6.04 6.04 0 0 1 6.042 6.042v13.804a.154.154 0 0 1-.154.154z"
+        />
+        <path
+          fill="#1967d2"
+          d="M28.125 32.346V18.542a6.04 6.04 0 0 0-4.375-5.807V32.5h4.22a.154.154 0 0 0 .155-.154"
+        />
+        <path
+          fill="#ea4335"
+          d="M19.792 26.575a6.04 6.04 0 0 0-3.75-5.59v5.59c0 1.72.72 3.273 1.875 4.373a6.02 6.02 0 0 0 1.875-4.373"
+        />
+      </svg>
+    )
+  if (kind === 'google_analytics')
+    return (
+      <svg viewBox="0 0 192 192" {...common}>
+        <path
+          fill="#f9ab00"
+          d="M130 29v132c0 14.77 10.19 23 21 23 10 0 21-7 21-23V30c0-13.54-10-22-21-22s-21 9.33-21 21z"
+        />
+        <path
+          fill="#e37400"
+          d="M75 96v65c0 14.77 10.19 23 21 23 10 0 21-7 21-23V97c0-13.54-10-22-21-22s-21 9.33-21 21z"
+        />
+        <circle fill="#e37400" cx="41" cy="163" r="21" />
       </svg>
     )
   if (kind === 'webhook') return <Webhook {...common} />
@@ -250,6 +295,18 @@ export function ProviderLogo({ kind, className }: { kind: ProviderKind; classNam
           fill="#fff"
           transform="translate(5.4 5.4) scale(0.55)"
           d="M14.679 0c4.648 0 7.413 2.765 7.413 6.434s-2.765 6.434-7.413 6.434H12.33L24 24h-8.245l-8.88-8.44c-.636-.588-.93-1.273-.93-1.86 0-.831.587-1.565 1.713-1.883l4.574-1.224c1.737-.465 2.936-1.81 2.936-3.572 0-2.153-1.761-3.4-3.939-3.4H0V0z"
+        />
+      </svg>
+    )
+  if (kind === 'replicate')
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        {/* Replicate's three bars on its black tile, in both themes. */}
+        <rect width="24" height="24" rx="5.5" fill="#000" />
+        <path
+          fill="#fff"
+          transform="translate(6 6) scale(0.5)"
+          d="M24 10.262v2.712h-9.518V24h-3.034V10.262zm0-5.131v2.717H8.755V24H5.722V5.131zM24 0v2.717H3.034V24H0V0z"
         />
       </svg>
     )

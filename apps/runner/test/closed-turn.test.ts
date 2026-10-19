@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answerAfterRestart, closeTurn, withoutBridge } from '../src/harness/closed-turn.js'
+import {
+  answerAfterRestart,
+  closeTurn,
+  withoutBridge,
+  withTools,
+} from '../src/harness/closed-turn.js'
 
 // What Claude Code's harness saves when a turn waiting on open_ticket stops.
 const waiting = {
@@ -139,4 +144,35 @@ test('a turn waiting on an approval is closed too, keeping the call it would hav
     approvalAfterRestart(closed!.approvals[0], false, 'not now'),
     /They declined it: not now\. Do not make it/,
   )
+})
+
+test("a frozen turn whose tools changed since goes on with the agent's own", () => {
+  const frozen = {
+    ...waiting,
+    continueFrom: {
+      ...waiting.continueFrom,
+      turnSettings: {
+        skills: [],
+        tools: [{ name: 'open_ticket' }, { name: 'github_list_repositories' }],
+      },
+      pendingToolResults: [],
+    },
+  }
+  // A second GitHub account renamed that kind's tools.
+  const { turnSettings: _settings, ...rest } = frozen.continueFrom
+  assert.deepEqual(withTools(frozen, ['open_ticket', 'github_list_repositories_acme']), {
+    ...frozen,
+    continueFrom: rest,
+  })
+  // An App granted since: the turn gets its tools too.
+  assert.deepEqual(
+    withTools(frozen, ['open_ticket', 'github_list_repositories', 'linear_list_issues']),
+    { ...frozen, continueFrom: rest },
+  )
+  // The same tools, in any order: kept as saved.
+  assert.equal(withTools(frozen, ['github_list_repositories', 'open_ticket']), frozen)
+  // Between turns, or with nothing saved, there is no turn to change.
+  const between = { type: 'resume-session', harnessId: 'codex', data: { threadId: 't1' } }
+  assert.equal(withTools(between, ['open_ticket']), between)
+  assert.equal(withTools(undefined, ['open_ticket']), undefined)
 })

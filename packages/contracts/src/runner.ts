@@ -49,7 +49,7 @@ export type AccountRef = z.infer<typeof AccountRef>
 /** A connection the teammate is granted, as tools. Never its credential. */
 export const ConnectorGrant = z.object({
   connectionId: z.string(),
-  /** gmail, google_calendar, google_drive, google_docs, google_sheets, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
+  /** gmail, google_calendar, google_drive, google_docs, google_sheets, google_search_console, google_analytics, stripe, github, or an MCP App's kind such as cloudflare (MCP_PROTOCOL). */
   kind: z.string(),
   label: z.string(),
   externalAccount: z.string().nullable(),
@@ -303,8 +303,8 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   }),
   /**
    * A teammate searches the library, memory and past thread summaries,
-   * saves a file to the library, registers a design system it saved there,
-   * or proposes a skill.
+   * saves, moves or deletes library files, registers a design system it saved
+   * there, or proposes a skill.
    * The API checks its grant. Answered like a connector call.
    */
   z.object({
@@ -325,6 +325,10 @@ export const RunnerToApi = z.discriminatedUnion('type', [
         content: z.string(),
         contentType: z.string().max(200).optional(),
       }),
+      /** Move or rename a file, or a folder with everything in it. */
+      z.object({ name: z.literal('move'), path: LibraryPath, to: LibraryPath }),
+      /** Put a file, or a folder with everything in it, in the trash. */
+      z.object({ name: z.literal('delete'), path: LibraryPath }),
       /** Register a design system whose folder is saved, or change one. */
       z.object({ name: z.literal('design_system'), designSystem: TeammateDesignSystem }),
       /** Files of a design a person changed since this thread last saved them: asked before saving it. */

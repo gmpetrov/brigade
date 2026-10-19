@@ -24,6 +24,7 @@ import {
   SKILL_ENTRY,
   SkillContent,
   TeamProposal,
+  TRASH_DAYS,
   Widget,
   WIDGET_GUIDE_TOOL,
   WIDGET_HTML_MAX,
@@ -247,6 +248,8 @@ export const openTicketTool = tool({
                     'google_drive',
                     'google_docs',
                     'google_sheets',
+                    'google_search_console',
+                    'google_analytics',
                     'stripe',
                     'github',
                     'cloudflare',
@@ -258,6 +261,7 @@ export const openTicketTool = tool({
                     'linear',
                     'mixpanel',
                     'resend',
+                    'replicate',
                     'mcp',
                   ],
                 },
@@ -265,6 +269,11 @@ export const openTicketTool = tool({
                 url: {
                   type: 'string',
                   description: 'kind mcp: the MCP server URL, e.g. https://mcp.example.com/mcp',
+                },
+                repository: {
+                  type: 'string',
+                  description:
+                    'kind github: the repository you need, as owner/name (e.g. acme/web), such as one checkout_repository could not reach. The person installs the GitHub app on it, or adds it, from the ticket',
                 },
               },
               required: ['kind', 'scope'],
@@ -439,6 +448,8 @@ export const proposeTeamTool = tool({
                       'google_drive',
                       'google_docs',
                       'google_sheets',
+                      'google_search_console',
+                      'google_analytics',
                       'stripe',
                       'github',
                     ],
@@ -671,6 +682,8 @@ export type LibraryCaller = (call: {
   operation:
     | { name: 'search'; query: string; limit: number }
     | { name: 'save'; path: string; content: string }
+    | { name: 'move'; path: string; to: string }
+    | { name: 'delete'; path: string }
     | { name: 'design_system'; designSystem: TeammateDesignSystem }
     | { name: 'design_edits'; path: string }
     | { name: 'skill_proposal'; proposal: SkillProposal }
@@ -681,8 +694,8 @@ export type LibraryCaller = (call: {
 
 /**
  * The workspace's search (library, memory, past thread summaries) and, with a
- * read-write grant on the library or a folder of it, saving to the library.
- * The API checks the grant.
+ * read-write grant on the library or a folder of it, saving, moving and
+ * deleting library files. The API checks the grant.
  */
 export function libraryTools(options: {
   access: 'read' | 'read_write'
@@ -886,6 +899,49 @@ export function libraryTools(options: {
           input,
         })
       },
+    })
+    tools.move_in_library = tool({
+      description:
+        `Move or rename a file in the workspace's library, or a folder with everything in it. ` +
+        `Refused when something is already at the new path. Documents and memory that name the old path keep it: update those that matter.`,
+      inputSchema: jsonSchema<{ path: string; to: string }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Its library path, e.g. "guides/refunds.md"' },
+          to: {
+            type: 'string',
+            description: 'Its whole new path, e.g. "guides/billing/refunds.md"',
+          },
+        },
+        required: ['path', 'to'],
+      }),
+      execute: (input, { toolCallId }) =>
+        options.call({
+          operation: { name: 'move', path: input.path, to: input.to },
+          toolCallId,
+          toolName: 'move_in_library',
+          input,
+        }),
+    })
+    tools.delete_from_library = tool({
+      description:
+        `Put a file of the workspace's library, or a folder with everything in it, in the library's trash, ` +
+        `where a person can restore it for ${TRASH_DAYS} days. Delete only what a person asked you to, ` +
+        `or what you saved yourself and nobody needs any more (a draft, a copy, a note that only points elsewhere).`,
+      inputSchema: jsonSchema<{ path: string }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Its library path, e.g. "guides/old-refunds.md"' },
+        },
+        required: ['path'],
+      }),
+      execute: (input, { toolCallId }) =>
+        options.call({
+          operation: { name: 'delete', path: input.path },
+          toolCallId,
+          toolName: 'delete_from_library',
+          input,
+        }),
     })
     tools.save_design = tool({
       description:
@@ -1180,13 +1236,16 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
         'track something on the board, or to start work in a thread of its own: your own name as assignee for a ' +
         'goal of yours that came up while talking about something else, another teammate (id or name) to hand ' +
         'them work. Either starts at once in its own thread. "none" puts it in Backlog; "self" makes this thread ' +
-        'the task. One goal is one task and one deliverable, however big: keep its parts off the board.',
+        'the task. One goal is one task and one deliverable, however big: keep its parts off the board. It goes in ' +
+        "this thread's project unless you set `project`: set it when the task belongs to another project than this " +
+        'thread (a Brigade fix that came up in a Lovarank thread goes in Brigade).',
       inputSchema: jsonSchema<{
         title: string
         description: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
         assignee?: string
         mission?: string
+        project?: string
       }>({
         type: 'object',
         properties: {
@@ -1208,6 +1267,12 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
               'The id of the mission it belongs to, from list_tasks or the create_task that made it. It takes the ' +
               "mission's project. Unset: a task of its own.",
           },
+          project: {
+            type: 'string',
+            description:
+              'The project it belongs to: its id (or name) from your instructions, or "none" for no project. ' +
+              "Unset: this thread's project. Leave it out with a mission, which gives its own project.",
+          },
         },
         required: ['title', 'description'],
       }),
@@ -1221,6 +1286,7 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
             priority: input.priority ?? 'medium',
             assignee: input.assignee || 'self',
             ...(input.mission ? { mission: input.mission } : {}),
+            ...(input.project ? { project: input.project === 'none' ? null : input.project } : {}),
           },
           input,
           toolCallId,
@@ -1262,13 +1328,16 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
     }),
     update_task: tool({
       description:
-        "Change a task's title, description or priority, or move it into or out of a mission.",
+        "Change a task's title, description or priority, move it into or out of a mission, or move it to another " +
+        "project, such as a task created in the wrong one. A task in a mission is in the mission's project: move " +
+        "the mission, or take the task out of it first. A task's thread moves with it.",
       inputSchema: jsonSchema<{
         taskId: string
         title?: string
         description?: string
         priority?: 'low' | 'medium' | 'high' | 'urgent'
         mission?: string
+        project?: string
       }>({
         type: 'object',
         properties: {
@@ -1280,18 +1349,24 @@ function boardTools(call: TaskCaller): Record<string, Tool> {
             type: 'string',
             description: 'A mission id to move it into, or "none" to take it out of its mission',
           },
+          project: {
+            type: 'string',
+            description:
+              'A project id (or name) from your instructions to move it to, or "none" to take it out of its project',
+          },
         },
         required: ['taskId'],
       }),
-      execute: ({ mission, ...input }, { toolCallId }) =>
+      execute: ({ mission, project, ...input }, { toolCallId }) =>
         send(
           'update_task',
           {
             name: 'update',
             ...input,
             ...(mission ? { mission: mission === 'none' ? null : mission } : {}),
+            ...(project ? { project: project === 'none' ? null : project } : {}),
           },
-          { ...input, mission },
+          { ...input, mission, project },
           toolCallId,
         ),
     }),

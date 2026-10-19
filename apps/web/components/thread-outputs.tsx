@@ -1,8 +1,9 @@
 'use client'
 // What a thread made, beside it: files its teammates wrote or named, library
 // documents, images, pull requests, emails, schedules and skills proposed. Read from the event
-// log, newest first; a file made again keeps one row. A pull request's row says how its
-// checks went, and an owner or admin merges it from there.
+// log, newest first; a file made again keeps one row, and one saved to the library shows
+// only as its library row. A pull request's row says how its checks went, and an owner or
+// admin merges it from there.
 import {
   bareToolName as bare,
   designName,
@@ -76,6 +77,17 @@ const json = (value: unknown) => (typeof value === 'string' ? value : JSON.strin
 const name = (path: string) => path.split('/').pop() ?? path
 
 /**
+ * Whether two paths name the same file: one may be absolute (a write tool's)
+ * and the other relative to the working folder (named in a message).
+ */
+function samePath(a: string, b: string) {
+  const [x, y] = [a, b].map((p) => p.replace(/^\.\//, ''))
+  if (x === y) return true
+  if (!x!.startsWith('/') && y!.endsWith(`/${x}`)) return true
+  return !y!.startsWith('/') && x!.endsWith(`/${y}`)
+}
+
+/**
  * Files a message names that are something made to hand over, not code it
  * read: a script can write a PDF without a write tool the runner sees.
  */
@@ -121,6 +133,8 @@ export function useThreadOutputs(events: SequencedEvent[]) {
       streaming.clear()
     }
     const calls = new Map<string, { toolName: string; input: unknown }>()
+    // Files saved to the library, as written on the computer and as library paths.
+    const saved: string[] = []
     for (const { event: e } of events) {
       switch (e.type) {
         case 'file.changed':
@@ -171,6 +185,9 @@ export function useThreadOutputs(events: SequencedEvent[]) {
           const input = (call.input ?? {}) as Record<string, unknown>
           const tool = bare(call.toolName)
           if (tool === 'save_to_library' && typeof input.path === 'string') {
+            // Its library row stands for the file on the computer it was saved from.
+            if (typeof input.file === 'string') saved.push(input.file)
+            saved.push(input.path)
             add({
               key: `library:${input.path}`,
               kind: 'library',
@@ -179,6 +196,32 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               file: { path: input.path },
             })
+          } else if (
+            (tool === 'move_in_library' || tool === 'delete_from_library') &&
+            typeof input.path === 'string'
+          ) {
+            // What it saved there follows it, or leaves with it.
+            const from = input.path
+            const to = typeof input.to === 'string' ? input.to : undefined
+            if (to) saved.push(to)
+            for (const output of [...byKey.values()]) {
+              const path = output.file?.path
+              if (!path || (output.kind !== 'library' && output.kind !== 'design')) continue
+              if (path !== from && !path.startsWith(`${from}/`)) continue
+              byKey.delete(output.key)
+              if (!to) continue
+              const moved = to + path.slice(from.length)
+              const named = (p: string) =>
+                output.kind === 'design' ? designName(p) || name(p) : name(p)
+              add({
+                ...output,
+                key: `${output.kind}:${moved}`,
+                label: output.label === named(path) ? named(moved) : output.label,
+                detail: output.detail?.replace(`· ${from}`, `· ${to}`),
+                at: e.at,
+                file: { path: moved },
+              })
+            }
           } else if (tool === 'save_design' && typeof input.path === 'string') {
             const path = input.path.replace(/\/+$/, '')
             add({
@@ -259,7 +302,9 @@ export function useThreadOutputs(events: SequencedEvent[]) {
       }
     }
     flush()
-    return [...byKey.values()].reverse()
+    return [...byKey.values()]
+      .filter((o) => o.kind !== 'file' || !saved.some((path) => samePath(path, o.file!.path)))
+      .reverse()
   }, [events])
 }
 

@@ -1,9 +1,18 @@
 // Google OAuth for connections. Tokens go straight into the vault.
 import { env } from '../config.js'
 
-/** The Apps that sign in with Brigade's Google client. */
+/** The Apps that sign in with Brigade's Google client, each with its own consent. */
 export type GoogleKind =
-  'gmail' | 'google_calendar' | 'google_drive' | 'google_docs' | 'google_sheets'
+  | 'gmail'
+  | 'google_calendar'
+  | 'google_drive'
+  | 'google_docs'
+  | 'google_sheets'
+  | 'google_search_console'
+  | 'google_analytics'
+
+// Neither Search Console nor Analytics says whose account it is: the address comes from userinfo.
+const EMAIL = 'https://www.googleapis.com/auth/userinfo.email'
 
 export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
   gmail: [
@@ -26,6 +35,9 @@ export const GOOGLE_SCOPES: Record<GoogleKind, string[]> = {
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive.file',
   ],
+  // webmasters, not webmasters.readonly: submitting sitemaps and adding properties write.
+  google_search_console: ['https://www.googleapis.com/auth/webmasters', EMAIL],
+  google_analytics: ['https://www.googleapis.com/auth/analytics.readonly', EMAIL],
 }
 
 export const isGoogleKind = (kind: string): kind is GoogleKind => kind in GOOGLE_SCOPES
@@ -109,6 +121,12 @@ export async function revokeGoogle(credential: GoogleCredential) {
 /** The account a credential belongs to, to show which one a connection is. Never the credential. */
 export async function googleAccount(kind: GoogleKind, accessToken: string) {
   const headers = { authorization: `Bearer ${accessToken}` }
+  if (kind === 'google_search_console' || kind === 'google_analytics') {
+    const user = (await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers,
+    }).then((r) => r.json())) as { email?: string }
+    return user.email ?? null
+  }
   if (kind === 'gmail') {
     const profile = (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
       headers,

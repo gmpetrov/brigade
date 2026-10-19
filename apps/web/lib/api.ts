@@ -494,6 +494,8 @@ export type Connection = {
     | 'google_drive'
     | 'google_docs'
     | 'google_sheets'
+    | 'google_search_console'
+    | 'google_analytics'
     | 'stripe'
     | 'github'
     | 'webhook'
@@ -506,6 +508,7 @@ export type Connection = {
     | 'linear'
     | 'mixpanel'
     | 'resend'
+    | 'replicate'
     | 'mcp'
   label: string
   externalAccount: string | null
@@ -837,6 +840,14 @@ export type LooseEnd =
       teammate: { id: string; name: string }
       quietSince: string
       offline: boolean
+    }
+  | {
+      kind: 'failed'
+      key: string
+      at: string
+      thread: { id: string; title: string }
+      teammate: { id: string; name: string }
+      error: string | null
     }
   | {
       kind: 'routine'

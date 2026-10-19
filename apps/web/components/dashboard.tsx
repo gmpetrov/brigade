@@ -58,6 +58,7 @@ import {
 } from '@/components/thread-panel'
 import { TopBar } from '@/components/top-bar'
 import { UpdatePill } from '@/components/update-pill'
+import { UsageMenu } from '@/components/usage-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -90,6 +91,7 @@ import {
   useApi,
   waitingItemKey,
   waitsOn,
+  type Account,
   type Me,
   type ProjectSummary,
   type PullWaiting,
@@ -202,6 +204,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // Pull requests waiting on a person: with the tickets, what Home's Waiting on you counts.
   const pulls = useApi<{ pulls: PullWaiting[] }>('/pulls/attention')
   const reloadPulls = pulls.reload
+  // The member's AI accounts, for the avatar menu's usage: fresh each time it opens.
+  const accounts = useApi<Account[]>('/accounts')
+  const reloadAccounts = accounts.reload
   const [searching, setSearching] = useState(false)
   // Expanded or folded to icons, as the member left it: the sidebar keeps it in a cookie.
   // Read once, before the sidebar first shows (it waits for the member to load).
@@ -435,7 +440,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <SidebarFooter className="gap-3">
                 {/* The member and their menu, and the way to connect apps; folded, a column. */}
                 <div className="flex items-center gap-2 px-2 pb-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:p-0">
-                  <DropdownMenu>
+                  <DropdownMenu onOpenChange={(open) => open && void reloadAccounts()}>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
@@ -508,6 +513,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           ))}
                         </div>
                       </div>
+                      <UsageMenu accounts={accounts.data} />
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={openNotifications}>
                         <Bell /> Notifications

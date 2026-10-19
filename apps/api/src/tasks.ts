@@ -19,6 +19,7 @@ import { messageChild } from './children.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastTask, dispatch, isOnline } from './hub.js'
 import { projectWhere, usableProject } from './projects.js'
+import { projectRefusal } from './task-project.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, currentTeammate, loadThread, requireMayPrompt } from './thread-spec.js'
@@ -1008,6 +1009,7 @@ const listed = (task: ReturnType<typeof view>, all: ReturnType<typeof view>[]) =
     priority: task.priority,
     teammate: task.teammate && { id: task.teammate.id, name: task.teammate.name },
     ...(task.parentId ? { missionId: task.parentId } : {}),
+    ...(task.projectId ? { projectId: task.projectId } : {}),
     ...(children.length
       ? { mission: { done: children.filter((c) => c.completedAt).length, total: children.length } }
       : {}),
@@ -1098,6 +1100,21 @@ export async function handleTaskCall(
     (await db.teammate.findFirst({
       where: { name: { equals: ref.trim(), mode: 'insensitive' }, archivedAt: null },
     }))
+  /** A project by id or name, or null for none; undefined when the call names none. */
+  const findProject = async (ref: string | null | undefined) => {
+    if (ref === undefined || ref === null) return ref
+    const project =
+      (await db.project.findFirst({ where: { id: ref }, select: { id: true } })) ??
+      (await db.project.findFirst({
+        where: { name: { equals: ref.trim(), mode: 'insensitive' } },
+        select: { id: true },
+      }))
+    if (!project)
+      throw new HTTPException(404, {
+        message: 'No project has that id or name; your instructions list the projects',
+      })
+    return usableProject(db, project.id)
+  }
 
   try {
     if (op.name === 'list') {
@@ -1117,9 +1134,16 @@ export async function handleTaskCall(
     }
 
     if (op.name === 'create') {
-      // In a mission, it is in the mission's project.
+      // In a mission, it is in the mission's project; else the one asked, or this thread's.
+      const refusal = projectRefusal(op.project, op.mission ?? null)
+      if (refusal) return fail(refusal)
       const mission = op.mission ? await requireMission(db, op.mission) : null
-      const projectId = mission ? mission.projectId : session.projectId
+      const asked = await findProject(op.project)
+      const projectId = mission
+        ? mission.projectId
+        : asked === undefined
+          ? session.projectId
+          : asked
       if (op.assignee === 'self') {
         if (session.origin === 'trigger')
           return fail('A thread a trigger started cannot become a task. Just do the work here.')
@@ -1219,10 +1243,15 @@ export async function handleTaskCall(
         })
 
       case 'update': {
-        const { name: _, taskId: __, mission, ...changes } = op
+        const { name: _, taskId: __, mission, project, ...changes } = op
+        // Like the Project select in the task panel: a task of its own, not one in a mission.
+        const refusal = projectRefusal(project, mission === undefined ? task.parentId : mission)
+        if (refusal) return fail(refusal)
+        const projectId = await findProject(project)
         await updateTask(db, by, taskId, {
           ...changes,
           ...(mission !== undefined ? { parentId: mission } : {}),
+          ...(projectId !== undefined ? { projectId } : {}),
         })
         return done({ ok: true })
       }

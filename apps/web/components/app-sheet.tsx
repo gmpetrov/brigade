@@ -121,7 +121,8 @@ export function AppSheet({
           kind === 'notion' ||
           kind === 'linear' ||
           kind === 'mixpanel' ||
-          kind === 'resend'
+          kind === 'resend' ||
+          kind === 'replicate'
         ? 'mcp'
         : kind === 'github'
           ? 'github'
@@ -771,7 +772,9 @@ function Unavailable({ kind }: { kind: Kind }) {
     kind === 'google_calendar' ||
     kind === 'google_drive' ||
     kind === 'google_docs' ||
-    kind === 'google_sheets'
+    kind === 'google_sheets' ||
+    kind === 'google_search_console' ||
+    kind === 'google_analytics'
   )
     return (
       <p className="text-sm text-muted-foreground">

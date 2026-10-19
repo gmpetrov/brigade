@@ -46,7 +46,8 @@ function saving(spec: ThreadSpec) {
       .filter((f) => f.access === access)
       .map((f) => `${f.path}/`)
       .join(', ')
-  const how = 'write it on this computer, then call `save_to_library`'
+  const how =
+    'write it on this computer, then call `save_to_library`; to move, rename or delete one, `move_in_library` or `delete_from_library`'
   if (spec.library === 'read_write') {
     const readOnly = list('read')
     return (
@@ -171,7 +172,7 @@ function chief(spec: ThreadSpec) {
       ? 'This workspace has no other teammates yet, so start here. '
       : 'When the person wants a new teammate or a different team, do this again for just that part. ') +
       'Find out what they are building (for whom, how far along), what takes their time, and the tools the work ' +
-      'lives in (a GitHub repository, Gmail, Google Calendar, Google Drive, Docs or Sheets, Stripe). Ask one or two questions at a time, three ' +
+      'lives in (a GitHub repository, Gmail, Google Calendar, Google Drive, Docs or Sheets, Search Console, Google Analytics, Stripe). Ask one or two questions at a time, three ' +
       'rounds at most; when they give a website or repository, look at it instead of asking about it.',
     `Then call \`${PROPOSE_TEAM_TOOL}\` and describe the team you suggest in a few lines after it. Propose two or ` +
       'three teammates, five at most, each only for work their answers call for. For one person building a company, ' +
@@ -419,7 +420,9 @@ const BOARD_TOOLS =
   'You can also manage the board: `list_tasks`, `create_task` for Backlog or for another teammate, ' +
   "`message_thread` (to write in a started task's thread), `update_task`, `assign_task` (teammates only, never a " +
   'person), `move_task` and ' +
-  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person.'
+  '`complete_task`. Only a ticket puts a task in Needs you: open one when you need a person. A task you create ' +
+  "goes in this thread's project; when it belongs to another project (see Projects), give `project` with that " +
+  "project's id, and move one created in the wrong project with `update_task`."
 
 /**
  * Big goals: one deliverable, however big. Nine tasks made a person follow nine
@@ -714,6 +717,11 @@ const code = (spec: ThreadSpec) =>
     '## Code',
     'You can work on the GitHub repositories of your GitHub connection. Check one out with `checkout_repository`: ' +
       `it goes into your working directory on a branch of your own for this thread (${threadBranch(spec)}).`,
+    'When the work needs a repository your GitHub connection does not reach (`checkout_repository` says so), ' +
+      'do not stop to explain it: open a ticket (`open_ticket`) with an `access` ask of kind `connection`, ' +
+      '`app` of kind `github` with the scope you need and `repository` set to its owner/name. The person installs ' +
+      'the GitHub app on it, or adds it to an installation, and gives you access right in the ticket; then check it ' +
+      'out and finish the task.',
     'Commit as you go and push with `git push -u origin HEAD`. Git reaches GitHub through Brigade: only branches ' +
       'under `brigade/` can be pushed, so propose changes to other branches with a pull request (the GitHub tool; ' +
       'a person may need to approve it). A new tag can be pushed too, on a commit already on the default branch and ' +

@@ -42,6 +42,8 @@ const BUILT_IN: Kind[] = [
   'google_drive',
   'google_docs',
   'google_sheets',
+  'google_search_console',
+  'google_analytics',
   'github',
   'cloudflare',
   'google_cloud',
@@ -52,6 +54,7 @@ const BUILT_IN: Kind[] = [
   'linear',
   'mixpanel',
   'resend',
+  'replicate',
   'stripe',
 ]
 

@@ -5,6 +5,7 @@ import { MessageAttachment } from './attachments.js'
 import { PROPOSE_TEAM_TOOL } from './chief.js'
 import { CredentialKind } from './credentials.js'
 import { EnvName, PreviewInfo } from './previews.js'
+import { RepositoryName } from './repositories.js'
 
 const base = {
   /** ISO time the event happened on the computer. */
@@ -262,6 +263,15 @@ export const Ask = z.discriminatedUnion('type', [
         scope: z.enum(['read', 'read_write']),
         /** kind mcp: the MCP server's URL, which the person adds from the ticket if it is not yet. */
         url: z.string().max(500).optional(),
+        /**
+         * kind github: the repository (owner/name) the teammate needs. The account given must
+         * reach it; the person installs the GitHub app on its owner, or adds it, from the ticket.
+         */
+        repository: RepositoryName.optional(),
+      })
+      .refine((app) => !app.repository || app.kind === 'github', {
+        message: 'repository is for kind github',
+        path: ['repository'],
       })
       .optional(),
     /**
@@ -496,6 +506,8 @@ export const AgentEvent = z.discriminatedUnion('type', [
     outputTokens: z.number().optional(),
     /** allowed, warning (close to a limit) or rejected (out of usage). */
     status: z.enum(['allowed', 'warning', 'rejected']).optional(),
+    /** The account the limits are for, when read after its turn (Codex) rather than during it. */
+    accountId: z.string().optional(),
     /** Subscription limits where the harness exposes them. utilization is 0..1. */
     limits: z
       .array(

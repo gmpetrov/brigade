@@ -164,7 +164,10 @@ export const ConnectorKind = {
   linear: 'linear',
   mixpanel: 'mixpanel',
   resend: 'resend',
-  mcp: 'mcp'
+  replicate: 'replicate',
+  mcp: 'mcp',
+  google_search_console: 'google_search_console',
+  google_analytics: 'google_analytics'
 } as const
 
 export type ConnectorKind = (typeof ConnectorKind)[keyof typeof ConnectorKind]
