@@ -27,11 +27,24 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   for good stays (from the Trash, or "Not a task" on its thread).
 - **Done goes away by itself.** A task done for 3 days is archived by the API's
   hourly sweep (`sweepDoneTasks`); "Archive all" clears Done sooner.
-- **Missions group tasks toward one goal.** A mission is a task with sub-tasks
-  (`Task.parentId`, one level), "Mission" in visible text only. The board shows
-  it as one card ("Mission", its title, `done/total`); its sheet lists its tasks.
-  A sub-task is in its mission's project. Teammates create the mission first,
-  then each task with `mission`; one deliverable stays one task.
+- **One goal, one task, cut in deliveries.** A person's attention is what is
+  scarce: a goal of days or several pull requests is one task, planned in one
+  to three deliveries, each a moment where the person tries something that works
+  or decides something only they can. Never one task per technical step: a
+  mission of nine tasks made a person follow nine pull requests. Its parts stay
+  off the board: the teammate does them itself (Claude Code's sub-agents for
+  parallel or side work), and starts a child thread only for what must outlive
+  its turn, is for another teammate (such as the review before a delivery) or may
+  need a person. A goal that came up in a conversation about something else gets
+  a thread of its own: the teammate assigns the task to itself by name. The
+  rules are in the session instructions (`bigGoals` in apps/runner/src/instructions.ts).
+- **Missions group tasks toward one goal, rarely.** A mission is a task with
+  sub-tasks (`Task.parentId`, one level), "Mission" in visible text only. The
+  board shows it as one card ("Mission", its title, `done/total`); its sheet
+  lists its tasks. A sub-task is in its mission's project. Teammates make one
+  only when several teammates each own a delivery the person follows on its
+  own: the mission first (titled without the word "Mission"), then each task
+  with `mission`.
 
 ## Missions
 

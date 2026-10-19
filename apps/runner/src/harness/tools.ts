@@ -1110,9 +1110,11 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
         'asks to track it; not for questions, explanations, brainstorming or quick actions you finish in this ' +
         'reply. Call it before starting the work; do not ask first, say in one line that you are tracking it. ' +
         'Set assignee to "none" to put a separate task in Backlog for later, or to another teammate (id or name) ' +
-        'to hand them a separate task: it starts at once in its own thread. One deliverable (one spec, one pull ' +
-        'request) is one task, its steps in the description. Two or more tasks toward one goal go in a mission: ' +
-        'create the mission first (a task saying the goal and what done looks like), then each task with `mission`.',
+        'to hand them a separate task: it starts at once in its own thread. One goal is one task, however many ' +
+        'pull requests it takes: plan it in deliveries (moments where the person tries something or decides) and ' +
+        'keep its parts off the board. A mission groups tasks only when several teammates each own a delivery the ' +
+        'person follows on its own: create the mission first (the goal, titled without the word "Mission"), then ' +
+        'each task with `mission`.',
       inputSchema: jsonSchema<{
         title: string
         description: string
@@ -1131,7 +1133,8 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
           assignee: {
             type: 'string',
             description:
-              '"self" (default): this thread is the task. "none": Backlog. Else a teammate id or name, never a person.',
+              '"self" (default): this thread is the task. "none": Backlog. Else a teammate id or name, never a ' +
+              'person; your own name starts it in a new thread of yours.',
           },
           mission: {
             type: 'string',
@@ -1560,8 +1563,9 @@ export function childTools(
     start_child: tool({
       description:
         'Start work in a child thread of this one: a fresh context, on this computer and the accounts of the person in ' +
-        'this thread, out of their sidebar and shown here. Use it for work that is long, can run in parallel with ' +
-        'other work, or is for another teammate (teammate); do quick work yourself. The child does not see this ' +
+        'this thread, out of their sidebar and shown here. Use it for work that must outlive your turn, is for ' +
+        'another teammate (teammate), or may need a person; otherwise do the work yourself, with your own ' +
+        'sub-agents for parallel parts if you have them. The child does not see this ' +
         'conversation: write instructions that stand alone (the goal, inputs by name, where the result goes, what ' +
         'done looks like). With wait (default), you are woken here once, with one note, when every child you wait ' +
         'for has reported: start them all, then end your turn; never wait or poll. ' +
