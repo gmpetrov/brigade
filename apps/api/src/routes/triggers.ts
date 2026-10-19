@@ -20,6 +20,8 @@ const KINDS: ConnectorKind[] = [
   'google_drive',
   'google_docs',
   'google_sheets',
+  'google_search_console',
+  'google_analytics',
   'stripe',
   'github',
   'cloudflare',
