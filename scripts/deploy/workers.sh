@@ -50,8 +50,6 @@ build:api)
   pnpm --filter "@brigade/api^..." build
   # prisma.config.ts needs a URL, which generating never connects to.
   DATABASE_URL=${DATABASE_URL:-postgresql://localhost/unused} pnpm --filter @brigade/api exec prisma generate
-  # The playbook templates (loops/) go inside the Worker's code.
-  pnpm --filter @brigade/api loops
   pnpm --filter @brigade/runner bundle
   ;;
 deploy:api)

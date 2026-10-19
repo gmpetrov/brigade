@@ -101,26 +101,24 @@ model Organization {
 
 /// A user's role in an organization: owner, admin or member.
 model Member {
-  id                String             @id
-  organizationId    String
-  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role              String             @default("member")
-  createdAt         DateTime           @default(now())
-  computers         Computer[]
-  accounts          Account[]
-  sessions          Session[]
-  tasks             Task[]
-  schedules         Schedule[]
-  threadReads       ThreadRead[]
-  threadPins        ThreadPin[]
-  homeDismissals    HomeDismissal[]
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+  computers      Computer[]
+  accounts       Account[]
+  sessions       Session[]
+  tasks          Task[]
+  schedules      Schedule[]
+  threadReads    ThreadRead[]
+  threadPins     ThreadPin[]
+  homeDismissals HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
-  notify            NotifyPreset       @default(needed)
-  pushNotices       PushNotice[]
-  /// Playbooks that run on their accounts.
-  loopInstallations LoopInstallation[]
+  notify         NotifyPreset @default(needed)
+  pushNotices    PushNotice[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -193,9 +191,6 @@ model Workspace {
   threadPins          ThreadPin[]
   homeDismissals      HomeDismissal[]
   pushNotices         PushNotice[]
-  loopInstallations   LoopInstallation[]
-  loopActions         LoopAction[]
-  loopRuns            LoopRun[]
 
   @@index([organizationId])
 }
@@ -310,7 +305,6 @@ model Teammate {
   schedules             Schedule[]
   schedulesCreated      Schedule[]           @relation("ScheduleCreatedByTeammate")
   wakeups               Wakeup[]
-  loopInstallations     LoopInstallation[]
 
   @@index([workspaceId])
 }
@@ -472,14 +466,6 @@ model Session {
   wakeups              Wakeup[]
   /// Schedules whose runs report here, as its children.
   reportingSchedules   Schedule[]         @relation("ScheduleParent")
-  /// The playbook run it belongs to: its root thread and the root's children (src/loops.ts).
-  loopRunId            String?
-  loopRun              LoopRun?           @relation("LoopRunThreads", fields: [loopRunId], references: [id], onDelete: SetNull)
-  /// The run it is the root thread of.
-  rootOfLoopRun        LoopRun?           @relation("LoopRunRoot")
-  /// A run's thread stays out of the sidebar's Threads until a person first takes part in it
-  /// (a message, a takeover, a pin): then this is set, and it stays there.
-  surfacedAt           DateTime?
 
   @@index([workspaceId, createdAt])
   @@index([projectId, createdAt])
@@ -487,7 +473,6 @@ model Session {
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
   @@index([parentId, createdAt])
-  @@index([loopRunId])
 }
 
 /// One AgentEvent with its sequence number. Append-only.
@@ -552,12 +537,12 @@ model Task {
 /// A teammate prompted with the same instructions on a cron schedule; each
 /// firing starts a fresh thread on the owner's accounts.
 model Schedule {
-  id                  String            @id @default(cuid())
+  id                  String    @id @default(cuid())
   organizationId      String
   workspaceId         String
-  workspace           Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   teammateId          String
-  teammate            Teammate          @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  teammate            Teammate  @relation(fields: [teammateId], references: [id], onDelete: Cascade)
   title               String
   /// The first message of each run.
   instructions        String
@@ -567,10 +552,10 @@ model Schedule {
   timezone            String
   /// Runs on this member's accounts; only they edit it.
   ownerMemberId       String
-  owner               Member            @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
+  owner               Member    @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
   /// Set when a teammate created it from a thread.
   createdByTeammateId String?
-  createdByTeammate   Teammate?         @relation("ScheduleCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
+  createdByTeammate   Teammate? @relation("ScheduleCreatedByTeammate", fields: [createdByTeammateId], references: [id], onDelete: SetNull)
   pausedAt            DateTime?
   /// The next firing; null while paused.
   nextRunAt           DateTime?
@@ -578,16 +563,13 @@ model Schedule {
   lastError           String?
   /// Its runs start in this project. Reporting to a thread, it is that thread's project, kept in step when the thread moves.
   projectId           String?
-  project             Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project             Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Set when made from a thread to report there: each run is a child of that thread (src/children.ts).
   parentSessionId     String?
-  parentSession       Session?          @relation("ScheduleParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  sessions            Session[]         @relation("ScheduleRuns")
-  /// Set when a playbook made it: changed only through the playbook, deleted with it.
-  loopInstallationId  String?
-  loopInstallation    LoopInstallation? @relation(fields: [loopInstallationId], references: [id], onDelete: Cascade)
+  parentSession       Session?  @relation("ScheduleParent", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  sessions            Session[] @relation("ScheduleRuns")
 
   @@index([nextRunAt])
   @@index([workspaceId])
@@ -1072,10 +1054,6 @@ model ConnectionCall {
   error          String?
   /// The approval ticket, when a human decided.
   ticketId       String?
-  /// A playbook's dry run: recorded, answered with a fake success, never sent.
-  simulated      Boolean    @default(false)
-  /// In a playbook's thread: the action of its manifest the call is.
-  loopActionKey  String?
   createdAt      DateTime   @default(now())
 
   @@index([sessionId])
@@ -1111,9 +1089,6 @@ model Trigger {
   /// The threads it starts are in this project.
   projectId            String?
   project              Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  /// Set when a playbook made it: changed only through the playbook, deleted with it.
-  loopInstallationId   String?
-  loopInstallation     LoopInstallation?    @relation(fields: [loopInstallationId], references: [id], onDelete: Cascade)
   createdAt            DateTime             @default(now())
   sessions             Session[]
 
@@ -1525,28 +1500,25 @@ model Skill {
 /// Skills imported together (a GitHub repository, a zip), kept as one: one
 /// scope, written onto its skills, and one switch over theirs.
 model SkillPack {
-  id                 String            @id @default(cuid())
-  organizationId     String
-  workspaceId        String
-  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name               String
+  id             String    @id @default(cuid())
+  organizationId String
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
   /// A GitHub address, or `file:<name>` for an upload: importing it again updates the pack.
-  source             String
-  everywhere         Boolean           @default(true)
-  teammateIds        String[]          @default([])
-  projectIds         String[]          @default([])
-  enabled            Boolean           @default(true)
-  createdByType      ActorType
-  createdById        String
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  skills             Skill[]
+  source         String
+  everywhere     Boolean   @default(true)
+  teammateIds    String[]  @default([])
+  projectIds     String[]  @default([])
+  enabled        Boolean   @default(true)
+  createdByType  ActorType
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  skills         Skill[]
   /// Set when the pack came with an App: its skills load only for teammates with that App.
-  appId              String?
-  app                App?              @relation(fields: [appId], references: [id], onDelete: SetNull)
-  /// Set when a playbook installed it: its skills load only in that playbook's threads.
-  loopInstallationId String?
-  loopInstallation   LoopInstallation? @relation(fields: [loopInstallationId], references: [id], onDelete: Cascade)
+  appId          String?
+  app            App?      @relation(fields: [appId], references: [id], onDelete: SetNull)
 
   @@unique([workspaceId, source])
   @@index([workspaceId])
@@ -1638,7 +1610,6 @@ model Project {
   schedules              Schedule[]
   triggers               Trigger[]
   documents              Document[]
-  loopInstallations      LoopInstallation[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -1709,121 +1680,4 @@ model PushNotice {
 
   @@unique([memberId, key])
   @@index([workspaceId])
-}
-
-// ---------------------------------------------------------------------------
-// Playbooks ("boucles"): a whole job to install (src/loops.ts). A template ships with
-// the API (apps/api/loops/<id>/loop.yaml); an installation runs it in a workspace.
-// ---------------------------------------------------------------------------
-
-enum LoopStatus {
-  /// Its settings are being filled in, or it waits for an owner or admin to activate it.
-  setup
-  dry_run
-  active
-  paused
-}
-
-/// ask: a person approves each time. auto: the teammate acts alone. deny: never.
-enum LoopActionLevel {
-  ask
-  auto
-  deny
-}
-
-enum LoopRunStatus {
-  running
-  waiting_person
-  waiting_event
-  done
-  failed
-}
-
-/// A playbook installed in a workspace (and a project): it runs for one teammate on its
-/// owner's accounts. Its triggers, schedules and skill pack are its own and go with it.
-model LoopInstallation {
-  id                  String       @id @default(cuid())
-  organizationId      String
-  workspaceId         String
-  workspace           Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  projectId           String?
-  project             Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  /// The template's id, e.g. brigade/support-bugs.
-  loopKey             String
-  version             String
-  /// brigade: shipped with the API. Later, a GitHub repository.
-  source              String       @default("brigade")
-  /// The template as installed (LoopManifest).
-  manifest            Json
-  teammateId          String
-  teammate            Teammate     @relation(fields: [teammateId], references: [id], onDelete: Cascade)
-  /// Runs on this member's accounts: their Claude or Codex subscription and their own Apps.
-  ownerMemberId       String
-  owner               Member       @relation(fields: [ownerMemberId], references: [id], onDelete: Cascade)
-  /// The answers to the template's settings, by key.
-  settings            Json         @default("{}")
-  status              LoopStatus   @default(setup)
-  createdByMemberId   String
-  activatedAt         DateTime?
-  activatedByMemberId String?
-  pausedAt            DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  actions             LoopAction[]
-  runs                LoopRun[]
-  triggers            Trigger[]
-  schedules           Schedule[]
-  skillPacks          SkillPack[]
-
-  @@index([workspaceId])
-  @@index([projectId])
-}
-
-/// One write a playbook may make, at its level of autonomy. Its numbers come from ConnectionCall and tickets.
-model LoopAction {
-  id                     String           @id @default(cuid())
-  organizationId         String
-  workspaceId            String
-  workspace              Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  installationId         String
-  installation           LoopInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
-  key                    String
-  level                  LoopActionLevel
-  /// Limits on auto: { cases?: string[], ... }.
-  conditions             Json             @default("{}")
-  levelChangedAt         DateTime?
-  levelChangedByMemberId String?
-
-  @@unique([installationId, key])
-}
-
-/// One event's work: its root thread (origin trigger or schedule) and the root's children.
-/// A later event of the same conversation continues it.
-model LoopRun {
-  id              String           @id @default(cuid())
-  organizationId  String
-  workspaceId     String
-  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  installationId  String
-  installation    LoopInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
-  /// Set once its thread started; a run whose thread could not start has none.
-  rootSessionId   String?          @unique
-  rootSession     Session?         @relation("LoopRunRoot", fields: [rootSessionId], references: [id], onDelete: SetNull)
-  /// The trigger's conversation (e.g. a Gmail thread): its later events continue this run.
-  conversationKey String?
-  /// The triage case the teammate reported (loop_report).
-  case            String?
-  status          LoopRunStatus    @default(running)
-  /// resolved, escalated, noise or failed, from loop_report.
-  outcome         String?
-  /// Times a person stepped in: a ticket resolved by a person, a member's message.
-  interventions   Int              @default(0)
-  firstResponseAt DateTime?
-  dryRun          Boolean          @default(false)
-  startedAt       DateTime         @default(now())
-  endedAt         DateTime?
-  threads         Session[]        @relation("LoopRunThreads")
-
-  @@index([installationId, startedAt])
-  @@index([installationId, conversationKey])
 }

@@ -204,14 +204,13 @@ export async function deleteSkill(db: ScopedDb, scope: Scope, actor: Actor, id: 
  * The skills a thread gets: on, in a pack that is on (if any), and for every
  * thread or its teammate or project. A pack's scope is written onto its skills.
  * A pack that came with an App only when the teammate can use one of its
- * accounts in the thread (`apps`); a playbook's only in that playbook's threads (`loop`).
+ * accounts in the thread (`apps`).
  */
 export async function threadSkills(
   db: ScopedDb,
   teammateId: string,
   projectId: string | null = null,
   apps: ReadonlySet<string> = new Set(),
-  loop: string | null = null,
 ): Promise<ThreadSkill[]> {
   const rows = await db.skill.findMany({
     where: {
@@ -220,9 +219,8 @@ export async function threadSkills(
         {
           OR: [
             { packId: null },
-            { pack: { enabled: true, appId: null, loopInstallationId: null } },
-            { pack: { enabled: true, appId: { in: [...apps] }, loopInstallationId: null } },
-            ...(loop ? [{ pack: { enabled: true, loopInstallationId: loop } }] : []),
+            { pack: { enabled: true, appId: null } },
+            { pack: { enabled: true, appId: { in: [...apps] } } },
           ],
         },
         {
@@ -418,14 +416,8 @@ export async function updatePack(
   id: string,
   input: UpdateSkillPack,
 ) {
-  const found = await db.skillPack.findFirst({ where: { id } })
-  if (!found) throw new HTTPException(404, { message: 'Pack not found' })
-  // A playbook's recipe loads only in its threads, and goes with it: it can be turned off, no more.
-  if (
-    found.loopInstallationId &&
-    (input.everywhere !== undefined || input.teammateIds || input.projectIds)
-  )
-    throw new HTTPException(409, { message: playbookPack })
+  if (!(await db.skillPack.findFirst({ where: { id } })))
+    throw new HTTPException(404, { message: 'Pack not found' })
   const pack = await db.skillPack.update({
     where: { id },
     data: {
@@ -452,14 +444,10 @@ export async function updatePack(
   return pack
 }
 
-const playbookPack =
-  "This pack is a playbook's recipe: it loads only in the playbook's threads and goes when the playbook is uninstalled"
-
 /** The pack goes, and its skills with it. */
 export async function deletePack(db: ScopedDb, scope: Scope, actor: Actor, id: string) {
   const pack = await db.skillPack.findFirst({ where: { id } })
   if (!pack) throw new HTTPException(404, { message: 'Pack not found' })
-  if (pack.loopInstallationId) throw new HTTPException(409, { message: playbookPack })
   await db.skillPack.delete({ where: { id } })
   await audit({
     ...scope,

@@ -4,7 +4,6 @@
 import { Cron } from 'croner'
 import { z } from 'zod'
 import { ChildOperations } from './children.js'
-import { LoopOperations } from './loops.js'
 import { WakeupOperations } from './wakeups.js'
 
 /** Runs closer together than this are refused. */
@@ -113,6 +112,5 @@ export const ScheduleOperation = z.discriminatedUnion('name', [
   }),
   ...WakeupOperations,
   ...ChildOperations,
-  ...LoopOperations,
 ])
 export type ScheduleOperation = z.infer<typeof ScheduleOperation>

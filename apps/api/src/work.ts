@@ -288,13 +288,7 @@ export async function handoffThread(
 }
 
 /** The thread a child is started from: it takes who may see and write in it from there. */
-type ParentThread = {
-  id: string
-  private: boolean
-  othersMayPrompt: boolean
-  /** A playbook run's thread: its children are part of the run. */
-  loopRunId?: string | null
-}
+type ParentThread = { id: string; private: boolean; othersMayPrompt: boolean }
 
 /** A child's columns (src/children.ts): out of the sidebar, shown in its parent, with its access. */
 const childOf = (
@@ -307,7 +301,6 @@ const childOf = (
   ...(child.awaitUntil ? { awaitUntil: child.awaitUntil } : {}),
   private: parent.private,
   othersMayPrompt: parent.othersMayPrompt,
-  ...(parent.loopRunId ? { loopRunId: parent.loopRunId } : {}),
 })
 
 /**
@@ -351,8 +344,6 @@ export async function startThread(
     projectId?: string | null
     /** How hard its teammates think; none: the harness's default. */
     effort?: Effort | null
-    /** The playbook run it is the root thread of: out of the sidebar until a person takes part. */
-    loopRunId?: string
   },
 ) {
   // Teammates the first message mentions answer after the starting one. A trigger's event is untrusted: it summons nobody.
@@ -379,7 +370,6 @@ export async function startThread(
       ...(input.taskId ? { taskId: input.taskId } : {}),
       ...(input.projectId ? { projectId: input.projectId } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
-      ...(input.loopRunId ? { loopRunId: input.loopRunId } : {}),
       ...(input.origin?.kind === 'trigger'
         ? {
             origin: 'trigger',

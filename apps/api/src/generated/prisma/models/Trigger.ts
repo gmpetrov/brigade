@@ -39,7 +39,6 @@ export type TriggerMinAggregateOutputType = {
   verificationSecretId: string | null
   createdByMemberId: string | null
   projectId: string | null
-  loopInstallationId: string | null
   createdAt: Date | null
 }
 
@@ -56,7 +55,6 @@ export type TriggerMaxAggregateOutputType = {
   verificationSecretId: string | null
   createdByMemberId: string | null
   projectId: string | null
-  loopInstallationId: string | null
   createdAt: Date | null
 }
 
@@ -74,7 +72,6 @@ export type TriggerCountAggregateOutputType = {
   verificationSecretId: number
   createdByMemberId: number
   projectId: number
-  loopInstallationId: number
   createdAt: number
   _all: number
 }
@@ -93,7 +90,6 @@ export type TriggerMinAggregateInputType = {
   verificationSecretId?: true
   createdByMemberId?: true
   projectId?: true
-  loopInstallationId?: true
   createdAt?: true
 }
 
@@ -110,7 +106,6 @@ export type TriggerMaxAggregateInputType = {
   verificationSecretId?: true
   createdByMemberId?: true
   projectId?: true
-  loopInstallationId?: true
   createdAt?: true
 }
 
@@ -128,7 +123,6 @@ export type TriggerCountAggregateInputType = {
   verificationSecretId?: true
   createdByMemberId?: true
   projectId?: true
-  loopInstallationId?: true
   createdAt?: true
   _all?: true
 }
@@ -219,7 +213,6 @@ export type TriggerGroupByOutputType = {
   verificationSecretId: string | null
   createdByMemberId: string
   projectId: string | null
-  loopInstallationId: string | null
   createdAt: Date
   _count: TriggerCountAggregateOutputType | null
   _min: TriggerMinAggregateOutputType | null
@@ -258,13 +251,11 @@ export type TriggerWhereInput = {
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
   projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
-  loopInstallationId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionScalarRelationFilter, Prisma.ConnectionWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
-  loopInstallation?: Prisma.XOR<Prisma.LoopInstallationNullableScalarRelationFilter, Prisma.LoopInstallationWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
 }
 
@@ -282,13 +273,11 @@ export type TriggerOrderByWithRelationInput = {
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
-  loopInstallationId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   connection?: Prisma.ConnectionOrderByWithRelationInput
   teammate?: Prisma.TeammateOrderByWithRelationInput
   project?: Prisma.ProjectOrderByWithRelationInput
-  loopInstallation?: Prisma.LoopInstallationOrderByWithRelationInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
 }
 
@@ -309,13 +298,11 @@ export type TriggerWhereUniqueInput = Prisma.AtLeast<{
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
   projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
-  loopInstallationId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   connection?: Prisma.XOR<Prisma.ConnectionScalarRelationFilter, Prisma.ConnectionWhereInput>
   teammate?: Prisma.XOR<Prisma.TeammateScalarRelationFilter, Prisma.TeammateWhereInput>
   project?: Prisma.XOR<Prisma.ProjectNullableScalarRelationFilter, Prisma.ProjectWhereInput> | null
-  loopInstallation?: Prisma.XOR<Prisma.LoopInstallationNullableScalarRelationFilter, Prisma.LoopInstallationWhereInput> | null
   sessions?: Prisma.SessionListRelationFilter
 }, "id" | "pathToken">
 
@@ -333,7 +320,6 @@ export type TriggerOrderByWithAggregationInput = {
   verificationSecretId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   projectId?: Prisma.SortOrderInput | Prisma.SortOrder
-  loopInstallationId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.TriggerCountOrderByAggregateInput
   _max?: Prisma.TriggerMaxOrderByAggregateInput
@@ -357,7 +343,6 @@ export type TriggerScalarWhereWithAggregatesInput = {
   verificationSecretId?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringWithAggregatesFilter<"Trigger"> | string
   projectId?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
-  loopInstallationId?: Prisma.StringNullableWithAggregatesFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Trigger"> | Date | string
 }
 
@@ -376,7 +361,6 @@ export type TriggerCreateInput = {
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
   project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -394,7 +378,6 @@ export type TriggerUncheckedCreateInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -414,7 +397,6 @@ export type TriggerUpdateInput = {
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -432,7 +414,6 @@ export type TriggerUncheckedUpdateInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -451,7 +432,6 @@ export type TriggerCreateManyInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -482,7 +462,6 @@ export type TriggerUncheckedUpdateManyInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -515,7 +494,6 @@ export type TriggerCountOrderByAggregateInput = {
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
-  loopInstallationId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -532,7 +510,6 @@ export type TriggerMaxOrderByAggregateInput = {
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
-  loopInstallationId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -549,7 +526,6 @@ export type TriggerMinOrderByAggregateInput = {
   verificationSecretId?: Prisma.SortOrder
   createdByMemberId?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
-  loopInstallationId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -741,48 +717,6 @@ export type TriggerUncheckedUpdateManyWithoutProjectNestedInput = {
   deleteMany?: Prisma.TriggerScalarWhereInput | Prisma.TriggerScalarWhereInput[]
 }
 
-export type TriggerCreateNestedManyWithoutLoopInstallationInput = {
-  create?: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput> | Prisma.TriggerCreateWithoutLoopInstallationInput[] | Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput[]
-  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput | Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput[]
-  createMany?: Prisma.TriggerCreateManyLoopInstallationInputEnvelope
-  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-}
-
-export type TriggerUncheckedCreateNestedManyWithoutLoopInstallationInput = {
-  create?: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput> | Prisma.TriggerCreateWithoutLoopInstallationInput[] | Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput[]
-  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput | Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput[]
-  createMany?: Prisma.TriggerCreateManyLoopInstallationInputEnvelope
-  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-}
-
-export type TriggerUpdateManyWithoutLoopInstallationNestedInput = {
-  create?: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput> | Prisma.TriggerCreateWithoutLoopInstallationInput[] | Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput[]
-  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput | Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput[]
-  upsert?: Prisma.TriggerUpsertWithWhereUniqueWithoutLoopInstallationInput | Prisma.TriggerUpsertWithWhereUniqueWithoutLoopInstallationInput[]
-  createMany?: Prisma.TriggerCreateManyLoopInstallationInputEnvelope
-  set?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  disconnect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  delete?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  update?: Prisma.TriggerUpdateWithWhereUniqueWithoutLoopInstallationInput | Prisma.TriggerUpdateWithWhereUniqueWithoutLoopInstallationInput[]
-  updateMany?: Prisma.TriggerUpdateManyWithWhereWithoutLoopInstallationInput | Prisma.TriggerUpdateManyWithWhereWithoutLoopInstallationInput[]
-  deleteMany?: Prisma.TriggerScalarWhereInput | Prisma.TriggerScalarWhereInput[]
-}
-
-export type TriggerUncheckedUpdateManyWithoutLoopInstallationNestedInput = {
-  create?: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput> | Prisma.TriggerCreateWithoutLoopInstallationInput[] | Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput[]
-  connectOrCreate?: Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput | Prisma.TriggerCreateOrConnectWithoutLoopInstallationInput[]
-  upsert?: Prisma.TriggerUpsertWithWhereUniqueWithoutLoopInstallationInput | Prisma.TriggerUpsertWithWhereUniqueWithoutLoopInstallationInput[]
-  createMany?: Prisma.TriggerCreateManyLoopInstallationInputEnvelope
-  set?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  disconnect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  delete?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  connect?: Prisma.TriggerWhereUniqueInput | Prisma.TriggerWhereUniqueInput[]
-  update?: Prisma.TriggerUpdateWithWhereUniqueWithoutLoopInstallationInput | Prisma.TriggerUpdateWithWhereUniqueWithoutLoopInstallationInput[]
-  updateMany?: Prisma.TriggerUpdateManyWithWhereWithoutLoopInstallationInput | Prisma.TriggerUpdateManyWithWhereWithoutLoopInstallationInput[]
-  deleteMany?: Prisma.TriggerScalarWhereInput | Prisma.TriggerScalarWhereInput[]
-}
-
 export type TriggerCreateWithoutWorkspaceInput = {
   id?: string
   organizationId: string
@@ -797,7 +731,6 @@ export type TriggerCreateWithoutWorkspaceInput = {
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
   project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -814,7 +747,6 @@ export type TriggerUncheckedCreateWithoutWorkspaceInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -862,7 +794,6 @@ export type TriggerScalarWhereInput = {
   verificationSecretId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdByMemberId?: Prisma.StringFilter<"Trigger"> | string
   projectId?: Prisma.StringNullableFilter<"Trigger"> | string | null
-  loopInstallationId?: Prisma.StringNullableFilter<"Trigger"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Trigger"> | Date | string
 }
 
@@ -880,7 +811,6 @@ export type TriggerCreateWithoutTeammateInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -897,7 +827,6 @@ export type TriggerUncheckedCreateWithoutTeammateInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -943,7 +872,6 @@ export type TriggerCreateWithoutSessionsInput = {
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
   project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
 }
 
 export type TriggerUncheckedCreateWithoutSessionsInput = {
@@ -960,7 +888,6 @@ export type TriggerUncheckedCreateWithoutSessionsInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -995,7 +922,6 @@ export type TriggerUpdateWithoutSessionsInput = {
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
 }
 
 export type TriggerUncheckedUpdateWithoutSessionsInput = {
@@ -1012,7 +938,6 @@ export type TriggerUncheckedUpdateWithoutSessionsInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1030,7 +955,6 @@ export type TriggerCreateWithoutConnectionInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
   project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -1047,7 +971,6 @@ export type TriggerUncheckedCreateWithoutConnectionInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -1092,7 +1015,6 @@ export type TriggerCreateWithoutProjectInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
   connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
   teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
-  loopInstallation?: Prisma.LoopInstallationCreateNestedOneWithoutTriggersInput
   sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
 }
 
@@ -1109,7 +1031,6 @@ export type TriggerUncheckedCreateWithoutProjectInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
-  loopInstallationId?: string | null
   createdAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
 }
@@ -1140,68 +1061,6 @@ export type TriggerUpdateManyWithWhereWithoutProjectInput = {
   data: Prisma.XOR<Prisma.TriggerUpdateManyMutationInput, Prisma.TriggerUncheckedUpdateManyWithoutProjectInput>
 }
 
-export type TriggerCreateWithoutLoopInstallationInput = {
-  id?: string
-  organizationId: string
-  label: string
-  event: string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: string | null
-  verification?: $Enums.TriggerVerification | null
-  verificationSecretId?: string | null
-  createdByMemberId: string
-  createdAt?: Date | string
-  workspace: Prisma.WorkspaceCreateNestedOneWithoutTriggersInput
-  connection: Prisma.ConnectionCreateNestedOneWithoutTriggersInput
-  teammate: Prisma.TeammateCreateNestedOneWithoutTriggersInput
-  project?: Prisma.ProjectCreateNestedOneWithoutTriggersInput
-  sessions?: Prisma.SessionCreateNestedManyWithoutTriggerInput
-}
-
-export type TriggerUncheckedCreateWithoutLoopInstallationInput = {
-  id?: string
-  organizationId: string
-  workspaceId: string
-  connectionId: string
-  teammateId: string
-  label: string
-  event: string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: string | null
-  verification?: $Enums.TriggerVerification | null
-  verificationSecretId?: string | null
-  createdByMemberId: string
-  projectId?: string | null
-  createdAt?: Date | string
-  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutTriggerInput
-}
-
-export type TriggerCreateOrConnectWithoutLoopInstallationInput = {
-  where: Prisma.TriggerWhereUniqueInput
-  create: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput>
-}
-
-export type TriggerCreateManyLoopInstallationInputEnvelope = {
-  data: Prisma.TriggerCreateManyLoopInstallationInput | Prisma.TriggerCreateManyLoopInstallationInput[]
-  skipDuplicates?: boolean
-}
-
-export type TriggerUpsertWithWhereUniqueWithoutLoopInstallationInput = {
-  where: Prisma.TriggerWhereUniqueInput
-  update: Prisma.XOR<Prisma.TriggerUpdateWithoutLoopInstallationInput, Prisma.TriggerUncheckedUpdateWithoutLoopInstallationInput>
-  create: Prisma.XOR<Prisma.TriggerCreateWithoutLoopInstallationInput, Prisma.TriggerUncheckedCreateWithoutLoopInstallationInput>
-}
-
-export type TriggerUpdateWithWhereUniqueWithoutLoopInstallationInput = {
-  where: Prisma.TriggerWhereUniqueInput
-  data: Prisma.XOR<Prisma.TriggerUpdateWithoutLoopInstallationInput, Prisma.TriggerUncheckedUpdateWithoutLoopInstallationInput>
-}
-
-export type TriggerUpdateManyWithWhereWithoutLoopInstallationInput = {
-  where: Prisma.TriggerScalarWhereInput
-  data: Prisma.XOR<Prisma.TriggerUpdateManyMutationInput, Prisma.TriggerUncheckedUpdateManyWithoutLoopInstallationInput>
-}
-
 export type TriggerCreateManyWorkspaceInput = {
   id?: string
   organizationId: string
@@ -1215,7 +1074,6 @@ export type TriggerCreateManyWorkspaceInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -1233,7 +1091,6 @@ export type TriggerUpdateWithoutWorkspaceInput = {
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1250,7 +1107,6 @@ export type TriggerUncheckedUpdateWithoutWorkspaceInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1268,7 +1124,6 @@ export type TriggerUncheckedUpdateManyWithoutWorkspaceInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1285,7 +1140,6 @@ export type TriggerCreateManyTeammateInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -1303,7 +1157,6 @@ export type TriggerUpdateWithoutTeammateInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1320,7 +1173,6 @@ export type TriggerUncheckedUpdateWithoutTeammateInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1338,7 +1190,6 @@ export type TriggerUncheckedUpdateManyWithoutTeammateInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1355,7 +1206,6 @@ export type TriggerCreateManyConnectionInput = {
   verificationSecretId?: string | null
   createdByMemberId: string
   projectId?: string | null
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -1373,7 +1223,6 @@ export type TriggerUpdateWithoutConnectionInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
   project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1390,7 +1239,6 @@ export type TriggerUncheckedUpdateWithoutConnectionInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1408,7 +1256,6 @@ export type TriggerUncheckedUpdateManyWithoutConnectionInput = {
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
   projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1425,7 +1272,6 @@ export type TriggerCreateManyProjectInput = {
   verification?: $Enums.TriggerVerification | null
   verificationSecretId?: string | null
   createdByMemberId: string
-  loopInstallationId?: string | null
   createdAt?: Date | string
 }
 
@@ -1443,7 +1289,6 @@ export type TriggerUpdateWithoutProjectInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
   connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
   teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
-  loopInstallation?: Prisma.LoopInstallationUpdateOneWithoutTriggersNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
 }
 
@@ -1460,7 +1305,6 @@ export type TriggerUncheckedUpdateWithoutProjectInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
 }
@@ -1478,77 +1322,6 @@ export type TriggerUncheckedUpdateManyWithoutProjectInput = {
   verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
   verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  loopInstallationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type TriggerCreateManyLoopInstallationInput = {
-  id?: string
-  organizationId: string
-  workspaceId: string
-  connectionId: string
-  teammateId: string
-  label: string
-  event: string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: string | null
-  verification?: $Enums.TriggerVerification | null
-  verificationSecretId?: string | null
-  createdByMemberId: string
-  projectId?: string | null
-  createdAt?: Date | string
-}
-
-export type TriggerUpdateWithoutLoopInstallationInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  label?: Prisma.StringFieldUpdateOperationsInput | string
-  event?: Prisma.StringFieldUpdateOperationsInput | string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
-  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutTriggersNestedInput
-  connection?: Prisma.ConnectionUpdateOneRequiredWithoutTriggersNestedInput
-  teammate?: Prisma.TeammateUpdateOneRequiredWithoutTriggersNestedInput
-  project?: Prisma.ProjectUpdateOneWithoutTriggersNestedInput
-  sessions?: Prisma.SessionUpdateManyWithoutTriggerNestedInput
-}
-
-export type TriggerUncheckedUpdateWithoutLoopInstallationInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  connectionId?: Prisma.StringFieldUpdateOperationsInput | string
-  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
-  label?: Prisma.StringFieldUpdateOperationsInput | string
-  event?: Prisma.StringFieldUpdateOperationsInput | string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
-  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  sessions?: Prisma.SessionUncheckedUpdateManyWithoutTriggerNestedInput
-}
-
-export type TriggerUncheckedUpdateManyWithoutLoopInstallationInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  connectionId?: Prisma.StringFieldUpdateOperationsInput | string
-  teammateId?: Prisma.StringFieldUpdateOperationsInput | string
-  label?: Prisma.StringFieldUpdateOperationsInput | string
-  event?: Prisma.StringFieldUpdateOperationsInput | string
-  options?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  pathToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verification?: Prisma.NullableEnumTriggerVerificationFieldUpdateOperationsInput | $Enums.TriggerVerification | null
-  verificationSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
-  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1597,13 +1370,11 @@ export type TriggerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   verificationSecretId?: boolean
   createdByMemberId?: boolean
   projectId?: boolean
-  loopInstallationId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
   sessions?: boolean | Prisma.Trigger$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
@@ -1622,13 +1393,11 @@ export type TriggerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verificationSecretId?: boolean
   createdByMemberId?: boolean
   projectId?: boolean
-  loopInstallationId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
 
 export type TriggerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1645,13 +1414,11 @@ export type TriggerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   verificationSecretId?: boolean
   createdByMemberId?: boolean
   projectId?: boolean
-  loopInstallationId?: boolean
   createdAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
 }, ExtArgs["result"]["trigger"]>
 
 export type TriggerSelectScalar = {
@@ -1668,17 +1435,15 @@ export type TriggerSelectScalar = {
   verificationSecretId?: boolean
   createdByMemberId?: boolean
   projectId?: boolean
-  loopInstallationId?: boolean
   createdAt?: boolean
 }
 
-export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "projectId" | "loopInstallationId" | "createdAt", ExtArgs["result"]["trigger"]>
+export type TriggerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "connectionId" | "teammateId" | "label" | "event" | "options" | "pathToken" | "verification" | "verificationSecretId" | "createdByMemberId" | "projectId" | "createdAt", ExtArgs["result"]["trigger"]>
 export type TriggerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
   sessions?: boolean | Prisma.Trigger$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1687,14 +1452,12 @@ export type TriggerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
 }
 export type TriggerIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   connection?: boolean | Prisma.ConnectionDefaultArgs<ExtArgs>
   teammate?: boolean | Prisma.TeammateDefaultArgs<ExtArgs>
   project?: boolean | Prisma.Trigger$projectArgs<ExtArgs>
-  loopInstallation?: boolean | Prisma.Trigger$loopInstallationArgs<ExtArgs>
 }
 
 export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1704,7 +1467,6 @@ export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     connection: Prisma.$ConnectionPayload<ExtArgs>
     teammate: Prisma.$TeammatePayload<ExtArgs>
     project: Prisma.$ProjectPayload<ExtArgs> | null
-    loopInstallation: Prisma.$LoopInstallationPayload<ExtArgs> | null
     sessions: Prisma.$SessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1742,10 +1504,6 @@ export type $TriggerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * The threads it starts are in this project.
      */
     projectId: string | null
-    /**
-     * Set when a playbook made it: changed only through the playbook, deleted with it.
-     */
-    loopInstallationId: string | null
     createdAt: Date
   }, ExtArgs["result"]["trigger"]>
   composites: {}
@@ -2145,7 +1903,6 @@ export interface Prisma__TriggerClient<T, Null = never, ExtArgs extends runtime.
   connection<T extends Prisma.ConnectionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ConnectionDefaultArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   teammate<T extends Prisma.TeammateDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeammateDefaultArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   project<T extends Prisma.Trigger$projectArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Trigger$projectArgs<ExtArgs>>): Prisma.Prisma__ProjectClient<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  loopInstallation<T extends Prisma.Trigger$loopInstallationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Trigger$loopInstallationArgs<ExtArgs>>): Prisma.Prisma__LoopInstallationClient<runtime.Types.Result.GetResult<Prisma.$LoopInstallationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.Trigger$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Trigger$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2189,7 +1946,6 @@ export interface TriggerFieldRefs {
   readonly verificationSecretId: Prisma.FieldRef<"Trigger", 'String'>
   readonly createdByMemberId: Prisma.FieldRef<"Trigger", 'String'>
   readonly projectId: Prisma.FieldRef<"Trigger", 'String'>
-  readonly loopInstallationId: Prisma.FieldRef<"Trigger", 'String'>
   readonly createdAt: Prisma.FieldRef<"Trigger", 'DateTime'>
 }
     
@@ -2608,25 +2364,6 @@ export type Trigger$projectArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   include?: Prisma.ProjectInclude<ExtArgs> | null
   where?: Prisma.ProjectWhereInput
-}
-
-/**
- * Trigger.loopInstallation
- */
-export type Trigger$loopInstallationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the LoopInstallation
-   */
-  select?: Prisma.LoopInstallationSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the LoopInstallation
-   */
-  omit?: Prisma.LoopInstallationOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.LoopInstallationInclude<ExtArgs> | null
-  where?: Prisma.LoopInstallationWhereInput
 }
 
 /**

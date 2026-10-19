@@ -82,7 +82,6 @@ import {
   repoTools,
   scheduleTools,
   childTools,
-  loopTools,
   showWidgetTool,
   taskTools,
   type ComputerUse,
@@ -233,8 +232,6 @@ function createAgent(
     ...taskTools(callTask),
     ...scheduleTools(callSchedule),
     ...childTools(callSchedule, { child: !!spec.parent }),
-    // A playbook run's root thread ends the run; its children report to it instead.
-    ...(spec.loop && !spec.parent ? loopTools(callSchedule) : {}),
     ...previewTools(preview, credentials),
     ...(makeImage ? imageTools(makeImage) : {}),
     ...(computer ? computerUseTools(computer) : {}),
