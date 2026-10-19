@@ -1484,9 +1484,26 @@ export function ThreadItems({
       case 'user': {
         // Brigade's own words about child threads: a note, not a person's message.
         if (item.brigade) {
-          // A report: each thread it tells about is a line that opens it.
+          // A report: one card per thread it tells about, that opens it.
           const reported =
             item.brigade === 'report' || item.brigade === 'follow' ? noteThreads(item.text) : null
+          if (reported) {
+            // “… has finished:” only repeats the cards; a schedule's run or a late one says more.
+            const head =
+              item.brigade === 'follow'
+                ? 'From a thread this one follows'
+                : reported.head && !/finished:$/.test(reported.head)
+                  ? reported.head
+                  : null
+            return (
+              <div key={item.key} data-seq={item.seq} className="flex flex-col gap-2">
+                {head && <p className="text-xs text-muted-foreground">{head}</p>}
+                {reported.threads.map((t) => (
+                  <ReportedThread key={t.id} thread={t} />
+                ))}
+              </div>
+            )
+          }
           return (
             <div
               key={item.key}
@@ -1502,25 +1519,9 @@ export function ThreadItems({
                       ? 'Dry run done'
                       : 'Work from the parent thread'}
               </p>
-              {reported ? (
-                <div className="flex flex-col gap-3">
-                  {reported.head && <p className="leading-relaxed">{reported.head}</p>}
-                  {reported.threads.map((t) => (
-                    <div key={t.id} className="flex flex-col gap-1.5">
-                      <ReportedThread thread={t} />
-                      {t.summary && (
-                        <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                          <MessageWithCode text={t.summary} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-                  <MessageWithCode text={forPeople(item.text)} />
-                </div>
-              )}
+              <div className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
+                <MessageWithCode text={forPeople(item.text)} />
+              </div>
             </div>
           )
         }
