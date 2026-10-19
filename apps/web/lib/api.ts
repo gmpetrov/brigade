@@ -304,6 +304,10 @@ export type ThreadChild = {
   awaited: boolean
   report: ChildReport | null
   reportDeliveredAt: string | null
+  /** A person talked with it and it has not reported: its last message goes to the parent then. */
+  reportDueAt: string | null
+  /** This member may write in it, so send its report now. */
+  mayPrompt: boolean
   createdAt: string
   teammate: { id: string; name: string }
   schedule: { id: string; title: string } | null
@@ -321,6 +325,8 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   controlledByMemberId: string | null
   mayPrompt: boolean
   lastSeq: number
+  /** In a child a person talked with: when its last message goes to the parent, unless sent sooner. */
+  reportDueAt: string | null
   teammate: { id: string; name: string; harness: string; model: string | null }
   teammates: {
     joinedAt: string

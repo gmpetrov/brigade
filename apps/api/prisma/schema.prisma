@@ -428,6 +428,9 @@ model Session {
   report               Json?
   /// When its report reached the parent (or was settled without waking it). A new turn clears both.
   reportDeliveredAt    DateTime?
+  /// A turn that answered a person ended without a report: its last message goes to the parent at
+  /// this time, unless the person writes again first (REPORT_AFTER_PERSON_MINUTES).
+  reportDueAt          DateTime?
   triggerId            String?
   trigger              Trigger?           @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   /// The trigger's conversation (e.g. a Gmail thread): later events in it continue this thread.
@@ -495,6 +498,7 @@ model Session {
   @@index([triggerId, conversationKey])
   @@index([scheduleId, createdAt])
   @@index([parentId, createdAt])
+  @@index([reportDueAt])
   @@index([playbookRunId])
 }
 

@@ -617,7 +617,11 @@ const children = (spec: ThreadSpec) =>
       '`report` once and end your turn: your report wakes the parent when your turn ends. If something you need is ' +
       'missing (a decision, an input), do not guess: report it as what you need, and the parent answers by writing ' +
       'here. When only a person can decide, open a ticket and report needs_person. You cannot start child threads ' +
-      'of your own.'
+      'of your own.\n\n' +
+      'When a person writes here, talk it through with them; your answers do not go to the parent. Once they ' +
+      'decide (they pick an option, say go ahead), call `report` with what they decided and what is left to do, ' +
+      'then end your turn: that is how the parent hears it, never `message_thread`. If they go quiet without ' +
+      'deciding, your last message goes to the parent after a while.'
     : '## Child threads\n\n' +
       'A child thread (`start_child`) is work in a fresh context beside this thread, shown here and not in the ' +
       'sidebar. Start one when the work must outlive your turn (hours of work, or waiting on something), is for ' +
