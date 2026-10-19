@@ -109,6 +109,13 @@ const inWs = [computer.organizationId, computer.workspaceId]
 const [sam] = await q(`select id from "Teammate" where "workspaceId" = $1 and name = 'Sam'`, [
   computer.workspaceId,
 ])
+// The preview's demo data grants Sam a GitHub account; these checks give him one themselves,
+// so they set the demo's aside while they run and put it back at the end.
+const demoGithub = await q(
+  `delete from "Grant" g using "Connection" c
+   where g."connectionId" = c.id and c.kind = 'github' and g."teammateId" = $1 returning g.*`,
+  [sam.id],
+)
 const [gmail] = await q(
   `select id from "Connection" where "workspaceId" = $1 and kind = 'gmail' and "externalAccount" = 'support@acme.test'`,
   [computer.workspaceId],
@@ -1033,6 +1040,12 @@ await check('two runs wait on one fix: the second follows it and hears its repor
 })
 
 await q(`update "Teammate" set caps = $2 where id = $1`, [sam.id, samCaps])
+for (const g of demoGithub)
+  await q(
+    `insert into "Grant" (id, "organizationId", "workspaceId", "teammateId", "connectionId", scope, "createdAt")
+     values ($1, $2, $3, $4, $5, $6, $7) on conflict do nothing`,
+    [g.id, g.organizationId, g.workspaceId, g.teammateId, g.connectionId, g.scope, g.createdAt],
+  )
 console.log(results.join('\n'))
 clearInterval(heartbeat)
 ws.close()
