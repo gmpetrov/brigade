@@ -193,7 +193,7 @@ function chief(spec: ThreadSpec) {
       '- Work whose result should come back to you here, long or in parallel (research, a check across several ' +
         'things, one part each for several teammates): `start_child` with the teammate, one child each, then end ' +
         'your turn. You are woken once all of them reported: put their answers together for the person.',
-      '- Separate goals that the board should track, or that go on in their own thread: `create_task` with the ' +
+      '- Work for a teammate that goes on in its own thread: `create_task` with the ' +
         'teammate as assignee, one task per goal, never one per step (see Big goals), and say in a line what you ' +
         'handed to whom.',
       "- Do not do a teammate's work yourself. When nobody fits, do it if it is small, else propose the teammate " +
@@ -430,10 +430,10 @@ const bigGoals = (spec: ThreadSpec) =>
   'you start: one to three moments where they try something that works (a feature in a preview, a draft, a ' +
   'campaign to approve) or make a decision only they can make. Cut only where they have something to try or ' +
   'decide, never by technical layer or by section of a spec, and get their ok on the plan.\n\n' +
-  'The goal is then one task, with its deliveries in the description. If this thread is about that goal, it ' +
-  'becomes the task (assignee "self"). If the goal came up while talking about something else, give it a thread ' +
-  'of its own: `create_task` with your own name as assignee and a description that stands alone (the plan, its ' +
-  'deliveries, links to the specs), then say here in a line that it goes on in its own thread, by its title.\n\n' +
+  'If this thread is about that goal, do it here. If the goal came up while talking about something else, give ' +
+  'it a thread of its own: `create_task` with your own name as assignee and a description that stands alone (the ' +
+  'plan, its deliveries, links to the specs), then say here in a line that it goes on in its own thread, by its ' +
+  'title.\n\n' +
   'The parts of a delivery stay off the board: do them yourself' +
   (spec.teammate.harness === 'claude_code'
     ? ', with your sub-agents (the Agent tool) for parallel or side work,'
@@ -444,10 +444,7 @@ const bigGoals = (spec: ThreadSpec) =>
   'it (a child thread with them, when one has access). Then one message: what to try and how, what was checked, ' +
   'and the one pull request to merge. If a delivery grows past what the person can try in a few minutes, propose ' +
   'to split it; never split it silently. When you end a turn before a delivery is ready, say in a line where ' +
-  'things stand.\n\n' +
-  'A mission groups tasks on the board, only when several teammates each own a delivery the person follows on ' +
-  'its own: create the mission first (the goal and what done looks like, titled without the word "Mission"), ' +
-  'then each task with `mission` set to its id.'
+  'things stand.'
 
 /** The Tasks board: this thread's task, or when to make one. */
 const tasks = (spec: ThreadSpec) =>
@@ -466,10 +463,9 @@ const tasks = (spec: ThreadSpec) =>
           .filter(Boolean)
           .join('\n\n')
       : '## Tasks\n\n' +
-        "The workspace tracks bigger work as tasks on its Tasks board. Call `create_task` when this thread's work " +
-        'has a deliverable someone will review, takes several steps, will wait on approval or someone else, or the ' +
-        'person asks to track it; not for questions, explanations or quick actions you finish in one reply. ' +
-        'Do not ask first: create it, say so in one line, and do the work.\n\n' +
+        'Work lives in threads: do it here, without making it a task. Call `create_task` only when the person asks ' +
+        'to track something on the Tasks board, or to start work in a thread of its own: a goal of yours (see Big ' +
+        'goals), or work for another teammate.\n\n' +
         BOARD_TOOLS,
     // A child does its part: the thread that started it plans.
     !spec.parent && bigGoals(spec),

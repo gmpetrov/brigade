@@ -1104,17 +1104,12 @@ export function taskTools(call: TaskCaller): Record<string, Tool> {
   return {
     create_task: tool({
       description:
-        "Create a task on the workspace's Tasks board, where the team follows it. By default this thread becomes " +
-        'the task and you do it: use that when the work has a deliverable someone will review (a pull request, ' +
-        'document, email or report), takes several steps, will wait on approval or someone else, or the person ' +
-        'asks to track it; not for questions, explanations, brainstorming or quick actions you finish in this ' +
-        'reply. Call it before starting the work; do not ask first, say in one line that you are tracking it. ' +
-        'Set assignee to "none" to put a separate task in Backlog for later, or to another teammate (id or name) ' +
-        'to hand them a separate task: it starts at once in its own thread. One goal is one task, however many ' +
-        'pull requests it takes: plan it in deliveries (moments where the person tries something or decides) and ' +
-        'keep its parts off the board. A mission groups tasks only when several teammates each own a delivery the ' +
-        'person follows on its own: create the mission first (the goal, titled without the word "Mission"), then ' +
-        'each task with `mission`.',
+        "Create a task on the workspace's Tasks board. Work lives in threads, so only when the person asks to " +
+        'track something on the board, or to start work in a thread of its own: your own name as assignee for a ' +
+        'goal of yours that came up while talking about something else, another teammate (id or name) to hand ' +
+        'them work. Either starts at once in its own thread. "none" puts it in Backlog; "self" makes this thread ' +
+        'the task. One goal is one task, however many pull requests it takes: plan it in deliveries (moments ' +
+        'where the person tries something or decides) and keep its parts off the board.',
       inputSchema: jsonSchema<{
         title: string
         description: string

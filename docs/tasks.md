@@ -27,6 +27,15 @@ description, a place on the Tasks board and, once someone is on it, a teammate.
   for good stays (from the Trash, or "Not a task" on its thread).
 - **Done goes away by itself.** A task done for 3 days is archived by the API's
   hourly sweep (`sweepDoneTasks`); "Archive all" clears Done sooner.
+- **On trial since 2026-10-19: work lives in threads.** Nobody opened the board,
+  and a task duplicates its thread (status, Needs you, pull requests). Teammates
+  no longer make a task by default: only when the person asks to track
+  something, or to start work in a thread of its own (a goal of theirs, or work
+  for another teammate). The board is out of navigation (search, project tabs,
+  project overview) but still at /app/tasks, and nothing is deleted. Pull
+  requests waiting on a person push and count in the badge from the pull
+  requests themselves (`waitingNow`), not from tasks. If nobody misses the board
+  after two weeks, tasks and missions go.
 - **One goal, one task, cut in deliveries.** A person's attention is what is
   scarce: a goal of days or several pull requests is one task, planned in one
   to three deliveries, each a moment where the person tries something that works
