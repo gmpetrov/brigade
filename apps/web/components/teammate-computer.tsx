@@ -39,7 +39,6 @@ export function TeammateComputer({ teammate }: { teammate: Teammate }) {
         <ComputerScreen
           thread={t}
           memberId={me.memberId ?? ''}
-          status={t.status}
           shell={panel.shell}
           onShell={panel.setShell}
           onChange={() => {
