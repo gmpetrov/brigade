@@ -277,6 +277,11 @@ export const openTicketTool = tool({
                   description:
                     'kind github: the repository you need, as owner/name (e.g. acme/web), such as one checkout_repository could not reach. The person installs the GitHub app on it, or adds it, from the ticket',
                 },
+                account: {
+                  type: 'string',
+                  description:
+                    'The account you mean, as its row shows it (e.g. the Gmail address), when you know which: the ticket picks it first',
+                },
               },
               required: ['kind', 'scope'],
             },

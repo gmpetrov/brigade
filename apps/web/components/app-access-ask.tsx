@@ -89,6 +89,24 @@ const SIGN_IN: Partial<Record<Connection['kind'], 'google' | 'github' | 'mcp'>> 
 }
 
 /**
+ * The account a ticket offers first: the one the teammate named, else one at a domain its ask
+ * mentions (support@acme.com picks the acme.com account), else the first.
+ */
+function preferredAccount(givable: Connection[], ask: AppAsk) {
+  const shown = (c: Connection) => (c.externalAccount ?? c.label ?? '').toLowerCase()
+  const named = ask.app.account?.trim().toLowerCase()
+  const text = `${ask.what} ${ask.reason ?? ''}`.toLowerCase()
+  return (
+    (named && givable.find((c) => shown(c) === named)) ||
+    givable.find((c) => {
+      const domain = shown(c).split('@')[1]
+      return !!domain && text.includes(`@${domain}`)
+    }) ||
+    givable[0]
+  )
+}
+
+/**
  * A teammate asks for an App: Give it the access (the API grants it as the
  * ticket is answered), or Decline. With no account yet, Connect signs in in a
  * window of its own and gives the access as soon as the account is there. A
@@ -138,6 +156,7 @@ export function AppAccessAsk({
   // Those this person may give. Another member's own account is left out: it is used only in
   // their threads. The API checks again that the account is usable in this thread.
   const givable = accounts.filter(mayGive)
+  const preferred = preferredAccount(givable, ask)
   // The installation on the repository's owner, if any, to add the repository to on GitHub. An
   // installation reaches only its own account's repositories: otherwise, install on the owner.
   const owner = repository?.split('/')[0]
@@ -211,7 +230,7 @@ export function AppAccessAsk({
         {givable.length > 0 ? (
           <>
             {givable.length > 1 && (
-              <Select value={picked ?? givable[0]!.id} onValueChange={setPicked}>
+              <Select value={picked ?? preferred?.id} onValueChange={setPicked}>
                 <SelectTrigger size="sm" aria-label={`Which ${name} account`}>
                   <SelectValue />
                 </SelectTrigger>
@@ -224,7 +243,7 @@ export function AppAccessAsk({
                 </SelectContent>
               </Select>
             )}
-            <Button size="sm" onClick={() => give(picked ?? givable[0]!.id)}>
+            <Button size="sm" onClick={() => give(picked ?? preferred?.id)}>
               Give {askerName} {access} access
             </Button>
             {decline}

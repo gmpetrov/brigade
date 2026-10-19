@@ -268,6 +268,8 @@ export const Ask = z.discriminatedUnion('type', [
          * reach it; the person installs the GitHub app on its owner, or adds it, from the ticket.
          */
         repository: RepositoryName.optional(),
+        /** The account the teammate means, as its row shows it (the Gmail address): picked first. */
+        account: z.string().max(320).optional(),
       })
       .refine((app) => !app.repository || app.kind === 'github', {
         message: 'repository is for kind github',
