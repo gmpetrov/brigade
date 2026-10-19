@@ -196,6 +196,32 @@ export function useThreadOutputs(events: SequencedEvent[]) {
               at: e.at,
               file: { path: input.path },
             })
+          } else if (
+            (tool === 'move_in_library' || tool === 'delete_from_library') &&
+            typeof input.path === 'string'
+          ) {
+            // What it saved there follows it, or leaves with it.
+            const from = input.path
+            const to = typeof input.to === 'string' ? input.to : undefined
+            if (to) saved.push(to)
+            for (const output of [...byKey.values()]) {
+              const path = output.file?.path
+              if (!path || (output.kind !== 'library' && output.kind !== 'design')) continue
+              if (path !== from && !path.startsWith(`${from}/`)) continue
+              byKey.delete(output.key)
+              if (!to) continue
+              const moved = to + path.slice(from.length)
+              const named = (p: string) =>
+                output.kind === 'design' ? designName(p) || name(p) : name(p)
+              add({
+                ...output,
+                key: `${output.kind}:${moved}`,
+                label: output.label === named(path) ? named(moved) : output.label,
+                detail: output.detail?.replace(`· ${from}`, `· ${to}`),
+                at: e.at,
+                file: { path: moved },
+              })
+            }
           } else if (tool === 'save_design' && typeof input.path === 'string') {
             const path = input.path.replace(/\/+$/, '')
             add({

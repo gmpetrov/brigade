@@ -23,6 +23,7 @@ import {
   SKILL_ENTRY,
   SkillContent,
   TeamProposal,
+  TRASH_DAYS,
   Widget,
   WIDGET_GUIDE_TOOL,
   WIDGET_HTML_MAX,
@@ -679,6 +680,8 @@ export type LibraryCaller = (call: {
   operation:
     | { name: 'search'; query: string; limit: number }
     | { name: 'save'; path: string; content: string }
+    | { name: 'move'; path: string; to: string }
+    | { name: 'delete'; path: string }
     | { name: 'design_system'; designSystem: TeammateDesignSystem }
     | { name: 'design_edits'; path: string }
     | { name: 'skill_proposal'; proposal: SkillProposal }
@@ -689,8 +692,8 @@ export type LibraryCaller = (call: {
 
 /**
  * The workspace's search (library, memory, past thread summaries) and, with a
- * read-write grant on the library or a folder of it, saving to the library.
- * The API checks the grant.
+ * read-write grant on the library or a folder of it, saving, moving and
+ * deleting library files. The API checks the grant.
  */
 export function libraryTools(options: {
   access: 'read' | 'read_write'
@@ -894,6 +897,49 @@ export function libraryTools(options: {
           input,
         })
       },
+    })
+    tools.move_in_library = tool({
+      description:
+        `Move or rename a file in the workspace's library, or a folder with everything in it. ` +
+        `Refused when something is already at the new path. Documents and memory that name the old path keep it: update those that matter.`,
+      inputSchema: jsonSchema<{ path: string; to: string }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Its library path, e.g. "guides/refunds.md"' },
+          to: {
+            type: 'string',
+            description: 'Its whole new path, e.g. "guides/billing/refunds.md"',
+          },
+        },
+        required: ['path', 'to'],
+      }),
+      execute: (input, { toolCallId }) =>
+        options.call({
+          operation: { name: 'move', path: input.path, to: input.to },
+          toolCallId,
+          toolName: 'move_in_library',
+          input,
+        }),
+    })
+    tools.delete_from_library = tool({
+      description:
+        `Put a file of the workspace's library, or a folder with everything in it, in the library's trash, ` +
+        `where a person can restore it for ${TRASH_DAYS} days. Delete only what a person asked you to, ` +
+        `or what you saved yourself and nobody needs any more (a draft, a copy, a note that only points elsewhere).`,
+      inputSchema: jsonSchema<{ path: string }>({
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Its library path, e.g. "guides/old-refunds.md"' },
+        },
+        required: ['path'],
+      }),
+      execute: (input, { toolCallId }) =>
+        options.call({
+          operation: { name: 'delete', path: input.path },
+          toolCallId,
+          toolName: 'delete_from_library',
+          input,
+        }),
     })
     tools.save_design = tool({
       description:
