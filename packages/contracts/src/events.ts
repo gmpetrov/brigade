@@ -154,14 +154,20 @@ export const LINE_CHARS = 200
  * answers too when it is no mere line and only a line comes after it: a teammate
  * that wrote its answer, then pushed its branch, adds "Pushed." and nothing more.
  * `first` is the first message after the last step (the last message when none).
+ * `steered`: the part of a turn before a message steered into it, which answers only
+ * when the teammate was done: a message after its last step. Still at work, none does.
  */
-export function turnAnswer(entries: TurnEntry[]): { first: number; messages: number[] } {
+export function turnAnswer(
+  entries: TurnEntry[],
+  steered = false,
+): { first: number; messages: number[] } {
   const chars = (at: number) => {
     const entry = entries[at]
     return entry?.kind === 'message' ? entry.chars : 0
   }
   const done = entries.findLastIndex((e) => e.kind === 'step')
   const after = entries.flatMap((e, at) => (at > done && e.kind === 'message' ? [at] : []))
+  if (!after.length && steered) return { first: -1, messages: [] }
   if (!after.length) {
     const last = entries.findLastIndex((e) => e.kind === 'message')
     return { first: last, messages: last < 0 ? [] : [last] }

@@ -132,6 +132,8 @@ export type Item =
       replyTo?: ReplyTo
       /** Given to this teammate during its running turn. */
       steeredTo?: string
+      /** When it was shown, or given to the running turn. */
+      at: number
       /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
       brigade?: NonNullable<ReturnType<typeof childNote>>
       /** An email a trigger received, shown as a mail rather than as the teammate's prompt. */
@@ -275,6 +277,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             seq,
             text: e.text,
             attachments: e.attachments ?? [],
+            at: Date.parse(e.at),
             ...(e.replyTo ? { replyTo: e.replyTo } : {}),
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
@@ -846,7 +849,8 @@ type Node =
  * How the thread reads: steps in a row fold together, and a long turn that ended
  * folds everything before its last message under how long it worked. What a person
  * must see (asks, pull requests, pictures, choices, team proposals, errors) stays out of the fold.
- * `running` is when the turn still running began.
+ * A message steered into a turn ends what came before it the same way, as a turn of its own.
+ * `running` is when the turn still running began, or the message steered into it last.
  */
 function layoutThread(items: Item[], working: boolean) {
   const group = (is: number[]): Node[] => {
@@ -870,8 +874,8 @@ function layoutThread(items: Item[], working: boolean) {
         : n,
     )
   }
-  const fold = (turn: number[], end: Extract<Item, { kind: 'turn' }>): Node[] => {
-    const ms = end.startedAt === undefined ? 0 : end.at - end.startedAt
+  /** A turn that worked for `ms`, keyed by the item it ends at; `steered` when that is a message steered into it. */
+  const fold = (turn: number[], ms: number, end: string, steered = false): Node[] => {
     if (ms < QUICK_TURN_MS) return group(turn)
     turn = actionsLast(items, turn)
     // The answer: every message after its last step, and a long one before that step when only a line follows.
@@ -881,6 +885,7 @@ function layoutThread(items: Item[], working: boolean) {
         if (item.kind === 'assistant') return { kind: 'message', chars: visibleChars(item.text) }
         return isActivity(item) && !isAside(item) ? { kind: 'step' } : { kind: 'other' }
       }),
+      steered,
     )
     const answer = new Set(messages)
     const folded = turn.filter((i, at) => {
@@ -901,39 +906,50 @@ function layoutThread(items: Item[], working: boolean) {
     return [
       ...group(kept(0, first)),
       // Keyed by its end: an older page loading above does not close it.
-      { type: 'worked', key: `w${end.key}`, ms, inner: group(folded) },
+      { type: 'worked', key: `w${end}`, ms, inner: group(folded) },
       ...group(kept(first, turn.length)),
     ]
   }
   const nodes: Node[] = []
   let running: number | undefined
-  // Since the last turn began or ended.
+  // When the last message steered into the running turn was given to it.
+  let steered: number | undefined
+  // Since the last turn began or ended, or a message was steered into it.
   let since: number[] = []
+  const worked = (to: number, from?: number) => (from === undefined ? 0 : to - from)
   items.forEach((item, i) => {
     // A turn starting again before it ended (resumed) goes on.
     if (item.kind === 'start' && running === undefined) {
       nodes.push(...group(since))
       since = [i]
       running = item.at
+      steered = undefined
       return
     }
     // A message not steered into it: the turn before never ended.
     if (item.kind === 'user' && !item.steeredTo && running !== undefined) {
       nodes.push(...group(since))
       since = []
-      running = undefined
+      running = steered = undefined
+    }
+    // Steered into the turn, such as one that only waited on a server it left running:
+    // what came before answers the message before, and keeps its answer out of the fold.
+    if (item.kind === 'user' && item.steeredTo) {
+      nodes.push(...fold(since, worked(item.at, steered ?? running), item.key, true))
+      since = []
+      steered = item.at
     }
     since.push(i)
     if (item.kind === 'turn') {
-      nodes.push(...fold(since, item))
+      nodes.push(...fold(since, worked(item.at, steered ?? running ?? item.startedAt), item.key))
       since = []
-      running = undefined
+      running = steered = undefined
     }
   })
   nodes.push(...group(since))
   const last = nodes.at(-1)
   if (working && last?.type === 'activity') last.live = true
-  return Object.assign(nodes, { running })
+  return Object.assign(nodes, { running: steered ?? running })
 }
 
 /** "45s", "1m 52s", "2h 5m". */
