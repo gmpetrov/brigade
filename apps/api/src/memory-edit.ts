@@ -160,7 +160,7 @@ export function planLineSync(
   for (const [key, line] of is) {
     const row = rowOf(key)
     if (row?.archivedAt) {
-      // Put back, by a person or a thread that learned it again.
+      // Put back, by a person or a thread that learned it again: known to hold today.
       plan.update.push({
         id: row.id,
         data: {
@@ -172,6 +172,7 @@ export function planLineSync(
           archivedById: null,
           archivedSessionId: null,
           confirmedAt: now,
+          ...(row.legacy ? { legacy: false } : {}),
         },
       })
     } else if (row) {
