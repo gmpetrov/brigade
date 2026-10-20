@@ -3,8 +3,8 @@
 A skill says how the workspace does a kind of work: release notes, issue triage, a weekly
 digest. It is a `SKILL.md` (frontmatter `name` and `description`, then the instructions)
 and the text files beside it: the open Agent Skills format Claude Code, Codex and Grok
-read. Memory holds facts and is always loaded; only a skill's name and description are,
-until the work calls for it.
+read. Memory holds facts: its core is always loaded, its topics when the work touches them
+(docs/memory.md). Only a skill's name and description are loaded, until the work calls for it.
 
 ## Decisions
 

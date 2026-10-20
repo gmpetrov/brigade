@@ -9,6 +9,7 @@ export * from './credentials.js'
 export * from './design.js'
 export * from './events.js'
 export * from './library.js'
+export * from './memory.js'
 export * from './playbooks.js'
 export * from './playbook-approvals.js'
 export * from './mentions.js'
@@ -57,8 +58,10 @@ export * from './trigger-events.js'
  * 32: a deleted thread's folders are removed (thread.deleted).
  * 33: a turn that failed is tried again: on its own after a passing error, or when a person asks (thread.retry).
  * 34: a cloud computer says when its disk is still full after it freed what it could (disk).
+ * 35: memory in layers: memory.update edits name topics, replacements, archive reasons and confirmed
+ *     lines; tidy runs lay a memory file out again (memory.tidy).
  */
-export const PROTOCOL_VERSION = 34
+export const PROTOCOL_VERSION = 35
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */

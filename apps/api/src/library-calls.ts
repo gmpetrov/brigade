@@ -15,7 +15,14 @@ import { notifyLibraryChanged } from './hub.js'
 import { libraryChangeRefusal } from './library-changes.js'
 import { moveFolder, teammateLibraryAccess, trashFolder } from './library-folders.js'
 import { trashLibraryFile } from './library-history.js'
-import { editMemory, moveLibraryFile, saveLibraryFile, saveSummary, search } from './library.js'
+import {
+  editMemory,
+  moveLibraryFile,
+  saveLibraryFile,
+  saveSummary,
+  search,
+  tidyMemory,
+} from './library.js'
 import { proposeSkill } from './skills.js'
 import { actingTeammate } from './thread-spec.js'
 
@@ -208,4 +215,58 @@ export async function handleMemoryUpdate(
     )
   }
   notifyLibraryChanged(scope.workspaceId)
+}
+
+/**
+ * A tidy run's new layout for one memory file, run on the account of a thread
+ * that went quiet. Only for a file that thread may edit: the workspace's (not
+ * from a private thread), its project's, or one of its teammates'.
+ */
+export async function handleMemoryTidy(
+  runner: Runner,
+  tidy: Extract<RunnerToApi, { type: 'memory.tidy' }>,
+) {
+  const scope: Scope = { organizationId: runner.organizationId, workspaceId: runner.workspaceId }
+  const db = scoped(scope)
+  const session = await db.session.findFirst({
+    where: { id: tidy.sessionId, computerId: runner.computerId },
+    include: { teammates: { include: { teammate: true } } },
+  })
+  if (!session) return
+  const { file } = tidy
+  const input = { sessionId: session.id, lastTidied: tidy.lastTidied }
+  if (file.kind === 'workspace') {
+    if (session.private) return
+    await tidyMemory(
+      scope,
+      { type: 'teammate', id: session.teammateId },
+      { kind: 'workspace_memory' },
+      tidy.layout,
+      input,
+    )
+  } else if (file.kind === 'project') {
+    if (session.private || session.projectId !== file.projectId) return
+    const project = await db.project.findFirst({
+      where: { id: file.projectId },
+      select: { id: true, name: true },
+    })
+    if (!project) return
+    await tidyMemory(
+      scope,
+      { type: 'teammate', id: session.teammateId },
+      { kind: 'project_memory', projectId: project.id, name: project.name },
+      tidy.layout,
+      input,
+    )
+  } else {
+    const seat = session.teammates.find((t) => t.teammateId === file.teammateId)
+    if (!seat) return
+    await tidyMemory(
+      scope,
+      { type: 'teammate', id: file.teammateId },
+      { kind: 'teammate_memory', teammateId: file.teammateId, name: seat.teammate.name },
+      tidy.layout,
+      input,
+    )
+  }
 }

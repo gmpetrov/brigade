@@ -448,30 +448,47 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   folder, then a `library.call` registers it (by name, so saving again updates it), which needs write access to
   that folder and is audited as the teammate; the workspace's first is the default. "Ask a teammate" under Library
   → Design systems drafts that thread.
-- **Memory** is three kinds of Markdown `Document` with no bucket object: workspace (`workspace.md`), teammate
-  (`teammates/<id>.md`) and thread summaries (`threads/<id>.md`). Memory loads through the harness's own file: the
-  runner writes `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex) into the thread's directory each time a harness
-  session starts, with the workspace's and the teammate's memory and where the library is. A file of that name
-  Brigade did not write is left alone.
+- **Memory** (design in `docs/memory.md`) is four kinds of Markdown `Document` with no bucket object: workspace
+  (`workspace.md`), project (`projects/<id>.md`), teammate (`teammates/<id>.md`) and thread summaries
+  (`threads/<id>.md`). A memory file is in layers: the lines before its first `## ` heading are its core, which every
+  thread loads; each `## ` section is a topic, which a thread reads when its work touches it (`parseMemoryFile` in
+  `@brigade/contracts`). Each line has a `MemoryLine` row, kept by its text: when and in which thread it was learned,
+  whether a person wrote it, when a thread last confirmed it, and once it left the file, why (the archive). The rows
+  follow the text on every write, a person's included (`planLineSync`); a line a person takes out minutes after
+  writing it was a draft and leaves no archive.
+- **Loading memory.** The runner writes `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex) into the thread's directory
+  each time a harness session starts, with each memory's core, every line ending with its date, and its topics as
+  files in `.brigade-memory/`, listed by name, description, size and path (`memory-layers.ts`). What every thread
+  loads is the size of the cores (4,000, 5,000 and 3,000 characters), however much memory holds; a core far past its
+  budget, before a tidy run fixes it, keeps its newest lines and puts the older ones in a topic file. A file of that
+  name Brigade did not write is left alone. Codex is allowed to read all of a long AGENTS.md (`project_doc_max_bytes`).
+  Lines other threads teach while a session runs are told at the start of its next turn, once (`memoryNews`); a parked
+  session loads them when it resumes.
 - **When a thread ends** is when it goes quiet: 5 minutes after its last turn (`BRIGADE_QUIET_MS` overrides, for
   tests), the runner runs the thread's harness once more, outside the thread, with no tools, on the same account,
-  in an empty directory. It reads what was said since the last time and answers with a summary and lines to add to
-  or remove from each memory file. Memory is loaded into every thread, so it is not a log: at most three lines a file
-  per run, only what a teammate would need in an unrelated thread and could not find with its tools (never the
-  thread's progress, what Brigade or a repository already shows, or what emails and websites said), and the same run
-  removes lines that are wrong, repeated or below that bar, so memory cleans itself. It reads each memory file
-  whole; a file past 30,000 characters is tidied by the same run (up to 20 repeated, replaced or outdated lines
-  removed, near repeats merged), long before the 50,000 a file holds. The API applies those lines
-  (`applyMemoryEdit`) one file at a time, so threads ending together never overwrite each other or people's edits,
-  and keeps the lines a run removed in the audit log (`memory.updated`), with any it could not add to a full file.
-  A private thread (set by its starter) leaves workspace memory alone, and its summary is searchable only by the
-  starter. One-off runs like this one use Claude Code's 5-minute prompt cache, since their prompt is read once.
-- **Loading memory.** Past 16,000 characters, a memory file in the instructions keeps its newest lines (new and
-  corrected lines go at the end); the older ones come into a turn when they bear on its message (`recall.ts`), and
-  search finds them. Codex is allowed to read all of a long AGENTS.md (`project_doc_max_bytes`).
+  in an empty directory (`memory.ts`). It reads what was said since the last time and each memory file it may change
+  whole, its lines numbered and dated under their core or topic, and answers with a summary and, per file, new
+  lines with their topic, corrected lines (`replace`), lines to archive with why, and lines it found still true
+  (`confirm`, which moves their date). Memory is not a log: at most three new lines a file per run, only what a
+  teammate would need in an unrelated thread and could not find with its tools (never the thread's progress, what
+  Brigade or a repository already shows, or what emails and websites said). The API applies the edit
+  (`changeMemoryFile`) one file at a time, so threads ending together never overwrite each other or people's edits.
+  A private thread (set by its starter) leaves workspace and project memory alone, and its summary is searchable
+  only by the starter. One-off runs like this one use Claude Code's 5-minute prompt cache, since their prompt is read
+  once.
+- **Tidy runs** (`memory-tidy.ts`) lay a memory file out again when its core is past budget, the file past 40,000
+  characters, a file never tidied reaches 30 lines, or a week after the last tidy once lines changed; never twice in
+  six hours. The run, on the account of the thread that went quiet and beside it rather than in its queue, answers
+  with the core, the topics with their descriptions, merges and lines to archive with why (`memory.tidy`; the API
+  drops it when the file was tidied again since, `layOutMemoryFile`). A layout that would take away more than 40 % of
+  the file (60 % past 40,000 characters) is not applied. Lines it leaves out stay where they were.
+- **The archive** holds the lines removed from memory: replaced, merged, outdated or removed by a person. Teammates no longer load them;
+  `search_workspace` and the dashboard's search find them, and the Memory tab lists them per file, with why, when,
+  by whom and the thread they were learned in, and puts one back under its topic.
 - **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,
-  `simple` for paths) with a GIN index, queried with `websearch_to_tsquery`. Teammates get `search_workspace`
-  (answered like a connector call); a teammate finds its own memory, never another teammate's.
+  `simple` for paths) with a GIN index, queried with `websearch_to_tsquery`; archived memory lines have their own,
+  and a few come after the files. Teammates get `search_workspace` (answered like a connector call); a teammate
+  finds its own memory, never another teammate's.
 - **Code from GitHub** (`apps/api/src/git.ts`, `apps/api/src/routes/git.ts`, `apps/runner/src/repos.ts`). GitHub is
   the source of truth; a computer's disk is a cache. Git reaches GitHub only through the API, which proxies git's
   smart HTTP protocol at `/git/<owner>/<name>.git` and adds the installation token there, so no GitHub credential

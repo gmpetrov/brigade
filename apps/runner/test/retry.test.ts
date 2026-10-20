@@ -71,7 +71,7 @@ function setup(sessionId: string, outcomes: Outcome[]) {
     parkTimer: undefined,
     turn: [],
     waiting: false,
-    recalled: new Set(),
+    told: new Set(),
   }
   seats.push(seat)
   ;(threads as unknown as { harness: () => unknown }).harness = () => seat

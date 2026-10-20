@@ -4,7 +4,8 @@ import { ThreadAttachmentRef } from './attachments.js'
 import { CredentialUse, TeammateCredentialSave } from './credentials.js'
 import { TeammateDesignSystem, ThreadDesignSystem } from './design.js'
 import { QuestionAnswer, ReplyTo, SequencedEvent, TicketAnswer } from './events.js'
-import { LibraryAccess, LibraryPath, MemoryEdit } from './library.js'
+import { LibraryAccess, LibraryPath, MemoryEdit, MemoryFileRef, NO_MEMORY_EDIT } from './library.js'
+import { MemoryLayout } from './memory.js'
 import {
   PROJECT_LOGO_CANDIDATES_MAX,
   PROJECT_SITE_TEXT_MAX,
@@ -427,13 +428,26 @@ export const RunnerToApi = z.discriminatedUnion('type', [
     type: z.literal('memory.update'),
     sessionId: z.string(),
     summary: z.string().trim().min(1).max(4000),
-    workspace: MemoryEdit.default({ add: [], remove: [] }),
+    workspace: MemoryEdit.default(NO_MEMORY_EDIT),
     /** For the thread's project's memory; unset when it has none. */
     project: MemoryEdit.optional(),
     teammates: z
       .array(z.object({ teammateId: z.string(), edit: MemoryEdit }))
       .max(10)
       .default([]),
+  }),
+  /**
+   * A memory file laid out again by a tidy run, on the account of a thread that
+   * went quiet: its core within budget, the rest in topics, repeats merged, what
+   * is outdated archived. `lastTidied` is when the file was last tidied as the
+   * run saw it: the API drops the layout if it was tidied again since.
+   */
+  z.object({
+    type: z.literal('memory.tidy'),
+    sessionId: z.string(),
+    file: MemoryFileRef,
+    lastTidied: z.string().nullable(),
+    layout: MemoryLayout,
   }),
   /**
    * A teammate's reply mentioned others in the thread: they answer next, in

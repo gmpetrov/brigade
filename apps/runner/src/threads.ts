@@ -14,6 +14,7 @@ import {
   bareToolName,
   commandPrompt,
   mayChangeQueued,
+  memoryFilePath,
   mentionedIds,
   MessageAttachment,
   THREAD_NOTE_SOURCE,
@@ -32,10 +33,10 @@ import type { Attachments, Folder } from './attachments.js'
 import type { Folders } from './folders.js'
 import type { HandedOver } from './hand-over.js'
 import type { Previews } from './previews.js'
-import { memoryPrompt, parseMemory, readOnce } from './memory.js'
+import { memoryRun } from './memory.js'
+import { memoryNews, threadMemory } from './memory-layers.js'
+import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
-import { pickLines, recallCandidates, recalledBlock } from './recall.js'
-import { MEMORY_CHARS, memoryBody } from './instructions.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
 import { CLOUD, paths } from './config.js'
 import { teammateHome, teammateUser } from './teammates.js'
@@ -60,6 +61,12 @@ const MAX_HANDOFFS = 40
 const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
 /** Longest a memory run may take. */
 const MEMORY_RUN_MS = 4 * 60_000
+/** Longest a tidy run may take: it reads and lays out a whole memory file, beside the thread. */
+const TIDY_RUN_MS = 15 * 60_000
+/** A file whose tidy run failed is not tried again on this computer before this. */
+const TIDY_RETRY_MS = 60 * 60_000
+/** Nor one this computer just tidied, as memory-tidy.ts's own gap. */
+const TIDY_RESEND_MS = 6 * 60 * 60_000
 /** When the runner stops, how long it waits for the turns it froze to come back out. */
 const STOP_GRACE_MS = 10_000
 /** Longest a title run may take: past that, the thread keeps its first line. */
@@ -129,8 +136,8 @@ type Seat = {
   turn: (TurnEntry & { text?: string })[]
   /** The running turn only waits on work started in the background: a new message goes straight in. */
   waiting: boolean
-  /** Memory lines already brought into this harness session (recall.ts). */
-  recalled: Set<string>
+  /** Memory lines learned since the session started that it was told (memoryNews). */
+  told: Set<string>
 }
 
 /** The bridge's word on whether the turn only waits on background work, from a harness event. */
@@ -214,6 +221,10 @@ export class Threads {
   private running = 0
   /** Turns queued or running, across threads. */
   private pending = 0
+  /** Memory files a tidy run is laying out now, by path; when one last failed, and when one was last sent. */
+  private readonly tidying = new Set<string>()
+  private readonly tidyFailed = new Map<string, number>()
+  private readonly tidySent = new Map<string, number>()
   private waiters: Array<() => void> = []
   /** The runner is stopping (stop): nothing new starts. */
   private stopping = false
@@ -263,6 +274,8 @@ export class Threads {
       ) => Promise<unknown>
       /** What a quiet thread leaves in memory. */
       memoryUpdate: (update: Extract<RunnerToApi, { type: 'memory.update' }>) => void
+      /** A memory file laid out again by a tidy run. */
+      memoryTidy: (tidy: Extract<RunnerToApi, { type: 'memory.tidy' }>) => void
       /** A title for a new thread. */
       title: (update: Extract<RunnerToApi, { type: 'thread.title' }>) => void
     },
@@ -761,7 +774,7 @@ export class Threads {
                 text: await (async () => {
                   const note = await this.options.folders.takeNote(name, spec.git)
                   const told = await this.catchUp(spec, upTo)
-                  return [note, this.recall(spec, seat, told), told].filter(Boolean).join('\n\n')
+                  return [note, this.memoryNews(spec, seat), told].filter(Boolean).join('\n\n')
                 })(),
               }
             : input.kind === 'lost'
@@ -1184,26 +1197,26 @@ export class Threads {
           // Taken from the same log by the next runner, when the thread goes quiet there.
           if (this.stopping) return
           const speakers = spec.teammates.filter((t) => fresh.some((e) => e.by === t.id))
-          // Memory as the run reads it, kept for reading its answer: it may change meanwhile.
-          const memory = readOnce(this.options.context.memoryFor)
+          const run = memoryRun({
+            spec,
+            entries: fresh,
+            summary: log.summary,
+            memory: this.options.context.memoryFor,
+            speakers,
+          })
           const text = await runOnce({
             spec,
             ...this.memoryWorkDir(spec),
-            prompt: memoryPrompt({
-              spec,
-              entries: fresh,
-              summary: log.summary,
-              memory,
-              speakers,
-            }),
+            prompt: run.prompt,
             signal: AbortSignal.any([AbortSignal.timeout(MEMORY_RUN_MS), this.stopped.signal]),
           })
-          const update = parseMemory(text, spec, speakers, memory)
+          const update = run.parse(text)
           if (!update) return console.warn(`thread ${sessionId}: memory run gave no usable answer`)
           this.options.memoryUpdate({ type: 'memory.update', sessionId, ...update })
           log.memorized = end
           log.summary = update.summary
           await this.saveLog(sessionId)
+          for (const file of run.tidyAfter(update)) this.tidy(spec, file)
         } finally {
           this.release()
         }
@@ -1214,6 +1227,59 @@ export class Threads {
         this.pending--
       }
     })
+  }
+
+  /**
+   * Lay a memory file out again (memory-tidy.ts), on the account of the thread
+   * that went quiet, beside it rather than in its queue: a tidy may take a few
+   * minutes and the thread's next message should not wait for it. One at a time
+   * per file on this computer; after a failure, not again for a while.
+   */
+  private tidy(spec: ThreadSpec, file: TidyFile) {
+    const path = memoryFilePath(file.ref)
+    const failed = this.tidyFailed.get(path)
+    // The manifest may not say yet that this computer just tidied it.
+    const sent = this.tidySent.get(path)
+    // One at a time on this computer, and outside the turns' slots: a tidy waits, a turn does not.
+    if (
+      this.stopping ||
+      this.tidying.size > 0 ||
+      (failed && Date.now() - failed < TIDY_RETRY_MS) ||
+      (sent && Date.now() - sent < TIDY_RESEND_MS)
+    )
+      return
+    this.tidying.add(path)
+    void (async () => {
+      try {
+        if (this.stopping) return
+        const run = tidyRun(file)
+        const text = await runOnce({
+          spec,
+          ...this.memoryWorkDir(spec, 'tidy-runs'),
+          prompt: run.prompt,
+          signal: AbortSignal.any([AbortSignal.timeout(TIDY_RUN_MS), this.stopped.signal]),
+        })
+        const layout = run.parse(text)
+        if (!layout) {
+          this.tidyFailed.set(path, Date.now())
+          return console.warn(`memory ${path}: tidy run gave no usable layout`)
+        }
+        this.tidyFailed.delete(path)
+        this.tidySent.set(path, Date.now())
+        this.options.memoryTidy({
+          type: 'memory.tidy',
+          sessionId: spec.sessionId,
+          file: file.ref,
+          lastTidied: file.lastTidied,
+          layout,
+        })
+      } catch (error) {
+        this.tidyFailed.set(path, Date.now())
+        console.warn(`memory ${path}: tidy run failed: ${String(error)}`)
+      } finally {
+        this.tidying.delete(path)
+      }
+    })()
   }
 
   /**
@@ -1315,15 +1381,14 @@ export class Threads {
   }
 
   /**
-   * Memory the instructions file had no room for, picked for this turn's message.
-   * Nothing while every memory fits there.
+   * What memory learned since the teammate's session started, told once at the
+   * start of a turn. A parked session loads all of it when it resumes: nothing to tell.
    */
-  private recall(spec: ThreadSpec, seat: Seat, message: string) {
-    const memory = this.options.context.memoryFor(spec.teammate.id)
-    const texts = [memory.workspace, spec.project?.memory ?? '', memory.teammate].map(memoryBody)
-    // A running session lacks what its instructions file did not show: lines cut, and lines learned since.
-    const left = recallCandidates(texts, MEMORY_CHARS, seat.harness.memoryShown)
-    return left.length ? recalledBlock(pickLines(left, message, seat.recalled)) : ''
+  private memoryNews(spec: ThreadSpec, seat: Seat) {
+    const loaded = seat.harness.memoryLoaded
+    if (!loaded) return ''
+    const memory = threadMemory(spec, this.options.context.memoryFor(spec.teammate.id), '')
+    return memoryNews(memory, loaded, seat.told)
   }
 
   /**
@@ -1456,7 +1521,7 @@ export class Threads {
         parkTimer: undefined,
         turn: [],
         waiting: false,
-        recalled: new Set(),
+        told: new Set(),
       }
       thread.harnesses.set(teammateId, seat)
     }
