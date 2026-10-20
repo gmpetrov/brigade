@@ -80,6 +80,7 @@ import { createLocalSandboxSession, freePort, stopGroup } from './local-sandbox.
 import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
+import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
   alwaysLoaded,
@@ -1322,8 +1323,7 @@ export class HarnessThread {
       request: this.requestCredential,
       ...(this.runAs ? { runAs: this.runAs } : {}),
       ...(browser && tabsFile ? { browser: { port: browser, tabsFile } } : {}),
-      readFile: (file) =>
-        readAs(resolvePath(this.workDir, file), this.runAs, 1024 * 1024, 'A secret file'),
+      readFile: (file) => this.readFile(file, 1024 * 1024, 'A secret file'),
     })
     const { agent, tools } = createAgent(
       this.spec,
@@ -1335,7 +1335,7 @@ export class HarnessThread {
         folders: this.spec.libraryFolders,
         libraryDir,
         call: this.context.callLibrary,
-        readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
+        readFile: (file) => this.readFile(file),
         listFiles: (folder) => listAs(resolvePath(this.workDir, folder), this.runAs),
         renderDesign: (folder, options) =>
           renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
@@ -1362,7 +1362,18 @@ export class HarnessThread {
           : result
       },
       this.context.callTask,
-      this.context.callSchedule,
+      (call) =>
+        reportWithFiles(call, {
+          read: (file, max) => this.readFile(file, max, 'Files sent with a report'),
+          upload: (name, bytes) =>
+            this.context.uploadFile({
+              sessionId: this.spec.sessionId,
+              teammateId: this.spec.teammate.id,
+              name,
+              bytes,
+            }),
+          send: this.context.callSchedule,
+        }),
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
@@ -1420,12 +1431,7 @@ export class HarnessThread {
     const ids = []
     for (const file of files) {
       if (typeof file !== 'string') throw new Error(`${field} lists file paths`)
-      const bytes = await readAs(
-        resolvePath(this.workDir, file),
-        this.runAs,
-        ATTACHMENT_MAX,
-        'Files sent with a call',
-      )
+      const bytes = await this.readFile(file, ATTACHMENT_MAX, 'Files sent with a call')
       ids.push(
         await this.context.uploadFile({
           sessionId: this.spec.sessionId,
@@ -1436,6 +1442,21 @@ export class HarnessThread {
       )
     }
     return this.callConnector({ ...call, input: { ...input, [field]: ids } })
+  }
+
+  /**
+   * A file the teammate names, read as it sees it: as its user, and from its thread's own
+   * /tmp in the thread's namespaces (thread-net.ts, readCommand). Relative to its folder.
+   */
+  private async readFile(file: string, max?: number, what?: string) {
+    const net = this.runAs ? await threadNet(this.spec.sessionId) : null
+    return readAs(
+      resolvePath(this.workDir, file),
+      this.runAs,
+      max,
+      what,
+      net?.isolated ? net.thread : undefined,
+    )
   }
 
   /** After a failure: save what can be saved, so the next message starts clean. */
@@ -1532,14 +1553,15 @@ async function readAs(
   runAs?: string,
   max = READ_MAX,
   what = 'Files saved to the library',
+  /** Its thread, when it has namespaces of its own: its /tmp is read in them (readCommand). */
+  thread?: string,
 ): Promise<Buffer> {
-  const { stdout } = await execFileAsync(
-    runAs ? 'sudo' : 'head',
-    runAs
-      ? ['-n', '-u', runAs, 'head', '-c', String(max + 1), '--', file]
-      : ['-c', String(max + 1), '--', file],
-    { cwd: '/', encoding: 'buffer', maxBuffer: max + 1024 },
-  ).catch((error: unknown) => {
+  const [command, args] = readCommand(file, max, runAs, thread)
+  const { stdout } = await execFileAsync(command, args, {
+    cwd: '/',
+    encoding: 'buffer',
+    maxBuffer: max + 1024,
+  }).catch((error: unknown) => {
     throw new Error(`Could not read ${file}: ${errorMessage(error)}`)
   })
   if (stdout.byteLength > max)

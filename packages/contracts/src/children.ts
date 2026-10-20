@@ -3,6 +3,7 @@
 // parent is woken once every child it waits for has reported (src/children.ts
 // in the API). A schedule made from a thread reports there the same way.
 import { z } from 'zod'
+import { ATTACHMENTS_PER_MESSAGE } from './attachments.js'
 
 /** Children a thread may have at work at once. */
 export const CHILDREN_AT_WORK = 5
@@ -17,6 +18,16 @@ export const FOLLOWERS_PER_THREAD = 20
  * long without it calling `report`, its last message goes to its parent as its report.
  */
 export const REPORT_AFTER_PERSON_MINUTES = 30
+/**
+ * Longest report: the answer first, then all its parent needs (a review's findings, the
+ * results). Notes, list_children and the dashboard show its start (REPORT_START);
+ * read_child gives it whole.
+ */
+export const REPORT_MAX = 40_000
+/** What a parent's note, list_children and the dashboard show of a report. */
+export const REPORT_START = 2_000
+/** Files one report sends its parent, as many as one message carries. */
+export const REPORT_FILES_MAX = ATTACHMENTS_PER_MESSAGE
 
 /**
  * nothing: nothing worth telling (a schedule's run with nothing new). report: something to say.
@@ -41,6 +52,8 @@ export const ChildReport = z.object({
   fromLastMessage: z.boolean().optional(),
   /** It ends a conversation a person had with it in the child (REPORT_AFTER_PERSON_MINUTES, or sent by them). */
   afterPerson: z.boolean().optional(),
+  /** The files it sent with it: where each is in its parent's working folder (attachments/…). */
+  files: z.array(z.string()).optional(),
 })
 export type ChildReport = z.infer<typeof ChildReport>
 
@@ -71,7 +84,9 @@ export const ChildOperations = [
   z.object({
     name: z.literal('report'),
     status: z.enum(['nothing', 'report', 'needs_person', 'failed']),
-    summary: Text.max(2_000),
+    summary: Text.max(REPORT_MAX),
+    /** Files for its parent, by id: the runner sent them first (POST /runner/attachments). */
+    files: z.array(z.string().min(1).max(64)).max(REPORT_FILES_MAX).optional(),
   }),
 ] as const
 
@@ -85,6 +100,15 @@ export const clipReport = (text: string, max: number) =>
 /** One line of a report, for a note: no line breaks, kept short. */
 const line = (text: string) => clipReport(text.replace(/\s+/g, ' ').trim(), 400)
 
+/**
+ * Where the files a report sent are, for its note: in the parent's working folder. As code,
+ * each opens beside the thread for people reading the note.
+ */
+const sentFiles = (report: ChildReport) =>
+  report.files?.length
+    ? `Files it sent (in your working folder): ${report.files.map((f) => `\`${f}\``).join(', ')}.`
+    : ''
+
 const STATUS_WORDS: Record<ChildReportStatus, string> = {
   nothing: 'nothing new',
   report: 'reports',
@@ -94,7 +118,13 @@ const STATUS_WORDS: Record<ChildReportStatus, string> = {
 }
 
 /** How each note ends: what to do next, for the teammate only (forPeople leaves it out). */
-const CHILD_HINT = 'When you are done, call `report` once with what you found, then end your turn.'
+const CHILD_HINT =
+  'When you are done, call `report` once, then end your turn. The thread that started you cannot ' +
+  'see your files, /tmp included: put in your report all it needs, the answer first, and send the ' +
+  'files it needs (scripts, logs, screenshots) with it, in `files`.'
+/** CHILD_HINT as children were told it before, still in their first messages. */
+const CHILD_HINT_BEFORE =
+  'When you are done, call `report` once with what you found, then end your turn.'
 const BATCH_HINT =
   '`read_child` gives a child’s full report and what it produced. To tell one more, ' +
   '`message_thread` with its threadId: it carries on and reports again. ' +
@@ -117,6 +147,10 @@ export function childPrompt(input: { from: string; parentTitle: string; instruct
   )
 }
 
+/** A report as a note tells it: its start, then where the files it sent are. */
+const reportStart = (report: ChildReport) =>
+  [clipReport(report.summary, REPORT_START), sentFiles(report)].filter(Boolean).join('\n\n')
+
 /** The note a parent wakes up to when the children it waits for have reported. */
 export function batchNote(
   finished: { id: string; title: string; teammate: string; report: ChildReport }[],
@@ -128,9 +162,14 @@ export function batchNote(
       : finished.length
         ? `${finished.length} child threads you were waiting for have finished:`
         : 'You stopped waiting for your child threads: none has finished yet.',
-    ...finished.map(
-      (c) =>
-        `- ${c.teammate} · “${c.title}” (${c.id}): ${STATUS_WORDS[c.report.status]}. ${line(c.report.summary)}`,
+    ...finished.map((c) =>
+      [
+        `- ${c.teammate} · “${c.title}” (${c.id}): ${STATUS_WORDS[c.report.status]}.`,
+        line(c.report.summary),
+        sentFiles(c.report),
+      ]
+        .filter(Boolean)
+        .join(' '),
     ),
   ]
   if (unfinished.length)
@@ -160,7 +199,7 @@ export function singleNote(child: {
     (child.schedule
       ? `A run of your schedule “${child.schedule}” (child thread “${child.title}”, ${child.id}) ${status}:`
       : `Your child thread “${child.title}” (${child.id}, ${child.teammate}) ${status}${child.late ? ' after you stopped waiting for it' : ''}:`) +
-    `\n\n${clipReport(child.report.summary, 2_000)}\n\n` +
+    `\n\n${reportStart(child.report)}\n\n` +
     (child.report.afterPerson ? AFTER_PERSON_HINT : SINGLE_HINT)
   )
 }
@@ -181,7 +220,7 @@ export function followNote(thread: {
 }) {
   return (
     `${FOLLOW_HEAD}${thread.title}” (${thread.id}, ${thread.teammate}) ${STATUS_WORDS[thread.report.status]}:` +
-    `\n\n${clipReport(thread.report.summary, 2_000)}\n\n` +
+    `\n\n${reportStart(thread.report)}\n\n` +
     FOLLOW_HINT
   )
 }
@@ -354,6 +393,7 @@ export const asksParallel = (text: string) => text.endsWith(PARALLEL_HINT)
 export function forPeople(text: string) {
   for (const hint of [
     CHILD_HINT,
+    CHILD_HINT_BEFORE,
     BATCH_HINT,
     AFTER_PERSON_HINT,
     SINGLE_HINT,
