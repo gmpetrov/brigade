@@ -58,8 +58,7 @@ export function ProjectIcon({
       <span
         aria-hidden
         className={cn(
-          // White behind it: most logos are drawn for a light page.
-          'flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-sm border bg-white',
+          'flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-sm',
           className,
         )}
       >
@@ -536,7 +535,7 @@ export function NewProjectDialog({
 export function ProjectLogoPreview({ logo, onRemove }: { logo: string; onRemove: () => void }) {
   return (
     <span className="group relative flex-none">
-      <span className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-white">
+      <span className="flex size-9 items-center justify-center overflow-hidden rounded-md">
         {/* eslint-disable-next-line @next/next/no-img-element -- a data URL or a stored logo */}
         <img src={logo} alt="Logo" className="size-full object-contain" />
       </span>
