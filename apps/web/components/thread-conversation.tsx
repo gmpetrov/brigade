@@ -953,6 +953,9 @@ export function ThreadConversation({
                         : undefined
                     }
                     onReply={t.mayPrompt && !t.controlledByMemberId ? replyToMessage : undefined}
+                    onRetry={
+                      t.mayPrompt && !t.controlledByMemberId ? () => call('/retry') : undefined
+                    }
                     onTicket={(requestId, answer) =>
                       // Answering may hand control back: show the composer again.
                       api(`/threads/${id}/tickets`, { body: { requestId, answer } }).then(

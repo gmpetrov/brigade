@@ -53,8 +53,11 @@ export * from './thread-history.js'
  * 30: a thread's tab comes to the front of its teammate's browser while people watch its desktop (browser.focus).
  * 31: playbook threads (the spec's `playbook`, and playbook_triage and playbook_report as schedule.call
  *     operations); follow_thread (a schedule.call operation).
+ * 32: a turn that failed is tried again: on its own after a passing error, or when a person asks (thread.retry).
  */
-export const PROTOCOL_VERSION = 31
+export const PROTOCOL_VERSION = 32
+/** Runners from this version on try a failed turn again when a person asks (thread.retry). */
+export const RETRY_PROTOCOL = 32
 /** Runners from this version on bring a thread's tab to the front (browser.focus). */
 export const FOCUS_PROTOCOL = 30
 /** Runners from this version on take thread.note. */

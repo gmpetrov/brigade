@@ -5,7 +5,7 @@
 // its turn starts; meanwhile it can be steered into the running turn, and cancelled or
 // edited when a person wrote it.
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, statfs, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import {
@@ -75,6 +75,25 @@ const OUT_OF_TURN = new Set<AgentEvent['type']>([
   'account.switched',
 ])
 
+/**
+ * Errors that pass (a full disk, the network, Claude's API down or overloaded): a turn that
+ * failed on one is tried again on its own, after RETRY_AFTER_MS. Out of usage is not one
+ * of them: that turn moves to another account, or pauses (HarnessThread.run).
+ */
+const PASSING_ERROR =
+  /ENOSPC|no space left|EAI_AGAIN|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network error|overloaded|internal server error|api_error|service unavailable|bad gateway|gateway time-?out|\b(500|502|503|504|529)\b/i
+/** A full disk: tried again only once this much is free on it. */
+const DISK_ERROR = /ENOSPC|no space left/i
+const FREE_BYTES = 1024 ** 3
+/** How long before each try of a turn that failed on a passing error; then a person tries again. */
+const RETRY_AFTER_MS = Number(process.env.BRIGADE_RETRY_MS)
+  ? Array<number>(3).fill(Number(process.env.BRIGADE_RETRY_MS))
+  : [60_000, 5 * 60_000, 15 * 60_000]
+/** What a teammate is told when its turn is tried again after it failed. */
+const retried = (error: string) =>
+  `Your last turn in this thread stopped on an error: ${error.slice(0, 2_000)}\n\n` +
+  'Before you redo anything, check what is already done (files, commands you ran, messages you sent), then carry on where you left off.'
+
 /** Events that end a turn: one still on its way to the API says the turn was over. */
 const TURN_ENDED = new Set<AgentEvent['type']>(['turn.completed', 'error'])
 
@@ -84,6 +103,9 @@ const TURN_ENDED = new Set<AgentEvent['type']>(['turn.completed', 'error'])
  * to the API say its turn was over.
  */
 type Lost = { kind: 'lost'; running: boolean; ended: boolean }
+
+/** A failed turn tried again: the teammate is told the error, and what was said since. */
+type Retry = { kind: 'retry'; error: string }
 
 type Command = Extract<
   ApiToRunner,
@@ -95,6 +117,7 @@ type Command = Extract<
       | 'thread.ticket'
       | 'thread.interrupt'
       | 'thread.queued'
+      | 'thread.retry'
   }
 >
 
@@ -179,6 +202,11 @@ type Thread = {
   quietTimer?: NodeJS.Timeout
   /** The latest turn's spec: the account and teammates a memory run uses. */
   lastSpec?: ThreadSpec
+  /**
+   * The latest turn failed: whose, on what error, and how many times it was tried again on
+   * its own since a person last asked; with the timer of the next try (failed).
+   */
+  failed?: { spec: ThreadSpec; error: string; tries: number; timer?: NodeJS.Timeout }
 }
 
 export class Threads {
@@ -246,6 +274,8 @@ export class Threads {
       // An interrupt meant for a turn that already ended does not stop the next one.
       if (thread && (!command.turnId || thread.running?.turnId === command.turnId))
         thread.controller?.abort()
+      // Stopped, a failed turn is not tried again on its own either.
+      if (thread) this.settleFailure(thread)
       return
     }
     if (command.type === 'thread.queued') return this.queued(command)
@@ -267,6 +297,9 @@ export class Threads {
       else this.options.emit(spec.sessionId, { at, type: 'raw', source: 'runner', value: reason })
       return
     }
+    // Someone wrote, or a person asked: what goes on now is theirs, not a try planned before.
+    if (command.type === 'thread.prompt') this.settleFailure(this.thread(spec.sessionId))
+    if (command.type === 'thread.retry') return this.retry(spec, command.error)
     if (command.type === 'thread.prompt' && command.handoff) {
       // Nobody wrote anything: each is told what was said since its last turn.
       for (const next of specs) this.enqueue(next, 'prompt')
@@ -448,6 +481,7 @@ export class Threads {
     const thread = this.thread(spec.sessionId)
     if (thread.takeover) return
     thread.takeover = { memberId, since: Date.now() }
+    this.settleFailure(thread)
     void this.options.previews.threadBusy(spec.sessionId)
     if (interrupt) thread.controller?.abort()
     // Queued messages do not run while a person has control: say so, rather than drop them silently.
@@ -553,6 +587,7 @@ export class Threads {
     if (thread && this.inUse(sessionId)) return
     if (thread) {
       clearTimeout(thread.quietTimer)
+      this.settleFailure(thread)
       for (const seat of thread.harnesses.values()) clearTimeout(seat.parkTimer)
       this.threads.delete(sessionId)
     }
@@ -573,6 +608,7 @@ export class Threads {
       if (thread.takeover) throw new Error('A person has control of this thread')
       await thread.queue.catch(() => undefined)
       clearTimeout(thread.quietTimer)
+      this.settleFailure(thread)
       for (const seat of thread.harnesses.values()) {
         clearTimeout(seat.parkTimer)
         await seat.harness.park().catch(() => undefined)
@@ -669,7 +705,7 @@ export class Threads {
    */
   private enqueue(
     spec: ThreadSpec,
-    input: ThreadInput | 'prompt' | Lost,
+    input: ThreadInput | 'prompt' | Lost | Retry,
     prepare?: () => Promise<number | undefined | null>,
   ) {
     const thread = this.thread(spec.sessionId)
@@ -730,7 +766,14 @@ export class Threads {
               }
             : input.kind === 'lost'
               ? await this.pickUp(spec, seat, input)
-              : input
+              : input.kind === 'retry'
+                ? {
+                    kind: 'prompt' as const,
+                    text: [retried(input.error), await this.catchUp(spec, undefined, true)]
+                      .filter(Boolean)
+                      .join('\n\n'),
+                  }
+                : input
         if (!turn || this.stopping) return
         this.options.emit(spec.sessionId, {
           at: new Date().toISOString(),
@@ -741,6 +784,9 @@ export class Threads {
         })
         seat.turn = []
         const outcome = await seat.harness.run(turn, spec, controller.signal)
+        if (outcome.status === 'failed' && !controller.signal.aborted)
+          this.failed(thread, spec, outcome.error ?? '')
+        else this.settleFailure(thread)
         if (outcome.status === 'waiting' && outcome.error) {
           this.options.emit(spec.sessionId, {
             at: new Date().toISOString(),
@@ -779,6 +825,76 @@ export class Threads {
         this.pending--
         if (acquired) this.release()
       }
+    })
+  }
+
+  /**
+   * A turn failed (its error shows in the thread). On a passing error (PASSING_ERROR) it is
+   * tried again on its own, after RETRY_AFTER_MS, a few times; a full disk is tried again
+   * once there is room on it. Else, and after those tries, a person tries it again
+   * (thread.retry) or writes.
+   */
+  private failed(thread: Thread, spec: ThreadSpec, error: string, diskFull = false) {
+    const tries = thread.failed?.tries ?? 0
+    clearTimeout(thread.failed?.timer)
+    thread.failed = { spec, error, tries }
+    if (!PASSING_ERROR.test(error) || this.stopping || thread.takeover) return
+    const name = spec.teammate.name
+    const wait = RETRY_AFTER_MS[tries]
+    if (wait === undefined)
+      return this.say(
+        spec.sessionId,
+        `${name} tried again ${tries} times and the error came back. Try again once it is fixed.`,
+      )
+    this.say(
+      spec.sessionId,
+      `${diskFull ? "The computer's disk is still full. " : ''}${name} tries again in ${minutes(wait)}.`,
+    )
+    thread.failed.timer = setTimeout(() => void this.tryAgain(thread, tries + 1), wait)
+  }
+
+  /** A try of a failed turn, on its own (failed). */
+  private async tryAgain(thread: Thread, tries: number) {
+    const failed = thread.failed
+    if (!failed || this.stopping || thread.takeover) return
+    failed.timer = undefined
+    failed.tries = tries
+    if (DISK_ERROR.test(failed.error) && !(await roomOnDisk()))
+      return this.failed(thread, failed.spec, failed.error, true)
+    this.retryTurn(thread, failed)
+  }
+
+  /** A person asks to try the failed turn again now: the tries on its own start over. */
+  private retry(spec: ThreadSpec, error: string | undefined) {
+    const thread = this.thread(spec.sessionId)
+    clearTimeout(thread.failed?.timer)
+    thread.failed = { spec, error: error ?? thread.failed?.error ?? 'unknown error', tries: 0 }
+    this.retryTurn(thread, thread.failed)
+  }
+
+  private retryTurn(thread: Thread, failed: NonNullable<Thread['failed']>) {
+    // Busy again (a message came, another turn runs or waits): that goes on instead.
+    if (
+      thread.controller ||
+      thread.messages.size > 0 ||
+      [...thread.waiting.values()].some((n) => n > 0)
+    )
+      return
+    this.enqueue(failed.spec, { kind: 'retry', error: failed.error })
+  }
+
+  /** No failed turn to try again any more: it went on, or someone wrote or stopped it. */
+  private settleFailure(thread: Thread) {
+    clearTimeout(thread.failed?.timer)
+    thread.failed = undefined
+  }
+
+  private say(sessionId: string, value: string) {
+    this.options.emit(sessionId, {
+      at: new Date().toISOString(),
+      type: 'raw',
+      source: 'runner',
+      value,
     })
   }
 
@@ -1367,6 +1483,20 @@ export function threadFolder(teammateId: string, sessionId: string) {
     ? { workDir: `${teammateHome(user)}/threads/${sessionId}`, runAs: user }
     : { workDir: paths.threadDir(teammateId, sessionId) }
 }
+
+const minutes = (ms: number) =>
+  ms < 60_000
+    ? `${Math.round(ms / 1000)} seconds`
+    : ms < 120_000
+      ? '1 minute'
+      : `${Math.round(ms / 60_000)} minutes`
+
+/** Room on this computer's disk for a turn that failed on a full one. */
+const roomOnDisk = () =>
+  statfs(paths.state).then(
+    (s) => s.bavail * s.bsize >= FREE_BYTES,
+    () => true,
+  )
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 

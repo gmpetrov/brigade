@@ -440,6 +440,7 @@ async function start() {
       case 'thread.ticket':
       case 'thread.interrupt':
       case 'thread.queued':
+      case 'thread.retry':
         try {
           threads.handle(message)
         } catch (error) {

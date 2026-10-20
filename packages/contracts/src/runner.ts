@@ -631,6 +631,15 @@ export const ApiToRunner = z.discriminatedUnion('type', [
     answer: TicketAnswer,
     memberId: z.string(),
   }),
+  /** A person asks the teammate whose turn failed to try it again (RETRY_PROTOCOL). */
+  z.object({
+    type: z.literal('thread.retry'),
+    commandId: z.string(),
+    thread: ThreadSpec,
+    /** The error the turn stopped on, as the thread shows it: the teammate is told it. */
+    error: z.string().max(10_000).optional(),
+    memberId: z.string(),
+  }),
   z.object({
     type: z.literal('thread.interrupt'),
     commandId: z.string(),
