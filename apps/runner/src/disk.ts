@@ -35,7 +35,7 @@ const TOOL_CACHES = ['.npm/_cacache', '.cache/yarn', '.cache/pip', '.cache/go-bu
 export const STILL_FULL = 0.85
 
 /** Package managers whose runs write into the caches cleared here, by the name their command has. */
-const MANAGERS = new Set(['pnpm', 'npm', 'npm-cli', 'yarn', 'bun', 'pip', 'pip3', 'uv', 'corepack'])
+const MANAGERS = new Set(['pnpm', 'npm', 'npm-cli', 'yarn', 'bun', 'pip', 'uv', 'corepack', 'go'])
 /** Their commands that install, and so write into a cache or store while they run. */
 const INSTALLS = new Set([
   'install',
@@ -58,27 +58,28 @@ const INSTALLS = new Set([
   'sync',
   'prepare',
 ])
-/** Their commands that run something instead: a dev server, a preview, a test. */
-const RUNS = new Set(['exec', 'run', 'test', 'start', 'dev', 'build', 'lint', 'x'])
+/** Go's commands that build, and so write into its build cache. */
+const GO_BUILDS = new Set(['build', 'test', 'run', 'install', 'get', 'mod', 'vet', 'generate'])
+
+/** A command's manager: its file's name without .js or a version (pip3.12 is pip). */
+const managerOf = (word: string) =>
+  (word.split('/').at(-1) ?? '').replace(/\.(c|m)?js$/, '').replace(/^pip[\d.]*$/, 'pip')
 
 /**
- * Whether a command line is a package manager installing. `pnpm` alone installs; a
- * value given to a flag (pnpm --filter web install) is skipped over. Wrong only
- * toward "installing", which only puts off clearing a cache.
+ * Whether a command line is a package manager installing. `pnpm` alone installs.
+ * Any of the first words after the manager may name the install, as a flag's
+ * value can come before it (pnpm --dir web install). Wrong only toward
+ * "installing", which only puts off clearing a cache.
  */
 export function installs(args: string) {
   const words = args.trim().split(/\s+/)
-  const at = words.findIndex((word) =>
-    MANAGERS.has((word.split('/').at(-1) ?? '').replace(/\.(c|m)?js$/, '')),
-  )
+  const at = words.findIndex((word) => MANAGERS.has(managerOf(word)))
   if (at < 0) return false
+  const manager = managerOf(words[at]!)
   const rest = words.slice(at + 1).filter((word) => !word.startsWith('-'))
-  if (rest.length === 0) return ['pnpm', 'yarn', 'bun'].some((m) => words[at]!.includes(m))
-  for (const word of rest.slice(0, 3)) {
-    if (RUNS.has(word)) return false
-    if (INSTALLS.has(word)) return true
-  }
-  return false
+  if (rest.length === 0) return ['pnpm', 'yarn', 'bun'].includes(manager)
+  const commands = manager === 'go' ? GO_BUILDS : INSTALLS
+  return rest.slice(0, 3).some((word) => commands.has(word))
 }
 
 /** Whether one of the teammate's processes is installing packages: its caches stay until it is done. */

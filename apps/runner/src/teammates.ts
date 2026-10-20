@@ -114,7 +114,11 @@ export const shareAccount = (accountId: string) => helper('share-account', accou
  * pulled there outside the teammates' rootless Dockers. Says how much it freed.
  */
 export async function pruneSystemDocker() {
-  const { stdout } = await run('sudo', ['-n', HELPER, 'prune-system-docker'], { cwd: '/' })
+  const { stdout } = await run('sudo', ['-n', HELPER, 'prune-system-docker'], {
+    cwd: '/',
+    // A Docker that hangs must not hold the disk check up for good.
+    timeout: 5 * 60_000,
+  })
   return stdout.trim()
 }
 

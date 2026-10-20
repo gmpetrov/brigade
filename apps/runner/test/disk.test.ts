@@ -72,6 +72,11 @@ test('a package manager installing is told from one running something', () => {
     'pnpm dlx create-next-app',
     'uv pip install requests',
     'yarn',
+    'pnpm --dir test install',
+    'pnpm -C build install',
+    'python3 -m pip3.12 install requests',
+    'go build ./...',
+    'go mod download',
   ])
     assert.equal(installs(args), true, args)
   for (const args of [
@@ -83,14 +88,16 @@ test('a package manager installing is told from one running something', () => {
     'node /opt/brigade/runner/dist/index.js start',
     'npm',
     'pnpm exec prettier --write install.md',
+    'pnpm --filter web dev',
+    'go version',
   ])
     assert.equal(installs(args), false, args)
 })
 
 test('the disk is said full from 85% until it is back under 80%, and said again every 10 minutes', () => {
   const at = 1_000_000
-  // Under 85%: not full; said once, then only every 10 minutes.
-  const first = diskReport(undefined, 0.82, at)
+  // Under 80%: not full; said once, then only every 10 minutes.
+  const first = diskReport(undefined, 0.78, at)
   assert.deepEqual(first, { full: false, at })
   assert.equal(diskReport(first!, 0.83, at + 60_000), null)
   assert.deepEqual(diskReport(first!, 0.83, at + 10 * 60_000), {
@@ -103,4 +110,7 @@ test('the disk is said full from 85% until it is back under 80%, and said again 
   // Still full down to 80%, then not.
   assert.equal(diskReport(full!, 0.81, at + 120_000), null)
   assert.deepEqual(diskReport(full!, 0.79, at + 120_000), { full: false, at: at + 120_000 })
+  // A runner just started between the two says nothing: an open ticket stays open.
+  assert.equal(diskReport(undefined, 0.82, at), null)
+  assert.deepEqual(diskReport(undefined, 0.79, at), { full: false, at })
 })
