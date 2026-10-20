@@ -286,11 +286,11 @@ export const MemoryLayout = z.object({
     )
     .max(30)
     .default([]),
-  /** Lines that say the same thing, said once. */
+  /** Lines that say the same thing, said once; or one line said in today's words. */
   merge: z
     .array(
       z.object({
-        from: z.array(z.string().max(1000)).min(2).max(20),
+        from: z.array(z.string().max(1000)).min(1).max(20),
         text: z.string().trim().min(1).max(1000),
         topic: z.string().trim().max(60).nullable().default(null),
       }),
@@ -362,7 +362,7 @@ export function layOutMemoryFile(text: string, layout: MemoryLayout): MemoryLayo
     const from = [...new Set(merge.from.map(memoryLineKey))].filter(
       (key) => where.has(key) && !taken.has(key),
     )
-    if (from.length < 2) continue
+    if (from.length < 1) continue
     const to = memoryLineText(merge.text)
     for (const key of from) taken.add(key)
     result.merged.push({ from: from.map((key) => where.get(key)!), to, topic: merge.topic })

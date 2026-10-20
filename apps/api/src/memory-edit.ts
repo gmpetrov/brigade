@@ -64,7 +64,8 @@ export function applyMemoryLayout(text: string, layout: MemoryLayout) {
   const sources = new Map<string, string[]>()
   for (const a of result.archived) reasons.set(memoryLineKey(a.text), a.reason)
   for (const m of result.merged) {
-    for (const from of m.from) reasons.set(memoryLineKey(from.text), `Merged into: ${m.to}`)
+    const said = m.from.length > 1 ? 'Merged into' : 'Reworded as'
+    for (const from of m.from) reasons.set(memoryLineKey(from.text), `${said}: ${m.to}`)
     sources.set(
       memoryLineKey(m.to),
       m.from.map((f) => memoryLineKey(f.text)),

@@ -159,8 +159,8 @@ export const topicPath = (folder: string, topic: LayeredTopic) =>
 export function memorySection(memory: LayeredMemory, workDir: string, folder: string) {
   const lines = memory.core.map(bullet)
   if (memory.topics.length) {
+    if (lines.length) lines.push('')
     lines.push(
-      '',
       'Topics, each in its own file: read one before work it bears on.',
       ...memory.topics.map((t) => {
         const about = t.description ? `: ${t.description.replace(/\.$/, '')}` : ''

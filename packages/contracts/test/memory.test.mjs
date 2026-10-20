@@ -271,3 +271,20 @@ test('a topic whose last line goes, goes with it', () => {
   )
   assert.ok(kept.text.endsWith('## Apps and MCP\n\n* Linear cannot delete issues.\n'))
 })
+
+test('a tidy layout can say one line again in today’s words', () => {
+  const result = layOutMemoryFile(
+    '# M\n\n- Playbooks show in the Automations page.\n',
+    MemoryLayout.parse({
+      merge: [
+        {
+          from: ['Playbooks show in the Automations page.'],
+          text: 'Playbooks show in the Routines page.',
+          topic: null,
+        },
+      ],
+    }),
+  )
+  assert.equal(result.text, '# M\n\n- Playbooks show in the Routines page.\n')
+  assert.equal(result.merged[0].from.length, 1)
+})

@@ -18,7 +18,7 @@ import {
 } from '@brigade/contracts'
 import { z } from 'zod'
 import { numberedMemory, type MemorySnapshot } from './memory-layers.js'
-import { lenientList, LineRef, needsTidy, type TidyFile } from './memory-tidy.js'
+import { inWords, lenientList, LineRef, needsTidy, type TidyFile } from './memory-tidy.js'
 
 /** How much of the conversation a memory run reads. */
 const CONVERSATION_CHARS = 60_000
@@ -269,7 +269,7 @@ function toEdit(edit: FileEdit | undefined, file: RunFile): MemoryEdit {
       .flatMap((r) => {
         const ref = typeof r === 'object' ? r.line : r
         const text = line(ref)
-        const reason = (typeof r === 'object' ? r.reason : undefined)?.trim().slice(0, 200)
+        const reason = inWords(typeof r === 'object' ? r.reason : undefined, file.lines)
         return text ? [{ text, reason: reason || 'Removed by a thread' }] : []
       })
       .slice(0, MAX_REMOVE),

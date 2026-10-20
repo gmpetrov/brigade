@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { memoryLineKey } from '@brigade/contracts'
-import { needsTidy, tidyRun, type TidyFile } from '../src/memory-tidy.js'
+import { inWords, needsTidy, tidyRun, type TidyFile } from '../src/memory-tidy.js'
 
 const now = new Date('2026-10-21T10:00:00Z')
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600_000).toISOString()
@@ -108,4 +108,21 @@ test('a layout that would take most of the file away is not trusted', () => {
   assert.equal(run.parse(JSON.stringify({ archive: all })), null)
   assert.ok(run.parse(JSON.stringify({ archive: all.slice(0, 10) })))
   assert.equal(run.parse('no json here'), null)
+})
+
+test('reasons name the lines they point at by their text, not their number', () => {
+  const lines = [
+    'PRs are squash-merged.',
+    'Collapsed sections show no count; a badge next to Home shows the total.',
+  ]
+  assert.equal(
+    inWords('replaced by line 2', lines),
+    'replaced by “Collapsed sections show no count; a badge next to Home shows the total.”',
+  )
+  assert.equal(
+    inWords('repeats lines 1 and 2', lines),
+    'repeats “PRs are squash-merged.” and “Collapsed sections show no count; a badge next to Home shows the total.”',
+  )
+  assert.equal(inWords('outdated since the rename', lines), 'outdated since the rename')
+  assert.equal(inWords('replaced by line 9', lines), 'replaced by 9')
 })

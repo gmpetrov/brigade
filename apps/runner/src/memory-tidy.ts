@@ -42,6 +42,29 @@ const TIDY_GAP_MS = 6 * 3600_000
 const MAX_GONE_SHARE = 0.4
 const MAX_GONE_SHARE_LONG = 0.6
 
+/** What the file is brought under when it is too long, so the next memory run does not tidy it again. */
+const TIDY_TARGET = Math.round(MEMORY_TIDY_AT * 0.9)
+
+/**
+ * A reason as people read it in the archive, where line numbers mean nothing:
+ * "replaced by line 158" names the line's text instead.
+ */
+export function inWords(reason: string | undefined, lines: string[]) {
+  const quote = (n: string) => {
+    const text = lines[Number(n) - 1]
+    return text ? `“${text.length > 80 ? `${text.slice(0, 79).trimEnd()}…` : text}”` : n
+  }
+  return (reason ?? '')
+    .trim()
+    .replace(/\blines?\s+(\d+(?:\s*(?:,|and|&)\s*\d+)*)/gi, (_, numbers: string) =>
+      numbers
+        .split(/\s*(?:,|and|&)\s*/i)
+        .map(quote)
+        .join(' and '),
+    )
+    .slice(0, 200)
+}
+
 /** Lines named by number, or by their text when a run writes that instead. */
 export const LineRef = z.union([z.number().int(), z.string()])
 /** A list that keeps the items it can read and drops the others. */
@@ -115,10 +138,10 @@ export function tidyRun(file: TidyFile, now = new Date()) {
     [
       `- core: the lines nearly every thread needs before it starts: how the team wants work done, decisions that hold everywhere, pitfalls that can do harm (a live account, production data). At most ${budget.toLocaleString('en')} characters in all, merged lines put in the core included (the core has ${numbered.coreChars.toLocaleString('en')} now); everything else goes in topics.`,
       '- topics: the other lines, grouped by what a thread would be working on when it needs them: a part of the product, a tool, a provider, a kind of task. Short names, each with a one-line description of when to read it; about 3 to 15 topics, none of a single line unless nothing else fits. Keep an existing topic and its name when it still fits.',
-      '- merge: lines that each say part of the same thing, said once in a line that holds today, under a topic (null: the core). List those lines only in the merge, not in a topic too.',
-      '- archive: lines that leave the file, each with a reason of a few words: a newer line replaced or contradicted it (say which in words), it is outdated (a plan since shipped, a "for now" or "until" whose time has passed, a bug of a version long replaced), or another line already says all of it. When two lines disagree about the same case, the newer one wins; lines about different cases both stay. A line a person wrote outranks one a teammate learned, and goes only when a newer line replaces it. Never archive a line only because it is old, long or rarely useful: archived lines leave every thread.',
+      '- merge: lines that each say part of the same thing, said once in a line that holds today, under a topic (null: the core); or a single line said again in the words of today (a feature renamed since). List those lines only in the merge, not in a topic too.',
+      '- archive: lines that leave the file, each with a reason of a few words: a newer line replaced or contradicted it (say which in words), it is outdated (a plan since shipped, a "for now" or "until" whose time has passed, a feature since removed, a bug of a version long replaced), or another line already says all of it. A line about something still there stays, even if it is being phased out. When two lines disagree about the same case, the newer one wins; lines about different cases both stay. A line a person wrote outranks one a teammate learned, and goes only when a newer line replaces it. Never archive a line only because it is old, long or rarely useful: archived lines leave every thread.',
       over &&
-        `- The file is past ${MEMORY_TIDY_AT.toLocaleString('en')} characters: also archive the lines least likely to matter again, until it is under (search still finds them).`,
+        `- The whole file is past ${MEMORY_TIDY_AT.toLocaleString('en')} characters: beyond the rules above, also archive the lines least likely to matter again until it is under ${TIDY_TARGET.toLocaleString('en')} (search still finds them).`,
       '- Every line goes in exactly one place: the core, one topic, one merge, or the archive.',
     ]
       .filter(Boolean)
@@ -166,13 +189,13 @@ export function tidyRun(file: TidyFile, now = new Date()) {
             .slice(0, 1000),
           topic: m.topic?.trim().slice(0, 60) || null,
         }))
-        .filter((m) => m.from.length >= 2 && m.text)
+        .filter((m) => m.from.length >= 1 && m.text)
         .slice(0, 100),
       archive: answer.archive
         .flatMap((a) => {
           const text = line(typeof a === 'object' ? a.line : a)
-          const reason = (typeof a === 'object' ? a.reason : undefined)?.trim().slice(0, 200)
-          return text ? [{ text, reason: reason || 'Tidied away' }] : []
+          const reason = typeof a === 'object' ? a.reason : undefined
+          return text ? [{ text, reason: inWords(reason, numbered.lines) || 'Tidied away' }] : []
         })
         .slice(0, 400),
     })
