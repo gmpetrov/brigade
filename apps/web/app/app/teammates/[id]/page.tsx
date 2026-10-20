@@ -4,7 +4,8 @@
 import { modelLabel } from '@brigade/contracts'
 import { MessagesSquare, Monitor } from 'lucide-react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
 import { TeammateAccess } from '@/components/teammate-access'
 import { TeammateForm } from '@/components/teammate-form'
@@ -12,15 +13,39 @@ import { TeammateCaps, TeammateStatus, useTeammateTimeline } from '@/components/
 import { useThreadPanel } from '@/components/thread-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, harnessLabel } from '@/lib/api'
 
+type Tab = 'profile' | 'access' | 'activity' | 'limits'
+
 export default function TeammatePage() {
+  return (
+    <Suspense>
+      <TeammateView />
+    </Suspense>
+  )
+}
+
+function TeammateView() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const params = useSearchParams()
   const { me, teammates, reloadTeammates } = useDashboard()
   const teammate = teammates.find((t) => t.id === id)
   const { teammateHref, openTeammate } = useThreadPanel()
   const oversight = useTeammateTimeline(id)
+
+  // ?tab= keeps the open tab across reloads and links; Profile is for admins only.
+  const tabs: Tab[] = isAdmin(me)
+    ? ['profile', 'access', 'activity', 'limits']
+    : ['access', 'activity', 'limits']
+  const asked = params.get('tab') as Tab | null
+  const tab = asked && tabs.includes(asked) ? asked : tabs[0]!
+  function openTab(next: string) {
+    router.replace(next === tabs[0] ? `/app/teammates/${id}` : `/app/teammates/${id}?tab=${next}`, {
+      scroll: false,
+    })
+  }
 
   if (!teammate) return <p className="text-sm text-muted-foreground">Loading…</p>
 
@@ -81,13 +106,28 @@ export default function TeammatePage() {
           )}
         </div>
       </header>
-      <div className="flex flex-wrap items-start gap-6">
-        <div className="flex min-w-0 flex-[999_1_32rem] flex-col gap-5">
+      <Tabs value={tab} onValueChange={openTab} className="gap-5">
+        <TabsList variant="line" className="border-b w-full justify-start rounded-none">
           {isAdmin(me) && (
-            <section aria-labelledby="profile" className="flex flex-col gap-3">
-              <h2 id="profile" className="text-base font-bold">
-                Profile
-              </h2>
+            <TabsTrigger value="profile" className="flex-none">
+              Profile
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="access" className="flex-none">
+            Access
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex-none">
+            Activity
+          </TabsTrigger>
+          <TabsTrigger value="limits" className="flex-none">
+            Limits
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="max-w-3xl">
+          {isAdmin(me) && (
+            // Kept mounted so unsaved edits survive a look at another tab.
+            <TabsContent value="profile" forceMount className="data-[state=inactive]:hidden">
               <TeammateForm
                 initial={teammate}
                 submitLabel="Save"
@@ -96,30 +136,34 @@ export default function TeammatePage() {
                   await reloadTeammates()
                 }}
               />
-            </section>
+            </TabsContent>
           )}
 
-          <TeammateAccess
-            teammate={teammate}
-            editable={isAdmin(me)}
-            onPolicyChange={() => void reloadTeammates()}
-          />
+          <TabsContent value="access">
+            <TeammateAccess
+              teammate={teammate}
+              editable={isAdmin(me)}
+              onPolicyChange={() => void reloadTeammates()}
+            />
+          </TabsContent>
 
-          <TeammateCaps
-            teammate={teammate}
-            usage={oversight.timeline.data?.usage}
-            editable={isAdmin(me)}
-            onSaved={() => {
-              void reloadTeammates()
-              oversight.refresh()
-            }}
-          />
-        </div>
+          <TabsContent value="activity">
+            <TeammateStatus {...oversight} />
+          </TabsContent>
 
-        <div className="flex min-w-0 flex-[1_1_20rem] flex-col gap-5">
-          <TeammateStatus {...oversight} />
+          <TabsContent value="limits">
+            <TeammateCaps
+              teammate={teammate}
+              usage={oversight.timeline.data?.usage}
+              editable={isAdmin(me)}
+              onSaved={() => {
+                void reloadTeammates()
+                oversight.refresh()
+              }}
+            />
+          </TabsContent>
         </div>
-      </div>
+      </Tabs>
     </div>
   )
 }
