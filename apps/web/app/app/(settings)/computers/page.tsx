@@ -13,11 +13,9 @@ import {
 import { cn } from '@/lib/utils'
 import { api, useApi, type Computer, type ComputersResponse } from '@/lib/api'
 import { useLive } from '@/lib/use-live'
+import { MAC_APP_URL } from '@/lib/mac-app'
 
 type LinkCode = { code: string; expiresAt: string; command: string; appLink?: string }
-
-/** Brigade.app for macOS (apps/desktop), from the latest GitHub release. */
-const MAC_APP_URL = 'https://github.com/gmpetrov/brigade/releases/latest/download/Brigade.dmg'
 
 const STATUS: Record<Computer['status'], string> = {
   pending: 'Waiting for its runner',

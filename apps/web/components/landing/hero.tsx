@@ -1,26 +1,28 @@
 import Link from 'next/link'
-import { formatCount, type ProofNumbers, REPO, REPO_URL, rileyShare } from '@/lib/github-proof'
-import { cn } from '@/lib/utils'
-import { Av, Cta, Icon, MockButton, s, SIGN_IN, SIGN_UP } from './parts'
+import { REPO_URL } from '@/lib/github-proof'
+import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 
 export function Header() {
   return (
-    <header className={cn(s.wrap, s.top)}>
-      <Link className={s.word} href="/">
+    <header className={c('wrap top')}>
+      <Link className={c('word')} href="/">
         Brigade
       </Link>
       <nav aria-label="Main">
-        <a className={s.hideM} href="#pricing">
+        <a className={c('hide-m')} href="/#pricing">
           Pricing
         </a>
-        <a className={s.hideM} href={REPO_URL}>
+        <a className={c('hide-m')} href="/#download">
+          Download
+        </a>
+        <a className={c('hide-m')} href={REPO_URL}>
           <Icon name="github" />
           GitHub
         </a>
         <Link href={SIGN_IN}>Sign in</Link>
-        <Cta href={SIGN_UP} primary>
+        <Link className={c('btn pri')} href={SIGN_UP}>
           Start free on your Mac
-        </Cta>
+        </Link>
       </nav>
     </header>
   )
@@ -28,80 +30,145 @@ export function Header() {
 
 export function Hero() {
   return (
-    <section className={s.hero} aria-labelledby="hero-title">
-      <div className={s.wrap}>
-        <div className={s.heroCopy}>
-          <p className={s.eyebrow}>The operating system for AI-native companies</p>
+    <section className={c('hero')} aria-labelledby="hero-title">
+      <div className={c('wrap')}>
+        <div className={c('hero-copy')}>
+          <p className={c('eyebrow')}>The operating system for AI-native companies</p>
           <h1 id="hero-title">
             <em>One team</em> builds it, sells it and supports it.
           </h1>
-          <p className={s.sub}>
+          <p className={c('sub')}>
             AI teammates write your code, answer your customers, run your marketing and chase your
             leads, all in one place. They run on the Claude or ChatGPT plan you already pay for, and
             every decision that needs you lands in one list on your phone.
           </p>
-          <div className={s.ctaRow}>
-            <Cta href={SIGN_UP} primary large>
+          <div className={c('cta-row')}>
+            <Link className={c('btn pri lg')} href={SIGN_UP}>
               Start free on your Mac
-            </Cta>
+            </Link>
           </div>
-          <p className={s.fine}>Open source · Free on your Mac</p>
+          <p className={c('fine')}>Open source · Free on your Mac</p>
         </div>
 
-        <div className={s.artM} aria-hidden="true">
-          <div className={s.art}>
-            <div className={cn(s.blk, s.slab)}>
-              <span className={s.msg}>
-                <Av>R</Av>Riley <span className={s.k}>· opened PR #212</span>
+        <div className={c('hero-art')}>
+          <div className={c('blk slab')} aria-hidden="true"></div>
+          <div className={c('blk b-orange')} aria-hidden="true"></div>
+          <div className={c('blk b-green')} aria-hidden="true"></div>
+          <div className={c('blk b-ink')} aria-hidden="true"></div>
+
+          <div
+            className={c('thread')}
+            role="img"
+            aria-label="A Brigade thread: Ada asks for the export bug to be fixed, Riley fixes it and ships it after her approval, Sam drafts replies to the customers who asked, and a weekly routine is created."
+          >
+            <div className={c('th-top')}>
+              <span className={c('th-pill')}>
+                <span className={c('proj')}>A</span>
+                <span className={c('av xs')}>R</span>Acme · Export bug
               </span>
-              <span className={cn(s.msg, s.r)}>
-                <Av sam>S</Av>Sam <span className={s.k}>· sorted 14 emails</span>
-              </span>
-              <span className={s.msg}>
-                <Av>R</Av>Riley <span className={s.k}>· checks passed</span>
-              </span>
-              <span className={cn(s.msg, s.waiting, 'dark')}>
-                <Av sam>S</Av>Sam <span className={s.k}>· draft ready, waiting on you</span>
+              <span className={c('th-state')}>
+                <span className={c('dot run')}></span>Riley, Sam
               </span>
             </div>
-            <div className={cn(s.blk, s.bGreen)} />
-            <div className={cn(s.blk, s.bOrange)} />
-            <div className={cn(s.blk, s.bInk)} />
-            <div className={cn(s.blk, s.bTint)} />
+            <div className={c('th-body')}>
+              <div className={c('me-who seq s0')}>Ada</div>
+              <div className={c('me seq s1')}>
+                A customer says the export button is broken. Fix it and tell the people who asked.
+              </div>
 
-            <div className={s.homeCard}>
-              <div className={s.hcHello}>Good morning, Ada</div>
-              <div className={s.hcState}>
-                <span className={cn(s.dot, s.wait)} />2 waiting on you · 3 threads running
-              </div>
-              <div className={s.hcH}>
-                <h4>Waiting on you</h4>
-                <span className={s.n}>2</span>
-              </div>
-              <div className={cn(s.list, s.wait)}>
-                <div className={s.it}>
-                  <span className={cn(s.ico, s.w)}>
-                    <Icon name="mail" />
-                  </span>
-                  <div className={s.tx}>
-                    <div className={s.tt}>Send reply to jo@northwind.io</div>
-                    <div className={s.mt}>Sam · Where is my invoice? · draft ready</div>
+              <div className={c('mm seq s2')}>
+                <span className={c('av')}>R</span>
+                <div className={c('tx')}>
+                  <div className={c('who')}>Riley</div>
+                  <p>On it.</p>
+                  <div className={c('conn')}>
+                    <span className={c('chip seq s3')}>
+                      <span className={c('tile sm')}>GH</span>GitHub{' '}
+                      <span className={c('ok-i')}>
+                        <Icon name="check" />
+                      </span>
+                    </span>
+                    <span className={c('chip seq s4')}>
+                      <span className={c('tile sm')}>G</span>Gmail{' '}
+                      <span className={c('ok-i')}>
+                        <Icon name="check" />
+                      </span>
+                    </span>
+                    <span className={c('seq s5')}>connected</span>
                   </div>
-                  <MockButton>Review</MockButton>
-                </div>
-                <div className={s.it}>
-                  <span className={cn(s.ico, s.w)}>
-                    <Icon name="pr" />
-                  </span>
-                  <div className={s.tx}>
-                    <div className={s.tt}>
-                      PR #212 <span className={s.k}>· Fix invoice rounding</span>
-                    </div>
-                    <div className={s.mt}>Ready to merge · Riley · checks passed</div>
-                  </div>
-                  <MockButton>Merge</MockButton>
                 </div>
               </div>
+
+              <div className={c('steps-l')}>
+                <div className={c('st seq s6')}>
+                  → found the bug in export.ts{' '}
+                  <span className={c('ok-i')}>
+                    <Icon name="check" />
+                  </span>
+                </div>
+                <div className={c('st seq s7')}>
+                  → tests pass{' '}
+                  <span className={c('ok-i')}>
+                    <Icon name="check" />
+                  </span>
+                </div>
+              </div>
+
+              <div className={c('pvw seq s8')}>
+                <div className={c('pvw-bar')}>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <span>preview · /reports</span>
+                  <b>live</b>
+                </div>
+                <div className={c('pvw-body')}>
+                  <div className={c('rows')}>
+                    <span className={c('ttl')}>Reports</span>
+                    <div className={c('bar')}></div>
+                    <div className={c('bar')}></div>
+                  </div>
+                  <span className={c('pvw-exp')}>
+                    Export <Icon name="check" />
+                  </span>
+                </div>
+              </div>
+
+              <div className={c('appr seq s9')}>
+                <span className={c('av')}>R</span>
+                <div className={c('tx')}>
+                  <div className={c('o')}>Needs you</div>
+                  <div className={c('tt')}>
+                    Riley wants to ship <span className={c('k')}>· Fix export button</span>
+                  </div>
+                </div>
+                <div className={c('act')}>
+                  <span className={c('btn sm pri')}>Approve</span>
+                  <span className={c('badge ok')}>approved</span>
+                </div>
+              </div>
+
+              <div className={c('mm seq s10')}>
+                <span className={c('av sam')}>S</span>
+                <div className={c('tx')}>
+                  <div className={c('who')}>Sam</div>
+                  <p>3 customers asked about it. Replies drafted, waiting on you.</p>
+                  <div className={c('conn')}>
+                    <span className={c('badge yel')}>waiting on you</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={c('sys seq s11')}>
+                <Icon name="refresh" />
+                Created routine · <b>Weekly release notes</b>
+              </div>
+            </div>
+            <div className={c('composer')} aria-hidden="true">
+              <span className={c('ph-t')}>Reply to Riley and Sam…</span>
+              <span className={c('send')}>
+                <Icon name="arrowUp" />
+              </span>
             </div>
           </div>
         </div>
@@ -110,42 +177,44 @@ export function Hero() {
   )
 }
 
-/** The live numbers from GitHub; a number it did not give back leaves out what needs it. */
-export function Proof({ numbers }: { numbers: ProofNumbers }) {
-  const { mergedPrs, rileyCommits, totalCommits } = numbers
+/** The AI plan band under the hero. */
+export function PlanBand() {
   return (
-    <section className={s.proof} aria-label="Built by its own teammates">
-      <div className={cn(s.wrap, s.reveal)}>
-        {mergedPrs !== null && (
-          <div>
-            <div className={s.num}>{formatCount(mergedPrs)}</div>
-            <div className={s.numL}>pull requests merged · last 30 days</div>
-          </div>
-        )}
-        {rileyCommits !== null && totalCommits !== null && (
-          <div>
-            <div className={s.num}>
-              {formatCount(rileyCommits)}
-              <span className={s.of}>/{formatCount(totalCommits)}</span>
-            </div>
-            <div className={s.numL}>commits written by Riley</div>
-          </div>
-        )}
-        <p>
-          <b>Brigade is built by its own teammates.</b>{' '}
-          {mergedPrs !== null && (
-            <>
-              {formatCount(mergedPrs)} pull requests merged on <code>{REPO}</code> in the last 30
-              days, and a person approved each one.{' '}
-            </>
-          )}
-          {rileyCommits !== null && totalCommits !== null && (
-            <>Riley, a Brigade teammate, wrote {rileyShare(rileyCommits, totalCommits)}. </>
-          )}
-          <a className={s.link} href={`${REPO_URL}/pulls?q=is%3Apr+is%3Amerged`}>
-            See them on GitHub <Icon name="arrow" />
-          </a>
-        </p>
+    <section className={c('plan-band')} aria-label="Runs on the AI plan you already pay for">
+      <div className={c('wrap')}>
+        <p className={c('pb-t')}>Runs on the AI plan you already pay for</p>
+        <div className={c('marks')}>
+          <span className={c('mark-l')}>
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <g stroke="oklch(0.64 0.15 42)" strokeWidth="3.2" strokeLinecap="round">
+                <path d="M16 4v24" />
+                <path d="M4 16h24" />
+                <path d="m7.5 7.5 17 17" />
+                <path d="m24.5 7.5-17 17" />
+              </g>
+            </svg>
+            Claude
+          </span>
+          <span className={c('mark-l')}>
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <g fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round">
+                <path d="M16 3.5 26.8 9.75v12.5L16 28.5 5.2 22.25V9.75z" />
+                <path d="M16 10.2 21 13.1v5.8L16 21.8l-5-2.9v-5.8z" />
+              </g>
+            </svg>
+            ChatGPT
+          </span>
+        </div>
+        <div className={c('pb-s')}>
+          <span className={c('pill')}>
+            <Icon name="laptop" />
+            Free on your Mac
+          </span>
+          <span className={c('pill')}>
+            <Icon name="code" />
+            Open source
+          </span>
+        </div>
       </div>
     </section>
   )

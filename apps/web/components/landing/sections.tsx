@@ -1,528 +1,590 @@
-import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
-import { Av, Badge, Icon, MockButton, s, Tile } from './parts'
+import type { CSSProperties } from 'react'
+import { c, Icon } from './parts'
 
-export function Problem() {
-  const tabs = ['claude · fix-auth', 'codex · billing-tests', 'claude · onboarding', 'zsh']
+export function Message() {
   return (
-    <section className={cn(s.sec, s.problem)} aria-labelledby="problem-title">
-      <div className={s.wrap}>
-        <h2 className={cn(s.h2, s.reveal)} id="problem-title">
-          Your AI can do the work. You&apos;re still watching it do it.
-        </h2>
-        <p className={cn(s.lead, s.reveal)}>
-          You pay for the best AI there is, then spend the day checking on it: which task finished,
-          which one is stuck on a question for you. One of them has been waiting twenty minutes for
-          a yes. And the inbox, the refunds and the follow-ups stay on your desk, because you
-          can&apos;t see what an agent would do with them.
-        </p>
-        <div className={cn(s.tabs, s.reveal)} aria-hidden="true">
-          {tabs.slice(0, 2).map((t) => (
-            <div key={t} className={s.tab}>
-              <Icon name="terminal" />
-              <span className={s.t}>{t}</span>
+    <section aria-labelledby="message-title" className={c('sec message')}>
+      <div className={c('wrap')}>
+        <div className={c('msg-stage')} aria-hidden="true">
+          <div className={c('blk b-green')}></div>
+          <div className={c('blk b-orange')}></div>
+          <div className={c('home-card')}>
+            <div className={c('hc-hello')}>Good morning, Ada</div>
+            <div className={c('hc-state')}>
+              <span className={c('dot wait')}></span>
+              <span className={c('xg')}>
+                <span className={c('m-a')}>2 waiting on you · 3 threads running</span>
+                <span className={c('m-b')}>1 waiting on you · 3 threads running</span>
+              </span>
             </div>
-          ))}
-          <div className={cn(s.tab, s.stuck)}>
-            <Icon name="terminal" />
-            <span className={s.t}>claude · migrate-db [y/n]</span>
-            <span className={s.tm}>20:14</span>
+            <div className={c('hc-h')}>
+              <h4>Waiting on you</h4>
+              <span className={c('n xg')}>
+                <span className={c('m-a')}>2</span>
+                <span className={c('m-b')}>1</span>
+              </span>
+            </div>
+            <div className={c('list wait')}>
+              <div className={c('xg rows')}>
+                <div className={c('it m-a')}>
+                  <span className={c('ico w')}>
+                    <Icon name="mail" />
+                  </span>
+                  <div className={c('tx')}>
+                    <div className={c('tt')}>Send 3 replies about the export fix</div>
+                    <div className={c('mt')}>Sam · Northwind, Lumen, Acme</div>
+                  </div>
+                  <span className={c('btn sm')}>Review</span>
+                </div>
+                <div className={c('it m-b')}>
+                  <span className={c('ico ok-c')}>
+                    <Icon name="check" />
+                  </span>
+                  <div className={c('tx')}>
+                    <div className={c('tt')}>3 replies sent</div>
+                    <div className={c('mt')}>Sam · after your yes</div>
+                  </div>
+                  <span className={c('badge ok')}>sent</span>
+                </div>
+              </div>
+              <div className={c('it')}>
+                <span className={c('ico w')}>
+                  <Icon name="pr" />
+                </span>
+                <div className={c('tx')}>
+                  <div className={c('tt')}>Fix invoice rounding</div>
+                  <div className={c('mt')}>Riley · tested · ready to ship</div>
+                </div>
+                <span className={c('btn sm')}>Approve</span>
+              </div>
+            </div>
+            <div className={c('hc-run')}>
+              <div className={c('r')}>
+                <span className={c('dot run')}></span>
+                <span className={c('t')}>Release notes · week 43</span>
+                <span className={c('m')}>Mark</span>
+              </div>
+              <div className={c('r')}>
+                <span className={c('dot run')}></span>
+                <span className={c('t')}>Competitor pricing check</span>
+                <span className={c('m')}>Mark</span>
+              </div>
+            </div>
           </div>
-          {tabs.slice(2).map((t) => (
-            <div key={t} className={s.tab}>
-              <Icon name="terminal" />
-              <span className={s.t}>{t}</span>
+          <div className={c('phone')}>
+            <div className={c('screen')}>
+              <span className={c('island')}></span>
+              <div className={c('sbar')}>
+                <span>9:41</span>
+                <span className={c('sig')}>
+                  <i></i>
+                </span>
+              </div>
+              <div className={c('ph-push m-push')}>
+                <div className={c('push')}>
+                  <span className={c('app')}>B</span>
+                  <div className={c('bd')}>
+                    <div className={c('ph')}>
+                      <b>Brigade</b>
+                      <span>now</span>
+                    </div>
+                    <div className={c('pt')}>Sam is waiting on you</div>
+                    <div className={c('pb')}>Send 3 replies about the export fix?</div>
+                  </div>
+                </div>
+              </div>
+              <div className={c('ph-body')}>
+                <div className={c('ph-title')}>
+                  Needs you{' '}
+                  <span className={c('n xg')}>
+                    <span className={c('m-a')}>2</span>
+                    <span className={c('m-b')}>1</span>
+                  </span>
+                </div>
+                <div className={c('ticket')}>
+                  <div className={c('tk-top')}>
+                    <span className={c('dot wait')}></span>Gmail · send
+                    <span className={c('sp')}></span>
+                    <span className={c('tm')}>now</span>
+                  </div>
+                  <div className={c('tk-who')}>
+                    <span className={c('av sam')}>S</span>
+                    <b>Sam wants to send 3 replies</b>
+                  </div>
+                  <div className={c('tk-meta')}>to jo@northwind.io and 2 more</div>
+                  <div className={c('tk-quote')}>
+                    Hi Jo, the export button works again. Thanks for telling us.
+                  </div>
+                  <div className={c('tk-act xg blk-g')}>
+                    <div className={c('acts m-a')}>
+                      <span className={c('btn pri m-tap')}>Send</span>
+                      <span className={c('btn')}>Decline</span>
+                    </div>
+                    <div className={c('sentline m-b')}>
+                      <span className={c('badge ok')}>sent</span>3 replies on their way
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-    </section>
-  )
-}
 
-function Check({ todo, children }: { todo?: boolean; children: ReactNode }) {
-  return (
-    <div className={s.chk}>
-      <span className={cn(s.c, todo && s.todo)}>
-        <Icon name={todo ? 'alert' : 'check'} />
-      </span>
-      <span className={s.l}>{children}</span>
-      {todo && <MockButton>Fix</MockButton>}
-    </div>
-  )
-}
-
-export function Push() {
-  return (
-    <div className={s.push}>
-      <span className={s.app}>B</span>
-      <div className={s.pushBody}>
-        <div className={s.ph}>
-          <b>Brigade</b>
-          <span>now</span>
-        </div>
-        <div className={s.pt}>Sam is waiting on you</div>
-        <div className={s.pb}>Send this reply to jo@northwind.io?</div>
-      </div>
-    </div>
-  )
-}
-
-export function HowItWorks() {
-  return (
-    <section className={cn(s.sec, s.how)} aria-labelledby="how-title">
-      <div className={s.wrap}>
-        <div className={cn(s.secHead, s.reveal)}>
-          <h2 className={s.h2} id="how-title">
-            Three steps to your first teammate
+        <div className={c('msg-copy')}>
+          <h2 className={c('h2')} id="message-title">
+            Message your teammates like your team.
           </h2>
+          <p className={c('lead')}>
+            Give each job its own thread, from your computer or your phone. Your teammates get on
+            with it in the background and come back only when a decision needs you.
+          </p>
+          <ul className={c('facts')}>
+            <li>
+              <Icon name="message" />
+              <div>
+                <b>One thread per job.</b> <span>Write it the way you would to a new hire.</span>
+              </div>
+            </li>
+            <li>
+              <Icon name="phone" />
+              <div>
+                <b>On your computer and your phone.</b>{' '}
+                <span>The same threads, wherever you are.</span>
+              </div>
+            </li>
+            <li>
+              <Icon name="bell" />
+              <div>
+                <b>Needs you, in one list.</b>{' '}
+                <span>Your phone buzzes only when a decision is yours.</span>
+              </div>
+            </li>
+          </ul>
         </div>
-        <ol className={s.steps}>
-          <li className={cn(s.step, s.reveal)}>
-            <span className={s.n}>01</span>
-            <h3>Link your Mac.</h3>
-            <p>
-              Install Brigade.app. It checks each setup step and fixes what&apos;s missing in one
-              click. Then sign in with the Claude or ChatGPT account you already use.
-            </p>
-            <div className={s.cap} aria-hidden="true">
-              <div className={s.mini}>
-                <div className={s.miniH}>Set up Brigade</div>
-                <Check>Claude Code installed</Check>
-                <Check>Signed in as ada@acme.com</Check>
-                <Check todo>Accessibility permission</Check>
-              </div>
-            </div>
-          </li>
-          <li className={cn(s.step, s.reveal)}>
-            <span className={s.n}>02</span>
-            <h3>Give each teammate a job.</h3>
-            <p>
-              Support emails, bug fixes, Stripe follow-ups. Connect the apps it needs: Gmail,
-              GitHub, Stripe, Linear, Notion and more.
-            </p>
-            <div className={s.cap} aria-hidden="true">
-              <div className={s.mini}>
-                <div className={s.miniH}>Teammates · Acme</div>
-                <div className={s.tmRow}>
-                  <Av sam>S</Av>
-                  <div>
-                    <div className={s.nm}>Sam</div>
-                    <div className={s.rl}>Support</div>
-                  </div>
-                  <span className={s.tiles}>
-                    <Tile>G</Tile>
-                    <Tile>S</Tile>
-                    <Tile>N</Tile>
-                  </span>
-                </div>
-                <div className={s.tmRow}>
-                  <Av>R</Av>
-                  <div>
-                    <div className={s.nm}>Riley</div>
-                    <div className={s.rl}>Engineer</div>
-                  </div>
-                  <span className={s.tiles}>
-                    <Tile>GH</Tile>
-                    <Tile>L</Tile>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </li>
-          <li className={cn(s.step, s.reveal)}>
-            <span className={s.n}>03</span>
-            <h3>Answer what needs you.</h3>
-            <p>
-              Teammates work in the background and come back for the decisions you kept. Your phone
-              tells you when one is waiting.
-            </p>
-            <div className={cn(s.cap, s.capPush)} aria-hidden="true">
-              <Push />
-            </div>
-          </li>
-        </ol>
       </div>
     </section>
   )
 }
-
-type Handoff = {
-  dept: string
-  name: string
-  sam?: boolean
-  text: string
-  icon: Parameters<typeof Icon>[0]['name']
-  title: string
-  meta: string
-  badge?: { tone: 'ok' | 'wait'; label: string }
-}
-
-const handoffs: Handoff[] = [
-  {
-    dept: 'Support',
-    name: 'Sam',
-    sam: true,
-    text: 'Reads a customer email: the export button is broken.',
-    icon: 'mail',
-    title: 'Export does nothing since Monday',
-    meta: 'jo@northwind.io',
-  },
-  {
-    dept: 'Code',
-    name: 'Riley',
-    text: 'Fixes it, and you approve the change from your phone.',
-    icon: 'pr',
-    title: 'Fix export button',
-    meta: 'tested',
-    badge: { tone: 'ok', label: 'approved' },
-  },
-  {
-    dept: 'Marketing',
-    name: 'Mark',
-    text: 'Turns the fix into release notes and a post for your users.',
-    icon: 'list',
-    title: 'Release notes',
-    meta: 'draft ready',
-  },
-  {
-    dept: 'Sales',
-    name: 'Sam',
-    sam: true,
-    text: "Tells the three accounts who asked about it that it's fixed.",
-    icon: 'mail',
-    title: '3 emails',
-    meta: 'Northwind, Lumen, Acme',
-    badge: { tone: 'wait', label: 'waiting on you' },
-  },
-]
 
 export function Bridge() {
   return (
-    <section className={cn(s.sec, s.bridge)} data-id="bridge" aria-labelledby="bridge-title">
-      <div className={s.wrap}>
-        <div className={cn(s.secHead, s.reveal)}>
-          <h2 className={s.h2} id="bridge-title">
+    <section aria-labelledby="bridge-title" className={c('sec bridge')}>
+      <div className={c('wrap')}>
+        <div className={c('sec-head')}>
+          <h2 className={c('h2')} id="bridge-title">
             One request, every department.
           </h2>
-          <p className={s.lead}>Your teammates pass the work along, the way a good team does.</p>
+          <div>
+            <p className={c('lead')}>
+              Your teammates pass the work along, the way a good team does.
+            </p>
+            <div className={c('cluster')} aria-hidden="true">
+              <span className={c('cav av c0')}>R</span>
+              <span className={c('cav av mark c1')}>M</span>
+              <span className={c('cav av sam c2')}>S</span>
+              <span className={c('cpill')}>
+                <span className={c('tdots')}>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </span>
+                <span className={c('xg')}>
+                  <span className={c('ct t0')}>Sending to Riley…</span>
+                  <span className={c('ct t1')}>Asking Mark…</span>
+                  <span className={c('ct t2')}>Pinging Sam…</span>
+                </span>
+              </span>
+            </div>
+          </div>
         </div>
-        <ol className={s.chain}>
-          {handoffs.map((h, i) => {
-            const wait = h.badge?.tone === 'wait'
-            return (
-              <li key={h.dept} className={cn(s.hand, s.reveal)}>
-                <div className={s.handTop}>
-                  <Av sam={h.sam}>{h.name[0]}</Av>
-                  <span className={s.handName}>{h.name}</span>
-                  <span className={s.handDept}>{h.dept}</span>
+        <ol className={c('chain')}>
+          <li className={c('hand')}>
+            <span className={c('glow g0')} aria-hidden="true"></span>
+            <div className={c('hand-top')}>
+              <span className={c('av sam')}>S</span>
+              <span className={c('hand-name')}>Sam</span>
+              <span className={c('hand-dept')}>Support</span>
+            </div>
+            <p className={c('hand-tx')}>Reads a customer email: the export button is broken.</p>
+            <div className={c('list')}>
+              <div className={c('it')}>
+                <span className={c('ico')}>
+                  <Icon name="mail" />
+                </span>
+                <div className={c('tx')}>
+                  <div className={c('tt')}>Export does nothing since Monday</div>
+                  <div className={c('mt')}>jo@northwind.io</div>
                 </div>
-                <p className={s.handTx}>{h.text}</p>
-                <div className={cn(s.list, s.handMock, wait && s.wait)} aria-hidden="true">
-                  <div className={s.it}>
-                    <span className={cn(s.ico, wait && s.w)}>
-                      <Icon name={h.icon} />
-                    </span>
-                    <div className={s.tx}>
-                      <div className={s.tt}>{h.title}</div>
-                      <div className={cn(s.mt, s.mono)}>{h.meta}</div>
-                      {h.badge && <Badge tone={h.badge.tone}>{h.badge.label}</Badge>}
-                    </div>
-                  </div>
+              </div>
+            </div>
+            <span className={c('hand-arrow')} aria-hidden="true">
+              <span>
+                <Icon name="arrow" />
+              </span>
+            </span>
+          </li>
+          <li className={c('hand')}>
+            <span className={c('glow g1')} aria-hidden="true"></span>
+            <div className={c('hand-top')}>
+              <span className={c('av')}>R</span>
+              <span className={c('hand-name')}>Riley</span>
+              <span className={c('hand-dept')}>Code</span>
+            </div>
+            <p className={c('hand-tx')}>Fixes it, and you approve the change from your phone.</p>
+            <div className={c('list')}>
+              <div className={c('it')}>
+                <span className={c('ico')}>
+                  <Icon name="pr" />
+                </span>
+                <div className={c('tx')}>
+                  <div className={c('tt')}>Fix export button</div>
+                  <div className={c('mt')}>tested</div>
+                  <span className={c('badge ok')}>approved</span>
                 </div>
-                {i < handoffs.length - 1 && (
-                  <span className={s.handArrow} aria-hidden="true">
-                    <Icon name="arrow" />
-                  </span>
-                )}
-              </li>
-            )
-          })}
+              </div>
+            </div>
+            <span className={c('hand-arrow')} aria-hidden="true">
+              <span>
+                <Icon name="arrow" />
+              </span>
+            </span>
+          </li>
+          <li className={c('hand')}>
+            <span className={c('glow g2')} aria-hidden="true"></span>
+            <div className={c('hand-top')}>
+              <span className={c('av mark')}>M</span>
+              <span className={c('hand-name')}>Mark</span>
+              <span className={c('hand-dept')}>Marketing</span>
+            </div>
+            <p className={c('hand-tx')}>
+              Turns the fix into release notes and a post for your users.
+            </p>
+            <div className={c('list')}>
+              <div className={c('it')}>
+                <span className={c('ico')}>
+                  <Icon name="list" />
+                </span>
+                <div className={c('tx')}>
+                  <div className={c('tt')}>Release notes</div>
+                  <div className={c('mt')}>draft ready</div>
+                </div>
+              </div>
+            </div>
+            <span className={c('hand-arrow')} aria-hidden="true">
+              <span>
+                <Icon name="arrow" />
+              </span>
+            </span>
+          </li>
+          <li className={c('hand')}>
+            <span className={c('glow g3')} aria-hidden="true"></span>
+            <div className={c('hand-top')}>
+              <span className={c('av sam')}>S</span>
+              <span className={c('hand-name')}>Sam</span>
+              <span className={c('hand-dept')}>Sales</span>
+            </div>
+            <p className={c('hand-tx')}>
+              Tells the three accounts who asked about it that it&apos;s fixed.
+            </p>
+            <div className={c('list wait')}>
+              <div className={c('it')}>
+                <span className={c('ico w')}>
+                  <Icon name="mail" />
+                </span>
+                <div className={c('tx')}>
+                  <div className={c('tt')}>3 emails</div>
+                  <div className={c('mt')}>Northwind, Lumen, Acme</div>
+                  <span className={c('badge wait')}>waiting on you</span>
+                </div>
+              </div>
+            </div>
+          </li>
         </ol>
-      </div>
-    </section>
-  )
-}
-
-export function Team() {
-  return (
-    <section className={cn(s.sec, s.team)} aria-labelledby="team-title">
-      <div className={s.wrap}>
-        <div className={cn(s.secHead, s.reveal)}>
-          <h2 className={s.h2} id="team-title">
-            One team, from your inbox to your app
-          </h2>
-        </div>
-        <div className={s.jobs}>
-          <article className={cn(s.job, s.reveal)}>
-            <div className={cn(s.stage, s.green)} aria-hidden="true">
-              <div className={s.shot}>
-                <div className={s.shotH}>
-                  <Av sam>S</Av>
-                  <b>Support inbox</b>
-                  <span className={s.sp} />
-                  <span className={s.meta}>Sam · today</span>
-                </div>
-                <div className={s.list}>
-                  <div className={s.it}>
-                    <span className={s.ico}>
-                      <Icon name="mail" />
-                    </span>
-                    <div className={s.tx}>
-                      <div className={s.tt}>Where is my invoice?</div>
-                      <div className={s.mt}>jo@northwind.io · answer drafted from your docs</div>
-                    </div>
-                    <Badge tone="wait">waiting</Badge>
-                  </div>
-                  <div className={s.it}>
-                    <span className={s.ico}>
-                      <Icon name="pr" />
-                    </span>
-                    <div className={s.tx}>
-                      <div className={s.tt}>Login loop after password reset</div>
-                      <div className={s.mt}>Bug · Riley opened PR #214</div>
-                    </div>
-                    <Badge tone="run">working</Badge>
-                  </div>
-                  <div className={s.it}>
-                    <span className={s.ico}>
-                      <Icon name="mail" />
-                    </span>
-                    <div className={s.tx}>
-                      <div className={s.tt}>How do I add a seat?</div>
-                      <div className={s.mt}>mei@lumen.co · sent after your yes</div>
-                    </div>
-                    <Badge tone="ok">answered</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <h3>Support inbox</h3>
-            <p>
-              A teammate sorts every support email into cases and drafts the answers your docs
-              already cover. It asks you before it sends. When a customer reports a bug, the
-              teammate writes the fix for you to approve.
-            </p>
-          </article>
-
-          <article className={cn(s.job, s.reveal)}>
-            <div className={cn(s.stage, s.violet)} aria-hidden="true">
-              <div className={s.shot}>
-                <div className={s.pv}>
-                  <div className={s.pvBar}>
-                    <i />
-                    <i />
-                    <i />
-                    <span>preview · /invoices</span>
-                  </div>
-                  <div className={s.pvBody}>
-                    <div className={s.pvRow}>
-                      <span>Invoice</span>
-                      <span>Total</span>
-                    </div>
-                    <div className={s.pvRow}>
-                      <span>#8811 · Lumen</span>
-                      <span className={s.mono}>$1,240.00</span>
-                    </div>
-                    <div className={cn(s.pvRow, s.hl)}>
-                      <span>#8812 · Northwind</span>
-                      <span className={s.mono}>$318.40</span>
-                    </div>
-                  </div>
-                </div>
-                <div className={s.prc}>
-                  <Av>R</Av>
-                  <div className={s.tx}>
-                    <div className={s.tt}>
-                      PR #212 <span className={s.k}>· Fix invoice rounding</span>
-                    </div>
-                    <div className={s.mt}>Riley · checks passed</div>
-                  </div>
-                  <MockButton tone="pri">Merge</MockButton>
-                </div>
-              </div>
-            </div>
-            <h3>Fixes to your app</h3>
-            <p>
-              Describe the fix in a sentence. The teammate opens your app and you watch the change
-              appear in a live preview as it works. When it looks right, you approve it from your
-              phone and it goes into your code.
-            </p>
-          </article>
-
-          <article className={cn(s.job, s.reveal)}>
-            <div className={cn(s.stage, s.orange)} aria-hidden="true">
-              <div className={cn(s.shot, s.doc)}>
-                <div className={s.shotH}>
-                  <Av>M</Av>
-                  <b>Draft · pricing page</b>
-                  <span className={s.sp} />
-                  <Badge tone="wait">waiting</Badge>
-                </div>
-                <div className={s.dt}>
-                  Stop paying twice for the same seat.<sup>1</sup>
-                </div>
-                <p>
-                  Founders on Reddit say per-seat pricing is the first thing they cut<sup>1</sup>.
-                  Two of five competitors hide prices behind a demo<sup>2</sup>.
-                </p>
-                <div className={s.srcs}>
-                  <span className={s.src}>
-                    <span className={s.sn}>1</span>reddit.com/r/SaaS
-                  </span>
-                  <span className={s.src}>
-                    <span className={s.sn}>2</span>competitor pricing pages
-                  </span>
-                  <span className={cn(s.src, s.hideM)}>
-                    <span className={s.sn}>3</span>skill · brand-voice
-                  </span>
-                </div>
-              </div>
-            </div>
-            <h3>Marketing</h3>
-            <p>
-              A teammate reads what your customers write on Reddit and what your competitors put on
-              their pages, then drafts the copy with every source linked. Write down how your team
-              does things, and it follows the same steps.
-            </p>
-          </article>
-
-          <article className={cn(s.job, s.reveal)}>
-            <div className={cn(s.stage, s.ink)} aria-hidden="true">
-              {/* The dark theme's colours, whatever the page's theme. */}
-              <div className={cn(s.shot, s.shotDark, 'dark')}>
-                <div className={s.shotH}>
-                  <b>This morning</b>
-                  <span className={s.sp} />
-                  <span className={s.meta}>Routines · Acme</span>
-                </div>
-                <div className={s.rt}>
-                  <span className={s.when}>07:00</span>
-                  <span className={s.what}>
-                    Triage the inbox<span className={s.k}>Sam · 23 emails sorted, 4 drafts</span>
-                  </span>
-                  <Badge tone="ok">done</Badge>
-                </div>
-                <div className={s.rt}>
-                  <span className={s.when}>08:00</span>
-                  <span className={s.what}>
-                    Chase failed payments
-                    <span className={s.k}>Sam · 3 reminders, 1 waiting on you</span>
-                  </span>
-                  <Badge tone="ok">done</Badge>
-                </div>
-                <div className={s.rt}>
-                  <span className={s.when}>Mon 09:00</span>
-                  <span className={s.what}>
-                    Send the week&apos;s numbers<span className={s.k}>Riley · to #founders</span>
-                  </span>
-                  <Badge>scheduled</Badge>
-                </div>
-              </div>
-            </div>
-            <h3>Overnight routines</h3>
-            <p>
-              Set a routine once: triage the inbox at 7, chase failed payments every morning, send
-              the week&apos;s numbers on Monday. The morning list on Home shows what got done.
-            </p>
-          </article>
+        <div className={c('rail')} aria-hidden="true">
+          <div className={c('rail-line')}></div>
+          <div className={c('rail-dots')}>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+          <div className={c('mover')}>
+            <span className={c('token')}>
+              <span className={c('xg')}>
+                <span className={c('av xs sam v0')}>S</span>
+                <span className={c('av xs v1')}>R</span>
+                <span className={c('av xs mark v2')}>M</span>
+                <span className={c('av xs sam v3')}>S</span>
+              </span>
+              Export bug
+            </span>
+          </div>
         </div>
       </div>
     </section>
   )
 }
 
-const handoffGroups: { label: string; tone: string; items: [string, string][] }[] = [
-  {
-    label: 'Build',
-    tone: 'violet',
-    items: [
-      ['Bug fixes', 'A bug a customer reports becomes a tested fix waiting for your approval'],
-      ['Release check', 'Each new version clicked through like a customer would, with screenshots'],
-      ['Ticket cleanup', 'Duplicate tickets merged and every bug given an owner'],
-      ['Product questions', '“Why did signups drop on Tuesday?” answered from your analytics'],
-    ],
-  },
-  {
-    label: 'Support',
-    tone: 'orange',
-    items: [
-      [
-        'Support inbox',
-        'Every support email sorted, and the routine ones answered from your docs once you say yes',
-      ],
-      ['Inbox triage', 'The overnight inbox is sorted, with what needs you on top'],
-      ['Help center', 'Help pages updated when the product changes'],
-    ],
-  },
-  {
-    label: 'Marketing',
-    tone: 'green',
-    items: [
-      ['Release notes', 'What shipped this week, rewritten in plain words for customers'],
-      ['Competitor watch', 'What your competitors changed on their site and pricing, every week'],
-      ['Customer research', 'What people say about you on Reddit and in reviews, with links'],
-      ['Search traffic', 'Pages losing Google traffic get flagged and explained every week'],
-    ],
-  },
-  {
-    label: 'Sales',
-    tone: 'ink',
-    items: [
-      ['Lead follow-ups', 'Leads who went quiet get a follow-up drafted for your yes'],
-      [
-        'Meeting prep',
-        "Each of tomorrow's meetings gets a one-page brief from your email and files",
-      ],
-    ],
-  },
-  {
-    label: 'Operations',
-    tone: 'violet',
-    items: [
-      ['Invoice reminders', 'Overdue Stripe invoices get a polite reminder every morning'],
-      ['Failed payments', 'Customers with a failed card hear from you before they churn'],
-      ['Weekly numbers', 'Revenue, refunds and signups on one page every Monday'],
-      ['Spreadsheet upkeep', 'Your sheets updated from Stripe and your database every evening'],
-      ['Mac chores', 'Keynote, Finder and any app on your Mac, used for you while you watch'],
-      ['Your own job', 'Show it once with Teach a task, and it runs on schedule from then on'],
-    ],
-  },
-]
-
-export function Handoff() {
+/** The four tiles, on a band in the dark theme whatever the page's theme. */
+export function Tiles() {
   return (
-    <section className={cn(s.sec, s.handoff)} data-id="handoff" aria-labelledby="handoff-title">
-      <div className={s.wrap}>
-        <div className={cn(s.secHead, s.reveal)}>
-          <h2 className={s.h2} id="handoff-title">
-            What you can hand off
+    <section aria-labelledby="tiles-title" className={c('sec tiles dark')}>
+      <div className={c('wrap')}>
+        <div className={c('sec-head')}>
+          <h2 className={c('h2')} id="tiles-title">
+            Teammates that work the way you do.
           </h2>
-          <p className={s.lead}>
-            If you can explain the job to a new hire, you can give it to a teammate.
+          <p className={c('lead')}>
+            They sign in to your tools, learn a task from watching you, keep what your team decided,
+            and work on a schedule.
           </p>
         </div>
-        <div className={s.groups}>
-          {handoffGroups.map((g) => (
-            <section
-              key={g.label}
-              className={cn(s.group, g.items.length > 4 && s.groupWide, s.reveal)}
-              aria-labelledby={`handoff-${g.label.toLowerCase()}`}
-            >
-              <h3 className={s.groupL} id={`handoff-${g.label.toLowerCase()}`}>
-                <span className={cn(s.groupDot, s[g.tone])} aria-hidden="true" />
-                {g.label}
-              </h3>
-              <ul>
-                {g.items.map(([name, line]) => (
-                  <li key={name}>
-                    <b>{name}</b>
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+        <div className={c('tk-grid')}>
+          <article className={c('tk')}>
+            <div className={c('tk-copy')}>
+              <h3>Works in your tools</h3>
+              <p>
+                Gmail, Stripe, GitHub, Notion and its own browser. On your Mac, any app you have.
+              </p>
+            </div>
+            <div className={c('demo')} aria-hidden="true">
+              <div className={c('comp')}>
+                <div className={c('comp-h')}>
+                  <b>Computer</b>
+                  <span className={c('xg end')}>
+                    <span className={c('badge run ta-a')}>working</span>
+                    <span className={c('badge wait ta-b')}>you&apos;re in control</span>
+                  </span>
+                </div>
+                <div className={c('comp-sub')}>
+                  Sign in to Gmail so I can work the support inbox.
+                </div>
+                <div className={c('desk')}>
+                  <i className={c('wp w1')}></i>
+                  <i className={c('wp w2')}></i>
+                  <i className={c('wp w3')}></i>
+                  <div className={c('win')}>
+                    <div className={c('win-bar')}>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <span>mail.google.com</span>
+                    </div>
+                    <div className={c('win-b xg blk-g')}>
+                      <div className={c('inbox ta-a')}>
+                        <div className={c('ir')}>
+                          <span className={c('d')}></span>
+                          <b>Where is my invoice?</b>
+                          <span>jo@northwind.io</span>
+                        </div>
+                        <div className={c('ir')}>
+                          <span className={c('d')}></span>
+                          <b>Export does nothing</b>
+                          <span>tom@lumen.co</span>
+                        </div>
+                        <div className={c('ir')}>
+                          <b>How do I add a seat?</b>
+                          <span>mei@acme.com</span>
+                        </div>
+                        <div className={c('ir')}>
+                          <b>Refund for October</b>
+                          <span>ines@fieldwork.io</span>
+                        </div>
+                      </div>
+                      <div className={c('signin ta-b')}>
+                        <div className={c('si-t')}>Sign in to continue</div>
+                        <div className={c('sfld')}>sam@acme.com</div>
+                        <div className={c('sfld')}>••••••••••</div>
+                        <div className={c('btn-c ta-btn')}>Continue</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={c('cur-layer ta-cur')}>
+                    <span className={c('cursor')}>
+                      <svg viewBox="0 0 16 16" className={c('ca')}>
+                        <path d="M2 1.5 13.5 7.6l-5.2 1.2-2.4 5z" />
+                      </svg>
+                      <span className={c('cn')}>Sam</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className={c('tk')}>
+            <div className={c('tk-copy')}>
+              <h3>Show it once</h3>
+              <p>
+                With Teach a task, do the job once while it watches. It writes down the steps and
+                does it from then on.
+              </p>
+            </div>
+            <div className={c('demo')} aria-hidden="true">
+              <div className={c('rec2')}>
+                <div className={c('rec-bar xg blk-g')}>
+                  <div className={c('rb tb-a')}>
+                    <span>Riley is watching and learning</span>
+                    <span className={c('timer')}>
+                      <span className={c('rdot')}></span>
+                      <span className={c('xg')}>
+                        <span className={c('tm0')}>0:00</span>
+                        <span className={c('tm1')}>0:01</span>
+                        <span className={c('tm2')}>0:02</span>
+                        <span className={c('tm3')}>0:03</span>
+                        <span className={c('tm4')}>0:04</span>
+                        <span className={c('tm5')}>0:05</span>
+                        <span className={c('tm6')}>0:06</span>
+                      </span>
+                    </span>
+                  </div>
+                  <div className={c('rb tb-b')}>
+                    <span className={c('badge ok')}>Teach a task · saved as skill</span>
+                    <span className={c('sk')}>weekly-report</span>
+                  </div>
+                </div>
+                <div className={c('dash')}>
+                  <div className={c('d-side')}>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                  </div>
+                  <div className={c('d-main')}>
+                    <div className={c('d-top')}>
+                      <span className={c('d-title')}></span>
+                      <span className={c('d-chip')}>Month</span>
+                      <span className={c('d-chip on')}>This week</span>
+                    </div>
+                    <div className={c('d-bars')}>
+                      <i style={{ '--a': '.35', '--b': '.55' } as CSSProperties}></i>
+                      <i style={{ '--a': '.5', '--b': '.42' } as CSSProperties}></i>
+                      <i style={{ '--a': '.42', '--b': '.66' } as CSSProperties}></i>
+                      <i style={{ '--a': '.6', '--b': '.5' } as CSSProperties}></i>
+                      <i style={{ '--a': '.48', '--b': '.74' } as CSSProperties}></i>
+                      <i style={{ '--a': '.7', '--b': '.62' } as CSSProperties}></i>
+                      <i
+                        className={c('hl')}
+                        style={{ '--a': '.55', '--b': '.9' } as CSSProperties}
+                      ></i>
+                      <i style={{ '--a': '.62', '--b': '.7' } as CSSProperties}></i>
+                      <i style={{ '--a': '.4', '--b': '.58' } as CSSProperties}></i>
+                      <i style={{ '--a': '.66', '--b': '.8' } as CSSProperties}></i>
+                    </div>
+                  </div>
+                  <div className={c('cur-layer tb-cur')}>
+                    <span className={c('cursor')}>
+                      <svg viewBox="0 0 16 16" className={c('ca')}>
+                        <path d="M2 1.5 13.5 7.6l-5.2 1.2-2.4 5z" />
+                      </svg>
+                      <span className={c('cn')}>Ada</span>
+                    </span>
+                  </div>
+                </div>
+                <span className={c('rec-frame tb-a')}></span>
+              </div>
+            </div>
+          </article>
+
+          <article className={c('tk')}>
+            <div className={c('tk-copy')}>
+              <h3>Remembers how you work</h3>
+              <p>
+                What your team decides goes into the workspace&apos;s memory, and skills hold the
+                steps for jobs you repeat.
+              </p>
+            </div>
+            <div className={c('demo')} aria-hidden="true">
+              <div className={c('memd')}>
+                <div className={c('bub tc1')}>
+                  <span className={c('av sam xs')}>S</span>
+                  <span>
+                    Northwind asked about invoices again. Same answer as last month, sent after your
+                    yes.
+                  </span>
+                </div>
+                <div className={c('bub tc2')}>
+                  <span className={c('av sam xs')}>S</span>
+                  <span>Noted: Jo prefers replies before 9am.</span>
+                </div>
+                <div className={c('memchip tc3')}>
+                  Updated memory for{' '}
+                  <span className={c('vchip')}>
+                    <span className={c('av xs sam')}>S</span>Sam
+                  </span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className={c('tk')}>
+            <div className={c('tk-copy')}>
+              <h3>Runs on a schedule</h3>
+              <p>
+                Set a routine once and it runs on time. With Cloud, it runs overnight while your Mac
+                sleeps.
+              </p>
+            </div>
+            <div className={c('demo')} aria-hidden="true">
+              <div className={c('sched')}>
+                <div className={c('sc-h')}>
+                  <svg className={c('clk')} viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <path className={c('hand-m')} d="M12 12V6" />
+                    <path d="M12 12h3.5" />
+                  </svg>
+                  <span className={c('xg sc-time')}>
+                    <span className={c('ck1')}>06:58</span>
+                    <span className={c('ck2')}>06:59</span>
+                    <span className={c('ck3')}>07:00</span>
+                  </span>
+                  <span className={c('sc-l')}>Routines · Acme</span>
+                </div>
+                <div className={c('rt')}>
+                  <span className={c('when')}>07:00</span>
+                  <span className={c('what')}>
+                    Triage the inbox
+                    <span className={c('k')}>Sam · sorts the night&apos;s emails</span>
+                  </span>
+                  <span className={c('xg end')}>
+                    <span className={c('badge r1a')}>scheduled</span>
+                    <span className={c('badge run r1b')}>running</span>
+                    <span className={c('badge ok r1c')}>done</span>
+                  </span>
+                </div>
+                <div className={c('rt')}>
+                  <span className={c('when')}>07:00</span>
+                  <span className={c('what')}>
+                    Chase failed payments<span className={c('k')}>Sam · reminders for yes</span>
+                  </span>
+                  <span className={c('xg end')}>
+                    <span className={c('badge r2a')}>scheduled</span>
+                    <span className={c('badge run r2b')}>running</span>
+                    <span className={c('badge ok r2c')}>done</span>
+                  </span>
+                </div>
+                <div className={c('rt')}>
+                  <span className={c('when')}>Mon 09:00</span>
+                  <span className={c('what')}>
+                    Send the week&apos;s numbers<span className={c('k')}>Riley · to #founders</span>
+                  </span>
+                  <span className={c('xg end')}>
+                    <span className={c('badge')}>scheduled</span>
+                  </span>
+                </div>
+                <div className={c('rt')}>
+                  <span className={c('when')}>Fri 16:00</span>
+                  <span className={c('what')}>
+                    Weekly release notes<span className={c('k')}>Mark · to the changelog</span>
+                  </span>
+                  <span className={c('xg end')}>
+                    <span className={c('badge')}>scheduled</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
