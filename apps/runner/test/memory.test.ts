@@ -1,103 +1,128 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import type { ThreadSpec } from '@brigade/contracts'
-import { memoryPrompt, parseMemory, readOnce, TIDY_AT } from '../src/memory.js'
+import { memoryLineKey, NO_MEMORY_EDIT, type ThreadSpec } from '@brigade/contracts'
+import { memoryRun } from '../src/memory.js'
+import type { MemorySnapshot } from '../src/memory-layers.js'
 
+const now = new Date('2026-10-21T10:00:00Z')
 const riley = { id: 'riley', name: 'Riley' }
-const spec = (project: string, isPrivate = false) =>
+const spec = (isPrivate = false) =>
   ({
     sessionId: 's1',
     teammate: { ...riley, harness: 'claude_code' },
     teammates: [riley],
     private: isPrivate,
-    project: { id: 'p1', name: 'Brigade', memory: project },
+    project: { id: 'p1', name: 'Brigade', memory: '# Brigade memory\n\n- (stale copy)\n' },
   }) as unknown as ThreadSpec
-const lines = (n: number, word: string) =>
-  Array.from({ length: n }, (_, i) => `- ${word} line ${i} ${'x'.repeat(80)}`).join('\n')
+const project = `# Brigade memory
+
+- PRs are squash-merged.
+- Esc never stops a run.
+
+## Sidebar
+
+- The ⋮ menu shows on hover.
+`
+const snapshot = (extra: Partial<MemorySnapshot> = {}): MemorySnapshot => ({
+  workspace: '# Workspace memory\n\n- Brand colour is violet.\n',
+  teammate: '# What Riley has learned\n\n- Run the typecheck yourself.\n',
+  projects: { p1: project },
+  lines: {
+    'projects/p1.md': {
+      [memoryLineKey('Esc never stops a run.')]: { at: '2026-10-19T09:00:00Z', by: 'Ada' },
+    },
+  },
+  ...extra,
+})
 const entries = [
-  { by: null, name: 'Member', text: 'Use violet for status dots.' },
+  { by: null, name: 'Member', text: 'The ⋮ menu should also show on focus.' },
   { by: 'riley', name: 'Riley', text: 'Done.' },
 ]
+const run = (isPrivate = false, extra: Partial<MemorySnapshot> = {}) =>
+  memoryRun({
+    spec: spec(isPrivate),
+    entries,
+    summary: undefined,
+    memory: () => snapshot(extra),
+    speakers: [riley],
+    now,
+  })
 
-test('the memory run reads each memory file whole, however long', () => {
-  const project = `# Brigade memory\n\n${lines(400, 'project')}\n- the newest project line`
-  const prompt = memoryPrompt({
-    spec: spec(project),
-    entries,
-    summary: undefined,
-    memory: () => ({ workspace: '# Workspace memory\n\n- a', teammate: '# Riley\n\n- b' }),
-    speakers: [riley],
-  })
-  assert.ok(project.length > TIDY_AT)
-  assert.match(prompt, /- the newest project line/)
-  assert.match(prompt, /Memory of the project "Brigade" now \(long: [\d,]+ characters, tidy it\):/)
-  assert.match(prompt, /A file marked long no longer fits/)
-  // Short files are not marked, and a run with no long file is not told to tidy.
-  assert.match(prompt, /Workspace memory now:/)
-  const short = memoryPrompt({
-    spec: spec('# Brigade memory\n\n- c'),
-    entries,
-    summary: undefined,
-    memory: () => ({ workspace: '- a', teammate: '- b' }),
-    speakers: [riley],
-  })
-  assert.doesNotMatch(short, /tidy/)
+test('the run reads each memory file whole, numbered and dated, under its core and topics', () => {
+  const { prompt } = run()
+  assert.match(
+    prompt,
+    /Memory of the project "Brigade" now:\n<<<\nCore:\n\[1\] PRs are squash-merged\.\n\[2\] Esc never stops a run\. \(19 Oct, by Ada\)\n\nTopic "Sidebar"\n\[3\] The ⋮ menu shows on hover\.\n>>>/,
+  )
+  // The manifest's copy of the project memory, fresher than the spec's.
+  assert.doesNotMatch(prompt, /stale copy/)
+  assert.match(prompt, /Workspace memory now:\n<<<\nCore:\n\[1\] Brand colour is violet\./)
+  assert.match(prompt, /Memory of Riley now:\n<<<\nCore:\n\[1\] Run the typecheck yourself\./)
+  assert.match(prompt, /- replace: \{"line": 12, "text": "…"\}/)
 })
 
-test('a long file may take merged lines; a short one keeps to three new lines', () => {
-  const answer = JSON.stringify({
-    summary: 'Asked for violet dots.',
-    workspace: { add: ['1', '2', '3', '4', '5'], remove: [] },
-    project: { add: ['1', '2', '3', '4', '5', '6', '7'], remove: ['- project line 3'] },
-    teammates: { Riley: { add: ['1', '2', '3', '4'], remove: [] } },
-  })
-  const update = parseMemory(answer, spec(lines(400, 'project')), [riley], () => ({
-    workspace: '- a',
-    teammate: '- b',
-  }))
+test('its answer names lines by number; they go to the API as the lines’ text', () => {
+  const { parse } = run()
+  const update = parse(
+    JSON.stringify({
+      summary: 'Asked for the menu on focus.',
+      workspace: { add: [], replace: [], remove: [], confirm: [] },
+      project: {
+        add: [{ text: 'Sections collapse by their title.', topic: 'Sidebar' }, 'A core line.'],
+        replace: [{ line: 3, text: 'The ⋮ menu shows on hover or focus.' }],
+        remove: [{ line: 2, reason: 'Reversed by the member.' }, 99],
+        confirm: [1, 'PRs are squash-merged.'],
+      },
+      teammates: { Riley: { add: ['1', '2', '3', '4'] } },
+    }),
+  )
   assert.ok(update)
-  assert.equal(update.workspace.add.length, 3)
-  assert.equal(update.project?.add.length, 6)
-  assert.deepEqual(update.project?.remove, ['- project line 3'])
-  assert.equal(update.teammates[0]?.edit.add.length, 3)
+  assert.deepEqual(update.project, {
+    ...NO_MEMORY_EDIT,
+    lines: [
+      { text: 'Sections collapse by their title.', topic: 'Sidebar' },
+      { text: 'A core line.', topic: null },
+    ],
+    replace: [{ from: 'The ⋮ menu shows on hover.', to: 'The ⋮ menu shows on hover or focus.' }],
+    // Line 99 does not exist: dropped.
+    archive: [{ text: 'Esc never stops a run.', reason: 'Reversed by the member.' }],
+    confirm: ['PRs are squash-merged.'],
+  })
+  assert.equal(update.teammates[0]?.edit.lines.length, 3)
+  assert.equal(parse('not json'), null)
 })
 
-test('a private thread is not asked to tidy what it may not edit', () => {
-  const prompt = memoryPrompt({
-    spec: spec(lines(400, 'project'), true),
-    entries,
-    summary: undefined,
-    memory: () => ({ workspace: lines(400, 'workspace'), teammate: '- b' }),
-    speakers: [riley],
-  })
-  assert.doesNotMatch(prompt, /tidy/)
+test('a private thread changes no workspace or project memory', () => {
+  const { parse, prompt } = run(true)
+  assert.match(prompt, /- workspace: leave every list empty; this thread is private\./)
+  const update = parse(
+    JSON.stringify({
+      summary: 'x',
+      workspace: { add: ['Something'] },
+      project: { add: ['Something'] },
+      teammates: {},
+    }),
+  )
+  assert.deepEqual(update?.workspace, NO_MEMORY_EDIT)
+  assert.equal(update?.project, undefined)
 })
 
-test('a long file loses at most 20 lines to one run', () => {
-  const answer = JSON.stringify({
-    summary: 'x',
-    workspace: { add: [], remove: [] },
-    project: { add: [], remove: Array.from({ length: 40 }, (_, i) => `- project line ${i}`) },
-    teammates: {},
-  })
-  const update = parseMemory(answer, spec(lines(400, 'project')), [riley], () => ({
-    workspace: '- a',
-    teammate: '- b',
-  }))
-  assert.equal(update?.project?.remove.length, 20)
-})
-
-test('a run’s answer is read against the memory it was shown, even if it changed meanwhile', () => {
-  let live = lines(400, 'lesson')
-  const memory = readOnce(() => ({ workspace: '- a', teammate: live }))
-  const seen = memory('riley').teammate
-  // Another run tidies the file below the threshold while this one runs.
-  live = '- short'
-  assert.equal(memory('riley').teammate, seen)
-  const answer = JSON.stringify({
-    summary: 'x',
-    teammates: { Riley: { add: ['1', '2', '3', '4', '5', '6'], remove: ['- lesson line 1'] } },
-  })
-  // The file was long when the run read it: its merged lines are kept with its removals.
-  assert.equal(parseMemory(answer, spec('- c'), [riley], memory)?.teammates[0]?.edit.add.length, 6)
+test('files that need tidying once the update is applied are named, with the new lines dated today', () => {
+  const long = Array.from({ length: 60 }, (_, i) => `- Lesson ${i} ${'x'.repeat(60)}`).join('\n')
+  const { parse, tidyAfter } = run(false, { teammate: `# What Riley has learned\n\n${long}\n` })
+  const update = parse(
+    JSON.stringify({
+      summary: 'x',
+      teammates: { Riley: { add: [{ text: 'A new lesson.', topic: 'Tests' }] } },
+    }),
+  )!
+  const files = tidyAfter(update)
+  // Riley's core is past its 3,000 characters; the short workspace and project files are not touched.
+  assert.deepEqual(
+    files.map((f) => f.ref),
+    [{ kind: 'teammate', teammateId: 'riley' }],
+  )
+  assert.match(files[0]!.text, /## Tests\n\n- A new lesson\.\n$/)
+  assert.ok(files[0]!.fresh.has(memoryLineKey('A new lesson.')))
+  assert.equal(files[0]!.lastTidied, null)
 })

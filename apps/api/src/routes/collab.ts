@@ -6,7 +6,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { fromCollabServer, normalizeMarkdown, toMarkdown, updateFrom } from '../collab.js'
 import { prisma, scoped } from '../db.js'
-import { documentText, isMarkdown, saveDocumentText } from '../library.js'
+import { documentText, isMarkdown, saveDocumentText, StaleMemory } from '../library.js'
 
 const SHA = 'x-collab-sha'
 
@@ -68,7 +68,12 @@ export const collab = new Hono()
       member ? { type: 'member', id: member.id } : { type: 'system', id: 'collab' },
       row,
       text,
-      { fromCollab: true },
-    )
+      // A memory file is checked again under its lock: a thread may have written to it since.
+      { fromCollab: true, baseSha: row.sha256 },
+    ).catch((error: unknown) => {
+      if (error instanceof StaleMemory) return null
+      throw error
+    })
+    if (!saved) return c.json({ error: 'stale' }, 409)
     return c.json({ sha: saved.sha256, saved: true })
   })

@@ -8,6 +8,7 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import {
   childPrompt,
+  MemoryEdit,
   parentMessage,
   singleNote,
   SUGGEST_REPLIES_TOOL,
@@ -15,7 +16,7 @@ import {
 } from '@brigade/contracts'
 import { audit, type Actor } from '../src/audit.js'
 import { prisma, scoped, type Prisma } from '../src/db.js'
-import { saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
+import { editMemory, saveLibraryFile, saveSummary, writeMemory } from '../src/library.js'
 import { sealSecret } from '../src/vault.js'
 import { seedPlaybooks } from './seed-playbooks.js'
 
@@ -1144,12 +1145,49 @@ export async function seedWorkspace(users: Users) {
     { kind: 'workspace_memory' },
     '# Workspace memory\n\n- Acme is a 12-person SaaS selling project tracking to small teams.\n- Customers are answered within one business day.\n- Refunds over $100 need a person to approve.\n- main deploys to production on every merge.\n',
   )
+  // A core every thread in the project loads, and topics read when the work touches them.
   await writeMemory(
     db,
     scope,
     asAda,
     { kind: 'project_memory', projectId: website.id },
-    '# Website memory\n\n- Use the theme tokens (bg-card, text-foreground), never raw colors.\n- Run `pnpm test` before opening a pull request.\n',
+    [
+      '# Website memory',
+      '',
+      '- Use the theme tokens (bg-card, text-foreground), never raw colors.',
+      '- Run `pnpm test` before opening a pull request.',
+      '',
+      '## Checkout',
+      '',
+      'Read before touching the checkout or payments.',
+      '',
+      '- Previews use Stripe in test mode; production is the live account: never test there.',
+      '- Only the checkout page loads Stripe.js.',
+      '',
+      '## Pricing page',
+      '',
+      'Read before changing prices or plans.',
+      '',
+      '- Prices come from the Stripe catalog; the page never hard-codes them.',
+      '- Annual plans show the monthly price, billed yearly.',
+      '',
+    ].join('\n'),
+  )
+  // A thread corrected a line: the old one is in the archive, with why.
+  await editMemory(
+    db,
+    scope,
+    { type: 'teammate', id: riley.id },
+    { kind: 'project_memory', projectId: website.id, name: website.name },
+    MemoryEdit.parse({
+      replace: [
+        {
+          from: 'Annual plans show the monthly price, billed yearly.',
+          to: 'Annual plans show the yearly price, with the monthly equivalent under it.',
+        },
+      ],
+    }),
+    checkout.id,
   )
   await writeMemory(
     db,

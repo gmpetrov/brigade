@@ -48,6 +48,9 @@ import {
   libraryFileOf,
   libraryFiles,
   memoryHeader,
+  memoryLineInfo,
+  archivedMemoryLines,
+  restoreMemoryLine,
   moveLibraryFile,
   readLibraryFile,
   readMemory,
@@ -91,13 +94,26 @@ const folderParam = (value: string | undefined) => {
 
 const memoryFile = (
   kind: MemoryFile['kind'],
-  row: { text: string; updatedAt: Date } | null,
+  row: { id: string; text: string; updatedAt: Date } | null,
   header: string,
+  info: Awaited<ReturnType<typeof memoryLineInfo>>,
 ): MemoryFile => ({
   kind,
   text: row?.text ?? header,
   updatedAt: row?.updatedAt.toISOString() ?? null,
+  documentId: row?.id ?? null,
+  lines: (row && info.get(row.id)?.lines) ?? {},
+  archived: (row && info.get(row.id)?.archived) ?? 0,
 })
+
+/** A memory file of this workspace, by its document id. */
+async function memoryDocument(db: AppEnv['Variables']['db'], id: string) {
+  const row = await db.document.findFirst({
+    where: { id, kind: { in: ['workspace_memory', 'teammate_memory', 'project_memory'] } },
+  })
+  if (!row) throw new HTTPException(404, { message: 'Memory not found' })
+  return row
+}
 
 export const library = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
@@ -259,25 +275,34 @@ export const library = new Hono<AppEnv>()
 
   .get('/memory', async (c) => {
     const { db, scope } = c.var
-    const [workspace, teammates, memories, summaries] = await Promise.all([
-      readMemory(db, { kind: 'workspace_memory' }),
-      db.teammate.findMany({ where: { archivedAt: null }, orderBy: { createdAt: 'asc' } }),
-      db.document.findMany({ where: { kind: 'teammate_memory' } }),
-      db.document.findMany({
-        where: {
-          kind: 'thread_summary',
-          session: { OR: [{ private: false }, { startedByMemberId: scope.memberId }] },
-        },
-        include: { session: { select: { title: true } } },
-        orderBy: { updatedAt: 'desc' },
-        take: 50,
-      }),
+    const [workspace, teammates, memories, projects, projectMemories, summaries] =
+      await Promise.all([
+        readMemory(db, { kind: 'workspace_memory' }),
+        db.teammate.findMany({ where: { archivedAt: null }, orderBy: { createdAt: 'asc' } }),
+        db.document.findMany({ where: { kind: 'teammate_memory' } }),
+        db.project.findMany({ where: { archivedAt: null }, orderBy: { createdAt: 'asc' } }),
+        db.document.findMany({ where: { kind: 'project_memory' } }),
+        db.document.findMany({
+          where: {
+            kind: 'thread_summary',
+            session: { OR: [{ private: false }, { startedByMemberId: scope.memberId }] },
+          },
+          include: { session: { select: { title: true } } },
+          orderBy: { updatedAt: 'desc' },
+          take: 50,
+        }),
+      ])
+    const info = await memoryLineInfo(db, [
+      ...(workspace ? [workspace.id] : []),
+      ...memories.map((m) => m.id),
+      ...projectMemories.map((m) => m.id),
     ])
     const overview: MemoryOverview = {
       workspace: memoryFile(
         'workspace_memory',
         workspace,
         memoryHeader({ kind: 'workspace_memory' }),
+        info,
       ),
       teammates: teammates.map((t) => ({
         teammateId: t.id,
@@ -286,6 +311,17 @@ export const library = new Hono<AppEnv>()
           'teammate_memory',
           memories.find((m) => m.teammateId === t.id) ?? null,
           memoryHeader({ kind: 'teammate_memory', teammateId: t.id }, t.name),
+          info,
+        ),
+      })),
+      projects: projects.map((p) => ({
+        projectId: p.id,
+        name: p.name,
+        memory: memoryFile(
+          'project_memory',
+          projectMemories.find((m) => m.projectId === p.id) ?? null,
+          memoryHeader({ kind: 'project_memory', projectId: p.id }, p.name),
+          info,
         ),
       })),
       summaries: summaries.map((s) => ({
@@ -297,6 +333,27 @@ export const library = new Hono<AppEnv>()
       })),
     }
     return c.json(overview)
+  })
+
+  /** A memory file's archived lines, newest first; ?q= filters by text. */
+  .get('/memory/:documentId/archive', async (c) => {
+    const { db } = c.var
+    const row = await memoryDocument(db, c.req.param('documentId'))
+    const query = (c.req.query('q') ?? '').trim().slice(0, 200)
+    return c.json(await archivedMemoryLines(db, row.id, query))
+  })
+
+  /** Put an archived line back in its memory file. */
+  .post('/memory/:documentId/archive/:lineId/restore', async (c) => {
+    const { db, scope } = c.var
+    await memoryDocument(db, c.req.param('documentId'))
+    await restoreMemoryLine(
+      db,
+      scope,
+      { type: 'member', id: scope.memberId },
+      c.req.param('lineId'),
+    )
+    return c.json({ ok: true })
   })
 
   .put('/memory/workspace', async (c) => {

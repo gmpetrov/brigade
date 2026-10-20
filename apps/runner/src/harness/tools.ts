@@ -772,7 +772,8 @@ export function libraryTools(options: {
     search_workspace: tool({
       description:
         `Search the workspace's shared knowledge by keywords: its document library (mirrored read-only at ${options.libraryDir}), ` +
-        `the workspace and teammate memory, and summaries of past threads. Use it before asking a person something the team may already know.`,
+        `the workspace, project and teammate memory, lines removed from memory (with why), and summaries of past threads. ` +
+        'Use it before asking a person something the team may already know.',
       inputSchema: jsonSchema<{ query: string; limit?: number }>({
         type: 'object',
         properties: {

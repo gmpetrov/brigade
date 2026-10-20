@@ -89,6 +89,7 @@ export const ModelName = {
   Subscription: 'Subscription',
   Ticket: 'Ticket',
   Document: 'Document',
+  MemoryLine: 'MemoryLine',
   DocumentVersion: 'DocumentVersion',
   LibraryFolder: 'LibraryFolder',
   LibraryFolderGrant: 'LibraryFolderGrant',
@@ -784,6 +785,7 @@ export const DocumentScalarFieldEnum = {
   updatedByType: 'updatedByType',
   updatedById: 'updatedById',
   updatedInSessionId: 'updatedInSessionId',
+  memoryTidiedAt: 'memoryTidiedAt',
   deletedAt: 'deletedAt',
   deletedByType: 'deletedByType',
   deletedById: 'deletedById',
@@ -792,6 +794,30 @@ export const DocumentScalarFieldEnum = {
 } as const
 
 export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
+export const MemoryLineScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  workspaceId: 'workspaceId',
+  documentId: 'documentId',
+  key: 'key',
+  text: 'text',
+  topic: 'topic',
+  createdByType: 'createdByType',
+  createdById: 'createdById',
+  sessionId: 'sessionId',
+  createdAt: 'createdAt',
+  legacy: 'legacy',
+  confirmedAt: 'confirmedAt',
+  archivedAt: 'archivedAt',
+  archivedReason: 'archivedReason',
+  archivedByType: 'archivedByType',
+  archivedById: 'archivedById',
+  archivedSessionId: 'archivedSessionId'
+} as const
+
+export type MemoryLineScalarFieldEnum = (typeof MemoryLineScalarFieldEnum)[keyof typeof MemoryLineScalarFieldEnum]
 
 
 export const DocumentVersionScalarFieldEnum = {

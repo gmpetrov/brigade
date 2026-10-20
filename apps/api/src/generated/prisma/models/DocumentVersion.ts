@@ -14,9 +14,7 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model DocumentVersion
- * A saved state of a library file. Its bytes are in the bucket under
- * <organization>/<workspace>/library-versions/<id>; the newest is also the file itself.
- * Saves by the same author from the same thread within minutes update one version.
+ * 
  */
 export type DocumentVersionModel = runtime.Types.Result.DefaultSelection<Prisma.$DocumentVersionPayload>
 

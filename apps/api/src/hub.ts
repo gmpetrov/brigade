@@ -21,7 +21,7 @@ import { specFor } from './thread-spec.js'
 import { ensureSetup, touch, wake } from './cloud.js'
 import { handleConnectorCall } from './connector-calls.js'
 import { handleCredentialRequest } from './credentials.js'
-import { handleLibraryCall, handleMemoryUpdate } from './library-calls.js'
+import { handleLibraryCall, handleMemoryTidy, handleMemoryUpdate } from './library-calls.js'
 import { handleScheduleCall } from './schedules.js'
 import { handleTaskCall } from './tasks.js'
 import {
@@ -725,6 +725,13 @@ export function runnerSocket(runner: {
     if (message.type === 'memory.update') {
       void handleMemoryUpdate(runner, message).catch((error) =>
         console.warn(`runner ${runner.id}: memory update failed: ${String(error)}`),
+      )
+      return
+    }
+
+    if (message.type === 'memory.tidy') {
+      void handleMemoryTidy(runner, message).catch((error) =>
+        console.warn(`runner ${runner.id}: memory tidy failed: ${String(error)}`),
       )
       return
     }
