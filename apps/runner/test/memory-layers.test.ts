@@ -5,6 +5,8 @@ import {
   EARLIER_CORE,
   layerMemory,
   lineNote,
+  memoryKeys,
+  memoryNews,
   memorySection,
   numberedMemory,
   threadMemory,
@@ -129,4 +131,49 @@ test('a run reads a file with every line numbered and dated, new lines dated tod
     'Control rows have no status dot.',
     'The ⋮ menu shows on hover.',
   ])
+})
+
+test('a running session is told, once, the lines memory learned since it started', () => {
+  const spec = {
+    teammate: { id: 'riley', name: 'Riley' },
+    project: { id: 'p1', name: 'Brigade', memory: file },
+  } as never
+  const started = threadMemory(spec, { workspace: '', teammate: '' }, '/work', now)
+  const loaded = memoryKeys(started)
+  const later = threadMemory(
+    {
+      ...(spec as object),
+      project: {
+        id: 'p1',
+        name: 'Brigade',
+        memory: `${file}- Sections collapse by their title.\n`,
+      },
+    } as never,
+    {
+      workspace: '- Brand colour is violet.\n',
+      teammate: '',
+      lines: {
+        'workspace.md': {
+          [memoryLineKey('Brand colour is violet.')]: { at: '2026-10-21T09:00:00Z' },
+        },
+      },
+    },
+    '/work',
+    now,
+  )
+  const told = new Set<string>()
+  assert.equal(
+    memoryNews(later, loaded, told),
+    [
+      '<memory-news>',
+      'Learned since this session started, by threads that went quiet meanwhile. Newer than what your instructions file holds.',
+      '- Brand colour is violet. (21 Oct, workspace memory)',
+      '- Sections collapse by their title. (project memory, Sidebar)',
+      '</memory-news>',
+    ].join('\n'),
+  )
+  // Told once per session.
+  assert.equal(memoryNews(later, loaded, told), '')
+  // Nothing new: nothing said.
+  assert.equal(memoryNews(started, loaded, new Set()), '')
 })

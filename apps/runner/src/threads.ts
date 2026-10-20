@@ -34,6 +34,7 @@ import type { Folders } from './folders.js'
 import type { HandedOver } from './hand-over.js'
 import type { Previews } from './previews.js'
 import { memoryRun } from './memory.js'
+import { memoryNews, threadMemory } from './memory-layers.js'
 import { tidyRun, type TidyFile } from './memory-tidy.js'
 import { MARKS_RULE, said, type LogEntry } from './said.js'
 import { parseTitle, TITLE_MODEL, titlePrompt } from './title.js'
@@ -135,6 +136,8 @@ type Seat = {
   turn: (TurnEntry & { text?: string })[]
   /** The running turn only waits on work started in the background: a new message goes straight in. */
   waiting: boolean
+  /** Memory lines learned since the session started that it was told (memoryNews). */
+  told: Set<string>
 }
 
 /** The bridge's word on whether the turn only waits on background work, from a harness event. */
@@ -771,7 +774,7 @@ export class Threads {
                 text: await (async () => {
                   const note = await this.options.folders.takeNote(name, spec.git)
                   const told = await this.catchUp(spec, upTo)
-                  return [note, told].filter(Boolean).join('\n\n')
+                  return [note, this.memoryNews(spec, seat), told].filter(Boolean).join('\n\n')
                 })(),
               }
             : input.kind === 'lost'
@@ -1379,6 +1382,17 @@ export class Threads {
   }
 
   /**
+   * What memory learned since the teammate's session started, told once at the
+   * start of a turn. A parked session loads all of it when it resumes: nothing to tell.
+   */
+  private memoryNews(spec: ThreadSpec, seat: Seat) {
+    const loaded = seat.harness.memoryLoaded
+    if (!loaded) return ''
+    const memory = threadMemory(spec, this.options.context.memoryFor(spec.teammate.id), '')
+    return memoryNews(memory, loaded, seat.told)
+  }
+
+  /**
    * Something that happened outside a turn (thread.note): a line in the thread,
    * and what each teammate is told at the start of its next turn.
    */
@@ -1508,6 +1522,7 @@ export class Threads {
         parkTimer: undefined,
         turn: [],
         waiting: false,
+        told: new Set(),
       }
       thread.harnesses.set(teammateId, seat)
     }

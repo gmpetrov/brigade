@@ -23,7 +23,8 @@ repeats piled up where nothing read them. Memory now has layers, dates and an ar
   cores however much the team learns, and it works in every language, since the model
   picks the topics. The per-turn recall by keywords (BM25) is gone: memory written in
   English and messages in French rarely shared words, and it brought lines picked on
-  words like "files" or "chose".
+  words like "files" or "chose". What a session lacks is told instead: lines other
+  threads taught since it started come at the start of its next turn, each once.
 - **Every line is dated.** A `MemoryLine` row per line, kept by its text (any bullet, case
   or spacing): when it was learned or last confirmed, in which thread, and whether a
   person wrote it. Lines show their date to the teammate ("(19 Oct)", "(19 Oct, by Ada)",

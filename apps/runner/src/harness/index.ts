@@ -37,7 +37,12 @@ import {
   writeInstructions,
   writeMemoryFiles,
 } from '../instructions.js'
-import { threadMemory, threadTopicFiles, type MemorySnapshot } from '../memory-layers.js'
+import {
+  memoryKeys,
+  threadMemory,
+  threadTopicFiles,
+  type MemorySnapshot,
+} from '../memory-layers.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { copyIncluded } from '../repo-settings.js'
@@ -362,6 +367,8 @@ function resumable(harness: ThreadSpec['teammate']['harness'], resume: unknown):
 /** One thread: one harness session in its own working directory. */
 export class HarnessThread {
   private live: Live | undefined
+  /** The memory lines the session loaded when it started (memoryKeys). */
+  private loaded: Set<string> = new Set()
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   /** Text and thinking blocks under way, by id (see EventMapper), handed over with the turn. */
@@ -592,6 +599,11 @@ export class HarnessThread {
   /** A harness session is running, not parked. */
   get active() {
     return this.live !== undefined
+  }
+
+  /** The memory lines the running session loaded when it started; none while parked. */
+  get memoryLoaded(): ReadonlySet<string> | undefined {
+    return this.live ? this.loaded : undefined
   }
 
   /**
@@ -1177,6 +1189,7 @@ export class HarnessThread {
       this.context.memoryFor(this.spec.teammate.id),
       this.workDir,
     )
+    this.loaded = memoryKeys(memory)
     await writeMemoryFiles(this.workDir, threadTopicFiles(memory, this.spec), this.runAs).catch(
       (error) => console.warn(`could not write memory topics: ${errorMessage(error)}`),
     )

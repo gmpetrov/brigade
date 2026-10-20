@@ -218,6 +218,57 @@ export function threadTopicFiles(
   ]
 }
 
+/** Every line's key in a thread's memories: what a session loads when it starts. */
+export function memoryKeys(memory: ThreadMemory) {
+  const keys = new Set<string>()
+  for (const layered of [memory.workspace, memory.project, memory.teammate]) {
+    for (const line of layered?.core ?? []) keys.add(line.key)
+    for (const topic of layered?.topics ?? []) for (const line of topic.lines) keys.add(line.key)
+  }
+  return keys
+}
+
+/** Lines told in one turn, at most. */
+const NEWS_LINES = 10
+const NEWS_CHARS = 3_000
+
+/**
+ * What memory learned since a session started: its instructions and topic files
+ * were written then, so a line another thread added since is told at the start
+ * of a turn, once (`told` keeps them). Empty when there is nothing new.
+ */
+export function memoryNews(memory: ThreadMemory, loaded: ReadonlySet<string>, told: Set<string>) {
+  const news: string[] = []
+  let size = 0
+  const scan = (layered: LayeredMemory | null, of: string) => {
+    if (!layered) return
+    const sections = [
+      { where: of, lines: layered.core },
+      ...layered.topics.map((t) => ({ where: `${of}, ${t.name}`, lines: t.lines })),
+    ]
+    for (const { where, lines } of sections)
+      for (const line of lines) {
+        if (loaded.has(line.key) || told.has(line.key)) continue
+        const note = line.note ? line.note.replace(/\)$/, `, ${where})`) : ` (${where})`
+        const text = `- ${line.text}${note}`
+        if (news.length >= NEWS_LINES || size + text.length > NEWS_CHARS) return
+        news.push(text)
+        size += text.length
+        told.add(line.key)
+      }
+  }
+  scan(memory.workspace, 'workspace memory')
+  scan(memory.project, 'project memory')
+  scan(memory.teammate, 'your memory')
+  if (!news.length) return ''
+  return [
+    '<memory-news>',
+    'Learned since this session started, by threads that went quiet meanwhile. Newer than what your instructions file holds.',
+    ...news,
+    '</memory-news>',
+  ].join('\n')
+}
+
 /**
  * A memory file as a memory or tidy run reads it: its core and topics, each
  * line numbered (runs name lines by number) and dated. `fresh`: lines added

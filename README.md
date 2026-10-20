@@ -462,6 +462,8 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   loads is the size of the cores (4,000, 5,000 and 3,000 characters), however much memory holds; a core far past its
   budget, before a tidy run fixes it, keeps its newest lines and puts the older ones in a topic file. A file of that
   name Brigade did not write is left alone. Codex is allowed to read all of a long AGENTS.md (`project_doc_max_bytes`).
+  Lines other threads teach while a session runs are told at the start of its next turn, once (`memoryNews`); a parked
+  session loads them when it resumes.
 - **When a thread ends** is when it goes quiet: 5 minutes after its last turn (`BRIGADE_QUIET_MS` overrides, for
   tests), the runner runs the thread's harness once more, outside the thread, with no tools, on the same account,
   in an empty directory (`memory.ts`). It reads what was said since the last time and each memory file it may change
