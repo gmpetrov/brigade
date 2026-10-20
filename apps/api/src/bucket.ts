@@ -5,7 +5,7 @@ import { createReadStream } from 'node:fs'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
-import { STORED_IMAGE_NAME } from '@brigade/contracts'
+import { STORED_FILE_NAME } from '@brigade/contracts'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
 import type { Scope } from './db.js'
@@ -73,17 +73,17 @@ export function skillFileKey(scope: Scope, sha256: string) {
   return `${scope.organizationId}/${scope.workspaceId}/skill-files/${sha256}`
 }
 
-/** The bucket folder of the images a thread's events refer to (event-images.ts). */
-export function threadImagesPrefix(scope: Scope, sessionId: string) {
+/** The bucket folder of the images and PDFs a thread's events refer to (event-files.ts). */
+export function threadFilesPrefix(scope: Scope, sessionId: string) {
   for (const part of [scope.organizationId, scope.workspaceId, sessionId])
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
-  return `${scope.organizationId}/${scope.workspaceId}/thread-images/${sessionId}/`
+  return `${scope.organizationId}/${scope.workspaceId}/thread-files/${sessionId}/`
 }
 
-/** The bucket key of an image a thread's events refer to, by its name: `<sha256>.<ext>`. */
-export function threadImageKey(scope: Scope, sessionId: string, name: string) {
-  if (!STORED_IMAGE_NAME.test(name)) throw new Error('Invalid bucket key part')
-  return `${threadImagesPrefix(scope, sessionId)}${name}`
+/** The bucket key of a file a thread's events refer to, by its name: `<sha256>.<ext>`. */
+export function threadFileKey(scope: Scope, sessionId: string, name: string) {
+  if (!STORED_FILE_NAME.test(name)) throw new Error('Invalid bucket key part')
+  return `${threadFilesPrefix(scope, sessionId)}${name}`
 }
 
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
@@ -217,7 +217,7 @@ export async function streamObject(key: string): Promise<ReadableStream<Uint8Arr
   return response.body
 }
 
-/** The keys of every object in a folder, such as `threadImagesPrefix`: it ends with a slash. */
+/** The keys of every object in a folder, such as `threadFilesPrefix`: it ends with a slash. */
 export async function listObjects(prefix: string): Promise<string[]> {
   if (!prefix.endsWith('/')) throw new Error('List a folder')
   if (!r2) {

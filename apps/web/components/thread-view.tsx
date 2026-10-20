@@ -18,8 +18,8 @@ import {
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
-  STORED_IMAGE,
-  STORED_IMAGE_NAME,
+  STORED_FILE,
+  STORED_FILE_NAME,
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
   hasVisibleText,
@@ -59,6 +59,7 @@ import {
   ClipboardList,
   EllipsisVertical,
   Copy,
+  FileText,
   Hand,
   LayoutTemplate,
   ListChecks,
@@ -71,6 +72,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
+import { PdfPreview } from '@/components/file-preview'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
 import { ReceivedEmailCard, ToolInputPreview } from '@/components/email-cards'
@@ -114,13 +116,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
-import {
-  storedImageUrl,
-  threadImageUrl,
-  useApi,
-  type Credential,
-  type ThreadChild,
-} from '@/lib/api'
+import { storedFileUrl, threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
 
@@ -1129,53 +1125,74 @@ function WidgetCard({ widget }: { widget: Widget }) {
   )
 }
 
-/** The names of the images a tool returned that are kept apart from its event (STORED_IMAGE). */
-function storedImages(value: unknown, names = new Set<string>()): Set<string> {
+/** The names of the images and PDFs a tool returned that are kept apart from its event (STORED_FILE). */
+function storedFiles(value: unknown, names = new Set<string>()): Set<string> {
   if (typeof value === 'string') {
-    const name = value.startsWith(STORED_IMAGE) && value.slice(STORED_IMAGE.length)
-    if (name && STORED_IMAGE_NAME.test(name)) names.add(name)
-  } else if (Array.isArray(value)) for (const v of value) storedImages(v, names)
+    const name = value.startsWith(STORED_FILE) && value.slice(STORED_FILE.length)
+    if (name && STORED_FILE_NAME.test(name)) names.add(name)
+  } else if (Array.isArray(value)) for (const v of value) storedFiles(v, names)
   else if (value && typeof value === 'object')
-    for (const v of Object.values(value)) storedImages(v, names)
+    for (const v of Object.values(value)) storedFiles(v, names)
   return names
 }
 
-/** The images a tool returned, such as a screenshot, above its output. Each opens over the page. */
-function ToolImages({
+/** The images and PDFs a tool returned, such as a screenshot, above its output. Each opens over the page. */
+function ToolFiles({
   threadId,
   names,
   title,
 }: {
   threadId: string
   names: string[]
-  /** What the preview is called: the file read, else the tool. */
+  /** What each is called: the file read, else the tool. */
   title: string
 }) {
   const [open, setOpen] = useState<string>()
   const titleOf = (name: string) =>
     names.length > 1 ? `${title} (${names.indexOf(name) + 1}/${names.length})` : title
+  const isPdf = (name: string) => name.endsWith('.pdf')
   return (
-    <div className="flex flex-wrap gap-2">
-      {names.map((name) => (
-        <button
-          key={name}
-          type="button"
-          className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
-          onClick={() => setOpen(name)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={storedImageUrl(threadId, name)}
-            alt={titleOf(name)}
-            loading="lazy"
-            className="max-h-64 max-w-full object-contain"
-          />
-        </button>
-      ))}
+    <div className="flex flex-wrap items-start gap-2">
+      {names.map((name) =>
+        isPdf(name) ? (
+          <button
+            key={name}
+            type="button"
+            className="flex max-w-64 items-center gap-2 rounded-lg border bg-card py-1.5 pr-3 pl-2 text-xs hover:border-ring"
+            onClick={() => setOpen(name)}
+          >
+            <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium">{titleOf(name)}</span>
+          </button>
+        ) : (
+          <button
+            key={name}
+            type="button"
+            className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
+            onClick={() => setOpen(name)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={storedFileUrl(threadId, name)}
+              alt={titleOf(name)}
+              loading="lazy"
+              className="max-h-64 max-w-full object-contain"
+            />
+          </button>
+        ),
+      )}
       <MediaPreview
         media={
-          open
-            ? { name: titleOf(open), src: storedImageUrl(threadId, open), kind: 'image' }
+          open && !isPdf(open)
+            ? { name: titleOf(open), src: storedFileUrl(threadId, open), kind: 'image' }
+            : undefined
+        }
+        onClose={() => setOpen(undefined)}
+      />
+      <PdfPreview
+        pdf={
+          open && isPdf(open)
+            ? { name: titleOf(open), url: storedFileUrl(threadId, open) }
             : undefined
         }
         onClose={() => setOpen(undefined)}
@@ -1192,15 +1209,15 @@ function ToolDetail({
   threadId: string
   item: Extract<Item, { kind: 'tool' }>
 }) {
-  const images = [...storedImages(item.output)]
-  if (!images.length) return <ToolOutput item={item} />
+  const files = [...storedFiles(item.output)]
+  if (!files.length) return <ToolOutput item={item} />
   const input = (item.input ?? {}) as Record<string, unknown>
   const path = input.file_path ?? input.path
   const read = toolKind(item.toolName) === 'read'
   const title =
     read && typeof path === 'string' ? (path.split('/').pop() ?? path) : bareToolName(item.toolName)
-  const shown = <ToolImages threadId={threadId} names={images} title={title} />
-  // A picture it read is shown as itself; any other tool's images come before what it returned.
+  const shown = <ToolFiles threadId={threadId} names={files} title={title} />
+  // A file it read is shown as itself; any other tool's files come before what it returned.
   if (read && !item.isError) return shown
   return (
     <>

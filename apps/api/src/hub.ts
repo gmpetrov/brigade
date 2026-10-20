@@ -15,7 +15,7 @@ import {
 import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
 import { readableEvents, storableForms, storableJson } from './storable-json.js'
-import { keepImagesApart } from './event-images.js'
+import { keepFilesApart } from './event-files.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureSetup, touch, wake } from './cloud.js'
@@ -848,11 +848,11 @@ export function runnerSocket(runner: {
       data: event as unknown as Prisma.InputJsonValue,
       at: new Date(event.at),
     })
-    // Images go to the bucket, not the database (event-images.ts).
+    // Images and PDFs go to the bucket, not the database (event-files.ts).
     const kept = await Promise.all(
       events.map(async ({ seq, event }) => ({
         seq,
-        event: await keepImagesApart(session, session.id, storableJson(event)),
+        event: await keepFilesApart(session, session.id, storableJson(event)),
       })),
     )
     const all = kept.map((e) => rows(e.seq, e.event))
