@@ -804,6 +804,20 @@ enum MergeStatus {
   merging
 }
 
+/// The review loop's status, gone with it (20261020180000_reviews_in_child_threads): kept for the
+/// API deployed before that one, which reads it while the new one starts. Nothing reads it now; a
+/// later migration drops it with PullRequest's other ignored columns.
+enum ReviewStatus {
+  none
+  reviewing
+  fixing
+  approved
+  changes_requested
+  stuck
+  resolving
+  merging
+}
+
 /// Whether a project's pull requests get a review by another teammate (src/reviews.ts).
 enum ReviewPolicy {
   /// The teammate that opens one says whether it gets a review, and why.
@@ -853,6 +867,11 @@ model PullRequest {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
+  /// The review loop's columns (see ReviewStatus): out of the client, dropped later.
+  reviewStatus        ReviewStatus        @default(none) @ignore
+  autoMerge           Boolean             @default(false) @ignore
+  reviewerTeammateId  String?             @ignore
+  reviewedSha         String?             @ignore
 
   @@unique([workspaceId, repository, number])
   @@index([sessionId])

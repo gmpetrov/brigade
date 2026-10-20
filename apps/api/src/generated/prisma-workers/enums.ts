@@ -135,6 +135,20 @@ export const MergeStatus = {
 export type MergeStatus = (typeof MergeStatus)[keyof typeof MergeStatus]
 
 
+export const ReviewStatus = {
+  none: 'none',
+  reviewing: 'reviewing',
+  fixing: 'fixing',
+  approved: 'approved',
+  changes_requested: 'changes_requested',
+  stuck: 'stuck',
+  resolving: 'resolving',
+  merging: 'merging'
+} as const
+
+export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus]
+
+
 export const ReviewPolicy = {
   teammate: 'teammate',
   manual: 'manual'

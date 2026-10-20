@@ -12,16 +12,17 @@ import { parseEnv } from 'node:util'
 //   keeps its reason; a project where reviews are manual starts none;
 // - the pull request waits on a person only once its review is done, and again after the
 //   author asks the reviewer to look again;
-// - one review at a time, even asked for twice at once; request_review only for the thread's
-//   own pull requests;
+// - one review at a time, even asked for twice at once or past a claim that ran out;
+//   request_review only for the thread's own pull requests;
 // - a task whose pull request is in review stays in Doing until the review is done, and a
 //   review at work past its wait still keeps it out of Needs you;
 // - a reviewer posts only through an account it may use there (not another member's own);
 //   with nobody else, the author reviews its own in a fresh context;
 // - a member's request for one opened outside Brigade gets a thread of its own;
 // - closing a pull request stops its review;
-// - the brief says whether the repository runs checks (a release workflow is none), and how
-//   the thread started.
+// - the brief says whether the repository runs checks (a release workflow is none, nor one
+//   whose filters leave the pull request out), and how the thread started;
+// - the review loop's columns stay for the API deployed before this change.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -76,6 +77,8 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
   let ci = false
   /** The repository's workflow files, by name. */
   let workflows: Record<string, string> = {}
+  /** A head whose checks GitHub is slow to list. */
+  let slowSha = ''
 
   const pull = (number: number) => ({
     number,
@@ -222,6 +225,9 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         return Response.json({ repositories: [{ full_name: repo, private: true }] })
       const pr = pathname.match(/^\/repos\/acme\/web\/pulls\/(\d+)$/)
       if (pr && method === 'GET') return Response.json(pull(Number(pr[1])))
+      // A slow GitHub for one head: what lets a claim run out meanwhile in a test.
+      if (pathname.endsWith(`/commits/${slowSha}/check-runs`))
+        await new Promise((resolve) => setTimeout(resolve, 800))
       if (pathname.endsWith('/check-runs'))
         return Response.json({
           check_runs: ci
@@ -535,20 +541,97 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     workflows = {}
   })
 
-  test('a workflow counts when it runs on the pull request: on pull_request, or a push to its branch', async () => {
+  test('a workflow counts when it runs on the pull request: on pull_request into its base, or a push to its branch', async () => {
     const { workflowRunsOn } = await import('../src/reviews.js')
-    const head = 'brigade/riley-fix'
-    const runs = (yaml: string) => workflowRunsOn(yaml, head)
+    const change = { head: 'brigade/riley-fix', base: 'main', files: ['src/a.ts'] }
+    const runs = (yaml: string, files: string[] | null = change.files) =>
+      workflowRunsOn(yaml, { ...change, files })
     assert.equal(runs('on: pull_request\n'), true)
     assert.equal(runs('on:\n  pull_request_target:\n    types: [opened]\n'), true)
     assert.equal(runs('on: [push, workflow_dispatch]\n'), true)
-    assert.equal(runs('on:\n  push:\n    paths: [src/**]\n'), true)
+    assert.equal(runs('not: [valid'), false)
+    // pull_request's filters are on the branch it goes into.
+    assert.equal(runs('on:\n  pull_request:\n    branches: [main]\n'), true)
+    assert.equal(runs('on:\n  pull_request:\n    branches: [release]\n'), false)
+    assert.equal(runs('on:\n  pull_request:\n    branches-ignore: [main]\n'), false)
+    assert.equal(runs('on:\n  pull_request:\n    types: [labeled]\n'), false)
+    // push's, on its branch; in order, the last pattern matching decides.
     assert.equal(runs("on:\n  push:\n    branches: ['brigade/**']\n"), true)
     assert.equal(runs('on:\n  push:\n    branches: [main]\n'), false)
+    assert.equal(runs("on:\n  push:\n    branches: ['**', '!brigade/**']\n"), false)
+    assert.equal(runs("on:\n  push:\n    branches: ['!brigade/**', '**']\n"), true)
     assert.equal(runs("on:\n  push:\n    branches-ignore: ['brigade/*']\n"), false)
     assert.equal(runs("on:\n  push:\n    tags: ['desktop-v*']\n"), false)
+    assert.equal(runs("on:\n  push:\n    tags: ['v*']\n    branches: ['**']\n"), true)
     assert.equal(runs("on:\n  schedule:\n    - cron: '0 8 * * 1'\n"), false)
     assert.equal(runs('on: release\n'), false)
-    assert.equal(runs('not: [valid'), false)
+    // paths, on its files; unknown files (too many to list) do not leave it out.
+    assert.equal(runs('on:\n  push:\n    paths: [src/**]\n'), true)
+    assert.equal(runs('on:\n  push:\n    paths: [docs/**]\n'), false)
+    assert.equal(runs('on:\n  push:\n    paths: [docs/**]\n', null), true)
+    assert.equal(runs("on:\n  pull_request:\n    paths: ['**', '!src/**']\n"), false)
+    assert.equal(runs('on:\n  pull_request:\n    paths-ignore: [src/**]\n'), false)
+    assert.equal(
+      runs('on:\n  pull_request:\n    paths-ignore: [src/**]\n', ['src/a.ts', 'README.md']),
+      true,
+    )
+  })
+
+  test('a claim to start a review is taken over only once it has run out, and let go only by its holder', async () => {
+    const { claimReview, releaseReview } = await import('../src/reviews.js')
+    await open(ids.thread, 50)
+    const { id } = await row(50)
+    const old = new Date(Date.now() - 6 * 60_000)
+    assert.deepEqual(await claimReview(db, id, old), old)
+    // A crash left it: a new request takes it over.
+    const now = new Date()
+    assert.deepEqual(await claimReview(db, id, now), now)
+    assert.equal(await claimReview(db, id), null)
+    // The old holder letting go leaves the new claim be.
+    await releaseReview(db, id, old)
+    assert.deepEqual((await row(50)).reviewClaimedAt, now)
+    await releaseReview(db, id, now)
+    assert.equal((await row(50)).reviewClaimedAt, null)
+  })
+
+  test('a request whose claim was taken over meanwhile stops its review, and the other one stands', async () => {
+    const { startReview } = await import('../src/reviews.js')
+    await open(ids.thread, 51)
+    slowSha = 'sha51'
+    try {
+      const slow = startReview(db, scope, {
+        repo,
+        number: 51,
+        by: { kind: 'member', memberId: ids.owner },
+      })
+      // While it starts, its claim is taken over, as by a request after it ran out.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      const other = new Date()
+      await db.pullRequest.updateMany({
+        where: { repository: repo, number: 51 },
+        data: { reviewClaimedAt: other },
+      })
+      await assert.rejects(slow, /Another review of it started meanwhile/)
+      const pr = await row(51)
+      assert.equal(pr.reviewSessionId, null)
+      assert.deepEqual(pr.reviewClaimedAt, other)
+      const stopped = await db.session.findFirstOrThrow({
+        where: { parentId: ids.thread, title: 'Review #51: Change 51' },
+      })
+      assert.equal(stopped.awaited, false)
+      assert.ok(stopped.archivedAt)
+      assert.equal((stopped.report as { status?: string } | null)?.status, 'cancelled')
+    } finally {
+      slowSha = ''
+    }
+  })
+
+  test('the review loop’s columns stay for the API deployed before, until a later migration', async () => {
+    // That API reads and writes them for the minutes it runs while the new one starts.
+    const columns = await prisma.$queryRaw<{ column_name: string }[]>`
+      select column_name from information_schema.columns where table_name = 'PullRequest'`
+    const names = columns.map((c) => c.column_name)
+    for (const name of ['reviewStatus', 'autoMerge', 'reviewerTeammateId', 'reviewedSha'])
+      assert.ok(names.includes(name), `${name} is still there`)
   })
 })

@@ -50,8 +50,10 @@ import { startThread } from './work.js'
 const ASK_CHARS = 2_000
 /** Workflow files read to tell whether a repository runs checks on its pull requests. */
 const WORKFLOWS_READ = 20
-/** How long one request has to start a review before another may: one at a time. */
-const CLAIM_MS = 2 * 60_000
+/** Pages of a pull request's files read for workflows that filter on paths (100 a page). */
+const CHANGED_PAGES = 3
+/** How long one request's claim to start a review holds before another may take it over. */
+const CLAIM_MS = 5 * 60_000
 
 type Teammate = { id: string; name: string; harness: 'claude_code' | 'codex'; kind: string }
 
@@ -86,22 +88,68 @@ const startedNote = (reviewer: string) =>
   'then, do not offer to merge it. Tell the person in a line that it is in review, then end your ' +
   'turn: do not wait or poll.'
 
-/** A workflow's branch filter, GitHub's glob: `*` within a path segment, `**` across them. */
-function globMatches(pattern: string, ref: string) {
+/** GitHub's filter glob: `*` within a path segment, `**` across them, the rest as it is. */
+function globMatches(pattern: string, value: string) {
   const source = pattern
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
     .replace(/\*\*/g, '\u0000')
     .replace(/\*/g, '[^/]*')
     .replace(/\u0000/g, '.*')
-  return new RegExp(`^${source}$`).test(ref)
+  return new RegExp(`^${source}$`).test(value)
 }
 
 /**
- * Whether a workflow runs on a pull request's head: on pull_request (or pull_request_target),
- * or on a push to its branch. One for tags, releases or a schedule (a desktop release, say)
- * does not.
+ * Whether a filter's patterns keep a value, as GitHub reads them: in order, a pattern keeps
+ * what it matches and one starting with `!` leaves it out again, so the last one matching
+ * decides. With none matching, it is left out.
  */
-export function workflowRunsOn(text: string, head: string) {
+function filterKeeps(patterns: string[], value: string) {
+  let kept = false
+  for (const pattern of patterns)
+    if (pattern.startsWith('!')) {
+      if (globMatches(pattern.slice(1), value)) kept = false
+    } else if (globMatches(pattern, value)) kept = true
+  return kept
+}
+
+const listOf = (v: unknown) =>
+  Array.isArray(v) ? v.map(String) : typeof v === 'string' ? [v] : null
+const objectOf = (v: unknown) =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+
+/** What a workflow's filters are read against: a pull request's branches and files. */
+export type Change = {
+  /** Its branch, and the one it goes into. */
+  head: string
+  base: string
+  /** The files it changes; null when there are too many to list. */
+  files: string[] | null
+}
+
+/**
+ * Whether an event's filters let it run for this branch and these files: branches (or
+ * branches-ignore), and paths (or paths-ignore) when the files are known.
+ */
+function filtersLet(filters: Record<string, unknown>, branch: string, files: string[] | null) {
+  const branches = listOf(filters.branches)
+  if (branches && !filterKeeps(branches, branch)) return false
+  if (listOf(filters['branches-ignore'])?.some((b) => globMatches(b, branch))) return false
+  if (!files?.length) return true
+  const paths = listOf(filters.paths)
+  if (paths && !files.some((f) => filterKeeps(paths, f))) return false
+  const ignored = listOf(filters['paths-ignore'])
+  return !(ignored && files.every((f) => ignored.some((p) => globMatches(p, f))))
+}
+
+/** The activity types a pull_request workflow runs on by default: opening it and each push. */
+const PULL_TYPES = ['opened', 'synchronize', 'reopened']
+
+/**
+ * Whether a workflow runs on a pull request: on pull_request (or pull_request_target) into its
+ * base, or on a push to its branch, as their filters say. One for tags, releases or a schedule
+ * (a desktop release, say) does not.
+ */
+export function workflowRunsOn(text: string, change: Change) {
   let doc: Record<string, unknown> | null
   try {
     doc = parseYaml(text) as Record<string, unknown> | null
@@ -115,20 +163,35 @@ export function workflowRunsOn(text: string, head: string) {
       ? { [on]: null }
       : Array.isArray(on)
         ? Object.fromEntries(on.map((e) => [String(e), null]))
-        : on && typeof on === 'object'
-          ? (on as Record<string, unknown>)
-          : {}
-  if ('pull_request' in events || 'pull_request_target' in events) return true
+        : objectOf(on)
+  for (const event of ['pull_request', 'pull_request_target']) {
+    if (!(event in events)) continue
+    const filters = objectOf(events[event])
+    const types = listOf(filters.types)
+    if (types && !types.some((t) => PULL_TYPES.includes(t))) continue
+    if (filtersLet(filters, change.base, change.files)) return true
+  }
   if (!('push' in events)) return false
-  const push = (events.push ?? {}) as Record<string, unknown>
-  const list = (v: unknown) =>
-    Array.isArray(v) ? v.map(String) : typeof v === 'string' ? [v] : null
-  const branches = list(push.branches)
-  if (branches) return branches.some((b) => !b.startsWith('!') && globMatches(b, head))
-  const ignored = list(push['branches-ignore'])
-  if (ignored) return !ignored.some((b) => globMatches(b, head))
+  const push = objectOf(events.push)
   // Tags alone: it runs for a release, not for a branch.
-  return !list(push.tags) && !list(push['tags-ignore'])
+  const tags = listOf(push.tags) ?? listOf(push['tags-ignore'])
+  if (tags && !listOf(push.branches) && !listOf(push['branches-ignore'])) return false
+  return filtersLet(push, change.head, change.files)
+}
+
+/** The files a pull request changes, or null past what is worth listing. */
+async function changedFiles(gh: GitHub, repo: string, number: number) {
+  const files: string[] = []
+  for (let page = 1; page <= CHANGED_PAGES; page++) {
+    const response = await gh.fetch(
+      `${repoPath(repo)}/pulls/${number}/files?per_page=100&page=${page}`,
+    )
+    if (!response.ok) return null
+    const list = (await response.json().catch(() => [])) as { filename: string }[]
+    files.push(...list.map((f) => f.filename))
+    if (list.length < 100) return files
+  }
+  return null
 }
 
 /**
@@ -142,21 +205,25 @@ async function checksRun(gh: GitHub, repo: string, p: GhPull): Promise<string[]>
   const ref = encodeURIComponent(p.head.sha)
   const response = await gh.fetch(`${repoPath(repo)}/contents/.github/workflows?ref=${ref}`)
   if (!response.ok) return []
-  const files = (await response.json().catch(() => [])) as unknown
-  if (!Array.isArray(files)) return []
-  const names: string[] = []
-  for (const f of (files as { name: string; path: string; type: string }[])
+  const listed = (await response.json().catch(() => [])) as unknown
+  if (!Array.isArray(listed)) return []
+  const workflows: { name: string; text: string }[] = []
+  for (const f of (listed as { name: string; path: string; type: string }[])
     .filter((f) => f.type === 'file' && /\.ya?ml$/.test(f.name))
     .slice(0, WORKFLOWS_READ)) {
     const path = f.path.split('/').map(encodeURIComponent).join('/')
     const file = await gh.fetch(`${repoPath(repo)}/contents/${path}?ref=${ref}`)
     if (!file.ok) continue
     const body = (await file.json().catch(() => null)) as { content?: string } | null
-    if (!body?.content) continue
-    if (workflowRunsOn(Buffer.from(body.content, 'base64').toString('utf8'), p.head.ref))
-      names.push(f.name)
+    if (body?.content)
+      workflows.push({ name: f.name, text: Buffer.from(body.content, 'base64').toString('utf8') })
   }
-  return names
+  // Its files only when a workflow filters on paths.
+  const files = workflows.some((w) => /\bpaths(-ignore)?\s*:/.test(w.text))
+    ? await changedFiles(gh, repo, p.number)
+    : null
+  const change = { head: p.head.ref, base: p.base.ref, files }
+  return workflows.filter((w) => workflowRunsOn(w.text, change)).map((w) => w.name)
 }
 
 /** How the thread that wrote it started: what the change answers, besides its description. */
@@ -315,21 +382,40 @@ export async function startReview(
   if (stateOf(p) !== 'open')
     throw new HTTPException(409, { message: 'This pull request is closed' })
   const { id } = await trackedRow(db, input.repo, p)
-  // One at a time: the request that claims the pull request starts its review. A claim left
-  // by a crash lapses.
+  const claim = await claimReview(db, id)
+  if (!claim) throw new HTTPException(409, { message: 'A review of it is starting' })
+  try {
+    return await startClaimed(db, scope, input, gh, p, id, claim)
+  } finally {
+    await releaseReview(db, id, claim)
+  }
+}
+
+/**
+ * Claim a pull request to start its review, one request at a time: when, which is the claim's
+ * mark, or null while another request holds it. A claim older than CLAIM_MS, left by a crash,
+ * may be taken over.
+ */
+export async function claimReview(db: ScopedDb, id: string, now = new Date()) {
   const { count } = await db.pullRequest.updateMany({
     where: {
       id,
-      OR: [{ reviewClaimedAt: null }, { reviewClaimedAt: { lt: new Date(Date.now() - CLAIM_MS) } }],
+      OR: [
+        { reviewClaimedAt: null },
+        { reviewClaimedAt: { lt: new Date(now.getTime() - CLAIM_MS) } },
+      ],
     },
-    data: { reviewClaimedAt: new Date() },
+    data: { reviewClaimedAt: now },
   })
-  if (!count) throw new HTTPException(409, { message: 'A review of it is starting' })
-  try {
-    return await startClaimed(db, scope, input, gh, p, id)
-  } finally {
-    await db.pullRequest.updateMany({ where: { id }, data: { reviewClaimedAt: null } })
-  }
+  return count ? now : null
+}
+
+/** Let go of a claim, if it is still this one: past its time, another request may hold it. */
+export async function releaseReview(db: ScopedDb, id: string, claim: Date) {
+  await db.pullRequest.updateMany({
+    where: { id, reviewClaimedAt: claim },
+    data: { reviewClaimedAt: null },
+  })
 }
 
 /** startReview, once it holds the pull request's claim: no other review starts meanwhile. */
@@ -340,6 +426,7 @@ async function startClaimed(
   gh: GitHub,
   p: GhPull,
   id: string,
+  claim: Date,
 ) {
   const row = (await db.pullRequest.findFirst({
     where: { id },
@@ -428,16 +515,25 @@ async function startClaimed(
       message: 'The computer is offline: the review could not start. Ask again once it is back.',
     })
   }
-  await db.pullRequest.updateMany({
-    where: { id: row.id },
+  // It becomes the pull request's review only while this request still holds the claim.
+  const linked = await db.pullRequest.updateMany({
+    where: { id: row.id, reviewClaimedAt: claim },
     data: {
       reviewSessionId: thread.id,
+      reviewClaimedAt: null,
       noReviewReason: null,
       ...(by.kind === 'member' ? { requestedByMemberId: by.memberId } : {}),
       // Opened outside Brigade: the review's thread becomes its own, where it waits on a person after.
       ...(row.sessionId ? {} : { sessionId: thread.id }),
     },
   })
+  if (!linked.count) {
+    // Its claim ran out and another request took it over: that one's review stands.
+    await stopReviewThread(scope, thread.id, 'Stopped: another review of it started.', {
+      archive: true,
+    })
+    throw new HTTPException(409, { message: 'Another review of it started meanwhile' })
+  }
   if (parent) await parentChanged(scope, parent.id)
   const actor: Actor =
     by.kind === 'member'
@@ -585,34 +681,45 @@ export async function requestReview(
 
 /** A pull request closed without merging: its review under way stops, and nothing waits for it. */
 export async function cancelReview(scope: Scope, pullRequestId: string) {
-  const db = scoped(scope)
-  const row = await db.pullRequest.findFirst({
+  const row = await scoped(scope).pullRequest.findFirst({
     where: { id: pullRequestId },
     select: { reviewSession: reviewInclude.reviewSession },
   })
   const review = row?.reviewSession
   if (!review || !reviewUnderWay(review)) return
-  const thread = await loadThread(db, review.id)
+  await stopReviewThread(scope, review.id, 'Stopped: the pull request was closed.')
+}
+
+/**
+ * Stop a review's thread: its turn is interrupted, and the thread that waited for it does no
+ * more. archive: one that should never have run (a second review), out of sight too.
+ */
+async function stopReviewThread(
+  scope: Scope,
+  threadId: string,
+  summary: string,
+  options: { archive?: boolean } = {},
+) {
+  const db = scoped(scope)
+  const thread = await loadThread(db, threadId)
   if (['starting', 'running', 'waiting'].includes(thread.status))
     await dispatch(thread.computer, {
       type: 'thread.interrupt',
       commandId: randomUUID(),
       sessionId: thread.id,
     })
-  if (!review.parentId) return
+  if (options.archive)
+    await db.session.updateMany({ where: { id: thread.id }, data: { archivedAt: new Date() } })
+  if (!thread.parentId) return
   await db.session.updateMany({
-    where: { id: review.id },
+    where: { id: thread.id },
     data: {
-      report: {
-        status: 'cancelled',
-        summary: 'Stopped: the pull request was closed.',
-        at: new Date().toISOString(),
-      },
+      report: { status: 'cancelled', summary, at: new Date().toISOString() },
       awaited: false,
       reportDeliveredAt: new Date(),
     } as never,
   })
   // The others its parent waits for may all be in now.
-  await settleAwaited(scope, review.parentId)
-  await parentChanged(scope, review.parentId)
+  await settleAwaited(scope, thread.parentId)
+  await parentChanged(scope, thread.parentId)
 }
