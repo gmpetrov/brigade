@@ -163,6 +163,7 @@ export async function getProject(db: ScopedDb, scope: WorkspaceScope, id: string
     brief: project.brief,
     url: project.url,
     folder: project.folder,
+    reviewPolicy: project.reviewPolicy,
     preferredConnections: connections,
     repositories: project.repositories.map(({ repository }) => {
       const row = recipes.find((r) => r.repository === repository)
@@ -274,6 +275,7 @@ export async function updateProject(
     logo?: string | null
     folder?: string | null
     preferredConnectionIds?: string[]
+    reviewPolicy?: 'teammate' | 'manual'
   },
 ) {
   const project = await db.project.findFirst({ where: { id } })
@@ -306,6 +308,7 @@ export async function updateProject(
         ...(input.preferredConnectionIds && {
           preferredConnectionIds: [...new Set(input.preferredConnectionIds)],
         }),
+        ...(input.reviewPolicy !== undefined && { reviewPolicy: input.reviewPolicy }),
       },
     })
     .catch((error: unknown) => {
@@ -461,6 +464,7 @@ export async function threadProject(
     folder: project.folder,
     repositories: project.repositories.map((r) => r.repository),
     connections: connections.map((c) => ({ connectionId: c.id, label: c.label })),
+    reviewPolicy: project.reviewPolicy,
   }
 }
 

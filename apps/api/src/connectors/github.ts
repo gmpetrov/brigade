@@ -1,5 +1,6 @@
 // GitHub connector (REST API), on an installation of Brigade's GitHub App.
 // It reaches only the repositories the customer picked when installing it.
+import { ReviewChoice } from '@brigade/contracts'
 import { z } from 'zod'
 import { env } from '../config.js'
 import { GITHUB_API } from './github-app.js'
@@ -573,8 +574,8 @@ export const github: ConnectorDefinition = {
     github_review_pull_request: op({
       description:
         'Submit your review of a pull request, once, when you have read it: approve it, or request changes, ' +
-        'with a summary and comments on specific lines of the new code. Brigade sends a request for changes ' +
-        'to the author and, when a person asked for it, merges an approved pull request.',
+        'with a summary and comments on specific lines of the new code. It is posted on GitHub, and the ' +
+        'pull request shows your verdict in Brigade.',
       write: true,
       input: z.object({
         repository: repo,
@@ -712,9 +713,15 @@ export const github: ConnectorDefinition = {
         base: branch.optional().describe('The branch to merge into'),
         body: z.string().max(65_000).optional().describe('Markdown'),
         draft: z.boolean().default(false),
+        review: ReviewChoice.optional().describe(
+          'Only when your instructions say you decide whether a pull request gets a review: whether ' +
+            'another teammate reviews this one before it reaches the person (wanted), and why, in a ' +
+            'few words the person reads on it (reason). Brigade starts the review and wakes you with it.',
+        ),
       }),
       target: (i) => `pull request ${i.head} → ${i.base ?? 'default branch'} in ${i.repository}`,
-      run: async (ctx, { repository: r, ...fields }) =>
+      // The review is Brigade's (src/reviews.ts), not GitHub's.
+      run: async (ctx, { repository: r, review: _review, ...fields }) =>
         pull(
           await send<PullRequest>(ctx, 'POST', `${repoPath(r)}/pulls`, {
             ...fields,

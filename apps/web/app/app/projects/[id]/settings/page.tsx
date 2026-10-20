@@ -13,8 +13,9 @@ import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { api, useApi, type ConnectionsResponse } from '@/lib/api'
+import { api, useApi, type ConnectionsResponse, type ReviewPolicy } from '@/lib/api'
 import { API_URL } from '@/lib/config'
 
 function Section({
@@ -37,6 +38,22 @@ function Section({
   )
 }
 
+/** Who decides whether a pull request gets a review, as the Code review section offers it. */
+const REVIEW_POLICIES: { value: ReviewPolicy; label: string; description: string }[] = [
+  {
+    value: 'teammate',
+    label: 'The teammate decides',
+    description:
+      'When it opens a pull request, the teammate says whether it needs a review, and why. Small changes go without one.',
+  },
+  {
+    value: 'manual',
+    label: 'Only when someone asks',
+    description:
+      "A review starts only when someone asks for one: on the pull request's page, or by asking the teammate in its thread.",
+  },
+]
+
 /** What the project is and what its threads are given; archiving and deleting it. */
 export default function ProjectSettings() {
   const { project, reload } = useProject()
@@ -54,6 +71,7 @@ export default function ProjectSettings() {
   const file = useRef<HTMLInputElement>(null)
   const [folder, setFolder] = useState(project.folder ?? '')
   const [preferred, setPreferred] = useState(project.preferredConnections.map((c) => c.id))
+  const [reviewPolicy, setReviewPolicy] = useState(project.reviewPolicy)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -67,7 +85,8 @@ export default function ProjectSettings() {
     url !== (project.url ?? '') ||
     logo !== undefined ||
     folder !== (project.folder ?? '') ||
-    preferred.join() !== project.preferredConnections.map((c) => c.id).join()
+    preferred.join() !== project.preferredConnections.map((c) => c.id).join() ||
+    reviewPolicy !== project.reviewPolicy
   useEffect(() => {
     if (changed) return
     setName(project.name)
@@ -76,6 +95,7 @@ export default function ProjectSettings() {
     setUrl(project.url ?? '')
     setFolder(project.folder ?? '')
     setPreferred(project.preferredConnections.map((c) => c.id))
+    setReviewPolicy(project.reviewPolicy)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the project changes
   }, [project])
 
@@ -109,6 +129,7 @@ export default function ProjectSettings() {
           ...(logo !== undefined && { logo }),
           folder: folder.trim() || null,
           preferredConnectionIds: preferred,
+          reviewPolicy,
         },
       }),
     )
@@ -296,6 +317,34 @@ export default function ProjectSettings() {
               })}
             </ul>
           )}
+        </Section>
+
+        <Section
+          title="Code review"
+          description="Whether its pull requests get a review by another teammate before they reach you. The reviewer reads one in a child thread, from a brief of Brigade's, and the teammate that wrote it fixes what it finds."
+        >
+          <RadioGroup
+            value={reviewPolicy}
+            onValueChange={(v) => setReviewPolicy(v as ReviewPolicy)}
+            aria-label="Code review"
+          >
+            {REVIEW_POLICIES.map((option) => (
+              <div key={option.value} className="flex items-start gap-3">
+                <RadioGroupItem
+                  id={`review-${option.value}`}
+                  value={option.value}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor={`review-${option.value}`}
+                  className="flex flex-col items-start gap-0.5 font-normal"
+                >
+                  <span className="font-medium">{option.label}</span>
+                  <span className="text-muted-foreground">{option.description}</span>
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </Section>
 
         <div className="flex items-center gap-3">

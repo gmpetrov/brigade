@@ -18,6 +18,7 @@ import {
   PROPOSE_TEAM_TOOL,
   BUILTIN_SKILL_PREFIX,
   PROPOSE_SKILL_TOOL,
+  REVIEW_RECHECKS,
   SHOW_WIDGET_TOOL,
   type ThreadSkill,
   type ThreadSpec,
@@ -445,9 +446,12 @@ const bigGoals = (spec: ThreadSpec) =>
     : '') +
   ' and start a child thread only for what must outlive your turn, is for another teammate, or may need a ' +
   'person.\n\n' +
-  'Check it before you hand it over: for code, tests and typecheck pass and another teammate reviewed it (a child ' +
-  'thread with them, when one has access). Then one message: what to try and how, what was checked, and the pull ' +
-  'request to merge. When you end a turn before it is ready, say in a line where things stand.'
+  'Check it before you hand it over: for code, tests and typecheck pass' +
+  (spec.git && reviewPolicy(spec) === 'teammate'
+    ? ', and when its pull request deserves a review (see Code), the review came back and you fixed what it found'
+    : '') +
+  '. Then one message: what to try and how, what was checked, and the pull request to merge. When you end a ' +
+  'turn before it is ready, say in a line where things stand.'
 
 /** A playbook's run starts no thread outside it: no task for a teammate, no schedule. */
 const playbookBoard = (playbook: NonNullable<ThreadSpec['playbook']>) =>
@@ -756,6 +760,48 @@ const credentials = (browser: Browser) =>
     .filter(Boolean)
     .join('\n\n')
 
+/**
+ * Who decides whether this thread's pull requests get a review by another teammate: the
+ * teammate (the project's default), only someone who asks, or, in a child thread, the thread
+ * that started it. A playbook's run follows its playbook.
+ */
+const reviewPolicy = (spec: ThreadSpec) =>
+  spec.playbook ? 'none' : spec.parent ? 'child' : (spec.project?.reviewPolicy ?? 'teammate')
+
+/** After a review: what the author does with its report. */
+const AFTER_REVIEW =
+  'With a review, Brigade starts it in a child thread, with a brief of its own, and wakes you with its report: ' +
+  `fix what it rightly found and push, then ask the reviewer to look at what changed with \`message_thread\` ` +
+  `(${REVIEW_RECHECKS} times at most), or tell it why you disagree; then tell the person where it stands. ` +
+  'Do not offer to merge a pull request while its review runs.'
+
+/** Reviews of the pull requests this thread opens. */
+function reviews(spec: ThreadSpec) {
+  const policy = reviewPolicy(spec)
+  if (policy === 'none') return null
+  if (policy === 'child')
+    return (
+      'A child thread starts no review: when a pull request you opened deserves one, say so in your report, and ' +
+      'the thread that started you asks for it.'
+    )
+  if (policy === 'manual')
+    return (
+      'In this project, a pull request gets a review by another teammate only when someone asks. When the person ' +
+      "asks you for one, call `request_review`; leave `github_create_pull_request`'s `review` out. " +
+      AFTER_REVIEW
+    )
+  return (
+    'You decide whether a pull request you open gets a review by another teammate before it reaches the person, ' +
+    "and say so in `github_create_pull_request`'s `review`: `wanted: true` for a change where a mistake would " +
+    'cost or is easy to miss (logic across several files, data or migrations, money, permissions or security, ' +
+    'concurrency, a fix you could not fully test), `wanted: false` for a small or low-risk one (copy, style, a ' +
+    'one-line fix, a revert), with a reason in a few words: the person reads it on the pull request. For one a ' +
+    'child thread of yours opened, call `request_review` when it deserves one, and when the person asks you ' +
+    'for a review. ' +
+    AFTER_REVIEW
+  )
+}
+
 /** How a teammate with a GitHub connection works on code. */
 const code = (spec: ThreadSpec) =>
   [
@@ -779,6 +825,7 @@ const code = (spec: ThreadSpec) =>
     'A repository has its own instructions for working on it: read its AGENTS.md, CLAUDE.md or README after ' +
       'checking it out, and the skills it keeps (`.claude/skills/` or `.agents/skills/` in it) whose description ' +
       'matches the work. A message mentions a repository as `@[owner/name](repository:owner/name)`.',
+    reviews(spec),
   ]
     .filter(Boolean)
     .join('\n\n')

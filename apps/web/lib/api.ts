@@ -15,8 +15,11 @@ import type {
   CredentialKind,
   CredentialSummary,
   DocumentAsset,
+  MergeStatus,
   PlaybookHomeLine,
   PlaybookPromotionPayload,
+  PullReview,
+  ReviewPolicy,
   SkillProposalPayload,
   TaskColumn,
   TaskPriority,
@@ -841,15 +844,16 @@ export const waitingItemKey = (t: Ticket) => {
   return playbook ? `playbook:${playbook.installationId}` : `ticket:${t.id}`
 }
 
-/** A pull request that waits on a person, from /pulls/attention. */
+/** A pull request that waits on a person, from /pulls/attention, with where its review stands. */
 export type PullWaiting = {
   repository: string
   number: number
   title: string
-  reviewStatus: string
+  mergeStatus: MergeStatus
   updatedAt: string
   session: { id: string; title: string } | null
   authorTeammate: { id: string; name: string } | null
+  review: PullReview | null
 }
 
 /** Home's loose ends: nobody is blocked, but nothing moves on its own (apps/api/src/home.ts). */
@@ -977,7 +981,9 @@ export type {
   PullRequestState,
   PullRequestSummary,
   PullRequestTracking,
-  ReviewStatus,
+  PullReview,
+  MergeStatus,
+  ReviewPolicy,
   TeammateReview,
 } from '@brigade/contracts'
 
@@ -998,6 +1004,8 @@ export type ProjectDetail = ProjectSummary & {
   url: string | null
   folder: string | null
   preferredConnections: { id: string; label: string; kind: string }[]
+  /** Whether its pull requests get a review by another teammate: the teammate decides, or only when asked. */
+  reviewPolicy: ReviewPolicy
   repositories: {
     repository: string
     /** Null when GitHub could not be asked. */

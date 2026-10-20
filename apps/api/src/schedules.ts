@@ -17,6 +17,7 @@ import { handleChildCall, isChildOperation } from './children.js'
 import { handlePlaybookCall, isPlaybookInstallOperation } from './playbook-chat.js'
 import { triageRun } from './playbook-autonomy.js'
 import { beginRun, reportRun, settleRun } from './playbooks.js'
+import { handleReviewCall, isReviewOperation } from './reviews.js'
 import { broadcastSchedule, isOnline } from './hub.js'
 import type { WorkspaceScope } from './scope.js'
 import { actingTeammate, loadThread } from './thread-spec.js'
@@ -511,6 +512,11 @@ export async function handleScheduleCall(
   // So do child threads; a child reports with them.
   if (isChildOperation(op)) {
     const output = await handleChildCall(db, scope, session, teammate, op)
+    return 'error' in output ? fail(output.error) : done(output)
+  }
+  // And a review of a pull request this thread opened.
+  if (isReviewOperation(op)) {
+    const output = await handleReviewCall(db, scope, session, teammate, op)
     return 'error' in output ? fail(output.error) : done(output)
   }
   // And a playbook run's case, once its event is sorted, and its report.

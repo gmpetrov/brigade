@@ -27,12 +27,19 @@ import { api, waitingItemKey, type PullWaiting, type Ticket } from '@/lib/api'
 /** Others listed under the one shown; the rest are a link away. */
 const LISTED = 4
 
-/** Why a pull request waits on a person, by where its review stands. */
-const PULL_WAITS: Record<string, string> = {
-  none: 'ready for review',
-  approved: 'approved, ready to merge',
-  changes_requested: 'changes requested',
-  stuck: 'review stopped',
+/** Why a pull request waits on a person: a merge that stopped, else where its review stands. */
+function pullWaits(pull: PullWaiting) {
+  if (pull.mergeStatus === 'stuck') return 'merge stopped'
+  const review = pull.review
+  switch (review?.state) {
+    case 'approved':
+      return `approved by ${review.reviewer?.name ?? 'a teammate'}, ready to merge`
+    case 'changes_requested':
+      return `${review.reviewer?.name ?? 'a teammate'} asked for changes`
+    case 'skipped':
+      return `ready to merge, no review: ${review.reason}`
+  }
+  return 'ready for review'
 }
 
 /** Who asks and in which thread, above a card. */
@@ -377,7 +384,7 @@ export function NeedsYou({
           <From
             teammate={current.pull.authorTeammate}
             thread={current.pull.session}
-            note={PULL_WAITS[current.pull.reviewStatus]}
+            note={pullWaits(current.pull)}
           />
           <PullCard
             key={current.key}

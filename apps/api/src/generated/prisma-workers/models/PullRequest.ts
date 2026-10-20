@@ -47,13 +47,13 @@ export type PullRequestMinAggregateOutputType = {
   baseRef: string | null
   sessionId: string | null
   authorTeammateId: string | null
-  reviewerTeammateId: string | null
-  reviewStatus: $Enums.ReviewStatus | null
-  autoMerge: boolean | null
+  reviewSessionId: string | null
+  noReviewReason: string | null
+  mergeStatus: $Enums.MergeStatus | null
   mergeMethod: string | null
   requestedByMemberId: string | null
   round: number | null
-  reviewedSha: string | null
+  resolveFromSha: string | null
   note: string | null
   state: string | null
   mergedAt: Date | null
@@ -72,13 +72,13 @@ export type PullRequestMaxAggregateOutputType = {
   baseRef: string | null
   sessionId: string | null
   authorTeammateId: string | null
-  reviewerTeammateId: string | null
-  reviewStatus: $Enums.ReviewStatus | null
-  autoMerge: boolean | null
+  reviewSessionId: string | null
+  noReviewReason: string | null
+  mergeStatus: $Enums.MergeStatus | null
   mergeMethod: string | null
   requestedByMemberId: string | null
   round: number | null
-  reviewedSha: string | null
+  resolveFromSha: string | null
   note: string | null
   state: string | null
   mergedAt: Date | null
@@ -97,13 +97,13 @@ export type PullRequestCountAggregateOutputType = {
   baseRef: number
   sessionId: number
   authorTeammateId: number
-  reviewerTeammateId: number
-  reviewStatus: number
-  autoMerge: number
+  reviewSessionId: number
+  noReviewReason: number
+  mergeStatus: number
   mergeMethod: number
   requestedByMemberId: number
   round: number
-  reviewedSha: number
+  resolveFromSha: number
   note: number
   state: number
   mergedAt: number
@@ -134,13 +134,13 @@ export type PullRequestMinAggregateInputType = {
   baseRef?: true
   sessionId?: true
   authorTeammateId?: true
-  reviewerTeammateId?: true
-  reviewStatus?: true
-  autoMerge?: true
+  reviewSessionId?: true
+  noReviewReason?: true
+  mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
   round?: true
-  reviewedSha?: true
+  resolveFromSha?: true
   note?: true
   state?: true
   mergedAt?: true
@@ -159,13 +159,13 @@ export type PullRequestMaxAggregateInputType = {
   baseRef?: true
   sessionId?: true
   authorTeammateId?: true
-  reviewerTeammateId?: true
-  reviewStatus?: true
-  autoMerge?: true
+  reviewSessionId?: true
+  noReviewReason?: true
+  mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
   round?: true
-  reviewedSha?: true
+  resolveFromSha?: true
   note?: true
   state?: true
   mergedAt?: true
@@ -184,13 +184,13 @@ export type PullRequestCountAggregateInputType = {
   baseRef?: true
   sessionId?: true
   authorTeammateId?: true
-  reviewerTeammateId?: true
-  reviewStatus?: true
-  autoMerge?: true
+  reviewSessionId?: true
+  noReviewReason?: true
+  mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
   round?: true
-  reviewedSha?: true
+  resolveFromSha?: true
   note?: true
   state?: true
   mergedAt?: true
@@ -296,13 +296,13 @@ export type PullRequestGroupByOutputType = {
   baseRef: string
   sessionId: string | null
   authorTeammateId: string | null
-  reviewerTeammateId: string | null
-  reviewStatus: $Enums.ReviewStatus
-  autoMerge: boolean
+  reviewSessionId: string | null
+  noReviewReason: string | null
+  mergeStatus: $Enums.MergeStatus
   mergeMethod: string | null
   requestedByMemberId: string | null
   round: number
-  reviewedSha: string | null
+  resolveFromSha: string | null
   note: string | null
   state: string
   mergedAt: Date | null
@@ -344,13 +344,13 @@ export type PullRequestWhereInput = {
   baseRef?: Prisma.StringFilter<"PullRequest"> | string
   sessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
-  reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
@@ -359,7 +359,7 @@ export type PullRequestWhereInput = {
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   authorTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
-  reviewerTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
+  reviewSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   reviews?: Prisma.PullRequestReviewListRelationFilter
 }
 
@@ -374,13 +374,13 @@ export type PullRequestOrderByWithRelationInput = {
   baseRef?: Prisma.SortOrder
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   authorTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
-  reviewerTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
-  reviewStatus?: Prisma.SortOrder
-  autoMerge?: Prisma.SortOrder
+  reviewSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  noReviewReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
-  reviewedSha?: Prisma.SortOrderInput | Prisma.SortOrder
+  resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -389,7 +389,7 @@ export type PullRequestOrderByWithRelationInput = {
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   session?: Prisma.SessionOrderByWithRelationInput
   authorTeammate?: Prisma.TeammateOrderByWithRelationInput
-  reviewerTeammate?: Prisma.TeammateOrderByWithRelationInput
+  reviewSession?: Prisma.SessionOrderByWithRelationInput
   reviews?: Prisma.PullRequestReviewOrderByRelationAggregateInput
 }
 
@@ -408,13 +408,13 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   baseRef?: Prisma.StringFilter<"PullRequest"> | string
   sessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
-  reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
@@ -423,7 +423,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   session?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   authorTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
-  reviewerTeammate?: Prisma.XOR<Prisma.TeammateNullableScalarRelationFilter, Prisma.TeammateWhereInput> | null
+  reviewSession?: Prisma.XOR<Prisma.SessionNullableScalarRelationFilter, Prisma.SessionWhereInput> | null
   reviews?: Prisma.PullRequestReviewListRelationFilter
 }, "id" | "workspaceId_repository_number">
 
@@ -438,13 +438,13 @@ export type PullRequestOrderByWithAggregationInput = {
   baseRef?: Prisma.SortOrder
   sessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   authorTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
-  reviewerTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
-  reviewStatus?: Prisma.SortOrder
-  autoMerge?: Prisma.SortOrder
+  reviewSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  noReviewReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
   round?: Prisma.SortOrder
-  reviewedSha?: Prisma.SortOrderInput | Prisma.SortOrder
+  resolveFromSha?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -471,13 +471,13 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   baseRef?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   sessionId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   authorTeammateId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
-  reviewerTeammateId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
-  reviewStatus?: Prisma.EnumReviewStatusWithAggregatesFilter<"PullRequest"> | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolWithAggregatesFilter<"PullRequest"> | boolean
+  reviewSessionId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  noReviewReason?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  mergeStatus?: Prisma.EnumMergeStatusWithAggregatesFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   round?: Prisma.IntWithAggregatesFilter<"PullRequest"> | number
-  reviewedSha?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  resolveFromSha?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   state?: Prisma.StringWithAggregatesFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PullRequest"> | Date | string | null
@@ -493,12 +493,12 @@ export type PullRequestCreateInput = {
   title: string
   headRef: string
   baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -507,7 +507,7 @@ export type PullRequestCreateInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
-  reviewerTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsReviewingInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
 }
 
@@ -522,13 +522,13 @@ export type PullRequestUncheckedCreateInput = {
   baseRef: string
   sessionId?: string | null
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -545,12 +545,12 @@ export type PullRequestUpdateInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -559,7 +559,7 @@ export type PullRequestUpdateInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
-  reviewerTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsReviewingNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
 }
 
@@ -574,13 +574,13 @@ export type PullRequestUncheckedUpdateInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -600,13 +600,13 @@ export type PullRequestCreateManyInput = {
   baseRef: string
   sessionId?: string | null
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -622,12 +622,12 @@ export type PullRequestUpdateManyMutationInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -646,13 +646,13 @@ export type PullRequestUncheckedUpdateManyInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -687,13 +687,13 @@ export type PullRequestCountOrderByAggregateInput = {
   baseRef?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   authorTeammateId?: Prisma.SortOrder
-  reviewerTeammateId?: Prisma.SortOrder
-  reviewStatus?: Prisma.SortOrder
-  autoMerge?: Prisma.SortOrder
+  reviewSessionId?: Prisma.SortOrder
+  noReviewReason?: Prisma.SortOrder
+  mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
-  reviewedSha?: Prisma.SortOrder
+  resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
@@ -717,13 +717,13 @@ export type PullRequestMaxOrderByAggregateInput = {
   baseRef?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   authorTeammateId?: Prisma.SortOrder
-  reviewerTeammateId?: Prisma.SortOrder
-  reviewStatus?: Prisma.SortOrder
-  autoMerge?: Prisma.SortOrder
+  reviewSessionId?: Prisma.SortOrder
+  noReviewReason?: Prisma.SortOrder
+  mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
-  reviewedSha?: Prisma.SortOrder
+  resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
@@ -742,13 +742,13 @@ export type PullRequestMinOrderByAggregateInput = {
   baseRef?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
   authorTeammateId?: Prisma.SortOrder
-  reviewerTeammateId?: Prisma.SortOrder
-  reviewStatus?: Prisma.SortOrder
-  autoMerge?: Prisma.SortOrder
+  reviewSessionId?: Prisma.SortOrder
+  noReviewReason?: Prisma.SortOrder
+  mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
   round?: Prisma.SortOrder
-  reviewedSha?: Prisma.SortOrder
+  resolveFromSha?: Prisma.SortOrder
   note?: Prisma.SortOrder
   state?: Prisma.SortOrder
   mergedAt?: Prisma.SortOrder
@@ -815,24 +815,10 @@ export type PullRequestCreateNestedManyWithoutAuthorTeammateInput = {
   connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
 }
 
-export type PullRequestCreateNestedManyWithoutReviewerTeammateInput = {
-  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput> | Prisma.PullRequestCreateWithoutReviewerTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput[]
-  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput | Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput[]
-  createMany?: Prisma.PullRequestCreateManyReviewerTeammateInputEnvelope
-  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-}
-
 export type PullRequestUncheckedCreateNestedManyWithoutAuthorTeammateInput = {
   create?: Prisma.XOR<Prisma.PullRequestCreateWithoutAuthorTeammateInput, Prisma.PullRequestUncheckedCreateWithoutAuthorTeammateInput> | Prisma.PullRequestCreateWithoutAuthorTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutAuthorTeammateInput[]
   connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutAuthorTeammateInput | Prisma.PullRequestCreateOrConnectWithoutAuthorTeammateInput[]
   createMany?: Prisma.PullRequestCreateManyAuthorTeammateInputEnvelope
-  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-}
-
-export type PullRequestUncheckedCreateNestedManyWithoutReviewerTeammateInput = {
-  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput> | Prisma.PullRequestCreateWithoutReviewerTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput[]
-  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput | Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput[]
-  createMany?: Prisma.PullRequestCreateManyReviewerTeammateInputEnvelope
   connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
 }
 
@@ -850,20 +836,6 @@ export type PullRequestUpdateManyWithoutAuthorTeammateNestedInput = {
   deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
 }
 
-export type PullRequestUpdateManyWithoutReviewerTeammateNestedInput = {
-  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput> | Prisma.PullRequestCreateWithoutReviewerTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput[]
-  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput | Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput[]
-  upsert?: Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewerTeammateInput | Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewerTeammateInput[]
-  createMany?: Prisma.PullRequestCreateManyReviewerTeammateInputEnvelope
-  set?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  disconnect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  delete?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  update?: Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewerTeammateInput | Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewerTeammateInput[]
-  updateMany?: Prisma.PullRequestUpdateManyWithWhereWithoutReviewerTeammateInput | Prisma.PullRequestUpdateManyWithWhereWithoutReviewerTeammateInput[]
-  deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
-}
-
 export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput = {
   create?: Prisma.XOR<Prisma.PullRequestCreateWithoutAuthorTeammateInput, Prisma.PullRequestUncheckedCreateWithoutAuthorTeammateInput> | Prisma.PullRequestCreateWithoutAuthorTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutAuthorTeammateInput[]
   connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutAuthorTeammateInput | Prisma.PullRequestCreateOrConnectWithoutAuthorTeammateInput[]
@@ -878,20 +850,6 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateNestedInput = {
   deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
 }
 
-export type PullRequestUncheckedUpdateManyWithoutReviewerTeammateNestedInput = {
-  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput> | Prisma.PullRequestCreateWithoutReviewerTeammateInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput[]
-  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput | Prisma.PullRequestCreateOrConnectWithoutReviewerTeammateInput[]
-  upsert?: Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewerTeammateInput | Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewerTeammateInput[]
-  createMany?: Prisma.PullRequestCreateManyReviewerTeammateInputEnvelope
-  set?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  disconnect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  delete?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
-  update?: Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewerTeammateInput | Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewerTeammateInput[]
-  updateMany?: Prisma.PullRequestUpdateManyWithWhereWithoutReviewerTeammateInput | Prisma.PullRequestUpdateManyWithWhereWithoutReviewerTeammateInput[]
-  deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
-}
-
 export type PullRequestCreateNestedManyWithoutSessionInput = {
   create?: Prisma.XOR<Prisma.PullRequestCreateWithoutSessionInput, Prisma.PullRequestUncheckedCreateWithoutSessionInput> | Prisma.PullRequestCreateWithoutSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutSessionInput[]
   connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutSessionInput | Prisma.PullRequestCreateOrConnectWithoutSessionInput[]
@@ -899,10 +857,24 @@ export type PullRequestCreateNestedManyWithoutSessionInput = {
   connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
 }
 
+export type PullRequestCreateNestedManyWithoutReviewSessionInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput> | Prisma.PullRequestCreateWithoutReviewSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput[]
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput | Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput[]
+  createMany?: Prisma.PullRequestCreateManyReviewSessionInputEnvelope
+  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+}
+
 export type PullRequestUncheckedCreateNestedManyWithoutSessionInput = {
   create?: Prisma.XOR<Prisma.PullRequestCreateWithoutSessionInput, Prisma.PullRequestUncheckedCreateWithoutSessionInput> | Prisma.PullRequestCreateWithoutSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutSessionInput[]
   connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutSessionInput | Prisma.PullRequestCreateOrConnectWithoutSessionInput[]
   createMany?: Prisma.PullRequestCreateManySessionInputEnvelope
+  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+}
+
+export type PullRequestUncheckedCreateNestedManyWithoutReviewSessionInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput> | Prisma.PullRequestCreateWithoutReviewSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput[]
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput | Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput[]
+  createMany?: Prisma.PullRequestCreateManyReviewSessionInputEnvelope
   connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
 }
 
@@ -920,6 +892,20 @@ export type PullRequestUpdateManyWithoutSessionNestedInput = {
   deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
 }
 
+export type PullRequestUpdateManyWithoutReviewSessionNestedInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput> | Prisma.PullRequestCreateWithoutReviewSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput[]
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput | Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput[]
+  upsert?: Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewSessionInput | Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewSessionInput[]
+  createMany?: Prisma.PullRequestCreateManyReviewSessionInputEnvelope
+  set?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  disconnect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  delete?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  update?: Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewSessionInput | Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewSessionInput[]
+  updateMany?: Prisma.PullRequestUpdateManyWithWhereWithoutReviewSessionInput | Prisma.PullRequestUpdateManyWithWhereWithoutReviewSessionInput[]
+  deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
+}
+
 export type PullRequestUncheckedUpdateManyWithoutSessionNestedInput = {
   create?: Prisma.XOR<Prisma.PullRequestCreateWithoutSessionInput, Prisma.PullRequestUncheckedCreateWithoutSessionInput> | Prisma.PullRequestCreateWithoutSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutSessionInput[]
   connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutSessionInput | Prisma.PullRequestCreateOrConnectWithoutSessionInput[]
@@ -934,8 +920,22 @@ export type PullRequestUncheckedUpdateManyWithoutSessionNestedInput = {
   deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
 }
 
-export type EnumReviewStatusFieldUpdateOperationsInput = {
-  set?: $Enums.ReviewStatus
+export type PullRequestUncheckedUpdateManyWithoutReviewSessionNestedInput = {
+  create?: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput> | Prisma.PullRequestCreateWithoutReviewSessionInput[] | Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput[]
+  connectOrCreate?: Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput | Prisma.PullRequestCreateOrConnectWithoutReviewSessionInput[]
+  upsert?: Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewSessionInput | Prisma.PullRequestUpsertWithWhereUniqueWithoutReviewSessionInput[]
+  createMany?: Prisma.PullRequestCreateManyReviewSessionInputEnvelope
+  set?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  disconnect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  delete?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  connect?: Prisma.PullRequestWhereUniqueInput | Prisma.PullRequestWhereUniqueInput[]
+  update?: Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewSessionInput | Prisma.PullRequestUpdateWithWhereUniqueWithoutReviewSessionInput[]
+  updateMany?: Prisma.PullRequestUpdateManyWithWhereWithoutReviewSessionInput | Prisma.PullRequestUpdateManyWithWhereWithoutReviewSessionInput[]
+  deleteMany?: Prisma.PullRequestScalarWhereInput | Prisma.PullRequestScalarWhereInput[]
+}
+
+export type EnumMergeStatusFieldUpdateOperationsInput = {
+  set?: $Enums.MergeStatus
 }
 
 export type PullRequestCreateNestedOneWithoutReviewsInput = {
@@ -960,12 +960,12 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   title: string
   headRef: string
   baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -973,7 +973,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
-  reviewerTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsReviewingInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
 }
 
@@ -987,13 +987,13 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   baseRef: string
   sessionId?: string | null
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1042,13 +1042,13 @@ export type PullRequestScalarWhereInput = {
   baseRef?: Prisma.StringFilter<"PullRequest"> | string
   sessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewerTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFilter<"PullRequest"> | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFilter<"PullRequest"> | boolean
+  reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   round?: Prisma.IntFilter<"PullRequest"> | number
-  reviewedSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  resolveFromSha?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   note?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   state?: Prisma.StringFilter<"PullRequest"> | string
   mergedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
@@ -1064,12 +1064,12 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   title: string
   headRef: string
   baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1077,7 +1077,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
-  reviewerTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsReviewingInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
 }
 
@@ -1091,13 +1091,13 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   headRef: string
   baseRef: string
   sessionId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1113,66 +1113,6 @@ export type PullRequestCreateOrConnectWithoutAuthorTeammateInput = {
 
 export type PullRequestCreateManyAuthorTeammateInputEnvelope = {
   data: Prisma.PullRequestCreateManyAuthorTeammateInput | Prisma.PullRequestCreateManyAuthorTeammateInput[]
-  skipDuplicates?: boolean
-}
-
-export type PullRequestCreateWithoutReviewerTeammateInput = {
-  id?: string
-  organizationId: string
-  repository: string
-  number: number
-  title: string
-  headRef: string
-  baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
-  mergeMethod?: string | null
-  requestedByMemberId?: string | null
-  round?: number
-  reviewedSha?: string | null
-  note?: string | null
-  state?: string
-  mergedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
-  session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
-  authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
-  reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
-}
-
-export type PullRequestUncheckedCreateWithoutReviewerTeammateInput = {
-  id?: string
-  organizationId: string
-  workspaceId: string
-  repository: string
-  number: number
-  title: string
-  headRef: string
-  baseRef: string
-  sessionId?: string | null
-  authorTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
-  mergeMethod?: string | null
-  requestedByMemberId?: string | null
-  round?: number
-  reviewedSha?: string | null
-  note?: string | null
-  state?: string
-  mergedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
-}
-
-export type PullRequestCreateOrConnectWithoutReviewerTeammateInput = {
-  where: Prisma.PullRequestWhereUniqueInput
-  create: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput>
-}
-
-export type PullRequestCreateManyReviewerTeammateInputEnvelope = {
-  data: Prisma.PullRequestCreateManyReviewerTeammateInput | Prisma.PullRequestCreateManyReviewerTeammateInput[]
   skipDuplicates?: boolean
 }
 
@@ -1192,22 +1132,6 @@ export type PullRequestUpdateManyWithWhereWithoutAuthorTeammateInput = {
   data: Prisma.XOR<Prisma.PullRequestUpdateManyMutationInput, Prisma.PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput>
 }
 
-export type PullRequestUpsertWithWhereUniqueWithoutReviewerTeammateInput = {
-  where: Prisma.PullRequestWhereUniqueInput
-  update: Prisma.XOR<Prisma.PullRequestUpdateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedUpdateWithoutReviewerTeammateInput>
-  create: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedCreateWithoutReviewerTeammateInput>
-}
-
-export type PullRequestUpdateWithWhereUniqueWithoutReviewerTeammateInput = {
-  where: Prisma.PullRequestWhereUniqueInput
-  data: Prisma.XOR<Prisma.PullRequestUpdateWithoutReviewerTeammateInput, Prisma.PullRequestUncheckedUpdateWithoutReviewerTeammateInput>
-}
-
-export type PullRequestUpdateManyWithWhereWithoutReviewerTeammateInput = {
-  where: Prisma.PullRequestScalarWhereInput
-  data: Prisma.XOR<Prisma.PullRequestUpdateManyMutationInput, Prisma.PullRequestUncheckedUpdateManyWithoutReviewerTeammateInput>
-}
-
 export type PullRequestCreateWithoutSessionInput = {
   id?: string
   organizationId: string
@@ -1216,12 +1140,12 @@ export type PullRequestCreateWithoutSessionInput = {
   title: string
   headRef: string
   baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1229,7 +1153,7 @@ export type PullRequestCreateWithoutSessionInput = {
   updatedAt?: Date | string
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
-  reviewerTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsReviewingInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
   reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
 }
 
@@ -1243,13 +1167,13 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   headRef: string
   baseRef: string
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1265,6 +1189,66 @@ export type PullRequestCreateOrConnectWithoutSessionInput = {
 
 export type PullRequestCreateManySessionInputEnvelope = {
   data: Prisma.PullRequestCreateManySessionInput | Prisma.PullRequestCreateManySessionInput[]
+  skipDuplicates?: boolean
+}
+
+export type PullRequestCreateWithoutReviewSessionInput = {
+  id?: string
+  organizationId: string
+  repository: string
+  number: number
+  title: string
+  headRef: string
+  baseRef: string
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
+  mergeMethod?: string | null
+  requestedByMemberId?: string | null
+  round?: number
+  resolveFromSha?: string | null
+  note?: string | null
+  state?: string
+  mergedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
+  session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
+  authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
+  reviews?: Prisma.PullRequestReviewCreateNestedManyWithoutPullRequestInput
+}
+
+export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  repository: string
+  number: number
+  title: string
+  headRef: string
+  baseRef: string
+  sessionId?: string | null
+  authorTeammateId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
+  mergeMethod?: string | null
+  requestedByMemberId?: string | null
+  round?: number
+  resolveFromSha?: string | null
+  note?: string | null
+  state?: string
+  mergedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  reviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutPullRequestInput
+}
+
+export type PullRequestCreateOrConnectWithoutReviewSessionInput = {
+  where: Prisma.PullRequestWhereUniqueInput
+  create: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput>
+}
+
+export type PullRequestCreateManyReviewSessionInputEnvelope = {
+  data: Prisma.PullRequestCreateManyReviewSessionInput | Prisma.PullRequestCreateManyReviewSessionInput[]
   skipDuplicates?: boolean
 }
 
@@ -1284,6 +1268,22 @@ export type PullRequestUpdateManyWithWhereWithoutSessionInput = {
   data: Prisma.XOR<Prisma.PullRequestUpdateManyMutationInput, Prisma.PullRequestUncheckedUpdateManyWithoutSessionInput>
 }
 
+export type PullRequestUpsertWithWhereUniqueWithoutReviewSessionInput = {
+  where: Prisma.PullRequestWhereUniqueInput
+  update: Prisma.XOR<Prisma.PullRequestUpdateWithoutReviewSessionInput, Prisma.PullRequestUncheckedUpdateWithoutReviewSessionInput>
+  create: Prisma.XOR<Prisma.PullRequestCreateWithoutReviewSessionInput, Prisma.PullRequestUncheckedCreateWithoutReviewSessionInput>
+}
+
+export type PullRequestUpdateWithWhereUniqueWithoutReviewSessionInput = {
+  where: Prisma.PullRequestWhereUniqueInput
+  data: Prisma.XOR<Prisma.PullRequestUpdateWithoutReviewSessionInput, Prisma.PullRequestUncheckedUpdateWithoutReviewSessionInput>
+}
+
+export type PullRequestUpdateManyWithWhereWithoutReviewSessionInput = {
+  where: Prisma.PullRequestScalarWhereInput
+  data: Prisma.XOR<Prisma.PullRequestUpdateManyMutationInput, Prisma.PullRequestUncheckedUpdateManyWithoutReviewSessionInput>
+}
+
 export type PullRequestCreateWithoutReviewsInput = {
   id?: string
   organizationId: string
@@ -1292,12 +1292,12 @@ export type PullRequestCreateWithoutReviewsInput = {
   title: string
   headRef: string
   baseRef: string
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1306,7 +1306,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   workspace: Prisma.WorkspaceCreateNestedOneWithoutPullRequestsInput
   session?: Prisma.SessionCreateNestedOneWithoutPullRequestsInput
   authorTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsAuthoredInput
-  reviewerTeammate?: Prisma.TeammateCreateNestedOneWithoutPullRequestsReviewingInput
+  reviewSession?: Prisma.SessionCreateNestedOneWithoutReviewsOfInput
 }
 
 export type PullRequestUncheckedCreateWithoutReviewsInput = {
@@ -1320,13 +1320,13 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   baseRef: string
   sessionId?: string | null
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1358,12 +1358,12 @@ export type PullRequestUpdateWithoutReviewsInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1372,7 +1372,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
-  reviewerTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsReviewingNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
 }
 
 export type PullRequestUncheckedUpdateWithoutReviewsInput = {
@@ -1386,13 +1386,13 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1410,13 +1410,13 @@ export type PullRequestCreateManyWorkspaceInput = {
   baseRef: string
   sessionId?: string | null
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1432,12 +1432,12 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1445,7 +1445,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
-  reviewerTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsReviewingNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
 }
 
@@ -1459,13 +1459,13 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1484,13 +1484,13 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1508,37 +1508,13 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   headRef: string
   baseRef: string
   sessionId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
-  note?: string | null
-  state?: string
-  mergedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-}
-
-export type PullRequestCreateManyReviewerTeammateInput = {
-  id?: string
-  organizationId: string
-  workspaceId: string
-  repository: string
-  number: number
-  title: string
-  headRef: string
-  baseRef: string
-  sessionId?: string | null
-  authorTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
-  mergeMethod?: string | null
-  requestedByMemberId?: string | null
-  round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1554,12 +1530,12 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1567,7 +1543,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
   session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
-  reviewerTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsReviewingNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
 }
 
@@ -1581,13 +1557,13 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1606,87 +1582,13 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  state?: Prisma.StringFieldUpdateOperationsInput | string
-  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type PullRequestUpdateWithoutReviewerTeammateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  repository?: Prisma.StringFieldUpdateOperationsInput | string
-  number?: Prisma.IntFieldUpdateOperationsInput | number
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  headRef?: Prisma.StringFieldUpdateOperationsInput | string
-  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  state?: Prisma.StringFieldUpdateOperationsInput | string
-  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
-  session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
-  authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
-  reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
-}
-
-export type PullRequestUncheckedUpdateWithoutReviewerTeammateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  repository?: Prisma.StringFieldUpdateOperationsInput | string
-  number?: Prisma.IntFieldUpdateOperationsInput | number
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  headRef?: Prisma.StringFieldUpdateOperationsInput | string
-  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  state?: Prisma.StringFieldUpdateOperationsInput | string
-  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
-}
-
-export type PullRequestUncheckedUpdateManyWithoutReviewerTeammateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
-  repository?: Prisma.StringFieldUpdateOperationsInput | string
-  number?: Prisma.IntFieldUpdateOperationsInput | number
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  headRef?: Prisma.StringFieldUpdateOperationsInput | string
-  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1704,13 +1606,37 @@ export type PullRequestCreateManySessionInput = {
   headRef: string
   baseRef: string
   authorTeammateId?: string | null
-  reviewerTeammateId?: string | null
-  reviewStatus?: $Enums.ReviewStatus
-  autoMerge?: boolean
+  reviewSessionId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
   round?: number
-  reviewedSha?: string | null
+  resolveFromSha?: string | null
+  note?: string | null
+  state?: string
+  mergedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type PullRequestCreateManyReviewSessionInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  repository: string
+  number: number
+  title: string
+  headRef: string
+  baseRef: string
+  sessionId?: string | null
+  authorTeammateId?: string | null
+  noReviewReason?: string | null
+  mergeStatus?: $Enums.MergeStatus
+  mergeMethod?: string | null
+  requestedByMemberId?: string | null
+  round?: number
+  resolveFromSha?: string | null
   note?: string | null
   state?: string
   mergedAt?: Date | string | null
@@ -1726,12 +1652,12 @@ export type PullRequestUpdateWithoutSessionInput = {
   title?: Prisma.StringFieldUpdateOperationsInput | string
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1739,7 +1665,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
   authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
-  reviewerTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsReviewingNestedInput
+  reviewSession?: Prisma.SessionUpdateOneWithoutReviewsOfNestedInput
   reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
 }
 
@@ -1753,13 +1679,13 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1778,13 +1704,87 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewerTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  reviewStatus?: Prisma.EnumReviewStatusFieldUpdateOperationsInput | $Enums.ReviewStatus
-  autoMerge?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   round?: Prisma.IntFieldUpdateOperationsInput | number
-  reviewedSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.StringFieldUpdateOperationsInput | string
+  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type PullRequestUpdateWithoutReviewSessionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  headRef?: Prisma.StringFieldUpdateOperationsInput | string
+  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  round?: Prisma.IntFieldUpdateOperationsInput | number
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.StringFieldUpdateOperationsInput | string
+  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutPullRequestsNestedInput
+  session?: Prisma.SessionUpdateOneWithoutPullRequestsNestedInput
+  authorTeammate?: Prisma.TeammateUpdateOneWithoutPullRequestsAuthoredNestedInput
+  reviews?: Prisma.PullRequestReviewUpdateManyWithoutPullRequestNestedInput
+}
+
+export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  headRef?: Prisma.StringFieldUpdateOperationsInput | string
+  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  round?: Prisma.IntFieldUpdateOperationsInput | number
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.StringFieldUpdateOperationsInput | string
+  mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  reviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutPullRequestNestedInput
+}
+
+export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  repository?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  headRef?: Prisma.StringFieldUpdateOperationsInput | string
+  baseRef?: Prisma.StringFieldUpdateOperationsInput | string
+  sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
+  mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  round?: Prisma.IntFieldUpdateOperationsInput | number
+  resolveFromSha?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   state?: Prisma.StringFieldUpdateOperationsInput | string
   mergedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1834,13 +1834,13 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   baseRef?: boolean
   sessionId?: boolean
   authorTeammateId?: boolean
-  reviewerTeammateId?: boolean
-  reviewStatus?: boolean
-  autoMerge?: boolean
+  reviewSessionId?: boolean
+  noReviewReason?: boolean
+  mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
-  reviewedSha?: boolean
+  resolveFromSha?: boolean
   note?: boolean
   state?: boolean
   mergedAt?: boolean
@@ -1849,7 +1849,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
   reviews?: boolean | Prisma.PullRequest$reviewsArgs<ExtArgs>
   _count?: boolean | Prisma.PullRequestCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pullRequest"]>
@@ -1865,13 +1865,13 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   baseRef?: boolean
   sessionId?: boolean
   authorTeammateId?: boolean
-  reviewerTeammateId?: boolean
-  reviewStatus?: boolean
-  autoMerge?: boolean
+  reviewSessionId?: boolean
+  noReviewReason?: boolean
+  mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
-  reviewedSha?: boolean
+  resolveFromSha?: boolean
   note?: boolean
   state?: boolean
   mergedAt?: boolean
@@ -1880,7 +1880,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
 }, ExtArgs["result"]["pullRequest"]>
 
 export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1894,13 +1894,13 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   baseRef?: boolean
   sessionId?: boolean
   authorTeammateId?: boolean
-  reviewerTeammateId?: boolean
-  reviewStatus?: boolean
-  autoMerge?: boolean
+  reviewSessionId?: boolean
+  noReviewReason?: boolean
+  mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
-  reviewedSha?: boolean
+  resolveFromSha?: boolean
   note?: boolean
   state?: boolean
   mergedAt?: boolean
@@ -1909,7 +1909,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
 }, ExtArgs["result"]["pullRequest"]>
 
 export type PullRequestSelectScalar = {
@@ -1923,13 +1923,13 @@ export type PullRequestSelectScalar = {
   baseRef?: boolean
   sessionId?: boolean
   authorTeammateId?: boolean
-  reviewerTeammateId?: boolean
-  reviewStatus?: boolean
-  autoMerge?: boolean
+  reviewSessionId?: boolean
+  noReviewReason?: boolean
+  mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
   round?: boolean
-  reviewedSha?: boolean
+  resolveFromSha?: boolean
   note?: boolean
   state?: boolean
   mergedAt?: boolean
@@ -1937,12 +1937,12 @@ export type PullRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewerTeammateId" | "reviewStatus" | "autoMerge" | "mergeMethod" | "requestedByMemberId" | "round" | "reviewedSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
   reviews?: boolean | Prisma.PullRequest$reviewsArgs<ExtArgs>
   _count?: boolean | Prisma.PullRequestCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1950,13 +1950,13 @@ export type PullRequestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
 }
 export type PullRequestIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
   authorTeammate?: boolean | Prisma.PullRequest$authorTeammateArgs<ExtArgs>
-  reviewerTeammate?: boolean | Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>
+  reviewSession?: boolean | Prisma.PullRequest$reviewSessionArgs<ExtArgs>
 }
 
 export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1965,7 +1965,7 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     session: Prisma.$SessionPayload<ExtArgs> | null
     authorTeammate: Prisma.$TeammatePayload<ExtArgs> | null
-    reviewerTeammate: Prisma.$TeammatePayload<ExtArgs> | null
+    reviewSession: Prisma.$SessionPayload<ExtArgs> | null
     reviews: Prisma.$PullRequestReviewPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1981,31 +1981,37 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
     headRef: string
     baseRef: string
     /**
-     * The thread that opened it (or the review's own thread); its review loop runs there.
+     * The thread that opened it (or its review's own thread, for one opened outside Brigade).
      */
     sessionId: string | null
     authorTeammateId: string | null
-    reviewerTeammateId: string | null
-    reviewStatus: $Enums.ReviewStatus
     /**
-     * Merge once approved and GitHub allows it. Only an owner or admin arms it.
+     * Its latest review's thread: a child of the thread that opened it, or a thread of its own.
      */
-    autoMerge: boolean
+    reviewSessionId: string | null
+    /**
+     * Why the teammate that opened it asked for no review, in its words: shown on it.
+     */
+    noReviewReason: string | null
+    mergeStatus: $Enums.MergeStatus
     /**
      * How it merges when Brigade merges it; squash when unset.
      */
     mergeMethod: string | null
+    /**
+     * The member who last asked to merge it or for its review: its tickets and pushes go to them.
+     */
     requestedByMemberId: string | null
     /**
-     * Review rounds in the current loop, from 1.
+     * The author's turns at resolving its conflicts and getting it merged, from 1.
      */
     round: number
     /**
-     * The head commit the latest review looked at; while resolving conflicts, the one before the author's turn.
+     * The head when the author's turn to resolve the conflicts began: unchanged after it, nothing was pushed.
      */
-    reviewedSha: string | null
+    resolveFromSha: string | null
     /**
-     * Why the loop is waiting or stopped, shown on the pull request.
+     * Why a merge is waiting or stopped, shown on the pull request.
      */
     note: string | null
     /**
@@ -2412,7 +2418,7 @@ export interface Prisma__PullRequestClient<T, Null = never, ExtArgs extends runt
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   session<T extends Prisma.PullRequest$sessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$sessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   authorTeammate<T extends Prisma.PullRequest$authorTeammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$authorTeammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  reviewerTeammate<T extends Prisma.PullRequest$reviewerTeammateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$reviewerTeammateArgs<ExtArgs>>): Prisma.Prisma__TeammateClient<runtime.Types.Result.GetResult<Prisma.$TeammatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  reviewSession<T extends Prisma.PullRequest$reviewSessionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$reviewSessionArgs<ExtArgs>>): Prisma.Prisma__SessionClient<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   reviews<T extends Prisma.PullRequest$reviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PullRequest$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PullRequestReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2453,13 +2459,13 @@ export interface PullRequestFieldRefs {
   readonly baseRef: Prisma.FieldRef<"PullRequest", 'String'>
   readonly sessionId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly authorTeammateId: Prisma.FieldRef<"PullRequest", 'String'>
-  readonly reviewerTeammateId: Prisma.FieldRef<"PullRequest", 'String'>
-  readonly reviewStatus: Prisma.FieldRef<"PullRequest", 'ReviewStatus'>
-  readonly autoMerge: Prisma.FieldRef<"PullRequest", 'Boolean'>
+  readonly reviewSessionId: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly noReviewReason: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly mergeStatus: Prisma.FieldRef<"PullRequest", 'MergeStatus'>
   readonly mergeMethod: Prisma.FieldRef<"PullRequest", 'String'>
   readonly requestedByMemberId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly round: Prisma.FieldRef<"PullRequest", 'Int'>
-  readonly reviewedSha: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly resolveFromSha: Prisma.FieldRef<"PullRequest", 'String'>
   readonly note: Prisma.FieldRef<"PullRequest", 'String'>
   readonly state: Prisma.FieldRef<"PullRequest", 'String'>
   readonly mergedAt: Prisma.FieldRef<"PullRequest", 'DateTime'>
@@ -2904,22 +2910,22 @@ export type PullRequest$authorTeammateArgs<ExtArgs extends runtime.Types.Extensi
 }
 
 /**
- * PullRequest.reviewerTeammate
+ * PullRequest.reviewSession
  */
-export type PullRequest$reviewerTeammateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type PullRequest$reviewSessionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Teammate
+   * Select specific fields to fetch from the Session
    */
-  select?: Prisma.TeammateSelect<ExtArgs> | null
+  select?: Prisma.SessionSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Teammate
+   * Omit specific fields from the Session
    */
-  omit?: Prisma.TeammateOmit<ExtArgs> | null
+  omit?: Prisma.SessionOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.TeammateInclude<ExtArgs> | null
-  where?: Prisma.TeammateWhereInput
+  include?: Prisma.SessionInclude<ExtArgs> | null
+  where?: Prisma.SessionWhereInput
 }
 
 /**

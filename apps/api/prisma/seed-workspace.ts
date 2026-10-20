@@ -124,6 +124,10 @@ export async function seedWorkspace(users: Users) {
     libraryAccess: 'read_write',
     caps: { threadsPerDay: 40 },
   })
+  const kai = await teammate({
+    name: 'Kai',
+    instructions: 'Engineer on the Acme web app. Reviews pull requests for bugs, not style.',
+  })
   const sam = await teammate({
     name: 'Sam',
     instructions:
@@ -490,8 +494,13 @@ export async function seedWorkspace(users: Users) {
               repository: 'acme/web',
               title: 'Pricing cards follow the theme',
               head: 'brigade/riley-pricing-dark',
+              review: { wanted: true, reason: 'It changes the colors of every pricing card' },
             },
-            { number: 128, url: 'https://github.com/acme/web/pull/128' },
+            {
+              number: 128,
+              url: 'https://github.com/acme/web/pull/128',
+              review: { started: true, reviewer: 'Kai' },
+            },
           ),
           {
             type: 'usage.updated',
@@ -501,7 +510,75 @@ export async function seedWorkspace(users: Users) {
             limits: usage,
           },
         ],
-        'Done: the pricing cards used `bg-white`, so they ignored the theme. They now use `bg-card` and `text-card-foreground`, and the tests pass.\n\nPull request: [acme/web#128](https://github.com/acme/web/pull/128).',
+        'The pricing cards used `bg-white`, so they ignored the theme. They now use `bg-card` and `text-card-foreground`, and the tests pass. Kai is reviewing the pull request; I will tell you once it is done.',
+      ),
+      // Woken by its review's report (src/reviews.ts).
+      ...turn(
+        riley.id,
+        adaAccount.id,
+        'The child thread you were waiting for has finished:\n- Kai · “Review #128: Pricing cards follow the theme”: reports. Approved: the cards use the theme tokens in both themes.',
+        null,
+        [],
+        'Kai reviewed it and approved it: nothing to fix. Ready to merge: [acme/web#128](https://github.com/acme/web/pull/128).',
+      ),
+    ],
+  })
+  // Its review, in a child thread started with Brigade's brief.
+  const darkModeReview = await thread({
+    title: 'Review #128: Pricing cards follow the theme',
+    teammateId: kai.id,
+    member: ada,
+    accountId: adaAccount.id,
+    status: 'idle',
+    startedAt: hours(4),
+    projectId: website.id,
+    origin: 'child',
+    parentId: darkMode.id,
+    parentTeammateId: riley.id,
+    awaited: true,
+    report: {
+      status: 'report',
+      summary: 'Approved: the cards use the theme tokens in both themes.',
+      at: hours(3).toISOString(),
+    },
+    reportDeliveredAt: hours(3),
+    events: [
+      ...turn(
+        kai.id,
+        adaAccount.id,
+        childPrompt({
+          from: riley.name,
+          parentTitle: 'Add dark mode to the pricing page',
+          instructions:
+            'Review pull request #128 "Pricing cards follow the theme" in acme/web (`brigade/riley-pricing-dark` into `main`), which Riley wrote, before it reaches a person: https://github.com/acme/web/pull/128',
+        }),
+        null,
+        [
+          ...tool(
+            harness('github_get_pull_request'),
+            { repository: 'acme/web', number: 128 },
+            { number: 128, title: 'Pricing cards follow the theme', files: 1 },
+          ),
+          ...tool(
+            harness('github_review_pull_request'),
+            {
+              repository: 'acme/web',
+              number: 128,
+              verdict: 'approve',
+              body: 'Looks right: the cards use the theme tokens and both themes were checked.',
+            },
+            { verdict: 'approve', url: 'https://github.com/acme/web/pull/128' },
+          ),
+          ...tool(
+            harness('report'),
+            {
+              status: 'report',
+              summary: 'Approved: the cards use the theme tokens in both themes.',
+            },
+            { ok: true },
+          ),
+        ],
+        'Approved: the cards use the theme tokens in both themes, and nothing else changed.',
       ),
     ],
   })
@@ -971,7 +1048,7 @@ export async function seedWorkspace(users: Users) {
   })
 
   // -------------------------------------------------------------------------
-  // The pull request Riley opened, approved by a review
+  // The pull request Riley opened, approved by Kai's review
   // -------------------------------------------------------------------------
   const pull = await prisma.pullRequest.create({
     data: {
@@ -983,11 +1060,7 @@ export async function seedWorkspace(users: Users) {
       baseRef: 'main',
       sessionId: darkMode.id,
       authorTeammateId: riley.id,
-      reviewerTeammateId: chief.id,
-      reviewStatus: 'approved',
-      round: 1,
-      reviewedSha: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',
-      requestedByMemberId: ada.id,
+      reviewSessionId: darkModeReview.id,
       createdAt: hours(4),
     },
   })
@@ -995,7 +1068,8 @@ export async function seedWorkspace(users: Users) {
     data: {
       ...inWorkspace,
       pullRequestId: pull.id,
-      teammateId: chief.id,
+      teammateId: kai.id,
+      sessionId: darkModeReview.id,
       verdict: 'approve',
       body: 'Looks right: the cards use the theme tokens and both themes were checked.',
       sha: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0',

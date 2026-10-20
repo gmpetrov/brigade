@@ -1,12 +1,10 @@
-// Pull requests and the review loop. GitHub keeps the code and the pull
-// request; Brigade keeps who wrote it, who reviews it and where the loop stands
-// (PullRequest), and drives it. A review request prompts the reviewer in the
-// thread that opened the pull request; its verdict (github_review_pull_request)
-// goes to the author when its turn ends; the author's next turn goes back to the
-// reviewer; an approval merges once GitHub allows it, when an owner or admin
-// armed the loop to. Otherwise a person merges, or asks a teammate with write
-// access to (github_merge_pull_request). A pull request that conflicts goes
-// back to the teammate that wrote it to resolve, and merges once that is done.
+// Pull requests. GitHub keeps the code and the pull request; Brigade keeps who
+// wrote it, its review and where a merge a person asked for stands (PullRequest).
+// A review is a child thread of the thread that opened it (src/reviews.ts); its
+// verdict (github_review_pull_request) is kept here. A person merges, or asks a
+// teammate with write access to (github_merge_pull_request). A pull request that
+// conflicts goes back to the teammate that wrote it to resolve, and merges once
+// that is done.
 import {
   MergeMethod,
   type CheckRun,
@@ -16,6 +14,7 @@ import {
   type PullRequestState,
   type PullRequestSummary,
   type PullRequestTracking,
+  type PullReview,
   type TeammateReview,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -26,14 +25,15 @@ import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
+import { cancelReview } from './reviews.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
 import { noteInThread, pullNote } from './thread-notes.js'
 import { loadThread } from './thread-spec.js'
-import { joinThread, promptThread, startThread } from './work.js'
+import { promptThread, startThread } from './work.js'
 
-/** Reviews in one loop before it stops and asks a person. */
-export const MAX_ROUNDS = 3
+/** The author's turns at resolving a merge's conflicts or failed checks before it stops and asks a person. */
+const MAX_ROUNDS = 3
 /** Diffs shown per pull request; GitHub lists at most 3000 files. */
 const FILES_MAX = 300
 
@@ -59,13 +59,14 @@ export type GhPull = {
   commits?: number
 }
 
-type GitHub = { fetch: (path: string, init?: RequestInit) => Promise<Response> }
+export type GitHub = { fetch: (path: string, init?: RequestInit) => Promise<Response> }
 
-const repoPath = (repo: string) => `/repos/${repo.split('/').map(encodeURIComponent).join('/')}`
+export const repoPath = (repo: string) =>
+  `/repos/${repo.split('/').map(encodeURIComponent).join('/')}`
 const key = (repo: string, number: number) => `${repo}#${number}`
 
 /** The workspace's GitHub, for a repository one of its connections reaches. */
-async function github(db: ScopedDb, scope: Scope, repo: string): Promise<GitHub> {
+export async function github(db: ScopedDb, scope: Scope, repo: string): Promise<GitHub> {
   const found = await workspaceGitHub(db, scope, repo)
   if (!found)
     throw new HTTPException(404, {
@@ -94,35 +95,123 @@ async function call<T>(gh: GitHub, path: string, init?: RequestInit) {
   }
 }
 
-const pullOf = (gh: GitHub, repo: string, number: number) =>
+export const pullOf = (gh: GitHub, repo: string, number: number) =>
   call<GhPull>(gh, `${repoPath(repo)}/pulls/${number}`)
 
-const stateOf = (p: GhPull) => (p.merged_at ? 'merged' : p.state)
+export const stateOf = (p: GhPull) => (p.merged_at ? 'merged' : p.state)
+
+/** Brigade's row for a pull request, made when it has none yet (one opened outside Brigade). */
+export async function trackedRow(db: ScopedDb, repo: string, p: GhPull) {
+  return (
+    (await db.pullRequest.findFirst({ where: { repository: repo, number: p.number } })) ??
+    (await db.pullRequest.create({
+      data: {
+        repository: repo,
+        number: p.number,
+        title: p.title,
+        headRef: p.head.ref,
+        baseRef: p.base.ref,
+      } as never,
+    }))
+  )
+}
 
 // ---------------------------------------------------------------------------
 // What the dashboard reads
 // ---------------------------------------------------------------------------
 
+/** A thread's statuses while at work, or asking a person something. */
+const AT_WORK_OR_ASKING = ['starting', 'running', 'waiting'] as const
+
+/**
+ * Whether a review is under way: its child thread is awaited and has not reported yet (a new
+ * message from the author waits for it again), or its own thread is at work.
+ */
+export const reviewUnderWay = (thread: {
+  parentId: string | null
+  awaited: boolean
+  reportDeliveredAt: Date | null
+  status: string
+}) =>
+  thread.parentId
+    ? thread.awaited && !thread.reportDeliveredAt
+    : (AT_WORK_OR_ASKING as readonly string[]).includes(thread.status)
+
+/** The same for the database, the other way round: a review's thread that is done (waitingOnPerson). */
+const REVIEW_DONE = {
+  OR: [
+    { parentId: null, status: { notIn: [...AT_WORK_OR_ASKING] } },
+    { parentId: { not: null }, OR: [{ awaited: false }, { reportDeliveredAt: { not: null } }] },
+  ],
+} satisfies Prisma.SessionWhereInput
+
+/** What a pull request's review reads: its thread, its latest verdict and why it got none. */
+export const reviewInclude = {
+  reviewSession: {
+    select: {
+      id: true,
+      status: true,
+      parentId: true,
+      awaited: true,
+      reportDeliveredAt: true,
+      teammate: { select: { id: true, name: true } },
+    },
+  },
+  reviews: {
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    select: {
+      verdict: true,
+      sha: true,
+      sessionId: true,
+      createdAt: true,
+      teammate: { select: { id: true, name: true } },
+    },
+  },
+} as const
+
+type ReviewRow = Prisma.PullRequestGetPayload<{ include: typeof reviewInclude }>
+
+/**
+ * Its review as the dashboard shows it: under way, its latest verdict, or why the teammate
+ * that opened it asked for none. headSha, when GitHub was asked: whether commits came after.
+ */
+export function reviewOf(
+  row: Pick<ReviewRow, 'reviewSession' | 'reviews' | 'noReviewReason'>,
+  headSha?: string,
+): PullReview | null {
+  const thread = row.reviewSession
+  if (thread && reviewUnderWay(thread))
+    return { state: 'reviewing', reviewer: thread.teammate, threadId: thread.id }
+  const last = row.reviews[0]
+  if (last)
+    return {
+      state: last.verdict === 'approve' ? 'approved' : 'changes_requested',
+      reviewer: last.teammate,
+      threadId: last.sessionId,
+      at: last.createdAt.toISOString(),
+      ...(headSha ? { changed: last.sha !== headSha } : {}),
+    }
+  return row.noReviewReason ? { state: 'skipped', reason: row.noReviewReason } : null
+}
+
 const rowInclude = {
   authorTeammate: { select: { id: true, name: true } },
-  reviewerTeammate: { select: { id: true, name: true } },
+  ...reviewInclude,
 } as const
 type Row = NonNullable<Awaited<ReturnType<typeof findRow>>>
 
 const findRow = (db: ScopedDb, repo: string, number: number) =>
   db.pullRequest.findFirst({ where: { repository: repo, number }, include: rowInclude })
 
-function tracking(row: Row | undefined): PullRequestTracking | null {
+function tracking(row: Row | undefined, headSha?: string): PullRequestTracking | null {
   if (!row) return null
   return {
-    reviewStatus: row.reviewStatus,
-    autoMerge: row.autoMerge,
-    round: row.round,
-    maxRounds: MAX_ROUNDS,
+    mergeStatus: row.mergeStatus,
     note: row.note,
     sessionId: row.sessionId,
     author: row.authorTeammate,
-    reviewer: row.reviewerTeammate,
+    review: reviewOf(row, headSha),
     preview: null,
   }
 }
@@ -151,7 +240,7 @@ function summary(repo: string, p: GhPull, row: Row | undefined): PullRequestSumm
     head: p.head.ref,
     base: p.base.ref,
     updatedAt: p.updated_at,
-    tracking: tracking(row),
+    tracking: tracking(row, p.head.sha),
   }
 }
 
@@ -175,11 +264,8 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
       baseRef: p.base.ref,
       state,
       ...(p.merged_at ? { mergedAt: new Date(p.merged_at) } : {}),
-      // A pull request closed on GitHub ends its loop.
-      ...(closed && row.reviewStatus !== 'none' && row.reviewStatus !== 'approved'
-        ? { reviewStatus: 'none', note: null }
-        : {}),
-      ...(closed ? { autoMerge: false } : {}),
+      // A pull request closed on GitHub ends a merge under way.
+      ...(closed && row.mergeStatus !== 'none' ? { mergeStatus: 'none', note: null } : {}),
     },
   })
   if (closed && row.state !== state && row.sessionId) {
@@ -187,6 +273,9 @@ async function sync(db: ScopedDb, scope: Scope, row: Row | undefined, p: GhPull)
     await stopThreadPreview(db, row.sessionId, `Stopped: the pull request was ${state}`)
     await noteInThread(db, row.sessionId, await pullNote(row, state))
   }
+  // Closed without merging, it needs no verdict. A merged one's review goes on: what it finds
+  // after the merge is still worth a follow-up.
+  if (state === 'closed' && row.state !== state) await cancelReview(scope, row.id)
 }
 
 /**
@@ -303,16 +392,19 @@ export async function listPulls(
 }
 
 /**
- * Open pull requests waiting on a person: one a teammate opened that nobody asked a
- * teammate to review (a person reviews and merges it), approved but not set to merge,
- * changes requested, or stopped. The sidebar, Home and Pull requests all count these.
+ * Open pull requests waiting on a person: one a teammate opened (a person merges it), once
+ * its review, if it has one under way, is done; or a merge that stopped. The sidebar, Home and
+ * Pull requests all count these.
  */
 export const waitingOnPerson = {
   state: 'open',
   OR: [
-    { reviewStatus: 'none', sessionId: { not: null } },
-    { reviewStatus: { in: ['stuck', 'changes_requested'] } },
-    { reviewStatus: 'approved', autoMerge: false },
+    {
+      mergeStatus: 'none',
+      sessionId: { not: null },
+      OR: [{ reviewSessionId: null }, { reviewSession: { is: REVIEW_DONE } }],
+    },
+    { mergeStatus: 'stuck' },
   ],
 } satisfies Prisma.PullRequestWhereInput
 
@@ -332,12 +424,12 @@ export const waitingNow = {
 } satisfies Prisma.PullRequestWhereInput
 
 /**
- * Those waiting on a person now, newest first, with the thread that opened each. `putAway`:
- * threads the member put away for later (src/later.ts), whose pull requests and their
- * children's are left out.
+ * Those waiting on a person now, newest first, with the thread that opened each and where its
+ * review stands. `putAway`: threads the member put away for later (src/later.ts), whose pull
+ * requests and their children's are left out.
  */
-export const needsAttention = (db: ScopedDb, putAway: string[] = []) =>
-  db.pullRequest.findMany({
+export async function needsAttention(db: ScopedDb, putAway: string[] = []) {
+  const rows = await db.pullRequest.findMany({
     where: putAway.length
       ? {
           AND: [
@@ -360,12 +452,19 @@ export const needsAttention = (db: ScopedDb, putAway: string[] = []) =>
       repository: true,
       number: true,
       title: true,
-      reviewStatus: true,
+      mergeStatus: true,
+      noReviewReason: true,
       updatedAt: true,
       session: { select: { id: true, title: true } },
       authorTeammate: { select: { id: true, name: true } },
+      ...reviewInclude,
     },
   })
+  return rows.map(({ reviewSession, reviews, noReviewReason, ...row }) => ({
+    ...row,
+    review: reviewOf({ reviewSession, reviews, noReviewReason }),
+  }))
+}
 
 /** Open pull requests, as last seen on GitHub. */
 export const openCount = (db: ScopedDb) => db.pullRequest.count({ where: { state: 'open' } })
@@ -379,7 +478,7 @@ function checkStatus(status: string, conclusion: string | null): CheckRun['statu
 }
 
 /** Check runs and commit statuses on a commit. Without the Checks permission, statuses only. */
-async function checksOf(gh: GitHub, repo: string, sha: string): Promise<CheckRun[]> {
+export async function checksOf(gh: GitHub, repo: string, sha: string): Promise<CheckRun[]> {
   const [runs, statuses] = await Promise.all([
     gh
       .fetch(`${repoPath(repo)}/commits/${sha}/check-runs?per_page=100`)
@@ -589,7 +688,7 @@ export async function notePullRequestCall(
         body: String(call.input.body),
         comments: (call.input.comments ?? []) as never,
         sha: out.sha,
-        round: row.round,
+        round: (await db.pullRequestReview.count({ where: { pullRequestId: row.id } })) + 1,
         url: out.url,
       } as never,
     })
@@ -612,10 +711,10 @@ export async function notePullRequestCall(
 }
 
 // ---------------------------------------------------------------------------
-// The loop
+// A merge a person asked for
 // ---------------------------------------------------------------------------
 
-type LoopRow = NonNullable<Awaited<ReturnType<ScopedDb['pullRequest']['findFirst']>>>
+type MergeRow = NonNullable<Awaited<ReturnType<ScopedDb['pullRequest']['findFirst']>>>
 
 const ref = (row: { repository: string; number: number }) => `${row.repository}#${row.number}`
 
@@ -625,8 +724,8 @@ const closeTickets = (db: ScopedDb, pullRequestId: string) =>
     data: { status: 'resolved', resolvedAt: new Date() },
   })
 
-/** A ticket for the member who asked for the review, once per reason. */
-async function ticketFor(db: ScopedDb, row: LoopRow, note: string) {
+/** A ticket for the member who asked to merge it, once per reason. */
+async function ticketFor(db: ScopedDb, row: MergeRow, note: string) {
   const open = await db.ticket.count({
     where: {
       status: 'open',
@@ -649,44 +748,44 @@ async function ticketFor(db: ScopedDb, row: LoopRow, note: string) {
   })
 }
 
-/** The loop stops here; a person decides what next. */
-async function stop(db: ScopedDb, scope: Scope, row: LoopRow, note: string) {
-  await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewStatus: 'stuck', note } })
+/** The merge stops here; a person decides what next. */
+async function stop(db: ScopedDb, scope: Scope, row: MergeRow, note: string) {
+  await db.pullRequest.updateMany({ where: { id: row.id }, data: { mergeStatus: 'stuck', note } })
   await ticketFor(db, row, note)
   await audit({
     ...scope,
     actor: { type: 'system', id: 'brigade' },
-    action: 'pull_request.loop_stopped',
+    action: 'pull_request.merge_stopped',
     target: { type: 'pull_request', id: row.id },
     data: { repository: row.repository, number: row.number, note },
   })
 }
 
-/** Move the loop on only from the state it was read in, so two events never both act. */
+/** Move the merge on only from the state it was read in, so two events never both act. */
 async function claim(
   db: ScopedDb,
-  row: LoopRow,
+  row: MergeRow,
   data: Parameters<ScopedDb['pullRequest']['updateMany']>[0]['data'],
 ) {
   const { count } = await db.pullRequest.updateMany({
-    where: { id: row.id, reviewStatus: row.reviewStatus, round: row.round },
+    where: { id: row.id, mergeStatus: row.mergeStatus, round: row.round },
     data,
   })
   return count === 1
 }
 
-/** Prompt one teammate in the loop's thread. Anything but a sent prompt stops the loop. */
+/** Prompt the author in the pull request's thread. Anything but a sent prompt stops the merge. */
 async function nudge(
   db: ScopedDb,
   scope: Scope,
-  row: LoopRow,
+  row: MergeRow,
   teammate: { id: string; name: string },
   text: string,
 ) {
   try {
     const thread = await loadThread(db, row.sessionId!)
     if (thread.controlledByMemberId)
-      return stop(db, scope, row, 'A person took over the thread; ask for a review again after')
+      return stop(db, scope, row, 'A person took over the thread; ask to merge it again after')
     const outcome = await promptThread(db, scope, thread, {
       text,
       memberId: null,
@@ -703,189 +802,6 @@ async function nudge(
       `Could not prompt ${teammate.name}: ${error instanceof Error ? error.message : String(error)}`,
     )
   }
-}
-
-function reviewPrompt(
-  row: LoopRow,
-  p: GhPull,
-  author: string | null,
-  reviewer: string,
-  autoMerge: boolean,
-) {
-  return [
-    `${reviewer}, please review pull request #${p.number} "${p.title}" in ${row.repository} ` +
-      `(\`${p.head.ref}\` into \`${p.base.ref}\`)${author ? `, written by ${author}` : ''}: ${p.html_url}`,
-    '',
-    'Read it with `github_get_pull_request`, and whatever else you need to judge it: the files at the ' +
-      'branch with `github_read_file`, or a checkout of the branch to run its tests. Look for bugs, ' +
-      'missing tests, security problems and anything that does not do what the description says. ' +
-      'Leave out style a formatter would fix. When it changes pages people see and the repository has a ' +
-      'saved preview, you may run it on the branch (`start_preview({ repository })` in your checkout) and ' +
-      'check the pages it touches with `check_preview`; say in your review what you saw.',
-    '',
-    'Then call `github_review_pull_request` once, with verdict "approve" or "request_changes", a ' +
-      'summary, and line comments for specific problems. ' +
-      (author
-        ? `Brigade sends a request for changes to ${author} and brings its answer back to you. `
-        : '') +
-      (autoMerge
-        ? 'Approving merges it once GitHub allows it. '
-        : 'Do not merge it yourself: a person decides. ') +
-      'Do not mention other teammates in your reply.',
-  ].join('\n')
-}
-
-function fixPrompt(
-  row: LoopRow,
-  review: { body: string; comments: unknown },
-  reviewer: string,
-  author: string,
-) {
-  const comments = (review.comments ?? []) as { path: string; line: number; body: string }[]
-  return [
-    `${reviewer} asked for changes on pull request #${row.number} in ${row.repository} ` +
-      `(round ${row.round} of ${MAX_ROUNDS}):`,
-    '',
-    review.body,
-    ...(comments.length
-      ? ['', 'Line comments:', ...comments.map((c) => `- \`${c.path}:${c.line}\`: ${c.body}`)]
-      : []),
-    '',
-    `${author}, make the changes on \`${row.headRef}\`, then commit and push them: the pull request ` +
-      'follows the branch. Where you disagree, say why in your reply instead. When you are done, ' +
-      `Brigade asks ${reviewer} to look again. Do not mention other teammates in your reply.`,
-  ].join('\n')
-}
-
-/**
- * A member asks a teammate to review a pull request. It runs in the thread
- * that opened it, so the author keeps its context and fixes what the reviewer
- * finds; a pull request from outside Brigade gets a thread of its own.
- */
-export async function requestReview(
-  scope: WorkspaceScope,
-  repo: string,
-  number: number,
-  input: { reviewerId: string; autoMerge: boolean },
-) {
-  const db = scoped(scope)
-  const admin = scope.role === 'owner' || scope.role === 'admin'
-  if (input.autoMerge && !admin)
-    throw new HTTPException(403, {
-      message: 'Only an owner or admin can merge, or set it to merge',
-    })
-  const gh = await github(db, scope, repo)
-  const p = await pullOf(gh, repo, number)
-  if (stateOf(p) !== 'open')
-    throw new HTTPException(409, { message: 'This pull request is closed' })
-  const reviewer = await db.teammate.findFirst({
-    where: { id: input.reviewerId, archivedAt: null },
-  })
-  if (!reviewer) throw new HTTPException(404, { message: 'Teammate not found' })
-  const access = await teammateGitHub(db, scope, reviewer.id, repo)
-  if (!access?.write)
-    throw new HTTPException(409, {
-      message: access
-        ? `${reviewer.name} has read-only access to ${repo}; reviewing posts on GitHub, so it needs read and write.`
-        : `${reviewer.name} has no GitHub connection that reaches ${repo}. Grant it one on its page.`,
-    })
-
-  let row =
-    (await db.pullRequest.findFirst({ where: { repository: repo, number } })) ??
-    (await db.pullRequest.create({
-      data: {
-        repository: repo,
-        number,
-        title: p.title,
-        headRef: p.head.ref,
-        baseRef: p.base.ref,
-      } as never,
-    }))
-  if (row.reviewStatus === 'reviewing' || row.reviewStatus === 'fixing')
-    throw new HTTPException(409, { message: 'This pull request is already in review' })
-  if (row.authorTeammateId === reviewer.id)
-    throw new HTTPException(400, {
-      message: `${reviewer.name} wrote this pull request. Pick another teammate to review it.`,
-    })
-
-  const author = row.authorTeammateId
-    ? await db.teammate.findFirst({ where: { id: row.authorTeammateId } })
-    : null
-  const text = reviewPrompt(row, p, author?.name ?? null, reviewer.name, input.autoMerge)
-  const loop = {
-    reviewerTeammateId: reviewer.id,
-    reviewStatus: 'reviewing' as const,
-    autoMerge: input.autoMerge,
-    mergeMethod: null,
-    requestedByMemberId: scope.memberId,
-    round: 1,
-    reviewedSha: null,
-    note: null,
-    title: p.title,
-    headRef: p.head.ref,
-    baseRef: p.base.ref,
-  }
-
-  if (row.sessionId) {
-    const thread = await loadThread(db, row.sessionId)
-    if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt)
-      throw new HTTPException(403, {
-        message:
-          "This pull request's thread runs on another member's subscription. They can ask for the review, or let others prompt in the thread.",
-      })
-    if (thread.controlledByMemberId)
-      throw new HTTPException(409, {
-        message: 'A person has control of the thread that opened it. Hand it back first.',
-      })
-    await joinThread(db, thread.id, [reviewer.id])
-    await db.pullRequest.updateMany({ where: { id: row.id }, data: loop })
-    const outcome = await promptThread(db, scope, await loadThread(db, thread.id), {
-      text,
-      memberId: scope.memberId,
-      teammateIds: [reviewer.id],
-    }).catch(async (error: unknown) => {
-      await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewStatus: 'none' } })
-      throw error
-    })
-    if (outcome === 'offline') {
-      await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewStatus: 'none' } })
-      throw new HTTPException(409, {
-        message: 'The computer of that thread is offline. Start its runner and try again.',
-      })
-    }
-  } else {
-    // The workspace computer, or else the member's own machine.
-    const computer =
-      (await db.computer.findFirst({ where: { kind: 'cloud', status: { not: 'destroyed' } } })) ??
-      (await db.computer.findFirst({
-        where: { kind: 'member_machine', memberId: scope.memberId },
-        orderBy: { updatedAt: 'desc' },
-      }))
-    if (!computer) throw new HTTPException(409, { message: 'The workspace has no computer' })
-    await db.pullRequest.updateMany({ where: { id: row.id }, data: loop })
-    const { thread } = await startThread(db, scope, {
-      teammate: reviewer,
-      computer,
-      memberId: scope.memberId,
-      title: `Review ${repo}#${number}: ${p.title}`,
-      text,
-      projectId: await projectOfRepository(db, repo),
-    }).catch(async (error: unknown) => {
-      await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewStatus: 'none' } })
-      throw error
-    })
-    await db.pullRequest.updateMany({ where: { id: row.id }, data: { sessionId: thread.id } })
-  }
-  await closeTickets(db, row.id)
-  await audit({
-    ...scope,
-    actor: { type: 'member', id: scope.memberId },
-    action: 'pull_request.review_requested',
-    target: { type: 'pull_request', id: row.id },
-    data: { repository: repo, number, reviewerId: reviewer.id, autoMerge: input.autoMerge },
-  })
-  row = (await db.pullRequest.findFirst({ where: { id: row.id } }))!
-  return { sessionId: row.sessionId }
 }
 
 function previewPrompt(repo: string, p: GhPull, teammate: string) {
@@ -922,17 +838,7 @@ export async function previewPull(
     throw new HTTPException(409, {
       message: `${teammate.name} has no GitHub connection that reaches ${repo}. Grant it one on its page.`,
     })
-  const row =
-    (await db.pullRequest.findFirst({ where: { repository: repo, number } })) ??
-    (await db.pullRequest.create({
-      data: {
-        repository: repo,
-        number,
-        title: p.title,
-        headRef: p.head.ref,
-        baseRef: p.base.ref,
-      } as never,
-    }))
+  const row = await trackedRow(db, repo, p)
   if (row.sessionId)
     throw new HTTPException(409, { message: 'This pull request has a thread: preview it there' })
   const computer =
@@ -964,163 +870,94 @@ export async function previewPull(
   return { sessionId: thread.id }
 }
 
-/** Stop the loop where it is. The thread's teammates finish the turn they are in. */
-export async function stopLoop(scope: WorkspaceScope, repo: string, number: number) {
+/** Stop a merge where it is. The author finishes the turn it is in. */
+export async function stopMerge(scope: WorkspaceScope, repo: string, number: number) {
   const db = scoped(scope)
   const row = await db.pullRequest.findFirst({ where: { repository: repo, number } })
-  if (!row) throw new HTTPException(404, { message: 'Brigade is not reviewing this pull request' })
+  if (!row || row.mergeStatus === 'none')
+    throw new HTTPException(404, { message: 'Brigade is not merging this pull request' })
   const admin = scope.role === 'owner' || scope.role === 'admin'
   if (!admin && row.requestedByMemberId !== scope.memberId)
     throw new HTTPException(403, {
-      message: 'Only the member who asked for the review, or an admin, can stop it',
+      message: 'Only the member who asked to merge it, or an admin, can stop it',
     })
   await db.pullRequest.updateMany({
     where: { id: row.id },
-    data: { reviewStatus: 'none', autoMerge: false, note: null },
+    data: { mergeStatus: 'none', note: null },
   })
   await closeTickets(db, row.id)
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
-    action: 'pull_request.loop_stopped',
+    action: 'pull_request.merge_stopped',
     target: { type: 'pull_request', id: row.id },
     data: { repository: repo, number },
   })
 }
 
-/** A teammate's turn ended in a thread: if it was its move in a review loop, the loop moves on. */
-export async function reviewTurnEnded(scope: Scope, sessionId: string, teammateId: string) {
+/** A teammate's turn ended in a thread: if it was resolving a pull request's conflicts there, it merges next. */
+export async function resolveTurnEnded(scope: Scope, sessionId: string, teammateId: string) {
   const db = scoped(scope)
   const rows = await db.pullRequest.findMany({
-    where: {
-      sessionId,
-      state: 'open',
-      reviewStatus: { in: ['reviewing', 'fixing', 'resolving'] },
-    },
+    where: { sessionId, state: 'open', mergeStatus: 'resolving', authorTeammateId: teammateId },
   })
   for (const row of rows) {
     try {
-      if (row.reviewStatus === 'reviewing' && row.reviewerTeammateId === teammateId)
-        await reviewerDone(db, scope, row)
-      else if (row.reviewStatus === 'fixing' && row.authorTeammateId === teammateId)
-        await authorDone(db, scope, row)
-      else if (row.reviewStatus === 'resolving' && row.authorTeammateId === teammateId)
-        await resolverDone(db, scope, row)
+      await resolverDone(db, scope, row)
     } catch (error) {
       // Never left waiting on a move nobody makes.
       await stop(
         db,
         scope,
         row,
-        `The review could not go on: ${error instanceof Error ? error.message : String(error)}`,
+        `The merge could not go on: ${error instanceof Error ? error.message : String(error)}`,
       )
     }
   }
 }
 
-async function reviewerDone(db: ScopedDb, scope: Scope, row: LoopRow) {
-  const [review, reviewer, author] = await Promise.all([
-    db.pullRequestReview.findFirst({
-      where: { pullRequestId: row.id, teammateId: row.reviewerTeammateId, round: row.round },
-      orderBy: { createdAt: 'desc' },
-    }),
-    db.teammate.findFirst({ where: { id: row.reviewerTeammateId! } }),
-    row.authorTeammateId ? db.teammate.findFirst({ where: { id: row.authorTeammateId } }) : null,
-  ])
-  const reviewerName = reviewer?.name ?? 'The reviewer'
-  if (!review)
-    return stop(db, scope, row, `${reviewerName} finished its turn without submitting a review`)
-
-  if (review.verdict === 'approve') {
-    if (
-      !(await claim(db, row, {
-        reviewStatus: 'approved',
-        reviewedSha: review.sha,
-        note: row.autoMerge ? 'Merging once GitHub allows it' : null,
-      }))
-    )
-      return
-    if (row.autoMerge) void advanceMerge(scope, row.id).catch(console.error)
-    return
-  }
-  if (!author) {
-    await claim(db, row, { reviewStatus: 'changes_requested', reviewedSha: review.sha })
-    return
-  }
-  if (row.round >= MAX_ROUNDS)
-    return stop(db, scope, row, `Not approved after ${MAX_ROUNDS} rounds of review`)
-  if (!(await claim(db, row, { reviewStatus: 'fixing', reviewedSha: review.sha }))) return
-  await nudge(db, scope, row, author, fixPrompt(row, review, reviewerName, author.name))
-}
-
-async function authorDone(db: ScopedDb, scope: Scope, row: LoopRow) {
-  const reviewer = await db.teammate.findFirst({ where: { id: row.reviewerTeammateId! } })
-  const author = await db.teammate.findFirst({ where: { id: row.authorTeammateId! } })
-  if (!reviewer || reviewer.archivedAt)
-    return stop(db, scope, row, 'The reviewing teammate is gone')
-  const gh = await github(db, scope, row.repository)
-  const p = await pullOf(gh, row.repository, row.number)
-  if (stateOf(p) !== 'open') {
-    await claim(db, row, { reviewStatus: 'none', state: stateOf(p), note: null })
-    return
-  }
-  if (!(await claim(db, row, { reviewStatus: 'reviewing', round: row.round + 1, note: null })))
-    return
-  const moved = p.head.sha !== row.reviewedSha
-  const text = [
-    `${author?.name ?? 'The author'} answered your review of pull request #${row.number} in ` +
-      `${row.repository} (round ${row.round + 1} of ${MAX_ROUNDS}). ` +
-      (moved && row.reviewedSha
-        ? `What changed since you reviewed it: ${p.html_url.replace(/\/pull\/\d+$/, '')}/compare/${row.reviewedSha}...${p.head.sha}`
-        : moved
-          ? 'It pushed new commits.'
-          : 'It pushed no new commits: read its reply.'),
-    '',
-    `${reviewer.name}, review it again and call \`github_review_pull_request\` once with your verdict. ` +
-      'Do not mention other teammates in your reply.',
-  ].join('\n')
-  await nudge(db, scope, { ...row, round: row.round + 1 }, reviewer, text)
-}
-
 /**
- * Back to the author before merging (failed checks, conflicts), or a stop when it cannot.
- * One a person asked to merge comes back to merging when the author is done, each time a round.
+ * Back to the author before merging (failed checks, conflicts), or a stop when it cannot:
+ * it comes back to merging when the author is done, each time a round.
  */
-async function sendBack(db: ScopedDb, scope: Scope, row: LoopRow, note: string, ask: string) {
+async function sendBack(
+  db: ScopedDb,
+  scope: Scope,
+  row: MergeRow,
+  head: string,
+  note: string,
+  ask: string,
+) {
   const author = row.authorTeammateId
     ? await db.teammate.findFirst({ where: { id: row.authorTeammateId, archivedAt: null } })
     : null
   if (!author || !row.sessionId || row.round >= MAX_ROUNDS) return stop(db, scope, row, note)
-  const merging = row.reviewStatus === 'merging'
   if (
-    !(await claim(
-      db,
-      row,
-      merging
-        ? { reviewStatus: 'resolving', round: row.round + 1, note }
-        : { reviewStatus: 'fixing', note },
-    ))
+    !(await claim(db, row, {
+      mergeStatus: 'resolving',
+      round: row.round + 1,
+      resolveFromSha: head,
+      note,
+    }))
   )
     return
   await nudge(
     db,
     scope,
-    { ...row, round: merging ? row.round + 1 : row.round },
+    { ...row, round: row.round + 1 },
     author,
     [
-      `Pull request #${row.number} in ${row.repository} was ${merging ? 'set to merge' : 'approved'}, but cannot merge yet: ${note}.`,
+      `Pull request #${row.number} in ${row.repository} was set to merge, but cannot merge yet: ${note}.`,
       '',
       `${author.name}, ${ask} Push to \`${row.headRef}\`. ` +
-        (merging
-          ? 'When you are done, Brigade merges it once GitHub allows it. '
-          : 'When you are done, the reviewer looks at what changed. ') +
+        'When you are done, Brigade merges it once GitHub allows it. ' +
         'Do not mention other teammates in your reply.',
     ].join('\n'),
   )
 }
 
 /** Waiting on GitHub, with a reason for the dashboard. GitHub refusing it also tells a person, once. */
-async function waiting(db: ScopedDb, row: LoopRow, note: string, ticket = false) {
+async function waiting(db: ScopedDb, row: MergeRow, note: string, ticket = false) {
   if (row.note !== note) await db.pullRequest.updateMany({ where: { id: row.id }, data: { note } })
   if (ticket) await ticketFor(db, row, note)
 }
@@ -1128,16 +965,16 @@ async function waiting(db: ScopedDb, row: LoopRow, note: string, ticket = false)
 /**
  * The author's turn to resolve conflicts ended: now it merges, once GitHub allows it.
  * Nothing pushed means it could not, and said why in its reply: a person decides.
- * reviewedSha holds the head it started from.
+ * resolveFromSha holds the head it started from.
  */
-async function resolverDone(db: ScopedDb, scope: Scope, row: LoopRow) {
+async function resolverDone(db: ScopedDb, scope: Scope, row: MergeRow) {
   const gh = await github(db, scope, row.repository)
   const p = await pullOf(gh, row.repository, row.number)
   if (stateOf(p) !== 'open') {
-    await claim(db, row, { reviewStatus: 'none', autoMerge: false, state: stateOf(p), note: null })
+    await claim(db, row, { mergeStatus: 'none', state: stateOf(p), note: null })
     return
   }
-  if (p.head.sha === row.reviewedSha)
+  if (p.head.sha === row.resolveFromSha)
     return stop(
       db,
       scope,
@@ -1146,8 +983,8 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: LoopRow) {
     )
   if (
     !(await claim(db, row, {
-      reviewStatus: 'merging',
-      reviewedSha: p.head.sha,
+      mergeStatus: 'merging',
+      resolveFromSha: p.head.sha,
       note: 'Merging once GitHub allows it',
     }))
   )
@@ -1155,7 +992,7 @@ async function resolverDone(db: ScopedDb, scope: Scope, row: LoopRow) {
   void advanceMerge(scope, row.id).catch(console.error)
 }
 
-function resolvePrompt(row: LoopRow, p: GhPull, author: string, method: MergeMethod) {
+function resolvePrompt(row: MergeRow, p: GhPull, author: string, method: MergeMethod) {
   return [
     `Pull request #${p.number} "${p.title}" in ${row.repository} conflicts with \`${p.base.ref}\`, ` +
       `and a person asked to merge it once that is resolved: ${p.html_url}`,
@@ -1195,7 +1032,7 @@ export async function resolveConflicts(
     throw new HTTPException(409, {
       message: 'No teammate wrote this pull request. Resolve its conflicts on GitHub.',
     })
-  if (['reviewing', 'fixing', 'resolving'].includes(row.reviewStatus))
+  if (row.mergeStatus === 'resolving')
     throw new HTTPException(409, { message: 'A teammate is already working on it' })
   const thread = await loadThread(db, row.sessionId)
   if (thread.startedByMemberId !== scope.memberId && !thread.othersMayPrompt)
@@ -1209,20 +1046,20 @@ export async function resolveConflicts(
     })
 
   const before = {
-    reviewStatus: row.reviewStatus,
-    autoMerge: row.autoMerge,
+    mergeStatus: row.mergeStatus,
+    mergeMethod: row.mergeMethod,
+    requestedByMemberId: row.requestedByMemberId,
     round: row.round,
-    reviewedSha: row.reviewedSha,
+    resolveFromSha: row.resolveFromSha,
   }
   await db.pullRequest.updateMany({
     where: { id: row.id },
     data: {
-      reviewStatus: 'resolving',
-      autoMerge: true,
+      mergeStatus: 'resolving',
       mergeMethod: method,
       requestedByMemberId: scope.memberId,
       round: 1,
-      reviewedSha: p.head.sha,
+      resolveFromSha: p.head.sha,
       note: `${author.name} is resolving the conflicts with \`${p.base.ref}\``,
     },
   })
@@ -1254,34 +1091,21 @@ export async function resolveConflicts(
 }
 
 /**
- * Merge an approved pull request armed to merge, or one a person asked to merge,
- * as soon as GitHub allows it. Checked when it is ready and every minute after.
+ * Merge a pull request a person asked to merge, as soon as GitHub allows it.
+ * Checked when it is ready and every minute after.
  */
 async function advanceMerge(scope: Scope, id: string) {
   const db = scoped(scope)
   const row = await db.pullRequest.findFirst({ where: { id } })
-  if (!row || row.state !== 'open') return
-  const merging = row.reviewStatus === 'merging'
-  if (!merging && (row.reviewStatus !== 'approved' || !row.autoMerge)) return
+  if (!row || row.state !== 'open' || row.mergeStatus !== 'merging') return
   const gh = await github(db, scope, row.repository)
   const p = await pullOf(gh, row.repository, row.number)
   if (stateOf(p) !== 'open') {
     await db.pullRequest.updateMany({
       where: { id: row.id },
-      data: { state: stateOf(p), autoMerge: false, note: null },
+      data: { state: stateOf(p), mergeStatus: 'none', note: null },
     })
     return
-  }
-  // A person asked to merge it as it is: only an approval holds to the commit it saw.
-  if (!merging && row.reviewedSha && p.head.sha !== row.reviewedSha) {
-    // The base merged into the branch (GitHub's "Update branch") changes nothing reviewed.
-    const head = await call<{ parents: { sha: string }[] }>(
-      gh,
-      `${repoPath(row.repository)}/commits/${p.head.sha}`,
-    )
-    if (head.parents.length !== 2 || head.parents[0]!.sha !== row.reviewedSha)
-      return stop(db, scope, row, 'New commits since the approval: ask for a review again')
-    await db.pullRequest.updateMany({ where: { id: row.id }, data: { reviewedSha: p.head.sha } })
   }
   if (p.draft) return waiting(db, row, 'A draft: mark it ready for review on GitHub to merge', true)
   if (p.mergeable == null) return // GitHub is still working it out.
@@ -1290,6 +1114,7 @@ async function advanceMerge(scope: Scope, id: string) {
       db,
       scope,
       row,
+      p.head.sha,
       `it conflicts with \`${p.base.ref}\``,
       `merge \`${p.base.ref}\` into your branch and resolve the conflicts.`,
     )
@@ -1300,6 +1125,7 @@ async function advanceMerge(scope: Scope, id: string) {
       db,
       scope,
       row,
+      p.head.sha,
       `checks failed (${failed.map((c) => c.name).join(', ')})`,
       `find out why these checks fail and fix it:\n${failed.map((c) => `- ${c.name}${c.url ? `: ${c.url}` : ''}`).join('\n')}\n`,
     )
@@ -1352,7 +1178,7 @@ async function recordMerge(
 ) {
   await db.pullRequest.updateMany({
     where: { id: row.id },
-    data: { state: 'merged', mergedAt: new Date(), autoMerge: false, note: null },
+    data: { state: 'merged', mergedAt: new Date(), mergeStatus: 'none', note: null },
   })
   await closeTickets(db, row.id)
   await audit({
@@ -1403,7 +1229,7 @@ export async function mergeNow(
 
 /**
  * An owner or admin closes a pull request without merging it, or reopens it.
- * Closing ends its review loop, as closing it on GitHub does.
+ * Closing stops a merge or a review under way, as closing it on GitHub does.
  */
 export async function setPullState(
   scope: WorkspaceScope,
@@ -1435,14 +1261,7 @@ export async function setPullState(
   const row = await findRow(db, repo, number)
   if (!row) return
   await sync(db, scope, row, p)
-  if (state === 'closed') {
-    // sync leaves an approved loop be; closing by hand ends it too.
-    await db.pullRequest.updateMany({
-      where: { id: row.id },
-      data: { reviewStatus: 'none', autoMerge: false, note: null },
-    })
-    await closeTickets(db, row.id)
-  }
+  if (state === 'closed') await closeTickets(db, row.id)
   await audit({
     ...scope,
     actor: { type: 'member', id: scope.memberId },
@@ -1454,17 +1273,14 @@ export async function setPullState(
 
 let watching = false
 
-/** Every minute: merge pull requests armed or asked to merge, once GitHub allows it. */
+/** Every minute: merge pull requests a person asked to merge, once GitHub allows it. */
 export function watchMerges() {
   setInterval(() => {
     if (watching) return
     watching = true
     void (async () => {
       const rows = await prisma.pullRequest.findMany({
-        where: {
-          state: 'open',
-          OR: [{ reviewStatus: 'approved', autoMerge: true }, { reviewStatus: 'merging' }],
-        },
+        where: { state: 'open', mergeStatus: 'merging' },
         select: { id: true, organizationId: true, workspaceId: true },
       })
       for (const r of rows)

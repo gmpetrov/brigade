@@ -21,7 +21,7 @@ export const canMerge = (p: { mergeable: boolean | null; mergeableState: string 
 /** It conflicts, and nobody is resolving it yet: Resolve conflicts takes the Merge button's place. */
 export const hasConflicts = (p: { mergeableState: string; tracking: PullRequestTracking | null }) =>
   p.mergeableState === 'dirty' &&
-  !['reviewing', 'fixing', 'resolving', 'merging'].includes(p.tracking?.reviewStatus ?? 'none')
+  !['resolving', 'merging'].includes(p.tracking?.mergeStatus ?? 'none')
 
 /** A teammate wrote it in a thread, so it can resolve the conflicts there; else they are resolved on GitHub. */
 export const resolvesInBrigade = (p: { tracking: PullRequestTracking | null }) =>
@@ -29,7 +29,27 @@ export const resolvesInBrigade = (p: { tracking: PullRequestTracking | null }) =
 
 /** Where Brigade waits on the pull request's teammate or on GitHub before it merges. */
 export const resolving = (p: { tracking: PullRequestTracking | null }) =>
-  p.tracking?.reviewStatus === 'resolving' || p.tracking?.reviewStatus === 'merging'
+  p.tracking?.mergeStatus === 'resolving' || p.tracking?.mergeStatus === 'merging'
+
+/** Who is reviewing it, while a review is under way. */
+export const reviewer = (p: { tracking: PullRequestTracking | null }) =>
+  p.tracking?.review?.state === 'reviewing'
+    ? (p.tracking.review.reviewer?.name ?? 'A teammate')
+    : null
+
+/** Merge, but not without a word while a review is under way: the person may want to wait for it. */
+export function confirmMerge(
+  p: { number: number; base?: string; tracking: PullRequestTracking | null } | undefined,
+  number: number,
+  method: string,
+) {
+  const by = p ? reviewer(p) : null
+  return confirm(
+    by
+      ? `${by} is still reviewing #${number}. Merge it anyway (${method})?`
+      : `Merge #${number}${p?.base ? ` into ${p.base}` : ''} (${method})?`,
+  )
+}
 
 /** The merge method last picked, remembered per browser. Squash until one is picked. */
 export function useLastMergeMethod() {

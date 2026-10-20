@@ -35,6 +35,7 @@ export type ProjectMinAggregateOutputType = {
   url: string | null
   brief: string | null
   folder: string | null
+  reviewPolicy: $Enums.ReviewPolicy | null
   archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -50,6 +51,7 @@ export type ProjectMaxAggregateOutputType = {
   url: string | null
   brief: string | null
   folder: string | null
+  reviewPolicy: $Enums.ReviewPolicy | null
   archivedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -66,6 +68,7 @@ export type ProjectCountAggregateOutputType = {
   brief: number
   folder: number
   preferredConnectionIds: number
+  reviewPolicy: number
   archivedAt: number
   createdAt: number
   updatedAt: number
@@ -83,6 +86,7 @@ export type ProjectMinAggregateInputType = {
   url?: true
   brief?: true
   folder?: true
+  reviewPolicy?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -98,6 +102,7 @@ export type ProjectMaxAggregateInputType = {
   url?: true
   brief?: true
   folder?: true
+  reviewPolicy?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -114,6 +119,7 @@ export type ProjectCountAggregateInputType = {
   brief?: true
   folder?: true
   preferredConnectionIds?: true
+  reviewPolicy?: true
   archivedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -203,6 +209,7 @@ export type ProjectGroupByOutputType = {
   brief: string
   folder: string | null
   preferredConnectionIds: string[]
+  reviewPolicy: $Enums.ReviewPolicy
   archivedAt: Date | null
   createdAt: Date
   updatedAt: Date
@@ -240,6 +247,7 @@ export type ProjectWhereInput = {
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
+  reviewPolicy?: Prisma.EnumReviewPolicyFilter<"Project"> | $Enums.ReviewPolicy
   archivedAt?: Prisma.DateTimeNullableFilter<"Project"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
@@ -264,6 +272,7 @@ export type ProjectOrderByWithRelationInput = {
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrderInput | Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
+  reviewPolicy?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -292,6 +301,7 @@ export type ProjectWhereUniqueInput = Prisma.AtLeast<{
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
+  reviewPolicy?: Prisma.EnumReviewPolicyFilter<"Project"> | $Enums.ReviewPolicy
   archivedAt?: Prisma.DateTimeNullableFilter<"Project"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
@@ -316,6 +326,7 @@ export type ProjectOrderByWithAggregationInput = {
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrderInput | Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
+  reviewPolicy?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -338,6 +349,7 @@ export type ProjectScalarWhereWithAggregatesInput = {
   brief?: Prisma.StringWithAggregatesFilter<"Project"> | string
   folder?: Prisma.StringNullableWithAggregatesFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
+  reviewPolicy?: Prisma.EnumReviewPolicyWithAggregatesFilter<"Project"> | $Enums.ReviewPolicy
   archivedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Project"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Project"> | Date | string
@@ -353,6 +365,7 @@ export type ProjectCreateInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -377,6 +390,7 @@ export type ProjectUncheckedCreateInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -399,6 +413,7 @@ export type ProjectUpdateInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -423,6 +438,7 @@ export type ProjectUncheckedUpdateInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -446,6 +462,7 @@ export type ProjectCreateManyInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -461,6 +478,7 @@ export type ProjectUpdateManyMutationInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -477,6 +495,7 @@ export type ProjectUncheckedUpdateManyInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -513,6 +532,7 @@ export type ProjectCountOrderByAggregateInput = {
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
   preferredConnectionIds?: Prisma.SortOrder
+  reviewPolicy?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -528,6 +548,7 @@ export type ProjectMaxOrderByAggregateInput = {
   url?: Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
+  reviewPolicy?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -543,6 +564,7 @@ export type ProjectMinOrderByAggregateInput = {
   url?: Prisma.SortOrder
   brief?: Prisma.SortOrder
   folder?: Prisma.SortOrder
+  reviewPolicy?: Prisma.SortOrder
   archivedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -684,6 +706,10 @@ export type ProjectUpdatepreferredConnectionIdsInput = {
   push?: string | string[]
 }
 
+export type EnumReviewPolicyFieldUpdateOperationsInput = {
+  set?: $Enums.ReviewPolicy
+}
+
 export type ProjectCreateNestedOneWithoutRepositoriesInput = {
   create?: Prisma.XOR<Prisma.ProjectCreateWithoutRepositoriesInput, Prisma.ProjectUncheckedCreateWithoutRepositoriesInput>
   connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutRepositoriesInput
@@ -724,6 +750,7 @@ export type ProjectCreateWithoutWorkspaceInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -746,6 +773,7 @@ export type ProjectUncheckedCreateWithoutWorkspaceInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -798,6 +826,7 @@ export type ProjectScalarWhereInput = {
   brief?: Prisma.StringFilter<"Project"> | string
   folder?: Prisma.StringNullableFilter<"Project"> | string | null
   preferredConnectionIds?: Prisma.StringNullableListFilter<"Project">
+  reviewPolicy?: Prisma.EnumReviewPolicyFilter<"Project"> | $Enums.ReviewPolicy
   archivedAt?: Prisma.DateTimeNullableFilter<"Project"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Project"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Project"> | Date | string
@@ -813,6 +842,7 @@ export type ProjectCreateWithoutSessionsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -836,6 +866,7 @@ export type ProjectUncheckedCreateWithoutSessionsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -873,6 +904,7 @@ export type ProjectUpdateWithoutSessionsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -896,6 +928,7 @@ export type ProjectUncheckedUpdateWithoutSessionsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -917,6 +950,7 @@ export type ProjectCreateWithoutTasksInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -940,6 +974,7 @@ export type ProjectUncheckedCreateWithoutTasksInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -977,6 +1012,7 @@ export type ProjectUpdateWithoutTasksInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1000,6 +1036,7 @@ export type ProjectUncheckedUpdateWithoutTasksInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1021,6 +1058,7 @@ export type ProjectCreateWithoutSchedulesInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1044,6 +1082,7 @@ export type ProjectUncheckedCreateWithoutSchedulesInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1081,6 +1120,7 @@ export type ProjectUpdateWithoutSchedulesInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1104,6 +1144,7 @@ export type ProjectUncheckedUpdateWithoutSchedulesInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1125,6 +1166,7 @@ export type ProjectCreateWithoutTriggersInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1148,6 +1190,7 @@ export type ProjectUncheckedCreateWithoutTriggersInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1185,6 +1228,7 @@ export type ProjectUpdateWithoutTriggersInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1208,6 +1252,7 @@ export type ProjectUncheckedUpdateWithoutTriggersInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1229,6 +1274,7 @@ export type ProjectCreateWithoutDocumentsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1252,6 +1298,7 @@ export type ProjectUncheckedCreateWithoutDocumentsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1289,6 +1336,7 @@ export type ProjectUpdateWithoutDocumentsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1312,6 +1360,7 @@ export type ProjectUncheckedUpdateWithoutDocumentsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1333,6 +1382,7 @@ export type ProjectCreateWithoutRepositoriesInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1356,6 +1406,7 @@ export type ProjectUncheckedCreateWithoutRepositoriesInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1393,6 +1444,7 @@ export type ProjectUpdateWithoutRepositoriesInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1416,6 +1468,7 @@ export type ProjectUncheckedUpdateWithoutRepositoriesInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1437,6 +1490,7 @@ export type ProjectCreateWithoutPlaybookInstallationsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1460,6 +1514,7 @@ export type ProjectUncheckedCreateWithoutPlaybookInstallationsInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1497,6 +1552,7 @@ export type ProjectUpdateWithoutPlaybookInstallationsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1520,6 +1576,7 @@ export type ProjectUncheckedUpdateWithoutPlaybookInstallationsInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1541,6 +1598,7 @@ export type ProjectCreateManyWorkspaceInput = {
   brief?: string
   folder?: string | null
   preferredConnectionIds?: Prisma.ProjectCreatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: $Enums.ReviewPolicy
   archivedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1556,6 +1614,7 @@ export type ProjectUpdateWithoutWorkspaceInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1578,6 +1637,7 @@ export type ProjectUncheckedUpdateWithoutWorkspaceInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1600,6 +1660,7 @@ export type ProjectUncheckedUpdateManyWithoutWorkspaceInput = {
   brief?: Prisma.StringFieldUpdateOperationsInput | string
   folder?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   preferredConnectionIds?: Prisma.ProjectUpdatepreferredConnectionIdsInput | string[]
+  reviewPolicy?: Prisma.EnumReviewPolicyFieldUpdateOperationsInput | $Enums.ReviewPolicy
   archivedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1701,6 +1762,7 @@ export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
+  reviewPolicy?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1726,6 +1788,7 @@ export type ProjectSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
+  reviewPolicy?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1743,6 +1806,7 @@ export type ProjectSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
+  reviewPolicy?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1760,12 +1824,13 @@ export type ProjectSelectScalar = {
   brief?: boolean
   folder?: boolean
   preferredConnectionIds?: boolean
+  reviewPolicy?: boolean
   archivedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "icon" | "logo" | "url" | "brief" | "folder" | "preferredConnectionIds" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
+export type ProjectOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "name" | "icon" | "logo" | "url" | "brief" | "folder" | "preferredConnectionIds" | "reviewPolicy" | "archivedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["project"]>
 export type ProjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   repositories?: boolean | Prisma.Project$repositoriesArgs<ExtArgs>
@@ -1826,6 +1891,10 @@ export type $ProjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
      * Connections its threads should use when several could do. A hint, not a grant.
      */
     preferredConnectionIds: string[]
+    /**
+     * Whether its pull requests get a review by another teammate.
+     */
+    reviewPolicy: $Enums.ReviewPolicy
     archivedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -2270,6 +2339,7 @@ export interface ProjectFieldRefs {
   readonly brief: Prisma.FieldRef<"Project", 'String'>
   readonly folder: Prisma.FieldRef<"Project", 'String'>
   readonly preferredConnectionIds: Prisma.FieldRef<"Project", 'String[]'>
+  readonly reviewPolicy: Prisma.FieldRef<"Project", 'ReviewPolicy'>
   readonly archivedAt: Prisma.FieldRef<"Project", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Project", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Project", 'DateTime'>

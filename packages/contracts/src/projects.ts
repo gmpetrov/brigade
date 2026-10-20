@@ -3,6 +3,7 @@
 // workspace resource stays shared: it organizes, it does not isolate.
 import { z } from 'zod'
 import { LibraryPath } from './library.js'
+import { ReviewPolicy } from './reviews.js'
 
 const Name = z.string().trim().min(1).max(80)
 /** One letter or an emoji. */
@@ -59,6 +60,8 @@ export const UpdateProject = z.object({
   logo: Logo.nullable().optional(),
   folder: Folder.nullable().optional(),
   preferredConnectionIds: z.array(z.string()).max(20).optional(),
+  /** Whether its pull requests get a review by another teammate. */
+  reviewPolicy: ReviewPolicy.optional(),
 })
 
 /** Replaces the project's repositories. */
@@ -132,6 +135,8 @@ export const ThreadProject = z.object({
   repositories: z.array(z.string()),
   /** Connections to use when several could do. */
   connections: z.array(z.object({ connectionId: z.string(), label: z.string() })),
+  /** Whether its pull requests get a review: the teammate decides, or only when someone asks. */
+  reviewPolicy: ReviewPolicy.default('teammate'),
 })
 export type ThreadProject = z.infer<typeof ThreadProject>
 

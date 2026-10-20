@@ -1,30 +1,48 @@
-// Pull requests: what the dashboard shows of a repository's pull requests, and
-// the review loop, where one teammate reviews another's work until it merges.
+// Pull requests: what the dashboard shows of a repository's pull requests, their
+// reviews by a teammate (src/reviews.ts in the API) and a merge a person asked for.
 import { z } from 'zod'
 
-export const ReviewStatus = z.enum([
+/** Where a merge a person asked for stands. */
+export const MergeStatus = z.enum([
   'none',
-  'reviewing',
-  'fixing',
-  'approved',
-  'changes_requested',
+  /** It stopped and a person has a ticket. */
   'stuck',
   /** A person asked to merge it once its conflicts are resolved: the author's turn. */
   'resolving',
   /** A person asked to merge it: it merges once GitHub allows it. */
   'merging',
 ])
-export type ReviewStatus = z.infer<typeof ReviewStatus>
+export type MergeStatus = z.infer<typeof MergeStatus>
 
 export const MergeMethod = z.enum(['squash', 'merge', 'rebase'])
 export type MergeMethod = z.infer<typeof MergeMethod>
 
+/** A member asks a teammate to review a pull request. */
 export const RequestReview = z.object({
-  reviewerId: z.string().min(1),
-  /** Merge once the reviewer approves and GitHub allows it. Owners and admins only. */
-  autoMerge: z.boolean().default(false),
+  /** Who reviews it; unset: Brigade picks another teammate, on another model when it can. */
+  reviewerId: z.string().min(1).optional(),
 })
 export type RequestReview = z.infer<typeof RequestReview>
+
+type Ref = { id: string; name: string }
+
+/** A pull request's review by a teammate: under way, its latest verdict, or why it got none. */
+export type PullReview =
+  /** The reviewer is at it, in its thread. */
+  | { state: 'reviewing'; reviewer: Ref | null; threadId: string }
+  /**
+   * Its latest verdict. changed: commits came after the one it looked at (unset where
+   * GitHub was not asked, as in Needs you's list).
+   */
+  | {
+      state: 'approved' | 'changes_requested'
+      reviewer: Ref | null
+      threadId: string | null
+      changed?: boolean
+      at: string
+    }
+  /** The teammate that opened it asked for none, and why. */
+  | { state: 'skipped'; reason: string }
 
 /** Preview a pull request without a thread: a teammate checks out its branch in a new one and starts it. */
 export const PreviewPullRequest = z.object({ teammateId: z.string().min(1) })
@@ -37,16 +55,14 @@ export type MergePullRequest = z.infer<typeof MergePullRequest>
 export const ResolvePullRequest = MergePullRequest
 export type ResolvePullRequest = MergePullRequest
 
-/** Brigade's side of a pull request: who wrote it, and where its review loop stands. */
+/** Brigade's side of a pull request: who wrote it, its review, and a merge a person asked for. */
 export type PullRequestTracking = {
-  reviewStatus: ReviewStatus
-  autoMerge: boolean
-  round: number
-  maxRounds: number
+  mergeStatus: MergeStatus
+  /** Why a merge waits or stopped. */
   note: string | null
   sessionId: string | null
-  author: { id: string; name: string } | null
-  reviewer: { id: string; name: string } | null
+  author: Ref | null
+  review: PullReview | null
   /** Its thread's preview, while one starts or runs: ready once its pages passed their check. */
   preview: 'starting' | 'running' | 'ready' | null
 }
