@@ -102,19 +102,21 @@ export async function wakeOnReply(
   now = new Date(),
 ) {
   if (!email.threadId) return 0
+  // Ended ones too: an email read again after a failed read stays the thread's it woke, even
+  // when that thread stopped waiting meanwhile.
   const watches = await prisma.replyWatch.findMany({
-    where: { connectionId: connection.id, conversationKey: email.threadId, until: { gt: now } },
+    where: { connectionId: connection.id, conversationKey: email.threadId },
   })
   let taken = 0
   for (const watch of watches) {
     const scope: Scope = { organizationId: watch.organizationId, workspaceId: watch.workspaceId }
     const db = scoped(scope)
     const sourceId = `gmail:${email.id}`
-    // Read again after a failed read: it woke this thread already.
     if (await db.wakeup.count({ where: { sessionId: watch.sessionId, sourceId } })) {
       taken++
       continue
     }
+    if (watch.until <= now) continue
     const queued = await db.wakeup.count({
       where: { sessionId: watch.sessionId, kind: 'reply', status: 'pending' },
     })

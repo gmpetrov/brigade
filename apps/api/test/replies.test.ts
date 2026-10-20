@@ -63,6 +63,8 @@ type Fake = {
   read: string[]
   sendsIn?: string
   onHistory?: () => Promise<unknown>
+  /** Messages Gmail fails to give, for now. */
+  failing?: Set<string>
 }
 let gmail: Fake
 const realFetch = globalThis.fetch
@@ -84,6 +86,7 @@ before(async () => {
     const message = /^\/messages\/([^/]+)$/.exec(path)?.[1]
     if (message) {
       gmail.read.push(message)
+      if (gmail.failing?.has(message)) return reply({ error: 'backendError' }, 503)
       return gmail.messages[message] ? reply(gmail.messages[message]) : reply({}, 404)
     }
     throw new Error(`unexpected request ${url}`)
@@ -410,6 +413,62 @@ test('a reply a thread waits on starts or continues no trigger thread', { skip }
     await db.trigger.deleteMany({ where: { id: trigger.id } })
   }
 })
+
+test(
+  'a reply read again after its thread stopped waiting still goes to no trigger',
+  { skip },
+  async () => {
+    const db = scoped(scope)
+    const trigger = await db.trigger.create({
+      data: {
+        connectionId: connection.id,
+        teammateId,
+        label: 'Every email',
+        event: 'email_received',
+        createdByMemberId: member,
+      } as never,
+    })
+    try {
+      const t = await thread()
+      const watch = await send(t, 'conv-i')
+      const sub = await subscribed()
+      // The reply, then an email Gmail fails to give: the read stops and keeps its cursor.
+      gmail.history = [
+        {
+          id: '150',
+          messagesAdded: [
+            { message: { id: 'm-i', threadId: 'conv-i', labelIds: ['INBOX'] } },
+            { message: { id: 'm-i-next', threadId: 'conv-other', labelIds: ['INBOX'] } },
+          ],
+        },
+      ]
+      gmail.messages['m-i'] = email('m-i', 'conv-i')
+      gmail.failing = new Set(['m-i-next'])
+      await assert.rejects(readInbox(sub.id))
+      assert.equal((await replies(t.id)).length, 1)
+
+      // The thread stops waiting; the next read gives the reply again, and the other is gone.
+      await stopWatching(db, { ...scope, memberId: member }, t, watch!.id)
+      gmail.failing = new Set()
+      await readInbox(sub.id)
+      assert.equal((await replies(t.id)).length, 1)
+      assert.equal(
+        await prisma.auditEntry.count({
+          where: { action: 'trigger.received', targetId: trigger.id },
+        }),
+        0,
+      )
+      assert.equal(
+        await prisma.ticket.count({
+          where: { payload: { path: ['triggerId'], equals: trigger.id } },
+        }),
+        0,
+      )
+    } finally {
+      await db.trigger.deleteMany({ where: { id: trigger.id } })
+    }
+  },
+)
 
 test(
   'replies waiting for an offline computer count toward the limit in a row',
