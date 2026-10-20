@@ -437,11 +437,15 @@ async function changeMemory(
   sessionId: string | null,
   change: (current: { text: string; memoryTidiedAt: Date | null } | null) => MemoryChange | null,
 ) {
+  // Only the workspace: a dashboard's scope also names its user and member, which no row has.
+  const inWorkspace = { organizationId: scope.organizationId, workspaceId: scope.workspaceId }
   return prisma.$transaction(
     async (tx) => {
       const path = memoryPath(target)
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:${path}`}))`
-      const current = await tx.document.findFirst({ where: { ...scope, kind: target.kind, path } })
+      const current = await tx.document.findFirst({
+        where: { ...inWorkspace, kind: target.kind, path },
+      })
       const next = change(current)
       if (!next) return null
       const changed = current?.text !== next.text
@@ -455,7 +459,7 @@ async function changeMemory(
       const row = !current
         ? await tx.document.create({
             data: {
-              ...scope,
+              ...inWorkspace,
               kind: target.kind,
               path,
               contentType: 'text/markdown',
@@ -475,7 +479,7 @@ async function changeMemory(
       })
       if (plan.create.length)
         await tx.memoryLine.createMany({
-          data: plan.create.map((line) => ({ ...scope, documentId: row.id, ...line })),
+          data: plan.create.map((line) => ({ ...inWorkspace, documentId: row.id, ...line })),
         })
       // Rows that change the same way (a topic, a confirmation) change together.
       const groups = new Map<string, { data: LineUpdate; ids: string[] }>()
@@ -856,7 +860,7 @@ export async function search(
       ${summaries}
     ORDER BY ts_rank(d.search, q.query) DESC, d."updatedAt" DESC
     LIMIT ${limit}`
-  // Lines memory let go (replaced, merged, outdated): a few, after the files, to tell what was decided before.
+  // Lines removed from memory (replaced, merged, outdated): a few, after the files, to tell what was decided before.
   const ownArchive = input.teammate
     ? Prisma.sql`AND (d.kind <> 'teammate_memory' OR d."teammateId" = ${input.teammate.id})`
     : Prisma.empty

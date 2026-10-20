@@ -42,7 +42,7 @@ const MEMORY_RULES =
   'in memory, and "by" names the person who wrote it. When two lines disagree, the newer one wins, and a ' +
   "person's line outranks one a teammate learned. A line about code, an account or a provider may have changed " +
   'since: check it before you rely on it, and when your work shows a line is wrong, say so in your reply. ' +
-  '`search_workspace` also finds the lines memory let go, with why.'
+  '`search_workspace` also finds lines removed from memory, with why.'
 
 /** Where the teammate may save to the library: everywhere, nowhere, or some folders. */
 function saving(spec: ThreadSpec) {

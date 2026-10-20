@@ -280,7 +280,10 @@ function Memory({
         target={{ kind: 'workspace_memory' }}
         onSaved={reload}
       />
-      {overview.projects.map((p) => (
+      {/* A project's empty memory is on its own page; here it would only add an empty card. */}
+      {overview.projects
+        .filter((p) => p.memory.documentId && p.memory.text.replace(/^#[^\n]*\n+/, '').trim())
+        .map((p) => (
         <MemoryCard
           key={p.projectId}
           title={p.name}

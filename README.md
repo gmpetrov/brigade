@@ -480,7 +480,7 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   with the core, the topics with their descriptions, merges and lines to archive with why (`memory.tidy`; the API
   drops it when the file was tidied again since, `layOutMemoryFile`). A layout that would take away more than 40 % of
   the file (60 % past 40,000 characters) is not applied. Lines it leaves out stay where they were.
-- **The archive** is the lines memory let go: replaced, merged, outdated or removed. Teammates no longer load them;
+- **The archive** holds the lines removed from memory: replaced, merged, outdated or removed by a person. Teammates no longer load them;
   `search_workspace` and the dashboard's search find them, and the Memory tab lists them per file, with why, when,
   by whom and the thread they were learned in, and puts one back under its topic.
 - **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,

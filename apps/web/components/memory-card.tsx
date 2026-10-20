@@ -1,7 +1,7 @@
 'use client'
 // A memory file as people see it: its core, which every thread loads, each line
 // with the day it was learned or last confirmed; its topics, which threads read
-// when their work touches them, folded; and the lines it let go (the archive),
+// when their work touches them, folded; and the lines removed from it (the archive),
 // which can be put back. Editing opens the file in the document editor.
 import {
   parseMemoryFile,
@@ -112,29 +112,21 @@ export function MemoryCard({
             {file.updatedAt && ` Updated ${timeAgo(file.updatedAt)}.`}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
-          {file.archived > 0 && file.documentId && (
-            <Button variant="ghost" size="sm" onClick={() => setArchive(true)}>
-              Removed lines
-              <span className="text-muted-foreground tabular-nums">{file.archived}</span>
-            </Button>
-          )}
-          <Button
-            variant={editing ? 'default' : 'outline'}
-            size="sm"
-            aria-pressed={editing}
-            onClick={() => {
-              if (!editing) {
-                documents.open({ target, title: `${title} memory`, subtitle: description })
-                return
-              }
-              documents.close()
-              void onSaved()
-            }}
-          >
-            {editing ? 'Done' : 'Edit'}
-          </Button>
-        </div>
+        <Button
+          variant={editing ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={editing}
+          onClick={() => {
+            if (!editing) {
+              documents.open({ target, title: `${title} memory`, subtitle: description })
+              return
+            }
+            documents.close()
+            void onSaved()
+          }}
+        >
+          {editing ? 'Done' : 'Edit'}
+        </Button>
       </div>
       <CardContent className="flex flex-col gap-4">
         {empty ? (
@@ -161,7 +153,7 @@ export function MemoryCard({
                         <span className="min-w-0 flex-1">
                           <span className="text-sm font-semibold">{topic.name}</span>
                           {topic.description && (
-                            <span className="ml-2 text-sm text-muted-foreground">
+                            <span className="block text-sm text-muted-foreground sm:ml-2 sm:inline">
                               {topic.description}
                             </span>
                           )}
@@ -181,6 +173,15 @@ export function MemoryCard({
             )}
           </>
         )}
+        {file.archived > 0 && file.documentId && (
+          <button
+            type="button"
+            onClick={() => setArchive(true)}
+            className="self-start text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
+            {file.archived} line{file.archived === 1 ? '' : 's'} removed
+          </button>
+        )}
       </CardContent>
       {archive && file.documentId && (
         <MemoryArchive
@@ -194,7 +195,7 @@ export function MemoryCard({
   )
 }
 
-/** The lines a memory let go: why, when and by whom, searchable, each one can be put back. */
+/** Lines removed from a memory: why, when and by whom, searchable, each one can be put back. */
 function MemoryArchive({
   title,
   documentId,
@@ -245,7 +246,7 @@ function MemoryArchive({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[min(90dvh,48rem)] flex-col gap-4 sm:max-w-2xl">
         <div className="flex flex-col gap-1">
-          <DialogTitle className="text-lg font-bold">Lines {title} memory let go</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Removed from {title} memory</DialogTitle>
           <DialogDescription>
             Replaced, merged, outdated or removed. Teammates no longer load them, but search still
             finds them. Put one back if it still holds.
