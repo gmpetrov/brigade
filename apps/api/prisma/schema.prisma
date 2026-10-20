@@ -1231,6 +1231,8 @@ enum TicketType {
   sign_in
   cap
   usage_limit
+  /// A cloud computer's disk is still full after its runner freed what it could.
+  disk_full
 }
 
 enum TicketStatus {

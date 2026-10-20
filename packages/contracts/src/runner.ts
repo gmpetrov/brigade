@@ -213,6 +213,11 @@ export const RunnerToApi = z.discriminatedUnion('type', [
   /** Still here, every 30 s: the API forgets a runner it stops hearing from (HEARTBEAT_PROTOCOL). */
   z.object({ type: z.literal('heartbeat') }),
   /**
+   * A cloud computer's disk after the runner freed what it could (DISK_PROTOCOL): still
+   * full, and how full (0 to 1). Said when that changes and every 10 minutes.
+   */
+  z.object({ type: z.literal('disk'), full: z.boolean(), used: z.number().min(0).max(1) }),
+  /**
    * The runner restarts into an update and hands its turns over to the next one (protocol 29):
    * until that one connects, the API holds the computer's commands, and it stays online.
    */

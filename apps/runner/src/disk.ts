@@ -28,6 +28,74 @@ const PRUNE_TIMEOUT_MS = 15 * 60_000
 /** Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP servers run from it. */
 const TOOL_CACHES = ['.npm/_cacache', '.cache/yarn', '.cache/pip', '.cache/go-build']
 
+/**
+ * After everything was freed, still this full: someone must act (a ticket in Needs you).
+ * Below FULL again, it closes.
+ */
+export const STILL_FULL = 0.85
+
+/** Package managers whose runs write into the caches cleared here, by the name their command has. */
+const MANAGERS = new Set(['pnpm', 'npm', 'npm-cli', 'yarn', 'bun', 'pip', 'pip3', 'uv', 'corepack'])
+/** Their commands that install, and so write into a cache or store while they run. */
+const INSTALLS = new Set([
+  'install',
+  'i',
+  'ci',
+  'add',
+  'update',
+  'up',
+  'upgrade',
+  'remove',
+  'rm',
+  'uninstall',
+  'un',
+  'dlx',
+  'fetch',
+  'import',
+  'rebuild',
+  'dedupe',
+  'store',
+  'sync',
+  'prepare',
+])
+/** Their commands that run something instead: a dev server, a preview, a test. */
+const RUNS = new Set(['exec', 'run', 'test', 'start', 'dev', 'build', 'lint', 'x'])
+
+/**
+ * Whether a command line is a package manager installing. `pnpm` alone installs; a
+ * value given to a flag (pnpm --filter web install) is skipped over. Wrong only
+ * toward "installing", which only puts off clearing a cache.
+ */
+export function installs(args: string) {
+  const words = args.trim().split(/\s+/)
+  const at = words.findIndex((word) =>
+    MANAGERS.has((word.split('/').at(-1) ?? '').replace(/\.(c|m)?js$/, '')),
+  )
+  if (at < 0) return false
+  const rest = words.slice(at + 1).filter((word) => !word.startsWith('-'))
+  if (rest.length === 0) return ['pnpm', 'yarn', 'bun'].some((m) => words[at]!.includes(m))
+  for (const word of rest.slice(0, 3)) {
+    if (RUNS.has(word)) return false
+    if (INSTALLS.has(word)) return true
+  }
+  return false
+}
+
+/** Whether one of the teammate's processes is installing packages: its caches stay until it is done. */
+export async function installing(runAs: string) {
+  // Every process, by uid: `ps -u` fails when the teammate has none. The runner reads every
+  // user's command lines; none of them is the teammate's to hide.
+  const read = await Promise.all([run('id', ['-u', runAs]), run('ps', ['-A', '-o', 'uid=,args='])])
+    .then(([uid, out]) => ({ uid: uid.toString().trim(), lines: out.toString().split('\n') }))
+    // Unknown: as if it were.
+    .catch(() => null)
+  if (!read) return true
+  return read.lines.some((line) => {
+    const [uid = '', ...args] = line.trim().split(/\s+/)
+    return uid === read.uid && installs(args.join(' '))
+  })
+}
+
 /** How much to set aside on a disk of this size. */
 export function reserveSize(diskBytes: number) {
   return Math.min(RESERVE_MAX, Math.floor(diskBytes * RESERVE_SHARE))

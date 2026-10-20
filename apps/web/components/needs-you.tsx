@@ -282,7 +282,10 @@ export function NeedsYou({
             : 'Declined'
           : t?.payload.source === 'harness'
             ? 'Declined'
-            : t?.type === 'sign_in' || t?.type === 'usage_limit' || t?.payload.pullRequest
+            : t?.type === 'sign_in' ||
+                t?.type === 'usage_limit' ||
+                t?.type === 'disk_full' ||
+                t?.payload.pullRequest
               ? 'Dismissed'
               : approved
                 ? 'Allowed'

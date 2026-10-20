@@ -56,8 +56,11 @@ export * from './trigger-events.js'
  *     operations); follow_thread (a schedule.call operation).
  * 32: a deleted thread's folders are removed (thread.deleted).
  * 33: a turn that failed is tried again: on its own after a passing error, or when a person asks (thread.retry).
+ * 34: a cloud computer says when its disk is still full after it freed what it could (disk).
  */
-export const PROTOCOL_VERSION = 33
+export const PROTOCOL_VERSION = 34
+/** Runners from this version on say when their disk is still full (disk). */
+export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */
 export const RETRY_PROTOCOL = 33
 /** Runners from this version on remove a deleted thread's folders (thread.deleted). */

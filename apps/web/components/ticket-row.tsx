@@ -13,6 +13,7 @@ const typeLabel: Record<Ticket['type'], string> = {
   cap: 'reached cap',
   sign_in: 'expired login',
   usage_limit: 'out of usage',
+  disk_full: 'disk full',
   question: 'question',
   request: 'ticket',
 }
