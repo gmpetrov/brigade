@@ -158,8 +158,8 @@ export default function PullRequestPage() {
           </Link>
           <span aria-hidden>·</span>
           <span>
-            <code className="font-mono text-xs">{p.head}</code> into{' '}
-            <code className="font-mono text-xs">{p.base}</code>
+            <code className="font-mono text-xs wrap-anywhere">{p.head}</code> into{' '}
+            <code className="font-mono text-xs wrap-anywhere">{p.base}</code>
           </span>
           <span aria-hidden>·</span>
           <span>by {t?.author?.name ?? p.author}</span>
@@ -376,7 +376,7 @@ export default function PullRequestPage() {
               </div>
               <Markdown text={r.body} />
               {r.comments.length > 0 && (
-                <ul className="flex flex-col gap-1.5 border-t pt-3 text-sm">
+                <ul className="flex min-w-0 flex-col gap-1.5 border-t pt-3 text-sm wrap-anywhere">
                   {r.comments.map((c, i) => (
                     <li key={i}>
                       <code className="font-mono text-xs">
