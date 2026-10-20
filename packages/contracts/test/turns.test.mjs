@@ -42,6 +42,16 @@ test('a short line before the last step is no answer of its own', () => {
   assert.deepEqual(turnAnswer([message(900), step, message(600)]), { first: 2, messages: [2] })
 })
 
+test('before a steered message, only a message after the last step answers', () => {
+  // It answered, then only waited on a server it left running: the message went in.
+  assert.deepEqual(turnAnswer([message(30), step, message(1200)], true), {
+    first: 2,
+    messages: [2],
+  })
+  // It was still at work: its last line is no answer.
+  assert.deepEqual(turnAnswer([other, message(900), step], true), { first: -1, messages: [] })
+})
+
 test('counts only the characters a person sees', () => {
   assert.equal(visibleChars(' a b\n\u200b'), 2)
   assert.equal(visibleChars('\u200b\ufeff '), 0)
