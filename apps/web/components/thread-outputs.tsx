@@ -1,8 +1,8 @@
 'use client'
 // What a thread made, beside it: files its teammates wrote or named, library
 // documents, images, pull requests, emails, schedules and skills proposed. Read from the event
-// log, newest first; a file made again keeps one row, and one saved to the library shows
-// only as its library row. A pull request's row says how its checks went, and an owner or
+// log; a file made again keeps one row, and one saved to the library shows only as its library
+// row. Open pull requests lead, then the rest newest first under a line for each day. A pull request's row says how its checks went, and an owner or
 // admin merges it from there.
 import {
   bareToolName as bare,
@@ -33,7 +33,7 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isAdmin, useDashboard } from '@/components/dashboard'
 import { relativeFile, type OpenFile } from '@/components/file-links'
 import { pullStatus } from '@/components/pull-status'
@@ -53,6 +53,7 @@ import {
   resolvesInBrigade,
   resolving,
 } from '@/lib/merge-method'
+import { dayLabel } from '@/lib/utils'
 
 export type ThreadOutput = {
   key: string
@@ -323,58 +324,99 @@ const ICONS = {
 const time = (at: string) =>
   new Date(at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 
+/** What a pull request's row learned of it, to place it: open ones lead, a merged one goes by its merge. */
+type PullPlace = { open: boolean; at: string }
+
 export function ThreadOutputs({ outputs, onOpen }: { outputs: ThreadOutput[]; onOpen: OpenFile }) {
   const [all, setAll] = useState(false)
-  const shown = all ? outputs : outputs.slice(0, SHOWN)
+  const [pulls, setPulls] = useState<Record<string, PullPlace>>({})
+  const place = useCallback(
+    (key: string, p: PullPlace) =>
+      setPulls((was) =>
+        was[key]?.open === p.open && was[key]?.at === p.at ? was : { ...was, [key]: p },
+      ),
+    [],
+  )
+  // Open pull requests first, waiting on a merge or a fix; then the rest newest first, by day.
+  const { open, rest } = useMemo(() => {
+    const open = outputs.filter((o) => pulls[o.key]?.open)
+    const rest = outputs
+      .filter((o) => !pulls[o.key]?.open)
+      .map((output) => ({ output, at: pulls[output.key]?.at ?? output.at }))
+      .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    return { open, rest }
+  }, [outputs, pulls])
+  const shown = all ? rest.length : SHOWN
+
+  const heading = (label: string) => (
+    <li role="separator" className="px-2 pt-2 pb-0.5 text-xs font-medium text-muted-foreground">
+      {label}
+    </li>
+  )
+  const item = (output: ThreadOutput, hidden = false) => {
+    // Rendered even past "Show all", hidden: its state places it.
+    if (output.pull)
+      return (
+        <li key={output.key} hidden={hidden}>
+          <PullOutput output={output} onPlace={place} {...output.pull} />
+        </li>
+      )
+    if (hidden) return null
+    const Icon = ICONS[output.kind]
+    const body = (
+      <>
+        <Icon className="size-4 flex-none text-muted-foreground" aria-hidden />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-medium">{output.label}</span>
+          {output.detail && (
+            <span className="truncate text-xs text-muted-foreground">{output.detail}</span>
+          )}
+        </span>
+        <time dateTime={output.at} className="flex-none text-xs text-muted-foreground">
+          {time(output.at)}
+        </time>
+      </>
+    )
+    const row = 'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left'
+    return (
+      <li key={output.key}>
+        {output.file ? (
+          <button
+            type="button"
+            className={`${row} hover:bg-secondary/60`}
+            title={output.file.path}
+            onClick={() => onOpen(output.file!)}
+          >
+            {body}
+          </button>
+        ) : output.href ? (
+          <Link href={output.href} className={`${row} hover:bg-secondary/60`}>
+            {body}
+          </Link>
+        ) : (
+          <div className={row}>{body}</div>
+        )}
+      </li>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <ul className="flex flex-col">
-        {shown.map((output) => {
-          if (output.pull)
-            return (
-              <li key={output.key}>
-                <PullOutput output={output} {...output.pull} />
-              </li>
-            )
-          const Icon = ICONS[output.kind]
-          const body = (
-            <>
-              <Icon className="size-4 flex-none text-muted-foreground" aria-hidden />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium">{output.label}</span>
-                {output.detail && (
-                  <span className="truncate text-xs text-muted-foreground">{output.detail}</span>
-                )}
-              </span>
-              <time dateTime={output.at} className="flex-none text-xs text-muted-foreground">
-                {time(output.at)}
-              </time>
-            </>
-          )
-          const row = 'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left'
+        {open.length > 0 && heading('Open')}
+        {open.map((output) => item(output))}
+        {rest.map(({ output, at }, i) => {
+          const hidden = i >= shown
+          const newDay = i === 0 || dayLabel(rest[i - 1]!.at) !== dayLabel(at)
           return (
-            <li key={output.key}>
-              {output.file ? (
-                <button
-                  type="button"
-                  className={`${row} hover:bg-secondary/60`}
-                  title={output.file.path}
-                  onClick={() => onOpen(output.file!)}
-                >
-                  {body}
-                </button>
-              ) : output.href ? (
-                <Link href={output.href} className={`${row} hover:bg-secondary/60`}>
-                  {body}
-                </Link>
-              ) : (
-                <div className={row}>{body}</div>
-              )}
-            </li>
+            <Fragment key={output.key}>
+              {newDay && !hidden && heading(dayLabel(at))}
+              {item(output, hidden)}
+            </Fragment>
           )
         })}
       </ul>
-      {outputs.length > SHOWN && (
+      {rest.length > SHOWN && (
         <button
           type="button"
           className="self-start px-2 text-xs font-medium text-primary hover:underline"
@@ -429,16 +471,23 @@ function pullLine(p: PullRequestState, fallback: string): ReactNode {
 
 function PullOutput({
   output,
+  onPlace,
   repository,
   number,
 }: {
   output: ThreadOutput
+  onPlace: (key: string, place: PullPlace) => void
   repository: string
   number: number
 }) {
   const { me } = useDashboard()
   const { pull, busy, error, merge, resolve } = usePull(repository, number, { checks: true })
   const p = pull.data
+  const state = p?.state
+  const mergedAt = p?.mergedAt
+  useEffect(() => {
+    if (state) onPlace(output.key, { open: state === 'open', at: mergedAt ?? output.at })
+  }, [state, mergedAt, onPlace, output.key, output.at])
   const Icon =
     p?.state === 'merged' ? GitMerge : p?.state === 'closed' ? GitPullRequestClosed : GitPullRequest
   const stamp = (
