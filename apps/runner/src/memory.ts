@@ -131,7 +131,7 @@ export function memoryRun(input: {
   const edit = '{"add": [], "replace": [], "remove": [], "confirm": []}'
   const prompt = [
     'You keep the shared memory of a team that works with AI teammates. Below are the current memory files and a conversation from one thread.',
-    'A memory file has a core, which every thread loads, and topics, which a thread reads when its work touches them. Each line is numbered and ends with the day it was learned or last confirmed ("before" a day: older than dates in memory; "by" a name: a person wrote it). A line with no day is older than the dated ones; among those, a line further down is newer.',
+    'A memory file has a core, which every thread loads, and topics, which a thread reads when its work touches them. Each line is numbered and, when memory knows it, ends with the day it was learned or last confirmed ("before" a day: older than dates in memory; "by" a name: a person wrote it). A line with no day is older than the dated ones; among those, a line further down is newer.',
     'Reply with only one JSON object and nothing else, in this shape:',
     `{"summary": "...", "workspace": ${edit}, ${project ? `"project": ${edit}, ` : ''}"teammates": {${speakers.map((t) => `${JSON.stringify(t.name)}: ${edit}`).join(', ')}}}`,
     [
@@ -157,7 +157,7 @@ export function memoryRun(input: {
       '- replace: {"line": 12, "text": "…"} when this conversation corrects or updates a line: the new text takes its place, and the old one goes to the archive. Prefer it to removing a line and adding another, so each thing is said once.',
       '- remove: {"line": 40, "reason": "…"} for lines this conversation shows are wrong or outdated, that say again what another line says, or that are the kind of line never to add. The reason says why in a few words; it is kept with the line in the archive, which search still finds.',
       '- confirm: [7, 31]: lines this conversation relied on or restated and showed still hold. Their date moves to today. Only lines the conversation actually shows are true.',
-      '- When two lines disagree, the newer one wins, and a line a person wrote outranks one a teammate learned.',
+      '- When two lines disagree about the same case, the newer one wins, and a line a person wrote outranks one a teammate learned.',
       '- Never include passwords, keys, tokens or other secrets.',
     ]
       .filter(Boolean)

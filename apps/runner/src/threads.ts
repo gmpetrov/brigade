@@ -60,10 +60,12 @@ const MAX_HANDOFFS = 40
 const QUIET_AFTER_MS = Number(process.env.BRIGADE_QUIET_MS) || PARK_AFTER_MS
 /** Longest a memory run may take. */
 const MEMORY_RUN_MS = 4 * 60_000
-/** Longest a tidy run may take: it reads and lays out a whole memory file. */
-const TIDY_RUN_MS = 8 * 60_000
+/** Longest a tidy run may take: it reads and lays out a whole memory file, beside the thread. */
+const TIDY_RUN_MS = 15 * 60_000
 /** A file whose tidy run failed is not tried again on this computer before this. */
 const TIDY_RETRY_MS = 60 * 60_000
+/** Nor one this computer just tidied, as memory-tidy.ts's own gap. */
+const TIDY_RESEND_MS = 6 * 60 * 60_000
 /** When the runner stops, how long it waits for the turns it froze to come back out. */
 const STOP_GRACE_MS = 10_000
 /** Longest a title run may take: past that, the thread keeps its first line. */
@@ -216,9 +218,10 @@ export class Threads {
   private running = 0
   /** Turns queued or running, across threads. */
   private pending = 0
-  /** Memory files a tidy run is laying out now, by path, and when one last failed. */
+  /** Memory files a tidy run is laying out now, by path; when one last failed, and when one was last sent. */
   private readonly tidying = new Set<string>()
   private readonly tidyFailed = new Map<string, number>()
+  private readonly tidySent = new Map<string, number>()
   private waiters: Array<() => void> = []
   /** The runner is stopping (stop): nothing new starts. */
   private stopping = false
@@ -1232,7 +1235,14 @@ export class Threads {
   private tidy(spec: ThreadSpec, file: TidyFile) {
     const path = memoryFilePath(file.ref)
     const failed = this.tidyFailed.get(path)
-    if (this.stopping || this.tidying.has(path) || (failed && Date.now() - failed < TIDY_RETRY_MS))
+    // The manifest may not say yet that this computer just tidied it.
+    const sent = this.tidySent.get(path)
+    if (
+      this.stopping ||
+      this.tidying.has(path) ||
+      (failed && Date.now() - failed < TIDY_RETRY_MS) ||
+      (sent && Date.now() - sent < TIDY_RESEND_MS)
+    )
       return
     this.tidying.add(path)
     void (async () => {
@@ -1252,6 +1262,7 @@ export class Threads {
           return console.warn(`memory ${path}: tidy run gave no usable layout`)
         }
         this.tidyFailed.delete(path)
+        this.tidySent.set(path, Date.now())
         this.options.memoryTidy({
           type: 'memory.tidy',
           sessionId: spec.sessionId,

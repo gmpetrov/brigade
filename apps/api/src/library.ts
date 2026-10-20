@@ -545,9 +545,12 @@ export async function editMemory(
   if (editIsEmpty(edit)) return
   let result: ReturnType<typeof applyMemoryEdit> | undefined
   const done = await changeMemory(scope, target, actor, sessionId, (current) => {
-    result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.name), edit)
+    const text = current?.text ?? memoryHeader(target, target.name)
+    result = applyMemoryEdit(text, edit)
+    const changes = result.added.length + result.replaced.length + result.removed.length
     return {
-      text: result.text,
+      // Only confirmations: the file stays exactly as people wrote it.
+      text: changes ? result.text : text,
       context: { ...noLineContext(), reasons: result.reasons, confirm: result.confirm },
     }
   })

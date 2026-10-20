@@ -60,7 +60,10 @@ test('a tidy run sees the file numbered and dated, with its budget, and its layo
     }),
     now,
   )
-  assert.match(run.prompt, /At most 5,000 characters in all \(the core has \d+ now\)/)
+  assert.match(
+    run.prompt,
+    /At most 5,000 characters in all, merged lines put in the core included \(the core has \d+ now\)/,
+  )
   assert.match(run.prompt, /\[1\] PRs are squash-merged\. \(15 Oct, by Ada\)/)
   assert.match(run.prompt, /Today is 21 Oct 2026\./)
   const layout = run.parse(
