@@ -4,8 +4,11 @@
 // documents in a frame that runs no script, spreadsheets and decks from the
 // API's reading of them. Used by the library and beside threads.
 import type { LibraryPreview } from '@brigade/contracts'
+import { FileText, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Markdown } from '@/components/markdown'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -103,6 +106,45 @@ export function PdfView({ url, name }: { url: string; name: string }) {
         </p>
       )}
     </div>
+  )
+}
+
+/** A PDF over the page, page by page; Esc, a click outside or × closes it. */
+export function PdfPreview({
+  pdf,
+  onClose,
+}: {
+  pdf?: { name: string; url: string }
+  onClose: () => void
+}) {
+  return (
+    <Dialog open={!!pdf} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex h-[calc(100dvh-4rem)] w-[min(56rem,calc(100vw-2rem))] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none"
+      >
+        <div className="flex items-center gap-2 border-b px-3 py-2.5">
+          <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {pdf?.name}
+          </DialogTitle>
+          <DialogClose asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Close"
+              title="Close (Esc)"
+              className="rounded-full"
+            >
+              <X aria-hidden />
+            </Button>
+          </DialogClose>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          {pdf && <PdfView url={pdf.url} name={pdf.name} />}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

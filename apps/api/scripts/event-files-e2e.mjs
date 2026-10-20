@@ -1,14 +1,14 @@
-// End-to-end check of images kept apart from events (src/event-images.ts) against the
-// real API and database, with a scripted runner on the real runner socket: its turn
-// returns a screenshot the way Claude Code's Read tool, the harness's own copy and a
-// browser tool do. It checks the stored events name the images instead of holding
-// them, the bucket has each once, the thread serves them, and deleting the thread
-// deletes them. It needs the preview's sample workspace (scripts/preview/setup.sh) and
+// End-to-end check of images and PDFs kept apart from events (src/event-files.ts)
+// against the real API and database, with a scripted runner on the real runner socket:
+// its turn returns a screenshot the way Claude Code's Read tool, the harness's own copy
+// and a browser tool do, and a PDF the way Read does. It checks the stored events name
+// the files instead of holding them, the bucket has each once, the thread serves them,
+// and deleting the thread deletes them. It needs the preview's sample workspace (scripts/preview/setup.sh) and
 // an API on its database without R2 (the bucket is then apps/api/.bucket), with
 // nothing else connected as the cloud computer's runner (it takes that runner's place):
 //
 //   cd apps/api && PORT=3101 API_URL=http://localhost:3101 WEB_URL=http://localhost:3102 pnpm dev
-//   node apps/api/scripts/event-images-e2e.mjs "$PWD" http://localhost:3101
+//   node apps/api/scripts/event-files-e2e.mjs "$PWD" http://localhost:3101
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -77,7 +77,36 @@ function png(width, height) {
 }
 const read = png(64, 64)
 const captured = png(48, 48)
-const nameOf = (bytes) => `${createHash('sha256').update(bytes).digest('hex')}.png`
+
+// --- A real one-page PDF, with enough text to be kept apart (4 KB of base64 or more).
+function pdf(lines) {
+  const text = lines.map((l, i) => `BT /F1 11 Tf 40 ${780 - i * 14} Td (${l}) Tj ET`).join('\n')
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${Buffer.byteLength(text)} >>\nstream\n${text}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ]
+  let out = '%PDF-1.4\n'
+  const offsets = objects.map((body, i) => {
+    const at = Buffer.byteLength(out)
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`
+    return at
+  })
+  const xref = Buffer.byteLength(out)
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+  out += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+  return Buffer.from(out)
+}
+const report = pdf(
+  Array.from(
+    { length: 50 },
+    (_, i) => `Line ${i + 1} of the report a teammate read: ${randomUUID()}`,
+  ),
+)
+const nameOf = (bytes, ext = 'png') => `${createHash('sha256').update(bytes).digest('hex')}.${ext}`
 
 // --- Sign in as Ada ---------------------------------------------------------
 const origin = process.env.WEB_URL ?? 'http://localhost:3102'
@@ -229,6 +258,29 @@ ws.on('message', (raw) => {
         },
       ],
     },
+    // Claude Code's Read of a PDF.
+    {
+      type: 'tool.started',
+      teammateId: t,
+      toolCallId: 'c3',
+      toolName: 'read',
+      input: { file_path: '/work/report.pdf' },
+    },
+    {
+      type: 'tool.finished',
+      teammateId: t,
+      toolCallId: 'c3',
+      toolName: 'read',
+      isError: false,
+      output: {
+        type: 'pdf',
+        file: {
+          filePath: '/work/report.pdf',
+          base64: report.toString('base64'),
+          originalSize: report.length,
+        },
+      },
+    },
     { type: 'message.done', id: randomUUID(), text: 'Here is what I saw.', teammateId: t },
     { type: 'turn.completed', finishReason: 'stop', teammateId: t },
   ])
@@ -252,66 +304,81 @@ const threadId = thread.id ?? thread.thread?.id
 assert.ok(threadId, JSON.stringify(thread))
 await until('the turn stored', async () => {
   const [s] = await q(`select "lastSeq", status from "Session" where id = $1`, [threadId])
-  return s.lastSeq >= 9 && s.status !== 'running' && s.status !== 'starting'
+  return s.lastSeq >= 11 && s.status !== 'running' && s.status !== 'starting'
 })
 
-const folder = `${repo}/apps/api/.bucket/${computer.organizationId}/${computer.workspaceId}/thread-images/${threadId}`
+const folder = `${repo}/apps/api/.bucket/${computer.organizationId}/${computer.workspaceId}/thread-files/${threadId}`
 const stored = await q(
   `select seq, type, data from "SessionEvent" where "sessionId" = $1 order by seq`,
   [threadId],
 )
 const text = JSON.stringify(stored.map((r) => r.data))
 
-await check('no event holds an image any more', () => {
+await check('no event holds an image or a PDF any more', () => {
+  assert.ok(report.toString('base64').length >= 4096, 'the PDF is big enough to be kept apart')
   assert.ok(!text.includes(read.toString('base64').slice(0, 200)))
   assert.ok(!text.includes(captured.toString('base64').slice(0, 200)))
+  assert.ok(!text.includes(report.toString('base64').slice(0, 200)))
 })
-await check("the Read result, the harness's copy and the screenshot name their images", () => {
+await check("the Reads, the harness's copy and the screenshot name their files", () => {
   const readResult = stored.find((r) => r.data.toolCallId === 'c1' && r.type === 'tool.finished')
-  assert.equal(readResult.data.output.file.base64, `brigade-image:${nameOf(read)}`)
+  assert.equal(readResult.data.output.file.base64, `brigade-file:${nameOf(read)}`)
   assert.equal(readResult.data.output.file.type, 'image/png')
   const copy = stored.find((r) => r.type === 'raw')
   assert.equal(
     copy.data.value.message.content[0].content[0].source.data,
-    `brigade-image:${nameOf(read)}`,
+    `brigade-file:${nameOf(read)}`,
   )
   const shot = stored.find((r) => r.data.toolCallId === 'c2' && r.type === 'tool.finished')
-  assert.equal(shot.data.output[1].source.data, `brigade-image:${nameOf(captured)}`)
+  assert.equal(shot.data.output[1].source.data, `brigade-file:${nameOf(captured)}`)
   assert.equal(shot.data.output[0].text, 'Took the screenshot.')
+  const readPdf = stored.find((r) => r.data.toolCallId === 'c3' && r.type === 'tool.finished')
+  assert.equal(readPdf.data.output.file.base64, `brigade-file:${nameOf(report, 'pdf')}`)
+  assert.equal(readPdf.data.output.file.filePath, '/work/report.pdf')
 })
-await check('the bucket has each image once, byte for byte', () => {
-  assert.deepEqual(readdirSync(folder).sort(), [nameOf(read), nameOf(captured)].sort())
+await check('the bucket has each file once, byte for byte', () => {
+  assert.deepEqual(
+    readdirSync(folder).sort(),
+    [nameOf(read), nameOf(captured), nameOf(report, 'pdf')].sort(),
+  )
   assert.deepEqual(readFileSync(`${folder}/${nameOf(read)}`), read)
+  assert.deepEqual(readFileSync(`${folder}/${nameOf(report, 'pdf')}`), report)
 })
-await check('the page of the thread gets the names, not the images', async () => {
+await check('the page of the thread gets the names, not the files', async () => {
   const page = await call(`/threads/${threadId}/events`)
   const json = JSON.stringify(page)
-  assert.ok(json.includes(`brigade-image:${nameOf(read)}`))
+  assert.ok(json.includes(`brigade-file:${nameOf(read)}`))
   assert.ok(!json.includes(read.toString('base64').slice(0, 200)))
 })
-await check('the thread serves its images to a member who sees it', async () => {
-  const res = await fetch(`${API}/api/threads/${threadId}/images/${nameOf(captured)}`, {
+await check('the thread serves its images and PDFs to a member who sees it', async () => {
+  const res = await fetch(`${API}/api/threads/${threadId}/files/${nameOf(captured)}`, {
     headers: { cookie, origin },
   })
   assert.equal(res.status, 200)
   assert.equal(res.headers.get('content-type'), 'image/png')
   assert.deepEqual(Buffer.from(await res.arrayBuffer()), captured)
+  const doc = await fetch(`${API}/api/threads/${threadId}/files/${nameOf(report, 'pdf')}`, {
+    headers: { cookie, origin },
+  })
+  assert.equal(doc.status, 200)
+  assert.equal(doc.headers.get('content-type'), 'application/pdf')
+  assert.deepEqual(Buffer.from(await doc.arrayBuffer()), report)
 })
-await check('a name that is not a stored image is refused; a missing one is 404', async () => {
-  const bad = await fetch(`${API}/api/threads/${threadId}/images/..%2F..%2Fsecret.png`, {
+await check('a name that is not a stored file is refused; a missing one is 404', async () => {
+  const bad = await fetch(`${API}/api/threads/${threadId}/files/..%2F..%2Fsecret.png`, {
     headers: { cookie, origin },
   })
   assert.ok([400, 404].includes(bad.status), String(bad.status))
-  const missing = await fetch(`${API}/api/threads/${threadId}/images/${'0'.repeat(64)}.png`, {
+  const missing = await fetch(`${API}/api/threads/${threadId}/files/${'0'.repeat(64)}.pdf`, {
     headers: { cookie, origin },
   })
   assert.equal(missing.status, 404)
 })
 await check('without a session, nothing is served', async () => {
-  const res = await fetch(`${API}/api/threads/${threadId}/images/${nameOf(read)}`)
+  const res = await fetch(`${API}/api/threads/${threadId}/files/${nameOf(read)}`)
   assert.ok([401, 403].includes(res.status), String(res.status))
 })
-await check('deleting the thread deletes its images', async () => {
+await check('deleting the thread deletes its files', async () => {
   await call(`/threads/${threadId}`, { method: 'DELETE' })
   assert.ok(!existsSync(folder) || readdirSync(folder).length === 0)
 })

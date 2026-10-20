@@ -10,7 +10,7 @@ import {
   folderArchiveKey,
   listObjects,
   repoBackupKey,
-  threadImagesPrefix,
+  threadFilesPrefix,
 } from './bucket.js'
 import { prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastSchedule, runnerProtocol, sendToRunner } from './hub.js'
@@ -20,7 +20,7 @@ const BUSY = new Set(['starting', 'running'])
 
 /**
  * The bucket keys a thread owns: files given to it that no other thread has, files its
- * teammates sent from it, the images its events refer to, its teammates' folder archives
+ * teammates sent from it, the files its events refer to, its teammates' folder archives
  * and its git backups.
  */
 export async function threadObjectKeys(db: ScopedDb, scope: Scope, sessionId: string) {
@@ -48,9 +48,9 @@ export async function threadObjectKeys(db: ScopedDb, scope: Scope, sessionId: st
   ]
   for (const id of own) keys.add(attachmentKey(scope, id))
 
-  // Images its teammates' tools returned (event-images.ts): the whole folder, also one
+  // Images and PDFs its teammates' tools returned (event-files.ts): the whole folder, also one
   // whose event the database never took.
-  for (const key of await listObjects(threadImagesPrefix(scope, sessionId))) keys.add(key)
+  for (const key of await listObjects(threadFilesPrefix(scope, sessionId))) keys.add(key)
 
   // Folder archives and git backups are keyed by thread and teammate. The audit log has
   // each one, also for a teammate that has left the thread since.
