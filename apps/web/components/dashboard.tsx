@@ -10,6 +10,7 @@ import {
   KeyRound,
   Library,
   LogOut,
+  MessageSquareText,
   Monitor,
   Moon,
   Plug,
@@ -85,6 +86,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { Switch } from '@/components/ui/switch'
 import {
   api,
   isAdmin,
@@ -294,6 +296,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   async function switchWorkspace(workspaceId: string) {
     await api('/workspaces/switch', { body: { workspaceId } })
     window.location.href = '/app'
+  }
+
+  /** Their message box suggests what they may write next, or stops: shown at once, then saved. */
+  function setSuggestions(on: boolean) {
+    me.setData((current) => current && { ...current, suggestions: on })
+    api('/me/suggestions', { method: 'PUT', body: { suggestions: on } }).catch(() => me.reload())
   }
 
   async function signOut() {
@@ -513,6 +521,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                           ))}
                         </div>
                       </div>
+                      {/* Suggestions in their message box, on or off: kept open so the switch shows. */}
+                      <DropdownMenuItem
+                        role="menuitemcheckbox"
+                        aria-checked={data.suggestions}
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          setSuggestions(!data.suggestions)
+                        }}
+                      >
+                        <MessageSquareText /> Suggest my next message
+                        <Switch
+                          size="sm"
+                          checked={data.suggestions}
+                          tabIndex={-1}
+                          aria-hidden
+                          className="pointer-events-none ml-auto"
+                        />
+                      </DropdownMenuItem>
                       <UsageMenu accounts={accounts.data} />
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={openNotifications}>

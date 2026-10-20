@@ -98,6 +98,12 @@ export const ThreadSpec = z.object({
   }),
   /** The thread's effort for every teammate in it; null: the harness's default. */
   effort: Effort.nullable().default(null),
+  /**
+   * After each turn, the harness guesses what the person may write next (message.suggested).
+   * Set on Claude Code, in a thread a member started who keeps suggestions on: the guess
+   * counts toward their account's usage.
+   */
+  suggestions: z.boolean().default(false),
   /** allow-reads: ask before writes and commands. allow-all: never ask. */
   permissionMode: z.enum(['allow-reads', 'allow-edits', 'allow-all']),
   /** The account to run on, then the starter's other accounts with usage left, in order. */

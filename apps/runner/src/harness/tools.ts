@@ -2,6 +2,7 @@
 // which checks the grant, asks for approval if needed, and makes the request.
 import { asSchema, jsonSchema, tool, type Tool } from 'ai'
 import {
+  ATTACHMENT_MAX,
   CHILD_WAIT_MAX_MINUTES,
   CHILD_WAIT_MINUTES,
   CHILDREN_AT_WORK,
@@ -21,6 +22,8 @@ import {
   DesignManifest,
   parseSkillMarkdown,
   PROPOSE_SKILL_TOOL,
+  REPORT_FILES_MAX,
+  REPORT_MAX,
   SKILL_ENTRY,
   SkillContent,
   TeamProposal,
@@ -1907,22 +1910,41 @@ export function childTools(
           'Report to the thread that started this one, once, when your work is done, then end your turn. ' +
           'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
           'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when you opened a ticket ' +
-          'and wait on a person, failed when you could not do it (say why). The summary is what the parent reads ' +
-          'first: a few lines, the answer first. Without a report, your last message stands for it.',
+          'and wait on a person, failed when you could not do it (say why). That thread cannot see your files, ' +
+          '/tmp included: never point it to one. Put all it needs in the summary, and send the files it needs ' +
+          '(reproduction scripts, logs, screenshots) in files: Brigade puts them in its working folder. Without a ' +
+          'report, your last message stands for it.',
         inputSchema: jsonSchema<{
           status: 'report' | 'nothing' | 'needs_person' | 'failed'
           summary: string
+          files?: string[]
         }>({
           type: 'object',
           properties: {
             status: { type: 'string', enum: ['report', 'nothing', 'needs_person', 'failed'] },
-            summary: { type: 'string', description: 'At most a few lines, the answer first' },
+            summary: {
+              type: 'string',
+              description:
+                'The answer first, in a few lines (its note shows the start), then everything the parent needs in ' +
+                `full, such as each finding with file:line and how to reproduce it. At most ${REPORT_MAX} characters.`,
+            },
+            files: {
+              type: 'array',
+              items: { type: 'string' },
+              description: `Paths of files to send, in your folder or /tmp: at most ${REPORT_FILES_MAX}, ${ATTACHMENT_MAX / (1024 * 1024)} MB each`,
+            },
           },
           required: ['status', 'summary'],
         }),
         execute: (input, { toolCallId }) =>
           call({
-            operation: { name: 'report', status: input.status, summary: input.summary },
+            operation: {
+              name: 'report',
+              status: input.status,
+              summary: input.summary,
+              // Paths here: the harness sends the files first, and the report carries their ids.
+              ...(input.files?.length ? { files: input.files } : {}),
+            },
             toolCallId,
             toolName: 'report',
             input,
@@ -1937,8 +1959,9 @@ export function childTools(
         'another teammate (teammate), or may need a person; otherwise do the work yourself, with your own ' +
         'sub-agents for parallel parts if you have them. The child does not see this ' +
         'conversation: write instructions that stand alone (the goal, inputs by name, where the result goes, what ' +
-        'done looks like). With wait (default), you are woken here once, with one note, when every child you wait ' +
-        'for has reported: start them all, then end your turn; never wait or poll. ' +
+        'done looks like). Its files are not visible from here: its report brings back what it found, and the ' +
+        'files it sends with it come to your working folder. With wait (default), you are woken here once, with ' +
+        'one note, when every child you wait for has reported: start them all, then end your turn; never wait or poll. ' +
         `At most ${CHILDREN_AT_WORK} at work at once.`,
       inputSchema: jsonSchema<{
         title: string
@@ -2001,7 +2024,8 @@ export function childTools(
     }),
     read_child: tool({
       description:
-        "A child thread's full report, its last message and the pull requests it opened" +
+        "A child thread's full report, the files it sent (in your working folder), its last message and the pull " +
+        'requests it opened' +
         (options.follow ? ', or those of a thread you follow (follow_thread).' : '.'),
       inputSchema: jsonSchema<{ threadId: string }>({
         type: 'object',

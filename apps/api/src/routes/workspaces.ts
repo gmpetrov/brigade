@@ -1,11 +1,11 @@
-import { CreateWorkspace, SwitchWorkspace } from '@brigade/contracts'
+import { CreateWorkspace, SetSuggestions, SwitchWorkspace } from '@brigade/contracts'
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { audit } from '../audit.js'
 import { ensureChief } from '../chief.js'
 import { createWorkspaceComputer } from '../cloud.js'
 import { prisma } from '../db.js'
-import { parseBody, requireUser, resolveScope, type AppEnv } from '../scope.js'
+import { parseBody, requireUser, requireWorkspace, resolveScope, type AppEnv } from '../scope.js'
 
 export const workspaces = new Hono<AppEnv>()
   .use(requireUser)
@@ -73,7 +73,15 @@ export const workspaces = new Hono<AppEnv>()
       workspaces: workspaceList.map((w) => ({ id: w.id, name: w.name })),
       activeWorkspaceId: scope?.workspaceId ?? null,
       memberId: scope?.memberId ?? null,
+      suggestions: membership?.suggestions ?? true,
     })
+  })
+
+  /** The member's message box suggests their next message, or stops (Member.suggestions). */
+  .put('/me/suggestions', requireWorkspace, async (c) => {
+    const { suggestions } = await parseBody(c.req.raw, SetSuggestions)
+    await prisma.member.update({ where: { id: c.var.scope.memberId }, data: { suggestions } })
+    return c.body(null, 204)
   })
 
   /** Create a workspace in the active organization and switch to it. */

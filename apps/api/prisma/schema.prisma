@@ -119,6 +119,8 @@ model Member {
   homeDismissals        HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
   notify                NotifyPreset           @default(needed)
+  /// Their message box suggests what they may write next, guessed after each turn on their account.
+  suggestions           Boolean                @default(true)
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]
@@ -794,7 +796,7 @@ model Account {
 
 /// Where a merge a person asked for stands. GitHub keeps the pull request's code and state.
 /// In the database it is still the review loop's type and column (ReviewStatus, reviewStatus),
-/// which the API deployed before 20261020180000_reviews_in_child_threads shares for the
+/// which the API deployed before 20261020200000_reviews_in_child_threads shares for the
 /// minutes both run: what either writes, the other reads.
 enum MergeStatus {
   /// No merge under way.
@@ -865,7 +867,7 @@ model PullRequest {
   updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
   /// The review loop's, gone with it: out of the client, kept for the API deployed before
-  /// 20261020180000_reviews_in_child_threads while it runs. A later migration drops them.
+  /// 20261020200000_reviews_in_child_threads while it runs. A later migration drops them.
   autoMerge           Boolean             @default(false) @ignore
   reviewerTeammateId  String?             @ignore
 

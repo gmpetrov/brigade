@@ -25,6 +25,7 @@ export * from './schedules.js'
 export * from './wakeups.js'
 export * from './search.js'
 export * from './skills.js'
+export * from './suggestions.js'
 export * from './tasks.js'
 export * from './thread-history.js'
 export * from './trigger-events.js'
@@ -61,9 +62,10 @@ export * from './trigger-events.js'
  * 34: a cloud computer says when its disk is still full after it freed what it could (disk).
  * 35: memory in layers: memory.update edits name topics, replacements, archive reasons and confirmed
  *     lines; tidy runs lay a memory file out again (memory.tidy).
- * 36: reviews in child threads (request_review as a schedule.call operation; the spec's project.reviewPolicy).
+ * 36: after a turn, Claude Code guesses the person's next message (the spec's `suggestions`, message.suggested).
+ * 37: reviews in child threads (request_review as a schedule.call operation; the spec's project.reviewPolicy).
  */
-export const PROTOCOL_VERSION = 36
+export const PROTOCOL_VERSION = 37
 /** Runners from this version on say when their disk is still full (disk). */
 export const DISK_PROTOCOL = 34
 /** Runners from this version on try a failed turn again when a person asks (thread.retry). */

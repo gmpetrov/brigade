@@ -66,6 +66,7 @@ import {
 } from './closed-turn.js'
 import { harnessEnv } from './env.js'
 import {
+  answered,
   askUserQuestions,
   askUserResult,
   errorMessage,
@@ -79,6 +80,7 @@ import { createLocalSandboxSession, freePort, stopGroup } from './local-sandbox.
 import { claimHandOver, type HandedOver } from '../hand-over.js'
 import { bridgeBrowser, threadNet } from '../thread-net.js'
 import { ReplyWatch, terminalTools } from './replies.js'
+import { readCommand, reportWithFiles } from './report-files.js'
 import {
   ASK_USER_TOOL,
   alwaysLoaded,
@@ -306,15 +308,19 @@ type Live = {
   sandbox: ReturnType<typeof createLocalSandboxSession>
   account: AccountRef
   credentials: ThreadCredentials
-  /** The connector tools and effort the agent was made with (agentKey). */
+  /** The connector tools, effort and suggestions the agent was made with (agentKey). */
   made: string
 }
 
-/** Which connector tools and effort a spec gives: an agent made with others is out of date. */
+/**
+ * Which connector tools, effort and suggestions a spec gives: an agent made with others is out
+ * of date (suggestions are its harness's environment, BRIGADE_PROMPT_SUGGESTIONS).
+ */
 const agentKey = (spec: ThreadSpec) =>
   JSON.stringify([
     spec.effort ?? null,
     spec.connectors.map((c) => [c.connectionId, c.scope, c.operations.map((o) => o.name)]),
+    spec.suggestions,
   ])
 
 type TurnStream = Awaited<ReturnType<Live['agent']['stream']>>['fullStream']
@@ -388,6 +394,12 @@ export class HarnessThread {
   private handingOver = false
   /** What the person has read of the turn: a turn without a reply is asked for one. */
   private readonly replies = new ReplyWatch()
+  /**
+   * The running turn is answered, and completed for everyone: Claude Code only writes its guess
+   * at the person's next message before its process ends (the bridge's drain). `done` settles
+   * once the turn's stream has ended; aborting `stop` ends it now.
+   */
+  private drain: { stop: AbortController; done: Promise<void> } | undefined
   private readonly stateFile: string
   /**
    * Names this harness session and its saved state. The thread's id for its
@@ -609,12 +621,25 @@ export class HarnessThread {
     return this.live ? this.loaded : undefined
   }
 
+  /** The running turn is answered: only Claude Code's guess at the person's next message is left. */
+  get answered() {
+    return this.drain !== undefined
+  }
+
+  /** The guess no longer matters (a new message, a stop): the answered turn's stream ends now. */
+  async stopDrain() {
+    const drain = this.drain
+    if (!drain) return
+    drain.stop.abort()
+    await drain.done
+  }
+
   /**
    * The last turn stopped on an approval, a question or a ticket: a new prompt
    * waits until a person answers it. A turn frozen mid-run waits on nobody.
    */
   async awaitingPerson() {
-    if (this.live) return this.live.session.hasUnfinishedTurn() && !this.frozen
+    if (this.live) return this.live.session.hasUnfinishedTurn() && !this.frozen && !this.drain
     await this.load()
     const resume = this.saved?.resume as { continueFrom?: unknown } | undefined
     return !!resume?.continueFrom && !frozenMidRun(resume)
@@ -645,6 +670,8 @@ export class HarnessThread {
 
   /** Stop the harness and keep its saved state, so the next message resumes it. */
   async park() {
+    // An answered turn ends first, rather than freeze where nothing is left to go on with.
+    await this.stopDrain()
     const live = this.live
     if (!live) return
     this.live = undefined
@@ -668,6 +695,11 @@ export class HarnessThread {
    * turn continued from its conversation after the restart, as after a stop without warning.
    */
   async handOver(): Promise<HandedOver[]> {
+    // Answered, the turn has nothing to hand over: its guess is dropped, and it parks.
+    if (this.drain) {
+      await this.park()
+      return []
+    }
     const live = this.live
     if (!live) return []
     this.live = undefined
@@ -749,10 +781,43 @@ export class HarnessThread {
     // A call approved while its turn was lost, made again: approved without asking twice.
     let approvedAgain: { toolName: string; input: unknown } | undefined
     const autoApproved: string[] = []
+    // Ends the stream being read once the turn is answered and only Claude Code's guess is
+    // left (drain): each stream gets a signal of its own, with the turn's.
+    let tail = new AbortController()
+    const streamSignal = () => {
+      tail = new AbortController()
+      return AbortSignal.any([signal, tail.signal])
+    }
+    // A stream the turn may end in (consumeLast); the bridge says when it is answered.
+    let mayAnswer = false
+    let early = false
+    let drained: () => void = () => {}
     const mapper = new EventMapper(
       (event) => {
         // Parked, what is left is done again; handed over, it is up to where the next runner goes on.
         if (frozenUnder() && !this.handingOver) return
+        if (answered(event)) {
+          // Answered, with a reply the person can read: done for everyone now, while Claude Code
+          // guesses what they may write next. A turn that owes a reply is asked for it in a
+          // stream of its own, which ends the turn instead.
+          if (
+            !mayAnswer ||
+            signal.aborted ||
+            this.replies.owes() ||
+            mapper.error ||
+            mapper.exhausted
+          )
+            return
+          early = true
+          this.drain = { stop: tail, done: new Promise<void>((resolve) => (drained = resolve)) }
+          this.emit({ type: 'turn.completed', finishReason: 'stop' })
+          return
+        }
+        // A guess counts once the turn is answered: before that, more of the turn comes after it
+        // (the reply it is asked for, what it waits on in the background).
+        if (event.type === 'message.suggested' && !early) return
+        // After that, only the guess and the turn's usage still go out: the rest is a closing process.
+        if (early && event.type !== 'message.suggested' && event.type !== 'usage.updated') return
         if (event.type === 'approval.requested') {
           if (approvedAgain && sameCall(approvedAgain, event)) {
             approvedAgain = undefined
@@ -797,6 +862,24 @@ export class HarnessThread {
           if (image) await this.keepImage(image)
         }
       }
+      // A stream that may be the turn's last: answered there, the turn completes for everyone
+      // while Claude Code guesses the person's next message (drain).
+      const consumeLast = async (stream: TurnStream) => {
+        mayAnswer = true
+        try {
+          await consume(stream)
+        } finally {
+          mayAnswer = false
+          this.drain = undefined
+          drained()
+        }
+      }
+      // Completed for everyone once answered: Claude Code's guess came, or no longer mattered.
+      const answeredEarly = async () => {
+        if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
+        await this.persist()
+        return { kind: 'done' as const, result: { status: 'idle' as const } }
+      }
       let text = input.kind === 'prompt' || input.kind === 'resume' ? input.text : undefined
       // Nothing frozen came back after all: the teammate is told what happened instead.
       if (input.kind === 'resume' && !text && !live.session.hasUnfinishedTurn()) text = RESTARTED
@@ -811,12 +894,18 @@ export class HarnessThread {
           }
         }
         // The computer stopped during the last turn, which froze it with nothing
-        // waiting on a person: finish that turn, then the new message.
+        // waiting on a person: finish that turn, then the new message. With no new message,
+        // that turn is this one, and may end early like any.
         this.frozen = false
-        await consume(
-          (await live.agent.continueStream({ session: live.session, abortSignal: signal }))
-            .fullStream,
-        )
+        const alone = text === ''
+        const frozen = await live.agent.continueStream({
+          session: live.session,
+          abortSignal: alone ? streamSignal() : signal,
+        })
+        if (alone) {
+          await consumeLast(frozen.fullStream)
+          if (early) return await answeredEarly()
+        } else await consume(frozen.fullStream)
       }
       // The frozen turn stopped again (an approval, a question, no usage left): the message waits.
       const held =
@@ -834,7 +923,7 @@ export class HarnessThread {
                   if (input.approved) approvedAgain = call
                   return approvalAfterRestart(call, input.approved, input.reason)
                 })(),
-                abortSignal: signal,
+                abortSignal: streamSignal(),
               })
             : closed && (input.kind === 'answer' || input.kind === 'ticket')
               ? await live.agent.stream({
@@ -844,18 +933,18 @@ export class HarnessThread {
                       ? this.answerResult(input.questionId, input.answer)
                       : this.ticketResult(input.requestId, input.answer),
                   ),
-                  abortSignal: signal,
+                  abortSignal: streamSignal(),
                 })
               : input.kind === 'prompt' || input.kind === 'resume'
                 ? await live.agent.stream({
                     session: live.session,
                     prompt: text!,
-                    abortSignal: signal,
+                    abortSignal: streamSignal(),
                   })
                 : input.kind === 'answer' || input.kind === 'ticket'
                   ? await live.agent.continueStream({
                       session: live.session,
-                      abortSignal: signal,
+                      abortSignal: streamSignal(),
                       toolResultContinuations: [
                         input.kind === 'answer'
                           ? this.answerResult(input.questionId, input.answer)
@@ -864,7 +953,7 @@ export class HarnessThread {
                     })
                   : await live.agent.continueStream({
                       session: live.session,
-                      abortSignal: signal,
+                      abortSignal: streamSignal(),
                       toolApprovalContinuations: [
                         {
                           type: 'tool-approval-response',
@@ -875,27 +964,29 @@ export class HarnessThread {
                       ],
                     })
       if (input.kind === 'approval' && !closed) this.approvals.delete(input.approvalId)
-      if (result) await consume(result.fullStream)
+      if (result) await consumeLast(result.fullStream)
+      if (early) return await answeredEarly()
       // The call approved while its turn was lost, made again: approved as the person did.
       while (autoApproved.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const approved = autoApproved.splice(0)
         result = await live.agent.continueStream({
           session: live.session,
-          abortSignal: signal,
+          abortSignal: streamSignal(),
           toolApprovalContinuations: approved.map((approvalId) => ({
             type: 'tool-approval-response' as const,
             approvalId,
             approved: true,
           })),
         })
-        await consume(result.fullStream)
+        await consumeLast(result.fullStream)
+        if (early) return await answeredEarly()
       }
       // A ticket nobody could answer: the error goes back and the turn carries on.
       while (mapper.rejected.length && live.session.hasUnfinishedTurn() && !signal.aborted) {
         const rejected = mapper.rejected.splice(0)
         result = await live.agent.continueStream({
           session: live.session,
-          abortSignal: signal,
+          abortSignal: streamSignal(),
           toolResultContinuations: rejected.map((r) => ({
             type: 'tool-result' as const,
             toolCallId: r.toolCallId,
@@ -903,7 +994,8 @@ export class HarnessThread {
             output: { type: 'error-text' as const, value: r.error },
           })),
         })
-        await consume(result.fullStream)
+        await consumeLast(result.fullStream)
+        if (early) return await answeredEarly()
       }
       // Over with no reply after its work (only in its thinking, or before its last step): asked for once.
       const over =
@@ -913,11 +1005,18 @@ export class HarnessThread {
         !mapper.error &&
         !live.session.hasUnfinishedTurn()
       const ask = over ? this.replies.ask() : undefined
-      if (ask)
-        await consume(
-          (await live.agent.stream({ session: live.session, prompt: ask, abortSignal: signal }))
-            .fullStream,
+      if (ask) {
+        await consumeLast(
+          (
+            await live.agent.stream({
+              session: live.session,
+              prompt: ask,
+              abortSignal: streamSignal(),
+            })
+          ).fullStream,
         )
+        if (early) return await answeredEarly()
+      }
       if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       // A login from before tokens, refreshed during the turn, goes back to the shared account directory.
       if (this.runAs) await linkAccount(this.runAs, live.account).catch(() => undefined)
@@ -933,6 +1032,11 @@ export class HarnessThread {
       await this.persist()
       return { kind: 'done', result: { status: 'idle' } }
     } catch (error) {
+      // Its stream broke while Claude Code guessed: the turn was completed already, the next starts clean.
+      if (early) {
+        await this.drop()
+        return { kind: 'done', result: { status: 'idle' } }
+      }
       if (frozenUnder()) return { kind: 'done', result: { status: 'waiting' } }
       if (signal.aborted) {
         this.emit({ type: 'turn.completed', finishReason: 'interrupted' })
@@ -1222,8 +1326,7 @@ export class HarnessThread {
       request: this.requestCredential,
       ...(this.runAs ? { runAs: this.runAs } : {}),
       ...(browser && tabsFile ? { browser: { port: browser, tabsFile } } : {}),
-      readFile: (file) =>
-        readAs(resolvePath(this.workDir, file), this.runAs, 1024 * 1024, 'A secret file'),
+      readFile: (file) => this.readFile(file, 1024 * 1024, 'A secret file'),
     })
     const { agent, tools } = createAgent(
       this.spec,
@@ -1235,7 +1338,7 @@ export class HarnessThread {
         folders: this.spec.libraryFolders,
         libraryDir,
         call: this.context.callLibrary,
-        readFile: (file) => readAs(resolvePath(this.workDir, file), this.runAs),
+        readFile: (file) => this.readFile(file),
         listFiles: (folder) => listAs(resolvePath(this.workDir, folder), this.runAs),
         renderDesign: (folder, options) =>
           renderDesign(resolvePath(this.workDir, folder), this.runAs, options),
@@ -1262,7 +1365,18 @@ export class HarnessThread {
           : result
       },
       this.context.callTask,
-      this.context.callSchedule,
+      (call) =>
+        reportWithFiles(call, {
+          read: (file, max) => this.readFile(file, max, 'Files sent with a report'),
+          upload: (name, bytes) =>
+            this.context.uploadFile({
+              sessionId: this.spec.sessionId,
+              teammateId: this.spec.teammate.id,
+              name,
+              bytes,
+            }),
+          send: this.context.callSchedule,
+        }),
       this.context.preview,
       this.spec.imageAccount ? (input, signal) => this.makeImage(input, signal) : undefined,
       this.computerUse(),
@@ -1272,8 +1386,16 @@ export class HarnessThread {
       id: this.key,
       workingDirectory: this.workDir,
       port: await freePort(),
-      // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch).
-      env: this.spec.teammate.harness === 'codex' ? env : { ...env, ...terminalTools(tools) },
+      // The runner, not Claude Code, asks for a reply the turn did not give (ReplyWatch). After
+      // each turn, Claude Code guesses the person's next message where the thread wants it.
+      env:
+        this.spec.teammate.harness === 'codex'
+          ? env
+          : {
+              ...env,
+              ...terminalTools(tools),
+              ...(this.spec.suggestions ? { BRIGADE_PROMPT_SUGGESTIONS: '1' } : {}),
+            },
       ...(this.runAs ? { runAs: this.runAs, thread: this.spec.sessionId } : {}),
       // The harness the runner before handed over, which this session attaches to: stopped with it.
       ...(adopt.length ? { adopt } : {}),
@@ -1312,12 +1434,7 @@ export class HarnessThread {
     const ids = []
     for (const file of files) {
       if (typeof file !== 'string') throw new Error(`${field} lists file paths`)
-      const bytes = await readAs(
-        resolvePath(this.workDir, file),
-        this.runAs,
-        ATTACHMENT_MAX,
-        'Files sent with a call',
-      )
+      const bytes = await this.readFile(file, ATTACHMENT_MAX, 'Files sent with a call')
       ids.push(
         await this.context.uploadFile({
           sessionId: this.spec.sessionId,
@@ -1328,6 +1445,21 @@ export class HarnessThread {
       )
     }
     return this.callConnector({ ...call, input: { ...input, [field]: ids } })
+  }
+
+  /**
+   * A file the teammate names, read as it sees it: as its user, and from its thread's own
+   * /tmp in the thread's namespaces (thread-net.ts, readCommand). Relative to its folder.
+   */
+  private async readFile(file: string, max?: number, what?: string) {
+    const net = this.runAs ? await threadNet(this.spec.sessionId) : null
+    return readAs(
+      resolvePath(this.workDir, file),
+      this.runAs,
+      max,
+      what,
+      net?.isolated ? net.thread : undefined,
+    )
   }
 
   /** After a failure: save what can be saved, so the next message starts clean. */
@@ -1424,14 +1556,15 @@ async function readAs(
   runAs?: string,
   max = READ_MAX,
   what = 'Files saved to the library',
+  /** Its thread, when it has namespaces of its own: its /tmp is read in them (readCommand). */
+  thread?: string,
 ): Promise<Buffer> {
-  const { stdout } = await execFileAsync(
-    runAs ? 'sudo' : 'head',
-    runAs
-      ? ['-n', '-u', runAs, 'head', '-c', String(max + 1), '--', file]
-      : ['-c', String(max + 1), '--', file],
-    { cwd: '/', encoding: 'buffer', maxBuffer: max + 1024 },
-  ).catch((error: unknown) => {
+  const [command, args] = readCommand(file, max, runAs, thread)
+  const { stdout } = await execFileAsync(command, args, {
+    cwd: '/',
+    encoding: 'buffer',
+    maxBuffer: max + 1024,
+  }).catch((error: unknown) => {
     throw new Error(`Could not read ${file}: ${errorMessage(error)}`)
   })
   if (stdout.byteLength > max)

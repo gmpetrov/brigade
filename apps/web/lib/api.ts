@@ -233,6 +233,8 @@ export type Me = {
   memberId: string | null
   /** The member has an AI account here that has worked: nothing runs without one. */
   aiReady: boolean
+  /** Their message box suggests what they may write next (message.suggested). */
+  suggestions: boolean
 }
 
 export type Teammate = {

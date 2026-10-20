@@ -290,3 +290,46 @@ test('a line others are merged into, in its own words, takes the newest of their
   )
   assert.deepEqual(plan.update.find((u) => u.id === rows[0]!.id)?.data.confirmedAt, day(2))
 })
+
+test('a line merged from lines that never had rows is still "before" a date', () => {
+  const before = '# M\n\n- A.\n- B.\n- C.\n'
+  const laid = applyMemoryLayout(
+    before,
+    MemoryLayout.parse({ merge: [{ from: ['A.', 'B.'], text: 'A and B.', topic: null }] }),
+  )
+  const plan = planLineSync(
+    before,
+    laid.text,
+    [],
+    context({ reasons: laid.reasons, sources: laid.sources }),
+  )
+  const ab = plan.create.find((c) => c.text === 'A and B.')
+  assert.equal(ab?.legacy, true)
+})
+
+test('a line older than dates that a thread confirms is dated today', () => {
+  const text = '# M\n\n- Old fact.\n'
+  const confirm = new Set([memoryLineKey('Old fact.')])
+  // No row yet: the row it gets is dated today.
+  const first = planLineSync(text, text, [], context({ confirm }))
+  assert.deepEqual(
+    first.create.map((c) => [c.legacy, c.createdAt]),
+    [[false, now]],
+  )
+  // A legacy row: confirmed, it is no longer "before" a date.
+  const legacy = row('Old fact.', { legacy: true, createdAt: day(3), createdByType: null })
+  const again = planLineSync(text, text, [legacy], context({ confirm }))
+  assert.deepEqual(again.update[0]?.data, { confirmedAt: now, legacy: false })
+})
+
+test('an archived line older than dates, put back, is dated today', () => {
+  const archived = row('Old fact.', {
+    legacy: true,
+    createdAt: day(3),
+    createdByType: null,
+    archivedAt: day(1),
+  })
+  const plan = planLineSync('# M\n', '# M\n\n- Old fact.\n', [archived], context())
+  assert.equal(plan.update[0]?.data.legacy, false)
+  assert.deepEqual(plan.update[0]?.data.confirmedAt, now)
+})
