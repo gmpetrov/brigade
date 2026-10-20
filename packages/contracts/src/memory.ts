@@ -180,29 +180,39 @@ export function changeMemoryFile(
     if (key && !at.has(key)) at.set(key, i)
   })
   const gone = new Set<number>()
+  // What the file will hold: lines that go make room, longer ones and new ones take it.
+  let size = text.length
   for (const line of changes.remove ?? []) {
     const i = at.get(memoryLineKey(line))
     if (i === undefined || gone.has(i)) continue
     gone.add(i)
     at.delete(memoryLineKey(line))
+    size -= lines[i]!.length + 1
     result.removed.push({ text: memoryLineText(lines[i]!), topic: topics[i] ?? null })
   }
   for (const { from, to } of changes.replace ?? []) {
     const i = at.get(memoryLineKey(from))
-    const next = memoryLineText(to)
+    const next = memoryLineText(to).replace(/\s*\n\s*/g, ' ')
     if (i === undefined || gone.has(i) || !next) continue
     const old = memoryLineText(lines[i]!)
-    at.delete(memoryLineKey(from))
-    const there = at.get(memoryLineKey(to))
-    if (there !== undefined) {
+    const there = at.get(memoryLineKey(next))
+    if (there !== undefined && there !== i) {
       // Already said elsewhere: the old line just goes.
+      at.delete(memoryLineKey(from))
       gone.add(i)
+      size -= lines[i]!.length + 1
       result.removed.push({ text: old, topic: topics[i] ?? null })
       continue
     }
-    const bullet = BULLET.exec(lines[i]!)?.[0] ?? '- '
-    lines[i] = `${bullet}${next.replace(/\s*\n\s*/g, ' ')}`
-    at.set(memoryLineKey(to), i)
+    const line = `${BULLET.exec(lines[i]!)?.[0] ?? '- '}${next}`
+    if (size + line.length - lines[i]!.length > max) {
+      result.dropped++
+      continue
+    }
+    size += line.length - lines[i]!.length
+    at.delete(memoryLineKey(from))
+    lines[i] = line
+    at.set(memoryLineKey(next), i)
     result.replaced.push({ from: old, to: next, topic: topics[i] ?? null })
   }
   // Where each section's new lines go: after its last line still there.
@@ -227,7 +237,6 @@ export function changeMemoryFile(
   const bullet = style === '*' || style === '+' ? `${style} ` : '- '
   const inserts = new Map<number, string[]>()
   const newTopics: { name: string; lines: string[] }[] = []
-  let size = text.length
   for (const { text: raw, topic } of changes.add ?? []) {
     const line = memoryLineText(raw).replace(/\s*\n\s*/g, ' ')
     const key = memoryLineKey(line)
@@ -288,17 +297,20 @@ export function changeMemoryFile(
   return result
 }
 
+/** A line already in a file, named by its text: people may have written it long. */
+const LineText = z.string().max(50_000)
+
 /** How a tidy run lays a memory file out again. Lines are named by their text. */
 export const MemoryLayout = z.object({
   /** Lines every thread needs, in order. */
-  core: z.array(z.string().max(1000)).max(400).default([]),
+  core: z.array(LineText).max(400).default([]),
   topics: z
     .array(
       z.object({
         name: z.string().trim().min(1).max(60),
         /** When a thread should read it. */
         description: z.string().trim().max(200).default(''),
-        lines: z.array(z.string().max(1000)).max(400).default([]),
+        lines: z.array(LineText).max(400).default([]),
       }),
     )
     .max(30)
@@ -307,7 +319,7 @@ export const MemoryLayout = z.object({
   merge: z
     .array(
       z.object({
-        from: z.array(z.string().max(1000)).min(1).max(20),
+        from: z.array(LineText).min(1).max(20),
         text: z.string().trim().min(1).max(1000),
         topic: z.string().trim().max(60).nullable().default(null),
       }),
@@ -316,7 +328,7 @@ export const MemoryLayout = z.object({
     .default([]),
   /** Lines that leave the file for the archive, with why. */
   archive: z
-    .array(z.object({ text: z.string().max(1000), reason: z.string().trim().max(200) }))
+    .array(z.object({ text: LineText, reason: z.string().trim().max(200) }))
     .max(400)
     .default([]),
 })
@@ -376,10 +388,9 @@ export function layOutMemoryFile(text: string, layout: MemoryLayout): MemoryLayo
   // Merged first, so their lines are not placed one by one too.
   const merged = new Map<string, { text: string; topic: string | null }>()
   for (const merge of layout.merge) {
-    const from = [...new Set(merge.from.map(memoryLineKey))].filter(
-      (key) => where.has(key) && !taken.has(key),
-    )
-    if (from.length < 1) continue
+    const from = [...new Set(merge.from.map(memoryLineKey))]
+    // Written from all its lines: if one is gone since (a thread replaced it), merging would bring it back.
+    if (!from.length || from.some((key) => !where.has(key) || taken.has(key))) continue
     const to = memoryLineText(merge.text)
     for (const key of from) taken.add(key)
     result.merged.push({ from: from.map((key) => where.get(key)!), to, topic: merge.topic })

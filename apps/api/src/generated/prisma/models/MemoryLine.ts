@@ -938,7 +938,7 @@ export type $MemoryLinePayload<ExtArgs extends runtime.Types.Extensions.Internal
     workspaceId: string
     documentId: string
     /**
-     * The line as compared: no bullet, any case, any spacing.
+     * A SHA-256 of the line as compared (no bullet, any case, any spacing), so any length fits the index.
      */
     key: string
     /**

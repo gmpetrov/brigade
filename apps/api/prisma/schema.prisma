@@ -1374,7 +1374,7 @@ model MemoryLine {
   workspaceId       String
   documentId        String
   document          Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  /// The line as compared: no bullet, any case, any spacing.
+  /// A SHA-256 of the line as compared (no bullet, any case, any spacing), so any length fits the index.
   key               String
   /// The line as last written, without its bullet.
   text              String

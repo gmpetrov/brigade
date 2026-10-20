@@ -1240,16 +1240,16 @@ export class Threads {
     const failed = this.tidyFailed.get(path)
     // The manifest may not say yet that this computer just tidied it.
     const sent = this.tidySent.get(path)
+    // One at a time on this computer, and outside the turns' slots: a tidy waits, a turn does not.
     if (
       this.stopping ||
-      this.tidying.has(path) ||
+      this.tidying.size > 0 ||
       (failed && Date.now() - failed < TIDY_RETRY_MS) ||
       (sent && Date.now() - sent < TIDY_RESEND_MS)
     )
       return
     this.tidying.add(path)
     void (async () => {
-      await this.acquire()
       try {
         if (this.stopping) return
         const run = tidyRun(file)
@@ -1277,7 +1277,6 @@ export class Threads {
         this.tidyFailed.set(path, Date.now())
         console.warn(`memory ${path}: tidy run failed: ${String(error)}`)
       } finally {
-        this.release()
         this.tidying.delete(path)
       }
     })()

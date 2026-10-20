@@ -1,6 +1,7 @@
 // Memory files as lines, without the database, so it can be tested on its own:
 // what a thread's edit or a tidy run does to a file's text, and how each line's
 // row (MemoryLine: its date, source, and why it left) follows the text.
+import { createHash } from 'node:crypto'
 import {
   changeMemoryFile,
   layOutMemoryFile,
@@ -12,12 +13,20 @@ import {
   type MemoryLayout,
 } from '@brigade/contracts'
 
+/**
+ * A line's key as its row keeps it: a hash of the line as compared
+ * (memoryLineKey), so a line of any length fits the row's unique index.
+ */
+export const rowKey = (key: string) => createHash('sha256').update(key).digest('hex')
+
 /** A line's row as the sync needs it. */
 export type LineRow = {
   id: string
+  /** rowKey of the line. */
   key: string
   text: string
   topic: string | null
+  legacy: boolean
   createdByType: 'member' | 'teammate' | 'runner' | 'system' | null
   createdById: string | null
   createdAt: Date
@@ -137,11 +146,11 @@ export function planLineSync(
   const was = memoryEntries(before)
   const is = memoryEntries(after)
   const byKey = new Map(rows.map((r) => [r.key, r]))
+  const rowOf = (key: string) => byKey.get(rowKey(key))
   const { actor, now } = context
-  const dateOf = (row: LineRow | undefined) =>
-    row ? Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0) : 0
+  const dateOf = (row: LineRow) => Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0)
   for (const [key, line] of is) {
-    const row = byKey.get(key)
+    const row = rowOf(key)
     if (row?.archivedAt) {
       // Put back, by a person or a thread that learned it again.
       plan.update.push({
@@ -164,17 +173,21 @@ export function planLineSync(
       if (context.confirm.has(key)) data.confirmedAt = now
       if (Object.keys(data).length) plan.update.push({ id: row.id, data })
     } else {
-      const legacy = was.has(key)
-      const sources = (context.sources.get(key) ?? []).map((k) => byKey.get(k))
-      const newest = Math.max(0, ...sources.map(dateOf))
+      const there = was.has(key)
+      // A merged line keeps the newest date of its lines; merged from lines older than dates, it is too.
+      const sources = (context.sources.get(key) ?? []).flatMap((k) => rowOf(k) ?? [])
+      const dated = sources.filter((r) => !r.legacy)
+      const merged = sources.length > 0
+      const legacy = there || (merged && dated.length === 0)
+      const newest = Math.max(0, ...(dated.length ? dated : sources).map(dateOf))
       plan.create.push({
-        key,
+        key: rowKey(key),
         text: line.text,
         topic: line.topic,
         legacy,
-        createdByType: legacy ? null : actor.type,
-        createdById: legacy ? null : actor.id,
-        sessionId: legacy ? null : context.sessionId,
+        createdByType: there ? null : actor.type,
+        createdById: there ? null : actor.id,
+        sessionId: there ? null : context.sessionId,
         createdAt: newest ? new Date(newest) : now,
         archivedAt: null,
         archivedReason: null,
@@ -186,7 +199,7 @@ export function planLineSync(
   }
   for (const [key, line] of was) {
     if (is.has(key)) continue
-    const row = byKey.get(key)
+    const row = rowOf(key)
     const reason =
       context.reasons.get(key) ?? (actor.type === 'member' ? 'Removed' : 'Removed by a thread')
     const archived = {
@@ -198,7 +211,7 @@ export function planLineSync(
     }
     if (!row) {
       plan.create.push({
-        key,
+        key: rowKey(key),
         text: line.text,
         topic: line.topic,
         legacy: true,

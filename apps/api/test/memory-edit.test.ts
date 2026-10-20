@@ -5,6 +5,7 @@ import {
   applyMemoryEdit,
   applyMemoryLayout,
   planLineSync,
+  rowKey,
   type LineContext,
   type LineRow,
 } from '../src/memory-edit.js'
@@ -80,9 +81,10 @@ const now = new Date('2026-10-21T10:00:00Z')
 const day = (d: number) => new Date(now.getTime() - d * 86_400_000)
 const row = (text: string, extra: Partial<LineRow> = {}): LineRow => ({
   id: `row-${memoryLineKey(text)}`,
-  key: memoryLineKey(text),
+  key: rowKey(memoryLineKey(text)),
   text,
   topic: null,
+  legacy: false,
   createdByType: 'teammate',
   createdById: 'riley',
   createdAt: day(5),
@@ -217,5 +219,51 @@ test('a line put back leaves the archive, and a merged line keeps the newest dat
       "Merged into: Stripe's MCP server cannot delete webhooks.",
       "Merged into: Stripe's MCP server cannot delete webhooks.",
     ],
+  )
+})
+
+test('a line of any length gets a row whose key fits the index', () => {
+  const long = `A line pasted long: ${'x'.repeat(8000)}`
+  const plan = planLineSync('# M\n', `# M\n\n- ${long}\n`, [], context())
+  assert.equal(plan.create[0]?.key.length, 64)
+  assert.equal(plan.create[0]?.text, long)
+})
+
+test('a line merged from lines older than dates in memory is still dated "before"', () => {
+  const before =
+    "# M\n\n- Stripe's MCP cannot delete webhooks.\n- Stripe MCP can't delete webhooks.\n"
+  const laid = applyMemoryLayout(
+    before,
+    MemoryLayout.parse({
+      merge: [
+        {
+          from: ["Stripe's MCP cannot delete webhooks.", "Stripe MCP can't delete webhooks."],
+          text: "Stripe's MCP server cannot delete webhooks.",
+          topic: null,
+        },
+      ],
+    }),
+  )
+  const rows = [
+    row("Stripe's MCP cannot delete webhooks.", {
+      legacy: true,
+      createdAt: day(1),
+      createdByType: null,
+    }),
+    row("Stripe MCP can't delete webhooks.", {
+      legacy: true,
+      createdAt: day(1),
+      createdByType: null,
+    }),
+  ]
+  const plan = planLineSync(
+    before,
+    laid.text,
+    rows,
+    context({ reasons: laid.reasons, sources: laid.sources }),
+  )
+  assert.deepEqual(
+    plan.create.map((c) => [c.legacy, c.createdAt]),
+    [[true, day(1)]],
   )
 })

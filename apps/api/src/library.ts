@@ -12,6 +12,7 @@ import {
   type LibraryFile,
   type LibraryManifest,
   changeMemoryFile,
+  memoryLineKey,
   tidyTakesTooMuch,
   type ArchivedMemoryLine,
   type MemoryEdit,
@@ -655,7 +656,7 @@ export async function memoryLineInfo(db: ScopedDb, documentIds: string[]) {
     where: { documentId: { in: documentIds } },
     select: {
       documentId: true,
-      key: true,
+      text: true,
       createdAt: true,
       confirmedAt: true,
       legacy: true,
@@ -692,7 +693,7 @@ export async function memoryLineInfo(db: ScopedDb, documentIds: string[]) {
       file.archived++
       continue
     }
-    file.lines[row.key] = {
+    file.lines[memoryLineKey(row.text)] = {
       at: lineDate(row).toISOString(),
       legacy: row.legacy,
       by: row.createdByType === 'member' ? (name('member', row.createdById)?.name ?? null) : null,
@@ -1027,7 +1028,7 @@ async function memoryLineMeta(db: ScopedDb, files: { id: string; path: string }[
     where: { documentId: { in: files.map((f) => f.id) }, archivedAt: null },
     select: {
       documentId: true,
-      key: true,
+      text: true,
       createdAt: true,
       confirmedAt: true,
       legacy: true,
@@ -1046,7 +1047,7 @@ async function memoryLineMeta(db: ScopedDb, files: { id: string; path: string }[
   for (const row of rows) {
     const path = paths.get(row.documentId)!
     const by = row.createdByType === 'member' ? name('member', row.createdById)?.name : undefined
-    ;(out[path] ??= {})[row.key] = {
+    ;(out[path] ??= {})[memoryLineKey(row.text)] = {
       at: lineDate(row).toISOString(),
       ...(by ? { by } : {}),
       ...(row.legacy ? { legacy: true } : {}),

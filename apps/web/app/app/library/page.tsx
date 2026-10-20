@@ -282,7 +282,11 @@ function Memory({
       />
       {/* A project's empty memory is on its own page; here it would only add an empty card. */}
       {overview.projects
-        .filter((p) => p.memory.documentId && p.memory.text.replace(/^#[^\n]*\n+/, '').trim())
+        .filter(
+          (p) =>
+            p.memory.documentId &&
+            (p.memory.archived > 0 || p.memory.text.replace(/^#[^\n]*\n+/, '').trim()),
+        )
         .map((p) => (
           <MemoryCard
             key={p.projectId}

@@ -303,7 +303,10 @@ export const SearchHit = z.object({
 })
 export type SearchHit = z.infer<typeof SearchHit>
 
+/** A new line, as a thread writes it. */
 const MemoryText = z.string().trim().min(1).max(1000)
+/** A line already in a file, which people may have written longer. */
+const MemoryRef = z.string().trim().min(1).max(MEMORY_MAX)
 
 /**
  * What a thread changes in a memory file. Applied by the API, so edits never
@@ -322,16 +325,16 @@ export const MemoryEdit = z.object({
     .default([]),
   /** Lines said again, corrected: the old one goes to the archive. */
   replace: z
-    .array(z.object({ from: MemoryText, to: MemoryText }))
+    .array(z.object({ from: MemoryRef, to: MemoryText }))
     .max(40)
     .default([]),
   /** Lines that go to the archive, with why. */
   archive: z
-    .array(z.object({ text: MemoryText, reason: z.string().trim().max(200) }))
+    .array(z.object({ text: MemoryRef, reason: z.string().trim().max(200) }))
     .max(40)
     .default([]),
   /** Lines the thread found still true: their date moves to now. */
-  confirm: z.array(MemoryText).max(60).default([]),
+  confirm: z.array(MemoryRef).max(60).default([]),
 })
 export type MemoryEdit = z.infer<typeof MemoryEdit>
 /** A thread's edit as changes to a memory file's text (changeMemoryFile), the same on the runner and the API. */

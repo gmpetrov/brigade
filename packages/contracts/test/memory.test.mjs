@@ -288,3 +288,35 @@ test('a tidy layout can say one line again in today’s words', () => {
   assert.equal(result.text, '# M\n\n- Playbooks show in the Routines page.\n')
   assert.equal(result.merged[0].from.length, 1)
 })
+
+test('a merge whose lines are not all still there is left out', () => {
+  const text = '# M\n\n- One.\n- Two.\n'
+  const result = layOutMemoryFile(
+    text,
+    MemoryLayout.parse({
+      merge: [{ from: ['One.', 'Gone since.'], text: 'One and gone.', topic: null }],
+    }),
+  )
+  assert.equal(result.text, text)
+  assert.deepEqual(result.merged, [])
+})
+
+test('lines that go make room, and a correction that would overfill the file is not made', () => {
+  const big = `# M\n\n- ${'a'.repeat(60)}\n- ${'b'.repeat(60)}\n`
+  // Removing a line makes room for a new one of the same size.
+  const swap = changeMemoryFile(
+    big,
+    { remove: ['a'.repeat(60)], add: [{ text: 'c'.repeat(60), topic: null }] },
+    big.length,
+  )
+  assert.equal(swap.dropped, 0)
+  assert.equal(swap.added.length, 1)
+  // Growing a line past the limit is dropped, and the old line stays.
+  const grow = changeMemoryFile(
+    big,
+    { replace: [{ from: 'b'.repeat(60), to: 'b'.repeat(90) }] },
+    big.length,
+  )
+  assert.equal(grow.dropped, 1)
+  assert.equal(grow.text, big)
+})
