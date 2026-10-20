@@ -1141,8 +1141,19 @@ function storedImages(value: unknown, names = new Set<string>()): Set<string> {
 }
 
 /** The images a tool returned, such as a screenshot, above its output. Each opens over the page. */
-function ToolImages({ threadId, names }: { threadId: string; names: string[] }) {
+function ToolImages({
+  threadId,
+  names,
+  title,
+}: {
+  threadId: string
+  names: string[]
+  /** What the preview is called: the file read, else the tool. */
+  title: string
+}) {
   const [open, setOpen] = useState<string>()
+  const titleOf = (name: string) =>
+    names.length > 1 ? `${title} (${names.indexOf(name) + 1}/${names.length})` : title
   return (
     <div className="flex flex-wrap gap-2">
       {names.map((name) => (
@@ -1155,7 +1166,7 @@ function ToolImages({ threadId, names }: { threadId: string; names: string[] }) 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={storedImageUrl(threadId, name)}
-            alt="An image the tool returned"
+            alt={titleOf(name)}
             loading="lazy"
             className="max-h-64 max-w-full object-contain"
           />
@@ -1163,7 +1174,9 @@ function ToolImages({ threadId, names }: { threadId: string; names: string[] }) 
       ))}
       <MediaPreview
         media={
-          open ? { name: open, src: storedImageUrl(threadId, open), kind: 'image' } : undefined
+          open
+            ? { name: titleOf(open), src: storedImageUrl(threadId, open), kind: 'image' }
+            : undefined
         }
         onClose={() => setOpen(undefined)}
       />
@@ -1181,12 +1194,17 @@ function ToolDetail({
 }) {
   const images = [...storedImages(item.output)]
   if (!images.length) return <ToolOutput item={item} />
+  const input = (item.input ?? {}) as Record<string, unknown>
+  const path = input.file_path ?? input.path
+  const read = toolKind(item.toolName) === 'read'
+  const title =
+    read && typeof path === 'string' ? (path.split('/').pop() ?? path) : bareToolName(item.toolName)
+  const shown = <ToolImages threadId={threadId} names={images} title={title} />
   // A picture it read is shown as itself; any other tool's images come before what it returned.
-  if (toolKind(item.toolName) === 'read' && !item.isError)
-    return <ToolImages threadId={threadId} names={images} />
+  if (read && !item.isError) return shown
   return (
     <>
-      <ToolImages threadId={threadId} names={images} />
+      {shown}
       <ToolOutput item={item} />
     </>
   )
