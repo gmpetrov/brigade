@@ -1,8 +1,9 @@
 -- The review loop goes: a review is a child thread of the thread that opened the pull request
--- (src/reviews.ts), and what the loop's status kept of a merge a person asked for moves to
--- mergeStatus. Only additions: the API deployed before this one keeps the loop's columns
--- (reviewStatus, autoMerge, reviewerTeammateId, reviewedSha) for the minutes it still runs
--- while the new one starts; a later migration drops them.
+-- (src/reviews.ts). Only additions, for the API deployed before this one, which runs a few
+-- minutes more while the new one starts: what the loop's status kept of a merge a person asked
+-- for (resolving, merging, stuck) stays in its column (reviewStatus, mergeStatus to the new
+-- code, with reviewedSha as resolveFromSha), so a merge either API moves on, the other sees.
+-- The loop's other columns stay too, and a later migration drops them.
 
 -- Tickets the loop opened for a pull request it stopped on no longer wait on anyone. A merge a
 -- person asked for (Resolve conflicts) has its method set; the loop's never had.
@@ -15,14 +16,12 @@ WHERE "status" = 'open'
        OR ("reviewStatus" = 'stuck' AND "mergeMethod" IS NULL)
   );
 
--- The loop stops: the old API, still running for a few minutes, moves none of them on.
+-- The loop stops: nothing moves its pull requests on, not even the older API meanwhile.
 UPDATE "PullRequest"
-SET "reviewStatus" = 'none', "autoMerge" = false, "note" = NULL, "round" = 0
+SET "reviewStatus" = 'none', "autoMerge" = false, "reviewedSha" = NULL, "note" = NULL, "round" = 0
 WHERE "reviewStatus" IN ('reviewing', 'fixing', 'approved', 'changes_requested')
    OR ("reviewStatus" = 'stuck' AND "mergeMethod" IS NULL);
-
--- CreateEnum
-CREATE TYPE "MergeStatus" AS ENUM ('none', 'stuck', 'resolving', 'merging');
+UPDATE "PullRequest" SET "reviewedSha" = NULL WHERE "reviewStatus" = 'none';
 
 -- CreateEnum
 CREATE TYPE "ReviewPolicy" AS ENUM ('teammate', 'manual');
@@ -34,16 +33,9 @@ ALTER TABLE "PullRequest" DROP CONSTRAINT "PullRequest_reviewerTeammateId_fkey";
 DROP INDEX "PullRequest_reviewStatus_autoMerge_idx";
 
 -- AlterTable
-ALTER TABLE "PullRequest" ADD COLUMN "mergeStatus" "MergeStatus" NOT NULL DEFAULT 'none',
-ADD COLUMN "resolveFromSha" TEXT,
-ADD COLUMN "noReviewReason" TEXT,
+ALTER TABLE "PullRequest" ADD COLUMN "noReviewReason" TEXT,
 ADD COLUMN "reviewClaimedAt" TIMESTAMP(3),
 ADD COLUMN "reviewSessionId" TEXT;
-
--- A merge under way (Resolve conflicts) goes on where it was.
-UPDATE "PullRequest"
-SET "mergeStatus" = "reviewStatus"::text::"MergeStatus", "resolveFromSha" = "reviewedSha"
-WHERE "reviewStatus" IN ('stuck', 'resolving', 'merging');
 
 -- AlterTable
 ALTER TABLE "Project" ADD COLUMN "reviewPolicy" "ReviewPolicy" NOT NULL DEFAULT 'teammate';
@@ -52,7 +44,7 @@ ALTER TABLE "Project" ADD COLUMN "reviewPolicy" "ReviewPolicy" NOT NULL DEFAULT 
 CREATE INDEX "PullRequest_reviewSessionId_idx" ON "PullRequest"("reviewSessionId");
 
 -- CreateIndex
-CREATE INDEX "PullRequest_mergeStatus_idx" ON "PullRequest"("mergeStatus");
+CREATE INDEX "PullRequest_reviewStatus_idx" ON "PullRequest"("reviewStatus");
 
 -- AddForeignKey
 ALTER TABLE "PullRequest" ADD CONSTRAINT "PullRequest_reviewSessionId_fkey" FOREIGN KEY ("reviewSessionId") REFERENCES "Session"("id") ON DELETE SET NULL ON UPDATE CASCADE;

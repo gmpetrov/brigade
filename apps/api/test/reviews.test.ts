@@ -22,7 +22,7 @@ import { parseEnv } from 'node:util'
 // - closing a pull request stops its review;
 // - the brief says whether the repository runs checks (a release workflow is none, nor one
 //   whose filters leave the pull request out), and how the thread started;
-// - the review loop's columns stay for the API deployed before this change.
+// - a merge either API moves on, the other sees, while the one deployed before still runs.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -626,12 +626,32 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     }
   })
 
-  test('the review loop’s columns stay for the API deployed before, until a later migration', async () => {
-    // That API reads and writes them for the minutes it runs while the new one starts.
+  test('a merge either API moves on, the other sees: they share its column while both run', async () => {
+    // The API deployed before reviews in child threads reads and writes the loop's columns
+    // for the minutes it runs while this one starts; a later migration drops what it alone uses.
     const columns = await prisma.$queryRaw<{ column_name: string }[]>`
       select column_name from information_schema.columns where table_name = 'PullRequest'`
     const names = columns.map((c) => c.column_name)
     for (const name of ['reviewStatus', 'autoMerge', 'reviewerTeammateId', 'reviewedSha'])
       assert.ok(names.includes(name), `${name} is still there`)
+    await open(ids.thread, 60)
+    const { id } = await row(60)
+    // The older API moves a resolve on to merging, as it writes it.
+    await prisma.$executeRaw`
+      update "PullRequest" set "reviewStatus" = 'merging', "reviewedSha" = 'resolved-head'
+      where id = ${id}`
+    const moved = await row(60)
+    assert.equal(moved.mergeStatus, 'merging')
+    assert.equal(moved.resolveFromSha, 'resolved-head')
+    // This one stops it: the older one reads it stopped.
+    await db.pullRequest.updateMany({ where: { id }, data: { mergeStatus: 'none' } })
+    const [old] = await prisma.$queryRaw<{ reviewStatus: string }[]>`
+      select "reviewStatus"::text as "reviewStatus" from "PullRequest" where id = ${id}`
+    assert.equal(old?.reviewStatus, 'none')
+    // A loop the older API starts meanwhile is no merge here: it waits on a person.
+    await prisma.$executeRaw`update "PullRequest" set "reviewStatus" = 'reviewing' where id = ${id}`
+    const { needsAttention } = await import('../src/pull-requests.js')
+    const listed = (await needsAttention(db)).find((p) => p.number === 60)
+    assert.equal(listed?.mergeStatus, 'none')
   })
 })

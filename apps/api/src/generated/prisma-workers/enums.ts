@@ -127,16 +127,6 @@ export type AccountSource = (typeof AccountSource)[keyof typeof AccountSource]
 
 export const MergeStatus = {
   none: 'none',
-  stuck: 'stuck',
-  resolving: 'resolving',
-  merging: 'merging'
-} as const
-
-export type MergeStatus = (typeof MergeStatus)[keyof typeof MergeStatus]
-
-
-export const ReviewStatus = {
-  none: 'none',
   reviewing: 'reviewing',
   fixing: 'fixing',
   approved: 'approved',
@@ -146,7 +136,7 @@ export const ReviewStatus = {
   merging: 'merging'
 } as const
 
-export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus]
+export type MergeStatus = (typeof MergeStatus)[keyof typeof MergeStatus]
 
 
 export const ReviewPolicy = {
