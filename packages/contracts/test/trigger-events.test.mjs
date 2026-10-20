@@ -60,26 +60,42 @@ test('a payload cut short stays text, and is no email', () => {
 })
 
 test('other events and other texts', () => {
-  assert.equal(triggerEmail(triggerEvent(message({ action: 'opened' }).replace('event email', 'event issues.opened'))), null)
+  assert.equal(
+    triggerEmail(
+      triggerEvent(message({ action: 'opened' }).replace('event email', 'event issues.opened')),
+    ),
+    null,
+  )
   assert.equal(triggerEvent('Can you check the Crisp bug?'), null)
   // A trigger message quoted by a person, with their words after it, is theirs.
   assert.equal(triggerEvent(`${message(email)}\n\nWhat does this mean?`), null)
 })
 
 test('mailbox splits a name from its address', () => {
-  assert.deepEqual(mailbox('gmp gmp <0b10101042@gmail.com>'), { name: 'gmp gmp', address: '0b10101042@gmail.com' })
-  assert.deepEqual(mailbox('"Ada L." <ada@example.com>'), { name: 'Ada L.', address: 'ada@example.com' })
+  assert.deepEqual(mailbox('gmp gmp <0b10101042@gmail.com>'), {
+    name: 'gmp gmp',
+    address: '0b10101042@gmail.com',
+  })
+  assert.deepEqual(mailbox('"Ada L." <ada@example.com>'), {
+    name: 'Ada L.',
+    address: 'ada@example.com',
+  })
   assert.deepEqual(mailbox('ada@example.com'), { name: null, address: 'ada@example.com' })
 })
 
 test('splitQuoted folds the earlier messages a reply quotes', () => {
-  const reply = 'merci !\nça marche\n\nLe mar. 20 oct. 2026 à 02:30, Support <support@chaindesk.ai> a\nécrit :\n\n> Bonjour,\n> essayez ceci\n'
+  const reply =
+    'merci !\nça marche\n\nLe mar. 20 oct. 2026 à 02:30, Support <support@chaindesk.ai> a\nécrit :\n\n> Bonjour,\n> essayez ceci\n'
   assert.deepEqual(splitQuoted(reply), {
     text: 'merci !\nça marche',
-    quoted: 'Le mar. 20 oct. 2026 à 02:30, Support <support@chaindesk.ai> a\nécrit :\n\n> Bonjour,\n> essayez ceci',
+    quoted:
+      'Le mar. 20 oct. 2026 à 02:30, Support <support@chaindesk.ai> a\nécrit :\n\n> Bonjour,\n> essayez ceci',
   })
   const en = 'Thanks!\n\nOn Tue, Oct 20, 2026 at 2:30 AM Support <s@x.ai> wrote:\n> Hi'
-  assert.deepEqual(splitQuoted(en), { text: 'Thanks!', quoted: 'On Tue, Oct 20, 2026 at 2:30 AM Support <s@x.ai> wrote:\n> Hi' })
+  assert.deepEqual(splitQuoted(en), {
+    text: 'Thanks!',
+    quoted: 'On Tue, Oct 20, 2026 at 2:30 AM Support <s@x.ai> wrote:\n> Hi',
+  })
   assert.deepEqual(splitQuoted('no quote here'), { text: 'no quote here', quoted: '' })
   assert.deepEqual(splitQuoted('> only a quote'), { text: '> only a quote', quoted: '' })
 })

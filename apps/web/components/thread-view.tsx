@@ -39,6 +39,10 @@ import {
   type ReplyTo,
   type SequencedEvent,
   type TicketAnswer,
+  triggerEmail,
+  triggerEvent,
+  type TriggerEmail,
+  type TriggerEventMessage,
 } from '@brigade/contracts'
 import {
   AppWindow,
@@ -67,6 +71,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MediaPreview, MessageAttachments } from '@/components/attachments'
 import { APP_NAMES, AppAccessAsk } from '@/components/app-access-ask'
 import { CredentialForm } from '@/components/credential-form'
+import { ReceivedEmailCard, ToolInputPreview } from '@/components/email-cards'
 import { TeammateAvatar } from '@/components/dashboard'
 import { FileLinksProvider, useFileLinks } from '@/components/file-links'
 import { contentUrl } from '@/components/library-browser'
@@ -125,6 +130,8 @@ export type Item =
       steeredTo?: string
       /** Written by Brigade about child threads, not by a person: a child's work, or reports for its parent. */
       brigade?: NonNullable<ReturnType<typeof childNote>>
+      /** An email a trigger received, shown as a mail rather than as the teammate's prompt. */
+      email?: { event: TriggerEventMessage; email: TriggerEmail }
     }
   | {
       kind: 'assistant'
@@ -267,6 +274,7 @@ export function useThreadItems(events: SequencedEvent[], firstSeq = 1) {
             ...(e.replyTo ? { replyTo: e.replyTo } : {}),
             ...(e.steered && turnTeammate ? { steeredTo: turnTeammate } : {}),
             ...(e.memberId === null && childNote(e.text) ? { brigade: childNote(e.text)! } : {}),
+            ...(e.memberId === null ? receivedEmail(e.text) : {}),
           })
           break
         case 'message.queued':
@@ -613,6 +621,13 @@ function ReplyQuote({ reply, author }: { reply: ReplyTo; author?: string }) {
   )
 }
 
+/** A trigger's email in a message Brigade wrote (memberId null), for its card. */
+function receivedEmail(text: string) {
+  const event = triggerEvent(text)
+  const email = event && triggerEmail(event)
+  return email ? { email: { event, email } } : {}
+}
+
 const json = (value: unknown) =>
   typeof value === 'string' ? value : JSON.stringify(value, null, 2)
 
@@ -703,10 +718,6 @@ function shownWidget(item: Extract<Item, { kind: 'tool' }>) {
   if (!item.finished || item.isError) return null
   return Widget.safeParse(item.input).data ?? null
 }
-
-/** Raw JSON or text under a tool call, an approval or a thought. */
-const preClass =
-  'max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap wrap-anywhere'
 
 /** A small uppercase label heading a card in the thread. */
 function CardLabel({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -1483,6 +1494,20 @@ export function ThreadItems({
   const render = (item: Item, i: number): React.ReactNode => {
     switch (item.kind) {
       case 'user': {
+        // An email a trigger received: a mail, with the files that came with it.
+        if (item.email)
+          return (
+            <div key={item.key} data-seq={item.seq} className="min-w-0">
+              <ReceivedEmailCard
+                event={item.email.event}
+                email={item.email.email}
+                attachments={item.attachments}
+                reply={
+                  !!item.email.email.threadId && item.email.email.threadId !== item.email.email.id
+                }
+              />
+            </div>
+          )
         // Brigade's own words about child threads: a note, not a person's message.
         if (item.brigade) {
           // A report: one card per thread it tells about, that opens it.
@@ -1754,7 +1779,7 @@ export function ThreadItems({
               )}
             </div>
             {item.reason && <p className="text-sm text-muted-foreground">{item.reason}</p>}
-            <pre className={cn(preClass, 'max-h-60')}>{json(item.input)}</pre>
+            <ToolInputPreview input={item.input} />
             {item.resolved ? null : canApprove ? (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => onApproval(item.approvalId, true)}>

@@ -13,6 +13,7 @@ import { BookOpenCheck, ChevronRight, FlaskConical, Power } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isAdmin, TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { EmailDraftView, emailDraft, ToolArguments } from '@/components/email-cards'
 import { AppList } from '@/components/playbook-apps'
 import { StatusBadge, StatusDot } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -129,8 +130,7 @@ const EVENT_DOTS: Record<PlaybookDryRunEvent['status'], string> = {
 
 /** A write it would have made: an email's recipients, subject and body; else its arguments. */
 function WouldDo({ write }: { write: PlaybookDryRunEvent['writes'][number] }) {
-  const input = (write.input ?? {}) as Record<string, unknown>
-  const mail = typeof input.body === 'string' && Array.isArray(input.to)
+  const draft = emailDraft(write.input)
   return (
     <Collapsible className="rounded-lg bg-muted/60 text-sm">
       <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left">
@@ -144,21 +144,7 @@ function WouldDo({ write }: { write: PlaybookDryRunEvent['writes'][number] }) {
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="px-3 pb-3">
-        {mail ? (
-          <div className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground">
-              To {(input.to as string[]).join(', ')}
-              {typeof input.subject === 'string' && ` · ${input.subject}`}
-            </p>
-            <p className="leading-relaxed wrap-anywhere whitespace-pre-wrap">
-              {input.body as string}
-            </p>
-          </div>
-        ) : (
-          <pre className="max-h-60 overflow-auto font-mono text-xs whitespace-pre-wrap wrap-anywhere">
-            {JSON.stringify(write.input, null, 2)}
-          </pre>
-        )}
+        {draft ? <EmailDraftView draft={draft} /> : <ToolArguments input={write.input} />}
       </CollapsibleContent>
     </Collapsible>
   )
