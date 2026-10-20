@@ -890,12 +890,18 @@ export class HarnessThread {
           }
         }
         // The computer stopped during the last turn, which froze it with nothing
-        // waiting on a person: finish that turn, then the new message.
+        // waiting on a person: finish that turn, then the new message. With no new message,
+        // that turn is this one, and may end early like any.
         this.frozen = false
-        await consume(
-          (await live.agent.continueStream({ session: live.session, abortSignal: signal }))
-            .fullStream,
-        )
+        const alone = text === ''
+        const frozen = await live.agent.continueStream({
+          session: live.session,
+          abortSignal: alone ? streamSignal() : signal,
+        })
+        if (alone) {
+          await consumeLast(frozen.fullStream)
+          if (early) return await answeredEarly()
+        } else await consume(frozen.fullStream)
       }
       // The frozen turn stopped again (an approval, a question, no usage left): the message waits.
       const held =
