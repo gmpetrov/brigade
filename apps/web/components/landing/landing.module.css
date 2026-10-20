@@ -6290,3 +6290,10 @@ a.lgr:hover .tt {
     margin-top: 40px;
   }
 }
+
+/* Off screen, a section's loops hold still (components/landing/in-view.tsx). */
+.page [data-offscreen] *,
+.page [data-offscreen] *::before,
+.page [data-offscreen] *::after {
+  animation-play-state: paused !important;
+}

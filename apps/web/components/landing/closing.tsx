@@ -325,8 +325,9 @@ export function Faq() {
               </span>
             </summary>
             <p>
-              Only if you let it: for each teammate you choose what it does alone and what waits for
-              your yes.
+              Yes, unless you tell it to wait. For each teammate you choose what it does on its own
+              and what waits for your yes in Needs you. Ready-made playbooks, like the support one,
+              ask before they send.
             </p>
           </details>
           <details>

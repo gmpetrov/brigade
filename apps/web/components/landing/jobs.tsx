@@ -7,7 +7,10 @@ const jobs: Job[] = [
     id: 'support',
     tab: (
       <>
-        <span className={c('av sam')}>S</span>Support inbox
+        <span className={c('av sam')} aria-hidden="true">
+          S
+        </span>
+        Support inbox
       </>
     ),
     panel: (
@@ -74,7 +77,10 @@ const jobs: Job[] = [
     id: 'bugs',
     tab: (
       <>
-        <span className={c('av')}>R</span>Bug fixes
+        <span className={c('av')} aria-hidden="true">
+          R
+        </span>
+        Bug fixes
       </>
     ),
     panel: (
@@ -135,7 +141,10 @@ const jobs: Job[] = [
     id: 'release',
     tab: (
       <>
-        <span className={c('av mark')}>M</span>Release notes
+        <span className={c('av mark')} aria-hidden="true">
+          M
+        </span>
+        Release notes
       </>
     ),
     panel: (
@@ -190,7 +199,10 @@ const jobs: Job[] = [
     id: 'leads',
     tab: (
       <>
-        <span className={c('av sam')}>S</span>Lead follow-ups
+        <span className={c('av sam')} aria-hidden="true">
+          S
+        </span>
+        Lead follow-ups
       </>
     ),
     panel: (
@@ -205,7 +217,7 @@ const jobs: Job[] = [
           </h3>
           <div className={c('apps')}>
             <span className={c('tile sm')}>G</span>
-            <span className={c('tile sm')}>H</span>Gmail · HubSpot
+            <span className={c('tile sm')}>GS</span>Gmail · Google Sheets
           </div>
         </div>
         <div className={c('pn-art tint')} aria-hidden="true">
@@ -257,7 +269,10 @@ const jobs: Job[] = [
     id: 'numbers',
     tab: (
       <>
-        <span className={c('av')}>R</span>Weekly numbers
+        <span className={c('av')} aria-hidden="true">
+          R
+        </span>
+        Weekly numbers
       </>
     ),
     panel: (
@@ -266,12 +281,10 @@ const jobs: Job[] = [
           <div className={c('pn-who')}>
             <span className={c('av')}>R</span>Riley <span className={c('k')}>· Operations</span>
           </div>
-          <h3>
-            Revenue, refunds and signups on one page every Monday, posted where your team reads it.
-          </h3>
+          <h3>Revenue, refunds and signups on one page, in your inbox every Monday.</h3>
           <div className={c('apps')}>
             <span className={c('tile sm')}>S</span>
-            <span className={c('tile sm')}>#</span>Stripe · Slack
+            <span className={c('tile sm')}>P</span>Stripe · PostHog
           </div>
         </div>
         <div className={c('pn-art ink')} aria-hidden="true">
@@ -279,7 +292,7 @@ const jobs: Job[] = [
             <div className={c('shot-h pi i0')}>
               <b>Week 43</b>
               <span className={c('sp')}></span>
-              <span className={c('meta')}>Mon 09:00 · #founders</span>
+              <span className={c('meta')}>Mon 09:00 · to your inbox</span>
             </div>
             <div className={c('stats')}>
               <div className={c('stat pi i1')}>
@@ -316,7 +329,10 @@ const jobs: Job[] = [
     id: 'competitors',
     tab: (
       <>
-        <span className={c('av mark')}>M</span>Competitor watch
+        <span className={c('av mark')} aria-hidden="true">
+          M
+        </span>
+        Competitor watch
       </>
     ),
     panel: (
@@ -384,7 +400,7 @@ const jobs: Job[] = [
 
 export function Jobs() {
   return (
-    <section className={c('sec jobs')} aria-labelledby="jobs-title">
+    <section className={c('sec jobs')} aria-labelledby="jobs-title" data-anim>
       <div className={c('wrap')}>
         <div className={c('sec-head')}>
           <h2 className={c('h2')} id="jobs-title">
@@ -500,8 +516,7 @@ export function Jobs() {
                   watch
                 </li>
                 <li>
-                  <b>Your own job</b>Show it once with Teach a task, and it runs on schedule from
-                  then on
+                  <b>Your own job</b>Show it once with Teach a task, then put it on a schedule
                 </li>
               </ul>
             </section>
