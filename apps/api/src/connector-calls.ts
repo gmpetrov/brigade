@@ -390,7 +390,16 @@ export async function handleConnectorCall(
       }).catch((error) => console.warn(`pull request bookkeeping failed: ${String(error)}`))
     return result({ ok: true, output, attachments: kept, ...(decision ? { decision } : {}) })
   } catch (error) {
-    const message = redact(error instanceof Error ? error.message : String(error))
+    // The provider refused the account's sign-in: say how its owner renews it, from a ticket.
+    const expired = await db.connection.count({
+      where: { id: connection.id, status: 'needs_reauth' },
+    })
+    const account = connection.externalAccount ?? connection.label
+    const message =
+      redact(error instanceof Error ? error.message : String(error)) +
+      (expired
+        ? `\nThe sign-in of ${account} expired: open an access ticket (kind connection, app.kind ${connection.kind}, app.account "${account}") so its owner reconnects it from the ticket.`
+        : '')
     // A call on its own keeps its share of its action's caps even when it fails: the provider
     // may have done the write before its answer was lost, and a retry must not go past the cap.
     await record({

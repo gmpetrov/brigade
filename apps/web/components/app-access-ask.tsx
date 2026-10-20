@@ -161,7 +161,21 @@ export function AppAccessAsk({
   // Those this person may give. Another member's own account is left out: it is used only in
   // their threads. The API checks again that the account is usable in this thread.
   const givable = accounts.filter(mayGive)
-  const preferred = preferredAccount(givable, ask)
+  // The person's own accounts whose sign-in expired: reconnecting one here gives it. Not for a
+  // server added by its URL (its card signs in) nor a GitHub repository (its installation reaches it).
+  const expired =
+    repository || serverUrl || server
+      ? []
+      : (data.data?.connections ?? []).filter(
+          (c) =>
+            c.kind === kind &&
+            c.status === 'needs_reauth' &&
+            c.createdByMemberId === me.memberId &&
+            // Already connected again beside it, before reconnecting renewed the same row.
+            !givable.some((g) => g.externalAccount && g.externalAccount === c.externalAccount),
+        )
+  const options = [...givable, ...expired]
+  const preferred = preferredAccount(options, ask)
   // The installation on the repository's owner, if any, to add the repository to on GitHub. An
   // installation reaches only its own account's repositories: otherwise, install on the owner.
   const owner = repository?.split('/')[0]
@@ -173,7 +187,15 @@ export function AppAccessAsk({
       c.externalAccount?.split(' ')[0]?.toLowerCase() === owner,
   )
   const [picked, setPicked] = useState<string>()
+  const chosen = options.find((c) => c.id === (picked ?? preferred?.id))
   const [waiting, setWaiting] = useState(false)
+  /** The expired account being signed in to again, and the accounts there were before. */
+  const [reconnecting, setReconnecting] = useState<{ id: string; before: string[] }>()
+  // The same account back, else one the person signed in to instead (another mailbox).
+  const reconnected = reconnecting
+    ? (givable.find((c) => c.id === reconnecting.id) ??
+      givable.find((c) => !reconnecting.before.includes(c.id)))
+    : undefined
   const [error, setError] = useState<string>()
   const access = ask.app.scope === 'read' ? 'read' : 'read and write'
   const give = (connectionId: string | undefined) =>
@@ -183,9 +205,9 @@ export function AppAccessAsk({
   // up (reaching the repository), the access goes with the answer.
   useEffect(() => {
     if (!waiting) return
-    if (givable.length > 0) {
+    if (reconnecting ? reconnected : givable.length > 0) {
       setWaiting(false)
-      give(givable.length === 1 || repository ? givable[0]!.id : undefined)
+      give(reconnected?.id ?? (givable.length === 1 || repository ? givable[0]!.id : undefined))
       return
     }
     const timer = setInterval(
@@ -196,9 +218,10 @@ export function AppAccessAsk({
       repository ? 3000 : 2000,
     )
     return () => clearInterval(timer)
-  }, [waiting, givable.length])
+  }, [waiting, givable.length, reconnected?.id])
 
-  async function connect(region?: string) {
+  /** Sign in at the provider: a new account, or the expired one given (the API renews it). */
+  async function connect(region?: string, expiredId?: string) {
     setError(undefined)
     const route = SIGN_IN[kind]
     if (!route) return
@@ -213,7 +236,9 @@ export function AppAccessAsk({
         })
         return url
       })
-      if (inWindow) setWaiting(true)
+      if (!inWindow) return
+      setReconnecting(expiredId ? { id: expiredId, before: givable.map((c) => c.id) } : undefined)
+      setWaiting(true)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -232,25 +257,48 @@ export function AppAccessAsk({
         {!(serverUrl && accounts.length === 0) && (
           <ProviderTile kind={kind} icons={server?.mcp?.icons} small />
         )}
-        {givable.length > 0 ? (
+        {options.length > 0 ? (
           <>
-            {givable.length > 1 && (
-              <Select value={picked ?? preferred?.id} onValueChange={setPicked}>
+            {options.length > 1 && (
+              <Select value={chosen?.id} onValueChange={setPicked}>
                 <SelectTrigger size="sm" aria-label={`Which ${name} account`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {givable.map((c) => (
+                  {options.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.externalAccount ?? c.label}
+                      {c.status === 'needs_reauth' && ' · sign-in expired'}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
-            <Button size="sm" onClick={() => give(picked ?? preferred?.id)}>
-              Give {askerName} {access} access
-            </Button>
+            {chosen?.status === 'needs_reauth' ? (
+              // Its sign-in expired: signing in again renews it, and the access goes with it.
+              <RegionMenu
+                regions={data.data.catalog[kind]?.regions}
+                onPick={(region) => void connect(region, chosen.id)}
+              >
+                <Button
+                  size="sm"
+                  disabled={waiting || !data.data.available[kind]}
+                  onClick={
+                    data.data.catalog[kind]?.regions
+                      ? undefined
+                      : () => void connect(undefined, chosen.id)
+                  }
+                >
+                  {options.length > 1
+                    ? `Reconnect and give ${askerName} ${access} access`
+                    : `Reconnect ${chosen.externalAccount ?? chosen.label}`}
+                </Button>
+              </RegionMenu>
+            ) : (
+              <Button size="sm" onClick={() => give(chosen?.id)}>
+                Give {askerName} {access} access
+              </Button>
+            )}
             {decline}
           </>
         ) : repository && accounts.length === 0 ? (
@@ -342,7 +390,10 @@ export function AppAccessAsk({
       {waiting && !repository && (
         <p className="text-sm text-muted-foreground">
           Finish signing in in the tab that opened. {askerName} gets {access} access as soon as{' '}
-          {name} is connected.
+          {reconnecting
+            ? `${chosen?.externalAccount ?? name} is reconnected`
+            : `${name} is connected`}
+          .
         </p>
       )}
       {reach.error && <p className="text-sm text-destructive-text">{reach.error.message}</p>}
