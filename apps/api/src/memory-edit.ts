@@ -152,7 +152,11 @@ export function planLineSync(
   const dateOf = (row: Pick<LineRow, 'createdAt' | 'confirmedAt'>) =>
     Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0)
   // A line in the file before with no row yet was there before memory kept dates.
-  const legacyLine = { legacy: true, createdAt: now, confirmedAt: null }
+  const legacyLine: Pick<LineRow, 'legacy' | 'createdAt' | 'confirmedAt'> = {
+    legacy: true,
+    createdAt: now,
+    confirmedAt: null,
+  }
   for (const [key, line] of is) {
     const row = rowOf(key)
     if (row?.archivedAt) {
@@ -196,7 +200,10 @@ export function planLineSync(
       // A merged line keeps the newest date of its lines; merged from lines older than dates
       // (rows or not), it is too.
       const sources = (context.sources.get(key) ?? []).flatMap(
-        (k) => rowOf(k) ?? (was.has(k) ? [legacyLine] : []),
+        (k): Pick<LineRow, 'legacy' | 'createdAt' | 'confirmedAt'>[] => {
+          const source = rowOf(k)
+          return source ? [source] : was.has(k) ? [legacyLine] : []
+        },
       )
       const dated = sources.filter((r) => !r.legacy)
       const merged = sources.length > 0
