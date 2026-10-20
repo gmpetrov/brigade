@@ -1,8 +1,10 @@
 'use client'
 // Emails as people read them rather than as the teammate gets them: one a trigger received
-// (the first message of its thread, or a reply in its conversation), and one a teammate asks
-// to send (an approval's arguments). The raw event or arguments fold under Details.
+// (the first message of its thread, or a reply in its conversation) or a reply to an email
+// sent from the thread, and one a teammate asks to send (an approval's arguments). The raw
+// event or arguments fold under Details.
 import {
+  AWAITED_REPLY,
   mailbox,
   splitQuoted,
   type MessageAttachment,
@@ -139,17 +141,30 @@ export function ReceivedEmailCard({
 }) {
   const from = mailbox(email.from)
   const at = when(email.date, event.received)
+  // A reply to an email sent from this thread, rather than a trigger's event.
+  const awaited = event.trigger === AWAITED_REPLY
   const labels = email.labels.map((l) => LABELS[l]).filter(Boolean)
   return (
     <article className="min-w-0 overflow-hidden rounded-xl border bg-card text-sm shadow-xs">
       <div className="flex items-center gap-2 border-b px-4 py-2 text-xs text-muted-foreground">
         <ProviderLogo kind="gmail" className="size-4" />
-        <span className="min-w-0 flex-1 truncate">
-          {reply ? 'Reply in this conversation' : 'New email'} ·{' '}
-          <span className="font-semibold text-foreground">{event.trigger}</span>
-        </span>
-        <Zap aria-hidden className="size-3.5 flex-none" />
-        Trigger
+        {awaited ? (
+          <>
+            <span className="min-w-0 flex-1 truncate">
+              Reply to the email sent from this thread
+            </span>
+            <Reply aria-hidden className="size-3.5 flex-none" />
+          </>
+        ) : (
+          <>
+            <span className="min-w-0 flex-1 truncate">
+              {reply ? 'Reply in this conversation' : 'New email'} ·{' '}
+              <span className="font-semibold text-foreground">{event.trigger}</span>
+            </span>
+            <Zap aria-hidden className="size-3.5 flex-none" />
+            Trigger
+          </>
+        )}
       </div>
       <div className="flex flex-col gap-2 px-4 pt-3.5 pb-3">
         <div className="flex items-start gap-3">
@@ -194,7 +209,9 @@ export function ReceivedEmailCard({
       <Details className="border-t px-4 py-2.5">
         <Facts
           rows={[
-            ['Trigger', `${event.trigger} · ${event.definition} on ${event.source}`],
+            awaited
+              ? ['Mailbox', event.source]
+              : ['Trigger', `${event.trigger} · ${event.definition} on ${event.source}`],
             ['Received', event.received, true],
             ...(labels.length ? [['Labels', labels.join(' · ')] as [string, string]] : []),
             ...(email.id ? [['Message id', email.id, true] as [string, string, boolean]] : []),

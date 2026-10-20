@@ -267,6 +267,7 @@ export type ConnectionWhereInput = {
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
   grants?: Prisma.GrantListRelationFilter
   calls?: Prisma.ConnectionCallListRelationFilter
+  replyWatches?: Prisma.ReplyWatchListRelationFilter
   triggers?: Prisma.TriggerListRelationFilter
   subscriptions?: Prisma.SubscriptionListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
@@ -293,6 +294,7 @@ export type ConnectionOrderByWithRelationInput = {
   vaultSecret?: Prisma.VaultSecretOrderByWithRelationInput
   grants?: Prisma.GrantOrderByRelationAggregateInput
   calls?: Prisma.ConnectionCallOrderByRelationAggregateInput
+  replyWatches?: Prisma.ReplyWatchOrderByRelationAggregateInput
   triggers?: Prisma.TriggerOrderByRelationAggregateInput
   subscriptions?: Prisma.SubscriptionOrderByRelationAggregateInput
   attachments?: Prisma.AttachmentOrderByRelationAggregateInput
@@ -322,6 +324,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   vaultSecret?: Prisma.XOR<Prisma.VaultSecretNullableScalarRelationFilter, Prisma.VaultSecretWhereInput> | null
   grants?: Prisma.GrantListRelationFilter
   calls?: Prisma.ConnectionCallListRelationFilter
+  replyWatches?: Prisma.ReplyWatchListRelationFilter
   triggers?: Prisma.TriggerListRelationFilter
   subscriptions?: Prisma.SubscriptionListRelationFilter
   attachments?: Prisma.AttachmentListRelationFilter
@@ -387,6 +390,7 @@ export type ConnectionCreateInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -410,6 +414,7 @@ export type ConnectionUncheckedCreateInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -433,6 +438,7 @@ export type ConnectionUpdateInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -456,6 +462,7 @@ export type ConnectionUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -522,6 +529,11 @@ export type ConnectionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ConnectionScalarRelationFilter = {
+  is?: Prisma.ConnectionWhereInput
+  isNot?: Prisma.ConnectionWhereInput
+}
+
 export type ConnectionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   organizationId?: Prisma.SortOrder
@@ -581,11 +593,6 @@ export type ConnectionNullableScalarRelationFilter = {
   isNot?: Prisma.ConnectionWhereInput | null
 }
 
-export type ConnectionScalarRelationFilter = {
-  is?: Prisma.ConnectionWhereInput
-  isNot?: Prisma.ConnectionWhereInput
-}
-
 export type ConnectionCreateNestedManyWithoutWorkspaceInput = {
   create?: Prisma.XOR<Prisma.ConnectionCreateWithoutWorkspaceInput, Prisma.ConnectionUncheckedCreateWithoutWorkspaceInput> | Prisma.ConnectionCreateWithoutWorkspaceInput[] | Prisma.ConnectionUncheckedCreateWithoutWorkspaceInput[]
   connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutWorkspaceInput | Prisma.ConnectionCreateOrConnectWithoutWorkspaceInput[]
@@ -626,6 +633,20 @@ export type ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   update?: Prisma.ConnectionUpdateWithWhereUniqueWithoutWorkspaceInput | Prisma.ConnectionUpdateWithWhereUniqueWithoutWorkspaceInput[]
   updateMany?: Prisma.ConnectionUpdateManyWithWhereWithoutWorkspaceInput | Prisma.ConnectionUpdateManyWithWhereWithoutWorkspaceInput[]
   deleteMany?: Prisma.ConnectionScalarWhereInput | Prisma.ConnectionScalarWhereInput[]
+}
+
+export type ConnectionCreateNestedOneWithoutReplyWatchesInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedCreateWithoutReplyWatchesInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutReplyWatchesInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+}
+
+export type ConnectionUpdateOneRequiredWithoutReplyWatchesNestedInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedCreateWithoutReplyWatchesInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutReplyWatchesInput
+  upsert?: Prisma.ConnectionUpsertWithoutReplyWatchesInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutReplyWatchesInput, Prisma.ConnectionUpdateWithoutReplyWatchesInput>, Prisma.ConnectionUncheckedUpdateWithoutReplyWatchesInput>
 }
 
 export type ConnectionCreateNestedManyWithoutAppInput = {
@@ -803,6 +824,7 @@ export type ConnectionCreateWithoutWorkspaceInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -825,6 +847,7 @@ export type ConnectionUncheckedCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -877,6 +900,114 @@ export type ConnectionScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
 }
 
+export type ConnectionCreateWithoutReplyWatchesInput = {
+  id?: string
+  organizationId: string
+  reach?: $Enums.ConnectionReach
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  mcpUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutConnectionsInput
+  app: Prisma.AppCreateNestedOneWithoutConnectionsInput
+  vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
+  grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionUncheckedCreateWithoutReplyWatchesInput = {
+  id?: string
+  organizationId: string
+  workspaceId: string
+  appId: string
+  reach?: $Enums.ConnectionReach
+  kind: $Enums.ConnectorKind
+  label: string
+  externalAccount?: string | null
+  externalUrl?: string | null
+  mcpUrl?: string | null
+  status?: $Enums.ConnectionStatus
+  vaultSecretId?: string | null
+  createdByMemberId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
+  calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionCreateOrConnectWithoutReplyWatchesInput = {
+  where: Prisma.ConnectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedCreateWithoutReplyWatchesInput>
+}
+
+export type ConnectionUpsertWithoutReplyWatchesInput = {
+  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedUpdateWithoutReplyWatchesInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedCreateWithoutReplyWatchesInput>
+  where?: Prisma.ConnectionWhereInput
+}
+
+export type ConnectionUpdateToOneWithWhereWithoutReplyWatchesInput = {
+  where?: Prisma.ConnectionWhereInput
+  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutReplyWatchesInput, Prisma.ConnectionUncheckedUpdateWithoutReplyWatchesInput>
+}
+
+export type ConnectionUpdateWithoutReplyWatchesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutConnectionsNestedInput
+  app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
+  vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionUncheckedUpdateWithoutReplyWatchesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  workspaceId?: Prisma.StringFieldUpdateOperationsInput | string
+  appId?: Prisma.StringFieldUpdateOperationsInput | string
+  reach?: Prisma.EnumConnectionReachFieldUpdateOperationsInput | $Enums.ConnectionReach
+  kind?: Prisma.EnumConnectorKindFieldUpdateOperationsInput | $Enums.ConnectorKind
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  externalAccount?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mcpUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumConnectionStatusFieldUpdateOperationsInput | $Enums.ConnectionStatus
+  vaultSecretId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdByMemberId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
+  calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
+}
+
 export type ConnectionCreateWithoutAppInput = {
   id?: string
   organizationId: string
@@ -894,6 +1025,7 @@ export type ConnectionCreateWithoutAppInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -916,6 +1048,7 @@ export type ConnectionUncheckedCreateWithoutAppInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -964,6 +1097,7 @@ export type ConnectionCreateWithoutVaultSecretInput = {
   app: Prisma.AppCreateNestedOneWithoutConnectionsInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -986,6 +1120,7 @@ export type ConnectionUncheckedCreateWithoutVaultSecretInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -1024,6 +1159,7 @@ export type ConnectionUpdateWithoutVaultSecretInput = {
   app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -1046,6 +1182,7 @@ export type ConnectionUncheckedUpdateWithoutVaultSecretInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -1068,6 +1205,7 @@ export type ConnectionCreateWithoutGrantsInput = {
   app: Prisma.AppCreateNestedOneWithoutConnectionsInput
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -1090,6 +1228,7 @@ export type ConnectionUncheckedCreateWithoutGrantsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -1128,6 +1267,7 @@ export type ConnectionUpdateWithoutGrantsInput = {
   app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -1150,6 +1290,7 @@ export type ConnectionUncheckedUpdateWithoutGrantsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -1172,6 +1313,7 @@ export type ConnectionCreateWithoutCallsInput = {
   app: Prisma.AppCreateNestedOneWithoutConnectionsInput
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
@@ -1194,6 +1336,7 @@ export type ConnectionUncheckedCreateWithoutCallsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
@@ -1232,6 +1375,7 @@ export type ConnectionUpdateWithoutCallsInput = {
   app?: Prisma.AppUpdateOneRequiredWithoutConnectionsNestedInput
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -1254,6 +1398,7 @@ export type ConnectionUncheckedUpdateWithoutCallsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -1277,6 +1422,7 @@ export type ConnectionCreateWithoutTriggersInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
 }
@@ -1299,6 +1445,7 @@ export type ConnectionUncheckedCreateWithoutTriggersInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
 }
@@ -1337,6 +1484,7 @@ export type ConnectionUpdateWithoutTriggersInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
 }
@@ -1359,6 +1507,7 @@ export type ConnectionUncheckedUpdateWithoutTriggersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
 }
@@ -1381,6 +1530,7 @@ export type ConnectionCreateWithoutSubscriptionsInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentCreateNestedManyWithoutConnectionInput
 }
@@ -1403,6 +1553,7 @@ export type ConnectionUncheckedCreateWithoutSubscriptionsInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutConnectionInput
 }
@@ -1441,6 +1592,7 @@ export type ConnectionUpdateWithoutSubscriptionsInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
 }
@@ -1463,6 +1615,7 @@ export type ConnectionUncheckedUpdateWithoutSubscriptionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
 }
@@ -1485,6 +1638,7 @@ export type ConnectionCreateWithoutAttachmentsInput = {
   vaultSecret?: Prisma.VaultSecretCreateNestedOneWithoutConnectionInput
   grants?: Prisma.GrantCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutConnectionInput
 }
@@ -1507,6 +1661,7 @@ export type ConnectionUncheckedCreateWithoutAttachmentsInput = {
   updatedAt?: Date | string
   grants?: Prisma.GrantUncheckedCreateNestedManyWithoutConnectionInput
   calls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutConnectionInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutConnectionInput
   triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutConnectionInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutConnectionInput
 }
@@ -1545,6 +1700,7 @@ export type ConnectionUpdateWithoutAttachmentsInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
 }
@@ -1567,6 +1723,7 @@ export type ConnectionUncheckedUpdateWithoutAttachmentsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
 }
@@ -1605,6 +1762,7 @@ export type ConnectionUpdateWithoutWorkspaceInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -1627,6 +1785,7 @@ export type ConnectionUncheckedUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -1683,6 +1842,7 @@ export type ConnectionUpdateWithoutAppInput = {
   vaultSecret?: Prisma.VaultSecretUpdateOneWithoutConnectionNestedInput
   grants?: Prisma.GrantUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUpdateManyWithoutConnectionNestedInput
@@ -1705,6 +1865,7 @@ export type ConnectionUncheckedUpdateWithoutAppInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   grants?: Prisma.GrantUncheckedUpdateManyWithoutConnectionNestedInput
   calls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutConnectionNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutConnectionNestedInput
   triggers?: Prisma.TriggerUncheckedUpdateManyWithoutConnectionNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutConnectionNestedInput
   attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutConnectionNestedInput
@@ -1735,6 +1896,7 @@ export type ConnectionUncheckedUpdateManyWithoutAppInput = {
 export type ConnectionCountOutputType = {
   grants: number
   calls: number
+  replyWatches: number
   triggers: number
   subscriptions: number
   attachments: number
@@ -1743,6 +1905,7 @@ export type ConnectionCountOutputType = {
 export type ConnectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   grants?: boolean | ConnectionCountOutputTypeCountGrantsArgs
   calls?: boolean | ConnectionCountOutputTypeCountCallsArgs
+  replyWatches?: boolean | ConnectionCountOutputTypeCountReplyWatchesArgs
   triggers?: boolean | ConnectionCountOutputTypeCountTriggersArgs
   subscriptions?: boolean | ConnectionCountOutputTypeCountSubscriptionsArgs
   attachments?: boolean | ConnectionCountOutputTypeCountAttachmentsArgs
@@ -1770,6 +1933,13 @@ export type ConnectionCountOutputTypeCountGrantsArgs<ExtArgs extends runtime.Typ
  */
 export type ConnectionCountOutputTypeCountCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ConnectionCallWhereInput
+}
+
+/**
+ * ConnectionCountOutputType without action
+ */
+export type ConnectionCountOutputTypeCountReplyWatchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReplyWatchWhereInput
 }
 
 /**
@@ -1815,6 +1985,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   vaultSecret?: boolean | Prisma.Connection$vaultSecretArgs<ExtArgs>
   grants?: boolean | Prisma.Connection$grantsArgs<ExtArgs>
   calls?: boolean | Prisma.Connection$callsArgs<ExtArgs>
+  replyWatches?: boolean | Prisma.Connection$replyWatchesArgs<ExtArgs>
   triggers?: boolean | Prisma.Connection$triggersArgs<ExtArgs>
   subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   attachments?: boolean | Prisma.Connection$attachmentsArgs<ExtArgs>
@@ -1888,6 +2059,7 @@ export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   vaultSecret?: boolean | Prisma.Connection$vaultSecretArgs<ExtArgs>
   grants?: boolean | Prisma.Connection$grantsArgs<ExtArgs>
   calls?: boolean | Prisma.Connection$callsArgs<ExtArgs>
+  replyWatches?: boolean | Prisma.Connection$replyWatchesArgs<ExtArgs>
   triggers?: boolean | Prisma.Connection$triggersArgs<ExtArgs>
   subscriptions?: boolean | Prisma.Connection$subscriptionsArgs<ExtArgs>
   attachments?: boolean | Prisma.Connection$attachmentsArgs<ExtArgs>
@@ -1915,6 +2087,7 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     vaultSecret: Prisma.$VaultSecretPayload<ExtArgs> | null
     grants: Prisma.$GrantPayload<ExtArgs>[]
     calls: Prisma.$ConnectionCallPayload<ExtArgs>[]
+    replyWatches: Prisma.$ReplyWatchPayload<ExtArgs>[]
     triggers: Prisma.$TriggerPayload<ExtArgs>[]
     subscriptions: Prisma.$SubscriptionPayload<ExtArgs>[]
     attachments: Prisma.$AttachmentPayload<ExtArgs>[]
@@ -2343,6 +2516,7 @@ export interface Prisma__ConnectionClient<T, Null = never, ExtArgs extends runti
   vaultSecret<T extends Prisma.Connection$vaultSecretArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$vaultSecretArgs<ExtArgs>>): Prisma.Prisma__VaultSecretClient<runtime.Types.Result.GetResult<Prisma.$VaultSecretPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   grants<T extends Prisma.Connection$grantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$grantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   calls<T extends Prisma.Connection$callsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$callsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  replyWatches<T extends Prisma.Connection$replyWatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$replyWatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReplyWatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   triggers<T extends Prisma.Connection$triggersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$triggersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TriggerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptions<T extends Prisma.Connection$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   attachments<T extends Prisma.Connection$attachmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$attachmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2855,6 +3029,30 @@ export type Connection$callsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.ConnectionCallScalarFieldEnum | Prisma.ConnectionCallScalarFieldEnum[]
+}
+
+/**
+ * Connection.replyWatches
+ */
+export type Connection$replyWatchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ReplyWatch
+   */
+  select?: Prisma.ReplyWatchSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ReplyWatch
+   */
+  omit?: Prisma.ReplyWatchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReplyWatchInclude<ExtArgs> | null
+  where?: Prisma.ReplyWatchWhereInput
+  orderBy?: Prisma.ReplyWatchOrderByWithRelationInput | Prisma.ReplyWatchOrderByWithRelationInput[]
+  cursor?: Prisma.ReplyWatchWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReplyWatchScalarFieldEnum | Prisma.ReplyWatchScalarFieldEnum[]
 }
 
 /**

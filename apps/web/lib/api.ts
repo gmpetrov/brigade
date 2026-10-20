@@ -366,6 +366,15 @@ export type Thread = Omit<ThreadSummary, 'teammates' | 'replies' | 'lastReplyAt'
   project: ProjectSummary | null
   /** When its teammates asked to be prompted here again, soonest first. */
   wakeups: { id: string; teammateId: string; note: string; wakeAt: string }[]
+  /** Emails sent from it whose replies wake it, until `until`; the latest sent first. */
+  replyWatches: {
+    id: string
+    teammateId: string
+    to: string
+    subject: string
+    until: string
+    connection: { kind: Connection['kind']; externalAccount: string | null; label: string }
+  }[]
   /**
    * While it moves to another computer: where to, and how far. waiting: once the
    * turn running ends. releasing: its computer hands its files over. arriving:

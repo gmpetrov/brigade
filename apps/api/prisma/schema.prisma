@@ -182,6 +182,7 @@ model Workspace {
   tasks                 Task[]
   schedules             Schedule[]
   wakeups               Wakeup[]
+  replyWatches          ReplyWatch[]
   projects              Project[]
   projectRepositories   ProjectRepository[]
   auditEntries          AuditEntry[]
@@ -314,6 +315,7 @@ model Teammate {
   schedules             Schedule[]
   schedulesCreated      Schedule[]             @relation("ScheduleCreatedByTeammate")
   wakeups               Wakeup[]
+  replyWatches          ReplyWatch[]
   playbookInstallations PlaybookInstallation[]
 
   @@index([workspaceId])
@@ -499,6 +501,7 @@ model Session {
   project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Times a teammate set to be prompted here again.
   wakeups              Wakeup[]
+  replyWatches         ReplyWatch[]
   /// Schedules whose runs report here, as its children.
   reportingSchedules   Schedule[]         @relation("ScheduleParent")
   /// The playbook run it belongs to: its root thread and the root's children (src/playbooks.ts).
@@ -637,6 +640,8 @@ model Schedule {
 enum WakeupKind {
   wakeup
   report
+  /// A reply in an email conversation the thread waits on (ReplyWatch); its note is the email.
+  reply
 }
 
 enum WakeupStatus {
@@ -665,9 +670,40 @@ model Wakeup {
   status         WakeupStatus @default(pending)
   firedAt        DateTime?
   createdAt      DateTime     @default(now())
+  /// What brought it, for a reply: the email's id (gmail:<message id>), so reading it again wakes nobody twice.
+  sourceId       String?
 
+  @@unique([sessionId, sourceId])
   @@index([status, wakeAt])
   @@index([sessionId, status])
+}
+
+/// An email a teammate sent from a thread: a reply in its conversation wakes that thread, until
+/// `until`. Another email in the conversation moves `until` on; cancelling sets it to now.
+model ReplyWatch {
+  id              String     @id @default(cuid())
+  organizationId  String
+  workspaceId     String
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId       String
+  session         Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// The teammate that sent it, the one woken.
+  teammateId      String
+  teammate        Teammate   @relation(fields: [teammateId], references: [id], onDelete: Cascade)
+  connectionId    String
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  /// The provider's conversation: a Gmail thread id.
+  conversationKey String
+  /// Who the last email went to and its subject, as sent, for the thread's panel.
+  to              String
+  subject         String
+  until           DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([sessionId, connectionId, conversationKey])
+  @@index([connectionId, conversationKey])
+  @@index([workspaceId])
 }
 
 model ThreadTeammate {
@@ -990,6 +1026,7 @@ model Connection {
   updatedAt         DateTime         @updatedAt
   grants            Grant[]
   calls             ConnectionCall[]
+  replyWatches      ReplyWatch[]
   triggers          Trigger[]
   subscriptions     Subscription[]
   attachments       Attachment[]

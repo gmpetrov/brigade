@@ -1,9 +1,11 @@
 // Subscriptions: how Brigade hears about each connection's events. Synced with
-// the connection's triggers whenever they change; a minute's tick renews what
-// expires, retries failed reads and, for Gmail without Pub/Sub, polls.
+// the connection's triggers whenever they change, and for Gmail with the replies
+// threads await (src/replies.ts); a minute's tick renews what expires, retries
+// failed reads, drops an inbox nothing listens to any more and, for Gmail without
+// Pub/Sub, polls.
 import { env } from '../config.js'
 import type { ConnectorKind } from '../connectors/types.js'
-import { prisma, scoped, type Scope } from '../db.js'
+import { prisma, scoped, type Scope, type ScopedDb } from '../db.js'
 import { SubscribeError, type Target } from './common.js'
 import { gmailPush, readInbox, retryAt as gmailRetries, syncGmail } from './gmail.js'
 import { readCalendar, retryAt as calendarRetries, syncCalendar } from './google-calendar.js'
@@ -24,9 +26,14 @@ export function unavailable(kind: ConnectorKind): string | null {
 export const delivery = (kind: ConnectorKind) =>
   kind === 'gmail' ? (gmailPush() ? 'push' : 'poll') : 'push'
 
+/** Whether threads wait on a reply in this connection's mailbox. */
+const awaitingReplies = async (db: ScopedDb, connectionId: string) =>
+  (await db.replyWatch.count({ where: { connectionId, until: { gt: new Date() } } })) > 0
+
 /**
- * Make the vendor-side subscriptions match the connection's triggers: register,
- * update or remove them. Throws SubscribeError with a reason a person can act on.
+ * Make the vendor-side subscriptions match the connection's triggers and awaited
+ * replies: register, update or remove them. Throws SubscribeError with a reason a
+ * person can act on.
  */
 export async function syncConnection(
   scope: Scope,
@@ -42,11 +49,27 @@ export async function syncConnection(
         where: { connectionId, teammate: { archivedAt: null } },
         select: { event: true, options: true },
       })
-  const target: Target = { db, scope, connection: connection as Target['connection'], triggers }
+  const target: Target = {
+    db,
+    scope,
+    connection: connection as Target['connection'],
+    triggers,
+    awaitingReplies:
+      !options.removing && connection.kind === 'gmail' && (await awaitingReplies(db, connectionId)),
+  }
   if (connection.kind === 'stripe') await syncStripe(target)
   else if (connection.kind === 'gmail') await syncGmail(target)
   else if (connection.kind === 'google_calendar') await syncCalendar(target)
   // GitHub: the GitHub App's one webhook. Custom apps: each trigger's own URL.
+}
+
+/** Whether a Gmail connection's inbox still has a trigger or an awaited reply to read for. */
+async function listened(scope: Scope, connectionId: string) {
+  const db = scoped(scope)
+  return (
+    (await db.trigger.count({ where: { connectionId, teammate: { archivedAt: null } } })) > 0 ||
+    (await awaitingReplies(db, connectionId))
+  )
 }
 
 async function tick() {
@@ -60,10 +83,12 @@ async function tick() {
     const scope: Scope = { organizationId: sub.organizationId, workspaceId: sub.workspaceId }
     const kind = sub.connection.kind
     try {
-      // Expiring watches and channels, and Gmail switching between push and poll.
+      // Expiring watches and channels, Gmail switching between push and poll, and an
+      // inbox read only for replies no thread awaits any more.
       const stale =
         (sub.mode === 'push' && sub.expiresAt && sub.expiresAt.getTime() < soon) ||
-        (kind === 'gmail' && sub.mode !== delivery('gmail'))
+        (kind === 'gmail' && sub.mode !== delivery('gmail')) ||
+        (kind === 'gmail' && !(await listened(scope, sub.connectionId)))
       if (stale && !synced.has(sub.connectionId)) {
         synced.add(sub.connectionId)
         await syncConnection(scope, sub.connectionId)

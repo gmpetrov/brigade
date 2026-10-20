@@ -30,7 +30,7 @@ import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
 import { loadThread } from './thread-spec.js'
-import { fireReport, firedInARow } from './wakeups.js'
+import { fireNow, firedInARow } from './wakeups.js'
 import { promptThread, startThread } from './work.js'
 
 type ChildOperation = Extract<
@@ -147,7 +147,7 @@ async function reportWakeup(
 async function wakeParent(scope: Scope, parentId: string, teammateId: string | null, note: string) {
   const id = await reportWakeup(scoped(scope), parentId, teammateId, note)
   // At once, rather than at the next minute's tick; it waits like any wake-up when it cannot go yet.
-  if (id) await fireReport(id)
+  if (id) await fireNow(id)
 }
 
 /**
@@ -281,7 +281,7 @@ export async function wakeFollowers(scope: Scope, sessionId: string) {
     }
     // Stored: an archived follower comes back with it, a busy one queues it, and one that
     // cannot fire now goes at the minute's tick.
-    if (wakeupId) await fireReport(wakeupId)
+    if (wakeupId) await fireNow(wakeupId)
   }
 }
 

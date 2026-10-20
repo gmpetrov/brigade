@@ -211,6 +211,7 @@ export type WorkspaceWhereInput = {
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
+  replyWatches?: Prisma.ReplyWatchListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   projectRepositories?: Prisma.ProjectRepositoryListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
@@ -266,6 +267,7 @@ export type WorkspaceOrderByWithRelationInput = {
   tasks?: Prisma.TaskOrderByRelationAggregateInput
   schedules?: Prisma.ScheduleOrderByRelationAggregateInput
   wakeups?: Prisma.WakeupOrderByRelationAggregateInput
+  replyWatches?: Prisma.ReplyWatchOrderByRelationAggregateInput
   projects?: Prisma.ProjectOrderByRelationAggregateInput
   projectRepositories?: Prisma.ProjectRepositoryOrderByRelationAggregateInput
   auditEntries?: Prisma.AuditEntryOrderByRelationAggregateInput
@@ -324,6 +326,7 @@ export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
   tasks?: Prisma.TaskListRelationFilter
   schedules?: Prisma.ScheduleListRelationFilter
   wakeups?: Prisma.WakeupListRelationFilter
+  replyWatches?: Prisma.ReplyWatchListRelationFilter
   projects?: Prisma.ProjectListRelationFilter
   projectRepositories?: Prisma.ProjectRepositoryListRelationFilter
   auditEntries?: Prisma.AuditEntryListRelationFilter
@@ -400,6 +403,7 @@ export type WorkspaceCreateInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -454,6 +458,7 @@ export type WorkspaceUncheckedCreateInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -508,6 +513,7 @@ export type WorkspaceUpdateInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -562,6 +568,7 @@ export type WorkspaceUncheckedUpdateInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -843,6 +850,20 @@ export type WorkspaceUpdateOneRequiredWithoutWakeupsNestedInput = {
   upsert?: Prisma.WorkspaceUpsertWithoutWakeupsInput
   connect?: Prisma.WorkspaceWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutWakeupsInput, Prisma.WorkspaceUpdateWithoutWakeupsInput>, Prisma.WorkspaceUncheckedUpdateWithoutWakeupsInput>
+}
+
+export type WorkspaceCreateNestedOneWithoutReplyWatchesInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedCreateWithoutReplyWatchesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutReplyWatchesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+}
+
+export type WorkspaceUpdateOneRequiredWithoutReplyWatchesNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedCreateWithoutReplyWatchesInput>
+  connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutReplyWatchesInput
+  upsert?: Prisma.WorkspaceUpsertWithoutReplyWatchesInput
+  connect?: Prisma.WorkspaceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutReplyWatchesInput, Prisma.WorkspaceUpdateWithoutReplyWatchesInput>, Prisma.WorkspaceUncheckedUpdateWithoutReplyWatchesInput>
 }
 
 export type WorkspaceCreateNestedOneWithoutThreadSeatsInput = {
@@ -1370,6 +1391,7 @@ export type WorkspaceCreateWithoutOrganizationInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1423,6 +1445,7 @@ export type WorkspaceUncheckedCreateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1513,6 +1536,7 @@ export type WorkspaceCreateWithoutComputersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1566,6 +1590,7 @@ export type WorkspaceUncheckedCreateWithoutComputersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1635,6 +1660,7 @@ export type WorkspaceUpdateWithoutComputersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1688,6 +1714,7 @@ export type WorkspaceUncheckedUpdateWithoutComputersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1741,6 +1768,7 @@ export type WorkspaceCreateWithoutRunnersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -1794,6 +1822,7 @@ export type WorkspaceUncheckedCreateWithoutRunnersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -1863,6 +1892,7 @@ export type WorkspaceUpdateWithoutRunnersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -1916,6 +1946,7 @@ export type WorkspaceUncheckedUpdateWithoutRunnersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -1969,6 +2000,7 @@ export type WorkspaceCreateWithoutTeammatesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2022,6 +2054,7 @@ export type WorkspaceUncheckedCreateWithoutTeammatesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2091,6 +2124,7 @@ export type WorkspaceUpdateWithoutTeammatesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2144,6 +2178,7 @@ export type WorkspaceUncheckedUpdateWithoutTeammatesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2198,6 +2233,7 @@ export type WorkspaceCreateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2251,6 +2287,7 @@ export type WorkspaceUncheckedCreateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2320,6 +2357,7 @@ export type WorkspaceUpdateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2373,6 +2411,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadReadsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2426,6 +2465,7 @@ export type WorkspaceCreateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2479,6 +2519,7 @@ export type WorkspaceUncheckedCreateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2548,6 +2589,7 @@ export type WorkspaceUpdateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2601,6 +2643,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadPinsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2654,6 +2697,7 @@ export type WorkspaceCreateWithoutThreadLatersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2707,6 +2751,7 @@ export type WorkspaceUncheckedCreateWithoutThreadLatersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -2776,6 +2821,7 @@ export type WorkspaceUpdateWithoutThreadLatersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -2829,6 +2875,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadLatersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -2882,6 +2929,7 @@ export type WorkspaceCreateWithoutHomeDismissalsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -2935,6 +2983,7 @@ export type WorkspaceUncheckedCreateWithoutHomeDismissalsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3004,6 +3053,7 @@ export type WorkspaceUpdateWithoutHomeDismissalsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -3057,6 +3107,7 @@ export type WorkspaceUncheckedUpdateWithoutHomeDismissalsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3109,6 +3160,7 @@ export type WorkspaceCreateWithoutSessionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -3162,6 +3214,7 @@ export type WorkspaceUncheckedCreateWithoutSessionsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3231,6 +3284,7 @@ export type WorkspaceUpdateWithoutSessionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -3284,6 +3338,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3337,6 +3392,7 @@ export type WorkspaceCreateWithoutTasksInput = {
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -3390,6 +3446,7 @@ export type WorkspaceUncheckedCreateWithoutTasksInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3459,6 +3516,7 @@ export type WorkspaceUpdateWithoutTasksInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -3512,6 +3570,7 @@ export type WorkspaceUncheckedUpdateWithoutTasksInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3565,6 +3624,7 @@ export type WorkspaceCreateWithoutSchedulesInput = {
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -3618,6 +3678,7 @@ export type WorkspaceUncheckedCreateWithoutSchedulesInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3687,6 +3748,7 @@ export type WorkspaceUpdateWithoutSchedulesInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -3740,6 +3802,7 @@ export type WorkspaceUncheckedUpdateWithoutSchedulesInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -3793,6 +3856,7 @@ export type WorkspaceCreateWithoutWakeupsInput = {
   pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -3846,6 +3910,7 @@ export type WorkspaceUncheckedCreateWithoutWakeupsInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -3915,6 +3980,7 @@ export type WorkspaceUpdateWithoutWakeupsInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -3968,6 +4034,239 @@ export type WorkspaceUncheckedUpdateWithoutWakeupsInput = {
   pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUncheckedUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUncheckedUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUncheckedUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceCreateWithoutReplyWatchesInput = {
+  id?: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutWorkspacesInput
+  computers?: Prisma.ComputerCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceUncheckedCreateWithoutReplyWatchesInput = {
+  id?: string
+  organizationId: string
+  name: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  computers?: Prisma.ComputerUncheckedCreateNestedManyWithoutWorkspaceInput
+  runners?: Prisma.RunnerUncheckedCreateNestedManyWithoutWorkspaceInput
+  teammates?: Prisma.TeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutWorkspaceInput
+  sessionEvents?: Prisma.SessionEventUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedCreateNestedManyWithoutWorkspaceInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutWorkspaceInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutWorkspaceInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutWorkspaceInput
+  apps?: Prisma.AppUncheckedCreateNestedManyWithoutWorkspaceInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentials?: Prisma.CredentialUncheckedCreateNestedManyWithoutWorkspaceInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  grants?: Prisma.GrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedCreateNestedManyWithoutWorkspaceInput
+  triggers?: Prisma.TriggerUncheckedCreateNestedManyWithoutWorkspaceInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedManyWithoutWorkspaceInput
+  tickets?: Prisma.TicketUncheckedCreateNestedManyWithoutWorkspaceInput
+  documents?: Prisma.DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedCreateNestedManyWithoutWorkspaceInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequests?: Prisma.PullRequestUncheckedCreateNestedManyWithoutWorkspaceInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedCreateNestedManyWithoutWorkspaceInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
+  schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
+  wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
+  projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
+  auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
+  designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
+  skills?: Prisma.SkillUncheckedCreateNestedManyWithoutWorkspaceInput
+  skillPacks?: Prisma.SkillPackUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewRecipes?: Prisma.PreviewRecipeUncheckedCreateNestedManyWithoutWorkspaceInput
+  previewVariables?: Prisma.PreviewVariableUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadReads?: Prisma.ThreadReadUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadPins?: Prisma.ThreadPinUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadLaters?: Prisma.ThreadLaterUncheckedCreateNestedManyWithoutWorkspaceInput
+  homeDismissals?: Prisma.HomeDismissalUncheckedCreateNestedManyWithoutWorkspaceInput
+  pushNotices?: Prisma.PushNoticeUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookInstallations?: Prisma.PlaybookInstallationUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookActions?: Prisma.PlaybookActionUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookRuns?: Prisma.PlaybookRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUncheckedCreateNestedManyWithoutWorkspaceInput
+  threadFollows?: Prisma.ThreadFollowUncheckedCreateNestedManyWithoutWorkspaceInput
+}
+
+export type WorkspaceCreateOrConnectWithoutReplyWatchesInput = {
+  where: Prisma.WorkspaceWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedCreateWithoutReplyWatchesInput>
+}
+
+export type WorkspaceUpsertWithoutReplyWatchesInput = {
+  update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedUpdateWithoutReplyWatchesInput>
+  create: Prisma.XOR<Prisma.WorkspaceCreateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedCreateWithoutReplyWatchesInput>
+  where?: Prisma.WorkspaceWhereInput
+}
+
+export type WorkspaceUpdateToOneWithWhereWithoutReplyWatchesInput = {
+  where?: Prisma.WorkspaceWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutReplyWatchesInput, Prisma.WorkspaceUncheckedUpdateWithoutReplyWatchesInput>
+}
+
+export type WorkspaceUpdateWithoutReplyWatchesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutWorkspacesNestedInput
+  computers?: Prisma.ComputerUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
+  projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
+  auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
+  designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
+  skills?: Prisma.SkillUpdateManyWithoutWorkspaceNestedInput
+  skillPacks?: Prisma.SkillPackUpdateManyWithoutWorkspaceNestedInput
+  previewRecipes?: Prisma.PreviewRecipeUpdateManyWithoutWorkspaceNestedInput
+  previewVariables?: Prisma.PreviewVariableUpdateManyWithoutWorkspaceNestedInput
+  threadReads?: Prisma.ThreadReadUpdateManyWithoutWorkspaceNestedInput
+  threadPins?: Prisma.ThreadPinUpdateManyWithoutWorkspaceNestedInput
+  threadLaters?: Prisma.ThreadLaterUpdateManyWithoutWorkspaceNestedInput
+  homeDismissals?: Prisma.HomeDismissalUpdateManyWithoutWorkspaceNestedInput
+  pushNotices?: Prisma.PushNoticeUpdateManyWithoutWorkspaceNestedInput
+  playbookInstallations?: Prisma.PlaybookInstallationUpdateManyWithoutWorkspaceNestedInput
+  playbookActions?: Prisma.PlaybookActionUpdateManyWithoutWorkspaceNestedInput
+  playbookRuns?: Prisma.PlaybookRunUpdateManyWithoutWorkspaceNestedInput
+  playbookDryRuns?: Prisma.PlaybookDryRunUpdateManyWithoutWorkspaceNestedInput
+  threadFollows?: Prisma.ThreadFollowUpdateManyWithoutWorkspaceNestedInput
+}
+
+export type WorkspaceUncheckedUpdateWithoutReplyWatchesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  computers?: Prisma.ComputerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  runners?: Prisma.RunnerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  teammates?: Prisma.TeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  sessionEvents?: Prisma.SessionEventUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadSeats?: Prisma.ThreadTeammateUncheckedUpdateManyWithoutWorkspaceNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutWorkspaceNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  apps?: Prisma.AppUncheckedUpdateManyWithoutWorkspaceNestedInput
+  vaultSecrets?: Prisma.VaultSecretUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentials?: Prisma.CredentialUncheckedUpdateManyWithoutWorkspaceNestedInput
+  credentialGrants?: Prisma.CredentialGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  grants?: Prisma.GrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  connectionCalls?: Prisma.ConnectionCallUncheckedUpdateManyWithoutWorkspaceNestedInput
+  triggers?: Prisma.TriggerUncheckedUpdateManyWithoutWorkspaceNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tickets?: Prisma.TicketUncheckedUpdateManyWithoutWorkspaceNestedInput
+  documents?: Prisma.DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolders?: Prisma.LibraryFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+  libraryFolderGrants?: Prisma.LibraryFolderGrantUncheckedUpdateManyWithoutWorkspaceNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  threadAttachments?: Prisma.ThreadAttachmentUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequests?: Prisma.PullRequestUncheckedUpdateManyWithoutWorkspaceNestedInput
+  pullRequestReviews?: Prisma.PullRequestReviewUncheckedUpdateManyWithoutWorkspaceNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
+  schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
+  wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4021,6 +4320,7 @@ export type WorkspaceCreateWithoutThreadSeatsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -4074,6 +4374,7 @@ export type WorkspaceUncheckedCreateWithoutThreadSeatsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4143,6 +4444,7 @@ export type WorkspaceUpdateWithoutThreadSeatsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -4196,6 +4498,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadSeatsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4249,6 +4552,7 @@ export type WorkspaceCreateWithoutSessionEventsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -4302,6 +4606,7 @@ export type WorkspaceUncheckedCreateWithoutSessionEventsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4371,6 +4676,7 @@ export type WorkspaceUpdateWithoutSessionEventsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -4424,6 +4730,7 @@ export type WorkspaceUncheckedUpdateWithoutSessionEventsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4477,6 +4784,7 @@ export type WorkspaceCreateWithoutAccountsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -4530,6 +4838,7 @@ export type WorkspaceUncheckedCreateWithoutAccountsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4599,6 +4908,7 @@ export type WorkspaceUpdateWithoutAccountsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -4652,6 +4962,7 @@ export type WorkspaceUncheckedUpdateWithoutAccountsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4705,6 +5016,7 @@ export type WorkspaceCreateWithoutPullRequestsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -4758,6 +5070,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -4827,6 +5140,7 @@ export type WorkspaceUpdateWithoutPullRequestsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -4880,6 +5194,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -4933,6 +5248,7 @@ export type WorkspaceCreateWithoutPullRequestReviewsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -4986,6 +5302,7 @@ export type WorkspaceUncheckedCreateWithoutPullRequestReviewsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5055,6 +5372,7 @@ export type WorkspaceUpdateWithoutPullRequestReviewsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -5108,6 +5426,7 @@ export type WorkspaceUncheckedUpdateWithoutPullRequestReviewsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5161,6 +5480,7 @@ export type WorkspaceCreateWithoutCommentsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -5214,6 +5534,7 @@ export type WorkspaceUncheckedCreateWithoutCommentsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5283,6 +5604,7 @@ export type WorkspaceUpdateWithoutCommentsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -5336,6 +5658,7 @@ export type WorkspaceUncheckedUpdateWithoutCommentsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5389,6 +5712,7 @@ export type WorkspaceCreateWithoutAppsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -5442,6 +5766,7 @@ export type WorkspaceUncheckedCreateWithoutAppsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5511,6 +5836,7 @@ export type WorkspaceUpdateWithoutAppsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -5564,6 +5890,7 @@ export type WorkspaceUncheckedUpdateWithoutAppsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5617,6 +5944,7 @@ export type WorkspaceCreateWithoutConnectionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -5670,6 +5998,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5739,6 +6068,7 @@ export type WorkspaceUpdateWithoutConnectionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -5792,6 +6122,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -5845,6 +6176,7 @@ export type WorkspaceCreateWithoutVaultSecretsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -5898,6 +6230,7 @@ export type WorkspaceUncheckedCreateWithoutVaultSecretsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -5967,6 +6300,7 @@ export type WorkspaceUpdateWithoutVaultSecretsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -6020,6 +6354,7 @@ export type WorkspaceUncheckedUpdateWithoutVaultSecretsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6073,6 +6408,7 @@ export type WorkspaceCreateWithoutCredentialsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -6126,6 +6462,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6195,6 +6532,7 @@ export type WorkspaceUpdateWithoutCredentialsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -6248,6 +6586,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6301,6 +6640,7 @@ export type WorkspaceCreateWithoutCredentialGrantsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -6354,6 +6694,7 @@ export type WorkspaceUncheckedCreateWithoutCredentialGrantsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6423,6 +6764,7 @@ export type WorkspaceUpdateWithoutCredentialGrantsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -6476,6 +6818,7 @@ export type WorkspaceUncheckedUpdateWithoutCredentialGrantsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6529,6 +6872,7 @@ export type WorkspaceCreateWithoutGrantsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -6582,6 +6926,7 @@ export type WorkspaceUncheckedCreateWithoutGrantsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6651,6 +6996,7 @@ export type WorkspaceUpdateWithoutGrantsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -6704,6 +7050,7 @@ export type WorkspaceUncheckedUpdateWithoutGrantsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6757,6 +7104,7 @@ export type WorkspaceCreateWithoutConnectionCallsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -6810,6 +7158,7 @@ export type WorkspaceUncheckedCreateWithoutConnectionCallsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -6879,6 +7228,7 @@ export type WorkspaceUpdateWithoutConnectionCallsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -6932,6 +7282,7 @@ export type WorkspaceUncheckedUpdateWithoutConnectionCallsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -6985,6 +7336,7 @@ export type WorkspaceCreateWithoutTriggersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -7038,6 +7390,7 @@ export type WorkspaceUncheckedCreateWithoutTriggersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7107,6 +7460,7 @@ export type WorkspaceUpdateWithoutTriggersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -7160,6 +7514,7 @@ export type WorkspaceUncheckedUpdateWithoutTriggersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7213,6 +7568,7 @@ export type WorkspaceCreateWithoutSubscriptionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -7266,6 +7622,7 @@ export type WorkspaceUncheckedCreateWithoutSubscriptionsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7335,6 +7692,7 @@ export type WorkspaceUpdateWithoutSubscriptionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -7388,6 +7746,7 @@ export type WorkspaceUncheckedUpdateWithoutSubscriptionsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7441,6 +7800,7 @@ export type WorkspaceCreateWithoutTicketsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -7494,6 +7854,7 @@ export type WorkspaceUncheckedCreateWithoutTicketsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7563,6 +7924,7 @@ export type WorkspaceUpdateWithoutTicketsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -7616,6 +7978,7 @@ export type WorkspaceUncheckedUpdateWithoutTicketsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7669,6 +8032,7 @@ export type WorkspaceCreateWithoutDocumentsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -7722,6 +8086,7 @@ export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -7791,6 +8156,7 @@ export type WorkspaceUpdateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -7844,6 +8210,7 @@ export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -7897,6 +8264,7 @@ export type WorkspaceCreateWithoutLibraryFoldersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -7950,6 +8318,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFoldersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8019,6 +8388,7 @@ export type WorkspaceUpdateWithoutLibraryFoldersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -8072,6 +8442,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFoldersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8125,6 +8496,7 @@ export type WorkspaceCreateWithoutLibraryFolderGrantsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -8178,6 +8550,7 @@ export type WorkspaceUncheckedCreateWithoutLibraryFolderGrantsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8247,6 +8620,7 @@ export type WorkspaceUpdateWithoutLibraryFolderGrantsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -8300,6 +8674,7 @@ export type WorkspaceUncheckedUpdateWithoutLibraryFolderGrantsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8354,6 +8729,7 @@ export type WorkspaceCreateWithoutAuditEntriesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
@@ -8407,6 +8783,7 @@ export type WorkspaceUncheckedCreateWithoutAuditEntriesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8476,6 +8853,7 @@ export type WorkspaceUpdateWithoutAuditEntriesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
@@ -8529,6 +8907,7 @@ export type WorkspaceUncheckedUpdateWithoutAuditEntriesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8581,6 +8960,7 @@ export type WorkspaceCreateWithoutAttachmentsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -8634,6 +9014,7 @@ export type WorkspaceUncheckedCreateWithoutAttachmentsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8703,6 +9084,7 @@ export type WorkspaceUpdateWithoutAttachmentsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -8756,6 +9138,7 @@ export type WorkspaceUncheckedUpdateWithoutAttachmentsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -8809,6 +9192,7 @@ export type WorkspaceCreateWithoutThreadAttachmentsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -8862,6 +9246,7 @@ export type WorkspaceUncheckedCreateWithoutThreadAttachmentsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -8931,6 +9316,7 @@ export type WorkspaceUpdateWithoutThreadAttachmentsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -8984,6 +9370,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadAttachmentsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9038,6 +9425,7 @@ export type WorkspaceCreateWithoutDesignSystemsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -9091,6 +9479,7 @@ export type WorkspaceUncheckedCreateWithoutDesignSystemsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9160,6 +9549,7 @@ export type WorkspaceUpdateWithoutDesignSystemsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -9213,6 +9603,7 @@ export type WorkspaceUncheckedUpdateWithoutDesignSystemsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9266,6 +9657,7 @@ export type WorkspaceCreateWithoutSkillsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -9319,6 +9711,7 @@ export type WorkspaceUncheckedCreateWithoutSkillsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9388,6 +9781,7 @@ export type WorkspaceUpdateWithoutSkillsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -9441,6 +9835,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9494,6 +9889,7 @@ export type WorkspaceCreateWithoutSkillPacksInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -9547,6 +9943,7 @@ export type WorkspaceUncheckedCreateWithoutSkillPacksInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9616,6 +10013,7 @@ export type WorkspaceUpdateWithoutSkillPacksInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -9669,6 +10067,7 @@ export type WorkspaceUncheckedUpdateWithoutSkillPacksInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9722,6 +10121,7 @@ export type WorkspaceCreateWithoutPreviewRecipesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -9775,6 +10175,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewRecipesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -9844,6 +10245,7 @@ export type WorkspaceUpdateWithoutPreviewRecipesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -9897,6 +10299,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewRecipesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -9950,6 +10353,7 @@ export type WorkspaceCreateWithoutPreviewVariablesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -10003,6 +10407,7 @@ export type WorkspaceUncheckedCreateWithoutPreviewVariablesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10072,6 +10477,7 @@ export type WorkspaceUpdateWithoutPreviewVariablesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -10125,6 +10531,7 @@ export type WorkspaceUncheckedUpdateWithoutPreviewVariablesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10178,6 +10585,7 @@ export type WorkspaceCreateWithoutProjectsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
@@ -10231,6 +10639,7 @@ export type WorkspaceUncheckedCreateWithoutProjectsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10300,6 +10709,7 @@ export type WorkspaceUpdateWithoutProjectsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
@@ -10353,6 +10763,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10406,6 +10817,7 @@ export type WorkspaceCreateWithoutProjectRepositoriesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemCreateNestedManyWithoutWorkspaceInput
@@ -10459,6 +10871,7 @@ export type WorkspaceUncheckedCreateWithoutProjectRepositoriesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
   designSystems?: Prisma.DesignSystemUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10528,6 +10941,7 @@ export type WorkspaceUpdateWithoutProjectRepositoriesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUpdateManyWithoutWorkspaceNestedInput
@@ -10581,6 +10995,7 @@ export type WorkspaceUncheckedUpdateWithoutProjectRepositoriesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
   designSystems?: Prisma.DesignSystemUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10634,6 +11049,7 @@ export type WorkspaceCreateWithoutPushNoticesInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -10687,6 +11103,7 @@ export type WorkspaceUncheckedCreateWithoutPushNoticesInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10756,6 +11173,7 @@ export type WorkspaceUpdateWithoutPushNoticesInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -10809,6 +11227,7 @@ export type WorkspaceUncheckedUpdateWithoutPushNoticesInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -10862,6 +11281,7 @@ export type WorkspaceCreateWithoutPlaybookInstallationsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -10915,6 +11335,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookInstallationsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -10984,6 +11405,7 @@ export type WorkspaceUpdateWithoutPlaybookInstallationsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -11037,6 +11459,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookInstallationsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11090,6 +11513,7 @@ export type WorkspaceCreateWithoutPlaybookActionsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -11143,6 +11567,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookActionsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11212,6 +11637,7 @@ export type WorkspaceUpdateWithoutPlaybookActionsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -11265,6 +11691,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookActionsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11318,6 +11745,7 @@ export type WorkspaceCreateWithoutPlaybookRunsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -11371,6 +11799,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookRunsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11440,6 +11869,7 @@ export type WorkspaceUpdateWithoutPlaybookRunsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -11493,6 +11923,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookRunsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11546,6 +11977,7 @@ export type WorkspaceCreateWithoutPlaybookDryRunsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -11599,6 +12031,7 @@ export type WorkspaceUncheckedCreateWithoutPlaybookDryRunsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11668,6 +12101,7 @@ export type WorkspaceUpdateWithoutPlaybookDryRunsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -11721,6 +12155,7 @@ export type WorkspaceUncheckedUpdateWithoutPlaybookDryRunsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -11774,6 +12209,7 @@ export type WorkspaceCreateWithoutThreadFollowsInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryCreateNestedManyWithoutWorkspaceInput
@@ -11827,6 +12263,7 @@ export type WorkspaceUncheckedCreateWithoutThreadFollowsInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutWorkspaceInput
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutWorkspaceInput
   wakeups?: Prisma.WakeupUncheckedCreateNestedManyWithoutWorkspaceInput
+  replyWatches?: Prisma.ReplyWatchUncheckedCreateNestedManyWithoutWorkspaceInput
   projects?: Prisma.ProjectUncheckedCreateNestedManyWithoutWorkspaceInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedCreateNestedManyWithoutWorkspaceInput
   auditEntries?: Prisma.AuditEntryUncheckedCreateNestedManyWithoutWorkspaceInput
@@ -11896,6 +12333,7 @@ export type WorkspaceUpdateWithoutThreadFollowsInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -11949,6 +12387,7 @@ export type WorkspaceUncheckedUpdateWithoutThreadFollowsInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12008,6 +12447,7 @@ export type WorkspaceUpdateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUpdateManyWithoutWorkspaceNestedInput
@@ -12061,6 +12501,7 @@ export type WorkspaceUncheckedUpdateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutWorkspaceNestedInput
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutWorkspaceNestedInput
   wakeups?: Prisma.WakeupUncheckedUpdateManyWithoutWorkspaceNestedInput
+  replyWatches?: Prisma.ReplyWatchUncheckedUpdateManyWithoutWorkspaceNestedInput
   projects?: Prisma.ProjectUncheckedUpdateManyWithoutWorkspaceNestedInput
   projectRepositories?: Prisma.ProjectRepositoryUncheckedUpdateManyWithoutWorkspaceNestedInput
   auditEntries?: Prisma.AuditEntryUncheckedUpdateManyWithoutWorkspaceNestedInput
@@ -12122,6 +12563,7 @@ export type WorkspaceCountOutputType = {
   tasks: number
   schedules: number
   wakeups: number
+  replyWatches: number
   projects: number
   projectRepositories: number
   auditEntries: number
@@ -12171,6 +12613,7 @@ export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensi
   tasks?: boolean | WorkspaceCountOutputTypeCountTasksArgs
   schedules?: boolean | WorkspaceCountOutputTypeCountSchedulesArgs
   wakeups?: boolean | WorkspaceCountOutputTypeCountWakeupsArgs
+  replyWatches?: boolean | WorkspaceCountOutputTypeCountReplyWatchesArgs
   projects?: boolean | WorkspaceCountOutputTypeCountProjectsArgs
   projectRepositories?: boolean | WorkspaceCountOutputTypeCountProjectRepositoriesArgs
   auditEntries?: boolean | WorkspaceCountOutputTypeCountAuditEntriesArgs
@@ -12400,6 +12843,13 @@ export type WorkspaceCountOutputTypeCountWakeupsArgs<ExtArgs extends runtime.Typ
 /**
  * WorkspaceCountOutputType without action
  */
+export type WorkspaceCountOutputTypeCountReplyWatchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReplyWatchWhereInput
+}
+
+/**
+ * WorkspaceCountOutputType without action
+ */
 export type WorkspaceCountOutputTypeCountProjectsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.ProjectWhereInput
 }
@@ -12559,6 +13009,7 @@ export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   tasks?: boolean | Prisma.Workspace$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Workspace$schedulesArgs<ExtArgs>
   wakeups?: boolean | Prisma.Workspace$wakeupsArgs<ExtArgs>
+  replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   projectRepositories?: boolean | Prisma.Workspace$projectRepositoriesArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
@@ -12637,6 +13088,7 @@ export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalAr
   tasks?: boolean | Prisma.Workspace$tasksArgs<ExtArgs>
   schedules?: boolean | Prisma.Workspace$schedulesArgs<ExtArgs>
   wakeups?: boolean | Prisma.Workspace$wakeupsArgs<ExtArgs>
+  replyWatches?: boolean | Prisma.Workspace$replyWatchesArgs<ExtArgs>
   projects?: boolean | Prisma.Workspace$projectsArgs<ExtArgs>
   projectRepositories?: boolean | Prisma.Workspace$projectRepositoriesArgs<ExtArgs>
   auditEntries?: boolean | Prisma.Workspace$auditEntriesArgs<ExtArgs>
@@ -12696,6 +13148,7 @@ export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     tasks: Prisma.$TaskPayload<ExtArgs>[]
     schedules: Prisma.$SchedulePayload<ExtArgs>[]
     wakeups: Prisma.$WakeupPayload<ExtArgs>[]
+    replyWatches: Prisma.$ReplyWatchPayload<ExtArgs>[]
     projects: Prisma.$ProjectPayload<ExtArgs>[]
     projectRepositories: Prisma.$ProjectRepositoryPayload<ExtArgs>[]
     auditEntries: Prisma.$AuditEntryPayload<ExtArgs>[]
@@ -13144,6 +13597,7 @@ export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtim
   tasks<T extends Prisma.Workspace$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   schedules<T extends Prisma.Workspace$schedulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$schedulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SchedulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   wakeups<T extends Prisma.Workspace$wakeupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$wakeupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WakeupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  replyWatches<T extends Prisma.Workspace$replyWatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$replyWatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReplyWatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projects<T extends Prisma.Workspace$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projectRepositories<T extends Prisma.Workspace$projectRepositoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$projectRepositoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectRepositoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditEntries<T extends Prisma.Workspace$auditEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$auditEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -14266,6 +14720,30 @@ export type Workspace$wakeupsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.WakeupScalarFieldEnum | Prisma.WakeupScalarFieldEnum[]
+}
+
+/**
+ * Workspace.replyWatches
+ */
+export type Workspace$replyWatchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ReplyWatch
+   */
+  select?: Prisma.ReplyWatchSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ReplyWatch
+   */
+  omit?: Prisma.ReplyWatchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReplyWatchInclude<ExtArgs> | null
+  where?: Prisma.ReplyWatchWhereInput
+  orderBy?: Prisma.ReplyWatchOrderByWithRelationInput | Prisma.ReplyWatchOrderByWithRelationInput[]
+  cursor?: Prisma.ReplyWatchWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReplyWatchScalarFieldEnum | Prisma.ReplyWatchScalarFieldEnum[]
 }
 
 /**

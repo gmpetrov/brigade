@@ -23,7 +23,7 @@ import type { ConnectorKind } from './connectors/types.js'
 import { prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { hasParts, requireInstallation } from './playbooks.js'
 import { eventMessage } from './triggers.js'
-import { fireReport } from './wakeups.js'
+import { fireNow } from './wakeups.js'
 import { startThread } from './work.js'
 
 /** Runs at once: a dry run should not take the whole computer. */
@@ -390,7 +390,7 @@ async function reportDone(db: ScopedDb, scope: Scope, dryRunId: string) {
       wakeAt: new Date(),
     } as never,
   })
-  await fireReport(wakeup.id)
+  await fireNow(wakeup.id)
 }
 
 const minutesText = (minutes: number) =>

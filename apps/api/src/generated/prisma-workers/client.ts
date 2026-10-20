@@ -142,6 +142,12 @@ export type Schedule = Prisma.ScheduleModel
  */
 export type Wakeup = Prisma.WakeupModel
 /**
+ * Model ReplyWatch
+ * An email a teammate sent from a thread: a reply in its conversation wakes that thread, until
+ * `until`. Another email in the conversation moves `until` on; cancelling sets it to now.
+ */
+export type ReplyWatch = Prisma.ReplyWatchModel
+/**
  * Model ThreadTeammate
  * 
  */

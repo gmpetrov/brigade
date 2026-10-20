@@ -260,6 +260,14 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   a triggered teammate only what it needs, or set it to `ask`. When a thread cannot start, the
   trigger's creator gets a ticket and the event is offered again (Stripe retries; Gmail and Calendar keep their
   cursor).
+- **Awaited replies** (`apps/api/src/replies.ts`). An email a teammate sends with `gmail_send` from a member's
+  thread (or its child) starts a `ReplyWatch` on its Gmail conversation, for 14 days after the last email it sent
+  there; `gmail_send`'s result tells the teammate so it does not set a wake-up to check the inbox. The inbox reader
+  hands each new email to the watches first: a reply in the conversation is a `Wakeup` of kind `reply`, fired at
+  once with the email in a trigger event's form (the dashboard shows it as a mail), once per email. Automatic
+  replies (`Auto-Submitted` and the like) wake nobody, and a thread woken `WAKEUPS_IN_A_ROW` times with no word
+  from a person stops waiting. The mailbox is read while a watch runs even without triggers, and then only the
+  awaited conversations' emails. The thread's panel lists them under Waiting for replies, where a member stops one.
 - **Projects** (`apps/api/src/projects.ts`, `routes/projects.ts`, design in `docs/projects.md`). A project
   groups a workspace's work: threads, tasks, schedules and triggers carry a `projectId`; it owns a library folder
   and links repositories by `owner/name`. Everything else stays shared. A thread in a project gets its brief,
@@ -273,7 +281,7 @@ machine, pauses a turn mid-stream, continues it, detaches and resumes.
   edits a schedule; admins may pause, run or delete it. Teammates create, list and change schedules with their tools,
   only from a member's thread (never a trigger's or a schedule's), owned by that thread's starter.
 - **Subscriptions** (`apps/api/src/subscriptions/`). Brigade subscribes the vendor itself, synced whenever a
-  connection's triggers change: a Stripe webhook endpoint per connection listing the events needed (its signing
+  connection's triggers or awaited replies change: a Stripe webhook endpoint per connection listing the events needed (its signing
   secret goes to the vault; a restricted key needs Webhook Endpoints write access); the GitHub App's one webhook;
   a Gmail `users.watch` through Pub/Sub (`GMAIL_PUBSUB_*`, renewed before its seven days run out), or, without
   Pub/Sub, a check every minute; a Calendar push channel per watched calendar, renewed before it expires. Vendor
