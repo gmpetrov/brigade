@@ -24,6 +24,7 @@ import {
   SendMessage,
   SetProject,
   StartThread,
+  STORED_IMAGE_NAME,
   UpdateThread,
   type ThreadFile,
   type ThreadSpec,
@@ -37,6 +38,7 @@ import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { readAttachment, toInfo } from '../attachments.js'
 import { audit } from '../audit.js'
+import { getObject, presignGet, threadImageKey } from '../bucket.js'
 import {
   latestPreview,
   livePreview,
@@ -556,6 +558,41 @@ export const threads = new Hono<AppEnv>()
       'content-security-policy': 'sandbox',
       'cache-control': 'private, max-age=3600',
     })
+  })
+
+  /**
+   * An image a teammate's tool returned, which the thread's events name (STORED_IMAGE):
+   * from the bucket, so it shows while the computer is stopped too. Its name is its
+   * hash, so it never changes.
+   */
+  .get('/:id/images/:name', async (c) => {
+    const name = c.req.param('name')
+    if (!STORED_IMAGE_NAME.test(name)) throw new HTTPException(400, { message: 'Which image?' })
+    const thread = await c.var.db.session.findFirst({
+      where: { id: c.req.param('id') },
+      select: { id: true },
+    })
+    if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
+    const key = threadImageKey(c.var.scope, thread.id, name)
+    const contentType = contentTypeFor(name)
+    const disposition = `inline; filename="${name}"`
+    try {
+      const signed = await presignGet(key, { contentType, disposition })
+      // The signed URL works a little longer than the browser keeps this.
+      c.header('cache-control', `private, max-age=${signed.seconds - 60}`)
+      return c.redirect(signed.url, 302)
+    } catch {
+      // No R2 (development): through the API.
+      const bytes = await getObject(key)
+      if (!bytes) throw new HTTPException(404, { message: 'The image is missing from storage' })
+      return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+        'content-type': contentType,
+        'content-disposition': disposition,
+        'x-content-type-options': 'nosniff',
+        'content-security-policy': 'sandbox',
+        'cache-control': 'private, max-age=31536000, immutable',
+      })
+    }
   })
 
   /** The thread end to end: events, connector calls, tickets and who did what. */

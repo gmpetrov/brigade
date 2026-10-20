@@ -15,6 +15,7 @@ import {
 import type { WSContext } from 'hono/ws'
 import { audit } from './audit.js'
 import { readableEvents, storableForms, storableJson } from './storable-json.js'
+import { keepImagesApart } from './event-images.js'
 import { onScopedWrite, prisma, scoped, type Prisma } from './db.js'
 import { specFor } from './thread-spec.js'
 import { ensureSetup, touch, wake } from './cloud.js'
@@ -847,14 +848,21 @@ export function runnerSocket(runner: {
       data: event as unknown as Prisma.InputJsonValue,
       at: new Date(event.at),
     })
-    const all = events.map((e) => rows(e.seq, storableJson(e.event)))
+    // Images go to the bucket, not the database (event-images.ts).
+    const kept = await Promise.all(
+      events.map(async ({ seq, event }) => ({
+        seq,
+        event: await keepImagesApart(session, session.id, storableJson(event)),
+      })),
+    )
+    const all = kept.map((e) => rows(e.seq, e.event))
     const refused = await prisma.sessionEvent.createMany({ data: all, skipDuplicates: true }).then(
       () => undefined,
       (error: unknown) => error,
     )
     if (!refused) return
     // One at a time, to find which: a database that is down refuses them all, and the error goes on.
-    for (const { seq, event } of events) {
+    for (const { seq, event } of kept) {
       const forms = storableForms(event)
       for (const [i, form] of forms.entries()) {
         const error = await prisma.sessionEvent

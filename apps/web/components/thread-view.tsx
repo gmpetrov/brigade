@@ -18,6 +18,8 @@ import {
   PREVIEW_REPLACED,
   PROPOSE_TEAM_TOOL,
   SHOW_WIDGET_TOOL,
+  STORED_IMAGE,
+  STORED_IMAGE_NAME,
   SUGGEST_REPLIES_TOOL,
   THREAD_NOTE_SOURCE,
   hasVisibleText,
@@ -112,7 +114,13 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { WidgetFrame } from '@/components/widget-frame'
 import { ReportedThread, reportNote, StartedChild } from '@/components/thread-children'
-import { threadImageUrl, useApi, type Credential, type ThreadChild } from '@/lib/api'
+import {
+  storedImageUrl,
+  threadImageUrl,
+  useApi,
+  type Credential,
+  type ThreadChild,
+} from '@/lib/api'
 import { useTicketReplies } from '@/lib/ticket-replies'
 import { cn } from '@/lib/utils'
 
@@ -1121,8 +1129,70 @@ function WidgetCard({ widget }: { widget: Widget }) {
   )
 }
 
+/** The names of the images a tool returned that are kept apart from its event (STORED_IMAGE). */
+function storedImages(value: unknown, names = new Set<string>()): Set<string> {
+  if (typeof value === 'string') {
+    const name = value.startsWith(STORED_IMAGE) && value.slice(STORED_IMAGE.length)
+    if (name && STORED_IMAGE_NAME.test(name)) names.add(name)
+  } else if (Array.isArray(value)) for (const v of value) storedImages(v, names)
+  else if (value && typeof value === 'object')
+    for (const v of Object.values(value)) storedImages(v, names)
+  return names
+}
+
+/** The images a tool returned, such as a screenshot, above its output. Each opens over the page. */
+function ToolImages({ threadId, names }: { threadId: string; names: string[] }) {
+  const [open, setOpen] = useState<string>()
+  return (
+    <div className="flex flex-wrap gap-2">
+      {names.map((name) => (
+        <button
+          key={name}
+          type="button"
+          className="block cursor-zoom-in overflow-hidden rounded-lg border bg-muted"
+          onClick={() => setOpen(name)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={storedImageUrl(threadId, name)}
+            alt="An image the tool returned"
+            loading="lazy"
+            className="max-h-64 max-w-full object-contain"
+          />
+        </button>
+      ))}
+      <MediaPreview
+        media={
+          open ? { name: open, src: storedImageUrl(threadId, open), kind: 'image' } : undefined
+        }
+        onClose={() => setOpen(undefined)}
+      />
+    </div>
+  )
+}
+
 /** A tool call opened: a command and what it printed, an edit as a diff, else its input and output. */
-function ToolDetail({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
+function ToolDetail({
+  threadId,
+  item,
+}: {
+  threadId: string
+  item: Extract<Item, { kind: 'tool' }>
+}) {
+  const images = [...storedImages(item.output)]
+  if (!images.length) return <ToolOutput item={item} />
+  // A picture it read is shown as itself; any other tool's images come before what it returned.
+  if (toolKind(item.toolName) === 'read' && !item.isError)
+    return <ToolImages threadId={threadId} names={images} />
+  return (
+    <>
+      <ToolImages threadId={threadId} names={images} />
+      <ToolOutput item={item} />
+    </>
+  )
+}
+
+function ToolOutput({ item }: { item: Extract<Item, { kind: 'tool' }> }) {
   const kind = toolKind(item.toolName)
   const input = (item.input ?? {}) as Record<string, unknown>
   const path = input.file_path ?? input.path
@@ -1764,7 +1834,7 @@ export function ThreadItems({
               ) : null}
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 flex flex-col gap-2">
-              <ToolDetail item={item} />
+              <ToolDetail threadId={threadId} item={item} />
             </CollapsibleContent>
           </Collapsible>
         )

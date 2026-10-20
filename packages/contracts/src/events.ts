@@ -378,6 +378,16 @@ export const TicketAnswer = z.discriminatedUnion('action', [
 ])
 export type TicketAnswer = z.infer<typeof TicketAnswer>
 
+/**
+ * What a stored event has where its teammate's tool returned an image in base64
+ * (a picture it read, a page it captured): this, then the image's name in its
+ * thread, `<sha256>.<ext>`. The image itself is in the bucket, served at
+ * /api/threads/:id/images/:name.
+ */
+export const STORED_IMAGE = 'brigade-image:'
+/** A stored image's name: its SHA-256 and an extension for its type. */
+export const STORED_IMAGE_NAME = /^[0-9a-f]{64}\.(?:png|jpg|gif|webp)$/
+
 export const AgentEvent = z.discriminatedUnion('type', [
   /**
    * A human prompt sent to the thread, where the teammate reads it: when its
