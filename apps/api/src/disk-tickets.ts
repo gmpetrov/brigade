@@ -22,19 +22,34 @@ export async function noteDisk(runner: Runner, disk: { full: boolean; used: numb
     })
     return
   }
-  const already = await db.ticket.count({
+  const open = await db.ticket.findFirst({
+    where: { ...ofComputer, status: 'open' },
+    select: { id: true, payload: true },
+  })
+  if (open) {
+    // How full it says, kept to the percent.
+    const said = (open.payload as { used?: number }).used ?? 0
+    if (Math.round(said * 100) !== Math.round(disk.used * 100))
+      await db.ticket.update({
+        where: { id: open.id },
+        data: {
+          payload: {
+            computerId: runner.computerId,
+            used: disk.used,
+            reason: diskFullReason(disk.used),
+          },
+        },
+      })
+    return
+  }
+  const dismissed = await db.ticket.count({
     where: {
       ...ofComputer,
-      OR: [
-        { status: 'open' },
-        {
-          resolvedByMemberId: { not: null },
-          resolvedAt: { gte: new Date(Date.now() - DISMISSED_FOR_MS) },
-        },
-      ],
+      resolvedByMemberId: { not: null },
+      resolvedAt: { gte: new Date(Date.now() - DISMISSED_FOR_MS) },
     },
   })
-  if (already) return
+  if (dismissed) return
   const computer = await prisma.computer.findFirst({
     where: { id: runner.computerId, workspaceId: runner.workspaceId },
     select: { kind: true },

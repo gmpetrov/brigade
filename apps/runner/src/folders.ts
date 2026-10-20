@@ -551,10 +551,10 @@ export class Folders {
         console.warn('the disk is still full: every thread folder left is in use or too large')
     } finally {
       // Room again: set some aside for the next time it fills.
-      if (!critical)
-        await this.reserve
-          ?.keep()
-          .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
+      // keep() sets it aside only with room to spare, so not while nearly full.
+      await this.reserve
+        ?.keep()
+        .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
       if (CLOUD)
         await this.report().catch((error) => console.warn(`disk report failed: ${String(error)}`))
       this.checkedAt = Date.now()
@@ -857,6 +857,8 @@ export function diskReport(
   now: number,
 ) {
   const full = used >= STILL_FULL || (Boolean(last?.full) && used >= FULL)
+  // Just started, between the two: whatever was said before stands (a ticket stays open).
+  if (!last && !full && used >= FULL) return null
   if (last && last.full === full && now - last.at < REPORT_EVERY_MS) return null
   return { full, at: now }
 }
