@@ -1,70 +1,80 @@
 import Link from 'next/link'
-import { formatCount, type ProofNumbers, REPO, REPO_URL, mergeDate } from '@/lib/github-proof'
-import { cn } from '@/lib/utils'
-import { Av, Badge, Cta, Icon, s, SIGN_IN, SIGN_UP } from './parts'
+import type { CSSProperties } from 'react'
+import { formatCount, mergeDate, type ProofNumbers, REPO, REPO_URL } from '@/lib/github-proof'
+import { MAC_APP_URL } from '@/lib/mac-app'
+import { c, Icon, SIGN_IN, SIGN_UP } from './parts'
 
+/** Brigade's own team as proof: the GitHub numbers read at build (lib/github-proof.ts), and
+ * the last pull requests merged. A number GitHub did not give back leaves out what needs it. */
 export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
   const { mergedPrs, rileyCommits, totalCommits, recentMerges } = numbers
   const commits = rileyCommits !== null && totalCommits !== null
+  // "Most" only while the numbers say so.
+  const share = commits && rileyCommits * 2 > totalCommits ? 'most' : 'much'
   return (
-    <section className={cn(s.sec, s.built)} aria-labelledby="built-title">
-      <div className={s.wrap}>
-        <div className={s.reveal}>
-          <h2 className={s.h2} id="built-title">
-            We build Brigade with Brigade
+    <section className={c('sec built')} aria-labelledby="built-title">
+      <div className={c('wrap')}>
+        <div>
+          <h2 className={c('h2')} id="built-title">
+            Brigade is built by Brigade.
           </h2>
-          <p className={s.lead}>
-            Brigade started on October 9, 2026.{' '}
-            {commits && (
-              <>
-                Since then Riley, one of its teammates, has written {formatCount(rileyCommits)} of
-                its {formatCount(totalCommits)} commits.{' '}
-              </>
-            )}
-            A person approves every change before it goes in. The whole history is public.
+          <p className={c('lead')}>
+            Our own teammates write {share} of Brigade&apos;s code, and a person approves every
+            change before it goes in. The whole history is public.
           </p>
-          <p className={s.lead}>
-            Our marketing runs the same way: Mark, a Brigade teammate, researched this page from 107
-            real quotes and 14 competitors&apos; sites before a person picked the words.
+          <p className={c('mark-note')}>
+            <span className={c('av mark')} aria-hidden="true">
+              M
+            </span>
+            This page was researched by Mark, a Brigade teammate.
           </p>
-          <a className={s.link} href={REPO_URL}>
+          <a className={c('link')} href={REPO_URL}>
             Read the code on GitHub <Icon name="arrow" />
           </a>
         </div>
-        <div className={s.reveal}>
-          {commits && (
-            <div className={s.nums} aria-hidden="true">
-              <div>
-                <div className={s.num}>{formatCount(rileyCommits)}</div>
-                <div className={s.numL}>commits by Riley</div>
-              </div>
-              <div>
-                <div className={cn(s.num, s.of)}>{formatCount(totalCommits)}</div>
-                <div className={s.numL}>commits in total</div>
-              </div>
+        <div>
+          {(mergedPrs !== null || commits) && (
+            <div className={c('nums')}>
+              {mergedPrs !== null && (
+                <div>
+                  <div className={c('num')}>{formatCount(mergedPrs)}</div>
+                  <div className={c('num-l')}>pull requests merged · last 30 days</div>
+                </div>
+              )}
+              {commits && (
+                <div>
+                  <div className={c('num')}>
+                    {formatCount(rileyCommits)}
+                    <span className={c('of')}>/{formatCount(totalCommits)}</span>
+                  </div>
+                  <div className={c('num-l')}>commits by Riley</div>
+                </div>
+              )}
             </div>
           )}
           {recentMerges && (
-            <section className={s.log} aria-label="Latest merged pull requests">
-              <div className={s.logH}>
+            <section className={c('log')} aria-label="Latest merged pull requests">
+              <div className={c('log-h')}>
                 <Icon name="github" />
-                <span className={s.mono}>{REPO}</span>
-                <span className={s.sp} />
-                {mergedPrs !== null && <Badge tone="ok">{formatCount(mergedPrs)} merged</Badge>}
+                <span className={c('mono')}>{REPO}</span>
+                <span className={c('sp')} />
+                {mergedPrs !== null && (
+                  <span className={c('badge ok')}>{formatCount(mergedPrs)} merged</span>
+                )}
               </div>
               {recentMerges.map((pr) => (
-                <a key={pr.number} className={s.lgr} href={pr.url}>
-                  <span className={s.mg} aria-hidden="true">
+                <a key={pr.number} className={c('lgr')} href={pr.url}>
+                  <span className={c('mg')} aria-hidden="true">
                     <Icon name="merged" />
                   </span>
                   <div>
-                    <div className={s.tt}>{pr.title}</div>
-                    <div className={s.mt}>
+                    <div className={c('tt')}>{pr.title}</div>
+                    <div className={c('mt')}>
                       #{pr.number}
                       {pr.branch && <> · {pr.branch}</>} · merged
                     </div>
                   </div>
-                  <span className={s.tm}>
+                  <span className={c('tm')}>
                     <time dateTime={pr.mergedAt}>{mergeDate(pr.mergedAt)}</time>
                   </span>
                 </a>
@@ -77,42 +87,44 @@ export function BuiltBy({ numbers }: { numbers: ProofNumbers }) {
   )
 }
 
+/** Pricing, on a band in the dark theme whatever the page's theme: the night the cloud computer works through. */
 export function Pricing() {
   return (
-    // Dark whatever the page's theme: the night the cloud computer works through.
-    <section className={cn(s.pricing, 'dark')} id="pricing" aria-labelledby="pricing-title">
-      <div className={s.night} aria-hidden="true">
-        <div className={cn(s.blk, s.slab)}>
-          <span className={s.msg}>
-            <span className={s.when}>02:14</span>Riley <span className={s.k}>· opened PR #213</span>
+    <section aria-labelledby="pricing-title" className={c('pricing dark')} id="pricing">
+      <div className={c('night')} aria-hidden="true">
+        <div className={c('blk slab')}>
+          <span className={c('msg')}>
+            <span className={c('when')}>02:14</span>Riley{' '}
+            <span className={c('k')}>· fixed the export bug</span>
           </span>
-          <span className={cn(s.msg, s.r)}>
-            <span className={s.when}>03:40</span>Sam{' '}
-            <span className={s.k}>· drafted 9 replies</span>
+          <span className={c('msg r')}>
+            <span className={c('when')}>03:40</span>Sam{' '}
+            <span className={c('k')}>· drafted 9 replies</span>
           </span>
-          <span className={s.msg}>
-            <span className={s.when}>07:00</span>Sam <span className={s.k}>· inbox triaged</span>
+          <span className={c('msg')}>
+            <span className={c('when')}>07:00</span>Sam{' '}
+            <span className={c('k')}>· inbox triaged</span>
           </span>
         </div>
-        <div className={s.moon} />
-        <div className={cn(s.blk, s.bGreen)} />
+        <div className={c('moon')}></div>
+        <div className={c('blk b-green')}></div>
       </div>
-      <div className={s.wrap}>
-        <div className={cn(s.prHead, s.reveal)}>
-          <h2 className={s.h2} id="pricing-title">
+      <div className={c('wrap')}>
+        <div className={c('pr-head')}>
+          <h2 className={c('h2')} id="pricing-title">
             Free on your Mac. Pay only for the cloud computer.
           </h2>
         </div>
-        <div className={cn(s.plans, s.reveal)}>
-          <div className={s.plan}>
-            <h3 className={s.planN}>
+        <div className={c('plans')}>
+          <div className={c('plan')}>
+            <div className={c('plan-n')}>
               <Icon name="laptop" />
               Free
-            </h3>
-            <div className={s.price}>
-              <span className={s.amt}>$0</span>
             </div>
-            <ul className={s.feat}>
+            <div className={c('price')}>
+              <span className={c('amt')}>$0</span>
+            </div>
+            <ul className={c('feat')}>
               <li>
                 <Icon name="check" />
                 Teammates run on your Mac while it&apos;s awake
@@ -126,20 +138,20 @@ export function Pricing() {
                 Unlimited teammates, threads and members
               </li>
             </ul>
-            <Cta href={SIGN_UP} large>
+            <Link className={c('btn lg')} href={SIGN_UP}>
               Start free on your Mac
-            </Cta>
+            </Link>
           </div>
-          <div className={cn(s.plan, s.cloud)}>
-            <h3 className={s.planN}>
+          <div className={c('plan cloud')}>
+            <div className={c('plan-n')}>
               <Icon name="cloud" />
               Cloud
-            </h3>
-            <div className={s.price}>
-              <span className={s.amt}>$99</span>
-              <span className={s.per}>/ month per workspace</span>
             </div>
-            <ul className={s.feat}>
+            <div className={c('price')}>
+              <span className={c('amt')}>$99</span>
+              <span className={c('per')}>/ month per workspace</span>
+            </div>
+            <ul className={c('feat')}>
               <li>
                 <Icon name="check" />
                 Teammates keep working when your Mac is asleep, closed or you don&apos;t have one
@@ -153,77 +165,232 @@ export function Pricing() {
                 Everything in Free, plus Brigade&apos;s cloud computer
               </li>
             </ul>
-            <Cta href={SIGN_UP} primary large>
+            <Link className={c('btn pri lg')} href={SIGN_UP}>
               Start with Cloud
-            </Cta>
-            <p className={s.quiet}>Runs up to 4 threads at once</p>
+            </Link>
+            <p className={c('quiet')}>Runs up to 4 threads at once</p>
           </div>
         </div>
-        <p className={s.prFoot}>
-          You use your own Claude or ChatGPT plan, so we never charge you for AI usage. Brigade is
-          open source under the MIT license.
+        <p className={c('pr-foot')}>
+          You bring the AI plan, so we never charge you for AI usage. Open source under the MIT
+          license.
         </p>
       </div>
     </section>
   )
 }
 
-const faqs = [
-  [
-    'Do I need a Claude or ChatGPT plan?',
-    'Yes. Teammates use your own Claude or ChatGPT account, through Claude Code and Codex, the official tools from Anthropic and OpenAI. A Claude Max or ChatGPT Pro plan gives them the most room.',
-  ],
-  [
-    'What happens when my Mac goes to sleep?',
-    "Teammates on your Mac stop until it wakes up, and a routine due in the meantime is skipped: you get a ticket saying so. With Cloud, they keep working on Brigade's computer and routines run on time.",
-  ],
-  [
-    "I don't have a Mac.",
-    "Start with Cloud. Your teammates run on Brigade's cloud computer and you use Brigade from any browser or your phone.",
-  ],
-  [
-    'Can a teammate send an email or write to Stripe without me?',
-    'Only if you let it. For each teammate you choose whether it can make changes in your apps on its own or waits for your yes in Needs you. Ready-made playbooks, like the support one, ask before they send.',
-  ],
-  [
-    'Where do my passwords and API keys go?',
-    "In your workspace's vault. For a website, Brigade types the login for the teammate, which never sees the password.",
-  ],
-  [
-    'What happens when I hit my Claude limit?',
-    'Connect a second account and the teammate moves to it mid-task. With no account left, the thread waits and starts again when your limit resets.',
-  ],
-  [
-    'How is this different from using Claude or ChatGPT on my own?',
-    "On your own, you start each task and stay with it until it's done. Brigade's teammates work in the background, connected to your Gmail, GitHub and Stripe, run routines on a schedule, and bring what needs you to one list your team shares.",
-  ],
-  [
-    'Is it really open source?',
-    'Yes, the whole product is on GitHub under the MIT license, including the web app, the server and the Mac app.',
-  ],
-]
+export function Download() {
+  return (
+    <section aria-labelledby="download-title" className={c('sec download')} id="download">
+      <div className={c('wrap')}>
+        <div className={c('sec-head')}>
+          <h2 className={c('h2')} id="download-title">
+            One team, on your desk and in your pocket.
+          </h2>
+          <p className={c('lead')}>
+            Install Brigade.app and sign in with the Claude or ChatGPT account you already use. Then
+            follow your teammates from any browser or your iPhone.
+          </p>
+        </div>
+        <div className={c('dl-grid')}>
+          <div className={c('dl')}>
+            <div className={c('dl-art tint')} aria-hidden="true">
+              <div className={c('mb')}>
+                <div className={c('mb-bar')}>
+                  <span>Mon 9:41</span>
+                  <span className={c('bb')}>B</span>
+                </div>
+                <div className={c('mb-menu')}>
+                  <div className={c('r')}>
+                    <span className={c('dot ok')}></span>Runner online
+                  </div>
+                  <div className={c('r')}>
+                    <span className={c('dot run')}></span>3 threads running
+                  </div>
+                  <div className={c('r m')}>Set up Brigade…</div>
+                </div>
+              </div>
+            </div>
+            <div className={c('dl-body')}>
+              <h3>Brigade.app for Mac</h3>
+              <p>
+                Lives in your menu bar. It checks each setup step and fixes what&apos;s missing.
+              </p>
+              <a className={c('btn pri')} href={MAC_APP_URL}>
+                <Icon name="download" />
+                Download for Mac
+              </a>
+            </div>
+          </div>
+          <div className={c('dl')}>
+            <div className={c('dl-art green')} aria-hidden="true">
+              <div className={c('brw2')}>
+                <div className={c('brw-bar')}>
+                  <span>brigade.sh</span>
+                </div>
+                <div className={c('brw2-b')}>
+                  <div className={c('sb')}>
+                    <i className={c('y')}></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                  </div>
+                  <div className={c('mn')}>
+                    <div className={c('h')}></div>
+                    <div className={c('w')}></div>
+                    <div className={c('g')}></div>
+                    <div className={c('g')} style={{ width: '70%' } as CSSProperties}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={c('dl-body')}>
+              <h3>On the web</h3>
+              <p>Every thread and every decision, from any browser.</p>
+              <Link className={c('btn')} href={SIGN_IN}>
+                Open Brigade
+              </Link>
+            </div>
+          </div>
+          <div className={c('dl')}>
+            <div className={c('dl-art orange')} aria-hidden="true">
+              <div className={c('iph')}>
+                <div className={c('sc')}>
+                  <div className={c('ic')}>
+                    <i></i>
+                    <i></i>
+                    <i className={c('b')}></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                  </div>
+                  <div className={c('lbl')}>Brigade on your Home Screen</div>
+                </div>
+              </div>
+            </div>
+            <div className={c('dl-body')}>
+              <h3>On your iPhone</h3>
+              <p>
+                Open Brigade in Safari and add it to your Home Screen. Its badge counts what needs
+                you.
+              </p>
+              <p className={c('dl-hint')}>
+                <Icon name="share" />
+                Add to Home Screen from Safari
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export function Faq() {
   return (
-    <section className={cn(s.sec, s.faq)} aria-labelledby="faq-title">
-      <div className={s.wrap}>
-        <div>
-          <h2 className={s.ovl} id="faq-title">
-            FAQ
+    <section aria-labelledby="faq-title" className={c('sec faq')}>
+      <div className={c('wrap')}>
+        <div className={c('side')}>
+          <h2 className={c('h2')} id="faq-title">
+            Questions
           </h2>
+          <p>
+            More on how it runs:{' '}
+            <Link className={c('link')} href="/how-it-works">
+              How Brigade works
+            </Link>
+          </p>
         </div>
-        <div className={cn(s.qs, s.reveal)}>
-          {faqs.map(([q, a], i) => (
-            <details key={q} open={i === 0}>
-              <summary>
-                {q}
-                <span className={s.pm} aria-hidden="true">
-                  <Icon name="plus" />
-                </span>
-              </summary>
-              <p>{a}</p>
-            </details>
-          ))}
+        <div className={c('qs')}>
+          <details open>
+            <summary>
+              Do I need to know how to code?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              No. You describe a job in a message, the way you would to a new hire. For a task in an
+              app, show it once with Teach a task.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can a teammate send an email or pay without me?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Only if you let it: for each teammate you choose what it does alone and what waits for
+              your yes.
+            </p>
+          </details>
+          <details>
+            <summary>
+              What happens when my Mac goes to sleep?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Teammates on your Mac stop until it wakes up, and a routine due in the meantime is
+              skipped: you get a ticket saying so. With Cloud, they keep working on Brigade&apos;s
+              computer and routines run on time.
+            </p>
+          </details>
+          <details>
+            <summary>
+              I don&apos;t have a Mac.
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Start with Cloud. Your teammates run on Brigade&apos;s cloud computer and you use
+              Brigade from any browser or your phone.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Which AI plans work?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Claude and ChatGPT plans, through Claude Code and Codex. Max or Pro gives the most
+              room. You can stack several accounts: when one runs out, the teammate continues on the
+              next account of the same provider.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Where do my passwords go?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              In your workspace&apos;s vault. For a website, Brigade types the login for the
+              teammate, which never sees the password.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is it open source?
+              <span className={c('pm')}>
+                <Icon name="plus" />
+              </span>
+            </summary>
+            <p>
+              Yes, the whole product is on GitHub under the MIT license, including the web app, the
+              server and the Mac app.
+            </p>
+          </details>
         </div>
       </div>
     </section>
@@ -232,29 +399,30 @@ export function Faq() {
 
 export function FinalCall() {
   return (
-    <section className={s.final} aria-labelledby="final-title">
-      <div className={s.art} aria-hidden="true">
-        <div className={cn(s.blk, s.bTint)} />
-        <div className={cn(s.blk, s.slab)}>
-          <span className={cn(s.msg, s.msg1)}>
-            <Av>R</Av>Riley <span className={s.k}>· merged by Ada</span>
+    <section aria-labelledby="final-title" className={c('final')}>
+      <div className={c('art')} aria-hidden="true">
+        <div className={c('blk b-tint')}></div>
+        <div className={c('blk slab')}>
+          <span className={c('fmsg')} style={{ left: '22px', top: '36px' } as CSSProperties}>
+            <span className={c('av')}>R</span>Riley <span className={c('k')}>· shipped by Ada</span>
           </span>
-          <span className={cn(s.msg, s.msg2)}>
-            <Av sam>S</Av>Sam <span className={s.k}>· 4 replies sent</span>
+          <span className={c('fmsg')} style={{ left: '52px', top: '96px' } as CSSProperties}>
+            <span className={c('av sam')}>S</span>Sam{' '}
+            <span className={c('k')}>· 3 replies sent</span>
           </span>
         </div>
-        <div className={cn(s.blk, s.bGreen)} />
-        <div className={cn(s.blk, s.bOrange)} />
-        <div className={cn(s.blk, s.bInk)} />
+        <div className={c('blk b-green')}></div>
+        <div className={c('blk b-orange')}></div>
+        <div className={c('blk b-ink')}></div>
       </div>
-      <div className={cn(s.wrap, s.reveal)}>
-        <h2 id="final-title">Give your AI teammates their own desk</h2>
-        <p className={s.lead}>
+      <div className={c('wrap')}>
+        <h2 id="final-title">Meet your first teammate.</h2>
+        <p className={c('lead')}>
           Start on your Mac today. Move to the cloud when you want them working through the night.
         </p>
-        <Cta href={SIGN_UP} primary large>
+        <Link className={c('btn pri lg')} href={SIGN_UP}>
           Start free on your Mac
-        </Cta>
+        </Link>
       </div>
     </section>
   )
@@ -262,11 +430,13 @@ export function FinalCall() {
 
 export function Footer() {
   return (
-    <footer className={s.foot}>
-      <div className={s.wrap}>
-        <span className={s.word}>Brigade</span>
+    <footer className={c('foot')}>
+      <div className={c('wrap')}>
+        <span className={c('word')}>Brigade</span>
         <nav aria-label="Footer">
-          <a href="#pricing">Pricing</a>
+          <a href="/#pricing">Pricing</a>
+          <a href="/#download">Download</a>
+          <Link href="/how-it-works">How it works</Link>
           <a href={REPO_URL}>GitHub</a>
           <Link href={SIGN_IN}>Sign in</Link>
           <span>MIT license</span>

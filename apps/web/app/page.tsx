@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
-import { BuiltBy, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
-import { Control, UnderTheHood } from '@/components/landing/control'
-import { Header, Hero, Proof } from '@/components/landing/hero'
-import { s } from '@/components/landing/parts'
-import { Bridge, Handoff, HowItWorks, Problem, Team } from '@/components/landing/sections'
+import { BuiltBy, Download, Faq, FinalCall, Footer, Pricing } from '@/components/landing/closing'
+import { Control } from '@/components/landing/control'
+import { Header, Hero, PlanBand } from '@/components/landing/hero'
+import { Jobs } from '@/components/landing/jobs'
+import { c } from '@/components/landing/parts'
+import { Bridge, Message, Tiles } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
 
@@ -54,7 +55,7 @@ const jsonLd = {
 export default function Landing() {
   const numbers = getProofNumbers()
   return (
-    <div className={s.page}>
+    <div className={c('page')}>
       <RedirectIfSignedIn />
       <script
         type="application/ld+json"
@@ -63,16 +64,15 @@ export default function Landing() {
       <Header />
       <main>
         <Hero />
-        <Proof numbers={numbers} />
-        <Problem />
-        <HowItWorks />
+        <PlanBand />
+        <Message />
         <Bridge />
-        <Team />
-        <Handoff />
+        <Tiles />
+        <Jobs />
         <Control />
-        <UnderTheHood />
         <BuiltBy numbers={numbers} />
         <Pricing />
+        <Download />
         <Faq />
         <FinalCall />
       </main>
