@@ -110,6 +110,15 @@ export function dockerEnv(user: string): Promise<Record<string, string>> {
 export const shareAccount = (accountId: string) => helper('share-account', accountId)
 
 /**
+ * Free what the computer's own Docker keeps for nothing (prune-system-docker): images
+ * pulled there outside the teammates' rootless Dockers. Says how much it freed.
+ */
+export async function pruneSystemDocker() {
+  const { stdout } = await run('sudo', ['-n', HELPER, 'prune-system-docker'], { cwd: '/' })
+  return stdout.trim()
+}
+
+/**
  * The teammate's own config directory for an account: private (its sessions
  * and history), sharing only the login file with the account directory.
  */

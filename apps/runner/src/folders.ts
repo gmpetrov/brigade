@@ -30,7 +30,7 @@ import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.j
 import { CACHES_EVERY_MS, CRITICAL, freeCaches, Reserve } from './disk.js'
 import { COPIED } from './repo-settings.js'
 import { owners, repairCaches, run } from './repos.js'
-import { teammateHome } from './teammates.js'
+import { pruneSystemDocker, teammateHome } from './teammates.js'
 import { threadFolder } from './threads.js'
 
 /** Remove dependency and build folders of quiet threads once the disk is this full (space or inodes)… */
@@ -447,7 +447,8 @@ export class Folders {
    * Stop the containers of threads gone quiet, and remove the node_modules
    * an older pnpm made in them. As the disk fills, remove the
    * dependency and build folders of the threads quiet longest. When it is
-   * full, prune what Docker keeps for nothing, then archive the folders of
+   * full, prune what Docker keeps for nothing (the teammates' and the
+   * computer's own), then archive the folders of
    * the threads quiet longest until it is not.
    */
   async check() {
@@ -522,6 +523,11 @@ export class Folders {
           await prune(runAs).catch((error) =>
             console.warn(`could not prune ${runAs}'s Docker: ${String(error)}`),
           )
+      // An older setup has no prune-system-docker yet: the helper says so, and the rest goes on.
+      await pruneSystemDocker().then(
+        (report) => report && console.log(`pruned the computer's Docker: ${report}`),
+        (error) => console.warn(`could not prune the computer's Docker: ${String(error)}`),
+      )
       for (const candidate of candidates) {
         if ((await this.fullness()) < ENOUGH) break
         if (now - candidate.active < MIN_QUIET_MS) break

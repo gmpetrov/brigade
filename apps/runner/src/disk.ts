@@ -11,8 +11,11 @@ import { rm, stat, statfs } from 'node:fs/promises'
 import { join } from 'node:path'
 import { run } from './repos.js'
 
-/** Past this, the reserve goes and caches are cleared even while their teammate works. */
-export const CRITICAL = 0.95
+/**
+ * Past this, the reserve goes and caches are cleared even while their teammate works.
+ * Before 95%: boat's snapshots fail past it, and a stop or resume then loses work.
+ */
+export const CRITICAL = 0.9
 /** Room is set aside only while the disk stays under this full with it. */
 const RESERVE_UNDER = 0.9
 /** At most this much set aside… */
