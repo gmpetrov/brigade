@@ -149,8 +149,10 @@ export function planLineSync(
   const byKey = new Map(rows.map((r) => [r.key, r]))
   const rowOf = (key: string) => byKey.get(rowKey(key))
   const { actor, now } = context
-  const dateOf = (row: LineRow) =>
+  const dateOf = (row: Pick<LineRow, 'createdAt' | 'confirmedAt'>) =>
     Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0)
+  // A line in the file before with no row yet was there before memory kept dates.
+  const legacyLine = { legacy: true, createdAt: now, confirmedAt: null }
   for (const [key, line] of is) {
     const row = rowOf(key)
     if (row?.archivedAt) {
@@ -172,7 +174,11 @@ export function planLineSync(
       const data: LineUpdate = {}
       if (row.topic !== line.topic) data.topic = line.topic
       if (row.text !== line.text) data.text = line.text
-      if (context.confirm.has(key)) data.confirmedAt = now
+      // Confirmed today: dated today, even a line older than dates in memory.
+      if (context.confirm.has(key)) {
+        data.confirmedAt = now
+        if (row.legacy) data.legacy = false
+      }
       // A line others were merged into, in its own words, takes the newest of their dates.
       const dated = (context.sources.get(key) ?? []).flatMap((k) => {
         const source = rowOf(k)
@@ -186,11 +192,15 @@ export function planLineSync(
       if (Object.keys(data).length) plan.update.push({ id: row.id, data })
     } else {
       const there = was.has(key)
-      // A merged line keeps the newest date of its lines; merged from lines older than dates, it is too.
-      const sources = (context.sources.get(key) ?? []).flatMap((k) => rowOf(k) ?? [])
+      const confirmed = context.confirm.has(key)
+      // A merged line keeps the newest date of its lines; merged from lines older than dates
+      // (rows or not), it is too.
+      const sources = (context.sources.get(key) ?? []).flatMap(
+        (k) => rowOf(k) ?? (was.has(k) ? [legacyLine] : []),
+      )
       const dated = sources.filter((r) => !r.legacy)
       const merged = sources.length > 0
-      const legacy = there || (merged && dated.length === 0)
+      const legacy = !confirmed && (there || (merged && dated.length === 0))
       const newest = Math.max(0, ...(dated.length ? dated : sources).map(dateOf))
       plan.create.push({
         key: rowKey(key),
@@ -200,7 +210,7 @@ export function planLineSync(
         createdByType: there ? null : actor.type,
         createdById: there ? null : actor.id,
         sessionId: there ? null : context.sessionId,
-        createdAt: newest ? new Date(newest) : now,
+        createdAt: newest && !confirmed ? new Date(newest) : now,
         archivedAt: null,
         archivedReason: null,
         archivedByType: null,
