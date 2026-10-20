@@ -148,7 +148,8 @@ export function planLineSync(
   const byKey = new Map(rows.map((r) => [r.key, r]))
   const rowOf = (key: string) => byKey.get(rowKey(key))
   const { actor, now } = context
-  const dateOf = (row: LineRow) => Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0)
+  const dateOf = (row: LineRow) =>
+    Math.max(row.createdAt.getTime(), row.confirmedAt?.getTime() ?? 0)
   for (const [key, line] of is) {
     const row = rowOf(key)
     if (row?.archivedAt) {
