@@ -92,7 +92,11 @@ Cloudflare shipped first, more simply than the phases below:
   - The runner bundle comes out the same for the same code, so runners update only when
     the runner changed.
 
-## What runs on the VPS (2026-10-14)
+## What ran on the VPS (2026-10-14 to 2026-10-20)
+
+Removed on 2026-10-20: the server no longer runs Brigade and nothing deploys there
+(`.github/workflows/vps.yml` is gone). `deploy/vps` stays, to build the images by hand.
+What follows describes it as it was.
 
 A second deployment, on a Hetzner ARM server (2 vCPUs, 4 GB), with the same settings as
 Cloudflare's except its URLs and its database: a Neon database of its own, in Frankfurt
@@ -116,8 +120,8 @@ where each file's key is its own id and only a database row deletes it.
   `collab`, behind the server's Traefik (Coolify's proxy). Traefik routes by the
   services' labels and gets the certificates from Let's Encrypt. Secrets are only in
   `api.env` and `collab.env` there, readable by root alone.
-- **Deploy** happens on each push to `main` that touches what the images are built from
-  (`.github/workflows/vps.yml`):
+- **Deploy** happened on each push to `main` that touched what the images are built from
+  (`.github/workflows/vps.yml`, now removed):
   - The workflow builds the images on an ARM runner and pushes them to GitHub's
     registry, tagged with the commit.
   - Over SSH, it runs `deploy/vps/deploy.sh` on the server: pull, migrate, restart.
