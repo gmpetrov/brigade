@@ -293,12 +293,11 @@ export function EmailDraftView({
 
 /** Any other tool's arguments: one per line, text with its line breaks, an amount first. */
 export function ToolArguments({ input, className }: { input: unknown; className?: string }) {
-  const box = cn(
-    'min-w-0 rounded-lg border bg-background px-3.5 py-3 text-sm',
-    className,
-  )
+  const box = cn('min-w-0 rounded-lg border bg-background px-3.5 py-3 text-sm', className)
   if (typeof input === 'string')
-    return <p className={cn(box, 'max-h-60 overflow-auto whitespace-pre-wrap wrap-anywhere')}>{input}</p>
+    return (
+      <p className={cn(box, 'max-h-60 overflow-auto whitespace-pre-wrap wrap-anywhere')}>{input}</p>
+    )
   if (!input || typeof input !== 'object' || Array.isArray(input)) return <Raw value={input} />
   const entries = Object.entries(input as Record<string, unknown>)
     .filter(([, value]) => value !== undefined)

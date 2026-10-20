@@ -229,8 +229,7 @@ export async function dispatch(
     const ongoing =
       conversationKey &&
       (await prisma.session.count({ where: { triggerId: trigger.id, conversationKey } })) > 0
-    if (!ongoing && definition.matches && !(await definition.matches(event, options, ctx)))
-      continue
+    if (!ongoing && definition.matches && !(await definition.matches(event, options, ctx))) continue
     const files = definition.attachments?.(event) ?? []
     if (files.length > 0 && !attachmentIds) {
       try {
