@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { beyondShown, pickLines, recalledBlock, SESSION_CHARS } from '../src/recall.js'
+import { newestLines, pickLines, recalledBlock, SESSION_CHARS } from '../src/recall.js'
 
-test('only lines past what the instructions file shows are candidates', () => {
-  assert.deepEqual(beyondShown('short memory', 100), [])
+test('a long memory shows its newest lines whole, and leaves the older ones to recall', () => {
+  assert.deepEqual(newestLines('short memory', 100), { shown: 'short memory', left: [] })
   const text = ['- first line', '- second line', '- third line'].join('\n')
-  // The file shows 15 characters: the second line is cut, so it is a candidate too.
-  assert.deepEqual(beyondShown(text, 15), ['- second line', '- third line'])
+  // 30 characters hold the last two lines; the first, the oldest, is left out.
+  assert.deepEqual(newestLines(text, 30), {
+    shown: '- second line\n- third line',
+    left: ['- first line'],
+  })
+  // Never half a line: 20 characters hold only the last one.
+  assert.deepEqual(newestLines(text, 20), {
+    shown: '- third line',
+    left: ['- first line', '- second line'],
+  })
 })
 
 test('picks the lines that bear on the message, best first, once per session', () => {

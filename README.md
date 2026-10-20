@@ -459,9 +459,16 @@ fingerprint>"`, sending the page `no-store`, and adds a bridge script first in i
   or remove from each memory file. Memory is loaded into every thread, so it is not a log: at most three lines a file
   per run, only what a teammate would need in an unrelated thread and could not find with its tools (never the
   thread's progress, what Brigade or a repository already shows, or what emails and websites said), and the same run
-  removes lines that are wrong, repeated or below that bar, so memory cleans itself. The API applies those lines (`applyMemoryEdit`) one file at a time, so threads
-  ending together never overwrite each other or people's edits. A private thread (set by its starter) leaves
-  workspace memory alone, and its summary is searchable only by the starter.
+  removes lines that are wrong, repeated or below that bar, so memory cleans itself. It reads each memory file
+  whole; a file past 30,000 characters is tidied by the same run (up to 20 repeated, replaced or outdated lines
+  removed, near repeats merged), long before the 50,000 a file holds. The API applies those lines
+  (`applyMemoryEdit`) one file at a time, so threads ending together never overwrite each other or people's edits,
+  and keeps the lines a run removed in the audit log (`memory.updated`), with any it could not add to a full file.
+  A private thread (set by its starter) leaves workspace memory alone, and its summary is searchable only by the
+  starter. One-off runs like this one use Claude Code's 5-minute prompt cache, since their prompt is read once.
+- **Loading memory.** Past 16,000 characters, a memory file in the instructions keeps its newest lines (new and
+  corrected lines go at the end); the older ones come into a turn when they bear on its message (`recall.ts`), and
+  search finds them. Codex is allowed to read all of a long AGENTS.md (`project_doc_max_bytes`).
 - **Search** is PostgreSQL full text: a generated `tsvector` (path weighted over text; `english` stemming for text,
   `simple` for paths) with a GIN index, queried with `websearch_to_tsquery`. Teammates get `search_workspace`
   (answered like a connector call); a teammate finds its own memory, never another teammate's.

@@ -22,6 +22,7 @@ import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
 import { folderRules, teammateLibraryAccess } from './library-folders.js'
 import { actorNames, ensureFirstVersion, recordVersion } from './library-history.js'
+import { applyMemoryEdit } from './memory-edit.js'
 import { DOCX, officeText, PPTX, XLSX } from './previews.js'
 
 /** Text kept for search per file; PostgreSQL's tsvector has a 1 MB limit. */
@@ -429,39 +430,6 @@ export async function writeMemory(
   return row
 }
 
-const normalize = (line: string) =>
-  line
-    .replace(/^\s*[-*+]\s+/, '')
-    .trim()
-    .toLowerCase()
-
-/**
- * Remove the lines a thread found wrong and add what it learned, keeping
- * everything else, people's edits included. Applied here so that two threads
- * ending together never overwrite each other.
- */
-export function applyMemoryEdit(text: string, edit: MemoryEdit) {
-  const remove = new Set(edit.remove.map(normalize))
-  const lines = text.split('\n').filter((l) => !l.trim() || !remove.has(normalize(l)))
-  const removed = text.split('\n').length - lines.length
-  const present = new Set(lines.map(normalize))
-  let out = lines.join('\n').replace(/\n*$/, '\n')
-  const lastLine = lines.findLast((l) => l.trim()) ?? ''
-  let added = 0
-  for (const line of edit.add) {
-    const key = normalize(line)
-    if (present.has(key)) continue
-    const bullet = `- ${line.replace(/^\s*[-*+]\s+/, '').replace(/\s*\n\s*/g, ' ')}\n`
-    // A list after a paragraph needs a blank line before it.
-    const gap = added === 0 && !/^\s*[-*+]\s/.test(lastLine) && !out.endsWith('\n\n') ? '\n' : ''
-    if (out.length + gap.length + bullet.length > MEMORY_MAX) break
-    out += gap + bullet
-    present.add(key)
-    added++
-  }
-  return { text: out, added, removed }
-}
-
 /** Apply a thread's edit to a memory file, creating it on first use. */
 export async function editMemory(
   db: ScopedDb,
@@ -481,7 +449,26 @@ export async function editMemory(
       where: { ...scope, kind: target.kind, path },
     })
     const result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.name), edit)
-    if (result.added === 0 && result.removed === 0) return
+    if (result.dropped > 0)
+      console.warn(
+        `memory ${path}: full, ${result.dropped} new lines left out (thread ${sessionId})`,
+      )
+    if (result.added === 0 && result.removed === 0) {
+      // Nothing changed, but a full file left lines out: that is said in the audit log.
+      if (current && result.dropped > 0)
+        await tx.auditEntry.create({
+          data: {
+            ...scope,
+            actorType: actor.type,
+            actorId: actor.id,
+            action: 'memory.updated',
+            targetType: 'document',
+            targetId: current.id,
+            data: { kind: target.kind, sessionId, added: 0, removed: 0, dropped: result.dropped },
+          },
+        })
+      return
+    }
     const fields = {
       text: result.text,
       size: Buffer.byteLength(result.text),
@@ -508,7 +495,15 @@ export async function editMemory(
         action: 'memory.updated',
         targetType: 'document',
         targetId: row.id,
-        data: { kind: target.kind, sessionId, added: result.added, removed: result.removed },
+        // The lines it removed, so a person can put one back.
+        data: {
+          kind: target.kind,
+          sessionId,
+          added: result.added,
+          removed: result.removed,
+          ...(result.removedLines.length ? { removedLines: result.removedLines } : {}),
+          ...(result.dropped ? { dropped: result.dropped } : {}),
+        },
       },
     })
     return row

@@ -198,6 +198,9 @@ const RESTARTED =
 const ASKED =
   'In case your conversation came back without it, this is the latest message you were answering:'
 
+/** What Codex may read of a thread's AGENTS.md (its own default is 32 KiB). */
+const INSTRUCTIONS_MAX_BYTES = 256 * 1024
+
 /** The teammate's model for the harness; none leaves Claude Code on the account's own. */
 function withModel(teammate: Pick<ThreadSpec['teammate'], 'harness' | 'model'>) {
   const model = runModel(teammate.harness, teammate.model)
@@ -225,7 +228,12 @@ function createAgent(
   // The thread's effort; none leaves each CLI on its own default.
   const effort = spec.effort ?? undefined
   const harness = codex
-    ? createCodex({ ...settings, ...(effort ? { reasoningEffort: effort } : {}) })
+    ? createCodex({
+        ...settings,
+        // Codex reads 32 KiB of AGENTS.md by default; Brigade's, with memory last, is longer.
+        codexConfig: { project_doc_max_bytes: INSTRUCTIONS_MAX_BYTES },
+        ...(effort ? { reasoningEffort: effort } : {}),
+      })
     : createClaudeCode({ ...settings, ...(effort ? { effort } : {}) })
   const tools = {
     // Connector tools grow with each account connected; Codex loads them on demand.
@@ -1480,7 +1488,11 @@ export async function runOnce(input: {
   purpose?: string
 }): Promise<string> {
   const { spec, workDir, runAs, purpose = 'memory' } = input
-  const env = await prepare(workDir, spec.account, spec.sessionId, runAs)
+  const env = {
+    ...(await prepare(workDir, spec.account, spec.sessionId, runAs)),
+    // Its prompt is read once: a one-hour cache write costs twice the input, a five-minute one 1.25 times.
+    CLAUDE_CODE_PROMPT_CACHE_TTL: '5m',
+  }
   const codex = spec.teammate.harness === 'codex'
   const settings = { auth: {} }
   const agent = new HarnessAgent({
