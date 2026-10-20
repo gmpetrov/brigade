@@ -1,21 +1,7 @@
 // Where a pull request's review stands, read from its thread (src/reviews.ts): shared by the
 // pull requests' lists (src/pull-requests.ts) and the Tasks board (src/tasks.ts), so Needs you
 // says the same everywhere.
-import type { MergeStatus } from '@brigade/contracts'
 import type { Prisma } from './db.js'
-
-/** A merge Brigade makes (Resolve conflicts), or one that stopped and waits on a person. */
-const MERGE_STATES = ['stuck', 'resolving', 'merging'] as const
-
-/**
- * A merge's status as the dashboard reads it. The column keeps the review loop's old values,
- * which only the API deployed before reviews in child threads may still write: none.
- */
-export const mergeStatusOf = (status: string): MergeStatus =>
-  (MERGE_STATES as readonly string[]).includes(status) ? (status as MergeStatus) : 'none'
-
-/** For the database: a pull request with no merge under way and none stopped. */
-export const NO_MERGE = { notIn: [...MERGE_STATES] as (typeof MERGE_STATES)[number][] }
 
 /** A thread's statuses while at work, or asking a person something. */
 const AT_WORK_OR_ASKING = ['starting', 'running', 'waiting'] as const
@@ -66,10 +52,9 @@ export function pullWaitsOnPerson(p: {
   mergeStatus: string
   reviewSession: ReviewThread | null
 }) {
-  const merge = mergeStatusOf(p.mergeStatus)
   return (
     p.state === 'open' &&
-    (merge === 'stuck' ||
-      (merge === 'none' && !(p.reviewSession && reviewUnderWay(p.reviewSession))))
+    (p.mergeStatus === 'stuck' ||
+      (p.mergeStatus === 'none' && !(p.reviewSession && reviewUnderWay(p.reviewSession))))
   )
 }

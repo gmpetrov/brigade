@@ -795,18 +795,11 @@ model Account {
 // ---------------------------------------------------------------------------
 
 /// Where a merge a person asked for stands. GitHub keeps the pull request's code and state.
-/// In the database it is still the review loop's type and column (ReviewStatus, reviewStatus),
-/// which the API deployed before 20261020200000_reviews_in_child_threads shares for the
-/// minutes both run: what either writes, the other reads.
+/// In the database it keeps the review loop's type and column names (ReviewStatus,
+/// reviewStatus): renaming them would break the API running while the next one starts.
 enum MergeStatus {
   /// No merge under way.
   none
-  /// The review loop's, gone with it (src/reviews.ts): only that older API may still write
-  /// them, while it runs. Read as none.
-  reviewing
-  fixing
-  approved
-  changes_requested
   /// It stopped and a person has a ticket: the conflicts were not resolved, or GitHub refuses the merge.
   stuck
   /// A person asked to merge it once its conflicts are resolved: the author teammate's turn.
@@ -866,10 +859,6 @@ model PullRequest {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   reviews             PullRequestReview[]
-  /// The review loop's, gone with it: out of the client, kept for the API deployed before
-  /// 20261020200000_reviews_in_child_threads while it runs. A later migration drops them.
-  autoMerge           Boolean             @default(false) @ignore
-  reviewerTeammateId  String?             @ignore
 
   @@unique([workspaceId, repository, number])
   @@index([sessionId])
@@ -1393,11 +1382,11 @@ model Document {
 /// merged, outdated, removed by a person) are the memory's archive: search finds
 /// them and people can put them back. The file's text stays the source of truth.
 model MemoryLine {
-  id                String     @id @default(cuid())
+  id                String                   @id @default(cuid())
   organizationId    String
   workspaceId       String
   documentId        String
-  document          Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document          Document                 @relation(fields: [documentId], references: [id], onDelete: Cascade)
   /// A SHA-256 of the line as compared (no bullet, any case, any spacing), so any length fits the index.
   key               String
   /// The line as last written, without its bullet.
@@ -1410,9 +1399,9 @@ model MemoryLine {
   createdById       String?
   /// The thread it was learned in.
   sessionId         String?
-  createdAt         DateTime   @default(now())
+  createdAt         DateTime                 @default(now())
   /// There before memory kept dates: learned before createdAt.
-  legacy            Boolean    @default(false)
+  legacy            Boolean                  @default(false)
   /// The last time a thread found it still true.
   confirmedAt       DateTime?
   /// Set while it is out of the file.
