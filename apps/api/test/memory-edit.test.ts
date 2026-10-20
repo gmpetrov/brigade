@@ -321,3 +321,15 @@ test('a line older than dates that a thread confirms is dated today', () => {
   const again = planLineSync(text, text, [legacy], context({ confirm }))
   assert.deepEqual(again.update[0]?.data, { confirmedAt: now, legacy: false })
 })
+
+test('an archived line older than dates, put back, is dated today', () => {
+  const archived = row('Old fact.', {
+    legacy: true,
+    createdAt: day(3),
+    createdByType: null,
+    archivedAt: day(1),
+  })
+  const plan = planLineSync('# M\n', '# M\n\n- Old fact.\n', [archived], context())
+  assert.equal(plan.update[0]?.data.legacy, false)
+  assert.deepEqual(plan.update[0]?.data.confirmedAt, now)
+})
