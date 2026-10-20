@@ -11,6 +11,7 @@ import {
   type SaveSkill,
   type SaveSkillPack,
   type Skill,
+  type SkillCommand,
   type SkillFile,
   type SkillImport,
   type SkillPack,
@@ -118,6 +119,15 @@ export async function toSkills(db: ScopedDb, rows: Row[]): Promise<Skill[]> {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     }
+  })
+}
+
+/** The skills that are on, their pack's switch too, by name: what the composer offers as `/name`. */
+export function skillCommands(db: ScopedDb): Promise<SkillCommand[]> {
+  return db.skill.findMany({
+    where: { enabled: true, OR: [{ packId: null }, { pack: { enabled: true } }] },
+    select: { name: true, description: true },
+    orderBy: { name: 'asc' },
   })
 }
 

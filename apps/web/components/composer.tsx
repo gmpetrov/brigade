@@ -5,7 +5,7 @@ import {
   MESSAGE_COMMANDS,
   messageCommand,
   skillCommand,
-  type Skill,
+  type SkillCommand,
   type DesignSystem,
   parseMentions,
   type Mention,
@@ -353,12 +353,15 @@ const isMessageCommand = (name: string): name is MessageCommand => name in MESSA
 
 /** The workspace's skills that are on (and their packs): each a command, `/name`. */
 export function useSkillCommands(): CommandOption[] {
-  const skills = useApi<Skill[]>('/skills')
+  const skills = useApi<SkillCommand[]>('/skills/commands')
   return useMemo(
     () =>
-      (skills.data ?? [])
-        .filter((s) => s.active)
-        .map((s) => ({ name: s.name, label: s.name, description: s.description, skill: true })),
+      (skills.data ?? []).map((s) => ({
+        name: s.name,
+        label: s.name,
+        description: s.description,
+        skill: true,
+      })),
     [skills.data],
   )
 }

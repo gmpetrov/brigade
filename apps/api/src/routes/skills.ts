@@ -29,6 +29,7 @@ import {
   previewImport,
   savePack,
   saveSkill,
+  skillCommands,
   toPack,
   toSkills,
   updatePack,
@@ -38,6 +39,9 @@ export const skills = new Hono<AppEnv>()
   .use(requireUser, requireWorkspace)
 
   .get('/', async (c) => c.json(await toSkills(c.var.db, await listSkills(c.var.db, c.var.scope))))
+
+  /** The skills that are on, for the composer's `/name` commands: names and descriptions only. */
+  .get('/commands', async (c) => c.json(await skillCommands(c.var.db)))
 
   .get('/packs', async (c) => c.json((await listPacks(c.var.db)).map(toPack)))
 
