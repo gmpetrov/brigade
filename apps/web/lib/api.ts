@@ -167,6 +167,10 @@ export const attachmentUrl = (id: string, download = false) =>
 export const threadImageUrl = (threadId: string, path: string, teammateId?: string) =>
   `${API_URL}/api/threads/${threadId}/image?${new URLSearchParams({ path, ...(teammateId ? { teammateId } : {}) })}`
 
+/** An image a teammate's tool returned, kept apart from the thread's events (STORED_IMAGE). */
+export const storedImageUrl = (threadId: string, name: string) =>
+  `${API_URL}/api/threads/${threadId}/images/${name}`
+
 /** GET requests sent ahead, by path: see `preload`. */
 const ahead = new Map<string, Promise<unknown>>()
 

@@ -2,9 +2,10 @@
 // the organization and workspace (spec hard constraint 5); callers pass a
 // scope and a document id, never a path from request input.
 import { createReadStream } from 'node:fs'
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
+import { STORED_IMAGE_NAME } from '@brigade/contracts'
 import { AwsClient } from 'aws4fetch'
 import { env } from './config.js'
 import type { Scope } from './db.js'
@@ -70,6 +71,19 @@ export function skillFileKey(scope: Scope, sha256: string) {
     if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
   if (!/^[0-9a-f]{64}$/.test(sha256)) throw new Error('Invalid bucket key part')
   return `${scope.organizationId}/${scope.workspaceId}/skill-files/${sha256}`
+}
+
+/** The bucket folder of the images a thread's events refer to (event-images.ts). */
+export function threadImagesPrefix(scope: Scope, sessionId: string) {
+  for (const part of [scope.organizationId, scope.workspaceId, sessionId])
+    if (!SAFE.test(part)) throw new Error('Invalid bucket key part')
+  return `${scope.organizationId}/${scope.workspaceId}/thread-images/${sessionId}/`
+}
+
+/** The bucket key of an image a thread's events refer to, by its name: `<sha256>.<ext>`. */
+export function threadImageKey(scope: Scope, sessionId: string, name: string) {
+  if (!STORED_IMAGE_NAME.test(name)) throw new Error('Invalid bucket key part')
+  return `${threadImagesPrefix(scope, sessionId)}${name}`
 }
 
 const REPO_PART = /^[a-z0-9_.-]{1,100}$/
@@ -202,6 +216,39 @@ export async function streamObject(key: string): Promise<ReadableStream<Uint8Arr
   if (!response.ok || !response.body) throw new Error(`bucket get failed: ${response.status}`)
   return response.body
 }
+
+/** The keys of every object in a folder, such as `threadImagesPrefix`: it ends with a slash. */
+export async function listObjects(prefix: string): Promise<string[]> {
+  if (!prefix.endsWith('/')) throw new Error('List a folder')
+  if (!r2) {
+    const entries = await readdir(join(env.BUCKET_DIR, prefix), { withFileTypes: true }).catch(
+      () => [],
+    )
+    return entries.filter((e) => e.isFile()).map((e) => `${prefix}${e.name}`)
+  }
+  const keys: string[] = []
+  let token: string | undefined
+  do {
+    const query = new URLSearchParams({ 'list-type': '2', prefix })
+    if (token) query.set('continuation-token', token)
+    const response = await r2.client.fetch(`${r2.base}?${query}`)
+    if (!response.ok) throw new Error(`bucket list failed: ${response.status}`)
+    const xml = await response.text()
+    for (const [, key] of xml.matchAll(/<Key>([^<]*)<\/Key>/g)) keys.push(unescapeXml(key!))
+    token = /<IsTruncated>true<\/IsTruncated>/.test(xml)
+      ? unescapeXml(xml.match(/<NextContinuationToken>([^<]*)</)?.[1] ?? '') || undefined
+      : undefined
+  } while (token)
+  return keys
+}
+
+const unescapeXml = (text: string) =>
+  text
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&')
 
 export async function deleteObject(key: string) {
   if (!r2) return rm(join(env.BUCKET_DIR, key), { force: true })
