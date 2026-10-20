@@ -823,7 +823,7 @@ export async function handleChildCall(
     ])
     return {
       ...(own ? brief(child) : followedBrief(child, true)),
-      lastMessage: clipReport(final, 8_000),
+      lastMessage: clipReport(final, 40_000),
       pullRequests: pulls.map((p) => ({
         ...p,
         url: `https://github.com/${p.repository}/pull/${p.number}`,

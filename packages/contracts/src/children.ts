@@ -94,7 +94,12 @@ const STATUS_WORDS: Record<ChildReportStatus, string> = {
 }
 
 /** How each note ends: what to do next, for the teammate only (forPeople leaves it out). */
-const CHILD_HINT = 'When you are done, call `report` once with what you found, then end your turn.'
+const CHILD_HINT =
+  'Your files, /tmp included, are not visible from the thread that started you: put everything it ' +
+  'needs (a review, its findings, the full results) in your last message, which it reads whole, ' +
+  'and keep `report` to a few lines. When you are done, call `report` once, then end your turn.'
+/** CHILD_HINT as children were told it before, still in their first messages. */
+const CHILD_HINT_BEFORE = 'When you are done, call `report` once with what you found, then end your turn.'
 const BATCH_HINT =
   '`read_child` gives a child’s full report and what it produced. To tell one more, ' +
   '`message_thread` with its threadId: it carries on and reports again. ' +
@@ -354,6 +359,7 @@ export const asksParallel = (text: string) => text.endsWith(PARALLEL_HINT)
 export function forPeople(text: string) {
   for (const hint of [
     CHILD_HINT,
+    CHILD_HINT_BEFORE,
     BATCH_HINT,
     AFTER_PERSON_HINT,
     SINGLE_HINT,

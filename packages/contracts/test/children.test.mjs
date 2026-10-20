@@ -98,6 +98,11 @@ test('people read a note without what it tells the teammate to do next', () => {
   assert.match(single, /\n\nx$/)
   const task = forPeople(childPrompt({ from: 'Riley', parentTitle: 'P', instructions: 'Do it' }))
   assert.match(task, /\n\nDo it$/)
+  // A child's first message from before its hint changed reads the same.
+  const before =
+    'Riley started this thread from the thread “P” and waits for your report.\n\nDo it\n\n' +
+    'When you are done, call `report` once with what you found, then end your turn.'
+  assert.equal(forPeople(before), forPeople(childPrompt({ from: 'Riley', parentTitle: 'P', instructions: 'Do it' })))
   // The teammate still gets them, and a person's own words are left as they are.
   assert.match(batchNote(one, []), /`read_child`/)
   assert.equal(forPeople('Call `report` when done.'), 'Call `report` when done.')

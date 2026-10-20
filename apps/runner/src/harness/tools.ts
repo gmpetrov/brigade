@@ -1865,7 +1865,9 @@ export function childTools(
           'status: report when you have something to tell (what you found or did, with links), nothing when there is ' +
           'nothing new (a scheduled check that found nothing: it wakes nobody), needs_person when you opened a ticket ' +
           'and wait on a person, failed when you could not do it (say why). The summary is what the parent reads ' +
-          'first: a few lines, the answer first. Without a report, your last message stands for it.',
+          'first: a few lines, the answer first. Put the full detail (a review, every finding) in your last ' +
+          'message, which the parent reads whole with read_child, never in a file: your files, /tmp included, ' +
+          'are not visible from its thread. Without a report, your last message stands for it.',
         inputSchema: jsonSchema<{
           status: 'report' | 'nothing' | 'needs_person' | 'failed'
           summary: string
