@@ -12,6 +12,10 @@ import {
   mayChangeQueued,
   noteThreads,
   parentMessage,
+  REPORT_FILES_MAX,
+  REPORT_MAX,
+  REPORT_START,
+  ScheduleOperation,
   singleNote,
   wakesParent,
 } from '../dist/index.js'
@@ -36,6 +40,66 @@ test('a batch note lists each child, and what still runs', () => {
   assert.match(note, /- Sam · “Upgrade” \(c2\): needs a person/)
   assert.match(note, /Still working past the time you gave them/)
   assert.match(note, /- Riley · “Slow” \(c3\)/)
+})
+
+test('a report carries the whole of what its parent needs, and up to ten files', () => {
+  const op = (summary, files) => ({
+    name: 'report',
+    status: 'report',
+    summary,
+    ...(files ? { files } : {}),
+  })
+  // A review of eleven findings, its reproductions inline: far past the few lines it once took.
+  assert.ok(ScheduleOperation.safeParse(op('x'.repeat(9_000))).success)
+  assert.ok(ScheduleOperation.safeParse(op('x'.repeat(REPORT_MAX))).success)
+  assert.ok(!ScheduleOperation.safeParse(op('x'.repeat(REPORT_MAX + 1))).success)
+  const ids = Array.from({ length: REPORT_FILES_MAX }, (_, i) => `att${i}`)
+  assert.ok(ScheduleOperation.safeParse(op('x', ids)).success)
+  assert.ok(!ScheduleOperation.safeParse(op('x', [...ids, 'one-more'])).success)
+})
+
+test("a note gives a report's start, and where the files it sent are", () => {
+  const long = { ...report('report', `Found 11 problems.\n\n${'detail '.repeat(1_000)}`) }
+  const files = ['attachments/bridge-repro.mjs', 'attachments/runner-repro.mts']
+  const single = singleNote({
+    id: 'c1',
+    title: 'Review',
+    teammate: 'Cody',
+    schedule: null,
+    report: { ...long, files },
+  })
+  const [card] = noteThreads(single).threads
+  assert.ok(card.summary.startsWith('Found 11 problems.'))
+  // Its start, cut where the note stops; read_child gives it whole.
+  assert.ok(card.summary.length < REPORT_START + 200)
+  assert.match(
+    card.summary,
+    /…\n\nFiles it sent \(in your working folder\): `attachments\/bridge-repro\.mjs`, `attachments\/runner-repro\.mts`\.$/,
+  )
+  const batch = batchNote(
+    [
+      {
+        id: 'c1',
+        title: 'Review',
+        teammate: 'Cody',
+        report: { ...report('report', 'Two problems.'), files },
+      },
+    ],
+    [],
+  )
+  assert.match(
+    batch,
+    /- Cody · “Review” \(c1\): reports\. Two problems\. Files it sent \(in your working folder\): `attachments\/bridge-repro\.mjs`, `attachments\/runner-repro\.mts`\./,
+  )
+  assert.equal(
+    noteThreads(batch).threads[0].summary,
+    'Two problems. Files it sent (in your working folder): `attachments/bridge-repro.mjs`, `attachments/runner-repro.mts`.',
+  )
+  // Without files, as before.
+  assert.doesNotMatch(
+    batchNote([{ id: 'c1', title: 'A', teammate: 'Cody', report: report('report', 'x') }], []),
+    /Files/,
+  )
 })
 
 test('every note Brigade writes for a parent or a child is recognized, and nothing else', () => {
@@ -102,7 +166,10 @@ test('people read a note without what it tells the teammate to do next', () => {
   const before =
     'Riley started this thread from the thread “P” and waits for your report.\n\nDo it\n\n' +
     'When you are done, call `report` once with what you found, then end your turn.'
-  assert.equal(forPeople(before), forPeople(childPrompt({ from: 'Riley', parentTitle: 'P', instructions: 'Do it' })))
+  assert.equal(
+    forPeople(before),
+    forPeople(childPrompt({ from: 'Riley', parentTitle: 'P', instructions: 'Do it' })),
+  )
   // The teammate still gets them, and a person's own words are left as they are.
   assert.match(batchNote(one, []), /`read_child`/)
   assert.equal(forPeople('Call `report` when done.'), 'Call `report` when done.')

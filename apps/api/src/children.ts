@@ -19,6 +19,8 @@ import {
   FOLLOWERS_PER_THREAD,
   followNote,
   REPORT_AFTER_PERSON_MINUTES,
+  REPORT_MAX,
+  REPORT_START,
   type PlaybookManifest,
   type ScheduleOperation,
   singleNote,
@@ -26,6 +28,7 @@ import {
   wakesParent,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { attachToThread } from './attachments.js'
 import { audit, type Actor } from './audit.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { broadcastThreadStatus, dispatch } from './hub.js'
@@ -339,7 +342,7 @@ export async function reportConversation(scope: Scope, childId: string) {
   const db = scoped(scope)
   const report: ChildReport = {
     status: 'report',
-    summary: clipReport((await lastMessage(childId)) || 'It ended without a word.', 2_000),
+    summary: clipReport((await lastMessage(childId)) || 'It ended without a word.', REPORT_MAX),
     at: new Date().toISOString(),
     fromLastMessage: true,
     afterPerson: true,
@@ -434,7 +437,7 @@ export async function noteChildEvents(
                 status: 'report',
                 summary: clipReport(
                   (await lastMessage(session.id)) || 'It ended without a word.',
-                  2_000,
+                  REPORT_MAX,
                 ),
                 at: event.at,
                 fromLastMessage: true,
@@ -498,6 +501,27 @@ async function atWork(db: ScopedDb, parentId: string) {
 const waitUntil = (minutes: number | undefined) =>
   new Date(Date.now() + (minutes ?? CHILD_WAIT_MINUTES) * 60_000)
 
+/**
+ * The files a child's report sends (its runner sent them first, POST /runner/attachments):
+ * given to its parent, where its runner puts them in each teammate's working folder before
+ * its next turn. Where each is there, or why they could not be.
+ */
+async function reportFiles(
+  db: ScopedDb,
+  scope: Scope,
+  childId: string,
+  parentId: string,
+  ids: string[],
+): Promise<string[] | { error: string }> {
+  const sent = await db.attachment.count({
+    where: { id: { in: ids }, sessionId: childId, source: 'teammate', status: 'ready' },
+  })
+  if (sent !== new Set(ids).size)
+    return { error: 'A file of this report was not found here: call report again' }
+  const { refs } = await attachToThread(db, scope, parentId, ids, null)
+  return refs.map((r) => r.path)
+}
+
 /** A thread's child by id: only its own. */
 async function ownChild(db: ScopedDb, parentId: string, id: string) {
   return db.session.findFirst({ where: { id, parentId }, select: CHILD_SELECT })
@@ -523,7 +547,9 @@ const brief = (c: {
     waitingForIt: c.awaited && !report,
     ...(c.schedule ? { schedule: c.schedule.title } : {}),
     startedAt: c.createdAt.toISOString(),
-    ...(report ? { report: { status: report.status, summary: report.summary } } : {}),
+    ...(report
+      ? { report: { status: report.status, summary: clipReport(report.summary, REPORT_START) } }
+      : {}),
   }
 }
 
@@ -760,10 +786,16 @@ export async function handleChildCall(
         error:
           'This thread has no parent: report is only for a child thread. Just reply to the person.',
       }
+    // Its files are its parent's now: in each of its teammates' folders before its next turn.
+    const files = op.files?.length
+      ? await reportFiles(db, scope, session.id, session.parentId, op.files)
+      : []
+    if (!Array.isArray(files)) return files
     const report: ChildReport = {
       status: op.status,
       summary: op.summary,
       at: new Date().toISOString(),
+      ...(files.length ? { files } : {}),
     }
     await db.session.updateMany({
       where: { id: session.id },
@@ -771,7 +803,9 @@ export async function handleChildCall(
     })
     return {
       ok: true,
-      note: 'Noted: it reaches the parent thread when your turn ends. End your turn now with a short closing line.',
+      note:
+        `Noted${files.length ? `, with ${files.length === 1 ? 'its file' : `its ${files.length} files`}` : ''}: ` +
+        'it reaches the parent thread when your turn ends. End your turn now with a short closing line.',
     }
   }
 
@@ -814,16 +848,34 @@ export async function handleChildCall(
         error:
           'No child of this thread, nor a thread it follows, has that id; list_children shows them',
       }
-    const [final, pulls] = await Promise.all([
+    const [final, pulls, files] = await Promise.all([
       lastMessage(child.id),
       db.pullRequest.findMany({
         where: { sessionId: child.id },
         select: { repository: true, number: true, title: true, state: true },
       }),
+      // What it sent to this thread, in each of its teammates' working folders.
+      db.threadAttachment.findMany({
+        where: { sessionId: session.id, attachment: { sessionId: child.id } },
+        select: { path: true, attachment: { select: { size: true, contentType: true } } },
+        orderBy: { createdAt: 'asc' },
+      }),
     ])
+    const report = reportOf(child.report)
     return {
       ...(own ? brief(child) : followedBrief(child, true)),
-      lastMessage: clipReport(final, 40_000),
+      ...(report ? { report: { status: report.status, summary: report.summary } } : {}),
+      ...(files.length
+        ? {
+            files: files.map((f) => ({
+              path: f.path,
+              size: f.attachment.size,
+              contentType: f.attachment.contentType,
+            })),
+          }
+        : {}),
+      // A report made of its last message is not said twice.
+      ...(final && final !== report?.summary ? { lastMessage: clipReport(final, 8_000) } : {}),
       pullRequests: pulls.map((p) => ({
         ...p,
         url: `https://github.com/${p.repository}/pull/${p.number}`,

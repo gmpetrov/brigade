@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import {
+  clipReport,
   FILE_VIEW_MAX,
   FOCUS_PROTOCOL,
+  REPORT_START,
   RETRY_PROTOCOL,
   VIEWABLE_FILE,
   AnswerQuestion,
@@ -86,7 +88,7 @@ import { reopenOnMessage } from '../tasks.js'
 import { recorder } from '../teaching.js'
 import { setThreadArchived } from '../thread-archive.js'
 import { latersOf, setLater } from '../later.js'
-import { descendants, reportConversation } from '../children.js'
+import { descendants, reportConversation, reportOf } from '../children.js'
 import { deleteThread } from '../thread-delete.js'
 import { stopWatching } from '../replies.js'
 import { cancelWakeup } from '../wakeups.js'
@@ -404,10 +406,17 @@ export const threads = new Hono<AppEnv>()
       attachments: thread.attachments.map((a) => toInfo(a.attachment, a.path)),
       followers: thread.followers.map((f) => f.follower),
       // Whether this member may send a child's report now (POST /:id/report), as in the child itself.
-      children: thread.children.map(({ startedByMemberId, othersMayPrompt, ...child }) => ({
-        ...child,
-        mayPrompt: startedByMemberId === c.var.scope.memberId || othersMayPrompt,
-      })),
+      children: thread.children.map(({ startedByMemberId, othersMayPrompt, ...child }) => {
+        // Its line shows the start of its report; the child keeps the whole of it.
+        const report = reportOf(child.report)
+        return {
+          ...child,
+          ...(report
+            ? { report: { ...report, summary: clipReport(report.summary, REPORT_START) } }
+            : {}),
+          mayPrompt: startedByMemberId === c.var.scope.memberId || othersMayPrompt,
+        }
+      }),
       mayPrompt: thread.startedByMemberId === c.var.scope.memberId || thread.othersMayPrompt,
       eventsWaitingSince: eventsWaitingSince(thread.id),
     })
