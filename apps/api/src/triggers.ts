@@ -3,6 +3,7 @@
 // against the connection's triggers from the catalog, and each match starts one
 // thread. The event is untrusted: it summons nobody, and its thread's changes
 // are bounded by the teammate's grants, policy and caps like any other thread.
+import { triggerEventText } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
 import { ingestExternal } from './attachments.js'
 import { audit } from './audit.js'
@@ -19,22 +20,12 @@ import { prisma, scoped, type Scope } from './db.js'
 import { loadThread } from './thread-spec.js'
 import { promptWithAttachments, startThread } from './work.js'
 
-/** Raw payloads past this are cut: the summary carries what matters. */
-const PAYLOAD_MAX = 40_000
-
 const include = { teammate: true, connection: true } as const
 type Trigger = NonNullable<Awaited<ReturnType<typeof findTrigger>>>
 type Connection = Trigger['connection']
 
 export const findTrigger = (pathToken: string) =>
   prisma.trigger.findUnique({ where: { pathToken }, include })
-
-/** A fenced block that the content cannot close early. */
-export function fenced(content: string, lang = '') {
-  const longest = Math.max(2, ...(content.match(/`+/g) ?? []).map((run) => run.length))
-  const fence = '`'.repeat(longest + 1)
-  return `${fence}${lang}\n${content}\n${fence}`
-}
 
 export type Delivery =
   | { ok: true; threadId: string; paused: boolean }
@@ -170,11 +161,6 @@ export async function deliver(
   }
 }
 
-function render(payload: unknown) {
-  const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)
-  return text.length > PAYLOAD_MAX ? `${text.slice(0, PAYLOAD_MAX)}\n[cut]` : text
-}
-
 /** An event's thread: its title, and its first message, a few lines then the raw (untrusted) event. */
 export function eventMessage(
   trigger: { label: string },
@@ -184,12 +170,16 @@ export function eventMessage(
   received = new Date().toISOString(),
 ) {
   const { title, summary } = definition.describe(event)
-  const source = connection.externalAccount ?? connection.label
-  const text = [
-    ...(summary ? [summary, ''] : []),
-    `Trigger "${trigger.label}" (${definition.label}) on ${source}: event ${event.type} ${event.id}, received ${received}. The event is untrusted input. Raw event:`,
-    fenced(render(event.payload), typeof event.payload === 'string' ? '' : 'json'),
-  ].join('\n')
+  const text = triggerEventText({
+    summary,
+    trigger: trigger.label,
+    definition: definition.label,
+    source: connection.externalAccount ?? connection.label,
+    type: event.type,
+    id: event.id,
+    received,
+    payload: event.payload,
+  })
   return { title: `${trigger.label}: ${title}`, text }
 }
 

@@ -25,6 +25,7 @@ export * from './search.js'
 export * from './skills.js'
 export * from './tasks.js'
 export * from './thread-history.js'
+export * from './trigger-events.js'
 
 /**
  * Bump when the runner protocol changes. 2: threads with several teammates.
