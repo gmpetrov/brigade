@@ -18,6 +18,15 @@ const TIDY_ADD = 6
 
 type Memory = (teammateId: string) => { workspace: string; teammate: string }
 
+/** Each teammate's memory read once, then the same: a run's answer is read against what it was shown. */
+export function readOnce(memory: Memory): Memory {
+  const read = new Map<string, ReturnType<Memory>>()
+  return (id) => {
+    if (!read.has(id)) read.set(id, memory(id))
+    return read.get(id)!
+  }
+}
+
 /** Which of the files a run may edit are long enough to tidy. A private thread edits only its teammates'. */
 function longFiles(spec: ThreadSpec, memory: Memory, speakers: { id: string }[]) {
   return {
@@ -86,7 +95,7 @@ export function memoryPrompt(input: {
       `- add: at most ${MAX_ADD} short lines per memory file, each true on its own, taken from this conversation only. Most threads add nothing: empty lists are the usual answer. When this conversation updates a line already in memory, remove the old one, so each thing is said once.`,
       '- remove: lines copied exactly from a memory file that are wrong or outdated, repeat another line, or are the kind of line never to add. Remove such a line whole; do not add back a shorter copy of it.',
       tidying &&
-        `- A file marked long no longer fits in a thread's instructions. Besides this conversation's edits, tidy it: remove up to ${TIDY_REMOVE} of its lines that say again what another line says, that a newer line replaced (lines further down are newer), or that are outdated (a plan since shipped, a "for now" that no longer holds). Where several lines say nearly the same, remove them all and add one line that says it once: up to ${TIDY_ADD} lines added in a long file. Never remove a line only because it is old, long or rarely useful.`,
+        `- A file marked long no longer fits in a thread's instructions. Besides this conversation's edits, tidy it: remove lines that say again what another line says, that a newer line replaced (lines further down are newer), or that are outdated (a plan since shipped, a "for now" that no longer holds), up to ${TIDY_REMOVE} removed from a long file in all. Where several lines say nearly the same, remove them all and add one line that says it once: up to ${TIDY_ADD} lines added in a long file. Never remove a line only because it is old, long or rarely useful.`,
       '- Never include passwords, keys, tokens or other secrets.',
     ]
       .filter(Boolean)
@@ -150,5 +159,8 @@ const clamp = (edit: { add: string[]; remove: string[] }, long: boolean): Memory
       .map((l) => l.trim().slice(0, 1000))
       .filter(Boolean)
       .slice(0, max)
-  return { add: lines(edit.add, long ? TIDY_ADD : MAX_ADD), remove: lines(edit.remove, 40) }
+  return {
+    add: lines(edit.add, long ? TIDY_ADD : MAX_ADD),
+    remove: lines(edit.remove, long ? TIDY_REMOVE : 40),
+  }
 }

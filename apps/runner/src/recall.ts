@@ -96,6 +96,34 @@ export function pickLines(candidates: string[], message: string, already: Set<st
   return picked
 }
 
+/** The lines a memory shows in an instructions file, as recall compares them. */
+export function shownLines(texts: string[], limit: number) {
+  return new Set(
+    texts.flatMap((text) =>
+      newestLines(text, limit)
+        .shown.split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+/**
+ * The lines recall may bring: those a running session's instructions file did
+ * not show (cut from it, or learned since it started). With no session running,
+ * the one that starts loads the newest lines, so the older ones.
+ */
+export function recallCandidates(texts: string[], limit: number, shown?: ReadonlySet<string>) {
+  return shown
+    ? texts.flatMap((text) =>
+        text
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l && !shown.has(l)),
+      )
+    : texts.flatMap((text) => newestLines(text, limit).left)
+}
+
 /** What a turn is told of its recalled lines; empty when there are none. */
 export function recalledBlock(lines: string[]) {
   if (lines.length === 0) return ''

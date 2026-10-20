@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ThreadSpec } from '@brigade/contracts'
-import { memoryPrompt, parseMemory, TIDY_AT } from '../src/memory.js'
+import { memoryPrompt, parseMemory, readOnce, TIDY_AT } from '../src/memory.js'
 
 const riley = { id: 'riley', name: 'Riley' }
 const spec = (project: string, isPrivate = false) =>
@@ -71,4 +71,33 @@ test('a private thread is not asked to tidy what it may not edit', () => {
     speakers: [riley],
   })
   assert.doesNotMatch(prompt, /tidy/)
+})
+
+test('a long file loses at most 20 lines to one run', () => {
+  const answer = JSON.stringify({
+    summary: 'x',
+    workspace: { add: [], remove: [] },
+    project: { add: [], remove: Array.from({ length: 40 }, (_, i) => `- project line ${i}`) },
+    teammates: {},
+  })
+  const update = parseMemory(answer, spec(lines(400, 'project')), [riley], () => ({
+    workspace: '- a',
+    teammate: '- b',
+  }))
+  assert.equal(update?.project?.remove.length, 20)
+})
+
+test('a run’s answer is read against the memory it was shown, even if it changed meanwhile', () => {
+  let live = lines(400, 'lesson')
+  const memory = readOnce(() => ({ workspace: '- a', teammate: live }))
+  const seen = memory('riley').teammate
+  // Another run tidies the file below the threshold while this one runs.
+  live = '- short'
+  assert.equal(memory('riley').teammate, seen)
+  const answer = JSON.stringify({
+    summary: 'x',
+    teammates: { Riley: { add: ['1', '2', '3', '4', '5', '6'], remove: ['- lesson line 1'] } },
+  })
+  // The file was long when the run read it: its merged lines are kept with its removals.
+  assert.equal(parseMemory(answer, spec('- c'), [riley], memory)?.teammates[0]?.edit.add.length, 6)
 })
