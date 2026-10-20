@@ -6224,6 +6224,44 @@ svg.i {
   padding-top: 96px;
 }
 
+.legal {
+  padding: 72px 0 96px;
+}
+.legal .wrap {
+  max-width: 720px;
+}
+.legal h1 {
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  margin-bottom: 32px;
+}
+.legal h2 {
+  margin-top: 40px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.legal p,
+.legal li {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+.legal ul {
+  padding-left: 20px;
+  list-style: disc;
+}
+.legal strong {
+  color: var(--foreground);
+}
+.legal a {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
 /* =================== Not in the design: what the code adds =================== */
 /* The iPhone card's way in is a step to take in Safari, not a link. */
 .dl-hint {
@@ -6267,6 +6305,12 @@ a.lgr:hover .tt {
     padding-top: 36px;
   }
   .hiw h1 {
+    font-size: 40px;
+  }
+  .legal {
+    padding-top: 36px;
+  }
+  .legal h1 {
     font-size: 40px;
   }
   .hiw .btn {
