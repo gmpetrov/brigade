@@ -35,6 +35,7 @@ export async function loadThread(db: ScopedDb, id: string) {
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       task: { select: { id: true, title: true, description: true, completedAt: true } },
       parent: { select: { id: true, title: true } },
+      startedBy: { select: { suggestions: true } },
     },
   })
   if (!thread) throw new HTTPException(404, { message: 'Thread not found' })
@@ -211,6 +212,13 @@ export async function specFor(
     },
     permissionMode: permissionMode(thread.computer.kind),
     effort: Effort.nullable().catch(null).parse(thread.effort),
+    // A guess at the person's next message after each turn, on the starter's account: in a
+    // thread a member started, while they keep it on. Older runners ignore it.
+    suggestions:
+      teammate.harness === 'claude_code' &&
+      thread.origin === 'member' &&
+      !playbook &&
+      thread.startedBy.suggestions,
     starter: teammate.id === thread.teammateId,
     teammates: thread.teammates.map((t) => ({ id: t.teammate.id, name: t.teammate.name })),
     roster,

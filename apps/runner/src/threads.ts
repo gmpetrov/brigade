@@ -134,6 +134,8 @@ type Seat = {
   parkTimer: NodeJS.Timeout | undefined
   /** The running turn's messages and steps: its answer is what hands it on (handOn). */
   turn: (TurnEntry & { text?: string })[]
+  /** The running turn's spec: the teammates its answer may hand on to. */
+  spec?: ThreadSpec
   /** The running turn only waits on work started in the background: a new message goes straight in. */
   waiting: boolean
   /** Memory lines learned since the session started that it was told (memoryNews). */
@@ -336,6 +338,8 @@ export class Threads {
         thread.messages.set(message.id, message)
         this.emitQueued(spec.sessionId, message)
       }
+      // A turn answered already only waits on Claude Code's guess, which no longer matters.
+      if (thread.running) void thread.harnesses.get(thread.running.teammateId)?.harness.stopDrain()
       this.enqueueMessage(thread, message)
       // A turn that only waits on its background work takes it at once, as if steered,
       // unless one is already in it: then it waits its turn (steerQueued).
@@ -796,6 +800,7 @@ export class Threads {
           turnId,
         })
         seat.turn = []
+        seat.spec = spec
         const outcome = await seat.harness.run(turn, spec, controller.signal)
         if (outcome.status === 'failed' && !controller.signal.aborted)
           this.failed(thread, spec, outcome.error ?? '')
@@ -911,14 +916,22 @@ export class Threads {
     })
   }
 
-  /** Nothing runs, waits or is queued in the thread: a message can show at once. */
+  /**
+   * Nothing runs (but a turn answered already), waits or is queued in the thread: a message
+   * can show at once.
+   */
   private quiet(thread: Thread) {
     return (
-      !thread.controller &&
+      (!thread.controller || this.answered(thread)) &&
       !thread.memorizing &&
       thread.messages.size === 0 &&
       ![...thread.waiting.values()].some((n) => n > 0)
     )
+  }
+
+  /** The running turn is answered: only Claude Code's guess at the person's next message is left. */
+  private answered(thread: Thread) {
+    return !!thread.running && !!thread.harnesses.get(thread.running.teammateId)?.harness.answered
   }
 
   /** Queue the turns that answer a message: its first teammate's, then the others'. */
@@ -1473,6 +1486,16 @@ export class Threads {
             if (waiting) this.steerQueued(thread, teammateId)
           }
           if (event.type === 'turn.completed') seat!.waiting = false
+          // Answered and handing on (handOn): the teammates it names start now, rather than wait
+          // on a guess at the member's next message their answers are about to replace.
+          if (
+            event.type === 'turn.completed' &&
+            seat!.harness.answered &&
+            mentionedTeammates(answerOf(seat!.turn), seat!.spec ?? spec).some(
+              (id) => id !== teammateId,
+            )
+          )
+            void seat!.harness.stopDrain()
           if (event.type === 'tool.started')
             seat!.turn.push({
               kind: ASIDE_TOOLS.has(bareToolName(event.toolName)) ? 'other' : 'step',

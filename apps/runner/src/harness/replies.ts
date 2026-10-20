@@ -52,6 +52,11 @@ export class ReplyWatch {
     if (this.read === 'after') this.read = 'before'
   }
 
+  /** The turn owes the person a reply (what ask asks for), without asking. */
+  owes() {
+    return this.read === 'nothing' || this.read === 'before'
+  }
+
   /** What to tell the teammate once its turn is over, if it owes the person a reply. Asked once. */
   ask(): string | undefined {
     const ask = this.read === 'nothing' ? NO_REPLY : this.read === 'before' ? AFTER_STEP : undefined

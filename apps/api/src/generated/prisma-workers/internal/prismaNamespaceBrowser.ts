@@ -208,7 +208,8 @@ export const MemberScalarFieldEnum = {
   userId: 'userId',
   role: 'role',
   createdAt: 'createdAt',
-  notify: 'notify'
+  notify: 'notify',
+  suggestions: 'suggestions'
 } as const
 
 export type MemberScalarFieldEnum = (typeof MemberScalarFieldEnum)[keyof typeof MemberScalarFieldEnum]

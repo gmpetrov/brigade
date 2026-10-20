@@ -1,5 +1,5 @@
 diff --git a/dist/bridge/index.mjs b/dist/bridge/index.mjs
-index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665be6f0f060 100644
+index e8da8699576b55f0cc271d7839d01d51cc5d649a..a186c6c50d6bf9c4b660f8de8ae90b9ddea85353 100644
 --- a/dist/bridge/index.mjs
 +++ b/dist/bridge/index.mjs
 @@ -1126,6 +1126,8 @@ function handleStreamEvent({ event, message, state, send, toCommonName }) {
@@ -39,7 +39,35 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
  		}, async (...handlerArgs) => {
  			const [input, extra] = handlerArgs;
  			const metadataToolCallId = extra._meta?.["claudecode/toolUseId"];
-@@ -1792,6 +1800,53 @@ async function runTurn(start, turn) {
+@@ -1724,9 +1732,15 @@ async function runTurn(start, turn) {
+ 			toolUseId
+ 		})
+ 	});
++	// Brigade: Claude Code guesses the person's next message once a turn is over, for the
++	// thread's message box (the runner sets this when the thread wants it). See drain below.
++	const suggesting = env.BRIGADE_PROMPT_SUGGESTIONS === "1";
++	let draining = false;
++	let drainTimer;
+ 	const q = claudeSdk.query({
+ 		prompt: queryInput.input,
+ 		options: {
++			...suggesting ? { promptSuggestions: true } : {},
+ 			...start.model ? { model: start.model } : {},
+ 			...start.maxTurns !== void 0 ? { maxTurns: start.maxTurns } : {},
+ 			...start.agentProgressSummaries !== void 0 ? { agentProgressSummaries: start.agentProgressSummaries } : {},
+@@ -1773,6 +1787,11 @@ async function runTurn(start, turn) {
+ 	let emittedTerminalError = false;
+ 	let emittedTerminalFinish = false;
+ 	const emitTerminalError = (message) => {
++		// Brigade: the turn was answered; a failure while Claude Code guesses only ends the guess.
++		if (draining) {
++			abortCtl.abort();
++			return;
++		}
+ 		const normalized = message?.trim();
+ 		if (!normalized || emittedTerminalError || emittedTerminalFinish) return;
+ 		streamEventState.observedTerminalError = normalized;
+@@ -1792,6 +1811,73 @@ async function runTurn(start, turn) {
  		onCompactionBoundary: (boundary) => compaction.onBoundary(boundary),
  		toCommonName
  	});
@@ -86,16 +114,50 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
 +		reportTimer = setTimeout(() => {
 +			reportPending = false;
 +			ended.clear();
-+			if (!holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) queryInput.close();
++			if (!holding() && queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !drain()) queryInput.close();
 +		}, 6e4);
 +		reportTimer.unref?.();
++	};
++	// Brigade: Claude Code sends its guess only after the turn's last result, and only while its
++	// process lives. Rather than end the query there, its input closes and the process gets to
++	// finish the guess, which it waits for before it exits. The host hears first that the turn
++	// is answered, so nothing waits on the guess; a stop from it ends the process at once.
++	const drain = () => {
++		if (!suggesting || draining) return false;
++		draining = true;
++		queryInput.close();
++		emit({
++			type: "raw",
++			rawValue: {
++				type: "system",
++				subtype: "brigade_answered"
++			}
++		});
++		gracefulAbort = void 0;
++		drainTimer = setTimeout(() => abortCtl.abort(), 2e4);
++		drainTimer.unref?.();
++		return true;
 +	};
  	try {
  		for await (const msg of q) {
  			if (abortCtl.signal.aborted) break;
-@@ -1800,6 +1855,34 @@ async function runTurn(start, turn) {
+@@ -1799,7 +1885,48 @@ async function runTurn(start, turn) {
+ 			if (type === "command_lifecycle") queryInput.handleLifecycle(msg);
  			const sessionId = msg.session_id;
  			if (typeof sessionId === "string" && sessionId.length > 0) lastClaudeSessionId = sessionId;
++			// Brigade: Claude Code's guess at the person's next message goes to the host. It is no
++			// part of the turn, whose counts and timers stay as they were: a report the turn still
++			// waits on keeps its timeout. Draining, the guess was all the drain waited for, and
++			// what the closing process says besides is no part of the turn either.
++			if (type === "prompt_suggestion") {
++				emit({
++					type: "raw",
++					rawValue: msg
++				});
++				if (draining) break;
++				continue;
++			}
++			if (draining) continue;
  			emitStreamEvent(msg);
 +			messages++;
 +			clearTimeout(reportTimer);
@@ -128,7 +190,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
  			if (type === "result") {
  				if (msg.subtype === "success") {
  					if (msg.is_error) {
-@@ -1835,16 +1918,25 @@ async function runTurn(start, turn) {
+@@ -1835,28 +1962,45 @@ async function runTurn(start, turn) {
  						emit,
  						usage: streamEventState.pendingStepUsage ?? harnessUsage
  					});
@@ -136,6 +198,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
 +					if (!queryInput.answersSentMessage(msg)) {
 +						// The answer to the last report: nothing else to wait for.
 +						if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !holding()) {
++							if (drain()) continue;
 +							queryInput.close();
 +							break;
 +						}
@@ -145,6 +208,7 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
  					queryInput.observeResult();
 -					if (!queryInput.hasActiveUserMessages()) {
 +					if (!queryInput.hasActiveUserMessages() && !holding()) {
++						if (drain()) continue;
  						queryInput.close();
  						break;
  					}
@@ -154,14 +218,39 @@ index e8da8699576b55f0cc271d7839d01d51cc5d649a..dc28ede55f84371fca342bd27c49665b
  			}
 -			if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages()) {
 +			if (queryInput.hasObservedResult && !queryInput.hasActiveUserMessages() && !holding()) {
++				if (drain()) continue;
  				queryInput.close();
  				break;
  			}
-@@ -1857,6 +1949,7 @@ async function runTurn(start, turn) {
- 		return;
+ 		}
+ 	} catch (err) {
+-		if (!turn.abortSignal.aborted && !(abortCtl.signal.aborted && emittedTerminalError)) turn.emitError({
+-			error: err,
+-			message: "claude-code turn failed"
+-		});
+-		return;
++		// Brigade: the turn was answered; how the process ends while it guesses changes nothing.
++		if (!draining || turn.abortSignal.aborted) {
++			if (!turn.abortSignal.aborted && !(abortCtl.signal.aborted && emittedTerminalError)) turn.emitError({
++				error: err,
++				message: "claude-code turn failed"
++			});
++			return;
++		}
  	} finally {
  		gracefulAbort = void 0;
 +		clearTimeout(reportTimer);
++		clearTimeout(drainTimer);
  		if (hardAbortTimer != null) clearTimeout(hardAbortTimer);
  		turn.abortSignal.removeEventListener("abort", onHostAbort);
  		queryInput.close();
+@@ -1865,6 +2009,9 @@ async function runTurn(start, turn) {
+ 		} catch {}
+ 	}
+ 	if (emittedTerminalError) return;
++	// Brigade: stopped by the host while it guessed, the turn is settled there already. A finish
++	// sent now, once the process is gone, would end the host's next turn instead.
++	if (draining && turn.abortSignal.aborted) return;
+ 	emittedTerminalFinish = true;
+ 	emit({
+ 		type: "finish",

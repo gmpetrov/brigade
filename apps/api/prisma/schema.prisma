@@ -119,6 +119,8 @@ model Member {
   homeDismissals        HomeDismissal[]
   /// Which notifications reach their devices (src/notifications.ts).
   notify                NotifyPreset           @default(needed)
+  /// Their message box suggests what they may write next, guessed after each turn on their account.
+  suggestions           Boolean                @default(true)
   pushNotices           PushNotice[]
   /// Playbooks that run on their accounts.
   playbookInstallations PlaybookInstallation[]

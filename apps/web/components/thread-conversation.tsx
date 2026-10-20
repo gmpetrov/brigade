@@ -28,6 +28,7 @@ import {
   mentionsToText,
   type QueuedMessageAction,
   type ReplyTo,
+  suggestionFor,
 } from '@brigade/contracts'
 import Link from 'next/link'
 import {
@@ -50,6 +51,7 @@ import {
 import { EffortButton, type EffortPick } from '@/components/effort'
 import { Composer } from '@/components/composer'
 import { TeammateAvatar, useDashboard } from '@/components/dashboard'
+import { useTouchScreen } from '@/components/desktop-touch'
 import { ComputerPanel, ExpandedComputer } from '@/components/computer-panel'
 import { TeachTask } from '@/components/teach-task'
 import { useDocumentPanel } from '@/components/document-panel'
@@ -200,6 +202,21 @@ export function ThreadConversation({
   // The turn asked to stop, until it ends: a tool can take a moment to give up.
   const [stopping, setStopping] = useState<string>()
   const [text, setText] = useReplyDraft(id)
+  // The teammate's guess at this member's next message, while it stands (suggestionFor).
+  const guess = useMemo(
+    () =>
+      suggestionFor(
+        events.map((e) => e.event),
+        me.suggestions ? me.memberId : null,
+      ),
+    [events, me.memberId, me.suggestions],
+  )
+  const guessSeq = guess ? events[guess.index]?.seq : undefined
+  // Typing writes over it for good, even once the box is empty again; so does taking it.
+  const [dismissed, setDismissed] = useState<number>()
+  useEffect(() => {
+    if (guessSeq !== undefined && text !== '') setDismissed(guessSeq)
+  }, [guessSeq, text])
   // The message the next one replies to, quoted above the composer.
   const [replyTo, setReplyTo] = useState<ReplyTo>()
   useEffect(() => setReplyTo(undefined), [id])
@@ -242,6 +259,8 @@ export function ThreadConversation({
   const [teaching, setTeaching] = useState(false)
   // Recording a task needs a desktop to do it on: not offered on phones.
   const phone = useIsMobile()
+  // No Tab key to take a suggestion: a Use button beside the box instead.
+  const touch = useTouchScreen()
   // One panel beside the thread: a document opened anywhere replaces the file, preview or computer.
   const documents = useDocumentPanel()
   const openFile = (f: { path: string; teammateId?: string }) => {
@@ -438,6 +457,16 @@ export function ThreadConversation({
   const t = thread.data
   const current = status ?? t.status
   const busy = current === 'running' || current === 'starting'
+  // In an empty box only, with nothing attached or quoted, and once the teammate is done.
+  const suggestion =
+    guess &&
+    guessSeq !== dismissed &&
+    !busy &&
+    current !== 'waiting' &&
+    !replyTo &&
+    files.uploads.length === 0
+      ? guess.text
+      : undefined
   const effort: EffortPick = {
     value: effortPicked ? effortPicked.value : t.effort,
     // The starting teammate's model: where Default sits.
@@ -1160,6 +1189,7 @@ export function ThreadConversation({
                         rows={1}
                         typeToFocus
                         placeholder={`Chat with ${answering.name}`}
+                        suggestion={suggestion}
                       />
                     </div>
                     <EffortButton effort={effort} later={effortLater} className="mb-1" />
@@ -1186,6 +1216,20 @@ export function ThreadConversation({
                         }
                       >
                         <CircleStop aria-hidden />
+                      </Button>
+                    )}
+                    {/* No Tab key on a touch screen: Use puts the suggestion in the box, the
+                        keyboard staying down, and the send button takes its place. */}
+                    {suggestion && touch && !text && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mb-1 rounded-full"
+                        onClick={() => setText(suggestion)}
+                        aria-label={`Use the suggested message: ${suggestion}`}
+                      >
+                        Use
                       </Button>
                     )}
                     {(text.trim() || files.uploads.length > 0 || moveTo) && (
