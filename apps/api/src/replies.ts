@@ -19,7 +19,7 @@ const WATCHED_ORIGINS = new Set(['member', 'child'])
 
 /**
  * After a teammate sent an email from a thread: watch its conversation for replies, or keep
- * watching it longer. Until when, and whether the watch is new; null when replies do not wake
+ * watching it longer (again, when it had ended). Until when; null when replies do not wake
  * this thread.
  */
 export async function watchReplies(
@@ -34,7 +34,7 @@ export async function watchReplies(
     subject: string
   },
   now = new Date(),
-): Promise<{ id: string; until: Date; created: boolean } | null> {
+): Promise<{ id: string; until: Date } | null> {
   if (!WATCHED_ORIGINS.has(sent.session.origin) || !sent.conversationKey) return null
   const until = new Date(now.getTime() + REPLY_WATCH_DAYS * 86_400_000)
   const data = {
@@ -54,7 +54,7 @@ export async function watchReplies(
     ? await db.replyWatch.update({ where: { id: existing.id }, data, select: { id: true } })
     : await db.replyWatch.create({ data: { ...where, ...data } as never, select: { id: true } })
   broadcastThreadStatus(scope.workspaceId, sent.session.id, sent.session.status)
-  return { id, until, created: !existing }
+  return { id, until }
 }
 
 /** A watch that cannot work (its mailbox could not be subscribed to): it ends now. */
@@ -86,7 +86,9 @@ export function automatic(headers: { name: string; value: string }[] | undefined
 /**
  * A new email in a mailbox: wake each thread waiting on its conversation. Each email wakes a
  * thread once, even when read again. A thread woken too often with no word from a person stops
- * waiting, as its wake-ups do (a teammate and an autoresponder answering each other).
+ * waiting, as its wake-ups do (a teammate and an autoresponder answering each other); replies
+ * still waiting for an offline computer count toward it. How many threads took the email, now
+ * or on an earlier read: the triggers do not get it then, so that one reply is answered once.
  */
 export async function wakeOnReply(
   connection: {
@@ -103,11 +105,20 @@ export async function wakeOnReply(
   const watches = await prisma.replyWatch.findMany({
     where: { connectionId: connection.id, conversationKey: email.threadId, until: { gt: now } },
   })
-  let woken = 0
+  let taken = 0
   for (const watch of watches) {
     const scope: Scope = { organizationId: watch.organizationId, workspaceId: watch.workspaceId }
     const db = scoped(scope)
-    if ((await firedInARow(db, watch.sessionId)) >= WAKEUPS_IN_A_ROW) {
+    const sourceId = `gmail:${email.id}`
+    // Read again after a failed read: it woke this thread already.
+    if (await db.wakeup.count({ where: { sessionId: watch.sessionId, sourceId } })) {
+      taken++
+      continue
+    }
+    const queued = await db.wakeup.count({
+      where: { sessionId: watch.sessionId, kind: 'reply', status: 'pending' },
+    })
+    if ((await firedInARow(db, watch.sessionId)) + queued >= WAKEUPS_IN_A_ROW) {
       await db.replyWatch.updateMany({ where: { id: watch.id }, data: { until: now } })
       await audit({
         ...scope,
@@ -127,18 +138,21 @@ export async function wakeOnReply(
           kind: 'reply',
           note: replyMessage(connection, watch, email, now),
           wakeAt: now,
-          sourceId: `gmail:${email.id}`,
+          sourceId,
         } as never,
       }))
     } catch (error) {
-      // Already woken by this email: the inbox read it again after a failed read.
-      if ((error as { code?: string }).code === 'P2002') continue
+      // Two reads of the same email at once: the other one woke it.
+      if ((error as { code?: string }).code === 'P2002') {
+        taken++
+        continue
+      }
       throw error
     }
     await fireNow(id)
-    woken++
+    taken++
   }
-  return woken
+  return taken
 }
 
 /** The reply as the thread gets it: a trigger's email message, which the dashboard shows as a mail. */

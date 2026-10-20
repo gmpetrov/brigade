@@ -42,6 +42,7 @@ const { AWAITED_REPLY, triggerEmail, triggerEvent, WAKEUPS_IN_A_ROW } =
   await import('@brigade/contracts')
 const { prisma, scoped } = await import('../src/db.js')
 const { automatic, stopWatching, wakeOnReply, watchReplies } = await import('../src/replies.js')
+const { handleConnectorCall } = await import('../src/connector-calls.js')
 const { readInbox } = await import('../src/subscriptions/gmail.js')
 const { syncConnection } = await import('../src/subscriptions/index.js')
 const { sealSecret } = await import('../src/vault.js')
@@ -54,8 +55,15 @@ let teammateId: string
 let computerId: string
 let connection: Awaited<ReturnType<typeof prisma.connection.create>>
 
-// Gmail, as the inbox reader asks it: the mailbox's history, then each message it reads.
-type Fake = { history: unknown[]; messages: Record<string, unknown>; read: string[] }
+// Gmail, as the inbox reader asks it: the mailbox's history, then each message it reads; and
+// as gmail_send sends, in the conversation `sendsIn`. onHistory runs while history is asked for.
+type Fake = {
+  history: unknown[]
+  messages: Record<string, unknown>
+  read: string[]
+  sendsIn?: string
+  onHistory?: () => Promise<unknown>
+}
 let gmail: Fake
 const realFetch = globalThis.fetch
 const reply = (json: unknown, status = 200) =>
@@ -67,7 +75,12 @@ before(async () => {
     const url = new URL(typeof input === 'string' ? input : input.toString())
     const path = url.pathname.replace('/gmail/v1/users/me', '')
     if (path === '/profile') return reply({ historyId: '100' })
-    if (path === '/history') return reply({ history: gmail.history, historyId: '200' })
+    if (path === '/history') {
+      await gmail.onHistory?.()
+      return reply({ history: gmail.history, historyId: '200' })
+    }
+    if (path === '/messages/send')
+      return reply({ id: `sent-${randomUUID()}`, threadId: gmail.sendsIn })
     const message = /^\/messages\/([^/]+)$/.exec(path)?.[1]
     if (message) {
       gmail.read.push(message)
@@ -176,8 +189,7 @@ test(
   { skip },
   async () => {
     const t = await thread()
-    const watch = await send(t, 'conv-a')
-    assert.ok(watch?.created)
+    assert.ok(await send(t, 'conv-a'))
     await syncConnection(scope, connection.id)
     const sub = await prisma.subscription.findFirstOrThrow({
       where: { connectionId: connection.id },
@@ -230,7 +242,6 @@ test('another email in the conversation keeps the same watch, for longer', { ski
   const first = await send(t, 'conv-b')
   const second = await send(t, 'conv-b')
   assert.equal(second?.id, first?.id)
-  assert.equal(second?.created, false)
   assert.ok(second!.until.getTime() >= first!.until.getTime())
   assert.equal(await prisma.replyWatch.count({ where: { sessionId: t.id } }), 1)
 })
@@ -281,6 +292,141 @@ test('a thread woken too often with no word from a person stops waiting', { skip
   const after = await prisma.replyWatch.findUniqueOrThrow({ where: { id: watch!.id } })
   assert.ok(after.until.getTime() <= Date.now())
 })
+
+/** The inbox's subscription, with a cursor from before the history the fake Gmail gives. */
+async function subscribed() {
+  await syncConnection(scope, connection.id)
+  const sub = await prisma.subscription.findFirstOrThrow({ where: { connectionId: connection.id } })
+  await prisma.subscription.updateMany({ where: { id: sub.id }, data: { cursor: '100' } })
+  return sub
+}
+
+/** gmail_send as a teammate calls it from this thread; what it answered. */
+async function gmailSend(t: Awaited<ReturnType<typeof thread>>, conversation: string) {
+  gmail.sendsIn = conversation
+  let answer: { ok: boolean; output?: unknown; error?: string } | undefined
+  await handleConnectorCall(
+    { computerId, ...scope },
+    {
+      type: 'connector.call',
+      callId: randomUUID(),
+      // The thread's own teammate.
+      sessionId: t.id,
+      connectionId: connection.id,
+      operation: 'gmail_send',
+      input: { to: ['support@ascii.dev'], subject: 'Runner lost', body: 'Details inside.' },
+    } as never,
+    (message) => {
+      if (message.type === 'connector.result') answer = message
+    },
+  )
+  return answer!
+}
+
+test(
+  'sending again in a conversation whose wait ended reads the inbox again',
+  { skip },
+  async () => {
+    await scoped(scope).grant.upsert({
+      where: { teammateId_connectionId: { teammateId, connectionId: connection.id } },
+      create: { teammateId, connectionId: connection.id, scope: 'read_write' } as never,
+      update: { scope: 'read_write' },
+    })
+    const t = await thread()
+    const first = await gmailSend(t, 'conv-e')
+    assert.equal(first.ok, true, first.error)
+    assert.match(String((first.output as { replies?: string }).replies), /wakes you/)
+    assert.equal(await prisma.subscription.count({ where: { connectionId: connection.id } }), 1)
+
+    // Its wait ends, and the minute tick drops the inbox nothing listens to any more.
+    await prisma.replyWatch.updateMany({
+      where: { connectionId: connection.id },
+      data: { until: new Date() },
+    })
+    await syncConnection(scope, connection.id)
+    assert.equal(await prisma.subscription.count({ where: { connectionId: connection.id } }), 0)
+
+    const again = await gmailSend(t, 'conv-e')
+    assert.equal(again.ok, true, again.error)
+    assert.equal(await prisma.subscription.count({ where: { connectionId: connection.id } }), 1)
+    assert.equal(await prisma.replyWatch.count({ where: { sessionId: t.id } }), 1)
+  },
+)
+
+test('a wait started while the inbox is being read still gets its reply', { skip }, async () => {
+  const t = await thread()
+  const sub = await subscribed()
+  gmail.onHistory = () => send(t, 'conv-f')
+  gmail.history = [
+    {
+      id: '150',
+      messagesAdded: [{ message: { id: 'm-f', threadId: 'conv-f', labelIds: ['INBOX'] } }],
+    },
+  ]
+  gmail.messages['m-f'] = email('m-f', 'conv-f')
+  await readInbox(sub.id)
+  assert.equal((await replies(t.id)).length, 1)
+})
+
+test('a reply a thread waits on starts or continues no trigger thread', { skip }, async () => {
+  const db = scoped(scope)
+  const trigger = await db.trigger.create({
+    data: {
+      connectionId: connection.id,
+      teammateId,
+      label: 'Every email',
+      event: 'email_received',
+      createdByMemberId: member,
+    } as never,
+  })
+  try {
+    const t = await thread()
+    await send(t, 'conv-g')
+    const sub = await subscribed()
+    gmail.history = [
+      {
+        id: '150',
+        messagesAdded: [{ message: { id: 'm-g', threadId: 'conv-g', labelIds: ['INBOX'] } }],
+      },
+    ]
+    gmail.messages['m-g'] = email('m-g', 'conv-g')
+    await readInbox(sub.id)
+    assert.equal((await replies(t.id)).length, 1)
+    // Never offered to the trigger: no thread of its own, nor a ticket saying it could not start one.
+    assert.equal(await prisma.session.count({ where: { triggerId: trigger.id } }), 0)
+    assert.equal(
+      await prisma.auditEntry.count({
+        where: { action: 'trigger.received', targetId: trigger.id },
+      }),
+      0,
+    )
+    assert.equal(
+      await prisma.ticket.count({
+        where: { payload: { path: ['triggerId'], equals: trigger.id } },
+      }),
+      0,
+    )
+  } finally {
+    await db.trigger.deleteMany({ where: { id: trigger.id } })
+  }
+})
+
+test(
+  'replies waiting for an offline computer count toward the limit in a row',
+  { skip },
+  async () => {
+    const t = await thread()
+    const watch = await send(t, 'conv-h')
+    // No runner answers here: each reply stays pending, as on a sleeping Mac.
+    for (let i = 0; i <= WAKEUPS_IN_A_ROW; i++)
+      await wakeOnReply(connection, emailPayload(`m-h-${i}`, 'conv-h'))
+    const queued = await replies(t.id)
+    assert.equal(queued.length, WAKEUPS_IN_A_ROW)
+    assert.ok(queued.every((w) => w.status === 'pending'))
+    const after = await prisma.replyWatch.findUniqueOrThrow({ where: { id: watch!.id } })
+    assert.ok(after.until.getTime() <= Date.now())
+  },
+)
 
 test('an inbox nobody waits on any more is no longer read', { skip }, async () => {
   // Every watch of the earlier tests ended, and the connection has no trigger.
