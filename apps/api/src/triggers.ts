@@ -233,7 +233,14 @@ export async function dispatch(
     const definition = catalog[trigger.event]
     if (!definition?.events.includes(event.type)) continue
     const options = (trigger.options ?? {}) as Record<string, string>
-    if (definition.matches && !(await definition.matches(event, options, ctx))) continue
+    const conversationKey = definition.conversation?.(event)
+    // A reply in a conversation this trigger already took up continues it even if its
+    // filter would not match (a reply to support@ comes back to the inbox's own address).
+    const ongoing =
+      conversationKey &&
+      (await prisma.session.count({ where: { triggerId: trigger.id, conversationKey } })) > 0
+    if (!ongoing && definition.matches && !(await definition.matches(event, options, ctx)))
+      continue
     const files = definition.attachments?.(event) ?? []
     if (files.length > 0 && !attachmentIds) {
       try {
@@ -251,7 +258,7 @@ export async function dispatch(
       eventType: event.type,
       title,
       text,
-      conversationKey: definition.conversation?.(event),
+      conversationKey,
       ...(files.length > 0 ? { attachmentIds } : {}),
     })
     if ('error' in delivery) failed = true
