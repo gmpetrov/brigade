@@ -435,7 +435,8 @@ export async function handleConnectorCall(
 
 /**
  * After gmail_send: watch the email's conversation, so that a reply wakes the thread, and read
- * its mailbox from now on if nothing did yet. What the teammate is told, if anything.
+ * its mailbox from now on if nothing does (no trigger, or every earlier watch ended and the
+ * tick dropped it). What the teammate is told, if anything.
  */
 async function awaitReplies(
   db: ScopedDb,
@@ -459,7 +460,7 @@ async function awaitReplies(
     subject: sent.input.subject,
   })
   if (!watch) return undefined
-  if (watch.created)
+  if (!(await db.subscription.count({ where: { connectionId: sent.connectionId } })))
     try {
       await syncConnection(scope, sent.connectionId)
     } catch (error) {

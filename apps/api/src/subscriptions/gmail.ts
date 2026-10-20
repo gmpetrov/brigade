@@ -118,18 +118,21 @@ export const readInbox = (subscriptionId: string) =>
     const now = async () =>
       (await json<{ historyId: string }>(await fetch(`${API}/profile`))).historyId
 
-    // Without triggers, only the conversations threads wait on a reply in are read.
-    const triggered = await db.trigger.count({
-      where: { connectionId: sub.connectionId, teammate: { archivedAt: null } },
+    // Without triggers, only the conversations threads wait on a reply in are read. Looked up
+    // after each page of history, so that a watch started while it was asked for is in it.
+    const listeners = async () => ({
+      triggered: await db.trigger.count({
+        where: { connectionId: sub.connectionId, teammate: { archivedAt: null } },
+      }),
+      awaited: new Set(
+        (
+          await db.replyWatch.findMany({
+            where: { connectionId: sub.connectionId, until: { gt: new Date() } },
+            select: { conversationKey: true },
+          })
+        ).map((w) => w.conversationKey),
+      ),
     })
-    const awaited = new Set(
-      (
-        await db.replyWatch.findMany({
-          where: { connectionId: sub.connectionId, until: { gt: new Date() } },
-          select: { conversationKey: true },
-        })
-      ).map((w) => w.conversationKey),
-    )
 
     const start = sub.cursor
     let cursor = start
@@ -148,6 +151,7 @@ export const readInbox = (subscriptionId: string) =>
         // Gmail keeps about a week of history. Past that, start again from now.
         if (response.status === 404) return save({ cursor: await now(), error: null })
         const page = await json<History>(response)
+        const { triggered, awaited } = await listeners()
         for (const record of page.history ?? []) {
           for (const { message } of record.messagesAdded ?? []) {
             // The mailbox's own mail, e.g. a teammate's reply to itself, starts nothing.
@@ -169,7 +173,9 @@ export const readInbox = (subscriptionId: string) =>
                 (h) => h.name.toLowerCase() === 'message-id',
               )?.value,
             }
-            if (!automatic(email.payload?.headers)) await wakeOnReply(sub.connection, payload)
+            // A reply a thread waits on is that thread's: no trigger starts or continues another.
+            if (!automatic(email.payload?.headers) && (await wakeOnReply(sub.connection, payload)))
+              continue
             const { failed } = await dispatch(sub.connection, {
               id: email.id,
               type: 'email',
