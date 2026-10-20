@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import {
   FILE_VIEW_MAX,
   FOCUS_PROTOCOL,
+  RETRY_PROTOCOL,
   VIEWABLE_FILE,
   AnswerQuestion,
   AnswerTicket,
@@ -26,6 +27,7 @@ import {
   UpdateThread,
   type ThreadFile,
   type ThreadSpec,
+  type AgentEvent,
   type ApiToRunner,
   type PreviewView,
   type ThreadPreviewState,
@@ -62,7 +64,13 @@ import {
 } from '../hub.js'
 import { contentTypeFor, isText } from '../library.js'
 import { projectWhere, usableProject } from '../projects.js'
-import { currentTeammate, loadThread, requireMayPrompt, specFor } from '../thread-spec.js'
+import {
+  currentTeammate,
+  loadThread,
+  requireMayPrompt,
+  specFor,
+  teammateIn,
+} from '../thread-spec.js'
 import { movePublic, requestMove } from '../move.js'
 import {
   handBack,
@@ -912,6 +920,53 @@ export const threads = new Hono<AppEnv>()
       ...scope,
       actor: { type: 'member', id: scope.memberId },
       action: 'thread.interrupted',
+      target: { type: 'thread', id: thread.id },
+    })
+    return c.json({ ok: true })
+  })
+
+  /** The latest turn failed: its teammate tries it again, told the error it stopped on. */
+  .post('/:id/retry', async (c) => {
+    const { scope, db } = c.var
+    const thread = await loadThread(db, c.req.param('id'))
+    requireMayPrompt(scope, thread)
+    const protocol = runnerProtocol(thread.computer.id)
+    if (protocol !== undefined && protocol < RETRY_PROTOCOL)
+      throw new HTTPException(409, {
+        message: "This computer's Brigade is too old to try a turn again. Send a message instead.",
+      })
+    // The thread's latest turn event: an error, with the turn it ended before it.
+    const [last, started] = await Promise.all([
+      db.sessionEvent.findFirst({
+        where: {
+          sessionId: thread.id,
+          type: { in: ['turn.started', 'turn.completed', 'error', 'message.user'] },
+        },
+        orderBy: { seq: 'desc' },
+        select: { data: true },
+      }),
+      db.sessionEvent.findFirst({
+        where: { sessionId: thread.id, type: 'turn.started' },
+        orderBy: { seq: 'desc' },
+        select: { data: true },
+      }),
+    ])
+    const error = last?.data as AgentEvent | undefined
+    if (error?.type !== 'error')
+      throw new HTTPException(409, { message: 'There is nothing to try again: no turn failed.' })
+    const turn = started?.data as AgentEvent | undefined
+    const teammate = teammateIn(thread, turn?.type === 'turn.started' ? turn.teammateId : undefined)
+    await deliver(thread.computer, {
+      type: 'thread.retry',
+      commandId: randomUUID(),
+      thread: await specFor(db, thread, { teammate }),
+      error: error.message.slice(0, 10_000),
+      memberId: scope.memberId,
+    })
+    await audit({
+      ...scope,
+      actor: { type: 'member', id: scope.memberId },
+      action: 'thread.retried',
       target: { type: 'thread', id: thread.id },
     })
     return c.json({ ok: true })

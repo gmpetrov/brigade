@@ -1419,6 +1419,7 @@ export function ThreadItems({
   eventsWaitingSince,
   childThreads = [],
   drafting = false,
+  onRetry,
 }: {
   threadId: string
   items: Item[]
@@ -1450,9 +1451,15 @@ export function ThreadItems({
   childThreads?: ThreadChild[]
   /** The person is writing a message: the buttons a teammate suggested step aside, their words win. */
   drafting?: boolean
+  /** Tries the turn that failed last again. Unset when they cannot write in the thread. */
+  onRetry?: () => Promise<void>
 }) {
   const byId = new Map(teammates.map((t) => [t.id, t]))
   const several = teammates.length > 1
+  const [retrying, setRetrying] = useState<string>()
+  // The latest turn failed: nothing came after its error but notes (a try planned on its own, say).
+  const retryable = (i: number) =>
+    !!onRetry && !working && items.slice(i + 1).every((it) => it.kind === 'note')
   const skillNames = useSkillCommands().map((s) => s.name)
   // A card closing the running turn waits for it to end: under a reply still being written it reads too early.
   // A teammate's buttons stay until anyone answers, with a click or their own words, or
@@ -1889,9 +1896,24 @@ export function ThreadItems({
           <div
             key={item.key}
             role="alert"
-            className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm wrap-anywhere whitespace-pre-wrap text-destructive-text"
+            className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive-text"
           >
-            {item.message}
+            <span className="min-w-0 flex-1 wrap-anywhere whitespace-pre-wrap">{item.message}</span>
+            {retryable(i) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="shrink-0"
+                disabled={retrying === item.key}
+                onClick={() => {
+                  setRetrying(item.key)
+                  void onRetry!().catch(() => setRetrying(undefined))
+                }}
+              >
+                Try again
+              </Button>
+            )}
           </div>
         )
       case 'note':

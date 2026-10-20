@@ -55,8 +55,11 @@ export * from './trigger-events.js'
  * 31: playbook threads (the spec's `playbook`, and playbook_triage and playbook_report as schedule.call
  *     operations); follow_thread (a schedule.call operation).
  * 32: a deleted thread's folders are removed (thread.deleted).
+ * 33: a turn that failed is tried again: on its own after a passing error, or when a person asks (thread.retry).
  */
-export const PROTOCOL_VERSION = 32
+export const PROTOCOL_VERSION = 33
+/** Runners from this version on try a failed turn again when a person asks (thread.retry). */
+export const RETRY_PROTOCOL = 33
 /** Runners from this version on remove a deleted thread's folders (thread.deleted). */
 export const DELETE_PROTOCOL = 32
 /** Runners from this version on bring a thread's tab to the front (browser.focus). */
