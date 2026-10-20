@@ -127,10 +127,6 @@ export type AccountSource = (typeof AccountSource)[keyof typeof AccountSource]
 
 export const MergeStatus = {
   none: 'none',
-  reviewing: 'reviewing',
-  fixing: 'fixing',
-  approved: 'approved',
-  changes_requested: 'changes_requested',
   stuck: 'stuck',
   resolving: 'resolving',
   merging: 'merging'

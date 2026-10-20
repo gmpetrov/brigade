@@ -25,13 +25,7 @@ import { ConnectorError, json } from './connectors/types.js'
 import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
-import {
-  mergeStatusOf,
-  NO_MERGE,
-  REVIEW_DONE,
-  REVIEW_THREAD,
-  reviewUnderWay,
-} from './review-state.js'
+import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { cancelReview } from './reviews.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
@@ -181,7 +175,7 @@ const findRow = (db: ScopedDb, repo: string, number: number) =>
 function tracking(row: Row | undefined, headSha?: string): PullRequestTracking | null {
   if (!row) return null
   return {
-    mergeStatus: mergeStatusOf(row.mergeStatus),
+    mergeStatus: row.mergeStatus,
     note: row.note,
     sessionId: row.sessionId,
     author: row.authorTeammate,
@@ -374,7 +368,7 @@ export const waitingOnPerson = {
   state: 'open',
   OR: [
     {
-      mergeStatus: NO_MERGE,
+      mergeStatus: 'none',
       sessionId: { not: null },
       OR: [{ reviewSessionId: null }, { reviewSession: { is: REVIEW_DONE } }],
     },
@@ -436,7 +430,6 @@ export async function needsAttention(db: ScopedDb, putAway: string[] = []) {
   })
   return rows.map(({ reviewSession, reviews, noReviewReason, ...row }) => ({
     ...row,
-    mergeStatus: mergeStatusOf(row.mergeStatus),
     review: reviewOf({ reviewSession, reviews, noReviewReason }),
   }))
 }
@@ -849,7 +842,7 @@ export async function previewPull(
 export async function stopMerge(scope: WorkspaceScope, repo: string, number: number) {
   const db = scoped(scope)
   const row = await db.pullRequest.findFirst({ where: { repository: repo, number } })
-  if (!row || mergeStatusOf(row.mergeStatus) === 'none')
+  if (!row || row.mergeStatus === 'none')
     throw new HTTPException(404, { message: 'Brigade is not merging this pull request' })
   const admin = scope.role === 'owner' || scope.role === 'admin'
   if (!admin && row.requestedByMemberId !== scope.memberId)
