@@ -431,3 +431,100 @@ export function Team() {
     </section>
   )
 }
+
+const handoffGroups: { label: string; tone: string; items: [string, string][] }[] = [
+  {
+    label: 'Build',
+    tone: 'violet',
+    items: [
+      ['Bug fixes', 'A bug a customer reports becomes a tested fix waiting for your approval'],
+      ['Release check', 'Each new version clicked through like a customer would, with screenshots'],
+      ['Ticket cleanup', 'Duplicate tickets merged and every bug given an owner'],
+      ['Product questions', '“Why did signups drop on Tuesday?” answered from your analytics'],
+    ],
+  },
+  {
+    label: 'Support',
+    tone: 'orange',
+    items: [
+      [
+        'Support inbox',
+        'Every support email sorted, and the routine ones answered from your docs once you say yes',
+      ],
+      ['Inbox triage', 'The overnight inbox is sorted, with what needs you on top'],
+      ['Help center', 'Help pages updated when the product changes'],
+    ],
+  },
+  {
+    label: 'Marketing',
+    tone: 'green',
+    items: [
+      ['Release notes', 'What shipped this week, rewritten in plain words for customers'],
+      ['Competitor watch', 'What your competitors changed on their site and pricing, every week'],
+      ['Customer research', 'What people say about you on Reddit and in reviews, with links'],
+      ['Search traffic', 'Pages losing Google traffic get flagged and explained every week'],
+    ],
+  },
+  {
+    label: 'Sales',
+    tone: 'ink',
+    items: [
+      ['Lead follow-ups', 'Leads who went quiet get a follow-up drafted for your yes'],
+      [
+        'Meeting prep',
+        "Each of tomorrow's meetings gets a one-page brief from your email and files",
+      ],
+    ],
+  },
+  {
+    label: 'Operations',
+    tone: 'violet',
+    items: [
+      ['Invoice reminders', 'Overdue Stripe invoices get a polite reminder every morning'],
+      ['Failed payments', 'Customers with a failed card hear from you before they churn'],
+      ['Weekly numbers', 'Revenue, refunds and signups on one page every Monday'],
+      ['Spreadsheet upkeep', 'Your sheets updated from Stripe and your database every evening'],
+      ['Mac chores', 'Keynote, Finder and any app on your Mac, used for you while you watch'],
+      ['Your own job', 'Show it once with Teach a task, and it runs on schedule from then on'],
+    ],
+  },
+]
+
+export function Handoff() {
+  return (
+    <section className={cn(s.sec, s.handoff)} data-id="handoff" aria-labelledby="handoff-title">
+      <div className={s.wrap}>
+        <div className={cn(s.secHead, s.reveal)}>
+          <h2 className={s.h2} id="handoff-title">
+            What you can hand off
+          </h2>
+          <p className={s.lead}>
+            If you can explain the job to a new hire, you can give it to a teammate.
+          </p>
+        </div>
+        <div className={s.groups}>
+          {handoffGroups.map((g) => (
+            <section
+              key={g.label}
+              className={cn(s.group, g.items.length > 4 && s.groupWide, s.reveal)}
+              aria-labelledby={`handoff-${g.label.toLowerCase()}`}
+            >
+              <h3 className={s.groupL} id={`handoff-${g.label.toLowerCase()}`}>
+                <span className={cn(s.groupDot, s[g.tone])} aria-hidden="true" />
+                {g.label}
+              </h3>
+              <ul>
+                {g.items.map(([name, line]) => (
+                  <li key={name}>
+                    <b>{name}</b>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

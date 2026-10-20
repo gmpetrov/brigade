@@ -859,6 +859,83 @@ a.btn.pri:hover {
   stroke-width: 1.75;
 }
 
+/* Handoff: what a teammate can take on, by department */
+.handoff {
+  background: var(--sidebar);
+}
+.groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.group {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px 10px;
+  min-width: 0;
+}
+.group.groupWide {
+  grid-column: span 2;
+}
+.group.groupWide ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+}
+.groupL {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin-bottom: 8px;
+}
+.groupDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--primary);
+}
+.groupDot.orange {
+  background: var(--chart-3);
+}
+.groupDot.green {
+  background: var(--block-accent);
+}
+.groupDot.ink {
+  background: var(--foreground);
+}
+.group ul {
+  list-style: none;
+}
+.group li {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.group li:first-child,
+.group.groupWide li:nth-child(2) {
+  border-top: 0;
+}
+.group li b {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.group li span {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
 /* Team */
 .jobs {
   display: grid;
@@ -2112,6 +2189,23 @@ a.btn.pri:hover {
     transform: rotate(90deg);
   }
 
+  .groups {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .group {
+    padding: 22px 22px 6px;
+  }
+  .group.groupWide {
+    grid-column: auto;
+  }
+  .group.groupWide ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group.groupWide li:nth-child(2) {
+    border-top: 1px solid var(--border);
+  }
+
   .jobs {
     grid-template-columns: minmax(0, 1fr);
     gap: 44px;
@@ -2355,6 +2449,9 @@ a.btn.pri:hover {
   }
   .hand:nth-child(2) .handArrow {
     display: none;
+  }
+  .groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
