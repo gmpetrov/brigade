@@ -3,7 +3,7 @@ import { BuiltBy, Faq, FinalCall, Footer, Pricing } from '@/components/landing/c
 import { Control, UnderTheHood } from '@/components/landing/control'
 import { Header, Hero, Proof } from '@/components/landing/hero'
 import { s } from '@/components/landing/parts'
-import { Bridge, HowItWorks, Problem, Team } from '@/components/landing/sections'
+import { Bridge, Handoff, HowItWorks, Problem, Team } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
 
@@ -68,6 +68,7 @@ export default function Landing() {
         <HowItWorks />
         <Bridge />
         <Team />
+        <Handoff />
         <Control />
         <UnderTheHood />
         <BuiltBy numbers={numbers} />
