@@ -284,15 +284,15 @@ function Memory({
       {overview.projects
         .filter((p) => p.memory.documentId && p.memory.text.replace(/^#[^\n]*\n+/, '').trim())
         .map((p) => (
-        <MemoryCard
-          key={p.projectId}
-          title={p.name}
-          description={`What teammates know about this project. Every thread in it loads the core; topics, when its work touches them.`}
-          file={p.memory}
-          target={{ kind: 'project_memory', projectId: p.projectId }}
-          onSaved={reload}
-        />
-      ))}
+          <MemoryCard
+            key={p.projectId}
+            title={p.name}
+            description={`What teammates know about this project. Every thread in it loads the core; topics, when its work touches them.`}
+            file={p.memory}
+            target={{ kind: 'project_memory', projectId: p.projectId }}
+            onSaved={reload}
+          />
+        ))}
       {overview.teammates.map((t) => (
         <MemoryCard
           key={t.teammateId}
