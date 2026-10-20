@@ -21,6 +21,7 @@ const TYPES: { value: Ticket['type'] | ''; label: string }[] = [
   { value: 'cap', label: 'Reached caps' },
   { value: 'sign_in', label: 'Expired logins' },
   { value: 'usage_limit', label: 'Out of usage' },
+  { value: 'disk_full', label: 'Disk full' },
   { value: 'question', label: 'Questions' },
   { value: 'request', label: 'From teammates' },
 ]

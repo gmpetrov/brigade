@@ -27,7 +27,7 @@ import { randomUUID } from 'node:crypto'
 import type { GitAccess } from '@brigade/contracts'
 import { CLOUD, HOME } from './config.js'
 import { prune, removeFor, removeMemberProject, stopQuiet } from './containers.js'
-import { CACHES_EVERY_MS, CRITICAL, freeCaches, Reserve } from './disk.js'
+import { CACHES_EVERY_MS, CRITICAL, freeCaches, installing, Reserve, STILL_FULL } from './disk.js'
 import { COPIED } from './repo-settings.js'
 import { owners, repairCaches, run } from './repos.js'
 import { pruneSystemDocker, teammateHome } from './teammates.js'
@@ -81,6 +81,8 @@ const CHECK_EVERY_MS = 5 * 60_000
 const WATCH_EVERY_MS = 20_000
 /** Past FULL, checked this often rather than every CHECK_EVERY_MS. */
 const FULL_CHECK_EVERY_MS = 60_000
+/** How often reportDisk says the same again. */
+const REPORT_EVERY_MS = 10 * 60_000
 /** Nearly full (CRITICAL), a teammate's caches are cleared again after this, even while it works. */
 const CRITICAL_CACHES_EVERY_MS = 5 * 60_000
 /** Larger than this, a folder stays; tried again after a day. One signed PUT to R2 takes up to 5 GiB. */
@@ -192,6 +194,8 @@ export class Folders {
   private locks = new Map<string, Promise<unknown>>()
   private checking = false
   private checkedAt = 0
+  /** What reportDisk last said, and when. */
+  private reported: { full: boolean; at: number } | undefined
   /** When each teammate's caches were last cleared, by user. */
   private cachesAt = new Map<string, number>()
   private reserve: Reserve | undefined
@@ -212,6 +216,11 @@ export class Folders {
       tempDir: string
       /** On a cloud computer, the file that sets room aside on the disk (disk.ts Reserve). */
       reserveFile?: string
+      /**
+       * On a cloud computer, after each check: whether the disk is still full (STILL_FULL)
+       * once everything that could go went, and how full (0 to 1). A person is asked to act.
+       */
+      reportDisk?: (disk: { full: boolean; used: number }) => void
     },
   ) {
     if (CLOUD && options.reserveFile) this.reserve = new Reserve(options.reserveFile, '/home')
@@ -546,20 +555,36 @@ export class Folders {
         await this.reserve
           ?.keep()
           .catch((error) => console.warn(`could not set room aside: ${String(error)}`))
+      if (CLOUD)
+        await this.report().catch((error) => console.warn(`disk report failed: ${String(error)}`))
       this.checkedAt = Date.now()
       this.checking = false
     }
   }
 
   /**
+   * Say whether the disk is still full after a check (diskReport); said again now
+   * and then, as a report sent while the API was away is lost.
+   */
+  private async report() {
+    if (!this.options.reportDisk) return
+    const used = await this.fullness()
+    const next = diskReport(this.reported, used, Date.now())
+    if (!next) return
+    if (next.full !== (this.reported?.full ?? false))
+      console.warn(`the disk is ${next.full ? 'still full' : 'no longer full'}`)
+    this.reported = next
+    this.options.reportDisk({ full: next.full, used: Math.min(1, Math.max(0, used)) })
+  }
+
+  /**
    * Clear a teammate's tool caches (disk.ts), once in a while (CACHES_EVERY_MS)
-   * unless `again`. While one of its threads is in use, an install may be
-   * under way: only when the disk is nearly full, and then more often.
+   * unless `again`. Not while it installs packages, which write into them,
+   * unless the disk is nearly full; and then more often.
    */
   private async clearCaches(runAs: string, critical: boolean, again = false) {
-    // Its folders now, not when the check began: a thread may have started since.
-    const busy = (await this.foldersOf(runAs)).some((c) => this.options.inUse(c.name.sessionId))
-    if (busy && !critical) return
+    // Asked now, not when the check began: an install may have started since.
+    if (!critical && (await installing(runAs))) return
     const every = again ? 0 : critical ? CRITICAL_CACHES_EVERY_MS : CACHES_EVERY_MS
     if (Date.now() - (this.cachesAt.get(runAs) ?? 0) < every) return
     this.cachesAt.set(runAs, Date.now())
@@ -820,6 +845,20 @@ export class Folders {
     }, 5_000)
     this.saveTimer.unref()
   }
+}
+
+/**
+ * What to say of the disk after a check, or nothing: full from STILL_FULL and until
+ * it is back under FULL; said when that changes, and every REPORT_EVERY_MS anyway.
+ */
+export function diskReport(
+  last: { full: boolean; at: number } | undefined,
+  used: number,
+  now: number,
+) {
+  const full = used >= STILL_FULL || (Boolean(last?.full) && used >= FULL)
+  if (last && last.full === full && now - last.at < REPORT_EVERY_MS) return null
+  return { full, at: now }
 }
 
 /** How full the disk holding teammates' homes is: the fuller of space and inodes. */

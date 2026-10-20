@@ -240,7 +240,8 @@ export const TicketType = {
   request: 'request',
   sign_in: 'sign_in',
   cap: 'cap',
-  usage_limit: 'usage_limit'
+  usage_limit: 'usage_limit',
+  disk_full: 'disk_full'
 } as const
 
 export type TicketType = (typeof TicketType)[keyof typeof TicketType]

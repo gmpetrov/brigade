@@ -258,6 +258,8 @@ async function start() {
     stateFile: join(paths.state, 'folders.json'),
     tempDir: join(paths.state, 'folder-archives'),
     reserveFile: join(paths.state, 'disk-reserve'),
+    // Still full: a ticket asks someone to act, closed once there is room (DISK_PROTOCOL).
+    reportDisk: (disk) => connection.send({ type: 'disk', ...disk }),
   })
   // Before a thread's folder is used outside a turn: put back when it was archived.
   const folderReady = (sessionId: string, teammateIds: string[]) =>

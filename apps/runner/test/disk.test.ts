@@ -18,7 +18,8 @@ exit 0
 `,
   { mode: 0o755 },
 )
-const { freeCaches, oldStores, reserveSize } = await import('../src/disk.js')
+const { freeCaches, installs, oldStores, reserveSize } = await import('../src/disk.js')
+const { diskReport } = await import('../src/folders.js')
 
 test('the reserve is 2 GiB, or 3% of a small disk', () => {
   assert.equal(reserveSize(69 * 1024 ** 3), 2 * 1024 ** 3)
@@ -57,4 +58,49 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
   for (const path of kept) assert.ok(existsSync(join(home, path)), `${path} stays`)
   for (const path of gone) assert.ok(!existsSync(join(home, path)), `${path} goes`)
   assert.match(await readFile(join(home, 'pnpm.log'), 'utf8'), /^store prune$/m)
+})
+
+test('a package manager installing is told from one running something', () => {
+  for (const args of [
+    'node /usr/local/bin/pnpm install',
+    '/opt/brigade/bin/shims/pnpm',
+    'node /home/bt-a/.local/share/pnpm/.tools/pnpm/10.34.6/bin/pnpm.cjs --filter web add zod',
+    'pnpm i --frozen-lockfile',
+    'npm ci',
+    'node /usr/lib/node_modules/npm/bin/npm-cli.js install',
+    'sh -c pnpm install',
+    'pnpm dlx create-next-app',
+    'uv pip install requests',
+    'yarn',
+  ])
+    assert.equal(installs(args), true, args)
+  for (const args of [
+    'node /usr/local/bin/pnpm exec next dev --port 3005',
+    'pnpm run build',
+    'pnpm --filter web dev',
+    'npm exec @modelcontextprotocol/server-github',
+    'npx -y @playwright/mcp',
+    'node /opt/brigade/runner/dist/index.js start',
+    'npm',
+    'pnpm exec prettier --write install.md',
+  ])
+    assert.equal(installs(args), false, args)
+})
+
+test('the disk is said full from 85% until it is back under 80%, and said again every 10 minutes', () => {
+  const at = 1_000_000
+  // Under 85%: not full; said once, then only every 10 minutes.
+  const first = diskReport(undefined, 0.82, at)
+  assert.deepEqual(first, { full: false, at })
+  assert.equal(diskReport(first!, 0.83, at + 60_000), null)
+  assert.deepEqual(diskReport(first!, 0.83, at + 10 * 60_000), {
+    full: false,
+    at: at + 10 * 60_000,
+  })
+  // From 85%: full at once.
+  const full = diskReport(first!, 0.86, at + 60_000)
+  assert.deepEqual(full, { full: true, at: at + 60_000 })
+  // Still full down to 80%, then not.
+  assert.equal(diskReport(full!, 0.81, at + 120_000), null)
+  assert.deepEqual(diskReport(full!, 0.79, at + 120_000), { full: false, at: at + 120_000 })
 })

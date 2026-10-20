@@ -39,6 +39,7 @@ import { noteChildEvents } from './children.js'
 import { bringBackFromLater } from './later.js'
 import { noteDryRunEvents } from './playbook-dry-runs.js'
 import { movesOn, onReleased } from './move.js'
+import { noteDisk } from './disk-tickets.js'
 import { messagesToRequeue, turnsToResume, type QueuedMessage } from './recovery.js'
 import type { Session } from './generated/prisma/client.js'
 import type { SessionStatus } from './generated/prisma/enums.js'
@@ -607,6 +608,11 @@ export function runnerSocket(runner: {
     }
 
     if (message.type === 'events.waiting') return noteEventsWaiting(message.threads)
+
+    if (message.type === 'disk')
+      return noteDisk(runner, message).catch((error) =>
+        console.error(`disk report from ${runner.computerId} failed`, error),
+      )
 
     if (message.type === 'events') return storeAll(message.events, ws)
 

@@ -746,7 +746,7 @@ export type ConnectionCall = {
 
 export type Ticket = {
   id: string
-  type: 'approval' | 'question' | 'request' | 'sign_in' | 'cap' | 'usage_limit'
+  type: 'approval' | 'question' | 'request' | 'sign_in' | 'cap' | 'usage_limit' | 'disk_full'
   status: 'open' | 'approved' | 'denied' | 'resolved'
   title: string
   payload: {
