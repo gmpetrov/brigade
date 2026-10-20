@@ -565,6 +565,12 @@ export const AgentEvent = z.discriminatedUnion('type', [
     turnId: z.string().optional(),
   }),
   z.object({ ...base, type: z.literal('turn.completed'), finishReason: z.string() }),
+  /**
+   * What the person who wrote last may write next, guessed by the teammate's harness once its
+   * turn was answered (ThreadSpec.suggestions). It waits in their message box until someone
+   * writes or another turn starts (suggestionFor).
+   */
+  z.object({ ...base, type: z.literal('message.suggested'), text: z.string().max(500) }),
   /** A command a person ran in the computer's terminal during takeover. */
   z.object({
     ...base,

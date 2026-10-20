@@ -336,6 +336,8 @@ export class Threads {
         thread.messages.set(message.id, message)
         this.emitQueued(spec.sessionId, message)
       }
+      // A turn answered already only waits on Claude Code's guess, which no longer matters.
+      if (thread.running) void thread.harnesses.get(thread.running.teammateId)?.harness.stopDrain()
       this.enqueueMessage(thread, message)
       // A turn that only waits on its background work takes it at once, as if steered,
       // unless one is already in it: then it waits its turn (steerQueued).
@@ -914,11 +916,16 @@ export class Threads {
   /** Nothing runs, waits or is queued in the thread: a message can show at once. */
   private quiet(thread: Thread) {
     return (
-      !thread.controller &&
+      (!thread.controller || this.answered(thread)) &&
       !thread.memorizing &&
       thread.messages.size === 0 &&
       ![...thread.waiting.values()].some((n) => n > 0)
     )
+  }
+
+  /** The running turn is answered: only Claude Code's guess at the person's next message is left. */
+  private answered(thread: Thread) {
+    return !!thread.running && !!thread.harnesses.get(thread.running.teammateId)?.harness.answered
   }
 
   /** Queue the turns that answer a message: its first teammate's, then the others'. */

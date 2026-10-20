@@ -282,6 +282,14 @@ const FILE_TOOLS = new Set([
 const PLAN_TOOLS = new Set(['TodoWrite', 'todoWrite', 'update_plan'])
 /** Low-level echoes of the model stream; their content already arrives as mapped parts. */
 const DROPPED_RAW = new Set(['stream_event'])
+/** Longest guess at a person's next message kept: Claude Code's own are under 100 characters. */
+const SUGGESTION_CHARS = 300
+
+/** The bridge's word that the turn is answered and only Claude Code's guess is still to come. */
+export const answered = (event: AgentEvent) =>
+  event.type === 'raw' &&
+  event.source === 'harness' &&
+  (event.value as { subtype?: unknown } | null)?.subtype === 'brigade_answered'
 
 type Part = { type: string; [key: string]: any }
 
@@ -521,6 +529,12 @@ export class EventMapper {
             }
           }
           return this.emit({ at, type: 'usage.updated', status, limits: limits(info) })
+        }
+        // Claude Code's guess at the person's next message, once the turn is over.
+        if (value?.type === 'prompt_suggestion') {
+          const text = typeof value.suggestion === 'string' ? value.suggestion.trim() : ''
+          if (!text) return
+          return this.emit({ at, type: 'message.suggested', text: text.slice(0, SUGGESTION_CHARS) })
         }
         return this.emit({ at, type: 'raw', source: 'harness', value })
       }

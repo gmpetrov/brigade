@@ -1620,6 +1620,7 @@ async function openTerminal(
       teammates: { include: { teammate: true }, orderBy: { joinedAt: 'asc' } },
       parent: { select: { id: true, title: true } },
       task: { select: { id: true, title: true, description: true, completedAt: true } },
+      startedBy: { select: { suggestions: true } },
     },
   })
   const fail = (text: string) => {
