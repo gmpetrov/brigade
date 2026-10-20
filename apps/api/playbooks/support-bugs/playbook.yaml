@@ -1,6 +1,6 @@
 id: brigade/support-bugs
 name: Support and bugs
-version: 1.1.0
+version: 1.2.0
 description: Sorts the support inbox, answers customers, fixes the bugs they report and tells them when it is fixed.
 
 # Two teammates: support reads the customers' mail and answers them; developer fixes the bugs
