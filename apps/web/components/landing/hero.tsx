@@ -30,7 +30,7 @@ export function Header() {
 
 export function Hero() {
   return (
-    <section className={c('hero')} aria-labelledby="hero-title">
+    <section className={c('hero')} aria-labelledby="hero-title" data-anim>
       <div className={c('wrap')}>
         <div className={c('hero-copy')}>
           <p className={c('eyebrow')}>The operating system for AI-native companies</p>

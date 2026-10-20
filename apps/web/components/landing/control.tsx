@@ -3,7 +3,7 @@ import { c, Icon } from './parts'
 
 export function Control() {
   return (
-    <section aria-labelledby="control-title" className={c('sec control')}>
+    <section aria-labelledby="control-title" className={c('sec control')} data-anim>
       <div className={c('wrap')}>
         <div className={c('sec-head')}>
           <h2 className={c('h2')} id="control-title">

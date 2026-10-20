@@ -3,7 +3,7 @@ import { c, Icon } from './parts'
 
 export function Message() {
   return (
-    <section aria-labelledby="message-title" className={c('sec message')}>
+    <section aria-labelledby="message-title" className={c('sec message')} data-anim>
       <div className={c('wrap')}>
         <div className={c('msg-stage')} aria-hidden="true">
           <div className={c('blk b-green')}></div>
@@ -168,7 +168,7 @@ export function Message() {
 
 export function Bridge() {
   return (
-    <section aria-labelledby="bridge-title" className={c('sec bridge')}>
+    <section aria-labelledby="bridge-title" className={c('sec bridge')} data-anim>
       <div className={c('wrap')}>
         <div className={c('sec-head')}>
           <h2 className={c('h2')} id="bridge-title">
@@ -328,7 +328,7 @@ export function Bridge() {
 /** The four tiles, on a band in the dark theme whatever the page's theme. */
 export function Tiles() {
   return (
-    <section aria-labelledby="tiles-title" className={c('sec tiles dark')}>
+    <section aria-labelledby="tiles-title" className={c('sec tiles dark')} data-anim>
       <div className={c('wrap')}>
         <div className={c('sec-head')}>
           <h2 className={c('h2')} id="tiles-title">
@@ -416,8 +416,8 @@ export function Tiles() {
             <div className={c('tk-copy')}>
               <h3>Show it once</h3>
               <p>
-                With Teach a task, do the job once while it watches. It writes down the steps and
-                does it from then on.
+                Do a task once while a teammate watches. It writes the steps down as a skill, ready
+                to use once you approve it.
               </p>
             </div>
             <div className={c('demo')} aria-hidden="true">
@@ -567,7 +567,8 @@ export function Tiles() {
                 <div className={c('rt')}>
                   <span className={c('when')}>Mon 09:00</span>
                   <span className={c('what')}>
-                    Send the week&apos;s numbers<span className={c('k')}>Riley · to #founders</span>
+                    Send the week&apos;s numbers
+                    <span className={c('k')}>Riley · to your inbox</span>
                   </span>
                   <span className={c('xg end')}>
                     <span className={c('badge')}>scheduled</span>

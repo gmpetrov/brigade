@@ -3,6 +3,7 @@ import { BuiltBy, Download, Faq, FinalCall, Footer, Pricing } from '@/components
 import { Control } from '@/components/landing/control'
 import { Header, Hero, PlanBand } from '@/components/landing/hero'
 import { Jobs } from '@/components/landing/jobs'
+import { PauseOffscreen } from '@/components/landing/in-view'
 import { c } from '@/components/landing/parts'
 import { Bridge, Message, Tiles } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
@@ -77,6 +78,7 @@ export default function Landing() {
         <FinalCall />
       </main>
       <Footer />
+      <PauseOffscreen />
     </div>
   )
 }
