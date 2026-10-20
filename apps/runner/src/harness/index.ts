@@ -791,8 +791,14 @@ export class HarnessThread {
         if (answered(event)) {
           // Answered, with a reply the person can read: done for everyone now, while Claude Code
           // guesses what they may write next. A turn that owes a reply goes on as before.
-          if (!mayAnswer || this.replies.owes() || mapper.error || mapper.exhausted) return
-          if (signal.aborted) return
+          if (
+            !mayAnswer ||
+            signal.aborted ||
+            this.replies.owes() ||
+            mapper.error ||
+            mapper.exhausted
+          )
+            return
           early = true
           this.drain = { stop: tail, done: new Promise<void>((resolve) => (drained = resolve)) }
           this.emit({ type: 'turn.completed', finishReason: 'stop' })
