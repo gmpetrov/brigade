@@ -3,14 +3,14 @@ import { BuiltBy, Faq, FinalCall, Footer, Pricing } from '@/components/landing/c
 import { Control, UnderTheHood } from '@/components/landing/control'
 import { Header, Hero, Proof } from '@/components/landing/hero'
 import { s } from '@/components/landing/parts'
-import { HowItWorks, Problem, Team } from '@/components/landing/sections'
+import { Bridge, HowItWorks, Problem, Team } from '@/components/landing/sections'
 import { RedirectIfSignedIn } from '@/components/redirect-if-signed-in'
 import { getProofNumbers } from '@/lib/github-proof'
 
 const SITE_URL = 'https://www.brigade.lol/'
-const title = 'Brigade · AI teammates on your own Claude or ChatGPT plan'
+const title = 'Brigade · The operating system for AI-native companies'
 const description =
-  'Run a team of AI teammates on the Claude or ChatGPT plan you already pay for. They work in the background, on your Mac or in the cloud, and ask you only when it matters. Free on Mac, open source.'
+  'AI teammates that write your code, answer your customers, run your marketing and chase your leads, on the Claude or ChatGPT plan you already pay for. Free on your Mac, open source.'
 
 // Static: prerendered at build, never revalidated. Its GitHub numbers are read at build
 // too (next.config.ts, lib/github-proof.ts), so rendering it never calls GitHub.
@@ -66,6 +66,7 @@ export default function Landing() {
         <Proof numbers={numbers} />
         <Problem />
         <HowItWorks />
+        <Bridge />
         <Team />
         <Control />
         <UnderTheHood />

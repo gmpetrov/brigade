@@ -72,7 +72,7 @@ export function Control() {
       <div className={s.wrap}>
         <div className={cn(s.secHead, s.reveal)}>
           <h2 className={s.h2} id="control-title">
-            You decide what needs your yes
+            Hand off the work. Keep the decisions.
           </h2>
           <p className={s.lead}>
             For each teammate, choose what it does alone and what it asks first: sending an email,
