@@ -1,15 +1,15 @@
 'use client'
-import { BookOpen, ChevronDown, FilePlus, FolderPlus, FolderUp, Search, Upload } from 'lucide-react'
+import { ChevronDown, FilePlus, FolderPlus, FolderUp, Search, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { timeAgo } from '@/components/dashboard'
 import { DesignGallery } from '@/components/design-gallery'
 import { DesignSystems } from '@/components/design-systems'
+import { MemoryCard } from '@/components/memory-card'
 import { useDocumentPanel } from '@/components/document-panel'
 import { join, LibraryBrowser } from '@/components/library-browser'
 import { LibraryTrash } from '@/components/library-trash'
-import { Markdown } from '@/components/markdown'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,14 +21,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { EditTarget } from '@brigade/contracts'
 import {
   api,
   isAdmin,
   useApi,
   type LibraryTree,
   type Me,
-  type MemoryFile,
   type MemoryOverview,
   type SearchHit,
   type Teammate,
@@ -282,6 +280,16 @@ function Memory({
         target={{ kind: 'workspace_memory' }}
         onSaved={reload}
       />
+      {overview.projects.map((p) => (
+        <MemoryCard
+          key={p.projectId}
+          title={p.name}
+          description={`What teammates know about this project. Every thread in it loads the core; topics, when its work touches them.`}
+          file={p.memory}
+          target={{ kind: 'project_memory', projectId: p.projectId }}
+          onSaved={reload}
+        />
+      ))}
       {overview.teammates.map((t) => (
         <MemoryCard
           key={t.teammateId}
@@ -330,68 +338,12 @@ function Memory({
   )
 }
 
-function MemoryCard({
-  title,
-  description,
-  file,
-  target,
-  onSaved,
-}: {
-  title: string
-  description: string
-  file: MemoryFile
-  target: EditTarget
-  onSaved: () => Promise<void>
-}) {
-  const documents = useDocumentPanel()
-  const editing = JSON.stringify(documents.current?.target) === JSON.stringify(target)
-
-  const body = file.text.replace(/^#[^\n]*\n+/, '').trim()
-  return (
-    <Card className="gap-3">
-      <div className="flex items-start justify-between gap-4 px-6">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="flex items-center gap-2 text-base font-bold">
-            <BookOpen aria-hidden className="size-4 text-muted-foreground" />
-            {title}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {description}
-            {file.updatedAt && ` Updated ${timeAgo(file.updatedAt)}.`}
-          </p>
-        </div>
-        <Button
-          variant={editing ? 'default' : 'outline'}
-          size="sm"
-          aria-pressed={editing}
-          onClick={() => {
-            if (!editing) {
-              documents.open({ target, title: `${title} memory`, subtitle: description })
-              return
-            }
-            documents.close()
-            void onSaved()
-          }}
-        >
-          {editing ? 'Done' : 'Edit'}
-        </Button>
-      </div>
-      <CardContent>
-        {body ? (
-          <Markdown text={body} className="text-sm" />
-        ) : (
-          <p className="text-sm text-muted-foreground">Nothing remembered yet.</p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 const KIND_LABEL: Record<SearchHit['kind'], string> = {
   library: 'File',
   workspace_memory: 'Memory',
   teammate_memory: 'Memory',
   project_memory: 'Memory',
+  archived_memory: 'Removed from memory',
   thread_summary: 'Thread',
 }
 
@@ -445,10 +397,10 @@ function SearchResults({
     return <p className="text-sm text-muted-foreground">Nothing matches “{query}”.</p>
   return (
     <Card className="gap-0 divide-y py-0">
-      {hits.map((h) => {
+      {hits.map((h, i) => {
         const title = <span className="block truncate text-sm font-semibold">{h.title}</span>
         return (
-          <div key={h.documentId} className="flex flex-col gap-1 px-5 py-3">
+          <div key={`${h.kind}:${h.documentId}:${i}`} className="flex flex-col gap-1 px-5 py-3">
             <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
               <StatusBadge status={h.kind} tone="neutral" label={KIND_LABEL[h.kind]} />
               {h.kind === 'library' ? (

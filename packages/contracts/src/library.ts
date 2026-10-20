@@ -226,12 +226,49 @@ export const WriteLibraryText = z.object({ text: z.string().max(5_000_000) })
 export const CreateLibraryText = z.object({ path: LibraryPath, text: z.string().max(5_000_000) })
 export const WriteMemory = z.object({ text: z.string().max(MEMORY_MAX) })
 
+/** Where a memory line came from, as the dashboard shows it. */
+export const MemoryLineInfo = z.object({
+  /** When it was learned, or last confirmed by a thread. */
+  at: z.string(),
+  /** It was there before memory kept dates: learned before `at`. */
+  legacy: z.boolean().default(false),
+  /** The person who wrote it in the editor; null when a teammate learned it. */
+  by: z.string().nullable().default(null),
+  /** The thread it was learned in. */
+  sessionId: z.string().nullable().default(null),
+  threadTitle: z.string().nullable().default(null),
+})
+export type MemoryLineInfo = z.infer<typeof MemoryLineInfo>
+
 export const MemoryFile = z.object({
   kind: DocumentKind,
   text: z.string(),
   updatedAt: z.string().nullable(),
+  /** The memory file's document; null until something is remembered. */
+  documentId: z.string().nullable().default(null),
+  /** Each line's date and source, by its key (memoryLineKey). */
+  lines: z.record(z.string(), MemoryLineInfo).default({}),
+  /** Lines that left the file and can be put back. */
+  archived: z.number().int().default(0),
 })
 export type MemoryFile = z.infer<typeof MemoryFile>
+
+/** A line that left a memory file: replaced, merged, outdated, or removed by a person. */
+export const ArchivedMemoryLine = z.object({
+  id: z.string(),
+  text: z.string(),
+  /** The topic it was under; null for the core. */
+  topic: z.string().nullable(),
+  reason: z.string(),
+  archivedAt: z.string(),
+  /** Who took it out: a person's or a teammate's name. */
+  archivedBy: z.string().nullable(),
+  /** When it was learned, and in which thread. */
+  createdAt: z.string(),
+  sessionId: z.string().nullable(),
+  threadTitle: z.string().nullable(),
+})
+export type ArchivedMemoryLine = z.infer<typeof ArchivedMemoryLine>
 
 export const ThreadSummary = z.object({
   sessionId: z.string(),
@@ -245,15 +282,19 @@ export type ThreadSummary = z.infer<typeof ThreadSummary>
 export const MemoryOverview = z.object({
   workspace: MemoryFile,
   teammates: z.array(z.object({ teammateId: z.string(), name: z.string(), memory: MemoryFile })),
+  projects: z
+    .array(z.object({ projectId: z.string(), name: z.string(), memory: MemoryFile }))
+    .default([]),
   summaries: z.array(ThreadSummary),
 })
 export type MemoryOverview = z.infer<typeof MemoryOverview>
 
 export const SearchHit = z.object({
-  kind: DocumentKind,
+  /** archived_memory: a line that left a memory file, with why. */
+  kind: z.union([DocumentKind, z.literal('archived_memory')]),
   /** Library path, or the memory file's name. */
   path: z.string(),
-  /** The library file, or the thread of a summary. */
+  /** The library file, the memory file, or the thread of a summary. */
   documentId: z.string(),
   sessionId: z.string().nullable(),
   title: z.string(),
@@ -262,12 +303,78 @@ export const SearchHit = z.object({
 })
 export type SearchHit = z.infer<typeof SearchHit>
 
-/** Lines to add to and remove from a memory file. Applied by the API, so edits never collide. */
+const MemoryText = z.string().trim().min(1).max(1000)
+
+/**
+ * What a thread changes in a memory file. Applied by the API, so edits never
+ * collide. Lines are named by their text. `add` and `remove` are what runners
+ * before protocol 35 send: lines added to the core, lines removed.
+ */
 export const MemoryEdit = z.object({
-  add: z.array(z.string().trim().min(1).max(1000)).max(40).default([]),
-  remove: z.array(z.string().trim().min(1).max(1000)).max(40).default([]),
+  add: z.array(MemoryText).max(40).default([]),
+  remove: z.array(MemoryText).max(40).default([]),
+  /** New lines, each under its topic (null: the core, which every thread loads). */
+  lines: z
+    .array(
+      z.object({ text: MemoryText, topic: z.string().trim().max(60).nullable().default(null) }),
+    )
+    .max(40)
+    .default([]),
+  /** Lines said again, corrected: the old one goes to the archive. */
+  replace: z
+    .array(z.object({ from: MemoryText, to: MemoryText }))
+    .max(40)
+    .default([]),
+  /** Lines that go to the archive, with why. */
+  archive: z
+    .array(z.object({ text: MemoryText, reason: z.string().trim().max(200) }))
+    .max(40)
+    .default([]),
+  /** Lines the thread found still true: their date moves to now. */
+  confirm: z.array(MemoryText).max(60).default([]),
 })
 export type MemoryEdit = z.infer<typeof MemoryEdit>
+/** A thread's edit as changes to a memory file's text (changeMemoryFile), the same on the runner and the API. */
+export const memoryEditChanges = (edit: MemoryEdit) => ({
+  remove: [...edit.remove, ...edit.archive.map((a) => a.text)],
+  replace: edit.replace,
+  add: [...edit.add.map((text) => ({ text, topic: null })), ...edit.lines],
+})
+
+export const NO_MEMORY_EDIT: MemoryEdit = {
+  add: [],
+  remove: [],
+  lines: [],
+  replace: [],
+  archive: [],
+  confirm: [],
+}
+
+/** When a line was learned or last confirmed, as a runner shows it to a teammate. */
+export const MemoryLineMeta = z.object({
+  at: z.string(),
+  /** The person who wrote it, when a person did. */
+  by: z.string().optional(),
+  /** There before memory kept dates: learned before `at`. */
+  legacy: z.boolean().optional(),
+})
+export type MemoryLineMeta = z.infer<typeof MemoryLineMeta>
+
+/** A memory file, as a runner names it to the API. */
+export const MemoryFileRef = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('workspace') }),
+  z.object({ kind: z.literal('project'), projectId: z.string() }),
+  z.object({ kind: z.literal('teammate'), teammateId: z.string() }),
+])
+export type MemoryFileRef = z.infer<typeof MemoryFileRef>
+
+/** A memory file's path among the documents: workspace.md, projects/<id>.md, teammates/<id>.md. */
+export const memoryFilePath = (ref: MemoryFileRef) =>
+  ref.kind === 'workspace'
+    ? 'workspace.md'
+    : ref.kind === 'project'
+      ? `projects/${ref.projectId}.md`
+      : `teammates/${ref.teammateId}.md`
 
 /** What the runner fetches to mirror the library and load memory. Never another workspace's. */
 export const LibraryManifest = z.object({
@@ -277,6 +384,12 @@ export const LibraryManifest = z.object({
   memory: z.object({
     workspace: z.string(),
     teammates: z.record(z.string(), z.string()),
+    /** Projects' memory, by project: fresher than a thread's spec, for the runs that edit it. */
+    projects: z.record(z.string(), z.string()).optional(),
+    /** Each line's date, by memory file path (memoryFilePath) and line key (memoryLineKey). */
+    lines: z.record(z.string(), z.record(z.string(), MemoryLineMeta)).optional(),
+    /** When each memory file was last tidied, by path. */
+    tidied: z.record(z.string(), z.string()).optional(),
   }),
   /**
    * Who may read what: each teammate's default access and the folders' rules.

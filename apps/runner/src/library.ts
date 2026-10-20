@@ -23,6 +23,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { libraryAccessFor, LibraryManifest } from '@brigade/contracts'
 import { CLOUD, HOME, paths, type RunnerConfig } from './config.js'
+import type { MemorySnapshot } from './memory-layers.js'
 import { teammateUser } from './teammates.js'
 
 /** Where the library is mirrored: a folder per teammate, and the store. */
@@ -59,9 +60,15 @@ export class Library {
     setInterval(() => void this.sync(), RESYNC_MS).unref()
   }
 
-  /** The memory a teammate loads: the workspace's and its own. */
-  memoryFor(teammateId: string) {
-    return { workspace: this.memory.workspace, teammate: this.memory.teammates[teammateId] ?? '' }
+  /** The memory a teammate loads: the workspace's and its own, with projects' and every line's date. */
+  memoryFor(teammateId: string): MemorySnapshot {
+    return {
+      workspace: this.memory.workspace,
+      teammate: this.memory.teammates[teammateId] ?? '',
+      ...(this.memory.projects ? { projects: this.memory.projects } : {}),
+      ...(this.memory.lines ? { lines: this.memory.lines } : {}),
+      ...(this.memory.tidied ? { tidied: this.memory.tidied } : {}),
+    }
   }
 
   /**

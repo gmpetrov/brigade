@@ -31,7 +31,13 @@ import { readCodexLimits } from '../codex-usage.js'
 import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
-import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
+import {
+  builtinSkills,
+  instructions,
+  writeInstructions,
+  writeMemoryFiles,
+} from '../instructions.js'
+import { threadMemory, threadTopicFiles, type MemorySnapshot } from '../memory-layers.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { copyIncluded } from '../repo-settings.js'
@@ -110,7 +116,7 @@ export type {
 export type ThreadContext = {
   /** A teammate's own mirror of the library, filled before its first thread here. */
   libraryDir: (teammateId: string) => Promise<string>
-  memoryFor: (teammateId: string) => { workspace: string; teammate: string }
+  memoryFor: (teammateId: string) => MemorySnapshot
   callLibrary: LibraryCaller
   /** Create a task from the thread, or complete its task. */
   callTask: TaskCaller
@@ -1164,13 +1170,22 @@ export class HarnessThread {
     const tabsFile =
       browser && this.runAs ? threadTabsFile(this.runAs, this.spec.sessionId) : undefined
     const libraryDir = await this.context.libraryDir(this.spec.teammate.id)
-    // Memory loads through the harness's own instruction file.
+    // Memory loads through the harness's own instruction file: each memory's core, and its
+    // topics as files beside it, read when the work touches them.
+    const memory = threadMemory(
+      this.spec,
+      this.context.memoryFor(this.spec.teammate.id),
+      this.workDir,
+    )
+    await writeMemoryFiles(this.workDir, threadTopicFiles(memory, this.spec), this.runAs).catch(
+      (error) => console.warn(`could not write memory topics: ${errorMessage(error)}`),
+    )
     await writeInstructions(
       this.workDir,
       this.spec,
       instructions(
         this.spec,
-        this.context.memoryFor(this.spec.teammate.id),
+        memory,
         libraryDir,
         tabsFile
           ? { ready: true }

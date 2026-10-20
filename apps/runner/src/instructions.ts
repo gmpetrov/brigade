@@ -24,23 +24,25 @@ import {
   WIDGET_GUIDE_TOOL,
 } from '@brigade/contracts'
 import { CLOUD } from './config.js'
-import { newestLines } from './recall.js'
+import {
+  memorySection,
+  MEMORY_DIR,
+  type LayeredMemory,
+  type ThreadMemory,
+} from './memory-layers.js'
 import { threadBranch } from './repos.js'
 
 const MARK = '<!-- Written by Brigade when this session starts; edits here are replaced. -->'
-/** Memory beyond this is left to search and recall (recall.ts), so the file stays a reasonable size. */
-export const MEMORY_CHARS = 16_000
+/** A memory with something in it: its section is left out otherwise. */
+const remembered = (memory: LayeredMemory | null): memory is LayeredMemory =>
+  !!memory && (memory.core.length > 0 || memory.topics.length > 0)
 
-/** A long memory keeps its newest lines; the older ones come by recall and search. */
-const clip = (text: string) => {
-  const { shown, left } = newestLines(text, MEMORY_CHARS)
-  return left.length === 0
-    ? text
-    : `… (${left.length} older lines not shown: those that bear on a message come with it, search_workspace finds the rest)\n\n${shown}`
-}
-
-/** Strip a memory file's own top heading; the section gives one. */
-export const memoryBody = (text: string) => text.replace(/^#\s[^\n]*\n+/, '').trim()
+const MEMORY_RULES =
+  'Each memory line ends with the day it was learned or last confirmed: "before" a day means older than dates ' +
+  'in memory, and "by" names the person who wrote it. When two lines disagree, the newer one wins, and a ' +
+  "person's line outranks one a teammate learned. A line about code, an account or a provider may have changed " +
+  'since: check it before you rely on it, and when your work shows a line is wrong, say so in your reply. ' +
+  '`search_workspace` also finds the lines memory let go, with why.'
 
 /** Where the teammate may save to the library: everywhere, nowhere, or some folders. */
 function saving(spec: ThreadSpec) {
@@ -67,12 +69,10 @@ function saving(spec: ThreadSpec) {
 
 export function instructions(
   spec: ThreadSpec,
-  memory: { workspace: string; teammate: string },
+  memory: ThreadMemory,
   libraryDir: string,
   browser: Browser,
 ) {
-  const workspace = memoryBody(memory.workspace)
-  const own = memoryBody(memory.teammate)
   return [
     MARK,
     '# Brigade',
@@ -104,13 +104,16 @@ export function instructions(
     children(spec),
     spec.playbook ? playbook(spec.playbook, !!spec.parent) : !spec.parent && INSTALLING,
     credentials(browser),
-    workspace && `## Workspace memory\n\n${clip(workspace)}`,
+    remembered(memory.workspace) &&
+      `## Workspace memory\n\n${memorySection(memory.workspace, memory.dir, 'workspace')}`,
     spec.project &&
-      memoryBody(spec.project.memory) &&
-      `## Project memory: ${spec.project.name}\n\n${clip(memoryBody(spec.project.memory))}`,
-    own && `## What you have learned\n\n${clip(own)}`,
+      remembered(memory.project) &&
+      `## Project memory: ${spec.project.name}\n\n${memorySection(memory.project, memory.dir, 'project')}`,
+    remembered(memory.teammate) &&
+      `## What you have learned\n\n${memorySection(memory.teammate, memory.dir, 'teammate')}`,
     '## Memory',
-    'When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
+    MEMORY_RULES +
+      ' When this thread goes quiet, Brigade notes what was decided and learned here into the memory above' +
       (spec.private ? ' (this thread is private: only into your own memory)' : '') +
       '. You do not need to write memory files yourself. Never put secrets in your replies.',
   ]
@@ -786,6 +789,45 @@ const code = (spec: ThreadSpec) =>
   ]
     .filter(Boolean)
     .join('\n\n')
+
+// Run by node as the teammate's user, the files as JSON on stdin: the folder is
+// replaced whole, so topics that went leave no file behind.
+const MEMORY_SCRIPT = `
+const fs = require('node:fs'), path = require('node:path')
+const root = process.argv[1]
+let input = ''
+process.stdin.setEncoding('utf8').on('data', (d) => (input += d)).on('end', () => {
+  fs.rmSync(root, { recursive: true, force: true })
+  for (const file of JSON.parse(input)) {
+    const target = path.resolve(root, file.path)
+    if (!target.startsWith(root + path.sep)) continue
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, file.text, { mode: 0o644 })
+  }
+})
+`
+
+/** Write memory's topic files under the working directory's MEMORY_DIR, as the teammate's user on a cloud computer. */
+export async function writeMemoryFiles(
+  workDir: string,
+  files: { path: string; text: string }[],
+  runAs?: string,
+) {
+  const node = [process.execPath, '-e', MEMORY_SCRIPT, join(workDir, MEMORY_DIR)]
+  const [command, ...args] = runAs ? ['sudo', '-n', '-u', runAs, '--', ...node] : node
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(command!, args, { cwd: '/', stdio: ['pipe', 'ignore', 'pipe'] })
+    let stderr = ''
+    child.stderr.on('data', (d) => (stderr += d))
+    child.on('error', reject)
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(stderr.trim().slice(-500) || `exit ${code}`)),
+    )
+    // A command that exits without reading its input closes the pipe: its exit says why.
+    child.stdin.on('error', () => undefined)
+    child.stdin.end(JSON.stringify(files))
+  })
+}
 
 export const instructionsFileName = (spec: ThreadSpec) =>
   spec.teammate.harness === 'codex' ? 'AGENTS.md' : 'CLAUDE.md'

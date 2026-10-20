@@ -355,6 +355,7 @@ async function start() {
     callSchedule: (sessionId, teammateId, { operation }) =>
       connection.callSchedule({ sessionId, teammateId, operation }),
     memoryUpdate: (update) => connection.send(update),
+    memoryTidy: (tidy) => connection.send(tidy),
     title: (update) => connection.send(update),
   })
   // On a cloud computer, the computer running out of memory as a whole: a preview or a turn is

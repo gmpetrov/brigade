@@ -11,7 +11,12 @@ import {
   MEMORY_MAX,
   type LibraryFile,
   type LibraryManifest,
+  changeMemoryFile,
+  type ArchivedMemoryLine,
   type MemoryEdit,
+  type MemoryLayout,
+  type MemoryLineInfo,
+  type MemoryLineMeta,
   type SearchHit,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
@@ -22,7 +27,13 @@ import { prisma, Prisma, scoped, type Scope, type ScopedDb } from './db.js'
 import { notifyLibraryChanged } from './hub.js'
 import { folderRules, teammateLibraryAccess } from './library-folders.js'
 import { actorNames, ensureFirstVersion, recordVersion } from './library-history.js'
-import { applyMemoryEdit } from './memory-edit.js'
+import {
+  applyMemoryEdit,
+  applyMemoryLayout,
+  planLineSync,
+  type LineContext,
+  type LineUpdate,
+} from './memory-edit.js'
 import { DOCX, officeText, PPTX, XLSX } from './previews.js'
 
 /** Text kept for search per file; PostgreSQL's tsvector has a 1 MB limit. */
@@ -400,9 +411,92 @@ export async function saveDocumentText(
   return writeMemory(db, scope, actor, memoryTarget(row), text, options)
 }
 
+type MemoryChange = {
+  text: string
+  context: Pick<LineContext, 'reasons' | 'confirm' | 'sources'>
+  /** A tidy run laid it out. */
+  tidied?: boolean
+}
+
+const noLineContext = (): MemoryChange['context'] => ({
+  reasons: new Map(),
+  confirm: new Set(),
+  sources: new Map(),
+})
+
+/**
+ * Change a memory file and bring its lines' rows along (dates, sources, the
+ * archive), one change at a time per file, so threads ending together, tidy
+ * runs and people editing never overwrite each other. `change` gets the
+ * current file and returns its new text, or null to leave it as it is.
+ */
+async function changeMemory(
+  scope: Scope,
+  target: MemoryTarget & { name?: string },
+  actor: Actor,
+  sessionId: string | null,
+  change: (current: { text: string; memoryTidiedAt: Date | null } | null) => MemoryChange | null,
+) {
+  return prisma.$transaction(
+    async (tx) => {
+      const path = memoryPath(target)
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:${path}`}))`
+      const current = await tx.document.findFirst({ where: { ...scope, kind: target.kind, path } })
+      const next = change(current)
+      if (!next) return null
+      const changed = current?.text !== next.text
+      const fields = {
+        text: next.text,
+        size: Buffer.byteLength(next.text),
+        sha256: sha256(next.text),
+        indexed: true,
+        ...(next.tidied ? { memoryTidiedAt: new Date() } : {}),
+      }
+      const row = !current
+        ? await tx.document.create({
+            data: {
+              ...scope,
+              kind: target.kind,
+              path,
+              contentType: 'text/markdown',
+              ...memoryLinks(target),
+              ...fields,
+            },
+          })
+        : changed || next.tidied
+          ? await tx.document.update({ where: { id: current.id }, data: fields })
+          : current
+      const rows = await tx.memoryLine.findMany({ where: { documentId: row.id } })
+      const plan = planLineSync(current?.text ?? '', next.text, rows, {
+        ...next.context,
+        actor,
+        sessionId,
+        now: new Date(),
+      })
+      if (plan.create.length)
+        await tx.memoryLine.createMany({
+          data: plan.create.map((line) => ({ ...scope, documentId: row.id, ...line })),
+        })
+      // Rows that change the same way (a topic, a confirmation) change together.
+      const groups = new Map<string, { data: LineUpdate; ids: string[] }>()
+      for (const { id, data } of plan.update) {
+        const key = JSON.stringify(data)
+        const group = groups.get(key)
+        if (group) group.ids.push(id)
+        else groups.set(key, { data, ids: [id] })
+      }
+      for (const { data, ids } of groups.values())
+        await tx.memoryLine.updateMany({ where: { id: { in: ids } }, data })
+      if (plan.delete.length) await tx.memoryLine.deleteMany({ where: { id: { in: plan.delete } } })
+      return { row, changed }
+    },
+    { timeout: 30_000 },
+  )
+}
+
 /** Replace a memory file's text (a person correcting it). */
 export async function writeMemory(
-  db: ScopedDb,
+  _db: ScopedDb,
   scope: Scope,
   actor: Actor,
   target: MemoryTarget,
@@ -410,14 +504,10 @@ export async function writeMemory(
   /** Set when the collab server saves what people edited: its room already has it. */
   options: { fromCollab?: boolean } = {},
 ) {
-  const row = await upsertText(
-    db,
-    scope,
-    target.kind,
-    memoryPath(target),
+  const { row } = (await changeMemory(scope, target, actor, null, () => ({
     text,
-    memoryLinks(target),
-  )
+    context: noLineContext(),
+  })))!
   await audit({
     ...scope,
     actor,
@@ -430,9 +520,17 @@ export async function writeMemory(
   return row
 }
 
+const editIsEmpty = (edit: MemoryEdit) =>
+  !edit.add.length &&
+  !edit.remove.length &&
+  !edit.lines.length &&
+  !edit.replace.length &&
+  !edit.archive.length &&
+  !edit.confirm.length
+
 /** Apply a thread's edit to a memory file, creating it on first use. */
 export async function editMemory(
-  db: ScopedDb,
+  _db: ScopedDb,
   scope: Scope,
   actor: Actor,
   /** name: the teammate's or the project's, for a new file's heading. */
@@ -440,77 +538,220 @@ export async function editMemory(
   edit: MemoryEdit,
   sessionId: string,
 ) {
-  if (edit.add.length === 0 && edit.remove.length === 0) return
-  // One edit at a time per file, so concurrent threads both land.
-  const row = await prisma.$transaction(async (tx) => {
-    const path = memoryPath(target)
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${scope.workspaceId}:${path}`}))`
-    const current = await tx.document.findFirst({
-      where: { ...scope, kind: target.kind, path },
-    })
-    const result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.name), edit)
-    if (result.dropped > 0)
-      console.warn(
-        `memory ${path}: full, ${result.dropped} new lines left out (thread ${sessionId})`,
-      )
-    if (result.added === 0 && result.removed === 0) {
-      // Nothing changed, but a full file left lines out: that is said in the audit log.
-      if (current && result.dropped > 0)
-        await tx.auditEntry.create({
-          data: {
-            ...scope,
-            actorType: actor.type,
-            actorId: actor.id,
-            action: 'memory.updated',
-            targetType: 'document',
-            targetId: current.id,
-            data: { kind: target.kind, sessionId, added: 0, removed: 0, dropped: result.dropped },
-          },
-        })
-      return
-    }
-    const fields = {
+  if (editIsEmpty(edit)) return
+  let result: ReturnType<typeof applyMemoryEdit> | undefined
+  const done = await changeMemory(scope, target, actor, sessionId, (current) => {
+    result = applyMemoryEdit(current?.text ?? memoryHeader(target, target.name), edit)
+    return {
       text: result.text,
-      size: Buffer.byteLength(result.text),
-      sha256: sha256(result.text),
-      indexed: true,
+      context: { ...noLineContext(), reasons: result.reasons, confirm: result.confirm },
     }
-    const row = current
-      ? await tx.document.update({ where: { id: current.id }, data: fields })
-      : await tx.document.create({
-          data: {
-            ...scope,
-            kind: target.kind,
-            path,
-            contentType: 'text/markdown',
-            ...memoryLinks(target),
-            ...fields,
-          },
-        })
-    await tx.auditEntry.create({
+  })
+  if (!done || !result) return
+  const path = memoryPath(target)
+  if (result.dropped > 0)
+    console.warn(`memory ${path}: full, ${result.dropped} new lines left out (thread ${sessionId})`)
+  if (done.changed || result.dropped > 0)
+    await audit({
+      ...scope,
+      actor,
+      action: 'memory.updated',
+      target: { type: 'document', id: done.row.id },
       data: {
-        ...scope,
-        actorType: actor.type,
-        actorId: actor.id,
-        action: 'memory.updated',
-        targetType: 'document',
-        targetId: row.id,
-        // The lines it removed, so a person can put one back.
-        data: {
-          kind: target.kind,
-          sessionId,
-          added: result.added,
-          removed: result.removed,
-          ...(result.removedLines.length ? { removedLines: result.removedLines } : {}),
-          ...(result.dropped ? { dropped: result.dropped } : {}),
-        },
+        kind: target.kind,
+        sessionId,
+        added: result.added.length,
+        replaced: result.replaced.length,
+        removed: result.removed.length,
+        confirmed: edit.confirm.length,
+        ...(result.dropped ? { dropped: result.dropped } : {}),
       },
     })
-    return row
-  })
   // Merged into what people may be editing, line by line as the thread asked.
-  if (row) notifyCollab(row.id)
-  return row
+  if (done.changed) notifyCollab(done.row.id)
+  return done.row
+}
+
+/**
+ * Lay a memory file out again as a tidy run asked: core within budget, topics,
+ * repeats merged, outdated lines archived. Dropped when the file was tidied
+ * again since the run read it.
+ */
+export async function tidyMemory(
+  scope: Scope,
+  actor: Actor,
+  target: MemoryTarget & { name?: string },
+  layout: MemoryLayout,
+  input: { sessionId: string; lastTidied: string | null },
+) {
+  let result: ReturnType<typeof applyMemoryLayout> | undefined
+  const done = await changeMemory(scope, target, actor, input.sessionId, (current) => {
+    if (!current) return null
+    if ((current.memoryTidiedAt?.toISOString() ?? null) !== input.lastTidied) return null
+    result = applyMemoryLayout(current.text, layout)
+    return {
+      text: result.text,
+      tidied: true,
+      context: { ...noLineContext(), reasons: result.reasons, sources: result.sources },
+    }
+  })
+  if (!done || !result) return null
+  await audit({
+    ...scope,
+    actor,
+    action: 'memory.tidied',
+    target: { type: 'document', id: done.row.id },
+    data: {
+      kind: target.kind,
+      sessionId: input.sessionId,
+      archived: result.archived.length,
+      merged: result.merged.length,
+      moved: result.moved.length,
+    },
+  })
+  if (done.changed) {
+    notifyCollab(done.row.id)
+    notifyLibraryChanged(scope.workspaceId)
+  }
+  return done.row
+}
+
+/** When a line was learned or last confirmed. */
+const lineDate = (row: { createdAt: Date; confirmedAt: Date | null }) =>
+  row.confirmedAt && row.confirmedAt > row.createdAt ? row.confirmedAt : row.createdAt
+
+/** Each memory file's live lines (date and source, by key), and how many lines it archived. */
+export async function memoryLineInfo(db: ScopedDb, documentIds: string[]) {
+  const out = new Map<string, { lines: Record<string, MemoryLineInfo>; archived: number }>()
+  if (!documentIds.length) return out
+  const rows = await db.memoryLine.findMany({
+    where: { documentId: { in: documentIds } },
+    select: {
+      documentId: true,
+      key: true,
+      createdAt: true,
+      confirmedAt: true,
+      legacy: true,
+      createdByType: true,
+      createdById: true,
+      sessionId: true,
+      archivedAt: true,
+    },
+  })
+  const name = await actorNames(
+    db,
+    rows.flatMap((r) =>
+      r.createdByType === 'member' && r.createdById && !r.archivedAt
+        ? [{ type: 'member', id: r.createdById }]
+        : [],
+    ),
+  )
+  const sessionIds = [
+    ...new Set(rows.flatMap((r) => (r.sessionId && !r.archivedAt ? [r.sessionId] : []))),
+  ]
+  const titles = new Map(
+    (sessionIds.length
+      ? await db.session.findMany({
+          where: { id: { in: sessionIds } },
+          select: { id: true, title: true },
+        })
+      : []
+    ).map((s) => [s.id, s.title]),
+  )
+  for (const id of documentIds) out.set(id, { lines: {}, archived: 0 })
+  for (const row of rows) {
+    const file = out.get(row.documentId)!
+    if (row.archivedAt) {
+      file.archived++
+      continue
+    }
+    file.lines[row.key] = {
+      at: lineDate(row).toISOString(),
+      legacy: row.legacy,
+      by: row.createdByType === 'member' ? (name('member', row.createdById)?.name ?? null) : null,
+      sessionId: row.sessionId,
+      threadTitle: row.sessionId ? (titles.get(row.sessionId) ?? null) : null,
+    }
+  }
+  return out
+}
+
+/** A memory file's archived lines, newest first; `query` filters by their text. */
+export async function archivedMemoryLines(
+  db: ScopedDb,
+  documentId: string,
+  query: string,
+): Promise<ArchivedMemoryLine[]> {
+  const rows = await db.memoryLine.findMany({
+    where: {
+      documentId,
+      archivedAt: { not: null },
+      ...(query ? { text: { contains: query, mode: 'insensitive' as const } } : {}),
+    },
+    orderBy: { archivedAt: 'desc' },
+    take: 200,
+  })
+  const name = await actorNames(
+    db,
+    rows.flatMap((r) =>
+      r.archivedByType && r.archivedById ? [{ type: r.archivedByType, id: r.archivedById }] : [],
+    ),
+  )
+  const sessionIds = [...new Set(rows.flatMap((r) => (r.sessionId ? [r.sessionId] : [])))]
+  const titles = new Map(
+    (sessionIds.length
+      ? await db.session.findMany({
+          where: { id: { in: sessionIds } },
+          select: { id: true, title: true },
+        })
+      : []
+    ).map((s) => [s.id, s.title]),
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    text: r.text,
+    topic: r.topic,
+    reason: r.archivedReason ?? 'Removed',
+    archivedAt: r.archivedAt!.toISOString(),
+    archivedBy: name(r.archivedByType, r.archivedById)?.name ?? null,
+    createdAt: r.createdAt.toISOString(),
+    sessionId: r.sessionId,
+    threadTitle: r.sessionId ? (titles.get(r.sessionId) ?? null) : null,
+  }))
+}
+
+/** Put an archived line back in its memory file, under the topic it was in. */
+export async function restoreMemoryLine(db: ScopedDb, scope: Scope, actor: Actor, lineId: string) {
+  const line = await db.memoryLine.findFirst({
+    where: { id: lineId, archivedAt: { not: null } },
+    include: { document: true },
+  })
+  if (!line) throw new HTTPException(404, { message: 'This line is not in the archive' })
+  const target = memoryTarget(line.document)
+  let full = false
+  const done = await changeMemory(scope, target, actor, null, (current) => {
+    const result = changeMemoryFile(
+      current?.text ?? '',
+      { add: [{ text: line.text, topic: line.topic }] },
+      MEMORY_MAX,
+    )
+    full = result.dropped > 0
+    return result.added.length ? { text: result.text, context: noLineContext() } : null
+  })
+  if (full)
+    throw new HTTPException(413, {
+      message: `This memory is full (${MEMORY_MAX.toLocaleString('en')} characters): remove a line first`,
+    })
+  if (!done) return
+  await audit({
+    ...scope,
+    actor,
+    action: 'memory.restored',
+    target: { type: 'document', id: done.row.id },
+    data: { kind: target.kind, line: line.text },
+  })
+  notifyCollab(done.row.id)
+  notifyLibraryChanged(scope.workspaceId)
 }
 
 /** The thread's summary: replaced each time the thread goes quiet. */
@@ -615,10 +856,60 @@ export async function search(
       ${summaries}
     ORDER BY ts_rank(d.search, q.query) DESC, d."updatedAt" DESC
     LIMIT ${limit}`
+  // Lines memory let go (replaced, merged, outdated): a few, after the files, to tell what was decided before.
+  const ownArchive = input.teammate
+    ? Prisma.sql`AND (d.kind <> 'teammate_memory' OR d."teammateId" = ${input.teammate.id})`
+    : Prisma.empty
+  const archived = await prisma.$queryRaw<
+    {
+      documentId: string
+      kind: string
+      path: string
+      teammateName: string | null
+      projectName: string | null
+      reason: string | null
+      archivedAt: Date
+      sessionId: string | null
+      snippet: string
+    }[]
+  >`
+    WITH q AS (
+      SELECT websearch_to_tsquery('english', ${input.query}) || websearch_to_tsquery('simple', ${input.query}) AS query
+    )
+    SELECT l."documentId", d.kind, d.path, t.name AS "teammateName", p.name AS "projectName",
+      l."archivedReason" AS reason, l."archivedAt", l."sessionId",
+      ts_headline('english', l.text, q.query, 'StartSel=«, StopSel=», HighlightAll=true') AS snippet
+    FROM "MemoryLine" l
+    CROSS JOIN q
+    JOIN "Document" d ON d.id = l."documentId"
+    LEFT JOIN "Teammate" t ON t.id = d."teammateId"
+    LEFT JOIN "Project" p ON p.id = d."projectId"
+    WHERE l."organizationId" = ${scope.organizationId}
+      AND l."workspaceId" = ${scope.workspaceId}
+      AND l."archivedAt" IS NOT NULL
+      AND l.search @@ q.query
+      ${ownArchive}
+    ORDER BY ts_rank(l.search, q.query) DESC, l."archivedAt" DESC
+    LIMIT ${Math.min(3, Math.ceil(input.limit / 4))}`
+  const day = (d: Date) => d.toISOString().slice(0, 10)
+  const archivedHits: SearchHit[] = archived.map((r) => ({
+    kind: 'archived_memory',
+    path: r.path,
+    documentId: r.documentId,
+    sessionId: r.sessionId,
+    title: `Archived from ${
+      r.kind === 'workspace_memory'
+        ? 'workspace memory'
+        : r.kind === 'teammate_memory'
+          ? `${r.teammateName ?? 'a teammate'}'s memory`
+          : `${r.projectName ?? 'a project'}'s memory`
+    } on ${day(r.archivedAt)}: ${r.reason ?? 'removed'}`,
+    snippet: r.snippet,
+  }))
   return rows
     .filter((r) => r.kind !== 'library' || !access || access.of(r.path) !== 'none')
-    .slice(0, input.limit)
-    .map((r) => ({
+    .slice(0, input.limit - archivedHits.length)
+    .map((r): SearchHit => ({
       kind: r.kind,
       path: r.path,
       documentId: r.id,
@@ -635,6 +926,7 @@ export async function search(
                 : `Thread: ${r.title ?? r.sessionId}`,
       snippet: r.snippet,
     }))
+    .concat(archivedHits)
 }
 
 /**
@@ -653,8 +945,16 @@ export async function manifest(
       orderBy: { path: 'asc' },
     }),
     db.document.findMany({
-      where: { kind: { in: ['workspace_memory', 'teammate_memory'] } },
-      select: { kind: true, teammateId: true, text: true },
+      where: { kind: { in: ['workspace_memory', 'teammate_memory', 'project_memory'] } },
+      select: {
+        id: true,
+        kind: true,
+        path: true,
+        teammateId: true,
+        projectId: true,
+        text: true,
+        memoryTidiedAt: true,
+      },
     }),
     db.teammate.findMany({
       where: { archivedAt: null },
@@ -680,7 +980,50 @@ export async function manifest(
           .filter((m) => m.kind === 'teammate_memory' && m.teammateId)
           .map((m) => [m.teammateId!, m.text]),
       ),
+      projects: Object.fromEntries(
+        memory
+          .filter((m) => m.kind === 'project_memory' && m.projectId)
+          .map((m) => [m.projectId!, m.text]),
+      ),
+      lines: await memoryLineMeta(db, memory),
+      tidied: Object.fromEntries(
+        memory.flatMap((m) => (m.memoryTidiedAt ? [[m.path, m.memoryTidiedAt.toISOString()]] : [])),
+      ),
     },
     access,
   }
+}
+
+/** Each memory file's live lines, by path and key: when learned or confirmed, and who wrote it when a person did. */
+async function memoryLineMeta(db: ScopedDb, files: { id: string; path: string }[]) {
+  const rows = await db.memoryLine.findMany({
+    where: { documentId: { in: files.map((f) => f.id) }, archivedAt: null },
+    select: {
+      documentId: true,
+      key: true,
+      createdAt: true,
+      confirmedAt: true,
+      legacy: true,
+      createdByType: true,
+      createdById: true,
+    },
+  })
+  const name = await actorNames(
+    db,
+    rows.flatMap((r) =>
+      r.createdByType === 'member' && r.createdById ? [{ type: 'member', id: r.createdById }] : [],
+    ),
+  )
+  const paths = new Map(files.map((f) => [f.id, f.path]))
+  const out: Record<string, Record<string, MemoryLineMeta>> = {}
+  for (const row of rows) {
+    const path = paths.get(row.documentId)!
+    const by = row.createdByType === 'member' ? name('member', row.createdById)?.name : undefined
+    ;(out[path] ??= {})[row.key] = {
+      at: lineDate(row).toISOString(),
+      ...(by ? { by } : {}),
+      ...(row.legacy ? { legacy: true } : {}),
+    }
+  }
+  return out
 }
