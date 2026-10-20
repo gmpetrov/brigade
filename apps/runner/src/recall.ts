@@ -1,6 +1,7 @@
 // Memory past what the instructions file holds (MEMORY_CHARS per memory), brought
 // into a turn when it bears on the message: its lines ranked against the message
 // (BM25, no model call), a few per turn, never one twice in a harness session.
+// The file keeps a memory's newest lines; the older ones are what is recalled.
 // Below the limit nothing is left out, and nothing is recalled.
 
 /** Lines brought into one turn, and their length. */
@@ -22,17 +23,24 @@ const STOP = new Set(
   ).split(' '),
 )
 
-/** A memory's lines that its first `limit` characters do not show whole. */
-export function beyondShown(text: string, limit: number) {
-  if (text.length <= limit) return []
-  const lines: string[] = []
-  let at = 0
-  for (const line of text.split('\n')) {
-    const end = at + line.length
-    if (end > limit && line.trim()) lines.push(line.trim())
-    at = end + 1
+/**
+ * A memory cut to `limit` characters: its newest lines, whole, and the older
+ * ones it leaves out. New lines go at the end of a memory file, and a line a
+ * thread corrects moves there, so the end is what changed last.
+ */
+export function newestLines(text: string, limit: number) {
+  if (text.length <= limit) return { shown: text, left: [] as string[] }
+  const lines = text.split('\n')
+  let from = lines.length
+  let size = 0
+  while (from > 0 && size + lines[from - 1]!.length + 1 <= limit) size += lines[--from]!.length + 1
+  return {
+    shown: lines.slice(from).join('\n').trim(),
+    left: lines
+      .slice(0, from)
+      .map((l) => l.trim())
+      .filter(Boolean),
   }
-  return lines
 }
 
 function terms(text: string) {
