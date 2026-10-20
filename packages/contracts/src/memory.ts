@@ -181,18 +181,50 @@ export function changeMemoryFile(
     if (key) at.set(key, [...(at.get(key) ?? []), i])
   })
   const gone = new Set<number>()
-  // What the file will hold: lines that go make room, longer ones and new ones take it.
-  let size = text.length
-  const drop = (i: number) => {
-    gone.add(i)
-    size -= lines[i]!.length + 1
+  const inserts = new Map<number, string[]>()
+  const newTopics: { name: string; lines: string[] }[] = []
+  // Topics that take a new line keep their heading even when all their old lines go.
+  const filled = new Set<string>()
+  // Each topic's heading and description, and its lines: a topic whose last line goes, goes with it.
+  const parts = new Map<string, { other: number[]; lines: number[] }>()
+  roles.forEach((role, i) => {
+    const topic = topics[i]
+    if (topic == null || role === 'blank') return
+    const part = parts.get(topicKey(topic)) ?? { other: [], lines: [] }
+    ;(role === 'line' ? part.lines : part.other).push(i)
+    parts.set(topicKey(topic), part)
+  })
+  /** The file as it would be now: what is checked against `max`, so the limit is the real size. */
+  const render = () => {
+    const hidden = new Set(gone)
+    for (const [key, part] of parts)
+      if (part.lines.length && part.lines.every((i) => gone.has(i)) && !filled.has(key))
+        for (const i of part.other) hidden.add(i)
+    const out: string[] = []
+    const place = (after: number) => {
+      const list = inserts.get(after)
+      if (!list?.length) return
+      // A list under a heading or a paragraph needs a blank line before it, and one after it before the next.
+      if (after >= 0 && roles[after] !== 'line') out.push('')
+      out.push(...list)
+      const next = roles[after + 1]
+      if (next && next !== 'line' && next !== 'blank') out.push('')
+    }
+    place(-1)
+    lines.forEach((line, i) => {
+      if (!hidden.has(i)) out.push(line)
+      place(i)
+    })
+    for (const topic of newTopics)
+      if (topic.lines.length) out.push('', `## ${topic.name}`, '', ...topic.lines)
+    return tidyBlanks(out)
   }
   for (const line of changes.remove ?? []) {
     const key = memoryLineKey(line)
     const places = at.get(key)
     if (!places?.length) continue
     at.delete(key)
-    for (const i of places) drop(i)
+    for (const i of places) gone.add(i)
     result.removed.push({
       text: memoryLineText(lines[places[0]!]!),
       topic: topics[places[0]!] ?? null,
@@ -209,21 +241,22 @@ export function changeMemoryFile(
     if (nextKey !== fromKey && at.has(nextKey)) {
       // Already said elsewhere: the old line, every copy of it, just goes.
       at.delete(fromKey)
-      for (const p of places) drop(p)
+      for (const p of places) gone.add(p)
       result.removed.push({ text: old, topic: topics[i] ?? null })
       continue
     }
-    const line = `${BULLET.exec(lines[i]!)?.[0] ?? '- '}${next}`
-    const freed = copies.reduce((n, p) => n + lines[p]!.length + 1, 0)
-    if (size + line.length - lines[i]!.length - freed > max) {
+    // Said once, corrected: the other copies go. Undone if the file would be too long.
+    const before = lines[i]!
+    const dropped = copies.filter((p) => !gone.has(p))
+    lines[i] = `${BULLET.exec(before)?.[0] ?? '- '}${next}`
+    for (const p of dropped) gone.add(p)
+    if (render().length > max) {
+      lines[i] = before
+      for (const p of dropped) gone.delete(p)
       result.dropped++
       continue
     }
-    // Said once, corrected: the other copies go.
-    for (const p of copies) drop(p)
-    size += line.length - lines[i]!.length
     at.delete(fromKey)
-    lines[i] = line
     at.set(nextKey, [i])
     result.replaced.push({ from: old, to: next, topic: topics[i] ?? null })
   }
@@ -247,65 +280,41 @@ export function changeMemoryFile(
   })
   const style = lines.find((l, i) => roles[i] === 'line' && BULLET.test(l))?.trimStart()[0]
   const bullet = style === '*' || style === '+' ? `${style} ` : '- '
-  const inserts = new Map<number, string[]>()
-  const newTopics: { name: string; lines: string[] }[] = []
   for (const { text: raw, topic } of changes.add ?? []) {
     const line = memoryLineText(raw).replace(/\s*\n\s*/g, ' ')
     const key = memoryLineKey(line)
     if (!key || at.has(key)) continue
     const name = topic?.trim() || null
     const section = sectionOf.get(name === null ? '' : topicKey(name))
-    let fresh = section ? undefined : newTopics.find((t) => topicKey(t.name) === topicKey(name!))
-    const cost = line.length + bullet.length + 1 + (section || fresh ? 0 : name!.length + 6)
-    if (size + cost > max) {
-      result.dropped++
-      continue
-    }
-    size += cost
     if (section) {
       const list = inserts.get(section.last) ?? []
+      const wasFilled = filled.has(section.key)
       list.push(`${bullet}${line}`)
       inserts.set(section.last, list)
+      filled.add(section.key)
+      if (render().length > max) {
+        list.pop()
+        if (!wasFilled) filled.delete(section.key)
+        result.dropped++
+        continue
+      }
     } else {
+      let fresh = newTopics.find((t) => topicKey(t.name) === topicKey(name!))
       if (!fresh) {
         fresh = { name: name!, lines: [] }
         newTopics.push(fresh)
       }
       fresh.lines.push(`${bullet}${line}`)
+      if (render().length > max) {
+        fresh.lines.pop()
+        result.dropped++
+        continue
+      }
     }
     at.set(key, [])
     result.added.push({ text: line, topic: section ? section.topic : name })
   }
-  // A topic whose last line goes, goes with it: its heading and description too.
-  const parts = new Map<string, { other: number[]; lines: number[] }>()
-  roles.forEach((role, i) => {
-    const topic = topics[i]
-    if (topic == null || role === 'blank') return
-    const part = parts.get(topicKey(topic)) ?? { other: [], lines: [] }
-    ;(role === 'line' ? part.lines : part.other).push(i)
-    parts.set(topicKey(topic), part)
-  })
-  for (const [key, part] of parts) {
-    const kept = part.lines.some((i) => !gone.has(i)) || inserts.has(sectionOf.get(key)!.last)
-    if (part.lines.length && !kept) for (const i of part.other) gone.add(i)
-  }
-  const out: string[] = []
-  const place = (after: number) => {
-    const list = inserts.get(after)
-    if (!list) return
-    // A list under a heading or a paragraph needs a blank line before it, and one after it before the next.
-    if (after >= 0 && roles[after] !== 'line') out.push('')
-    out.push(...list)
-    const next = roles[after + 1]
-    if (next && next !== 'line' && next !== 'blank') out.push('')
-  }
-  place(-1)
-  lines.forEach((line, i) => {
-    if (!gone.has(i)) out.push(line)
-    place(i)
-  })
-  for (const topic of newTopics) out.push('', `## ${topic.name}`, '', ...topic.lines)
-  result.text = tidyBlanks(out)
+  result.text = render()
   return result
 }
 
