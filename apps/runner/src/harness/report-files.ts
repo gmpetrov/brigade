@@ -7,10 +7,13 @@ import { ATTACHMENT_MAX, ATTACHMENTS_TOTAL_MAX, REPORT_FILES_MAX } from '@brigad
 import { THREAD_HELPER } from '../thread-net.js'
 import type { ScheduleCaller } from './tools.js'
 
+/** What a thread with its own namespaces has of its own (thread-net.ts): seen only inside them. */
+const OWN_MOUNTS = /^\/(?:tmp|var\/tmp|dev\/shm)(?:\/|$)/
+
 /**
- * How to read a file's first `max` + 1 bytes as the teammate: as its user, and in its
- * thread's namespaces where the thread has its own /tmp. Without -E: the runner's
- * environment stays out of the teammate's processes.
+ * How to read a file's first `max` + 1 bytes as the teammate: as its user, and from its
+ * thread's own /tmp, /var/tmp or /dev/shm in its thread's namespaces, when it has them.
+ * Without -E: the runner's environment stays out of the teammate's processes.
  */
 export function readCommand(
   file: string,
@@ -20,7 +23,8 @@ export function readCommand(
 ): [string, string[]] {
   const head = ['-c', String(max + 1), '--', file]
   if (!runAs) return ['head', head]
-  if (thread) return ['sudo', ['-n', THREAD_HELPER, 'enter', thread, runAs, 'head', ...head]]
+  if (thread && OWN_MOUNTS.test(file))
+    return ['sudo', ['-n', THREAD_HELPER, 'enter', thread, runAs, 'head', ...head]]
   return ['sudo', ['-n', '-u', runAs, 'head', ...head]]
 }
 

@@ -1334,8 +1334,8 @@ export class HarnessThread {
   }
 
   /**
-   * A file the teammate names, read as it sees it: as its user, and in its thread's
-   * namespaces where the thread has its own /tmp (thread-net.ts). Relative to its folder.
+   * A file the teammate names, read as it sees it: as its user, and from its thread's own
+   * /tmp in the thread's namespaces (thread-net.ts, readCommand). Relative to its folder.
    */
   private async readFile(file: string, max?: number, what?: string) {
     const net = this.runAs ? await threadNet(this.spec.sessionId) : null
@@ -1442,7 +1442,7 @@ async function readAs(
   runAs?: string,
   max = READ_MAX,
   what = 'Files saved to the library',
-  /** Its thread, whose own /tmp it sees (thread-net.ts): read in the thread's namespaces. */
+  /** Its thread, when it has namespaces of its own: its /tmp is read in them (readCommand). */
   thread?: string,
 ): Promise<Buffer> {
   const [command, args] = readCommand(file, max, runAs, thread)

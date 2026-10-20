@@ -70,6 +70,14 @@ test('a file is read as the teammate sees it: in its thread, where its /tmp is i
       '/tmp/review.md',
     ],
   ])
+  assert.equal(readCommand('/var/tmp/x', 10, 'bt-cody', 'thread-1')[1][2], 'enter')
+  assert.equal(readCommand('/dev/shm/x', 10, 'bt-cody', 'thread-1')[1][2], 'enter')
+  // Its folder is the same inside and out: read as before.
+  assert.deepEqual(readCommand('/home/bt-cody/threads/t1/a.md', 10, 'bt-cody', 'thread-1'), [
+    'sudo',
+    ['-n', '-u', 'bt-cody', 'head', '-c', '11', '--', '/home/bt-cody/threads/t1/a.md'],
+  ])
+  assert.equal(readCommand('/tmpfile', 10, 'bt-cody', 'thread-1')[1][1], '-u')
 })
 
 test('the report tool hands its files on as paths, and leaves them out when there are none', async () => {
