@@ -100,17 +100,19 @@ export async function threadMentions(db: ScopedDb, sessionId: string) {
     const texts =
       event.text !== undefined
         ? [event.text]
-        : !answer || answer.action === 'declined'
+        : !answer
           ? []
-          : 'replies' in answer
-            ? Object.values(answer.replies).map((r) =>
-                r.type === 'input'
-                  ? r.text
-                  : r.type === 'access' && r.granted
-                    ? (r.credential ?? '')
-                    : '',
-              )
-            : Object.values(answer.answers).map((a) => a.freeform ?? '')
+          : answer.action === 'declined'
+            ? [answer.note ?? '']
+            : 'replies' in answer
+              ? Object.values(answer.replies).map((r) =>
+                  r.type === 'input'
+                    ? r.text
+                    : r.type === 'access' && r.granted
+                      ? (r.credential ?? '')
+                      : '',
+                )
+              : Object.values(answer.answers).map((a) => a.freeform ?? '')
     for (const text of texts)
       for (const id of mentionedIds(text, 'credential')) {
         const members = byCredential.get(id) ?? new Set<string>()
@@ -485,7 +487,9 @@ export async function handleCredentialRequest(
       title: `${teammate!.name}: change ${row.name}`,
       target: row.name,
       reason: `${teammate!.name} asks to change ${listed.join(', ')} on ${row.name}.${
-        input.secret ? ' The current value is kept, so it can be restored from the Secrets page.' : ''
+        input.secret
+          ? ' The current value is kept, so it can be restored from the Secrets page.'
+          : ''
       } Only its creator or an admin can allow it.`,
       always: false,
       payload: {

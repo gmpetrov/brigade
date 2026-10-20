@@ -281,8 +281,10 @@ export default function RunLogPage() {
         return {
           actor: who(d.memberId) ?? 'a member',
           what:
-            (d.answer as { action: string }).action === 'declined'
-              ? 'Declined the ticket'
+            (d.answer as { action: string; note?: string }).action === 'declined'
+              ? (d.answer as { note?: string }).note
+                ? 'Replied with something else'
+                : 'Declined the ticket'
               : 'Answered the ticket',
           detail: d.answer,
         }
@@ -290,8 +292,10 @@ export default function RunLogPage() {
         return {
           actor: who(d.memberId) ?? 'a member',
           what:
-            (d.answer as { action: string }).action === 'declined'
-              ? 'Declined the question'
+            (d.answer as { action: string; note?: string }).action === 'declined'
+              ? (d.answer as { note?: string }).note
+                ? 'Replied with something else'
+                : 'Declined the question'
               : 'Answered',
           detail: d.answer,
         }

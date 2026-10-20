@@ -133,7 +133,9 @@ function HarnessTicket({
         askerName={askerName}
         onAnswer={(answer: TicketAnswer) =>
           api(`/tickets/${t.id}/answer`, { body: { answer } }).then(() =>
-            onDone(answer.action === 'declined' ? 'Declined' : `Sent to ${askerName}`),
+            onDone(
+              answer.action === 'declined' && !answer.note ? 'Declined' : `Sent to ${askerName}`,
+            ),
           )
         }
       />

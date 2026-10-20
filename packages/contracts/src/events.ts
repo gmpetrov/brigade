@@ -208,6 +208,12 @@ export const WIDGET_THEME_VARS = [
   '--font-mono',
 ] as const
 
+/**
+ * Something else, in place of what the teammate asked: a person's own words, such as
+ * "use the Cloudflare App instead". The teammate drops the ask and does what they say.
+ */
+const DeclineNote = z.string().trim().min(1).max(20_000).optional()
+
 export const QuestionAnswer = z.discriminatedUnion('action', [
   z.object({
     action: z.enum(['answered', 'partially-answered']),
@@ -219,7 +225,7 @@ export const QuestionAnswer = z.discriminatedUnion('action', [
       }),
     ),
   }),
-  z.object({ action: z.literal('declined') }),
+  z.object({ action: z.literal('declined'), note: DeclineNote }),
 ])
 export type QuestionAnswer = z.infer<typeof QuestionAnswer>
 
@@ -374,7 +380,7 @@ export type AskReply = z.infer<typeof AskReply>
 
 export const TicketAnswer = z.discriminatedUnion('action', [
   z.object({ action: z.literal('answered'), replies: z.record(z.string(), AskReply) }),
-  z.object({ action: z.literal('declined') }),
+  z.object({ action: z.literal('declined'), note: DeclineNote }),
 ])
 export type TicketAnswer = z.infer<typeof TicketAnswer>
 
