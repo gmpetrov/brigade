@@ -140,3 +140,29 @@ test('the swap file is as large as the memory, within 8 GiB, a tenth of the disk
   // small: 4 GB of memory, a small disk.
   assert.equal(size(3.9 * GIB, 20, 15), 2)
 })
+
+test("the teammate helper prunes the computer's own Docker, never its volumes", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'system-docker-'))
+  const stub = (name: string, body: string) =>
+    writeFileSync(join(dir, name), `#!/bin/sh\n${body}\n`, { mode: 0o755 })
+  stub('docker', 'echo "$*" >>"$LOG"; echo "Total reclaimed space: 2.979GB"')
+  stub('systemctl', '[ "$ACTIVE" = yes ]')
+  const prune = (active: string) => {
+    const log = join(dir, `${active}.log`)
+    const result = spawnSync(
+      'sh',
+      ['-c', TEAMMATE_HELPER, 'brigade-teammate', 'prune-system-docker'],
+      {
+        env: { PATH: `${dir}:/usr/bin:/bin`, LOG: log, ACTIVE: active },
+        encoding: 'utf8',
+      },
+    )
+    assert.equal(result.status, 0, result.stderr)
+    return { out: result.stdout.trim(), calls: existsSync(log) ? readFileSync(log, 'utf8') : '' }
+  }
+  const { out, calls } = prune('yes')
+  assert.equal(out, 'Total reclaimed space: 2.979GB')
+  assert.equal(calls.trim(), 'system prune --all --force')
+  // No Docker running on the computer: nothing to prune.
+  assert.deepEqual(prune('no'), { out: '', calls: '' })
+})

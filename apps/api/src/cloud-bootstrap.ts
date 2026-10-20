@@ -125,6 +125,11 @@ case "\${1:-}" in
       *) fail "bad clipboard command" ;;
     esac
     ;;
+  prune-system-docker) # the computer's own Docker, beside the teammates' rootless ones: images,
+    # stopped containers, networks and build cache nothing uses, when the disk fills. Never volumes.
+    command -v docker >/dev/null && systemctl is-active --quiet docker || exit 0
+    docker system prune --all --force | tail -1
+    ;;
   *) fail "unknown command" ;;
 esac
 `
