@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { newestLines, pickLines, recalledBlock, SESSION_CHARS } from '../src/recall.js'
+import {
+  newestLines,
+  pickLines,
+  recallCandidates,
+  recalledBlock,
+  SESSION_CHARS,
+  shownLines,
+} from '../src/recall.js'
 
 test('a long memory shows its newest lines whole, and leaves the older ones to recall', () => {
   assert.deepEqual(newestLines('short memory', 100), { shown: 'short memory', left: [] })
@@ -51,4 +58,20 @@ test('the block says what the lines are, and nothing when there are none', () =>
     recalledBlock(['- a line']),
     /^<recalled-memory>\n.*\n- a line\n<\/recalled-memory>$/s,
   )
+})
+
+test('a running session can recall what its instructions file did not show, lines learned since included', () => {
+  const start = ['- first line', '- second line', '- third line'].join('\n')
+  // The session started on the newest 30 characters: the first line was cut.
+  const shown = shownLines([start], 30)
+  assert.deepEqual([...shown], ['- second line', '- third line'])
+  // Since then another thread added a line, which is now among the newest.
+  const now = `${start}\n- a line learned since`
+  assert.deepEqual(recallCandidates([now], 30, shown), ['- first line', '- a line learned since'])
+  // A parked session loads the newest lines when it resumes: only the older ones are left.
+  assert.deepEqual(recallCandidates([now], 30, undefined), [
+    '- first line',
+    '- second line',
+    '- third line',
+  ])
 })

@@ -31,7 +31,14 @@ import { readCodexLimits } from '../codex-usage.js'
 import { browserMcpServer, ensureBrowser, threadTabsFile } from '../browsers.js'
 import { ComputerUseError, computerUseClient } from '../computer-use.js'
 import { ThreadCredentials, type CredentialRequester } from '../credentials.js'
-import { builtinSkills, instructions, writeInstructions } from '../instructions.js'
+import {
+  builtinSkills,
+  instructions,
+  MEMORY_CHARS,
+  memoryBody,
+  writeInstructions,
+} from '../instructions.js'
+import { shownLines } from '../recall.js'
 import { backup, checkout, gitEnv, type BundleStore, type CheckoutInput } from '../repos.js'
 import { writeSkills } from '../skills.js'
 import { copyIncluded } from '../repo-settings.js'
@@ -356,6 +363,8 @@ function resumable(harness: ThreadSpec['teammate']['harness'], resume: unknown):
 /** One thread: one harness session in its own working directory. */
 export class HarnessThread {
   private live: Live | undefined
+  /** The memory lines the instructions file showed when the session started (recall.ts). */
+  private shown: Set<string> = new Set()
   /** Tool calls not yet finished, kept across turns (see EventMapper). */
   private readonly toolCalls = new Map<string, { toolName: string; input: unknown }>()
   /** Text and thinking blocks under way, by id (see EventMapper), handed over with the turn. */
@@ -586,6 +595,11 @@ export class HarnessThread {
   /** A harness session is running, not parked. */
   get active() {
     return this.live !== undefined
+  }
+
+  /** The memory lines the running session's instructions file shows; none while parked. */
+  get memoryShown(): ReadonlySet<string> | undefined {
+    return this.live ? this.shown : undefined
   }
 
   /**
@@ -1164,13 +1178,18 @@ export class HarnessThread {
     const tabsFile =
       browser && this.runAs ? threadTabsFile(this.runAs, this.spec.sessionId) : undefined
     const libraryDir = await this.context.libraryDir(this.spec.teammate.id)
-    // Memory loads through the harness's own instruction file.
+    // Memory loads through the harness's own instruction file. What it shows, for recall.
+    const memory = this.context.memoryFor(this.spec.teammate.id)
+    this.shown = shownLines(
+      [memory.workspace, this.spec.project?.memory ?? '', memory.teammate].map(memoryBody),
+      MEMORY_CHARS,
+    )
     await writeInstructions(
       this.workDir,
       this.spec,
       instructions(
         this.spec,
-        this.context.memoryFor(this.spec.teammate.id),
+        memory,
         libraryDir,
         tabsFile
           ? { ready: true }
