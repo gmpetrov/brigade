@@ -221,6 +221,9 @@ export const Skill = z.object({
 })
 export type Skill = z.infer<typeof Skill>
 
+/** A skill that is on, as the composer offers it (`/name`): no instructions or files to carry. */
+export type SkillCommand = { name: string; description: string }
+
 /**
  * A skill in a thread's spec: what the runner writes into the teammate's skills
  * folder. Its files come from the bucket by their SHA-256 (`refs`); `files`,
