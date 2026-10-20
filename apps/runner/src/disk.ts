@@ -25,8 +25,22 @@ const RESERVE_SHARE = 0.03
 /** pnpm reads its whole store to prune it: once in a while, unless something was trimmed. */
 export const CACHES_EVERY_MS = 30 * 60_000
 const PRUNE_TIMEOUT_MS = 15 * 60_000
-/** Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP servers run from it. */
-const TOOL_CACHES = ['.npm/_cacache', '.cache/yarn', '.cache/pip', '.cache/go-build']
+/**
+ * Caches under the home that tools fill again by themselves. ~/.npm/_npx is not one: MCP
+ * servers run from it; nor ~/.cargo/bin, the tools cargo installed. Bun links a project's
+ * node_modules from its cache like pnpm: they keep their files.
+ */
+const TOOL_CACHES = [
+  '.npm/_cacache',
+  '.cache/yarn',
+  '.cache/pip',
+  '.cache/go-build',
+  '.bun/install/cache',
+  '.cargo/registry/cache',
+  '.cargo/registry/src',
+  '.cargo/git/checkouts',
+  '.cargo/git/db',
+]
 
 /**
  * After everything was freed, still this full: someone must act (a ticket in Needs you).
@@ -35,7 +49,18 @@ const TOOL_CACHES = ['.npm/_cacache', '.cache/yarn', '.cache/pip', '.cache/go-bu
 export const STILL_FULL = 0.85
 
 /** Package managers whose runs write into the caches cleared here, by the name their command has. */
-const MANAGERS = new Set(['pnpm', 'npm', 'npm-cli', 'yarn', 'bun', 'pip', 'uv', 'corepack', 'go'])
+const MANAGERS = new Set([
+  'pnpm',
+  'npm',
+  'npm-cli',
+  'yarn',
+  'bun',
+  'pip',
+  'uv',
+  'corepack',
+  'go',
+  'cargo',
+])
 /** Their commands that install, and so write into a cache or store while they run. */
 const INSTALLS = new Set([
   'install',
@@ -58,8 +83,34 @@ const INSTALLS = new Set([
   'sync',
   'prepare',
 ])
-/** Go's commands that build, and so write into its build cache. */
-const GO_BUILDS = new Set(['build', 'test', 'run', 'install', 'get', 'mod', 'vet', 'generate'])
+/** For Go and Cargo, the commands that build: they read and write their caches as they run. */
+const BUILDS: Record<string, Set<string>> = {
+  go: new Set(['build', 'test', 'run', 'install', 'get', 'mod', 'vet', 'generate']),
+  cargo: new Set([
+    'build',
+    'b',
+    'check',
+    'c',
+    'test',
+    't',
+    'run',
+    'r',
+    'bench',
+    'clippy',
+    'doc',
+    'fix',
+    'fetch',
+    'install',
+    'update',
+    'add',
+    'vendor',
+    'package',
+    'publish',
+    'metadata',
+    'tree',
+    'generate-lockfile',
+  ]),
+}
 
 /** A command's manager: its file's name without .js or a version (pip3.12 is pip). */
 const managerOf = (word: string) =>
@@ -78,7 +129,7 @@ export function installs(args: string) {
   const manager = managerOf(words[at]!)
   const rest = words.slice(at + 1).filter((word) => !word.startsWith('-'))
   if (rest.length === 0) return ['pnpm', 'yarn', 'bun'].includes(manager)
-  const commands = manager === 'go' ? GO_BUILDS : INSTALLS
+  const commands = BUILDS[manager] ?? INSTALLS
   return rest.slice(0, 3).some((word) => commands.has(word))
 }
 

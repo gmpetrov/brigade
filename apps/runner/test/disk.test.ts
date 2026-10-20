@@ -42,6 +42,8 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
     '.local/share/pnpm/store/v10/files/00/abc',
     '.npm/_npx/1234/package.json',
     '.cache/ms-playwright/chromium-1200/chrome',
+    '.cargo/bin/cargo-watch',
+    '.cargo/registry/index/index.crates.io-6f17d22bba15001f/config.json',
     'threads/cmthread1/app/node_modules/is-number/index.js',
   ]
   const gone = [
@@ -50,6 +52,9 @@ test("a teammate's caches go, its threads and the tools it runs stay", async (t)
     '.cache/yarn/v6/pkg',
     '.cache/pip/http/a',
     '.cache/go-build/00/a',
+    '.bun/install/cache/0019245d1f12eeb3.npm/package.json',
+    '.cargo/registry/cache/index.crates.io-6f17d22bba15001f/serde-1.0.0.crate',
+    '.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.0/lib.rs',
   ]
   for (const path of [...kept, ...gone]) await file(path)
 
@@ -77,6 +82,10 @@ test('a package manager installing is told from one running something', () => {
     'python3 -m pip3.12 install requests',
     'go build ./...',
     'go mod download',
+    'bun install',
+    'bun add zod',
+    '/home/bt-a/.cargo/bin/cargo build --release',
+    'cargo t',
   ])
     assert.equal(installs(args), true, args)
   for (const args of [
@@ -90,6 +99,8 @@ test('a package manager installing is told from one running something', () => {
     'pnpm exec prettier --write install.md',
     'pnpm --filter web dev',
     'go version',
+    'bun run dev',
+    'cargo --version',
   ])
     assert.equal(installs(args), false, args)
 })
