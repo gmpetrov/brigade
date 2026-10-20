@@ -16,8 +16,8 @@ import { run } from './repos.js'
  * Before 95%: boat's snapshots fail past it, and a stop or resume then loses work.
  */
 export const CRITICAL = 0.9
-/** Room is set aside only while the disk stays under this full with it. */
-const RESERVE_UNDER = 0.9
+/** Room is set aside only while the disk stays under this full with it: well below CRITICAL. */
+const RESERVE_UNDER = 0.85
 /** At most this much set aside… */
 const RESERVE_MAX = 2 * 1024 ** 3
 /** …and at most this share of the disk. */
