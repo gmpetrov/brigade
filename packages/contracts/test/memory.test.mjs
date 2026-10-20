@@ -339,3 +339,18 @@ test('a tidy may not empty a small file either', () => {
   assert.equal(tidyTakesTooMuch(eight, '# M\n'), true)
   assert.equal(tidyTakesTooMuch(eight, eight.replace('- Fact 0.\n', '')), false)
 })
+
+test('the limit is checked on the file as written, separators and emptied topics included', () => {
+  // The emptied topic's heading goes too: the new line fits in 17 characters.
+  const room = changeMemoryFile(
+    '# M\n\n## Old\n\n- a\n',
+    { remove: ['a'], add: [{ text: 'new rule', topic: null }] },
+    17,
+  )
+  assert.equal(room.dropped, 0)
+  assert.equal(room.text, '# M\n\n- new rule\n')
+  // The blank line under the title counts: 9 characters do not fit in 8.
+  const tight = changeMemoryFile('# M\n', { add: [{ text: 'x', topic: null }] }, 8)
+  assert.equal(tight.dropped, 1)
+  assert.equal(tight.text, '# M\n')
+})
