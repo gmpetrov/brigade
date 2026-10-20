@@ -246,6 +246,12 @@ async function start() {
         const response = await folderRequest(f, '', { method: 'DELETE' })
         if (!response.ok) throw refused('API', response)
       },
+      gone: async (f) => {
+        // The same request as get: it answers 410 before looking for an archive.
+        const response = await folderRequest(f, '')
+        await response.body?.cancel()
+        return response.status === 410
+      },
     },
     inUse: (sessionId): boolean => threads.inUse(sessionId) || previews.has(sessionId),
     quiet: (name) => previews.archive(name.sessionId),

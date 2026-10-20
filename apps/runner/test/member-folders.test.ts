@@ -87,6 +87,7 @@ test('a thread quiet for days loses what a reinstall makes again, and its teamma
       put: () => Promise.reject(new Error('nothing is archived from a member’s machine')),
       get: async () => false,
       delete: async () => undefined,
+      gone: async () => false,
     },
     inUse: (sessionId) => sessionId === 'busy',
     quiet: async (name) => {
@@ -135,7 +136,12 @@ test('a git command in a checkout counts as use', async () => {
   const stateFile = join(home, 'state', 'folders-2.json')
   await writeFile(stateFile, JSON.stringify({ active: { [worked.workDir]: Date.now() - 4 * DAY } }))
   const folders = new Folders({
-    archives: { put: async () => undefined, get: async () => false, delete: async () => undefined },
+    archives: {
+      put: async () => undefined,
+      get: async () => false,
+      delete: async () => undefined,
+      gone: async () => false,
+    },
     inUse: () => false,
     stateFile,
     tempDir: join(home, 'tmp'),

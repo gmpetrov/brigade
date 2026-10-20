@@ -13,6 +13,8 @@ import { run } from './repos.js'
 
 /** Past this, the reserve goes and caches are cleared even while their teammate works. */
 export const CRITICAL = 0.95
+/** Room is set aside only while the disk stays under this full with it. */
+const RESERVE_UNDER = 0.9
 /** At most this much set aside… */
 const RESERVE_MAX = 2 * 1024 ** 3
 /** …and at most this share of the disk. */
@@ -77,40 +79,51 @@ export async function freeCaches(home: string, runAs?: string) {
  * Room set aside on the disk with the thread folders, given back when it is
  * nearly full (CRITICAL): the runner, its state and the turn under way have
  * room to finish while the rest is freed. Set aside again once there is room.
+ * Counted as free space when deciding what to free (folders.ts), like the swap
+ * file: it must never be why a thread loses its files.
  */
 export class Reserve {
+  /** Given back, and not set aside again since: the disk is still nearly full. */
+  released = false
+
   constructor(
     private readonly file: string,
     /** A path on the disk to watch: the reserve is kept only on that disk. */
     private readonly disk: string,
   ) {}
 
-  /** Set aside, when there is room for it beside what `roomy` leaves free. */
-  async keep(roomy: number) {
-    if (await this.held()) return
+  /** Set aside, when the disk stays under RESERVE_UNDER full with it. */
+  async keep() {
+    if ((await this.size()) > 0) return
     const [s, same] = await Promise.all([statfs(this.disk), this.onDisk()])
     if (!same) return
     const size = reserveSize(s.blocks * s.bsize)
-    // Only while the disk is under `roomy` full once it is made.
-    if (size <= 0 || 1 - (s.bavail * s.bsize - size) / (s.blocks * s.bsize) >= roomy) return
-    await run('fallocate', ['-l', String(size), this.file]).then(
-      () => console.log(`set ${gib(size)} aside on the disk`),
-      (error) => console.warn(`could not set room aside on the disk: ${String(error)}`),
-    )
+    if (size <= 0 || 1 - (s.bavail * s.bsize - size) / (s.blocks * s.bsize) >= RESERVE_UNDER) return
+    try {
+      await run('fallocate', ['-l', String(size), this.file])
+    } catch (error) {
+      // Not left half made: it would look set aside.
+      await rm(this.file, { force: true })
+      return console.warn(`could not set room aside on the disk: ${String(error)}`)
+    }
+    this.released = false
+    console.log(`set ${gib(size)} aside on the disk`)
   }
 
   /** Give it back. Whether there was one. */
   async release() {
-    if (!(await this.held())) return false
+    if ((await this.size()) === 0) return false
     await rm(this.file, { force: true })
+    this.released = true
     console.warn('the disk is nearly full: gave back the room set aside')
     return true
   }
 
-  private held() {
+  /** The bytes it takes on the disk; 0 when there is none. */
+  size() {
     return stat(this.file).then(
-      () => true,
-      () => false,
+      (s) => s.blocks * 512,
+      () => 0,
     )
   }
 
