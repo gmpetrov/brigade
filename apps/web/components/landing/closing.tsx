@@ -227,7 +227,7 @@ export function Download() {
             <div className={c('dl-art green')} aria-hidden="true">
               <div className={c('brw2')}>
                 <div className={c('brw-bar')}>
-                  <span>brigade.sh</span>
+                  <span>www.brigade.lol</span>
                 </div>
                 <div className={c('brw2-b')}>
                   <div className={c('sb')}>
