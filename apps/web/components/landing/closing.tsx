@@ -440,6 +440,8 @@ export function Footer() {
           <Link href="/how-it-works">How it works</Link>
           <a href={REPO_URL}>GitHub</a>
           <Link href={SIGN_IN}>Sign in</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
           <span>MIT license</span>
           <span>© 2026</span>
         </nav>
