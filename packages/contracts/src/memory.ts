@@ -108,12 +108,12 @@ export const memoryLineCount = (text: string) => {
 /**
  * Whether a tidy would take too much of a file away, counted on its result,
  * however it does it (archived, merged, or said again as another line): more
- * than 40 % of its lines, or 60 % of a file past MEMORY_TIDY_AT.
+ * than 40 % of its lines, or 60 % of a file past MEMORY_TIDY_AT, small files included.
  */
 export function tidyTakesTooMuch(before: string, after: string) {
   const was = memoryLineCount(before)
   const share = before.length > MEMORY_TIDY_AT ? 0.6 : 0.4
-  return was - memoryLineCount(after) > Math.max(10, was * share)
+  return was - memoryLineCount(after) > Math.floor(was * share)
 }
 
 /** How long a memory's core is, as a thread loads it. */
@@ -173,46 +173,58 @@ export function changeMemoryFile(
 ): MemoryChangeResult {
   const { lines, roles, topics } = scan(text)
   const result: MemoryChangeResult = { text, added: [], replaced: [], removed: [], dropped: 0 }
-  const at = new Map<string, number>()
+  // Every place each line is said, by key: a line said twice (in the core and a topic) is one line.
+  const at = new Map<string, number[]>()
   roles.forEach((role, i) => {
     if (role !== 'line') return
     const key = memoryLineKey(lines[i]!)
-    if (key && !at.has(key)) at.set(key, i)
+    if (key) at.set(key, [...(at.get(key) ?? []), i])
   })
   const gone = new Set<number>()
   // What the file will hold: lines that go make room, longer ones and new ones take it.
   let size = text.length
-  for (const line of changes.remove ?? []) {
-    const i = at.get(memoryLineKey(line))
-    if (i === undefined || gone.has(i)) continue
+  const drop = (i: number) => {
     gone.add(i)
-    at.delete(memoryLineKey(line))
     size -= lines[i]!.length + 1
-    result.removed.push({ text: memoryLineText(lines[i]!), topic: topics[i] ?? null })
+  }
+  for (const line of changes.remove ?? []) {
+    const key = memoryLineKey(line)
+    const places = at.get(key)
+    if (!places?.length) continue
+    at.delete(key)
+    for (const i of places) drop(i)
+    result.removed.push({
+      text: memoryLineText(lines[places[0]!]!),
+      topic: topics[places[0]!] ?? null,
+    })
   }
   for (const { from, to } of changes.replace ?? []) {
-    const i = at.get(memoryLineKey(from))
+    const fromKey = memoryLineKey(from)
+    const places = at.get(fromKey)
     const next = memoryLineText(to).replace(/\s*\n\s*/g, ' ')
-    if (i === undefined || gone.has(i) || !next) continue
+    if (!places?.length || !next) continue
+    const [i, ...copies] = places as [number, ...number[]]
     const old = memoryLineText(lines[i]!)
-    const there = at.get(memoryLineKey(next))
-    if (there !== undefined && there !== i) {
-      // Already said elsewhere: the old line just goes.
-      at.delete(memoryLineKey(from))
-      gone.add(i)
-      size -= lines[i]!.length + 1
+    const nextKey = memoryLineKey(next)
+    if (nextKey !== fromKey && at.has(nextKey)) {
+      // Already said elsewhere: the old line, every copy of it, just goes.
+      at.delete(fromKey)
+      for (const p of places) drop(p)
       result.removed.push({ text: old, topic: topics[i] ?? null })
       continue
     }
     const line = `${BULLET.exec(lines[i]!)?.[0] ?? '- '}${next}`
-    if (size + line.length - lines[i]!.length > max) {
+    const freed = copies.reduce((n, p) => n + lines[p]!.length + 1, 0)
+    if (size + line.length - lines[i]!.length - freed > max) {
       result.dropped++
       continue
     }
+    // Said once, corrected: the other copies go.
+    for (const p of copies) drop(p)
     size += line.length - lines[i]!.length
-    at.delete(memoryLineKey(from))
+    at.delete(fromKey)
     lines[i] = line
-    at.set(memoryLineKey(next), i)
+    at.set(nextKey, [i])
     result.replaced.push({ from: old, to: next, topic: topics[i] ?? null })
   }
   // Where each section's new lines go: after its last line still there.
@@ -261,7 +273,7 @@ export function changeMemoryFile(
       }
       fresh.lines.push(`${bullet}${line}`)
     }
-    at.set(key, -1)
+    at.set(key, [])
     result.added.push({ text: line, topic: section ? section.topic : name })
   }
   // A topic whose last line goes, goes with it: its heading and description too.

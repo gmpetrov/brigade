@@ -121,6 +121,7 @@ export type LinePlan = {
 export type LineUpdate = {
   text?: string
   topic?: string | null
+  legacy?: boolean
   confirmedAt?: Date
   archivedAt?: Date | null
   archivedReason?: string | null
@@ -172,6 +173,16 @@ export function planLineSync(
       if (row.topic !== line.topic) data.topic = line.topic
       if (row.text !== line.text) data.text = line.text
       if (context.confirm.has(key)) data.confirmedAt = now
+      // A line others were merged into, in its own words, takes the newest of their dates.
+      const dated = (context.sources.get(key) ?? []).flatMap((k) => {
+        const source = rowOf(k)
+        return source && !source.legacy ? [dateOf(source)] : []
+      })
+      const newest = Math.max(0, ...dated)
+      if (newest && (row.legacy || newest > dateOf(row))) {
+        data.confirmedAt = new Date(Math.max(newest, data.confirmedAt?.getTime() ?? 0))
+        if (row.legacy) data.legacy = false
+      }
       if (Object.keys(data).length) plan.update.push({ id: row.id, data })
     } else {
       const there = was.has(key)

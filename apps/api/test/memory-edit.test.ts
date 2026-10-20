@@ -267,3 +267,26 @@ test('a line merged from lines older than dates in memory is still dated "before
     [[true, day(1)]],
   )
 })
+
+test('a line others are merged into, in its own words, takes the newest of their dates', () => {
+  const before = '# M\n\n- Use R2 for files.\n- Files go to R2.\n'
+  const laid = applyMemoryLayout(
+    before,
+    MemoryLayout.parse({
+      merge: [
+        { from: ['Use R2 for files.', 'Files go to R2.'], text: 'Use R2 for files.', topic: null },
+      ],
+    }),
+  )
+  const rows = [
+    row('Use R2 for files.', { createdAt: day(20) }),
+    row('Files go to R2.', { createdAt: day(2) }),
+  ]
+  const plan = planLineSync(
+    before,
+    laid.text,
+    rows,
+    context({ reasons: laid.reasons, sources: laid.sources }),
+  )
+  assert.deepEqual(plan.update.find((u) => u.id === rows[0]!.id)?.data.confirmedAt, day(2))
+})

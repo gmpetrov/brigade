@@ -7,6 +7,7 @@ import {
   memoryLineKey,
   MemoryLayout,
   parseMemoryFile,
+  tidyTakesTooMuch,
   topicSlug,
 } from '../dist/memory.js'
 
@@ -319,4 +320,22 @@ test('lines that go make room, and a correction that would overfill the file is 
   )
   assert.equal(grow.dropped, 1)
   assert.equal(grow.text, big)
+})
+
+test('a line said twice is removed or corrected everywhere it is', () => {
+  const text = '# M\n\n- Old rule.\n\n## Topic\n\n- Old rule.\n- Other.\n'
+  const removed = changeMemoryFile(text, { remove: ['Old rule.'] }, 50_000)
+  assert.equal(removed.text, '# M\n\n## Topic\n\n- Other.\n')
+  const corrected = changeMemoryFile(
+    text,
+    { replace: [{ from: 'Old rule.', to: 'Corrected rule.' }] },
+    50_000,
+  )
+  assert.equal(corrected.text, '# M\n\n- Corrected rule.\n\n## Topic\n\n- Other.\n')
+})
+
+test('a tidy may not empty a small file either', () => {
+  const eight = `# M\n\n${Array.from({ length: 8 }, (_, i) => `- Fact ${i}.`).join('\n')}\n`
+  assert.equal(tidyTakesTooMuch(eight, '# M\n'), true)
+  assert.equal(tidyTakesTooMuch(eight, eight.replace('- Fact 0.\n', '')), false)
 })
