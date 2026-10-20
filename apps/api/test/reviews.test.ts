@@ -12,11 +12,16 @@ import { parseEnv } from 'node:util'
 //   keeps its reason; a project where reviews are manual starts none;
 // - the pull request waits on a person only once its review is done, and again after the
 //   author asks the reviewer to look again;
-// - one review at a time; request_review only for the thread's own pull requests;
-// - with nobody else, the author reviews its own in a fresh context;
+// - one review at a time, even asked for twice at once; request_review only for the thread's
+//   own pull requests;
+// - a task whose pull request is in review stays in Doing until the review is done, and a
+//   review at work past its wait still keeps it out of Needs you;
+// - a reviewer posts only through an account it may use there (not another member's own);
+//   with nobody else, the author reviews its own in a fresh context;
 // - a member's request for one opened outside Brigade gets a thread of its own;
 // - closing a pull request stops its review;
-// - the brief says whether the repository runs checks, and how the thread started.
+// - the brief says whether the repository runs checks (a release workflow is none), and how
+//   the thread started.
 const envFile = new URL('../.env', import.meta.url)
 if (!process.env.DATABASE_URL && existsSync(envFile))
   process.env.DATABASE_URL = parseEnv(readFileSync(envFile, 'utf8')).DATABASE_URL
@@ -55,16 +60,22 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     | 'web'
     | 'quiet'
     | 'thread'
-    | 'quietThread',
+    | 'quietThread'
+    | 'bob'
+    | 'lee',
     string
   >
   let db: ReturnType<typeof scoped>
   let scope: { organizationId: string; workspaceId: string }
+  /** A thread of Riley's in a project, that started with a request (and is a task's, given one). */
+  let thread: (projectId: string, ask: string, taskId?: string) => Promise<string>
   const realFetch = globalThis.fetch
   /** Pull requests GitHub knows, by number: open unless said. */
   const closed = new Set<number>()
   /** Whether the repository's pull requests have check runs. */
   let ci = false
+  /** The repository's workflow files, by name. */
+  let workflows: Record<string, string> = {}
 
   const pull = (number: number) => ({
     number,
@@ -131,6 +142,25 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         vaultSecretId: await sealSecret(db, scope, { installationId }),
       } as never,
     })
+    // Bob's own GitHub account, which only Bob's threads may use: Lee's only one.
+    await prisma.user.create({
+      data: { id: `bob-${suffix}`, name: 'Bob', email: `bob-${suffix}@test.local` },
+    })
+    ids.bob = `m-bob-${suffix}`
+    await prisma.member.create({
+      data: { id: ids.bob, organizationId: ids.org, userId: `bob-${suffix}`, role: 'member' },
+    })
+    ids.lee = (await teammate({ name: 'Lee', harness: 'codex' })).id
+    const bobs = await db.connection.create({
+      data: {
+        appId: app.id,
+        kind: 'github',
+        label: "Bob's GitHub",
+        reach: 'mine',
+        createdByMemberId: ids.bob,
+        vaultSecretId: await sealSecret(db, scope, { installationId }),
+      } as never,
+    })
     // Sam only reads it: it cannot post a review.
     await db.grant.createMany({
       data: [
@@ -138,6 +168,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         { teammateId: ids.kai, connectionId: github.id, scope: 'read_write' },
         { teammateId: ids.chief, connectionId: github.id, scope: 'read_write' },
         { teammateId: ids.sam, connectionId: github.id, scope: 'read' },
+        { teammateId: ids.lee, connectionId: bobs.id, scope: 'read_write' },
       ] as never,
     })
     ids.web = (await db.project.create({ data: { name: `Web ${suffix}` } as never })).id
@@ -149,7 +180,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
         data: { name: `Quiet ${suffix}`, reviewPolicy: 'manual' } as never,
       })
     ).id
-    const thread = async (projectId: string, ask: string) => {
+    thread = async (projectId: string, ask: string, taskId?: string) => {
       const session = await db.session.create({
         data: {
           teammateId: ids.riley,
@@ -159,6 +190,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
           projectId,
           status: 'idle',
           lastSeq: 1,
+          ...(taskId ? { taskId } : {}),
         } as never,
       })
       await db.threadTeammate.create({
@@ -197,6 +229,22 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
             : [],
         })
       if (pathname.endsWith('/status')) return Response.json({ statuses: [] })
+      if (pathname === '/repos/acme/web/contents/.github/workflows')
+        return Object.keys(workflows).length
+          ? Response.json(
+              Object.keys(workflows).map((name) => ({
+                name,
+                path: `.github/workflows/${name}`,
+                type: 'file',
+              })),
+            )
+          : Response.json({ message: 'Not Found' }, { status: 404 })
+      const workflow = pathname.match(/^\/repos\/acme\/web\/contents\/\.github\/workflows\/(.+)$/)
+      if (workflow && workflows[workflow[1]!])
+        return Response.json({
+          content: Buffer.from(workflows[workflow[1]!]!).toString('base64'),
+          encoding: 'base64',
+        })
       return Response.json({ message: 'Not Found' }, { status: 404 })
     }) as typeof fetch
   })
@@ -206,7 +254,7 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     if (ids.workspace) await prisma.workspace.deleteMany({ where: { id: ids.workspace } })
     await prisma.member.deleteMany({ where: { organizationId: ids.org } })
     await prisma.organization.deleteMany({ where: { id: ids.org } })
-    await prisma.user.deleteMany({ where: { id: `owner-${suffix}` } })
+    await prisma.user.deleteMany({ where: { id: { in: [`owner-${suffix}`, `bob-${suffix}`] } } })
   })
 
   /** Riley opens a pull request in a thread, as its GitHub call tells Brigade; what it is told back. */
@@ -338,15 +386,72 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.equal((await row(13)).noReviewReason, null)
   })
 
-  test('with nobody else to review it, the author reviews its own in a fresh context', async () => {
+  test('a reviewer posts only through an account it may use there; with nobody else, the author reviews its own', async () => {
+    // Without Kai, only Lee is on another model, and its GitHub is Bob's own: not in Ada's thread.
     await db.teammate.updateMany({ where: { id: ids.kai }, data: { archivedAt: new Date() } })
     try {
       const told = await open(ids.thread, 16, { wanted: true, reason: 'A migration' })
       assert.equal(told?.review.reviewer, 'Riley', told?.review.note)
       assert.equal((await row(16)).reviewSession?.teammateId, ids.riley)
+      // Asked for by name, it says why not.
+      const { startReview } = await import('../src/reviews.js')
+      await assert.rejects(
+        startReview(db, scope, {
+          repo,
+          number: 17,
+          reviewer: 'Lee',
+          by: { kind: 'member', memberId: ids.owner },
+        }),
+        /Lee cannot post a review on acme\/web/,
+      )
     } finally {
       await db.teammate.updateMany({ where: { id: ids.kai }, data: { archivedAt: null } })
     }
+  })
+
+  test('two requests at once start one review', async () => {
+    await open(ids.thread, 18)
+    const { startReview } = await import('../src/reviews.js')
+    const ask = () =>
+      startReview(db, scope, { repo, number: 18, by: { kind: 'member', memberId: ids.owner } })
+    const results = await Promise.allSettled([ask(), ask(), ask()])
+    assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1)
+    for (const r of results)
+      if (r.status === 'rejected')
+        assert.match(String((r.reason as Error).message), /starting|already reviewing/)
+    const started = await db.session.count({
+      where: { parentId: ids.thread, title: 'Review #18: Change 18' },
+    })
+    assert.equal(started, 1)
+    // The claim is let go: once that review is done, another may start.
+    assert.equal((await row(18)).reviewClaimedAt, null)
+  })
+
+  test('a task whose pull request is in review stays in Doing until the review is done', async () => {
+    const { listTasks } = await import('../src/tasks.js')
+    const task = await db.task.create({
+      data: { title: 'Dark pricing cards', createdByMemberId: ids.owner } as never,
+    })
+    const taskThread = await thread(ids.web, 'Dark pricing cards', task.id)
+    await open(taskThread, 19, { wanted: true, reason: 'Every card changes' })
+    const column = async () => (await listTasks(db)).find((t) => t.id === task.id)?.column
+    assert.equal(await column(), 'doing')
+    const child = (await row(19)).reviewSessionId!
+    await db.session.updateMany({ where: { id: child }, data: { reportDeliveredAt: new Date() } })
+    assert.equal(await column(), 'needs_you')
+  })
+
+  test('a review at work past its wait still keeps the pull request out of Needs you', async () => {
+    await open(ids.thread, 22, { wanted: true, reason: 'Concurrency' })
+    const child = (await row(22)).reviewSessionId!
+    // The thread stopped waiting for it, and was told so; the reviewer goes on.
+    await db.session.updateMany({
+      where: { id: child },
+      data: { awaited: false, status: 'running' },
+    })
+    assert.ok(!(await waiting()).includes(22))
+    await db.session.updateMany({ where: { id: child }, data: { status: 'idle' } })
+    assert.ok((await waiting()).includes(22))
   })
 
   test('a member’s request for one opened outside Brigade gets a thread of its own', async () => {
@@ -404,17 +509,46 @@ describe('reviews in child threads', { skip: !database && 'no database answers' 
     assert.match(without, /run its typecheck and tests/)
     assert.match(brief([], false), /say the verdict and the problems in your reply/)
     assert.match(brief([], true, true), /You wrote it in another thread/)
-    // A repository with checks: the review started says so in its brief.
-    ci = true
-    try {
-      const told = await open(ids.thread, 31, { wanted: true, reason: 'Touches billing' })
+    // What a review started finds: checks reported on its head, or a workflow that runs on it.
+    const found = async (number: number) => {
+      const told = await open(ids.thread, number, { wanted: true, reason: 'Touches billing' })
       assert.equal(told?.review.started, true, told?.review.note)
       const audited = await prisma.auditEntry.findFirst({
-        where: { action: 'pull_request.review_requested', targetId: (await row(31)).id },
+        where: { action: 'pull_request.review_requested', targetId: (await row(number)).id },
       })
-      assert.equal((audited?.data as { checks?: boolean } | undefined)?.checks, true)
+      return (audited?.data as { checks?: boolean } | undefined)?.checks
+    }
+    ci = true
+    try {
+      assert.equal(await found(31), true)
     } finally {
       ci = false
     }
+    // Only a release on tags, as in this very repository: no checks on its pull requests.
+    workflows = { 'desktop-release.yml': "on:\n  push:\n    tags: ['desktop-v*']\njobs: {}\n" }
+    assert.equal(await found(32), false)
+    workflows = {
+      'desktop-release.yml': workflows['desktop-release.yml']!,
+      'ci.yml': 'on: [pull_request]\njobs: {}\n',
+    }
+    assert.equal(await found(33), true)
+    workflows = {}
+  })
+
+  test('a workflow counts when it runs on the pull request: on pull_request, or a push to its branch', async () => {
+    const { workflowRunsOn } = await import('../src/reviews.js')
+    const head = 'brigade/riley-fix'
+    const runs = (yaml: string) => workflowRunsOn(yaml, head)
+    assert.equal(runs('on: pull_request\n'), true)
+    assert.equal(runs('on:\n  pull_request_target:\n    types: [opened]\n'), true)
+    assert.equal(runs('on: [push, workflow_dispatch]\n'), true)
+    assert.equal(runs('on:\n  push:\n    paths: [src/**]\n'), true)
+    assert.equal(runs("on:\n  push:\n    branches: ['brigade/**']\n"), true)
+    assert.equal(runs('on:\n  push:\n    branches: [main]\n'), false)
+    assert.equal(runs("on:\n  push:\n    branches-ignore: ['brigade/*']\n"), false)
+    assert.equal(runs("on:\n  push:\n    tags: ['desktop-v*']\n"), false)
+    assert.equal(runs("on:\n  schedule:\n    - cron: '0 8 * * 1'\n"), false)
+    assert.equal(runs('on: release\n'), false)
+    assert.equal(runs('not: [valid'), false)
   })
 })

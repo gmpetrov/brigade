@@ -49,6 +49,7 @@ export type PullRequestMinAggregateOutputType = {
   authorTeammateId: string | null
   reviewSessionId: string | null
   noReviewReason: string | null
+  reviewClaimedAt: Date | null
   mergeStatus: $Enums.MergeStatus | null
   mergeMethod: string | null
   requestedByMemberId: string | null
@@ -74,6 +75,7 @@ export type PullRequestMaxAggregateOutputType = {
   authorTeammateId: string | null
   reviewSessionId: string | null
   noReviewReason: string | null
+  reviewClaimedAt: Date | null
   mergeStatus: $Enums.MergeStatus | null
   mergeMethod: string | null
   requestedByMemberId: string | null
@@ -99,6 +101,7 @@ export type PullRequestCountAggregateOutputType = {
   authorTeammateId: number
   reviewSessionId: number
   noReviewReason: number
+  reviewClaimedAt: number
   mergeStatus: number
   mergeMethod: number
   requestedByMemberId: number
@@ -136,6 +139,7 @@ export type PullRequestMinAggregateInputType = {
   authorTeammateId?: true
   reviewSessionId?: true
   noReviewReason?: true
+  reviewClaimedAt?: true
   mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
@@ -161,6 +165,7 @@ export type PullRequestMaxAggregateInputType = {
   authorTeammateId?: true
   reviewSessionId?: true
   noReviewReason?: true
+  reviewClaimedAt?: true
   mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
@@ -186,6 +191,7 @@ export type PullRequestCountAggregateInputType = {
   authorTeammateId?: true
   reviewSessionId?: true
   noReviewReason?: true
+  reviewClaimedAt?: true
   mergeStatus?: true
   mergeMethod?: true
   requestedByMemberId?: true
@@ -298,6 +304,7 @@ export type PullRequestGroupByOutputType = {
   authorTeammateId: string | null
   reviewSessionId: string | null
   noReviewReason: string | null
+  reviewClaimedAt: Date | null
   mergeStatus: $Enums.MergeStatus
   mergeMethod: string | null
   requestedByMemberId: string | null
@@ -346,6 +353,7 @@ export type PullRequestWhereInput = {
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  reviewClaimedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -376,6 +384,7 @@ export type PullRequestOrderByWithRelationInput = {
   authorTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   noReviewReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewClaimedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -410,6 +419,7 @@ export type PullRequestWhereUniqueInput = Prisma.AtLeast<{
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  reviewClaimedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -440,6 +450,7 @@ export type PullRequestOrderByWithAggregationInput = {
   authorTeammateId?: Prisma.SortOrderInput | Prisma.SortOrder
   reviewSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   noReviewReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  reviewClaimedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -473,6 +484,7 @@ export type PullRequestScalarWhereWithAggregatesInput = {
   authorTeammateId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   reviewSessionId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   noReviewReason?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
+  reviewClaimedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PullRequest"> | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusWithAggregatesFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableWithAggregatesFilter<"PullRequest"> | string | null
@@ -494,6 +506,7 @@ export type PullRequestCreateInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -524,6 +537,7 @@ export type PullRequestUncheckedCreateInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -546,6 +560,7 @@ export type PullRequestUpdateInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -576,6 +591,7 @@ export type PullRequestUncheckedUpdateInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -602,6 +618,7 @@ export type PullRequestCreateManyInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -623,6 +640,7 @@ export type PullRequestUpdateManyMutationInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -648,6 +666,7 @@ export type PullRequestUncheckedUpdateManyInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -689,6 +708,7 @@ export type PullRequestCountOrderByAggregateInput = {
   authorTeammateId?: Prisma.SortOrder
   reviewSessionId?: Prisma.SortOrder
   noReviewReason?: Prisma.SortOrder
+  reviewClaimedAt?: Prisma.SortOrder
   mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
@@ -719,6 +739,7 @@ export type PullRequestMaxOrderByAggregateInput = {
   authorTeammateId?: Prisma.SortOrder
   reviewSessionId?: Prisma.SortOrder
   noReviewReason?: Prisma.SortOrder
+  reviewClaimedAt?: Prisma.SortOrder
   mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
@@ -744,6 +765,7 @@ export type PullRequestMinOrderByAggregateInput = {
   authorTeammateId?: Prisma.SortOrder
   reviewSessionId?: Prisma.SortOrder
   noReviewReason?: Prisma.SortOrder
+  reviewClaimedAt?: Prisma.SortOrder
   mergeStatus?: Prisma.SortOrder
   mergeMethod?: Prisma.SortOrder
   requestedByMemberId?: Prisma.SortOrder
@@ -961,6 +983,7 @@ export type PullRequestCreateWithoutWorkspaceInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -989,6 +1012,7 @@ export type PullRequestUncheckedCreateWithoutWorkspaceInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1044,6 +1068,7 @@ export type PullRequestScalarWhereInput = {
   authorTeammateId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   reviewSessionId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   noReviewReason?: Prisma.StringNullableFilter<"PullRequest"> | string | null
+  reviewClaimedAt?: Prisma.DateTimeNullableFilter<"PullRequest"> | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFilter<"PullRequest"> | $Enums.MergeStatus
   mergeMethod?: Prisma.StringNullableFilter<"PullRequest"> | string | null
   requestedByMemberId?: Prisma.StringNullableFilter<"PullRequest"> | string | null
@@ -1065,6 +1090,7 @@ export type PullRequestCreateWithoutAuthorTeammateInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1093,6 +1119,7 @@ export type PullRequestUncheckedCreateWithoutAuthorTeammateInput = {
   sessionId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1141,6 +1168,7 @@ export type PullRequestCreateWithoutSessionInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1169,6 +1197,7 @@ export type PullRequestUncheckedCreateWithoutSessionInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1201,6 +1230,7 @@ export type PullRequestCreateWithoutReviewSessionInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1229,6 +1259,7 @@ export type PullRequestUncheckedCreateWithoutReviewSessionInput = {
   sessionId?: string | null
   authorTeammateId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1293,6 +1324,7 @@ export type PullRequestCreateWithoutReviewsInput = {
   headRef: string
   baseRef: string
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1322,6 +1354,7 @@ export type PullRequestUncheckedCreateWithoutReviewsInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1359,6 +1392,7 @@ export type PullRequestUpdateWithoutReviewsInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1388,6 +1422,7 @@ export type PullRequestUncheckedUpdateWithoutReviewsInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1412,6 +1447,7 @@ export type PullRequestCreateManyWorkspaceInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1433,6 +1469,7 @@ export type PullRequestUpdateWithoutWorkspaceInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1461,6 +1498,7 @@ export type PullRequestUncheckedUpdateWithoutWorkspaceInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1486,6 +1524,7 @@ export type PullRequestUncheckedUpdateManyWithoutWorkspaceInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1510,6 +1549,7 @@ export type PullRequestCreateManyAuthorTeammateInput = {
   sessionId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1531,6 +1571,7 @@ export type PullRequestUpdateWithoutAuthorTeammateInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1559,6 +1600,7 @@ export type PullRequestUncheckedUpdateWithoutAuthorTeammateInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1584,6 +1626,7 @@ export type PullRequestUncheckedUpdateManyWithoutAuthorTeammateInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1608,6 +1651,7 @@ export type PullRequestCreateManySessionInput = {
   authorTeammateId?: string | null
   reviewSessionId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1632,6 +1676,7 @@ export type PullRequestCreateManyReviewSessionInput = {
   sessionId?: string | null
   authorTeammateId?: string | null
   noReviewReason?: string | null
+  reviewClaimedAt?: Date | string | null
   mergeStatus?: $Enums.MergeStatus
   mergeMethod?: string | null
   requestedByMemberId?: string | null
@@ -1653,6 +1698,7 @@ export type PullRequestUpdateWithoutSessionInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1681,6 +1727,7 @@ export type PullRequestUncheckedUpdateWithoutSessionInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1706,6 +1753,7 @@ export type PullRequestUncheckedUpdateManyWithoutSessionInput = {
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   reviewSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1727,6 +1775,7 @@ export type PullRequestUpdateWithoutReviewSessionInput = {
   headRef?: Prisma.StringFieldUpdateOperationsInput | string
   baseRef?: Prisma.StringFieldUpdateOperationsInput | string
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1755,6 +1804,7 @@ export type PullRequestUncheckedUpdateWithoutReviewSessionInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1780,6 +1830,7 @@ export type PullRequestUncheckedUpdateManyWithoutReviewSessionInput = {
   sessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   authorTeammateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   noReviewReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  reviewClaimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   mergeStatus?: Prisma.EnumMergeStatusFieldUpdateOperationsInput | $Enums.MergeStatus
   mergeMethod?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedByMemberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1836,6 +1887,7 @@ export type PullRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   authorTeammateId?: boolean
   reviewSessionId?: boolean
   noReviewReason?: boolean
+  reviewClaimedAt?: boolean
   mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
@@ -1867,6 +1919,7 @@ export type PullRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   authorTeammateId?: boolean
   reviewSessionId?: boolean
   noReviewReason?: boolean
+  reviewClaimedAt?: boolean
   mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
@@ -1896,6 +1949,7 @@ export type PullRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   authorTeammateId?: boolean
   reviewSessionId?: boolean
   noReviewReason?: boolean
+  reviewClaimedAt?: boolean
   mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
@@ -1925,6 +1979,7 @@ export type PullRequestSelectScalar = {
   authorTeammateId?: boolean
   reviewSessionId?: boolean
   noReviewReason?: boolean
+  reviewClaimedAt?: boolean
   mergeStatus?: boolean
   mergeMethod?: boolean
   requestedByMemberId?: boolean
@@ -1937,7 +1992,7 @@ export type PullRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
+export type PullRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "workspaceId" | "repository" | "number" | "title" | "headRef" | "baseRef" | "sessionId" | "authorTeammateId" | "reviewSessionId" | "noReviewReason" | "reviewClaimedAt" | "mergeStatus" | "mergeMethod" | "requestedByMemberId" | "round" | "resolveFromSha" | "note" | "state" | "mergedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["pullRequest"]>
 export type PullRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   session?: boolean | Prisma.PullRequest$sessionArgs<ExtArgs>
@@ -1993,6 +2048,10 @@ export type $PullRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
      * Why the teammate that opened it asked for no review, in its words: shown on it.
      */
     noReviewReason: string | null
+    /**
+     * While a review of it is being started: one at a time (src/reviews.ts).
+     */
+    reviewClaimedAt: Date | null
     mergeStatus: $Enums.MergeStatus
     /**
      * How it merges when Brigade merges it; squash when unset.
@@ -2461,6 +2520,7 @@ export interface PullRequestFieldRefs {
   readonly authorTeammateId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly reviewSessionId: Prisma.FieldRef<"PullRequest", 'String'>
   readonly noReviewReason: Prisma.FieldRef<"PullRequest", 'String'>
+  readonly reviewClaimedAt: Prisma.FieldRef<"PullRequest", 'DateTime'>
   readonly mergeStatus: Prisma.FieldRef<"PullRequest", 'MergeStatus'>
   readonly mergeMethod: Prisma.FieldRef<"PullRequest", 'String'>
   readonly requestedByMemberId: Prisma.FieldRef<"PullRequest", 'String'>

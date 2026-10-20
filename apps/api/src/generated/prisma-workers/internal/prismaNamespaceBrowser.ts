@@ -525,6 +525,7 @@ export const PullRequestScalarFieldEnum = {
   authorTeammateId: 'authorTeammateId',
   reviewSessionId: 'reviewSessionId',
   noReviewReason: 'noReviewReason',
+  reviewClaimedAt: 'reviewClaimedAt',
   mergeStatus: 'mergeStatus',
   mergeMethod: 'mergeMethod',
   requestedByMemberId: 'requestedByMemberId',

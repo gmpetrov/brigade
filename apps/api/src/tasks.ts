@@ -22,6 +22,7 @@ import { projectWhere, usableProject } from './projects.js'
 import { projectRefusal } from './task-project.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
+import { pullWaitsOnPerson, REVIEW_THREAD } from './review-state.js'
 import { actingTeammate, currentTeammate, loadThread, requireMayPrompt } from './thread-spec.js'
 import { joinThread, promptThread, startThread } from './work.js'
 
@@ -41,7 +42,13 @@ const BOARD = {
       startedByMemberId: true,
       _count: { select: { tickets: { where: { status: 'open' as const } } } },
       pullRequests: {
-        select: { repository: true, number: true, state: true },
+        select: {
+          repository: true,
+          number: true,
+          state: true,
+          mergeStatus: true,
+          reviewSession: { select: REVIEW_THREAD },
+        },
         orderBy: { createdAt: 'asc' as const },
       },
     },
@@ -62,25 +69,23 @@ const ACTIVE = ['starting', 'running']
 
 /**
  * No thread: backlog. An open ticket, a waiting thread, or an open pull request the
- * teammate opened and stopped at (for review and merge): needs you. Its merge
- * marks the task done (see settleOnMerge).
+ * teammate opened and stopped at, once its review is done (for the person to merge):
+ * needs you, as Home and the sidebar say (pullWaitsOnPerson). Its merge marks the task
+ * done (see settleOnMerge).
  */
 export function columnOf(task: {
   completedAt: Date | null
   session: {
     status: string
     _count: { tickets: number }
-    pullRequests: { state: string }[]
+    pullRequests: Parameters<typeof pullWaitsOnPerson>[0][]
   } | null
 }): TaskColumn {
   if (task.completedAt) return 'done'
   if (!task.session) return 'backlog'
   if (task.session._count.tickets > 0 || task.session.status === 'waiting') return 'needs_you'
   // Only an open one waits on a person: once merged or closed, a reopened task is Doing.
-  if (
-    task.session.pullRequests.some((p) => p.state === 'open') &&
-    !ACTIVE.includes(task.session.status)
-  )
+  if (task.session.pullRequests.some(pullWaitsOnPerson) && !ACTIVE.includes(task.session.status))
     return 'needs_you'
   return 'doing'
 }

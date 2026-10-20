@@ -22,6 +22,7 @@ import {
   type ScheduleOperation,
 } from '@brigade/contracts'
 import { HTTPException } from 'hono/http-exception'
+import { parse as parseYaml } from 'yaml'
 import { audit, type Actor } from './audit.js'
 import { parentChanged, settleAwaited } from './children.js'
 import { scoped, type Scope, type ScopedDb } from './db.js'
@@ -34,12 +35,12 @@ import {
   pullOf,
   repoPath,
   reviewInclude,
-  reviewUnderWay,
   stateOf,
   trackedRow,
   type GhPull,
   type GitHub,
 } from './pull-requests.js'
+import { reviewUnderWay } from './review-state.js'
 import { usableAccounts } from './routes/accounts.js'
 import type { WorkspaceScope } from './scope.js'
 import { loadThread, type LoadedThread } from './thread-spec.js'
@@ -47,6 +48,10 @@ import { startThread } from './work.js'
 
 /** How much of the request that started the author's thread the reviewer reads. */
 const ASK_CHARS = 2_000
+/** Workflow files read to tell whether a repository runs checks on its pull requests. */
+const WORKFLOWS_READ = 20
+/** How long one request has to start a review before another may: one at a time. */
+const CLAIM_MS = 2 * 60_000
 
 type Teammate = { id: string; name: string; harness: 'claude_code' | 'codex'; kind: string }
 
@@ -81,23 +86,77 @@ const startedNote = (reviewer: string) =>
   'then, do not offer to merge it. Tell the person in a line that it is in review, then end your ' +
   'turn: do not wait or poll.'
 
+/** A workflow's branch filter, GitHub's glob: `*` within a path segment, `**` across them. */
+function globMatches(pattern: string, ref: string) {
+  const source = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '\u0000')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\u0000/g, '.*')
+  return new RegExp(`^${source}$`).test(ref)
+}
+
+/**
+ * Whether a workflow runs on a pull request's head: on pull_request (or pull_request_target),
+ * or on a push to its branch. One for tags, releases or a schedule (a desktop release, say)
+ * does not.
+ */
+export function workflowRunsOn(text: string, head: string) {
+  let doc: Record<string, unknown> | null
+  try {
+    doc = parseYaml(text) as Record<string, unknown> | null
+  } catch {
+    return false
+  }
+  // YAML 1.1 reads the `on` key as true.
+  const on = doc?.on ?? doc?.['true']
+  const events: Record<string, unknown> =
+    typeof on === 'string'
+      ? { [on]: null }
+      : Array.isArray(on)
+        ? Object.fromEntries(on.map((e) => [String(e), null]))
+        : on && typeof on === 'object'
+          ? (on as Record<string, unknown>)
+          : {}
+  if ('pull_request' in events || 'pull_request_target' in events) return true
+  if (!('push' in events)) return false
+  const push = (events.push ?? {}) as Record<string, unknown>
+  const list = (v: unknown) =>
+    Array.isArray(v) ? v.map(String) : typeof v === 'string' ? [v] : null
+  const branches = list(push.branches)
+  if (branches) return branches.some((b) => !b.startsWith('!') && globMatches(b, head))
+  const ignored = list(push['branches-ignore'])
+  if (ignored) return !ignored.some((b) => globMatches(b, head))
+  // Tags alone: it runs for a release, not for a branch.
+  return !list(push.tags) && !list(push['tags-ignore'])
+}
+
 /**
  * The checks the repository runs on this pull request: those reported on its head, else its
- * workflows, as a pull request just opened may not list its runs yet. Empty: it runs none.
+ * workflows that run on it, as a pull request just opened may not list its runs yet. Empty:
+ * it runs none.
  */
 async function checksRun(gh: GitHub, repo: string, p: GhPull): Promise<string[]> {
   const checks = await checksOf(gh, repo, p.head.sha)
   if (checks.length) return [...new Set(checks.map((c) => c.name))]
-  const response = await gh.fetch(
-    `${repoPath(repo)}/contents/.github/workflows?ref=${encodeURIComponent(p.head.sha)}`,
-  )
+  const ref = encodeURIComponent(p.head.sha)
+  const response = await gh.fetch(`${repoPath(repo)}/contents/.github/workflows?ref=${ref}`)
   if (!response.ok) return []
   const files = (await response.json().catch(() => [])) as unknown
-  return Array.isArray(files)
-    ? (files as { name: string; type: string }[])
-        .filter((f) => f.type === 'file' && /\.ya?ml$/.test(f.name))
-        .map((f) => f.name)
-    : []
+  if (!Array.isArray(files)) return []
+  const names: string[] = []
+  for (const f of (files as { name: string; path: string; type: string }[])
+    .filter((f) => f.type === 'file' && /\.ya?ml$/.test(f.name))
+    .slice(0, WORKFLOWS_READ)) {
+    const path = f.path.split('/').map(encodeURIComponent).join('/')
+    const file = await gh.fetch(`${repoPath(repo)}/contents/${path}?ref=${ref}`)
+    if (!file.ok) continue
+    const body = (await file.json().catch(() => null)) as { content?: string } | null
+    if (!body?.content) continue
+    if (workflowRunsOn(Buffer.from(body.content, 'base64').toString('utf8'), p.head.ref))
+      names.push(f.name)
+  }
+  return names
 }
 
 /** How the thread that wrote it started: what the change answers, besides its description. */
@@ -137,8 +196,10 @@ export function reviewBrief(input: {
     'Read it with `github_get_pull_request`, and whatever else you need to judge it: the files at its ' +
       'branch with `github_read_file`, or a checkout of the branch. ' +
       (input.checks.length
-        ? `This repository runs checks on its pull requests (${input.checks.join(', ')}): leave what ` +
-          'they check to them, and read the change for what they miss.'
+        ? `This repository runs checks on its pull requests (${input.checks.join(', ')}): leave to ` +
+          'them what they cover, and read the change for what they miss. If none of them runs its ' +
+          'typecheck and tests (a deploy preview, say), run those yourself on a checkout of the ' +
+          'branch, and say how they went.'
         : 'No checks run on its pull requests, so nobody else runs its tests: check out the branch, ' +
           'run its typecheck and tests (its README or AGENTS.md says how), and say which ran and how ' +
           'they went.'),
@@ -176,7 +237,10 @@ async function pickReviewer(
     computerId: string
   },
 ): Promise<Teammate> {
-  const posts = async (t: Teammate) => !!(await teammateGitHub(db, scope, t.id, input.repo))?.write
+  // Through an account it may use in a thread that member starts: a member's own, only theirs.
+  const posts = async (t: Teammate) =>
+    !!(await teammateGitHub(db, scope, t.id, input.repo, { startedByMemberId: input.memberId }))
+      ?.write
   const runs = async (t: Teammate) =>
     (
       await usableAccounts(db, {
@@ -250,9 +314,35 @@ export async function startReview(
   const p = await pullOf(gh, input.repo, input.number)
   if (stateOf(p) !== 'open')
     throw new HTTPException(409, { message: 'This pull request is closed' })
-  const tracked = await trackedRow(db, input.repo, p)
+  const { id } = await trackedRow(db, input.repo, p)
+  // One at a time: the request that claims the pull request starts its review. A claim left
+  // by a crash lapses.
+  const { count } = await db.pullRequest.updateMany({
+    where: {
+      id,
+      OR: [{ reviewClaimedAt: null }, { reviewClaimedAt: { lt: new Date(Date.now() - CLAIM_MS) } }],
+    },
+    data: { reviewClaimedAt: new Date() },
+  })
+  if (!count) throw new HTTPException(409, { message: 'A review of it is starting' })
+  try {
+    return await startClaimed(db, scope, input, gh, p, id)
+  } finally {
+    await db.pullRequest.updateMany({ where: { id }, data: { reviewClaimedAt: null } })
+  }
+}
+
+/** startReview, once it holds the pull request's claim: no other review starts meanwhile. */
+async function startClaimed(
+  db: ScopedDb,
+  scope: Scope,
+  input: { repo: string; number: number; reviewer?: string; by: Asker },
+  gh: GitHub,
+  p: GhPull,
+  id: string,
+) {
   const row = (await db.pullRequest.findFirst({
-    where: { id: tracked.id },
+    where: { id },
     include: { authorTeammate: true, reviewSession: reviewInclude.reviewSession },
   }))!
   if (row.reviewSession && reviewUnderWay(row.reviewSession))

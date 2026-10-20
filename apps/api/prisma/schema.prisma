@@ -834,6 +834,8 @@ model PullRequest {
   reviewSession       Session?            @relation("PullRequestReviewThread", fields: [reviewSessionId], references: [id], onDelete: SetNull)
   /// Why the teammate that opened it asked for no review, in its words: shown on it.
   noReviewReason      String?
+  /// While a review of it is being started: one at a time (src/reviews.ts).
+  reviewClaimedAt     DateTime?
   mergeStatus         MergeStatus         @default(none)
   /// How it merges when Brigade merges it; squash when unset.
   mergeMethod         String?

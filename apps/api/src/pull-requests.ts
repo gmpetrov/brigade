@@ -22,9 +22,10 @@ import { previewStates, stopThreadPreview } from './app-previews.js'
 import { audit, type Actor } from './audit.js'
 import { GITHUB_API, githubHeaders, installationToken } from './connectors/github-app.js'
 import { ConnectorError, json } from './connectors/types.js'
-import { prisma, scoped, type Prisma, type Scope, type ScopedDb } from './db.js'
+import { prisma, scoped, Prisma, type Scope, type ScopedDb } from './db.js'
 import { teammateGitHub, workspaceGitHub } from './git.js'
 import { projectOfRepository } from './projects.js'
+import { REVIEW_DONE, REVIEW_THREAD, reviewUnderWay } from './review-state.js'
 import { cancelReview } from './reviews.js'
 import type { WorkspaceScope } from './scope.js'
 import { settleOnMerge } from './tasks.js'
@@ -102,61 +103,28 @@ export const stateOf = (p: GhPull) => (p.merged_at ? 'merged' : p.state)
 
 /** Brigade's row for a pull request, made when it has none yet (one opened outside Brigade). */
 export async function trackedRow(db: ScopedDb, repo: string, p: GhPull) {
-  return (
-    (await db.pullRequest.findFirst({ where: { repository: repo, number: p.number } })) ??
-    (await db.pullRequest.create({
-      data: {
-        repository: repo,
-        number: p.number,
-        title: p.title,
-        headRef: p.head.ref,
-        baseRef: p.base.ref,
-      } as never,
-    }))
-  )
+  const where = { repository: repo, number: p.number }
+  const found = await db.pullRequest.findFirst({ where })
+  if (found) return found
+  try {
+    return await db.pullRequest.create({
+      data: { ...where, title: p.title, headRef: p.head.ref, baseRef: p.base.ref } as never,
+    })
+  } catch (error) {
+    // Made by another request meanwhile: that one.
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'))
+      throw error
+    return db.pullRequest.findFirstOrThrow({ where })
+  }
 }
 
 // ---------------------------------------------------------------------------
 // What the dashboard reads
 // ---------------------------------------------------------------------------
 
-/** A thread's statuses while at work, or asking a person something. */
-const AT_WORK_OR_ASKING = ['starting', 'running', 'waiting'] as const
-
-/**
- * Whether a review is under way: its child thread is awaited and has not reported yet (a new
- * message from the author waits for it again), or its own thread is at work.
- */
-export const reviewUnderWay = (thread: {
-  parentId: string | null
-  awaited: boolean
-  reportDeliveredAt: Date | null
-  status: string
-}) =>
-  thread.parentId
-    ? thread.awaited && !thread.reportDeliveredAt
-    : (AT_WORK_OR_ASKING as readonly string[]).includes(thread.status)
-
-/** The same for the database, the other way round: a review's thread that is done (waitingOnPerson). */
-const REVIEW_DONE = {
-  OR: [
-    { parentId: null, status: { notIn: [...AT_WORK_OR_ASKING] } },
-    { parentId: { not: null }, OR: [{ awaited: false }, { reportDeliveredAt: { not: null } }] },
-  ],
-} satisfies Prisma.SessionWhereInput
-
 /** What a pull request's review reads: its thread, its latest verdict and why it got none. */
 export const reviewInclude = {
-  reviewSession: {
-    select: {
-      id: true,
-      status: true,
-      parentId: true,
-      awaited: true,
-      reportDeliveredAt: true,
-      teammate: { select: { id: true, name: true } },
-    },
-  },
+  reviewSession: { select: REVIEW_THREAD },
   reviews: {
     orderBy: { createdAt: 'desc' },
     take: 1,

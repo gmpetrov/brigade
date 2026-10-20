@@ -36,6 +36,7 @@ ALTER TABLE "PullRequest" DROP COLUMN "reviewStatus",
 DROP COLUMN "autoMerge",
 DROP COLUMN "reviewerTeammateId",
 ADD COLUMN "noReviewReason" TEXT,
+ADD COLUMN "reviewClaimedAt" TIMESTAMP(3),
 ADD COLUMN "reviewSessionId" TEXT;
 ALTER TABLE "PullRequest" RENAME COLUMN "reviewedSha" TO "resolveFromSha";
 -- Only a merge under way keeps it: the rest is what a review looked at.

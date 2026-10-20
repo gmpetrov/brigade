@@ -30,6 +30,7 @@ import { prisma } from './db.js'
 import { isLooking } from './hub.js'
 import { laterKey, latersIn } from './later.js'
 import { waitingNow } from './pull-requests.js'
+import { REVIEW_THREAD } from './review-state.js'
 import { columnOf } from './tasks.js'
 import { sendPush, type Vapid } from './web-push.js'
 
@@ -178,7 +179,9 @@ async function workspaceItems(workspaceId: string, members: Recipient[], now: Da
             ...thread.select,
             status: true,
             _count: { select: { tickets: { where: { status: 'open' as const } } } },
-            pullRequests: { select: { state: true } },
+            pullRequests: {
+              select: { state: true, mergeStatus: true, reviewSession: { select: REVIEW_THREAD } },
+            },
           },
         },
       },
