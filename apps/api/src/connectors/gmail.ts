@@ -132,6 +132,13 @@ const Compose = z.object({
     .string()
     .optional()
     .describe('Gmail message id to reply to, keeping the thread'),
+  from: z
+    .string()
+    .email()
+    .optional()
+    .describe(
+      "One of the account's verified Send mail as addresses. Default: when replying, the address the email was sent to if it is one of them (e.g. support@), else the account's own",
+    ),
   attachments: z
     .array(z.string().min(1))
     .max(10)
@@ -153,18 +160,66 @@ const wrapped = (bytes: Uint8Array) =>
     .toString('base64')
     .replace(/.{76}(?=.)/g, '$&\r\n')
 
+type SendAs = {
+  sendAsEmail: string
+  displayName?: string
+  isPrimary?: boolean
+  verificationStatus?: string
+}
+
+/** The addresses in a header such as To or Cc, lower-cased. */
+const addressesIn = (value: string | undefined) =>
+  (value ?? '').match(/[^\s<>,;"()]+@[^\s<>,;"()]+/g)?.map((a) => a.toLowerCase()) ?? []
+
+/** The account's verified Send mail as addresses (its own included). */
+async function sendAsOf(ctx: ConnectorContext) {
+  const got = await json<{ sendAs?: SendAs[] }>(await ctx.fetch(`${API}/settings/sendAs`))
+  return (got.sendAs ?? []).filter((a) => a.isPrimary || a.verificationStatus === 'accepted')
+}
+
+/**
+ * The From header: the address asked for, or for a reply the alias the email was
+ * sent to (a reply to support@ goes out from support@, as Gmail on the web does),
+ * so the customer sees it and their answer comes back to it. None: the account's own.
+ */
+async function fromHeader(ctx: ConnectorContext, asked: string | undefined, sentTo: string[]) {
+  if (!asked && sentTo.length === 0) return null
+  let aliases: SendAs[]
+  try {
+    aliases = await sendAsOf(ctx)
+  } catch (error) {
+    if (asked) throw error
+    return null // Not knowing the aliases, the account's own address stays.
+  }
+  const alias = asked
+    ? aliases.find((a) => a.sendAsEmail.toLowerCase() === asked.toLowerCase())
+    : aliases.find((a) => !a.isPrimary && sentTo.includes(a.sendAsEmail.toLowerCase()))
+  if (asked && !alias)
+    throw new ConnectorError(
+      `${asked} is not one of this account's Send mail as addresses: ${aliases.map((a) => a.sendAsEmail).join(', ') || 'none'}`,
+    )
+  if (!alias || alias.isPrimary) return null
+  const name = alias.displayName
+  if (!name) return `From: ${alias.sendAsEmail}`
+  // An encoded word can't sit inside quotes.
+  const shown = encodedWord(name) === name ? `"${name}"` : encodedWord(name)
+  return `From: ${shown} <${alias.sendAsEmail}>`
+}
+
 /** An RFC 2822 message, threaded when replying, with its attachments as a multipart/mixed body. */
 async function compose(ctx: ConnectorContext, input: z.infer<typeof Compose>) {
   let threadId: string | undefined
   const headers = [`To: ${input.to.join(', ')}`]
   if (input.cc?.length) headers.push(`Cc: ${input.cc.join(', ')}`)
   let subject = input.subject
+  let sentTo: string[] = []
   if (input.replyToMessageId) {
     const original = await json<Message>(
       await ctx.fetch(
-        `${API}/messages/${encodeURIComponent(input.replyToMessageId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=Subject&metadataHeaders=References`,
+        `${API}/messages/${encodeURIComponent(input.replyToMessageId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=Subject&metadataHeaders=References&metadataHeaders=To&metadataHeaders=Cc`,
       ),
     )
+    sentTo = [...addressesIn(header(original, 'To')), ...addressesIn(header(original, 'Cc'))]
     threadId = original.threadId
     const messageId = header(original, 'Message-ID')
     if (messageId)
@@ -174,6 +229,8 @@ async function compose(ctx: ConnectorContext, input: z.infer<typeof Compose>) {
       )
     if (!subject) subject = `Re: ${header(original, 'Subject') ?? ''}`
   }
+  const from = await fromHeader(ctx, input.from, sentTo)
+  if (from) headers.unshift(from)
   headers.push(
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     'MIME-Version: 1.0',
@@ -432,7 +489,8 @@ export const gmail: ConnectorDefinition = {
       write: true,
       input: Compose,
       files: 'attachments',
-      target: (i) => `email to ${i.to.join(', ')}: "${i.subject}"${withFiles(i)}`,
+      target: (i) =>
+        `email${i.from ? ` from ${i.from}` : ''} to ${i.to.join(', ')}: "${i.subject}"${withFiles(i)}`,
       run: async (ctx, i) => {
         const sent = await json<Message>(
           await deliver(ctx, '/messages/send', await compose(ctx, i)),
@@ -446,7 +504,8 @@ export const gmail: ConnectorDefinition = {
       write: true,
       input: Compose,
       files: 'attachments',
-      target: (i) => `draft to ${i.to.join(', ')}: "${i.subject}"${withFiles(i)}`,
+      target: (i) =>
+        `draft${i.from ? ` from ${i.from}` : ''} to ${i.to.join(', ')}: "${i.subject}"${withFiles(i)}`,
       run: async (ctx, i) => {
         const draft = await json<{ id: string; message: Message }>(
           await deliver(ctx, '/drafts', await compose(ctx, i)),

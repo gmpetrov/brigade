@@ -298,3 +298,58 @@ test('Gmail replays the latest mails its search matches, as the inbox reader han
 test("the dry run's closing note shows as Brigade's, not as a person's message", () => {
   assert.equal(childNote(`${DRY_RUN_HEAD}Support and bugs is done: 3 events`), 'dry_run')
 })
+
+test('a Gmail reply goes out from the alias the email was sent to', async () => {
+  const send = async (
+    sendAs: {
+      sendAsEmail: string
+      displayName?: string
+      isPrimary?: boolean
+      verificationStatus?: string
+    }[],
+    extra: { from?: string } = {},
+  ) => {
+    let raw = ''
+    const fetch = async (url: string, init?: RequestInit) => {
+      const u = new URL(url)
+      if (u.pathname.endsWith('/settings/sendAs')) return Response.json({ sendAs })
+      if (u.pathname.endsWith('/messages/send')) {
+        raw = Buffer.from(JSON.parse(String(init!.body)).raw, 'base64url').toString()
+        return Response.json({ id: 'sent', threadId: 't1' })
+      }
+      return Response.json({
+        id: 'm1',
+        threadId: 't1',
+        payload: {
+          headers: [
+            { name: 'Message-ID', value: '<m1@x>' },
+            { name: 'Subject', value: 'Big bug' },
+            { name: 'To', value: 'Acme Support <Support@acme.test>' },
+          ],
+        },
+      })
+    }
+    await gmail.operations.gmail_send!.run({ fetch } as never, {
+      to: ['jane@customer.test'],
+      subject: 'Re: Big bug',
+      body: 'Hi',
+      replyToMessageId: 'm1',
+      ...extra,
+    })
+    return raw.split('\r\n').find((l) => l.startsWith('From:')) ?? null
+  }
+  const own = { sendAsEmail: 'georges@gmail.test', isPrimary: true }
+  const support = {
+    sendAsEmail: 'support@acme.test',
+    displayName: 'Acme Support',
+    verificationStatus: 'accepted',
+  }
+  assert.equal(await send([own, support]), 'From: "Acme Support" <support@acme.test>')
+  // Not a verified alias: the account's own address stays.
+  assert.equal(await send([own, { ...support, verificationStatus: 'pending' }]), null)
+  assert.equal(await send([own]), null)
+  await assert.rejects(
+    send([own], { from: 'support@acme.test' }),
+    /not one of this account's Send mail as/,
+  )
+})
