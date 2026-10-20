@@ -31,13 +31,14 @@ export function Hero() {
     <section className={s.hero} aria-labelledby="hero-title">
       <div className={s.wrap}>
         <div className={s.heroCopy}>
+          <p className={s.eyebrow}>The operating system for AI-native companies</p>
           <h1 id="hero-title">
-            Hand off the work. Keep the <em>decisions.</em>
+            <em>One team</em> builds it, sells it and supports it.
           </h1>
           <p className={s.sub}>
-            AI teammates sort your support inbox, research your market and fix bugs in your app
-            while you get on with your day. They run on the Claude or ChatGPT plan you already pay
-            for, and every decision that needs you lands in one list on your phone.
+            AI teammates write your code, answer your customers, run your marketing and chase your
+            leads, all in one place. They run on the Claude or ChatGPT plan you already pay for, and
+            every decision that needs you lands in one list on your phone.
           </p>
           <div className={s.ctaRow}>
             <Cta href={SIGN_UP} primary large>

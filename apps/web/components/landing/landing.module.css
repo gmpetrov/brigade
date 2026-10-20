@@ -237,6 +237,14 @@ a.btn.pri:hover {
   font-style: normal;
   color: var(--primary);
 }
+.eyebrow {
+  margin-bottom: 22px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
 .hero .sub {
   margin-top: 30px;
   font-size: 20px;
@@ -244,6 +252,7 @@ a.btn.pri:hover {
   color: var(--muted-foreground);
   max-width: 540px;
   letter-spacing: -0.02em;
+  text-wrap: pretty;
 }
 .ctaRow {
   display: flex;
@@ -776,6 +785,78 @@ a.btn.pri:hover {
 .push .pb {
   color: var(--muted-foreground);
   line-height: 1.4;
+}
+
+/* Bridge: one request handed from teammate to teammate */
+.chain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px;
+}
+.hand {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.handTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.handName {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+.handDept {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.handTx {
+  flex: 1;
+  margin-top: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.handMock {
+  margin-top: 20px;
+}
+.hand .handMock .tx .badge {
+  margin-top: 7px;
+}
+.hand .handMock .tt,
+.hand .handMock .mt {
+  white-space: normal;
+  text-wrap: pretty;
+}
+.hand .handMock .mt {
+  font-size: 11.5px;
+}
+.handArrow {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+}
+.handArrow svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
 }
 
 /* Team */
@@ -1936,6 +2017,10 @@ a.btn.pri:hover {
     font-size: 16.5px;
     margin-top: 20px;
   }
+  .eyebrow {
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
   .ctaRow {
     margin-top: 28px;
     gap: 16px;
@@ -2009,6 +2094,22 @@ a.btn.pri:hover {
     margin: 22px -22px 0;
     min-height: 0;
     padding: 20px 20px 0;
+  }
+
+  .chain {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+  .handArrow {
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 36px;
+    transform: none;
+  }
+  .handArrow svg {
+    transform: rotate(90deg);
   }
 
   .jobs {
@@ -2244,6 +2345,16 @@ a.btn.pri:hover {
     margin-left: 0;
     flex-wrap: wrap;
     gap: 14px 20px;
+  }
+}
+
+/* Tablets: the chain folds into two rows; the arrow at the end of the first row goes. */
+@media (min-width: 641px) and (max-width: 1099px) {
+  .chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hand:nth-child(2) .handArrow {
+    display: none;
   }
 }
 

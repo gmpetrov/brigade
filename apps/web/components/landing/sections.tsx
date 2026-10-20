@@ -147,6 +147,103 @@ export function HowItWorks() {
   )
 }
 
+type Handoff = {
+  dept: string
+  name: string
+  sam?: boolean
+  text: string
+  icon: Parameters<typeof Icon>[0]['name']
+  title: string
+  meta: string
+  badge?: { tone: 'ok' | 'wait'; label: string }
+}
+
+const handoffs: Handoff[] = [
+  {
+    dept: 'Support',
+    name: 'Sam',
+    sam: true,
+    text: 'Reads a customer email: the export button is broken.',
+    icon: 'mail',
+    title: 'Export does nothing since Monday',
+    meta: 'jo@northwind.io',
+  },
+  {
+    dept: 'Code',
+    name: 'Riley',
+    text: 'Fixes it, and you approve the change from your phone.',
+    icon: 'pr',
+    title: 'Fix export button',
+    meta: 'tested',
+    badge: { tone: 'ok', label: 'approved' },
+  },
+  {
+    dept: 'Marketing',
+    name: 'Mark',
+    text: 'Turns the fix into release notes and a post for your users.',
+    icon: 'list',
+    title: 'Release notes',
+    meta: 'draft ready',
+  },
+  {
+    dept: 'Sales',
+    name: 'Sam',
+    sam: true,
+    text: "Tells the three accounts who asked about it that it's fixed.",
+    icon: 'mail',
+    title: '3 emails',
+    meta: 'Northwind, Lumen, Acme',
+    badge: { tone: 'wait', label: 'waiting on you' },
+  },
+]
+
+export function Bridge() {
+  return (
+    <section className={cn(s.sec, s.bridge)} data-id="bridge" aria-labelledby="bridge-title">
+      <div className={s.wrap}>
+        <div className={cn(s.secHead, s.reveal)}>
+          <h2 className={s.h2} id="bridge-title">
+            One request, every department.
+          </h2>
+          <p className={s.lead}>Your teammates pass the work along, the way a good team does.</p>
+        </div>
+        <ol className={s.chain}>
+          {handoffs.map((h, i) => {
+            const wait = h.badge?.tone === 'wait'
+            return (
+              <li key={h.dept} className={cn(s.hand, s.reveal)}>
+                <div className={s.handTop}>
+                  <Av sam={h.sam}>{h.name[0]}</Av>
+                  <span className={s.handName}>{h.name}</span>
+                  <span className={s.handDept}>{h.dept}</span>
+                </div>
+                <p className={s.handTx}>{h.text}</p>
+                <div className={cn(s.list, s.handMock, wait && s.wait)} aria-hidden="true">
+                  <div className={s.it}>
+                    <span className={cn(s.ico, wait && s.w)}>
+                      <Icon name={h.icon} />
+                    </span>
+                    <div className={s.tx}>
+                      <div className={s.tt}>{h.title}</div>
+                      <div className={cn(s.mt, s.mono)}>{h.meta}</div>
+                      {h.badge && <Badge tone={h.badge.tone}>{h.badge.label}</Badge>}
+                    </div>
+                  </div>
+                </div>
+                {i < handoffs.length - 1 && (
+                  <span className={s.handArrow} aria-hidden="true">
+                    <Icon name="arrow" />
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
 export function Team() {
   return (
     <section className={cn(s.sec, s.team)} aria-labelledby="team-title">
